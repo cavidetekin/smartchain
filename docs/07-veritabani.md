@@ -28,7 +28,7 @@
 | `stg.Worker` | İşçi. | Entegrasyon |  | 15 |
 | `stg.WorkerCompetence` | İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa. | Entegrasyon |  | 2 |
 | `stg.WorkerAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 4 |
-| `stg.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 14 |
+| `stg.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 13 |
 | `stg.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Entegrasyon |  | 16 |
 | `stg.Customer` | Müşteri. | Entegrasyon |  | 14 |
 | `stg.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Entegrasyon |  | 3 |
@@ -62,7 +62,7 @@
 | `core.ShiftPlan` | Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 7 |
 | `core.WorkerAbsence` | Kişi bazında izin ve rapor. | İşlem verisi | evet | 5 |
 | `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 34 |
-| `core.Supplier` | Tedarikçi ve fasoncu. | Ana veri | evet | 15 |
+| `core.Supplier` | Tedarikçi ve fasoncu. | Ana veri | evet | 14 |
 | `core.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Ana veri | evet | 17 |
 | `core.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode ile bağlanır. Faz 1'de varsayılan versiyon kullanılır. | Ana veri | evet | 13 |
 | `core.BOM` | Ürün ağacı satırı. | Ana veri | evet | 12 |
@@ -80,13 +80,14 @@
 | `core.TransferOrder` | Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep). | İşlem verisi | evet | 13 |
 | `core.ProductionConfirmation` | Üretim gerçekleşmeleri; ilk günden tutulur (verim önerisi ve ileriki fazlar). | İşlem verisi | evet | 14 |
 
-## `param` · Planlama parametreleri ve senaryo tanımları (10 tablo)
+## `param` · Planlama parametreleri ve senaryo tanımları (11 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
 | `param.ResourceEfficiency` | Kaynak ve dönem bazında verim (kapasite katsayısı); senaryoya özel. | Parametre |  | 6 |
 | `param.ResourcePeriodLimit` | Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın kapasite birimi. | Parametre |  | 6 |
 | `param.OvertimeLimit` | Fazla mesai üst limiti (vardiya ve dönem bazında). | Parametre |  | 4 |
+| `param.SupplierLimit` | Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66). | Parametre |  | 7 |
 | `param.ParameterSet` | Parametre seti; gece senaryoları farklı setlerle çalışır. | Parametre |  | 3 |
 | `param.PlanningSetting` | Genel planlama parametreleri (anahtar–değer); ör. model tipi, fazla mesai dahil mi, fix dönem, toleranslar, MRP öncelik ve kısıt ayarları. | Parametre |  | 3 |
 | `param.TimeBucketDefinition` | Zaman yapısı: planlama ufku ve dinamik bucket dizisi. | Parametre |  | 4 |

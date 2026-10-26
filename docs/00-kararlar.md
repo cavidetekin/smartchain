@@ -71,6 +71,7 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | K-63 | Versiyonlu tablolarda birincil anahtar Id + VersionFrom; Id kaydın bütün versiyonlarında sabittir. Versiyonlu tabloya fiziksel FK konmaz, bütünlüğü aktarım (kod→Id) sağlar; tekillik yalnız güncel kayıtta (VersionTo boş) aranır. | Geliştirme 0.2 |
 | K-64 | Veritabanı şeması docs'tan üretilir (db/generate.py); geçişler Alembic ile, her geçişin geri adımı vardır. Tablo ve alan açıklamaları veritabanına da yazılır. | Geliştirme 0.2 |
 | K-65 | Takvim (Calendar, CalendarDay), vardiya (Shift, ShiftPlan), duruş (ResourceDowntime) ve kapasite profili (ResourceCapacityProfile) Smartchain'de ekrandan tek tek girilir; entegrasyondan ve Excel'den gelmez, stg tabloları yoktur. Yetkinlik grubu, işçi, işçi–yetkinlik ve izin (CompetenceGroup, Worker, WorkerCompetence, WorkerAbsence) ERP'den gelir. | Geliştirme 0.2 |
+| K-66 | Tedarikçi kapasitesi ve kapalı dönemleri SupplierLimit parametre tablosunda tutulur (problem 39): malzeme bazında dönem üst limiti; malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Tedarikçide takvim alanı yoktur; Smartchain'de ekrandan girilir. | Geliştirme 0.2 |
 
 ## Açık konular
 

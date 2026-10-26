@@ -150,6 +150,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Material:** Malzeme ve planlama ana verisi
 - **Supplier:** Tedarikçi ve fasoncu
 - **MaterialSupplier:** Malzeme–tedarikçi ilişkisi
+- **SupplierLimit:** Tedarikçi dönem üst limiti; malzeme boşsa kapalı dönem
 - **ProductionVersion:** Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı
 - Ürün ağacı satırı
 - Rota satırı: operasyon–kaynak
@@ -581,7 +582,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Code | nvarchar(50) | UK | Tedarikçi kodu | ERP | H | E |  |
 | Name | nvarchar(200) |  | Ad | ERP | H | H |  |
 | IsSubcontractor | bit |  | Fasoncu mu | ERP, yoksa kural | H | H | 0 |
-| CalendarId | int | FK | Tedarikçi takvimi (kapalı dönemler) | Kural ya da elle | H | H |  |
 | AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H |  |
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
@@ -609,6 +609,22 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H |  |
 | AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+
+### SupplierLimit
+<sub>21. Veri modeli · Malzeme</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66).
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| ParameterSetId | int | FK | Parametre seti | Smartchain (parametre) | H | E |  |
+| SupplierId | bigint | FK | Tedarikçi | Smartchain (parametre) | H | E |  |
+| MaterialId | bigint | FK | Malzeme; boşsa tedarikçinin bütün malzemeleri (yalnız kapalı dönem) | Smartchain (parametre) | H | H |  |
+| ValidFrom | date |  | Başlangıç | Smartchain (parametre) | H | E |  |
+| ValidTo | date |  | Bitiş | Smartchain (parametre) | H | E |  |
+| UpperLimit | decimal(18,4) |  | Dönem üst limiti, malzemenin temel biriminde; malzeme boşsa 0 | Smartchain (parametre) | E | E | 0 |
 
 ### ProductionVersion
 <sub>21. Veri modeli · Malzeme</sub>

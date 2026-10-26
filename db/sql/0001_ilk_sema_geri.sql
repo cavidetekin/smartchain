@@ -186,6 +186,10 @@ DROP TABLE param.[TimeBucketDefinition];
 
 GO
 
+DROP TABLE param.[SupplierLimit];
+
+GO
+
 DROP TABLE param.[ScenarioDefinition];
 
 GO

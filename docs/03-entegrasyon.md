@@ -374,7 +374,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Code | nvarchar(50) | UK | E | Tedarikçi kodu | ERP | hata (satır atlanır) |
 | Name | nvarchar(200) |  | H | Ad | ERP | boş kalır |
 | IsSubcontractor | bit |  | H | Fasoncu mu | ERP, yoksa kural | kural ya da elle |
-| CalendarCode | nvarchar(30) | REF | H | Tedarikçi takvimi (kapalı dönemler) | Kural ya da elle | boş kalır |
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 

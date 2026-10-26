@@ -97,8 +97,8 @@ CREATE TABLE adm.[DataRule] (
     [AssignFromField] NVARCHAR(60) NULL, 
     [Owner] NVARCHAR(10) NOT NULL, 
     [IsActive] BIT NULL DEFAULT 1, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
+    [ValidFrom] DATE NULL, 
+    [ValidTo] DATE NULL, 
     [Description] NVARCHAR(400) NULL, 
     CONSTRAINT [PK_DataRule] PRIMARY KEY ([Id])
 );
@@ -256,7 +256,7 @@ GO
 CREATE TABLE adm.[License] (
     [Id] INTEGER NOT NULL IDENTITY, 
     [LicenseFile] IMAGE NOT NULL, 
-    [ValidUntil] DATETIME NOT NULL, 
+    [ValidUntil] DATE NOT NULL, 
     [InstallationId] NVARCHAR(100) NOT NULL, 
     CONSTRAINT [PK_License] PRIMARY KEY ([Id])
 );
@@ -950,7 +950,7 @@ GO
 
 CREATE TABLE core.[CalendarDay] (
     [CalendarId] INTEGER NOT NULL, 
-    [Date] DATETIME NOT NULL, 
+    [Date] DATE NOT NULL, 
     [IsWorkingDay] BIT NOT NULL DEFAULT 1, 
     [WorkingFraction] NUMERIC(5, 4) NULL DEFAULT 1, 
     [VersionFrom] INTEGER NOT NULL, 
@@ -1190,7 +1190,7 @@ CREATE TABLE core.[Forecast] (
     [MaterialId] BIGINT NOT NULL, 
     [CustomerId] BIGINT NULL, 
     [ProjectId] BIGINT NULL, 
-    [Period] DATETIME NOT NULL, 
+    [Period] DATE NOT NULL, 
     [Quantity] NUMERIC(18, 4) NOT NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
@@ -1516,8 +1516,8 @@ CREATE TABLE core.[MaterialSupplier] (
     [MinOrderQty] NUMERIC(18, 4) NULL, 
     [OrderMultiple] NUMERIC(18, 4) NULL, 
     [MaxOrderQty] NUMERIC(18, 4) NULL, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
+    [ValidFrom] DATE NULL, 
+    [ValidTo] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -1755,8 +1755,8 @@ CREATE TABLE core.[ProductionVersion] (
     [IsDefault] BIT NOT NULL DEFAULT 1, 
     [BaseQuantity] NUMERIC(18, 4) NULL DEFAULT 1, 
     [RouteCode] NVARCHAR(50) NOT NULL, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
+    [ValidFrom] DATE NULL, 
+    [ValidTo] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -2051,8 +2051,8 @@ CREATE TABLE core.[PurchaseOrderLine] (
     [SupplierId] BIGINT NULL, 
     [MaterialId] BIGINT NOT NULL, 
     [OpenQty] NUMERIC(18, 4) NOT NULL, 
-    [RequestedDate] DATETIME NULL, 
-    [ConfirmedDate] DATETIME NULL, 
+    [RequestedDate] DATE NULL, 
+    [ConfirmedDate] DATE NULL, 
     [ProjectId] BIGINT NULL, 
     [WorkOrderId] BIGINT NULL, 
     [Status] NVARCHAR(15) NOT NULL, 
@@ -2381,8 +2381,8 @@ GO
 CREATE TABLE core.[ResourceCapacityProfile] (
     [Id] BIGINT NOT NULL, 
     [ResourceId] BIGINT NOT NULL, 
-    [ValidFrom] DATETIME NOT NULL, 
-    [ValidTo] DATETIME NOT NULL, 
+    [ValidFrom] DATE NOT NULL, 
+    [ValidTo] DATE NOT NULL, 
     [DailyCapacity] NUMERIC(18, 4) NOT NULL, 
     [VersionFrom] INTEGER NOT NULL, 
     [VersionTo] INTEGER NULL, 
@@ -2794,8 +2794,8 @@ CREATE TABLE core.[SalesOrderLine] (
     [MaterialId] BIGINT NOT NULL, 
     [ProjectId] BIGINT NULL, 
     [OpenQty] NUMERIC(18, 4) NOT NULL, 
-    [RequestedDate] DATETIME NOT NULL, 
-    [ConfirmedDate] DATETIME NULL, 
+    [RequestedDate] DATE NOT NULL, 
+    [ConfirmedDate] DATE NULL, 
     [Priority] INTEGER NULL, 
     [AllowPartialDelivery] BIT NULL, 
     [Status] NVARCHAR(15) NOT NULL, 
@@ -2940,8 +2940,8 @@ CREATE TABLE core.[Shift] (
     [Id] BIGINT NOT NULL, 
     [LocationId] INTEGER NOT NULL, 
     [Code] NVARCHAR(20) NOT NULL, 
-    [StartTime] DATETIME NOT NULL, 
-    [EndTime] DATETIME NOT NULL, 
+    [StartTime] TIME NOT NULL, 
+    [EndTime] TIME NOT NULL, 
     [BreakMinutes] INTEGER NULL DEFAULT 0, 
     [VersionFrom] INTEGER NOT NULL, 
     [VersionTo] INTEGER NULL, 
@@ -3012,8 +3012,8 @@ CREATE TABLE core.[ShiftPlan] (
     [CompetenceGroupId] BIGINT NULL, 
     [ResourceGroupId] BIGINT NULL, 
     [ShiftId] BIGINT NOT NULL, 
-    [ValidFrom] DATETIME NOT NULL, 
-    [ValidTo] DATETIME NOT NULL, 
+    [ValidFrom] DATE NOT NULL, 
+    [ValidTo] DATE NOT NULL, 
     [Headcount] INTEGER NOT NULL, 
     [VersionFrom] INTEGER NOT NULL, 
     [VersionTo] INTEGER NULL, 
@@ -3099,8 +3099,8 @@ CREATE TABLE core.[Stock] (
     [StockStatus] NVARCHAR(15) NOT NULL DEFAULT N'Serbest', 
     [ProjectId] BIGINT NULL, 
     [Quantity] NUMERIC(18, 4) NOT NULL, 
-    [QualityEntryDate] DATETIME NULL, 
-    [ExpiryDate] DATETIME NULL, 
+    [QualityEntryDate] DATE NULL, 
+    [ExpiryDate] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -3215,7 +3215,6 @@ CREATE TABLE core.[Supplier] (
     [Code] NVARCHAR(50) NOT NULL, 
     [Name] NVARCHAR(200) NULL, 
     [IsSubcontractor] BIT NULL DEFAULT 0, 
-    [CalendarId] INTEGER NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -3254,10 +3253,6 @@ execute sp_addextendedproperty 'MS_Description', N'Ad', 'schema', core, 'table',
 GO
 
 execute sp_addextendedproperty 'MS_Description', N'Fasoncu mu', 'schema', core, 'table', [Supplier], 'column', [IsSubcontractor];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Tedarikçi takvimi (kapalı dönemler)', 'schema', core, 'table', [Supplier], 'column', [CalendarId];
 
 GO
 
@@ -3321,10 +3316,6 @@ execute sp_addextendedproperty 'MS_Description', N'Son değişiklik zamanı', 's
 
 GO
 
-CREATE INDEX [IX_Supplier_CalendarId] ON core.[Supplier] ([CalendarId]);
-
-GO
-
 CREATE UNIQUE INDEX [UX_Supplier_Code] ON core.[Supplier] ([Code]) WHERE VersionTo IS NULL;
 
 GO
@@ -3336,8 +3327,8 @@ CREATE TABLE core.[TransferOrder] (
     [ToLocationId] INTEGER NOT NULL, 
     [MaterialId] BIGINT NOT NULL, 
     [OpenQty] NUMERIC(18, 4) NOT NULL, 
-    [ShipDate] DATETIME NULL, 
-    [ReceiptDate] DATETIME NULL, 
+    [ShipDate] DATE NULL, 
+    [ReceiptDate] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -3516,12 +3507,12 @@ CREATE TABLE core.[WorkOrder] (
     [Status] NVARCHAR(15) NOT NULL, 
     [OrderQty] NUMERIC(18, 4) NOT NULL, 
     [OpenQty] NUMERIC(18, 4) NOT NULL, 
-    [StartDate] DATETIME NULL, 
-    [DueDate] DATETIME NOT NULL, 
+    [StartDate] DATE NULL, 
+    [DueDate] DATE NOT NULL, 
     [ProjectId] BIGINT NULL, 
     [SalesOrderLineId] BIGINT NULL, 
     [ParentWorkOrderId] BIGINT NULL, 
-    [LastActivityDate] DATETIME NULL, 
+    [LastActivityDate] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -4122,8 +4113,8 @@ CREATE TABLE param.[AllocationRule] (
     [DemandClass] NVARCHAR(100) NOT NULL, 
     [ResourceId] BIGINT NULL, 
     [ResourceGroupId] BIGINT NULL, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
+    [ValidFrom] DATE NULL, 
+    [ValidTo] DATE NULL, 
     [SharePct] NUMERIC(6, 2) NOT NULL, 
     [Hardness] NVARCHAR(10) NULL DEFAULT N'Yumuşak', 
     CONSTRAINT [PK_AllocationRule] PRIMARY KEY ([Id]), 
@@ -4276,8 +4267,8 @@ CREATE TABLE param.[ResourceEfficiency] (
     [Id] BIGINT NOT NULL IDENTITY, 
     [ParameterSetId] INTEGER NOT NULL, 
     [ResourceId] BIGINT NOT NULL, 
-    [ValidFrom] DATETIME NOT NULL, 
-    [ValidTo] DATETIME NOT NULL, 
+    [ValidFrom] DATE NOT NULL, 
+    [ValidTo] DATE NOT NULL, 
     [EfficiencyPct] NUMERIC(6, 2) NOT NULL DEFAULT 100, 
     CONSTRAINT [PK_ResourceEfficiency] PRIMARY KEY ([Id]), 
     CONSTRAINT [FK_ResourceEfficiency_ParameterSetId] FOREIGN KEY([ParameterSetId]) REFERENCES param.[ParameterSet] ([Id])
@@ -4321,8 +4312,8 @@ CREATE TABLE param.[ResourcePeriodLimit] (
     [Id] BIGINT NOT NULL IDENTITY, 
     [ParameterSetId] INTEGER NOT NULL, 
     [ResourceId] BIGINT NOT NULL, 
-    [ValidFrom] DATETIME NOT NULL, 
-    [ValidTo] DATETIME NOT NULL, 
+    [ValidFrom] DATE NOT NULL, 
+    [ValidTo] DATE NOT NULL, 
     [UpperLimit] NUMERIC(18, 4) NOT NULL, 
     CONSTRAINT [PK_ResourcePeriodLimit] PRIMARY KEY ([Id]), 
     CONSTRAINT [FK_ResourcePeriodLimit_ParameterSetId] FOREIGN KEY([ParameterSetId]) REFERENCES param.[ParameterSet] ([Id])
@@ -4416,6 +4407,60 @@ execute sp_addextendedproperty 'MS_Description', N'Gece çalışma önceliği', 
 GO
 
 execute sp_addextendedproperty 'MS_Description', N'Gece çalışsın mı', 'schema', param, 'table', [ScenarioDefinition], 'column', [IsActive];
+
+GO
+
+CREATE TABLE param.[SupplierLimit] (
+    [Id] BIGINT NOT NULL IDENTITY, 
+    [ParameterSetId] INTEGER NOT NULL, 
+    [SupplierId] BIGINT NOT NULL, 
+    [MaterialId] BIGINT NULL, 
+    [ValidFrom] DATE NOT NULL, 
+    [ValidTo] DATE NOT NULL, 
+    [UpperLimit] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
+    CONSTRAINT [PK_SupplierLimit] PRIMARY KEY ([Id]), 
+    CONSTRAINT [FK_SupplierLimit_ParameterSetId] FOREIGN KEY([ParameterSetId]) REFERENCES param.[ParameterSet] ([Id])
+);
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain''de ekrandan girilir (K-65, K-66).', 'schema', param, 'table', [SupplierLimit];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Kayıt kimliği', 'schema', param, 'table', [SupplierLimit], 'column', [Id];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Parametre seti', 'schema', param, 'table', [SupplierLimit], 'column', [ParameterSetId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Tedarikçi', 'schema', param, 'table', [SupplierLimit], 'column', [SupplierId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Malzeme; boşsa tedarikçinin bütün malzemeleri (yalnız kapalı dönem)', 'schema', param, 'table', [SupplierLimit], 'column', [MaterialId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Başlangıç', 'schema', param, 'table', [SupplierLimit], 'column', [ValidFrom];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Bitiş', 'schema', param, 'table', [SupplierLimit], 'column', [ValidTo];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Dönem üst limiti, malzemenin temel biriminde; malzeme boşsa 0', 'schema', param, 'table', [SupplierLimit], 'column', [UpperLimit];
+
+GO
+
+CREATE INDEX [IX_SupplierLimit_MaterialId] ON param.[SupplierLimit] ([MaterialId]);
+
+GO
+
+CREATE INDEX [IX_SupplierLimit_SupplierId] ON param.[SupplierLimit] ([SupplierId]);
 
 GO
 
@@ -4750,7 +4795,7 @@ CREATE TABLE stg.[Forecast] (
     [MaterialCode] NVARCHAR(50) NULL, 
     [CustomerCode] NVARCHAR(50) NULL, 
     [ProjectCode] NVARCHAR(50) NULL, 
-    [Period] DATETIME NULL, 
+    [Period] DATE NULL, 
     [Quantity] NUMERIC(18, 4) NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
@@ -5171,8 +5216,8 @@ CREATE TABLE stg.[MaterialSupplier] (
     [MinOrderQty] NUMERIC(18, 4) NULL, 
     [OrderMultiple] NUMERIC(18, 4) NULL, 
     [MaxOrderQty] NUMERIC(18, 4) NULL, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
+    [ValidFrom] DATE NULL, 
+    [ValidTo] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -5374,8 +5419,8 @@ CREATE TABLE stg.[ProductionVersion] (
     [IsDefault] BIT NULL, 
     [BaseQuantity] NUMERIC(18, 4) NULL, 
     [RouteCode] NVARCHAR(50) NULL, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
+    [ValidFrom] DATE NULL, 
+    [ValidTo] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -5632,8 +5677,8 @@ CREATE TABLE stg.[PurchaseOrderLine] (
     [SupplierCode] NVARCHAR(50) NULL, 
     [MaterialCode] NVARCHAR(50) NULL, 
     [OpenQty] NUMERIC(18, 4) NULL, 
-    [RequestedDate] DATETIME NULL, 
-    [ConfirmedDate] DATETIME NULL, 
+    [RequestedDate] DATE NULL, 
+    [ConfirmedDate] DATE NULL, 
     [ProjectCode] NVARCHAR(50) NULL, 
     [WorkOrderNo] NVARCHAR(30) NULL, 
     [Status] NVARCHAR(15) NULL, 
@@ -6149,8 +6194,8 @@ CREATE TABLE stg.[SalesOrderLine] (
     [MaterialCode] NVARCHAR(50) NULL, 
     [ProjectCode] NVARCHAR(50) NULL, 
     [OpenQty] NUMERIC(18, 4) NULL, 
-    [RequestedDate] DATETIME NULL, 
-    [ConfirmedDate] DATETIME NULL, 
+    [RequestedDate] DATE NULL, 
+    [ConfirmedDate] DATE NULL, 
     [Priority] INTEGER NULL, 
     [AllowPartialDelivery] BIT NULL, 
     [Status] NVARCHAR(15) NULL, 
@@ -6277,8 +6322,8 @@ CREATE TABLE stg.[Stock] (
     [StockStatus] NVARCHAR(15) NULL, 
     [ProjectCode] NVARCHAR(50) NULL, 
     [Quantity] NUMERIC(18, 4) NULL, 
-    [QualityEntryDate] DATETIME NULL, 
-    [ExpiryDate] DATETIME NULL, 
+    [QualityEntryDate] DATE NULL, 
+    [ExpiryDate] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -6374,7 +6419,6 @@ CREATE TABLE stg.[Supplier] (
     [Code] NVARCHAR(50) NULL, 
     [Name] NVARCHAR(200) NULL, 
     [IsSubcontractor] BIT NULL, 
-    [CalendarCode] NVARCHAR(30) NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -6420,10 +6464,6 @@ execute sp_addextendedproperty 'MS_Description', N'Ad', 'schema', stg, 'table', 
 GO
 
 execute sp_addextendedproperty 'MS_Description', N'Fasoncu mu', 'schema', stg, 'table', [Supplier], 'column', [IsSubcontractor];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Tedarikçi takvimi (kapalı dönemler)', 'schema', stg, 'table', [Supplier], 'column', [CalendarCode];
 
 GO
 
@@ -6575,13 +6615,13 @@ CREATE TABLE stg.[WorkOrder] (
     [Status] NVARCHAR(15) NULL, 
     [OrderQty] NUMERIC(18, 4) NULL, 
     [OpenQty] NUMERIC(18, 4) NULL, 
-    [StartDate] DATETIME NULL, 
-    [DueDate] DATETIME NULL, 
+    [StartDate] DATE NULL, 
+    [DueDate] DATE NULL, 
     [ProjectCode] NVARCHAR(50) NULL, 
     [SalesOrderNo] NVARCHAR(30) NULL, 
     [SalesOrderLineNo] INTEGER NULL, 
     [ParentWorkOrderNo] NVARCHAR(30) NULL, 
-    [LastActivityDate] DATETIME NULL, 
+    [LastActivityDate] DATE NULL, 
     [AdditionalText1] NVARCHAR(255) NULL, 
     [AdditionalText2] NVARCHAR(255) NULL, 
     [AdditionalText3] NVARCHAR(255) NULL, 
@@ -7288,7 +7328,7 @@ CREATE TABLE planning.[CapacityLoad] (
     [Id] BIGINT NOT NULL, 
     [PlanRunId] BIGINT NOT NULL, 
     [ResourceId] BIGINT NOT NULL, 
-    [BucketStart] DATETIME NOT NULL, 
+    [BucketStart] DATE NOT NULL, 
     [GrossCapacity] NUMERIC(18, 4) NULL, 
     [DowntimeLoss] NUMERIC(18, 4) NULL, 
     [NetCapacity] NUMERIC(18, 4) NULL, 
@@ -7375,8 +7415,8 @@ CREATE TABLE planning.[DemandFulfillment] (
     [PlanRunId] BIGINT NOT NULL, 
     [DemandType] NVARCHAR(15) NOT NULL, 
     [DemandId] BIGINT NOT NULL, 
-    [DueDate] DATETIME NULL, 
-    [PlannedDate] DATETIME NULL, 
+    [DueDate] DATE NULL, 
+    [PlannedDate] DATE NULL, 
     [ShortQty] NUMERIC(18, 4) NULL, 
     [DelayDays] INTEGER NULL, 
     [VersionFrom] INTEGER NOT NULL, 
@@ -7686,9 +7726,9 @@ CREATE TABLE planning.[PlannedOrder] (
     [ProjectId] BIGINT NULL, 
     [Quantity] NUMERIC(18, 4) NOT NULL, 
     [RoundedQty] NUMERIC(18, 4) NULL, 
-    [StartDate] DATETIME NULL, 
-    [DueDate] DATETIME NOT NULL, 
-    [BucketStart] DATETIME NULL, 
+    [StartDate] DATE NULL, 
+    [DueDate] DATE NOT NULL, 
+    [BucketStart] DATE NULL, 
     [VersionFrom] INTEGER NOT NULL, 
     [VersionTo] INTEGER NULL, 
     [ImportBatchId] BIGINT NULL, 
@@ -7787,8 +7827,8 @@ CREATE TABLE planning.[SupplyRecommendation] (
     [SupplyType] NVARCHAR(15) NOT NULL, 
     [SupplyId] BIGINT NOT NULL, 
     [Action] NVARCHAR(15) NOT NULL, 
-    [CurrentDate] DATETIME NULL, 
-    [ProposedDate] DATETIME NULL, 
+    [CurrentDate] DATE NULL, 
+    [ProposedDate] DATE NULL, 
     [ProposedQty] NUMERIC(18, 4) NULL, 
     [VersionFrom] INTEGER NOT NULL, 
     [VersionTo] INTEGER NULL, 
