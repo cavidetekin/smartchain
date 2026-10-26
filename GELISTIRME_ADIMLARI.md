@@ -14,7 +14,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 0 · Altyapı
 
-- [ ] 0.1 Repo, CLAUDE.md, docs taşıma (19, 21, 23, 24, 26)
+- [~] 0.1 Repo, CLAUDE.md, docs taşıma (19, 21, 23, 24, 26)
 - [ ] 0.2 Veritabanı: ana tablolar, Staging_*, veri yönetimi ve sistem tabloları; ileri ve geri geçiş betikleri
 - [ ] 0.3 Uygulama iskeleti: FastAPI katmanları, hata yönetimi, log
 - [ ] 0.4 İş kuyruğu (Job) ve WebSocket bildirim iskeleti
