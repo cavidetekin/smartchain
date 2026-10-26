@@ -11,7 +11,7 @@ Veritabanı şeması ve geçişler. Şema docs'tan üretilir (K-64); `models.py`
 
 ## Geliştirme bilgisayarında kurulum (Windows)
 
-1. **SQL Server 2022 Developer** kur (ücretsiz, tam sürüm). Kurulumda varsayılan instance (`MSSQLSERVER`) yeterli. Yönetim için **SQL Server Management Studio (SSMS)** kur.
+1. **SQL Server 2025 Developer** kur (ücretsiz, tam sürüm; indirme sayfasında "Developer" kutusu, deneme sürümü değil). Kurulum tipi Basic. Kurulumda varsayılan instance (`MSSQLSERVER`) yeterli. Yönetim için **SQL Server Management Studio (SSMS)** kur.
 2. **ODBC Driver 18 for SQL Server** kur (Python'un SQL Server'a bağlanması için).
 3. **Python 3.12** kur; repo klasöründe: `pip install -r requirements.txt`
 4. SSMS'te veritabanını aç:
