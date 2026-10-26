@@ -1064,6 +1064,41 @@ PlanRun = sa.Table(
     comment="Bir plan hesabı (senaryo ya da çalışma); bütün plan çıktıları buna bağlı.",
 )
 
+PlanBucket = sa.Table(
+    "PlanBucket", metadata,
+    sa.Column("PlanRunId", sa.BigInteger(), sa.ForeignKey("planning.PlanRun.Id"), primary_key=True, autoincrement=False, comment="Plan hesabı"),
+    sa.Column("BucketNo", sa.Integer(), primary_key=True, autoincrement=False, comment="Dönem sırası (1, 2, 3…)"),
+    sa.Column("BucketStart", sa.Date(), nullable=False, comment="Başlangıç"),
+    sa.Column("BucketEnd", sa.Date(), nullable=False, comment="Bitiş (dahil)"),
+    sa.Column("BucketType", sa.Unicode(10), nullable=False, comment="Gün | Hafta | Ay | Çeyrek | Yıl"),
+    sa.Column("WorkingDays", sa.Numeric(9, 2), nullable=False, comment="İş günü sayısı (takvimden; yarım gün 0,5)"),
+    sa.Column("IsFrozen", sa.Boolean(), nullable=False, server_default=sa.text("0"), comment="Dondurulmuş dönem"),
+    sa.Column("Label", sa.Unicode(20), nullable=False, comment="Kolon başlığı (28.10, H45, Ara)"),
+    schema="planning",
+    comment="Plan hesabının takvimi: dönemlerin tarih aralığı, iş günü ve dondurma durumu. Hesap başında zaman yapısından ve takvimden bir kez üretilir; ekranlar kolonlarını, motor dönemlerini buradan okur (K-66).",
+)
+
+MaterialPeriodPlan = sa.Table(
+    "MaterialPeriodPlan", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği"),
+    sa.Column("PlanRunId", sa.BigInteger(), sa.ForeignKey("planning.PlanRun.Id"), nullable=False, comment="Plan hesabı"),
+    sa.Column("MaterialId", sa.BigInteger(), index=True, nullable=False, comment="Malzeme"),
+    sa.Column("ProjectId", sa.BigInteger(), index=True, nullable=True, comment="Proje (boşsa ortak)"),
+    sa.Column("BucketNo", sa.Integer(), nullable=False, comment="Dönem (PlanBucket)"),
+    sa.Column("IndependentDemand", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Bağımsız talep (sipariş, tahmin, teklif)"),
+    sa.Column("DependentDemand", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Bağımlı talep (üst ürünlerden)"),
+    sa.Column("ExistingSupply", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Mevcut arz (açık iş emri, satın alma, fason, transfer)"),
+    sa.Column("PlannedProduction", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Planlı üretim"),
+    sa.Column("PlannedPurchase", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Planlı satın alma ve fason"),
+    sa.Column("ProjectedStock", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Dönem sonu stok projeksiyonu"),
+    sa.Column("Shortage", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Dönem eksiği"),
+    sa.Column("CumulativeShortage", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Kümülatif eksik"),
+    sa.Column("IsManual", sa.Boolean(), nullable=False, server_default=sa.text("0"), comment="Dönemde elle girilen değer var"),
+    sa.Index("UX_MaterialPeriodPlan_PlanRunId_MaterialId_ProjectId_BucketNo", "PlanRunId", "MaterialId", "ProjectId", "BucketNo", unique=True),
+    schema="planning",
+    comment="Malzeme × dönem sonucu: talep, arz, stok projeksiyonu ve eksik. Ürün bazlı planlama ve malzeme planı ekranları buradan okur; motor gelene kadar plan fikstürü yazar (K-65, K-66).",
+)
+
 PlanVersion = sa.Table(
     "PlanVersion", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği"),
@@ -1143,6 +1178,7 @@ CapacityLoad = sa.Table(
     sa.Column("PlanRunId", sa.BigInteger(), sa.ForeignKey("planning.PlanRun.Id"), nullable=False, comment="Plan hesabı"),
     sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak"),
     sa.Column("BucketStart", sa.Date(), nullable=False, comment="Dönem"),
+    sa.Column("BucketNo", sa.Integer(), nullable=False, comment="Dönem (PlanBucket)"),
     sa.Column("GrossCapacity", sa.Numeric(18, 4), nullable=True, comment="Brüt kapasite"),
     sa.Column("DowntimeLoss", sa.Numeric(18, 4), nullable=True, comment="Duruş kaybı"),
     sa.Column("NetCapacity", sa.Numeric(18, 4), nullable=True, comment="Kalan kapasite (verim sonrası)"),

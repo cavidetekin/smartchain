@@ -42,7 +42,15 @@ DROP TABLE planning.[PlanMetric];
 
 GO
 
+DROP TABLE planning.[PlanBucket];
+
+GO
+
 DROP TABLE planning.[Pegging];
+
+GO
+
+DROP TABLE planning.[MaterialPeriodPlan];
 
 GO
 

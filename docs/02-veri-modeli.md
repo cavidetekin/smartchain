@@ -226,6 +226,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Pegging:** Arz–talep bağı (full pegging)
 - **PlanWarning:** Plan hesabının ürettiği uyarılar
 - **PlanMetric:** Senaryo karşılaştırma metrikleri
+- **PlanBucket:** Plan hesabının takvimi (dönemler)
+- **MaterialPeriodPlan:** Malzeme × dönem sonucu: talep, arz, stok projeksiyonu, eksik
 
 ### Location
 <sub>21. Veri modeli · Ortak</sub>
@@ -1244,6 +1246,46 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | EndedAt | datetime2 |  | Bitiş | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Kısmen \| Hata | Sistem | H | H |  |
 
+### PlanBucket
+<sub>21. Veri modeli · Plan</sub>
+
+- Plan · versiyonsuz · Faz 1
+- Plan hesabının takvimi: dönemlerin tarih aralığı, iş günü ve dondurma durumu. Hesap başında zaman yapısından ve takvimden bir kez üretilir; ekranlar kolonlarını, motor dönemlerini buradan okur (K-66).
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| PlanRunId | bigint | PK,FK | Plan hesabı | Ön hesap | H | E |  |
+| BucketNo | int | PK | Dönem sırası (1, 2, 3…) | Ön hesap | H | E |  |
+| BucketStart | date |  | Başlangıç | Ön hesap | H | E |  |
+| BucketEnd | date |  | Bitiş (dahil) | Ön hesap | H | E |  |
+| BucketType | nvarchar(10) |  | Gün \| Hafta \| Ay \| Çeyrek \| Yıl | Ön hesap | H | E |  |
+| WorkingDays | decimal(9,2) |  | İş günü sayısı (takvimden; yarım gün 0,5) | Ön hesap | H | E |  |
+| IsFrozen | bit |  | Dondurulmuş dönem | Ön hesap | H | E | 0 |
+| Label | nvarchar(20) |  | Kolon başlığı (28.10, H45, Ara) | Ön hesap | H | E |  |
+
+### MaterialPeriodPlan
+<sub>21. Veri modeli · Plan</sub>
+
+- Plan · versiyonsuz · Faz 1
+- Malzeme × dönem sonucu: talep, arz, stok projeksiyonu ve eksik. Ürün bazlı planlama ve malzeme planı ekranları buradan okur; motor gelene kadar plan fikstürü yazar (K-65, K-66).
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| PlanRunId | bigint | FK,UK | Plan hesabı | Motor | H | E |  |
+| MaterialId | bigint | FK,UK | Malzeme | Motor | H | E |  |
+| ProjectId | bigint | FK,UK | Proje (boşsa ortak) | Motor | H | H |  |
+| BucketNo | int | UK | Dönem (PlanBucket) | Motor | H | E |  |
+| IndependentDemand | decimal(18,4) |  | Bağımsız talep (sipariş, tahmin, teklif) | Motor | H | E | 0 |
+| DependentDemand | decimal(18,4) |  | Bağımlı talep (üst ürünlerden) | Motor | H | E | 0 |
+| ExistingSupply | decimal(18,4) |  | Mevcut arz (açık iş emri, satın alma, fason, transfer) | Motor | H | E | 0 |
+| PlannedProduction | decimal(18,4) |  | Planlı üretim | Motor | H | E | 0 |
+| PlannedPurchase | decimal(18,4) |  | Planlı satın alma ve fason | Motor | H | E | 0 |
+| ProjectedStock | decimal(18,4) |  | Dönem sonu stok projeksiyonu | Motor | H | E | 0 |
+| Shortage | decimal(18,4) |  | Dönem eksiği | Motor | H | E | 0 |
+| CumulativeShortage | decimal(18,4) |  | Kümülatif eksik | Motor | H | E | 0 |
+| IsManual | bit |  | Dönemde elle girilen değer var | Motor | H | E | 0 |
+
 ### PlanVersion
 <sub>21. Veri modeli · Plan</sub>
 
@@ -1329,6 +1371,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
 | ResourceId | bigint | FK | Kaynak | Motor | H | E |  |
 | BucketStart | date |  | Dönem | Motor | H | E |  |
+| BucketNo | int |  | Dönem (PlanBucket) | Motor | H | E |  |
 | GrossCapacity | decimal(18,4) |  | Brüt kapasite | Motor | H | H |  |
 | DowntimeLoss | decimal(18,4) |  | Duruş kaybı | Motor | H | H |  |
 | NetCapacity | decimal(18,4) |  | Kalan kapasite (verim sonrası) | Motor | H | H |  |

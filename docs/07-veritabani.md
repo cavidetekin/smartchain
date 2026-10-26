@@ -97,7 +97,7 @@
 | `param.WarningDefinition` | Uyarı tanımı, eşik ve önem seviyesi. | Parametre |  | 5 |
 | `param.ScenarioDefinition` | Gece senaryosu tanımı: parametre seti + eksen ayarları. | Parametre |  | 9 |
 
-## `planning` · Senaryo, çalışma ve plan çıktıları (12 tablo)
+## `planning` · Senaryo, çalışma ve plan çıktıları (14 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -105,11 +105,13 @@
 | `planning.Workspace` | Kullanıcının bir senaryo üzerindeki çalışması; yayınlanmazsa gece silinir. | Plan |  | 6 |
 | `planning.WorkspaceOverride` | Çalışmadaki geçici değişiklikler: parametreler ve çalışmada değiştirilebilir ana veri alanları. | Plan |  | 7 |
 | `planning.PlanRun` | Bir plan hesabı (senaryo ya da çalışma); bütün plan çıktıları buna bağlı. | Plan |  | 10 |
+| `planning.PlanBucket` | Plan hesabının takvimi: dönemlerin tarih aralığı, iş günü ve dondurma durumu. Hesap başında zaman yapısından ve takvimden bir kez üretilir; ekranlar kolonlarını, motor dönemlerini buradan okur (K-66). | Plan |  | 8 |
+| `planning.MaterialPeriodPlan` | Malzeme × dönem sonucu: talep, arz, stok projeksiyonu ve eksik. Ürün bazlı planlama ve malzeme planı ekranları buradan okur; motor gelene kadar plan fikstürü yazar (K-65, K-66). | Plan |  | 14 |
 | `planning.PlanVersion` | Onaylı plan versiyonu; hep saklanır. Aynı anda tek geçerli. | Plan |  | 7 |
 | `planning.PlannedOrder` | Planlı sipariş: üretim, satın alma ya da fason önerisi. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca. | Plan | evet | 11 |
 | `planning.SupplyRecommendation` | Mevcut arz için öneri: öne çek, ertele, iptal, azalt, hızlandır. | Plan | evet | 8 |
 | `planning.DemandFulfillment` | Talebin planlanan karşılanması ve gecikmesi. | Plan | evet | 8 |
-| `planning.CapacityLoad` | Kaynak ve dönem bazında kapasite ve kapasite yükü. | Plan | evet | 9 |
+| `planning.CapacityLoad` | Kaynak ve dönem bazında kapasite ve kapasite yükü. | Plan | evet | 10 |
 | `planning.Pegging` | Arz–talep bağı (full pegging). | Plan | evet | 9 |
 | `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan | evet | 7 |
 | `planning.PlanMetric` | Senaryo karşılaştırma metrikleri; senaryo silinse de özet kısa süre kalır. | Plan |  | 3 |

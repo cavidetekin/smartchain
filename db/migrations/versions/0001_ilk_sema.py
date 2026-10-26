@@ -1864,6 +1864,7 @@ def upgrade():
     sa.Column('PlanRunId', sa.BigInteger(), nullable=False, comment='Plan hesabı'),
     sa.Column('ResourceId', sa.BigInteger(), nullable=False, comment='Kaynak'),
     sa.Column('BucketStart', sa.Date(), nullable=False, comment='Dönem'),
+    sa.Column('BucketNo', sa.Integer(), nullable=False, comment='Dönem (PlanBucket)'),
     sa.Column('GrossCapacity', sa.Numeric(precision=18, scale=4), nullable=True, comment='Brüt kapasite'),
     sa.Column('DowntimeLoss', sa.Numeric(precision=18, scale=4), nullable=True, comment='Duruş kaybı'),
     sa.Column('NetCapacity', sa.Numeric(precision=18, scale=4), nullable=True, comment='Kalan kapasite (verim sonrası)'),
@@ -1901,6 +1902,29 @@ def upgrade():
     schema='planning',
     comment='Talebin planlanan karşılanması ve gecikmesi.'
     )
+    op.create_table('MaterialPeriodPlan',
+    sa.Column('Id', sa.BigInteger(), autoincrement=True, nullable=False, comment='Kayıt kimliği'),
+    sa.Column('PlanRunId', sa.BigInteger(), nullable=False, comment='Plan hesabı'),
+    sa.Column('MaterialId', sa.BigInteger(), nullable=False, comment='Malzeme'),
+    sa.Column('ProjectId', sa.BigInteger(), nullable=True, comment='Proje (boşsa ortak)'),
+    sa.Column('BucketNo', sa.Integer(), nullable=False, comment='Dönem (PlanBucket)'),
+    sa.Column('IndependentDemand', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Bağımsız talep (sipariş, tahmin, teklif)'),
+    sa.Column('DependentDemand', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Bağımlı talep (üst ürünlerden)'),
+    sa.Column('ExistingSupply', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Mevcut arz (açık iş emri, satın alma, fason, transfer)'),
+    sa.Column('PlannedProduction', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Planlı üretim'),
+    sa.Column('PlannedPurchase', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Planlı satın alma ve fason'),
+    sa.Column('ProjectedStock', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Dönem sonu stok projeksiyonu'),
+    sa.Column('Shortage', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Dönem eksiği'),
+    sa.Column('CumulativeShortage', sa.Numeric(precision=18, scale=4), server_default=sa.text('0'), nullable=False, comment='Kümülatif eksik'),
+    sa.Column('IsManual', sa.Boolean(), server_default=sa.text('0'), nullable=False, comment='Dönemde elle girilen değer var'),
+    sa.ForeignKeyConstraint(['PlanRunId'], ['planning.PlanRun.Id'], name=op.f('FK_MaterialPeriodPlan_PlanRunId')),
+    sa.PrimaryKeyConstraint('Id', name=op.f('PK_MaterialPeriodPlan')),
+    schema='planning',
+    comment='Malzeme × dönem sonucu: talep, arz, stok projeksiyonu ve eksik. Ürün bazlı planlama ve malzeme planı ekranları buradan okur; motor gelene kadar plan fikstürü yazar (K-65, K-66).'
+    )
+    op.create_index(op.f('IX_MaterialPeriodPlan_MaterialId'), 'MaterialPeriodPlan', ['MaterialId'], unique=False, schema='planning')
+    op.create_index(op.f('IX_MaterialPeriodPlan_ProjectId'), 'MaterialPeriodPlan', ['ProjectId'], unique=False, schema='planning')
+    op.create_index('UX_MaterialPeriodPlan_PlanRunId_MaterialId_ProjectId_BucketNo', 'MaterialPeriodPlan', ['PlanRunId', 'MaterialId', 'ProjectId', 'BucketNo'], unique=True, schema='planning')
     op.create_table('Pegging',
     sa.Column('Id', sa.BigInteger(), autoincrement=False, nullable=False, comment='Kayıt kimliği'),
     sa.Column('PlanRunId', sa.BigInteger(), nullable=False, comment='Plan hesabı'),
@@ -1921,6 +1945,20 @@ def upgrade():
     sa.PrimaryKeyConstraint('Id', 'VersionFrom', name=op.f('PK_Pegging')),
     schema='planning',
     comment='Arz–talep bağı (full pegging).'
+    )
+    op.create_table('PlanBucket',
+    sa.Column('PlanRunId', sa.BigInteger(), autoincrement=False, nullable=False, comment='Plan hesabı'),
+    sa.Column('BucketNo', sa.Integer(), autoincrement=False, nullable=False, comment='Dönem sırası (1, 2, 3…)'),
+    sa.Column('BucketStart', sa.Date(), nullable=False, comment='Başlangıç'),
+    sa.Column('BucketEnd', sa.Date(), nullable=False, comment='Bitiş (dahil)'),
+    sa.Column('BucketType', sa.Unicode(length=10), nullable=False, comment='Gün | Hafta | Ay | Çeyrek | Yıl'),
+    sa.Column('WorkingDays', sa.Numeric(precision=9, scale=2), nullable=False, comment='İş günü sayısı (takvimden; yarım gün 0,5)'),
+    sa.Column('IsFrozen', sa.Boolean(), server_default=sa.text('0'), nullable=False, comment='Dondurulmuş dönem'),
+    sa.Column('Label', sa.Unicode(length=20), nullable=False, comment='Kolon başlığı (28.10, H45, Ara)'),
+    sa.ForeignKeyConstraint(['PlanRunId'], ['planning.PlanRun.Id'], name=op.f('FK_PlanBucket_PlanRunId')),
+    sa.PrimaryKeyConstraint('PlanRunId', 'BucketNo', name=op.f('PK_PlanBucket')),
+    schema='planning',
+    comment='Plan hesabının takvimi: dönemlerin tarih aralığı, iş günü ve dondurma durumu. Hesap başında zaman yapısından ve takvimden bir kez üretilir; ekranlar kolonlarını, motor dönemlerini buradan okur (K-66).'
     )
     op.create_table('PlanMetric',
     sa.Column('PlanRunId', sa.BigInteger(), autoincrement=False, nullable=False, comment='Plan hesabı'),
@@ -2033,7 +2071,9 @@ def downgrade():
     op.drop_table('PlanWarning', schema='planning')
     op.drop_table('PlanVersion', schema='planning')
     op.drop_table('PlanMetric', schema='planning')
+    op.drop_table('PlanBucket', schema='planning')
     op.drop_table('Pegging', schema='planning')
+    op.drop_table('MaterialPeriodPlan', schema='planning')
     op.drop_table('DemandFulfillment', schema='planning')
     op.drop_table('CapacityLoad', schema='planning')
     op.drop_table('SolverLog', schema='adm')
