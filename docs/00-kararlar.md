@@ -110,3 +110,4 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | A-32 | Satın alma ve satış personaları end user ise aksiyon tamamlama ve ERP numarası girme hikâyeleri salt okunur kuralıyla çelişir; 'sınırlı key user' rolü mü? | 20 |
 | A-33 | Kalan 56 hikâyenin kabul kriterleri dilime alınırken yazılacak. | 20 |
 | A-34 | Aktarım filtresinin yöntemi: kapsam filtresi (pasif malzeme, kapalı sipariş, başka lokasyon gibi) nasıl tanımlanacak? Değişen kayıtlar K-40 ve A-23'e, hatalı satırlar 26. adımdaki hata yönetimine bağlı. | Geliştirme 4.3 |
+| A-35 | Kaynağın takvimi (Resource.CalendarId) şimdilik Smartchain'de atanır, entegrasyonla gelmez; ERP'den takvim kodu alınıp alınmayacağına sonra bakılacak. | Geliştirme 0.2 |

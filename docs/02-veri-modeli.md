@@ -330,7 +330,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Quantity | int |  | Paralel kaynak adedi | ERP, yoksa kural | H | E | 1 |
-| CalendarId | int | FK | Çalışma takvimi | ERP, yoksa kural | H | E |  |
+| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır) | Kural ya da elle | H | E |  |
 | CapacitySource | nvarchar(10) |  | İşçi gruplarında: Vardiyadan \| Doğrudan | Kural ya da elle | H | H | Doğrudan |
 | SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Kural ya da elle | H | H |  |
 | SupplierId | bigint | FK | Fasonda fasoncu | ERP | H | H |  |

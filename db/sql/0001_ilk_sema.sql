@@ -2278,7 +2278,7 @@ execute sp_addextendedproperty 'MS_Description', N'Paralel kaynak adedi', 'schem
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Çalışma takvimi', 'schema', core, 'table', [Resource], 'column', [CalendarId];
+execute sp_addextendedproperty 'MS_Description', N'Çalışma takvimi (Smartchain ekranında atanır)', 'schema', core, 'table', [Resource], 'column', [CalendarId];
 
 GO
 
@@ -5755,7 +5755,6 @@ CREATE TABLE stg.[Resource] (
     [CapacityUnit] NVARCHAR(10) NULL, 
     [DailyCapacity] NUMERIC(18, 4) NULL, 
     [Quantity] INTEGER NULL, 
-    [CalendarCode] NVARCHAR(30) NULL, 
     [CapacitySource] NVARCHAR(10) NULL, 
     [SubconPlanningType] NVARCHAR(15) NULL, 
     [SupplierCode] NVARCHAR(50) NULL, 
@@ -5834,10 +5833,6 @@ execute sp_addextendedproperty 'MS_Description', N'Bir adet kaynağın bir çal�
 GO
 
 execute sp_addextendedproperty 'MS_Description', N'Paralel kaynak adedi', 'schema', stg, 'table', [Resource], 'column', [Quantity];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Çalışma takvimi', 'schema', stg, 'table', [Resource], 'column', [CalendarCode];
 
 GO
 

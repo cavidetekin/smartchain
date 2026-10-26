@@ -295,7 +295,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
 |---|---|---|---|---|---|---|
 | Quantity | int |  | E | Paralel kaynak adedi | ERP, yoksa kural | kural ya da elle |
-| CalendarCode | nvarchar(30) | REF | E | Çalışma takvimi | ERP, yoksa kural | kural ya da elle |
 | CapacitySource | nvarchar(10) |  | H | İşçi gruplarında: Vardiyadan \| Doğrudan | Kural ya da elle | varsayılan Doğrudan |
 | SubconPlanningType | nvarchar(15) |  | H | Fasonda: İş yeri \| Tedarik süresi | Kural ya da elle | boş kalır |
 | SupplierCode | nvarchar(50) | REF | H | Fasonda fasoncu | ERP | boş kalır |

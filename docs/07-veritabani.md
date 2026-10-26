@@ -22,7 +22,7 @@
 | `stg.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode ile bağlanır. Faz 1'de varsayılan versiyon kullanılır. | Entegrasyon |  | 12 |
 | `stg.BOM` | Ürün ağacı satırı. | Entegrasyon |  | 12 |
 | `stg.Routing` | Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OpNo, sonra SeqNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile. | Entegrasyon |  | 20 |
-| `stg.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Entegrasyon |  | 26 |
+| `stg.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Entegrasyon |  | 25 |
 | `stg.ResourceGroup` | Kaynak grubu (makine grubu, işçi kaynak grubu). | Entegrasyon |  | 13 |
 | `stg.CompetenceGroup` | İşçi yetkinlik grubu. | Entegrasyon |  | 3 |
 | `stg.Worker` | İşçi. | Entegrasyon |  | 15 |
