@@ -16,7 +16,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [x] 0.1 Repo, CLAUDE.md, docs taşıma (19, 21, 23, 24, 26)
 - [x] 0.2 Veritabanı: ana tablolar, stg.*, veri yönetimi ve sistem tabloları; ileri ve geri geçiş betikleri
-- [ ] 0.3 Uygulama iskeleti: FastAPI katmanları, hata yönetimi, log
+- [~] 0.3 Uygulama iskeleti: FastAPI katmanları, hata yönetimi, log
 - [ ] 0.4 İş kuyruğu (Job) ve WebSocket bildirim iskeleti
 - [ ] 0.5 Motor arayüzü ve sahte motor (fikstür döndürür)
 - [ ] 0.6 Kurulum iskeleti: Windows servisleri, IIS, ayrı SQL Server; temiz makineye kurulum

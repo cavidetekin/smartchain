@@ -11,3 +11,5 @@ build/
 .vscode/
 *.bak
 ~$*
+logs/
+.pytest_cache/

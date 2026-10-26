@@ -12,3 +12,4 @@ Master Design Document'tan (MDD) türetilmiş tasarım dokümanları. Tek kaynak
 | 05-ekranlar.md | 24 (ekranlar) |
 | 06-fonksiyonlar.md | 24 (fonksiyonlar) |
 | 07-veritabani.md | Üretilmiş: şemalar ve tablolar (db/generate.py) |
+| 08-api.md | Geliştirme 0.3: API kuralları |

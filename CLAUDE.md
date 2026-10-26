@@ -55,6 +55,7 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/05-ekranlar.md` | 25 ekran ve ekran mockupları (MDD 24) |
 | `docs/06-fonksiyonlar.md` | 98 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
 | `docs/07-veritabani.md` | Veritabanı haritası: şemalar ve tablolar (üretilmiş) |
+| `docs/08-api.md` | API kuralları: katmanlar, adresler, hata cevabı, log, ayarlar |
 | `docs/mockups/` | Mockup görselleri |
 
 Motor (MDD 18), raporlar (25), kurulum (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
@@ -67,6 +68,6 @@ python db/generate.py                              # docs → db/models.py, docs
 alembic -c db/alembic.ini upgrade head             # veritabanını güncelle (SMARTCHAIN_DB_URL)
 alembic -c db/alembic.ini upgrade head --sql       # bağlantısız: SQL betiğini yazdır
 alembic -c db/alembic.ini downgrade -1             # son geçişi geri al
+uvicorn app.api.main:app --reload --port 8000      # API'yi başlat (geliştirme)
+python -m pytest                                   # testler
 ```
-
-Uygulama çalıştırma ve test komutları adım 0.3'te eklenir.

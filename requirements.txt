@@ -2,3 +2,12 @@
 sqlalchemy>=2.0
 alembic>=1.13
 pyodbc>=5.0
+
+# API (adım 0.3)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic-settings>=2.4
+
+# Test
+pytest>=8.0
+httpx>=0.27
