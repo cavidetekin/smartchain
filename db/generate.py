@@ -179,8 +179,8 @@ def sa_type(t: str) -> str:
     if t == "date": return "mssql.DATE()"
     if t == "time": return "mssql.TIME()"
     if t == "datetime2": return "mssql.DATETIME2()"
-    if t == "nvarchar(max)": return "sa.UnicodeText()"
-    if t == "varbinary(max)": return "sa.LargeBinary()"
+    if t == "nvarchar(max)": return "mssql.NVARCHAR()"
+    if t == "varbinary(max)": return "mssql.VARBINARY(\"max\")"
     m = re.match(r"varbinary\((\d+)\)", t)
     if m: return f"mssql.VARBINARY({m.group(1)})"
     m = re.match(r"nvarchar\((\d+)\)", t)

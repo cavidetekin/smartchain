@@ -1,3 +1,6 @@
+USE Smartchain;
+GO
+
 BEGIN TRANSACTION;
 
 -- Running downgrade 0001 -> 

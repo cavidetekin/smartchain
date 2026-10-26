@@ -1,3 +1,6 @@
+USE Smartchain;
+GO
+
 BEGIN TRANSACTION;
 
 CREATE TABLE alembic_version (
@@ -255,7 +258,7 @@ GO
 
 CREATE TABLE adm.[License] (
     [Id] INTEGER NOT NULL IDENTITY, 
-    [LicenseFile] IMAGE NOT NULL, 
+    [LicenseFile] VARBINARY(max) NOT NULL, 
     [ValidUntil] DATE NOT NULL, 
     [InstallationId] NVARCHAR(100) NOT NULL, 
     CONSTRAINT [PK_License] PRIMARY KEY ([Id])
@@ -504,8 +507,8 @@ CREATE TABLE adm.[AuditLog] (
     [Action] NVARCHAR(40) NOT NULL, 
     [ObjectType] NVARCHAR(40) NULL, 
     [ObjectKey] NVARCHAR(200) NULL, 
-    [OldValue] NTEXT NULL, 
-    [NewValue] NTEXT NULL, 
+    [OldValue] NVARCHAR(max) NULL, 
+    [NewValue] NVARCHAR(max) NULL, 
     CONSTRAINT [PK_AuditLog] PRIMARY KEY ([Id]), 
     CONSTRAINT [FK_AuditLog_UserId] FOREIGN KEY([UserId]) REFERENCES adm.[AppUser] ([Id])
 );
@@ -679,11 +682,11 @@ CREATE TABLE adm.[Job] (
     [Priority] INTEGER NULL, 
     [Status] NVARCHAR(15) NOT NULL, 
     [RequestedBy] INTEGER NULL, 
-    [Payload] NTEXT NULL, 
+    [Payload] NVARCHAR(max) NULL, 
     [Progress] NVARCHAR(100) NULL, 
     [HeartbeatAt] DATETIME2 NULL, 
     [Attempt] INTEGER NULL DEFAULT 0, 
-    [ErrorText] NTEXT NULL, 
+    [ErrorText] NVARCHAR(max) NULL, 
     CONSTRAINT [PK_Job] PRIMARY KEY ([Id]), 
     CONSTRAINT [FK_Job_RequestedBy] FOREIGN KEY([RequestedBy]) REFERENCES adm.[AppUser] ([Id])
 );

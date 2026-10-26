@@ -1240,11 +1240,11 @@ Job = sa.Table(
     sa.Column("Priority", sa.Integer(), nullable=True, comment="Öncelik"),
     sa.Column("Status", sa.Unicode(15), nullable=False, comment="Sırada | Çalışıyor | Bitti | Hata | İptal"),
     sa.Column("RequestedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Başlatan"),
-    sa.Column("Payload", sa.UnicodeText(), nullable=True, comment="İş parametreleri (JSON)"),
+    sa.Column("Payload", mssql.NVARCHAR(), nullable=True, comment="İş parametreleri (JSON)"),
     sa.Column("Progress", sa.Unicode(100), nullable=True, comment="İlerleme"),
     sa.Column("HeartbeatAt", mssql.DATETIME2(), nullable=True, comment="Son yaşam sinyali"),
     sa.Column("Attempt", sa.Integer(), nullable=True, server_default=sa.text("0"), comment="Deneme sayısı"),
-    sa.Column("ErrorText", sa.UnicodeText(), nullable=True, comment="Hata"),
+    sa.Column("ErrorText", mssql.NVARCHAR(), nullable=True, comment="Hata"),
     schema="adm",
     comment="İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler.",
 )
@@ -1269,8 +1269,8 @@ AuditLog = sa.Table(
     sa.Column("Action", sa.Unicode(40), nullable=False, comment="İşlem"),
     sa.Column("ObjectType", sa.Unicode(40), nullable=True, comment="Nesne"),
     sa.Column("ObjectKey", sa.Unicode(200), nullable=True, comment="Kayıt"),
-    sa.Column("OldValue", sa.UnicodeText(), nullable=True, comment="Önceki"),
-    sa.Column("NewValue", sa.UnicodeText(), nullable=True, comment="Yeni"),
+    sa.Column("OldValue", mssql.NVARCHAR(), nullable=True, comment="Önceki"),
+    sa.Column("NewValue", mssql.NVARCHAR(), nullable=True, comment="Yeni"),
     schema="adm",
     comment="Kim, ne zaman, neyi değiştirdi; giriş kayıtları; sistem sahibi işlemleri silinemez.",
 )
@@ -1286,7 +1286,7 @@ SystemSetting = sa.Table(
 License = sa.Table(
     "License", metadata,
     sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Kimlik"),
-    sa.Column("LicenseFile", sa.LargeBinary(), nullable=False, comment="İmzalı lisans dosyası"),
+    sa.Column("LicenseFile", mssql.VARBINARY("max"), nullable=False, comment="İmzalı lisans dosyası"),
     sa.Column("ValidUntil", mssql.DATE(), nullable=False, comment="Bitiş"),
     sa.Column("InstallationId", sa.Unicode(100), nullable=False, comment="Kurulum kimliği"),
     schema="adm",
