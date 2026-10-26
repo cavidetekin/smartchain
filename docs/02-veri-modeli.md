@@ -278,26 +278,26 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Ortak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Çalışma takvimi başlığı (kaynaklara bağlanır).
+- Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | int | PK | Takvim kimliği | Sistem | H | E |  |
-| Code | nvarchar(30) | UK | Takvim kodu | ERP, yoksa kural | H | E |  |
-| Name | nvarchar(100) |  | Takvim adı | ERP, yoksa kural | H | H |  |
+| Code | nvarchar(30) | UK | Takvim kodu | Kural ya da elle | H | E |  |
+| Name | nvarchar(100) |  | Takvim adı | Kural ya da elle | H | H |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### CalendarDay
 <sub>21. Veri modeli · Ortak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Takvimin gün bazında çalışma durumu.
+- Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
-| CalendarId | int | PK,FK | Takvim | ERP, yoksa kural | H | E |  |
-| Date | date | PK | Gün | ERP, yoksa kural | H | E |  |
-| IsWorkingDay | bit |  | Çalışma günü mü | ERP, yoksa kural | H | E | 1 |
+| CalendarId | int | PK,FK | Takvim | Kural ya da elle | H | E |  |
+| Date | date | PK | Gün | Kural ya da elle | H | E |  |
+| IsWorkingDay | bit |  | Çalışma günü mü | Kural ya da elle | H | E | 1 |
 | WorkingFraction | decimal(5,4) |  | Günün çalışılan oranı (yarım gün 0,5) | Kural ya da elle | H | H | 1 |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
@@ -360,7 +360,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz.
+- Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -375,16 +375,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.
+- Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| ResourceId | bigint | FK | Kaynak | ERP, yoksa kural | H | E |  |
-| DowntimeType | nvarchar(10) |  | Bakım \| Arıza | ERP, yoksa kural | H | E |  |
-| StartAt | datetime2 |  | Başlangıç | ERP, yoksa kural | E | E |  |
-| EndAt | datetime2 |  | Bitiş | ERP, yoksa kural | E | E |  |
-| AffectedQuantity | int |  | Etkilenen kaynak adedi | ERP, yoksa kural | E | E | 1 |
+| ResourceId | bigint | FK | Kaynak | Kural ya da elle | H | E |  |
+| DowntimeType | nvarchar(10) |  | Bakım \| Arıza | Kural ya da elle | H | E |  |
+| StartAt | datetime2 |  | Başlangıç | Kural ya da elle | E | E |  |
+| EndAt | datetime2 |  | Bitiş | Kural ya da elle | E | E |  |
+| AffectedQuantity | int |  | Etkilenen kaynak adedi | Kural ya da elle | E | E | 1 |
 | DurationDays | decimal(9,4) |  | Süre, gün olarak (yarım gün 0,5) | Ön hesap | H | H |  |
 | Note | nvarchar(400) |  | Açıklama | Kullanıcı | H | H |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
@@ -429,8 +429,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | LocationId | int | FK | Lokasyon | ERP | H | E |  |
-| Code | nvarchar(50) | UK | Grup kodu | Kural ya da elle | H | E |  |
-| Name | nvarchar(150) |  | Grup adı | Kural ya da elle | H | H |  |
+| Code | nvarchar(50) | UK | Grup kodu | ERP | H | E |  |
+| Name | nvarchar(150) |  | Grup adı | ERP | H | H |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### Worker
@@ -459,41 +459,41 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
-| WorkerId | bigint | PK,FK | İşçi | Kural ya da elle | H | E |  |
-| CompetenceGroupId | bigint | PK,FK | Yetkinlik grubu | Kural ya da elle | H | E |  |
+| WorkerId | bigint | PK,FK | İşçi | ERP | H | E |  |
+| CompetenceGroupId | bigint | PK,FK | Yetkinlik grubu | ERP | H | E |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### Shift
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Vardiya tanımı.
+- Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| LocationId | int | FK | Lokasyon | ERP | H | E |  |
-| Code | nvarchar(20) | UK | Vardiya kodu | ERP, yoksa kural | H | E |  |
-| StartTime | time |  | Başlangıç saati | ERP, yoksa kural | H | E |  |
-| EndTime | time |  | Bitiş saati | ERP, yoksa kural | H | E |  |
-| BreakMinutes | int |  | Mola süresi (dk) | ERP, yoksa kural | H | H | 0 |
+| LocationId | int | FK | Lokasyon | Kural ya da elle | H | E |  |
+| Code | nvarchar(20) | UK | Vardiya kodu | Kural ya da elle | H | E |  |
+| StartTime | time |  | Başlangıç saati | Kural ya da elle | H | E |  |
+| EndTime | time |  | Bitiş saati | Kural ya da elle | H | E |  |
+| BreakMinutes | int |  | Mola süresi (dk) | Kural ya da elle | H | H | 0 |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### ShiftPlan
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.
+- Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| CompetenceGroupId | bigint | FK | Yetkinlik grubu (ya da) | ERP, yoksa kural | H | H |  |
-| ResourceGroupId | bigint | FK | İşçi kaynak grubu | ERP, yoksa kural | H | H |  |
-| ShiftId | bigint | FK | Vardiya | ERP, yoksa kural | H | E |  |
-| ValidFrom | date |  | Başlangıç | ERP, yoksa kural | H | E |  |
-| ValidTo | date |  | Bitiş | ERP, yoksa kural | H | E |  |
-| Headcount | int |  | Kişi sayısı | ERP, yoksa kural | E | E |  |
+| CompetenceGroupId | bigint | FK | Yetkinlik grubu (ya da) | Kural ya da elle | H | H |  |
+| ResourceGroupId | bigint | FK | İşçi kaynak grubu | Kural ya da elle | H | H |  |
+| ShiftId | bigint | FK | Vardiya | Kural ya da elle | H | E |  |
+| ValidFrom | date |  | Başlangıç | Kural ya da elle | H | E |  |
+| ValidTo | date |  | Bitiş | Kural ya da elle | H | E |  |
+| Headcount | int |  | Kişi sayısı | Kural ya da elle | E | E |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### WorkerAbsence

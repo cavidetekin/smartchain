@@ -11,7 +11,7 @@
 - **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
 - **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.
 
-## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58) (28 tablo)
+## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58) (26 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -24,12 +24,10 @@
 | `stg.Routing` | Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OpNo, sonra SeqNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile. | Entegrasyon |  | 20 |
 | `stg.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Entegrasyon |  | 26 |
 | `stg.ResourceGroup` | Kaynak grubu (makine grubu, işçi kaynak grubu). | Entegrasyon |  | 13 |
-| `stg.ResourceCapacityProfile` | Günlük kapasitenin dönemsel değişikliği. Birim kontrol için gelir; ana tabloda saklanmaz. | Entegrasyon |  | 5 |
-| `stg.Calendar` | Çalışma takvimi başlığı (kaynaklara bağlanır). | Entegrasyon |  | 2 |
-| `stg.CalendarDay` | Takvimin gün bazında çalışma durumu. | Entegrasyon |  | 4 |
-| `stg.Shift` | Vardiya tanımı. | Entegrasyon |  | 5 |
-| `stg.ShiftPlan` | Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. | Entegrasyon |  | 6 |
-| `stg.ResourceDowntime` | Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. | Entegrasyon |  | 5 |
+| `stg.CompetenceGroup` | İşçi yetkinlik grubu. | Entegrasyon |  | 3 |
+| `stg.Worker` | İşçi. | Entegrasyon |  | 15 |
+| `stg.WorkerCompetence` | İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa. | Entegrasyon |  | 2 |
+| `stg.WorkerAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 4 |
 | `stg.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 14 |
 | `stg.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Entegrasyon |  | 16 |
 | `stg.Customer` | Müşteri. | Entegrasyon |  | 14 |
@@ -51,17 +49,17 @@
 | `core.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Ana veri |  | 20 |
 | `core.UnitOfMeasure` | Ölçü birimi. | Ana veri |  | 2 |
 | `core.UomConversion` | Malzeme bazında birim dönüşümü. | Ana veri | evet | 5 |
-| `core.Calendar` | Çalışma takvimi başlığı (kaynaklara bağlanır). | Ana veri | evet | 3 |
-| `core.CalendarDay` | Takvimin gün bazında çalışma durumu. | Ana veri | evet | 4 |
+| `core.Calendar` | Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 3 |
+| `core.CalendarDay` | Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 4 |
 | `core.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Ana veri | evet | 27 |
 | `core.ResourceGroup` | Kaynak grubu (makine grubu, işçi kaynak grubu). | Ana veri | evet | 14 |
-| `core.ResourceCapacityProfile` | Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. | Ana veri | evet | 5 |
-| `core.ResourceDowntime` | Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. | Ana veri | evet | 8 |
+| `core.ResourceCapacityProfile` | Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 5 |
+| `core.ResourceDowntime` | Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 8 |
 | `core.CompetenceGroup` | İşçi yetkinlik grubu. | Ana veri | evet | 4 |
 | `core.Worker` | İşçi. | Ana veri | evet | 16 |
 | `core.WorkerCompetence` | İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa. | Ana veri | evet | 2 |
-| `core.Shift` | Vardiya tanımı. | Ana veri | evet | 6 |
-| `core.ShiftPlan` | Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. | Ana veri | evet | 7 |
+| `core.Shift` | Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 6 |
+| `core.ShiftPlan` | Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 7 |
 | `core.WorkerAbsence` | Kişi bazında izin ve rapor. | İşlem verisi | evet | 5 |
 | `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 34 |
 | `core.Supplier` | Tedarikçi ve fasoncu. | Ana veri | evet | 15 |

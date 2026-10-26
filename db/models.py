@@ -75,7 +75,7 @@ Calendar = sa.Table(
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı"),
     sa.Index("UX_Calendar_Code", "Code", unique=True, mssql_where=sa.text("VersionTo IS NULL")),
     schema="core",
-    comment="Çalışma takvimi başlığı (kaynaklara bağlanır).",
+    comment="Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
 )
 
 CalendarDay = sa.Table(
@@ -90,7 +90,7 @@ CalendarDay = sa.Table(
     sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı (kod ya da kodların birleşimi)"),
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı"),
     schema="core",
-    comment="Takvimin gün bazında çalışma durumu.",
+    comment="Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
 )
 
 Resource = sa.Table(
@@ -171,7 +171,7 @@ ResourceCapacityProfile = sa.Table(
     sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı (kod ya da kodların birleşimi)"),
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı"),
     schema="core",
-    comment="Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz.",
+    comment="Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
 )
 
 ResourceDowntime = sa.Table(
@@ -190,7 +190,7 @@ ResourceDowntime = sa.Table(
     sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı (kod ya da kodların birleşimi)"),
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı"),
     schema="core",
-    comment="Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.",
+    comment="Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
 )
 
 ResourceEfficiency = sa.Table(
@@ -289,7 +289,7 @@ Shift = sa.Table(
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı"),
     sa.Index("UX_Shift_Code", "Code", unique=True, mssql_where=sa.text("VersionTo IS NULL")),
     schema="core",
-    comment="Vardiya tanımı.",
+    comment="Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
 )
 
 ShiftPlan = sa.Table(
@@ -307,7 +307,7 @@ ShiftPlan = sa.Table(
     sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı (kod ya da kodların birleşimi)"),
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı"),
     schema="core",
-    comment="Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.",
+    comment="Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
 )
 
 WorkerAbsence = sa.Table(
@@ -1518,95 +1518,71 @@ stg_ResourceGroup = sa.Table(
     comment="Kaynak grubu (makine grubu, işçi kaynak grubu).",
 )
 
-stg_ResourceCapacityProfile = sa.Table(
-    "ResourceCapacityProfile", metadata,
-    sa.Column("StagingRowId", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Satır kimliği"),
-    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=False, comment="Yükleme partisi"),
-    sa.Column("RowStatus", sa.Unicode(15), nullable=False, comment="Yeni | Hatalı | Aktarıldı"),
-    sa.Column("ErrorText", sa.Unicode(400), nullable=True, comment="Hata açıklaması"),
-    sa.Column("ResourceCode", sa.Unicode(50), nullable=True, comment="Kaynak kodu"),
-    sa.Column("CapacityUnit", sa.Unicode(10), nullable=True, comment="Kapasite birimi; Resource.CapacityUnit'ten farklıysa satır hata"),
-    sa.Column("ValidFrom", sa.Date(), nullable=True, comment="Başlangıç"),
-    sa.Column("ValidTo", sa.Date(), nullable=True, comment="Bitiş"),
-    sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=True, comment="Bu aralıktaki günlük kapasite"),
-    sa.Index("UX_ResourceCapacityProfile_ResourceCode_ValidFrom", "ResourceCode", "ValidFrom", unique=True),
-    schema="stg",
-    comment="Günlük kapasitenin dönemsel değişikliği. Birim kontrol için gelir; ana tabloda saklanmaz.",
-)
-
-stg_Calendar = sa.Table(
-    "Calendar", metadata,
-    sa.Column("StagingRowId", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Satır kimliği"),
-    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=False, comment="Yükleme partisi"),
-    sa.Column("RowStatus", sa.Unicode(15), nullable=False, comment="Yeni | Hatalı | Aktarıldı"),
-    sa.Column("ErrorText", sa.Unicode(400), nullable=True, comment="Hata açıklaması"),
-    sa.Column("Code", sa.Unicode(30), nullable=True, comment="Takvim kodu"),
-    sa.Column("Name", sa.Unicode(100), nullable=True, comment="Takvim adı"),
-    sa.Index("UX_Calendar_Code", "Code", unique=True),
-    schema="stg",
-    comment="Çalışma takvimi başlığı (kaynaklara bağlanır).",
-)
-
-stg_CalendarDay = sa.Table(
-    "CalendarDay", metadata,
-    sa.Column("StagingRowId", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Satır kimliği"),
-    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=False, comment="Yükleme partisi"),
-    sa.Column("RowStatus", sa.Unicode(15), nullable=False, comment="Yeni | Hatalı | Aktarıldı"),
-    sa.Column("ErrorText", sa.Unicode(400), nullable=True, comment="Hata açıklaması"),
-    sa.Column("CalendarCode", sa.Unicode(30), nullable=True, comment="Takvim"),
-    sa.Column("Date", sa.Date(), nullable=True, comment="Gün"),
-    sa.Column("IsWorkingDay", sa.Boolean(), nullable=True, comment="Çalışma günü mü"),
-    sa.Column("WorkingFraction", sa.Numeric(5, 4), nullable=True, comment="Günün çalışılan oranı (yarım gün 0,5)"),
-    sa.Index("UX_CalendarDay_CalendarCode", "CalendarCode", unique=True),
-    schema="stg",
-    comment="Takvimin gün bazında çalışma durumu.",
-)
-
-stg_Shift = sa.Table(
-    "Shift", metadata,
+stg_CompetenceGroup = sa.Table(
+    "CompetenceGroup", metadata,
     sa.Column("StagingRowId", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Satır kimliği"),
     sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=False, comment="Yükleme partisi"),
     sa.Column("RowStatus", sa.Unicode(15), nullable=False, comment="Yeni | Hatalı | Aktarıldı"),
     sa.Column("ErrorText", sa.Unicode(400), nullable=True, comment="Hata açıklaması"),
     sa.Column("LocationCode", sa.Unicode(30), nullable=True, comment="Lokasyon kodu"),
-    sa.Column("Code", sa.Unicode(20), nullable=True, comment="Vardiya kodu"),
-    sa.Column("StartTime", sa.Time(), nullable=True, comment="Başlangıç saati"),
-    sa.Column("EndTime", sa.Time(), nullable=True, comment="Bitiş saati"),
-    sa.Column("BreakMinutes", sa.Integer(), nullable=True, comment="Mola süresi (dk)"),
-    sa.Index("UX_Shift_Code", "Code", unique=True),
+    sa.Column("Code", sa.Unicode(50), nullable=True, comment="Grup kodu"),
+    sa.Column("Name", sa.Unicode(150), nullable=True, comment="Grup adı"),
+    sa.Index("UX_CompetenceGroup_Code", "Code", unique=True),
     schema="stg",
-    comment="Vardiya tanımı.",
+    comment="İşçi yetkinlik grubu.",
 )
 
-stg_ShiftPlan = sa.Table(
-    "ShiftPlan", metadata,
+stg_Worker = sa.Table(
+    "Worker", metadata,
     sa.Column("StagingRowId", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Satır kimliği"),
     sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=False, comment="Yükleme partisi"),
     sa.Column("RowStatus", sa.Unicode(15), nullable=False, comment="Yeni | Hatalı | Aktarıldı"),
     sa.Column("ErrorText", sa.Unicode(400), nullable=True, comment="Hata açıklaması"),
-    sa.Column("CompetenceGroupCode", sa.Unicode(50), nullable=True, comment="Yetkinlik grubu (ya da)"),
-    sa.Column("ResourceGroupCode", sa.Unicode(50), nullable=True, comment="İşçi kaynak grubu"),
-    sa.Column("ShiftCode", sa.Unicode(30), nullable=True, comment="Vardiya kodu"),
-    sa.Column("ValidFrom", sa.Date(), nullable=True, comment="Başlangıç"),
-    sa.Column("ValidTo", sa.Date(), nullable=True, comment="Bitiş"),
-    sa.Column("Headcount", sa.Integer(), nullable=True, comment="Kişi sayısı"),
+    sa.Column("LocationCode", sa.Unicode(30), nullable=True, comment="Lokasyon kodu"),
+    sa.Column("Code", sa.Unicode(50), nullable=True, comment="Sicil no"),
+    sa.Column("Name", sa.Unicode(150), nullable=True, comment="Ad"),
+    sa.Column("ResourceGroupCode", sa.Unicode(50), nullable=True, comment="Bağlı olduğu işçi kaynak grubu kodu"),
+    sa.Column("IsActive", sa.Boolean(), nullable=True, comment="Aktif mi"),
+    sa.Column("AdditionalText1", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalText2", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalText3", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalText4", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalText5", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalText6", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalText7", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalNumber1", sa.Numeric(18, 4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalNumber2", sa.Numeric(18, 4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da"),
+    sa.Column("AdditionalNumber3", sa.Numeric(18, 4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da"),
+    sa.Index("UX_Worker_Code", "Code", unique=True),
     schema="stg",
-    comment="Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.",
+    comment="İşçi.",
 )
 
-stg_ResourceDowntime = sa.Table(
-    "ResourceDowntime", metadata,
+stg_WorkerCompetence = sa.Table(
+    "WorkerCompetence", metadata,
     sa.Column("StagingRowId", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Satır kimliği"),
     sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=False, comment="Yükleme partisi"),
     sa.Column("RowStatus", sa.Unicode(15), nullable=False, comment="Yeni | Hatalı | Aktarıldı"),
     sa.Column("ErrorText", sa.Unicode(400), nullable=True, comment="Hata açıklaması"),
-    sa.Column("ResourceCode", sa.Unicode(50), nullable=True, comment="Kaynak kodu"),
-    sa.Column("DowntimeType", sa.Unicode(10), nullable=True, comment="Bakım | Arıza"),
+    sa.Column("WorkerCode", sa.Unicode(50), nullable=True, comment="İşçi sicil no"),
+    sa.Column("CompetenceGroupCode", sa.Unicode(50), nullable=True, comment="Yetkinlik grubu kodu"),
+    sa.Index("UX_WorkerCompetence_WorkerCode_CompetenceGroupCode", "WorkerCode", "CompetenceGroupCode", unique=True),
+    schema="stg",
+    comment="İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa.",
+)
+
+stg_WorkerAbsence = sa.Table(
+    "WorkerAbsence", metadata,
+    sa.Column("StagingRowId", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Satır kimliği"),
+    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=False, comment="Yükleme partisi"),
+    sa.Column("RowStatus", sa.Unicode(15), nullable=False, comment="Yeni | Hatalı | Aktarıldı"),
+    sa.Column("ErrorText", sa.Unicode(400), nullable=True, comment="Hata açıklaması"),
+    sa.Column("WorkerCode", sa.Unicode(50), nullable=True, comment="İşçi sicil no"),
     sa.Column("StartAt", mssql.DATETIME2(), nullable=True, comment="Başlangıç"),
     sa.Column("EndAt", mssql.DATETIME2(), nullable=True, comment="Bitiş"),
-    sa.Column("AffectedQuantity", sa.Integer(), nullable=True, comment="Etkilenen kaynak adedi"),
+    sa.Column("AbsenceType", sa.Unicode(10), nullable=True, comment="İzin | Rapor"),
     schema="stg",
-    comment="Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.",
+    comment="Kişi bazında izin ve rapor.",
 )
 
 stg_Supplier = sa.Table(

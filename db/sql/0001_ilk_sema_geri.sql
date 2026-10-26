@@ -74,6 +74,18 @@ DROP TABLE adm.[DataVersionEntity];
 
 GO
 
+DROP TABLE stg.[WorkerCompetence];
+
+GO
+
+DROP TABLE stg.[WorkerAbsence];
+
+GO
+
+DROP TABLE stg.[Worker];
+
+GO
+
 DROP TABLE stg.[WorkOrderOperation];
 
 GO
@@ -102,14 +114,6 @@ DROP TABLE stg.[Stock];
 
 GO
 
-DROP TABLE stg.[ShiftPlan];
-
-GO
-
-DROP TABLE stg.[Shift];
-
-GO
-
 DROP TABLE stg.[SalesOrderLine];
 
 GO
@@ -119,14 +123,6 @@ DROP TABLE stg.[Routing];
 GO
 
 DROP TABLE stg.[ResourceGroup];
-
-GO
-
-DROP TABLE stg.[ResourceDowntime];
-
-GO
-
-DROP TABLE stg.[ResourceCapacityProfile];
 
 GO
 
@@ -174,11 +170,7 @@ DROP TABLE stg.[Customer];
 
 GO
 
-DROP TABLE stg.[CalendarDay];
-
-GO
-
-DROP TABLE stg.[Calendar];
+DROP TABLE stg.[CompetenceGroup];
 
 GO
 

@@ -94,10 +94,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Lokasyon ve birim (Location, UnitOfMeasure, UomConversion) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code · MaterialCode + From + To | Zorunlu |
 | Ürün ağacı (ProductionVersion, BOM) | Ana veri | API · SQL · Excel | ERP | Gece tam | MaterialCode + VersionCode · + ComponentMaterialCode | Zorunlu |
 | Rota (Routing) | Ana veri | API · SQL · Excel | ERP | Gece tam | RouteCode + OpNo + SeqNo + ResourceCode | Zorunlu |
-| Kaynak (Resource, ResourceGroup, ResourceCapacityProfile) | Ana veri | Excel · SQL · API | ERP, Smartchain alanları ayrı | Gece tam / elle | Code | Zorunlu |
-| Takvim ve gün (Calendar, CalendarDay) | Ana veri | Excel · SQL | ERP ya da Smartchain | Haftalık / elle | Code · CalendarCode + Date | Zorunlu |
-| Vardiya ve plan (Shift, ShiftPlan) | Ana veri | Excel · SQL | Smartchain (ERP'de yoksa) | Elle | Code · grup+vardiya+tarih | İşçi grubu varsa |
-| Duruş (ResourceDowntime) | Ana veri | Excel · API | ERP bakım ya da Smartchain | Gece / elle | ResourceCode + StartAt | İsteğe bağlı |
+| Kaynak (Resource, ResourceGroup) | Ana veri | Excel · SQL · API | ERP, Smartchain alanları ayrı | Gece tam / elle | Code | Zorunlu |
+| İşçi, yetkinlik ve izin (CompetenceGroup, Worker, WorkerCompetence, WorkerAbsence) | Ana veri · İşlem verisi | API · SQL · Excel | ERP | Gece tam | Code · WorkerCode + CompetenceGroupCode · WorkerCode + StartAt | İşçi grubu varsa |
+| Takvim ve gün (Calendar, CalendarDay) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | Zorunlu |
+| Vardiya ve plan (Shift, ShiftPlan) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | İşçi grubu varsa |
+| Duruş ve kapasite profili (ResourceDowntime, ResourceCapacityProfile) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | İsteğe bağlı |
 | Tedarikçi ve malzeme-tedarikçi (Supplier, MaterialSupplier) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code · MaterialCode + SupplierCode | Zorunlu |
 | Müşteri (Customer) | Ana veri | API · SQL | ERP | Gece tam | Code | Zorunlu |
 | Proje (Project, ProjectGroup) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code | Proje bazlı planlamada |
@@ -316,80 +317,53 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### stg.ResourceCapacityProfile
+### stg.CompetenceGroup
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Günlük kapasitenin dönemsel değişikliği. Birim kontrol için gelir; ana tabloda saklanmaz.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
-
-| ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
-|---|---|---|---|---|---|---|
-| ResourceCode | nvarchar(50) | UK,REF | E | Kaynak kodu | Kural ya da elle | hata (satır atlanır) |
-| CapacityUnit | nvarchar(10) |  | E | Kapasite birimi; Resource.CapacityUnit'ten farklıysa satır hata | Kural ya da elle | hata (satır atlanır) |
-| ValidFrom | date | UK | E | Başlangıç | Kural ya da elle | hata (satır atlanır) |
-| ValidTo | date |  | E | Bitiş | Kural ya da elle | hata (satır atlanır) |
-| DailyCapacity | decimal(18,4) |  | E | Bu aralıktaki günlük kapasite | Kural ya da elle | hata (satır atlanır) |
-
-### stg.Calendar
-<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Ortak</sub>
-
-- Çalışma takvimi başlığı (kaynaklara bağlanır).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
-
-| ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
-|---|---|---|---|---|---|---|
-| Code | nvarchar(30) | UK | E | Takvim kodu | ERP, yoksa kural | kural ya da elle |
-| Name | nvarchar(100) |  | H | Takvim adı | ERP, yoksa kural | kural ya da elle |
-
-### stg.CalendarDay
-<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Ortak</sub>
-
-- Takvimin gün bazında çalışma durumu.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
-
-| ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
-|---|---|---|---|---|---|---|
-| CalendarCode | nvarchar(30) | UK,REF | E | Takvim | ERP, yoksa kural | kural ya da elle |
-| Date | date | PK | E | Gün | ERP, yoksa kural | kural ya da elle |
-| IsWorkingDay | bit |  | E | Çalışma günü mü | ERP, yoksa kural | kural ya da elle |
-| WorkingFraction | decimal(5,4) |  | H | Günün çalışılan oranı (yarım gün 0,5) | Kural ya da elle | varsayılan 1 |
-
-### stg.Shift
-<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
-
-- Vardiya tanımı.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- İşçi yetkinlik grubu.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
-| Code | nvarchar(20) | UK | E | Vardiya kodu | ERP, yoksa kural | kural ya da elle |
-| StartTime | time |  | E | Başlangıç saati | ERP, yoksa kural | kural ya da elle |
-| EndTime | time |  | E | Bitiş saati | ERP, yoksa kural | kural ya da elle |
-| BreakMinutes | int |  | H | Mola süresi (dk) | ERP, yoksa kural | kural ya da elle |
+| Code | nvarchar(50) | UK | E | Grup kodu | ERP | hata (satır atlanır) |
+| Name | nvarchar(150) |  | H | Grup adı | ERP | boş kalır |
 
-### stg.ShiftPlan
+### stg.Worker
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- İşçi.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
 |---|---|---|---|---|---|---|
-| CompetenceGroupCode | nvarchar(50) | REF | H | Yetkinlik grubu (ya da) | ERP, yoksa kural | kural ya da elle |
-| ResourceGroupCode | nvarchar(50) | REF | H | İşçi kaynak grubu | ERP, yoksa kural | kural ya da elle |
-| ShiftCode | nvarchar(30) | REF | E | Vardiya kodu | ERP, yoksa kural | kural ya da elle |
-| ValidFrom | date |  | E | Başlangıç | ERP, yoksa kural | kural ya da elle |
-| ValidTo | date |  | E | Bitiş | ERP, yoksa kural | kural ya da elle |
-| Headcount | int |  | E | Kişi sayısı | ERP, yoksa kural | kural ya da elle |
+| LocationCode | nvarchar(30) | REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
+| Code | nvarchar(50) | UK | E | Sicil no | ERP | hata (satır atlanır) |
+| Name | nvarchar(150) |  | H | Ad | ERP | boş kalır |
+| ResourceGroupCode | nvarchar(50) | REF | H | Bağlı olduğu işçi kaynak grubu kodu | ERP, yoksa kural | kural ya da elle |
+| IsActive | bit |  | H | Aktif mi | ERP | varsayılan 1 |
+| AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
+| AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### stg.ResourceDowntime
+### stg.WorkerCompetence
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
 |---|---|---|---|---|---|---|
-| ResourceCode | nvarchar(50) | REF | E | Kaynak kodu | ERP, yoksa kural | kural ya da elle |
-| DowntimeType | nvarchar(10) |  | E | Bakım \| Arıza | ERP, yoksa kural | kural ya da elle |
-| StartAt | datetime2 |  | E | Başlangıç | ERP, yoksa kural | kural ya da elle |
-| EndAt | datetime2 |  | E | Bitiş | ERP, yoksa kural | kural ya da elle |
-| AffectedQuantity | int |  | E | Etkilenen kaynak adedi | ERP, yoksa kural | kural ya da elle |
+| WorkerCode | nvarchar(50) | UK,REF | E | İşçi sicil no | ERP | hata (satır atlanır) |
+| CompetenceGroupCode | nvarchar(50) | UK,REF | E | Yetkinlik grubu kodu | ERP | hata (satır atlanır) |
+
+### stg.WorkerAbsence
+<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
+
+- Kişi bazında izin ve rapor.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+
+| ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | YOKSA |
+|---|---|---|---|---|---|---|
+| WorkerCode | nvarchar(50) | REF | E | İşçi sicil no | ERP | hata (satır atlanır) |
+| StartAt | datetime2 |  | E | Başlangıç | ERP | hata (satır atlanır) |
+| EndAt | datetime2 |  | E | Bitiş | ERP | hata (satır atlanır) |
+| AbsenceType | nvarchar(10) |  | E | İzin \| Rapor | ERP | hata (satır atlanır) |
 
 ### stg.Supplier
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>

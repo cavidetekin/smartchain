@@ -908,7 +908,7 @@ CREATE TABLE core.[Calendar] (
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Çalışma takvimi başlığı (kaynaklara bağlanır).', 'schema', core, 'table', [Calendar];
+execute sp_addextendedproperty 'MS_Description', N'Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain''de ekrandan girilir; entegrasyondan gelmez (K-65).', 'schema', core, 'table', [Calendar];
 
 GO
 
@@ -964,7 +964,7 @@ CREATE TABLE core.[CalendarDay] (
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Takvimin gün bazında çalışma durumu.', 'schema', core, 'table', [CalendarDay];
+execute sp_addextendedproperty 'MS_Description', N'Takvimin gün bazında çalışma durumu. Smartchain''de ekrandan girilir; entegrasyondan gelmez (K-65).', 'schema', core, 'table', [CalendarDay];
 
 GO
 
@@ -2395,7 +2395,7 @@ CREATE TABLE core.[ResourceCapacityProfile] (
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit''i; ekranda gösterilir, ayrı saklanmaz.', 'schema', core, 'table', [ResourceCapacityProfile];
+execute sp_addextendedproperty 'MS_Description', N'Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit''i; ekranda gösterilir, ayrı saklanmaz. Smartchain''de ekrandan girilir; entegrasyondan gelmez (K-65).', 'schema', core, 'table', [ResourceCapacityProfile];
 
 GO
 
@@ -2463,7 +2463,7 @@ CREATE TABLE core.[ResourceDowntime] (
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.', 'schema', core, 'table', [ResourceDowntime];
+execute sp_addextendedproperty 'MS_Description', N'Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain''de ekrandan girilir; entegrasyondan gelmez (K-65).', 'schema', core, 'table', [ResourceDowntime];
 
 GO
 
@@ -2955,7 +2955,7 @@ CREATE TABLE core.[Shift] (
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Vardiya tanımı.', 'schema', core, 'table', [Shift];
+execute sp_addextendedproperty 'MS_Description', N'Vardiya tanımı. Smartchain''de ekrandan girilir; entegrasyondan gelmez (K-65).', 'schema', core, 'table', [Shift];
 
 GO
 
@@ -3026,7 +3026,7 @@ CREATE TABLE core.[ShiftPlan] (
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.', 'schema', core, 'table', [ShiftPlan];
+execute sp_addextendedproperty 'MS_Description', N'Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain''de ekrandan girilir; entegrasyondan gelmez (K-65).', 'schema', core, 'table', [ShiftPlan];
 
 GO
 
@@ -4586,103 +4586,53 @@ CREATE UNIQUE INDEX [UX_BOM_MaterialCode_ProductionVersionCode] ON stg.[BOM] ([M
 
 GO
 
-CREATE TABLE stg.[Calendar] (
+CREATE TABLE stg.[CompetenceGroup] (
     [StagingRowId] BIGINT NOT NULL IDENTITY, 
     [ImportBatchId] BIGINT NOT NULL, 
     [RowStatus] NVARCHAR(15) NOT NULL, 
     [ErrorText] NVARCHAR(400) NULL, 
-    [Code] NVARCHAR(30) NULL, 
-    [Name] NVARCHAR(100) NULL, 
-    CONSTRAINT [PK_Calendar] PRIMARY KEY ([StagingRowId]), 
-    CONSTRAINT [FK_Calendar_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
+    [LocationCode] NVARCHAR(30) NULL, 
+    [Code] NVARCHAR(50) NULL, 
+    [Name] NVARCHAR(150) NULL, 
+    CONSTRAINT [PK_CompetenceGroup] PRIMARY KEY ([StagingRowId]), 
+    CONSTRAINT [FK_CompetenceGroup_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
 );
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Çalışma takvimi başlığı (kaynaklara bağlanır).', 'schema', stg, 'table', [Calendar];
+execute sp_addextendedproperty 'MS_Description', N'İşçi yetkinlik grubu.', 'schema', stg, 'table', [CompetenceGroup];
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [Calendar], 'column', [StagingRowId];
+execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [CompetenceGroup], 'column', [StagingRowId];
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [Calendar], 'column', [ImportBatchId];
+execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [CompetenceGroup], 'column', [ImportBatchId];
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [Calendar], 'column', [RowStatus];
+execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [CompetenceGroup], 'column', [RowStatus];
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [Calendar], 'column', [ErrorText];
+execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [CompetenceGroup], 'column', [ErrorText];
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Takvim kodu', 'schema', stg, 'table', [Calendar], 'column', [Code];
+execute sp_addextendedproperty 'MS_Description', N'Lokasyon kodu', 'schema', stg, 'table', [CompetenceGroup], 'column', [LocationCode];
 
 GO
 
-execute sp_addextendedproperty 'MS_Description', N'Takvim adı', 'schema', stg, 'table', [Calendar], 'column', [Name];
+execute sp_addextendedproperty 'MS_Description', N'Grup kodu', 'schema', stg, 'table', [CompetenceGroup], 'column', [Code];
 
 GO
 
-CREATE UNIQUE INDEX [UX_Calendar_Code] ON stg.[Calendar] ([Code]);
+execute sp_addextendedproperty 'MS_Description', N'Grup adı', 'schema', stg, 'table', [CompetenceGroup], 'column', [Name];
 
 GO
 
-CREATE TABLE stg.[CalendarDay] (
-    [StagingRowId] BIGINT NOT NULL IDENTITY, 
-    [ImportBatchId] BIGINT NOT NULL, 
-    [RowStatus] NVARCHAR(15) NOT NULL, 
-    [ErrorText] NVARCHAR(400) NULL, 
-    [CalendarCode] NVARCHAR(30) NULL, 
-    [Date] DATETIME NULL, 
-    [IsWorkingDay] BIT NULL, 
-    [WorkingFraction] NUMERIC(5, 4) NULL, 
-    CONSTRAINT [PK_CalendarDay] PRIMARY KEY ([StagingRowId]), 
-    CONSTRAINT [FK_CalendarDay_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
-);
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Takvimin gün bazında çalışma durumu.', 'schema', stg, 'table', [CalendarDay];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [CalendarDay], 'column', [StagingRowId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [CalendarDay], 'column', [ImportBatchId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [CalendarDay], 'column', [RowStatus];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [CalendarDay], 'column', [ErrorText];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Takvim', 'schema', stg, 'table', [CalendarDay], 'column', [CalendarCode];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Gün', 'schema', stg, 'table', [CalendarDay], 'column', [Date];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Çalışma günü mü', 'schema', stg, 'table', [CalendarDay], 'column', [IsWorkingDay];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Günün çalışılan oranı (yarım gün 0,5)', 'schema', stg, 'table', [CalendarDay], 'column', [WorkingFraction];
-
-GO
-
-CREATE UNIQUE INDEX [UX_CalendarDay_CalendarCode] ON stg.[CalendarDay] ([CalendarCode]);
+CREATE UNIQUE INDEX [UX_CompetenceGroup_Code] ON stg.[CompetenceGroup] ([Code]);
 
 GO
 
@@ -5955,122 +5905,6 @@ CREATE UNIQUE INDEX [UX_Resource_Code] ON stg.[Resource] ([Code]);
 
 GO
 
-CREATE TABLE stg.[ResourceCapacityProfile] (
-    [StagingRowId] BIGINT NOT NULL IDENTITY, 
-    [ImportBatchId] BIGINT NOT NULL, 
-    [RowStatus] NVARCHAR(15) NOT NULL, 
-    [ErrorText] NVARCHAR(400) NULL, 
-    [ResourceCode] NVARCHAR(50) NULL, 
-    [CapacityUnit] NVARCHAR(10) NULL, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
-    [DailyCapacity] NUMERIC(18, 4) NULL, 
-    CONSTRAINT [PK_ResourceCapacityProfile] PRIMARY KEY ([StagingRowId]), 
-    CONSTRAINT [FK_ResourceCapacityProfile_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
-);
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Günlük kapasitenin dönemsel değişikliği. Birim kontrol için gelir; ana tabloda saklanmaz.', 'schema', stg, 'table', [ResourceCapacityProfile];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [StagingRowId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [ImportBatchId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [RowStatus];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [ErrorText];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Kaynak kodu', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [ResourceCode];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Kapasite birimi; Resource.CapacityUnit''ten farklıysa satır hata', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [CapacityUnit];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Başlangıç', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [ValidFrom];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bitiş', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [ValidTo];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bu aralıktaki günlük kapasite', 'schema', stg, 'table', [ResourceCapacityProfile], 'column', [DailyCapacity];
-
-GO
-
-CREATE UNIQUE INDEX [UX_ResourceCapacityProfile_ResourceCode_ValidFrom] ON stg.[ResourceCapacityProfile] ([ResourceCode], [ValidFrom]);
-
-GO
-
-CREATE TABLE stg.[ResourceDowntime] (
-    [StagingRowId] BIGINT NOT NULL IDENTITY, 
-    [ImportBatchId] BIGINT NOT NULL, 
-    [RowStatus] NVARCHAR(15) NOT NULL, 
-    [ErrorText] NVARCHAR(400) NULL, 
-    [ResourceCode] NVARCHAR(50) NULL, 
-    [DowntimeType] NVARCHAR(10) NULL, 
-    [StartAt] DATETIME2 NULL, 
-    [EndAt] DATETIME2 NULL, 
-    [AffectedQuantity] INTEGER NULL, 
-    CONSTRAINT [PK_ResourceDowntime] PRIMARY KEY ([StagingRowId]), 
-    CONSTRAINT [FK_ResourceDowntime_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
-);
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.', 'schema', stg, 'table', [ResourceDowntime];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [ResourceDowntime], 'column', [StagingRowId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [ResourceDowntime], 'column', [ImportBatchId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [ResourceDowntime], 'column', [RowStatus];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [ResourceDowntime], 'column', [ErrorText];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Kaynak kodu', 'schema', stg, 'table', [ResourceDowntime], 'column', [ResourceCode];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bakım | Arıza', 'schema', stg, 'table', [ResourceDowntime], 'column', [DowntimeType];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Başlangıç', 'schema', stg, 'table', [ResourceDowntime], 'column', [StartAt];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bitiş', 'schema', stg, 'table', [ResourceDowntime], 'column', [EndAt];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Etkilenen kaynak adedi', 'schema', stg, 'table', [ResourceDowntime], 'column', [AffectedQuantity];
-
-GO
-
 CREATE TABLE stg.[ResourceGroup] (
     [StagingRowId] BIGINT NOT NULL IDENTITY, 
     [ImportBatchId] BIGINT NOT NULL, 
@@ -6433,127 +6267,6 @@ execute sp_addextendedproperty 'MS_Description', N'Ek sayı alanları; etiketi F
 GO
 
 CREATE UNIQUE INDEX [UX_SalesOrderLine_OrderNo_LineNo_LineItemNo] ON stg.[SalesOrderLine] ([OrderNo], [LineNo], [LineItemNo]);
-
-GO
-
-CREATE TABLE stg.[Shift] (
-    [StagingRowId] BIGINT NOT NULL IDENTITY, 
-    [ImportBatchId] BIGINT NOT NULL, 
-    [RowStatus] NVARCHAR(15) NOT NULL, 
-    [ErrorText] NVARCHAR(400) NULL, 
-    [LocationCode] NVARCHAR(30) NULL, 
-    [Code] NVARCHAR(20) NULL, 
-    [StartTime] DATETIME NULL, 
-    [EndTime] DATETIME NULL, 
-    [BreakMinutes] INTEGER NULL, 
-    CONSTRAINT [PK_Shift] PRIMARY KEY ([StagingRowId]), 
-    CONSTRAINT [FK_Shift_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
-);
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Vardiya tanımı.', 'schema', stg, 'table', [Shift];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [Shift], 'column', [StagingRowId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [Shift], 'column', [ImportBatchId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [Shift], 'column', [RowStatus];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [Shift], 'column', [ErrorText];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Lokasyon kodu', 'schema', stg, 'table', [Shift], 'column', [LocationCode];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Vardiya kodu', 'schema', stg, 'table', [Shift], 'column', [Code];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Başlangıç saati', 'schema', stg, 'table', [Shift], 'column', [StartTime];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bitiş saati', 'schema', stg, 'table', [Shift], 'column', [EndTime];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Mola süresi (dk)', 'schema', stg, 'table', [Shift], 'column', [BreakMinutes];
-
-GO
-
-CREATE UNIQUE INDEX [UX_Shift_Code] ON stg.[Shift] ([Code]);
-
-GO
-
-CREATE TABLE stg.[ShiftPlan] (
-    [StagingRowId] BIGINT NOT NULL IDENTITY, 
-    [ImportBatchId] BIGINT NOT NULL, 
-    [RowStatus] NVARCHAR(15) NOT NULL, 
-    [ErrorText] NVARCHAR(400) NULL, 
-    [CompetenceGroupCode] NVARCHAR(50) NULL, 
-    [ResourceGroupCode] NVARCHAR(50) NULL, 
-    [ShiftCode] NVARCHAR(30) NULL, 
-    [ValidFrom] DATETIME NULL, 
-    [ValidTo] DATETIME NULL, 
-    [Headcount] INTEGER NULL, 
-    CONSTRAINT [PK_ShiftPlan] PRIMARY KEY ([StagingRowId]), 
-    CONSTRAINT [FK_ShiftPlan_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
-);
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.', 'schema', stg, 'table', [ShiftPlan];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [ShiftPlan], 'column', [StagingRowId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [ShiftPlan], 'column', [ImportBatchId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [ShiftPlan], 'column', [RowStatus];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [ShiftPlan], 'column', [ErrorText];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Yetkinlik grubu (ya da)', 'schema', stg, 'table', [ShiftPlan], 'column', [CompetenceGroupCode];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'İşçi kaynak grubu', 'schema', stg, 'table', [ShiftPlan], 'column', [ResourceGroupCode];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Vardiya kodu', 'schema', stg, 'table', [ShiftPlan], 'column', [ShiftCode];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Başlangıç', 'schema', stg, 'table', [ShiftPlan], 'column', [ValidFrom];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bitiş', 'schema', stg, 'table', [ShiftPlan], 'column', [ValidTo];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Kişi sayısı', 'schema', stg, 'table', [ShiftPlan], 'column', [Headcount];
 
 GO
 
@@ -7149,6 +6862,212 @@ execute sp_addextendedproperty 'MS_Description', N'Ek sayı alanları; etiketi F
 GO
 
 execute sp_addextendedproperty 'MS_Description', N'Ek sayı alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [WorkOrderOperation], 'column', [AdditionalNumber2];
+
+GO
+
+CREATE TABLE stg.[Worker] (
+    [StagingRowId] BIGINT NOT NULL IDENTITY, 
+    [ImportBatchId] BIGINT NOT NULL, 
+    [RowStatus] NVARCHAR(15) NOT NULL, 
+    [ErrorText] NVARCHAR(400) NULL, 
+    [LocationCode] NVARCHAR(30) NULL, 
+    [Code] NVARCHAR(50) NULL, 
+    [Name] NVARCHAR(150) NULL, 
+    [ResourceGroupCode] NVARCHAR(50) NULL, 
+    [IsActive] BIT NULL, 
+    [AdditionalText1] NVARCHAR(255) NULL, 
+    [AdditionalText2] NVARCHAR(255) NULL, 
+    [AdditionalText3] NVARCHAR(255) NULL, 
+    [AdditionalText4] NVARCHAR(255) NULL, 
+    [AdditionalText5] NVARCHAR(255) NULL, 
+    [AdditionalText6] NVARCHAR(255) NULL, 
+    [AdditionalText7] NVARCHAR(255) NULL, 
+    [AdditionalNumber1] NUMERIC(18, 4) NULL, 
+    [AdditionalNumber2] NUMERIC(18, 4) NULL, 
+    [AdditionalNumber3] NUMERIC(18, 4) NULL, 
+    CONSTRAINT [PK_Worker] PRIMARY KEY ([StagingRowId]), 
+    CONSTRAINT [FK_Worker_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
+);
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'İşçi.', 'schema', stg, 'table', [Worker];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [Worker], 'column', [StagingRowId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [Worker], 'column', [ImportBatchId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [Worker], 'column', [RowStatus];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [Worker], 'column', [ErrorText];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Lokasyon kodu', 'schema', stg, 'table', [Worker], 'column', [LocationCode];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Sicil no', 'schema', stg, 'table', [Worker], 'column', [Code];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ad', 'schema', stg, 'table', [Worker], 'column', [Name];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Bağlı olduğu işçi kaynak grubu kodu', 'schema', stg, 'table', [Worker], 'column', [ResourceGroupCode];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Aktif mi', 'schema', stg, 'table', [Worker], 'column', [IsActive];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek metin alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalText1];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek metin alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalText2];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek metin alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalText3];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek metin alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalText4];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek metin alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalText5];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek metin alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalText6];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek metin alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalText7];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek sayı alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalNumber1];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek sayı alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalNumber2];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Ek sayı alanları; etiketi FieldDefinition''da', 'schema', stg, 'table', [Worker], 'column', [AdditionalNumber3];
+
+GO
+
+CREATE UNIQUE INDEX [UX_Worker_Code] ON stg.[Worker] ([Code]);
+
+GO
+
+CREATE TABLE stg.[WorkerAbsence] (
+    [StagingRowId] BIGINT NOT NULL IDENTITY, 
+    [ImportBatchId] BIGINT NOT NULL, 
+    [RowStatus] NVARCHAR(15) NOT NULL, 
+    [ErrorText] NVARCHAR(400) NULL, 
+    [WorkerCode] NVARCHAR(50) NULL, 
+    [StartAt] DATETIME2 NULL, 
+    [EndAt] DATETIME2 NULL, 
+    [AbsenceType] NVARCHAR(10) NULL, 
+    CONSTRAINT [PK_WorkerAbsence] PRIMARY KEY ([StagingRowId]), 
+    CONSTRAINT [FK_WorkerAbsence_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
+);
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Kişi bazında izin ve rapor.', 'schema', stg, 'table', [WorkerAbsence];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [WorkerAbsence], 'column', [StagingRowId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [WorkerAbsence], 'column', [ImportBatchId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [WorkerAbsence], 'column', [RowStatus];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [WorkerAbsence], 'column', [ErrorText];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'İşçi sicil no', 'schema', stg, 'table', [WorkerAbsence], 'column', [WorkerCode];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Başlangıç', 'schema', stg, 'table', [WorkerAbsence], 'column', [StartAt];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Bitiş', 'schema', stg, 'table', [WorkerAbsence], 'column', [EndAt];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'İzin | Rapor', 'schema', stg, 'table', [WorkerAbsence], 'column', [AbsenceType];
+
+GO
+
+CREATE TABLE stg.[WorkerCompetence] (
+    [StagingRowId] BIGINT NOT NULL IDENTITY, 
+    [ImportBatchId] BIGINT NOT NULL, 
+    [RowStatus] NVARCHAR(15) NOT NULL, 
+    [ErrorText] NVARCHAR(400) NULL, 
+    [WorkerCode] NVARCHAR(50) NULL, 
+    [CompetenceGroupCode] NVARCHAR(50) NULL, 
+    CONSTRAINT [PK_WorkerCompetence] PRIMARY KEY ([StagingRowId]), 
+    CONSTRAINT [FK_WorkerCompetence_ImportBatchId] FOREIGN KEY([ImportBatchId]) REFERENCES adm.[ImportBatch] ([Id])
+);
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa.', 'schema', stg, 'table', [WorkerCompetence];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Satır kimliği', 'schema', stg, 'table', [WorkerCompetence], 'column', [StagingRowId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Yükleme partisi', 'schema', stg, 'table', [WorkerCompetence], 'column', [ImportBatchId];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Yeni | Hatalı | Aktarıldı', 'schema', stg, 'table', [WorkerCompetence], 'column', [RowStatus];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Hata açıklaması', 'schema', stg, 'table', [WorkerCompetence], 'column', [ErrorText];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'İşçi sicil no', 'schema', stg, 'table', [WorkerCompetence], 'column', [WorkerCode];
+
+GO
+
+execute sp_addextendedproperty 'MS_Description', N'Yetkinlik grubu kodu', 'schema', stg, 'table', [WorkerCompetence], 'column', [CompetenceGroupCode];
+
+GO
+
+CREATE UNIQUE INDEX [UX_WorkerCompetence_WorkerCode_CompetenceGroupCode] ON stg.[WorkerCompetence] ([WorkerCode], [CompetenceGroupCode]);
 
 GO
 

@@ -264,7 +264,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_Calendar_ImportBatchId')),
     sa.PrimaryKeyConstraint('Id', 'VersionFrom', name=op.f('PK_Calendar')),
     schema='core',
-    comment='Çalışma takvimi başlığı (kaynaklara bağlanır).'
+    comment="Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65)."
     )
     op.create_index('UX_Calendar_Code', 'Calendar', ['Code'], unique=True, schema='core', mssql_where=sa.text('VersionTo IS NULL'))
     op.create_table('CalendarDay',
@@ -280,7 +280,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_CalendarDay_ImportBatchId')),
     sa.PrimaryKeyConstraint('CalendarId', 'Date', 'VersionFrom', name=op.f('PK_CalendarDay')),
     schema='core',
-    comment='Takvimin gün bazında çalışma durumu.'
+    comment="Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65)."
     )
     op.create_index(op.f('IX_CalendarDay_CalendarId'), 'CalendarDay', ['CalendarId'], unique=False, schema='core')
     op.create_table('CompetenceGroup',
@@ -623,7 +623,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_ResourceCapacityProfile_ImportBatchId')),
     sa.PrimaryKeyConstraint('Id', 'VersionFrom', name=op.f('PK_ResourceCapacityProfile')),
     schema='core',
-    comment="Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz."
+    comment="Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65)."
     )
     op.create_index(op.f('IX_ResourceCapacityProfile_ResourceId'), 'ResourceCapacityProfile', ['ResourceId'], unique=False, schema='core')
     op.create_table('ResourceDowntime',
@@ -643,7 +643,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_ResourceDowntime_ImportBatchId')),
     sa.PrimaryKeyConstraint('Id', 'VersionFrom', name=op.f('PK_ResourceDowntime')),
     schema='core',
-    comment='Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.'
+    comment="Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65)."
     )
     op.create_index(op.f('IX_ResourceDowntime_ResourceId'), 'ResourceDowntime', ['ResourceId'], unique=False, schema='core')
     op.create_table('ResourceGroup',
@@ -759,7 +759,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['LocationId'], ['core.Location.Id'], name=op.f('FK_Shift_LocationId')),
     sa.PrimaryKeyConstraint('Id', 'VersionFrom', name=op.f('PK_Shift')),
     schema='core',
-    comment='Vardiya tanımı.'
+    comment="Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65)."
     )
     op.create_index('UX_Shift_Code', 'Shift', ['Code'], unique=True, schema='core', mssql_where=sa.text('VersionTo IS NULL'))
     op.create_table('ShiftPlan',
@@ -778,7 +778,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_ShiftPlan_ImportBatchId')),
     sa.PrimaryKeyConstraint('Id', 'VersionFrom', name=op.f('PK_ShiftPlan')),
     schema='core',
-    comment='Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.'
+    comment="Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65)."
     )
     op.create_index(op.f('IX_ShiftPlan_CompetenceGroupId'), 'ShiftPlan', ['CompetenceGroupId'], unique=False, schema='core')
     op.create_index(op.f('IX_ShiftPlan_ResourceGroupId'), 'ShiftPlan', ['ResourceGroupId'], unique=False, schema='core')
@@ -1172,34 +1172,20 @@ def upgrade():
     comment='Ürün ağacı satırı.'
     )
     op.create_index('UX_BOM_MaterialCode_ProductionVersionCode', 'BOM', ['MaterialCode', 'ProductionVersionCode'], unique=True, schema='stg')
-    op.create_table('Calendar',
+    op.create_table('CompetenceGroup',
     sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
     sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
     sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
     sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
-    sa.Column('Code', sa.Unicode(length=30), nullable=True, comment='Takvim kodu'),
-    sa.Column('Name', sa.Unicode(length=100), nullable=True, comment='Takvim adı'),
-    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_Calendar_ImportBatchId')),
-    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_Calendar')),
+    sa.Column('LocationCode', sa.Unicode(length=30), nullable=True, comment='Lokasyon kodu'),
+    sa.Column('Code', sa.Unicode(length=50), nullable=True, comment='Grup kodu'),
+    sa.Column('Name', sa.Unicode(length=150), nullable=True, comment='Grup adı'),
+    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_CompetenceGroup_ImportBatchId')),
+    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_CompetenceGroup')),
     schema='stg',
-    comment='Çalışma takvimi başlığı (kaynaklara bağlanır).'
+    comment='İşçi yetkinlik grubu.'
     )
-    op.create_index('UX_Calendar_Code', 'Calendar', ['Code'], unique=True, schema='stg')
-    op.create_table('CalendarDay',
-    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
-    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
-    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
-    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
-    sa.Column('CalendarCode', sa.Unicode(length=30), nullable=True, comment='Takvim'),
-    sa.Column('Date', sa.Date(), nullable=True, comment='Gün'),
-    sa.Column('IsWorkingDay', sa.Boolean(), nullable=True, comment='Çalışma günü mü'),
-    sa.Column('WorkingFraction', sa.Numeric(precision=5, scale=4), nullable=True, comment='Günün çalışılan oranı (yarım gün 0,5)'),
-    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_CalendarDay_ImportBatchId')),
-    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_CalendarDay')),
-    schema='stg',
-    comment='Takvimin gün bazında çalışma durumu.'
-    )
-    op.create_index('UX_CalendarDay_CalendarCode', 'CalendarDay', ['CalendarCode'], unique=True, schema='stg')
+    op.create_index('UX_CompetenceGroup_Code', 'CompetenceGroup', ['Code'], unique=True, schema='stg')
     op.create_table('Customer',
     sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
     sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
@@ -1497,37 +1483,6 @@ def upgrade():
     comment='Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.'
     )
     op.create_index('UX_Resource_Code', 'Resource', ['Code'], unique=True, schema='stg')
-    op.create_table('ResourceCapacityProfile',
-    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
-    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
-    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
-    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
-    sa.Column('ResourceCode', sa.Unicode(length=50), nullable=True, comment='Kaynak kodu'),
-    sa.Column('CapacityUnit', sa.Unicode(length=10), nullable=True, comment="Kapasite birimi; Resource.CapacityUnit'ten farklıysa satır hata"),
-    sa.Column('ValidFrom', sa.Date(), nullable=True, comment='Başlangıç'),
-    sa.Column('ValidTo', sa.Date(), nullable=True, comment='Bitiş'),
-    sa.Column('DailyCapacity', sa.Numeric(precision=18, scale=4), nullable=True, comment='Bu aralıktaki günlük kapasite'),
-    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_ResourceCapacityProfile_ImportBatchId')),
-    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_ResourceCapacityProfile')),
-    schema='stg',
-    comment='Günlük kapasitenin dönemsel değişikliği. Birim kontrol için gelir; ana tabloda saklanmaz.'
-    )
-    op.create_index('UX_ResourceCapacityProfile_ResourceCode_ValidFrom', 'ResourceCapacityProfile', ['ResourceCode', 'ValidFrom'], unique=True, schema='stg')
-    op.create_table('ResourceDowntime',
-    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
-    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
-    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
-    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
-    sa.Column('ResourceCode', sa.Unicode(length=50), nullable=True, comment='Kaynak kodu'),
-    sa.Column('DowntimeType', sa.Unicode(length=10), nullable=True, comment='Bakım | Arıza'),
-    sa.Column('StartAt', mssql.DATETIME2(), nullable=True, comment='Başlangıç'),
-    sa.Column('EndAt', mssql.DATETIME2(), nullable=True, comment='Bitiş'),
-    sa.Column('AffectedQuantity', sa.Integer(), nullable=True, comment='Etkilenen kaynak adedi'),
-    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_ResourceDowntime_ImportBatchId')),
-    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_ResourceDowntime')),
-    schema='stg',
-    comment='Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.'
-    )
     op.create_table('ResourceGroup',
     sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
     sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
@@ -1613,38 +1568,6 @@ def upgrade():
     comment='Müşteri sipariş satırı; teklifler Type = Teklif ile gelir. Vade: teyit tarihi, yoksa istek tarihi.'
     )
     op.create_index('UX_SalesOrderLine_OrderNo_LineNo_LineItemNo', 'SalesOrderLine', ['OrderNo', 'LineNo', 'LineItemNo'], unique=True, schema='stg')
-    op.create_table('Shift',
-    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
-    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
-    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
-    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
-    sa.Column('LocationCode', sa.Unicode(length=30), nullable=True, comment='Lokasyon kodu'),
-    sa.Column('Code', sa.Unicode(length=20), nullable=True, comment='Vardiya kodu'),
-    sa.Column('StartTime', sa.Time(), nullable=True, comment='Başlangıç saati'),
-    sa.Column('EndTime', sa.Time(), nullable=True, comment='Bitiş saati'),
-    sa.Column('BreakMinutes', sa.Integer(), nullable=True, comment='Mola süresi (dk)'),
-    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_Shift_ImportBatchId')),
-    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_Shift')),
-    schema='stg',
-    comment='Vardiya tanımı.'
-    )
-    op.create_index('UX_Shift_Code', 'Shift', ['Code'], unique=True, schema='stg')
-    op.create_table('ShiftPlan',
-    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
-    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
-    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
-    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
-    sa.Column('CompetenceGroupCode', sa.Unicode(length=50), nullable=True, comment='Yetkinlik grubu (ya da)'),
-    sa.Column('ResourceGroupCode', sa.Unicode(length=50), nullable=True, comment='İşçi kaynak grubu'),
-    sa.Column('ShiftCode', sa.Unicode(length=30), nullable=True, comment='Vardiya kodu'),
-    sa.Column('ValidFrom', sa.Date(), nullable=True, comment='Başlangıç'),
-    sa.Column('ValidTo', sa.Date(), nullable=True, comment='Bitiş'),
-    sa.Column('Headcount', sa.Integer(), nullable=True, comment='Kişi sayısı'),
-    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_ShiftPlan_ImportBatchId')),
-    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_ShiftPlan')),
-    schema='stg',
-    comment='Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.'
-    )
     op.create_table('Stock',
     sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
     sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
@@ -1791,6 +1714,59 @@ def upgrade():
     schema='stg',
     comment='İş emrinin operasyonları ve kalan iş.'
     )
+    op.create_table('Worker',
+    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
+    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
+    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
+    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
+    sa.Column('LocationCode', sa.Unicode(length=30), nullable=True, comment='Lokasyon kodu'),
+    sa.Column('Code', sa.Unicode(length=50), nullable=True, comment='Sicil no'),
+    sa.Column('Name', sa.Unicode(length=150), nullable=True, comment='Ad'),
+    sa.Column('ResourceGroupCode', sa.Unicode(length=50), nullable=True, comment='Bağlı olduğu işçi kaynak grubu kodu'),
+    sa.Column('IsActive', sa.Boolean(), nullable=True, comment='Aktif mi'),
+    sa.Column('AdditionalText1', sa.Unicode(length=255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalText2', sa.Unicode(length=255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalText3', sa.Unicode(length=255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalText4', sa.Unicode(length=255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalText5', sa.Unicode(length=255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalText6', sa.Unicode(length=255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalText7', sa.Unicode(length=255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalNumber1', sa.Numeric(precision=18, scale=4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalNumber2', sa.Numeric(precision=18, scale=4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da"),
+    sa.Column('AdditionalNumber3', sa.Numeric(precision=18, scale=4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da"),
+    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_Worker_ImportBatchId')),
+    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_Worker')),
+    schema='stg',
+    comment='İşçi.'
+    )
+    op.create_index('UX_Worker_Code', 'Worker', ['Code'], unique=True, schema='stg')
+    op.create_table('WorkerAbsence',
+    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
+    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
+    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
+    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
+    sa.Column('WorkerCode', sa.Unicode(length=50), nullable=True, comment='İşçi sicil no'),
+    sa.Column('StartAt', mssql.DATETIME2(), nullable=True, comment='Başlangıç'),
+    sa.Column('EndAt', mssql.DATETIME2(), nullable=True, comment='Bitiş'),
+    sa.Column('AbsenceType', sa.Unicode(length=10), nullable=True, comment='İzin | Rapor'),
+    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_WorkerAbsence_ImportBatchId')),
+    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_WorkerAbsence')),
+    schema='stg',
+    comment='Kişi bazında izin ve rapor.'
+    )
+    op.create_table('WorkerCompetence',
+    sa.Column('StagingRowId', sa.BigInteger(), autoincrement=True, nullable=False, comment='Satır kimliği'),
+    sa.Column('ImportBatchId', sa.BigInteger(), nullable=False, comment='Yükleme partisi'),
+    sa.Column('RowStatus', sa.Unicode(length=15), nullable=False, comment='Yeni | Hatalı | Aktarıldı'),
+    sa.Column('ErrorText', sa.Unicode(length=400), nullable=True, comment='Hata açıklaması'),
+    sa.Column('WorkerCode', sa.Unicode(length=50), nullable=True, comment='İşçi sicil no'),
+    sa.Column('CompetenceGroupCode', sa.Unicode(length=50), nullable=True, comment='Yetkinlik grubu kodu'),
+    sa.ForeignKeyConstraint(['ImportBatchId'], ['adm.ImportBatch.Id'], name=op.f('FK_WorkerCompetence_ImportBatchId')),
+    sa.PrimaryKeyConstraint('StagingRowId', name=op.f('PK_WorkerCompetence')),
+    schema='stg',
+    comment='İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa.'
+    )
+    op.create_index('UX_WorkerCompetence_WorkerCode_CompetenceGroupCode', 'WorkerCompetence', ['WorkerCode', 'CompetenceGroupCode'], unique=True, schema='stg')
     op.create_table('DataVersionEntity',
     sa.Column('DataVersionId', sa.BigInteger(), autoincrement=False, nullable=False, comment='Veri versiyonu'),
     sa.Column('EntityName', sa.Unicode(length=60), autoincrement=False, nullable=False, comment='Varlık'),
@@ -2041,6 +2017,9 @@ def downgrade():
     op.drop_table('Scenario', schema='planning')
     op.drop_table('PlanRun', schema='planning')
     op.drop_table('DataVersionEntity', schema='adm')
+    op.drop_table('WorkerCompetence', schema='stg')
+    op.drop_table('WorkerAbsence', schema='stg')
+    op.drop_table('Worker', schema='stg')
     op.drop_table('WorkOrderOperation', schema='stg')
     op.drop_table('WorkOrderComponent', schema='stg')
     op.drop_table('WorkOrder', schema='stg')
@@ -2048,13 +2027,9 @@ def downgrade():
     op.drop_table('UnitOfMeasure', schema='stg')
     op.drop_table('Supplier', schema='stg')
     op.drop_table('Stock', schema='stg')
-    op.drop_table('ShiftPlan', schema='stg')
-    op.drop_table('Shift', schema='stg')
     op.drop_table('SalesOrderLine', schema='stg')
     op.drop_table('Routing', schema='stg')
     op.drop_table('ResourceGroup', schema='stg')
-    op.drop_table('ResourceDowntime', schema='stg')
-    op.drop_table('ResourceCapacityProfile', schema='stg')
     op.drop_table('Resource', schema='stg')
     op.drop_table('PurchaseOrderLine', schema='stg')
     op.drop_table('ProjectGroup', schema='stg')
@@ -2066,8 +2041,7 @@ def downgrade():
     op.drop_table('Location', schema='stg')
     op.drop_table('Forecast', schema='stg')
     op.drop_table('Customer', schema='stg')
-    op.drop_table('CalendarDay', schema='stg')
-    op.drop_table('Calendar', schema='stg')
+    op.drop_table('CompetenceGroup', schema='stg')
     op.drop_table('BOM', schema='stg')
     op.drop_table('Workspace', schema='planning')
     op.drop_table('TimeBucketDefinition', schema='param')

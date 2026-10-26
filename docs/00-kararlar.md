@@ -70,6 +70,7 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | K-62 | Veritabanı beş şemadır: stg (entegrasyon), core (ana veri ve işlem verisi), param (parametre), planning (plan çıktıları), adm (veri yönetimi ve sistem). Entegrasyon ve ana tablo aynı adı taşır: stg.Material → core.Material. | Geliştirme 0.2 |
 | K-63 | Versiyonlu tablolarda birincil anahtar Id + VersionFrom; Id kaydın bütün versiyonlarında sabittir. Versiyonlu tabloya fiziksel FK konmaz, bütünlüğü aktarım (kod→Id) sağlar; tekillik yalnız güncel kayıtta (VersionTo boş) aranır. | Geliştirme 0.2 |
 | K-64 | Veritabanı şeması docs'tan üretilir (db/generate.py); geçişler Alembic ile, her geçişin geri adımı vardır. Tablo ve alan açıklamaları veritabanına da yazılır. | Geliştirme 0.2 |
+| K-65 | Takvim (Calendar, CalendarDay), vardiya (Shift, ShiftPlan), duruş (ResourceDowntime) ve kapasite profili (ResourceCapacityProfile) Smartchain'de ekrandan tek tek girilir; entegrasyondan ve Excel'den gelmez, stg tabloları yoktur. Yetkinlik grubu, işçi, işçi–yetkinlik ve izin (CompetenceGroup, Worker, WorkerCompetence, WorkerAbsence) ERP'den gelir. | Geliştirme 0.2 |
 
 ## Açık konular
 
