@@ -7375,7 +7375,6 @@ CREATE TABLE planning.[CapacityLoad] (
     [PlanRunId] BIGINT NOT NULL, 
     [ResourceId] BIGINT NOT NULL, 
     [BucketStart] DATETIME NOT NULL, 
-    [BucketNo] INTEGER NOT NULL, 
     [GrossCapacity] NUMERIC(18, 4) NULL, 
     [DowntimeLoss] NUMERIC(18, 4) NULL, 
     [NetCapacity] NUMERIC(18, 4) NULL, 
@@ -7410,10 +7409,6 @@ execute sp_addextendedproperty 'MS_Description', N'Kaynak', 'schema', planning, 
 GO
 
 execute sp_addextendedproperty 'MS_Description', N'Dönem', 'schema', planning, 'table', [CapacityLoad], 'column', [BucketStart];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dönem (PlanBucket)', 'schema', planning, 'table', [CapacityLoad], 'column', [BucketNo];
 
 GO
 
@@ -7538,99 +7533,6 @@ execute sp_addextendedproperty 'MS_Description', N'Son değişiklik zamanı', 's
 
 GO
 
-CREATE TABLE planning.[MaterialPeriodPlan] (
-    [Id] BIGINT NOT NULL IDENTITY, 
-    [PlanRunId] BIGINT NOT NULL, 
-    [MaterialId] BIGINT NOT NULL, 
-    [ProjectId] BIGINT NULL, 
-    [BucketNo] INTEGER NOT NULL, 
-    [IndependentDemand] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [DependentDemand] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [ExistingSupply] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [PlannedProduction] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [PlannedPurchase] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [ProjectedStock] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [Shortage] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [CumulativeShortage] NUMERIC(18, 4) NOT NULL DEFAULT 0, 
-    [IsManual] BIT NOT NULL DEFAULT 0, 
-    CONSTRAINT [PK_MaterialPeriodPlan] PRIMARY KEY ([Id]), 
-    CONSTRAINT [FK_MaterialPeriodPlan_PlanRunId] FOREIGN KEY([PlanRunId]) REFERENCES planning.[PlanRun] ([Id])
-);
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Malzeme × dönem sonucu: talep, arz, stok projeksiyonu ve eksik. Ürün bazlı planlama ve malzeme planı ekranları buradan okur; motor gelene kadar plan fikstürü yazar (K-65, K-66).', 'schema', planning, 'table', [MaterialPeriodPlan];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Kayıt kimliği', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [Id];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Plan hesabı', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [PlanRunId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Malzeme', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [MaterialId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Proje (boşsa ortak)', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [ProjectId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dönem (PlanBucket)', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [BucketNo];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bağımsız talep (sipariş, tahmin, teklif)', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [IndependentDemand];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bağımlı talep (üst ürünlerden)', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [DependentDemand];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Mevcut arz (açık iş emri, satın alma, fason, transfer)', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [ExistingSupply];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Planlı üretim', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [PlannedProduction];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Planlı satın alma ve fason', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [PlannedPurchase];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dönem sonu stok projeksiyonu', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [ProjectedStock];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dönem eksiği', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [Shortage];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Kümülatif eksik', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [CumulativeShortage];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dönemde elle girilen değer var', 'schema', planning, 'table', [MaterialPeriodPlan], 'column', [IsManual];
-
-GO
-
-CREATE INDEX [IX_MaterialPeriodPlan_MaterialId] ON planning.[MaterialPeriodPlan] ([MaterialId]);
-
-GO
-
-CREATE INDEX [IX_MaterialPeriodPlan_ProjectId] ON planning.[MaterialPeriodPlan] ([ProjectId]);
-
-GO
-
-CREATE UNIQUE INDEX [UX_MaterialPeriodPlan_PlanRunId_MaterialId_ProjectId_BucketNo] ON planning.[MaterialPeriodPlan] ([PlanRunId], [MaterialId], [ProjectId], [BucketNo]);
-
-GO
-
 CREATE TABLE planning.[Pegging] (
     [Id] BIGINT NOT NULL, 
     [PlanRunId] BIGINT NOT NULL, 
@@ -7710,57 +7612,6 @@ execute sp_addextendedproperty 'MS_Description', N'İş anahtarı (kod ya da kod
 GO
 
 execute sp_addextendedproperty 'MS_Description', N'Son değişiklik zamanı', 'schema', planning, 'table', [Pegging], 'column', [UpdatedAt];
-
-GO
-
-CREATE TABLE planning.[PlanBucket] (
-    [PlanRunId] BIGINT NOT NULL, 
-    [BucketNo] INTEGER NOT NULL, 
-    [BucketStart] DATETIME NOT NULL, 
-    [BucketEnd] DATETIME NOT NULL, 
-    [BucketType] NVARCHAR(10) NOT NULL, 
-    [WorkingDays] NUMERIC(9, 2) NOT NULL, 
-    [IsFrozen] BIT NOT NULL DEFAULT 0, 
-    [Label] NVARCHAR(20) NOT NULL, 
-    CONSTRAINT [PK_PlanBucket] PRIMARY KEY ([PlanRunId], [BucketNo]), 
-    CONSTRAINT [FK_PlanBucket_PlanRunId] FOREIGN KEY([PlanRunId]) REFERENCES planning.[PlanRun] ([Id])
-);
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Plan hesabının takvimi: dönemlerin tarih aralığı, iş günü ve dondurma durumu. Hesap başında zaman yapısından ve takvimden bir kez üretilir; ekranlar kolonlarını, motor dönemlerini buradan okur (K-66).', 'schema', planning, 'table', [PlanBucket];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Plan hesabı', 'schema', planning, 'table', [PlanBucket], 'column', [PlanRunId];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dönem sırası (1, 2, 3…)', 'schema', planning, 'table', [PlanBucket], 'column', [BucketNo];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Başlangıç', 'schema', planning, 'table', [PlanBucket], 'column', [BucketStart];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Bitiş (dahil)', 'schema', planning, 'table', [PlanBucket], 'column', [BucketEnd];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Gün | Hafta | Ay | Çeyrek | Yıl', 'schema', planning, 'table', [PlanBucket], 'column', [BucketType];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'İş günü sayısı (takvimden; yarım gün 0,5)', 'schema', planning, 'table', [PlanBucket], 'column', [WorkingDays];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Dondurulmuş dönem', 'schema', planning, 'table', [PlanBucket], 'column', [IsFrozen];
-
-GO
-
-execute sp_addextendedproperty 'MS_Description', N'Kolon başlığı (28.10, H45, Ara)', 'schema', planning, 'table', [PlanBucket], 'column', [Label];
 
 GO
 

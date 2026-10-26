@@ -5,7 +5,7 @@ Veritabanı şeması ve geçişler. Şema docs'tan üretilir (K-64); `models.py`
 | Dosya | Ne |
 |---|---|
 | `generate.py` | docs/02 ve docs/03'ü okur, `models.py` ve `docs/07-veritabani.md` yazar |
-| `models.py` | Üretilmiş SQLAlchemy tanımı (99 tablo, 5 şema) |
+| `models.py` | Üretilmiş SQLAlchemy tanımı (97 tablo, 5 şema) |
 | `alembic.ini`, `migrations/` | Geçişler; `versions/0001_ilk_sema.py` ilk şema |
 | `sql/` | Geçişlerin SQL karşılığı (bilgi amaçlı; SSMS'te de çalıştırılabilir) |
 
@@ -22,7 +22,7 @@ Veritabanı şeması ve geçişler. Şema docs'tan üretilir (K-64); `models.py`
 5. Bağlantı varsayılan olarak `localhost` üzerindeki `Smartchain` veritabanına Windows oturumunla gider. Farklıysa `SMARTCHAIN_DB_URL` ortam değişkenini ayarla, örnek:
    `mssql+pyodbc://@localhost/Smartchain?driver=ODBC+Driver+18+for+SQL+Server&trusted_connection=yes&TrustServerCertificate=yes`
 6. Şemayı kur: `alembic -c db/alembic.ini upgrade head`
-7. Kontrol (SSMS): 5 şema (`stg`, `core`, `param`, `planning`, `adm`), 99 tablo ve `dbo.alembic_version`. Tablo ve kolon özelliklerinde Türkçe açıklamalar görünür.
+7. Kontrol (SSMS): 5 şema (`stg`, `core`, `param`, `planning`, `adm`), 97 tablo ve `dbo.alembic_version`. Tablo ve kolon özelliklerinde Türkçe açıklamalar görünür.
 8. Geri alma testi: `alembic -c db/alembic.ini downgrade base`, ardından yeniden `upgrade head`.
 
 ## Değişiklik akışı

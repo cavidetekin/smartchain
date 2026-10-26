@@ -70,8 +70,6 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | K-62 | Veritabanı beş şemadır: stg (entegrasyon), core (ana veri ve işlem verisi), param (parametre), planning (plan çıktıları), adm (veri yönetimi ve sistem). Entegrasyon ve ana tablo aynı adı taşır: stg.Material → core.Material. | Geliştirme 0.2 |
 | K-63 | Versiyonlu tablolarda birincil anahtar Id + VersionFrom; Id kaydın bütün versiyonlarında sabittir. Versiyonlu tabloya fiziksel FK konmaz, bütünlüğü aktarım (kod→Id) sağlar; tekillik yalnız güncel kayıtta (VersionTo boş) aranır. | Geliştirme 0.2 |
 | K-64 | Veritabanı şeması docs'tan üretilir (db/generate.py); geçişler Alembic ile, her geçişin geri adımı vardır. Tablo ve alan açıklamaları veritabanına da yazılır. | Geliştirme 0.2 |
-| K-65 | Plan sonuçları yalnız plan bucket'ı düzeyinde saklanır; ay, çeyrek gibi kaba görünümler okunurken toplanır. Oranlar bileşenlerinden hesaplanır (Σ yük / Σ kapasite), sınırı kesen bucket iş günü oranıyla bölünür, stok projeksiyonu toplanmaz (dönemin son değeri), plan bucket'ından ince görünüm yoktur. | Geliştirme 0.2 |
-| K-66 | Her plan hesabı kendi takvimini (PlanBucket) taşır; ekran ve motor dönemleri buradan okur. Farklı hesapların karşılaştırması bucket numarasıyla değil BucketStart tarihiyle yapılır. Malzeme × dönem sonucu MaterialPeriodPlan'da, kaynak × dönem sonucu CapacityLoad'da saklanır. | Geliştirme 0.2 |
 
 ## Açık konular
 
