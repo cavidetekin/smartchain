@@ -33,11 +33,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Servis hesabı ve bağlantı bilgileri
   - Varlık sırası: referans verisi (birim, takvim, kaynak, malzeme) → ağaç ve rota → işlem verisi (stok, sipariş, iş emri)
   - Son başarılı çekim zamanı (artımlı çekim destekleyen varlıklar için)
-- **03:** Okunan satırlar dönüştürülmeden ham veri tablolarına (Staging_*) yazılır; parti numarası, zaman, yöntem ve satır sayısı ImportBatch'e kaydedilir.
+- **03:** Okunan satırlar dönüştürülmeden ham veri tablolarına (stg.*) yazılır; parti numarası, zaman, yöntem ve satır sayısı ImportBatch'e kaydedilir.
 - **04:** Her varlık bitince ilerleme ekrana anlık düşer (WebSocket). Hata alan varlık işaretlenir, sıradaki varlıkla devam edilir.
 - **05:** Geçici hatada (zaman aşımı, bağlantı kopması) aralıklı 3 deneme yapılır; kalıcı hatada varlık 'hata' ile kapanır, önceki ham veri korunur.
 - **ÇIKTI**
-  - Dolu ham veri tabloları (Staging_*) ve ImportBatch kaydı: varlık bazında durum, satır ve hata sayısı
+  - Dolu ham veri tabloları (stg.*) ve ImportBatch kaydı: varlık bazında durum, satır ve hata sayısı
   - Çekim logu (deneme, süre, hata metni) · Entegrasyon ekranında 'son çağrı' bilgisi
   - Sabah ekranında gece akışı satırı; elle çekimde ekranda sonuç özeti
 - **06:** Parti tamamlanınca doğrulama (04) otomatik başlar. Gece akışında doğrulama sonrası tam yükleme (05) devam eder.
@@ -603,7 +603,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Saklama süresi (SystemSetting, varsayılan 7 gün)
   - ImportBatch kayıtları (parti yaşı, varlık, durum)
   - Zamanlama
-- **03:** Seçilen partilerin Staging_* satırları ve ekli Excel dosyaları silinir; ImportBatch kaydı 'ham veri silindi' işaretlenir, sayıları kalır.
+- **03:** Seçilen partilerin stg.* satırları ve ekli Excel dosyaları silinir; ImportBatch kaydı 'ham veri silindi' işaretlenir, sayıları kalır.
 - **04:** Silinen boyut ve parti sayısı Sistem sağlığına yazılır.
 - **05:** Hata olursa iş sonraki hafta yeniden dener; log tutulur.
 - **ÇIKTI**

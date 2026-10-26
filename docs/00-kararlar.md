@@ -63,10 +63,13 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | K-55 | Bitti tanımı: kod + test + docs güncel + sentetik veriyle çalışır + kurulum paketinde + demo yapıldı. | 29 |
 | K-56 | Hikâye kalıbı: '<Rol> olarak <hedef> istiyorum, böylece <fayda>'; kabul kriterleri Verilen / Olduğunda / O zaman; öncelik MoSCoW (Must = Faz 1 çekirdek). | 20 |
 | K-57 | Hikâye 'ne ve neden', prensip slaytı 'nasıl': her hikâye bir ekran, fonksiyon ya da rapor numarasına bağlanır; kabul kriteri otomatik teste dönüşür. | 20 |
-| K-58 | İki katman: entegrasyon tabloları (Staging_*) kodla, ana tablolar Id ile; ERP verisi ana tablolara aktarımla geçer. | 21 |
+| K-58 | İki katman: entegrasyon tabloları (stg.*) kodla, ana tablolar Id ile; ERP verisi ana tablolara aktarımla geçer. | 21 |
 | K-59 | Ek alanlar: ana veride 10 (7 metin + 3 sayı), yapı ve işlem verisinde 5 (3 metin + 2 sayı); etiketi FieldDefinition'da. | 21 |
 | K-60 | Teklif ayrı tablo değil: SalesOrderLine.Type = Kesin \| Teklif; kazanma olasılığı tutulmaz. | 21 |
 | K-61 | Rota satırı operasyon–kaynak: RouteCode + OpNo + SeqNo + ResourceCode; sıra önce OpNo, sonra SeqNo. | 21 |
+| K-62 | Veritabanı beş şemadır: stg (entegrasyon), core (ana veri ve işlem verisi), param (parametre), planning (plan çıktıları), adm (veri yönetimi ve sistem). Entegrasyon ve ana tablo aynı adı taşır: stg.Material → core.Material. | Geliştirme 0.2 |
+| K-63 | Versiyonlu tablolarda birincil anahtar Id + VersionFrom; Id kaydın bütün versiyonlarında sabittir. Versiyonlu tabloya fiziksel FK konmaz, bütünlüğü aktarım (kod→Id) sağlar; tekillik yalnız güncel kayıtta (VersionTo boş) aranır. | Geliştirme 0.2 |
+| K-64 | Veritabanı şeması docs'tan üretilir (db/generate.py); geçişler Alembic ile, her geçişin geri adımı vardır. Tablo ve alan açıklamaları veritabanına da yazılır. | Geliştirme 0.2 |
 
 ## Açık konular
 

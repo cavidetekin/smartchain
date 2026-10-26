@@ -20,10 +20,13 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 
 ## Veri
 
-- **İki katman (K-58).** Entegrasyon tabloları (`Staging_*`) ERP'nin dilidir: Id yok, ilişkiler kodla (MaterialCode, LocationCode…). Ana tablolar Id + Code taşır; motor, ekranlar ve raporlar yalnız ana tabloları okur.
+- **İki katman (K-58).** Entegrasyon tabloları (`stg.*`) ERP'nin dilidir: Id yok, ilişkiler kodla (MaterialCode, LocationCode…). Ana tablolar Id + Code taşır; motor, ekranlar ve raporlar yalnız ana tabloları okur.
 - **ETL sırası:** Staging'e çekme (API, SQL arayüz tabloları, Excel) → yapısal doğrulama → veri kuralları → aktarım filtresi (A-34) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle, varsayılan; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
 - **Ek alanlar (K-59):** ana veride AdditionalText1–7 ve AdditionalNumber1–3, yapı ve işlem verisinde AdditionalText1–3 ve AdditionalNumber1–2; etiketleri FieldDefinition'da.
 - Tablo ve alan adları `docs/02-veri-modeli.md` ve `docs/03-entegrasyon.md` ile birebir; sözleşme alan adlarını değiştirme.
+- **Şemalar (K-62):** `stg` entegrasyon, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem. Aynı ad iki katmanda: `stg.Material` → `core.Material`.
+- **Versiyonlu tablolar (K-63):** birincil anahtar `Id + VersionFrom`; `Id` kaydın bütün versiyonlarında aynı. Versiyonlu tabloya fiziksel FK yok, bütünlüğü aktarım sağlar; tekillik yalnız güncel kayıtta (`VersionTo IS NULL`).
+- **Şema docs'tan üretilir (K-64):** `db/models.py` ve `docs/07-veritabani.md` elle değiştirilmez. Sıra: docs → `python db/generate.py` → `alembic -c db/alembic.ini revision --autogenerate -m "..."` → geçişi gözden geçir.
 
 ## Arayüz
 
@@ -47,14 +50,23 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/00-kararlar.md` | Bütün kararlar (K-n) ve açık konular (A-n) |
 | `docs/01-mimari.md` | Mimari kararlar (MDD 19) |
 | `docs/02-veri-modeli.md` | Ana tablolar ve alanlar (MDD 21) |
-| `docs/03-entegrasyon.md` | Entegrasyon tasarımı ve `Staging_*` tabloları (MDD 26) |
+| `docs/03-entegrasyon.md` | Entegrasyon tasarımı ve `stg.*` tabloları (MDD 26) |
 | `docs/04-arayuz-prensipleri.md` | U-1…U-22 (MDD 23) |
 | `docs/05-ekranlar.md` | 25 ekran ve ekran mockupları (MDD 24) |
 | `docs/06-fonksiyonlar.md` | 98 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
+| `docs/07-veritabani.md` | Veritabanı haritası: şemalar ve tablolar (üretilmiş) |
 | `docs/mockups/` | Mockup görselleri |
 
 Motor (MDD 18), raporlar (25), kurulum (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
 
 ## Komutlar
 
-Henüz yok. Adım 0.3'te (uygulama iskeleti) çalıştırma ve test komutları buraya yazılır.
+```
+pip install -r requirements.txt
+python db/generate.py                              # docs → db/models.py, docs/07-veritabani.md
+alembic -c db/alembic.ini upgrade head             # veritabanını güncelle (SMARTCHAIN_DB_URL)
+alembic -c db/alembic.ini upgrade head --sql       # bağlantısız: SQL betiğini yazdır
+alembic -c db/alembic.ini downgrade -1             # son geçişi geri al
+```
+
+Uygulama çalıştırma ve test komutları adım 0.3'te eklenir.

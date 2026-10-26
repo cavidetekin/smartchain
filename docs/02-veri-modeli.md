@@ -23,7 +23,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - K-39  Veri sınıfları: ana veri, işlem verisi, parametre; her alanın sınıfı ve değer önceliği veri sözlüğünde.
   - K-40  Veri versiyonları kayıt bazında (VersionFrom, VersionTo); kısmi yüklemede veri kopyalanmaz.
   - K-41  Çalışmadaki geçici değişiklikler tek tabloda; plan çıktıları plan hesabına bağlı.
-  - K-58  İki katman: entegrasyon tabloları (Staging_*) kodla, ana tablolar Id ile; ERP verisi ana tablolara aktarımla geçer.
+  - K-58  İki katman: entegrasyon tabloları (stg.*) kodla, ana tablolar Id ile; ERP verisi ana tablolara aktarımla geçer.
   - K-59  Ek alanlar: ana veride 10 (7 metin + 3 sayı), yapı ve işlem verisinde 5 (3 metin + 2 sayı); etiketi FieldDefinition'da.
   - K-60  Teklif ayrı tablo değil: SalesOrderLine.Type = Kesin | Teklif; kazanma olasılığı tutulmaz.
   - K-61  Rota satırı operasyon–kaynak: RouteCode + OpNo + SeqNo + ResourceCode; sıra önce OpNo, sonra SeqNo.
@@ -34,7 +34,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Veri modelinin ilkeleri
 <sub>21. Veri modeli · İlkeler</sub>
 
-- **ERP'den bağımsız:** Tek veri sözleşmesi; API, Excel ve SQL arayüz tabloları aynı entegrasyon tablolarına (Staging_*) iner.
+- **ERP'den bağımsız:** Tek veri sözleşmesi; API, Excel ve SQL arayüz tabloları aynı entegrasyon tablolarına (stg.*) iner.
 - **Adlandırma:** Tablo ve alan adları İngilizce (Resource.ResourceType), açıklamalar Türkçe. Veritabanı MS SQL Server.
 - **Lokasyon:** Lokasyon bütün ana ve işlem verisi tablolarında baştan var; Faz 1'de her lokasyon kendi içinde planlanır.
 - **Veri sınıfları:** Ana veri genel ve bütün senaryolarda aynı; parametre Smartchain'de, parametre setine bağlı ve senaryoya özel olabilir; işlem verisi ERP'den gelen hareketler.
@@ -50,7 +50,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · İki katman ve ek alanlar</sub>
 
 - ENTEGRASYON TABLOSU
-- **Staging_Material:** ERP'nin dili: Id yok, ilişkiler kodla. API, SQL arayüzü ve Excel aynı yapıya iner.
+- **stg.Material:** ERP'nin dili: Id yok, ilişkiler kodla. API, SQL arayüzü ve Excel aynı yapıya iner.
   - MaterialCode, LocationCode
   - Name, BaseUom, MaterialGroup …
   - AdditionalText1–7, AdditionalNumber1–3
@@ -104,7 +104,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - versiyon
 - **Sistem  6 tablo:** AppUser · Job · SolverLog · AuditLog · SystemSetting · License
 - **Ortak  5 tablo:** Location · UnitOfMeasure · Calendar
-- Akış: ERP verisi entegrasyon tablolarına (Staging_*) iner, veri kurallarıyla tamamlanır ve yüklemeyle veri versiyonu olur. Senaryolar bir veri versiyonu ve bir parametre setiyle çalışır; çıktılar plan hesabına bağlanır, onaylı plan ERP'ye döner.
+- Akış: ERP verisi entegrasyon tablolarına (stg.*) iner, veri kurallarıyla tamamlanır ve yüklemeyle veri versiyonu olur. Senaryolar bir veri versiyonu ve bir parametre setiyle çalışır; çıktılar plan hesabına bağlanır, onaylı plan ERP'ye döner.
 
 ### Tablo listesi
 <sub>21. Veri modeli · Tablo listesi · 1/6</sub>
@@ -204,7 +204,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ManualValue:** Kayıt bazında elle girilen değer
 - **FieldValueSource:** Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır)
 - **ImportBatch:** Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla
-- **Staging_*:** Entegrasyon tabloları: her varlık için bir tane (Staging_Material…); ilişkiler kodla
+- **stg.*:** Entegrasyon tabloları: her varlık için bir tane (stg.Material…); ilişkiler kodla
 - **DataVersion:** Yükleme ile oluşan dondurulmuş veri versiyonu
 - **DataVersionEntity:** Kısmi yüklemede hangi varlıkların yüklendiği
 
@@ -1119,11 +1119,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | RowCount | int |  | Satır sayısı | Sistem | H | H |  |
 | ErrorCount | int |  | Hatalı satır | Sistem | H | H |  |
 
-### Staging_*
+### stg.*
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Entegrasyon · versiyonsuz · Faz 1
-- Entegrasyon tabloları: her varlık için bir tane (Staging_Material…). ERP'nin dili: Id yok, ilişkiler kodla. API, SQL ve Excel buraya iner.
+- Entegrasyon tabloları: her varlık için bir tane (stg.Material…). ERP'nin dili: Id yok, ilişkiler kodla. API, SQL ve Excel buraya iner.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|

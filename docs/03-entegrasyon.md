@@ -10,7 +10,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 01 İlkeler
   - 02 Mimari ve veri akışı
   - 03–04 Varlık listesi
-  - 05–35 Entegrasyon tabloları (Staging_*)
+  - 05–35 Entegrasyon tabloları (stg.*)
   - 36–38 Üç yöntem · API, SQL, Excel
   - 39–42 Eşleme, sahiplik, zamanlama, hata
   - 43–46 Çıkış, güvenlik, devreye alma
@@ -49,7 +49,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - REST çağrısı, sayfalama, artımlı çekim
   - Alan eşleme tanımı (ERP → sözleşme)
   - 3 deneme, zaman aşımı
-- **Ham veri (Staging_*)**
+- **Ham veri (stg.*)**
   - Her yöntem aynı ham tabloya yazar
   - ImportBatch: parti, zaman, yöntem, satır, hata
   - 1 hafta saklama
@@ -120,7 +120,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Birim maliyet (Material ek alanı, yeni) | Ana veri | API · SQL · Excel | ERP | Gece tam | MaterialCode | A-22 · stok değeri, tutar |
 | Çıkış: satın alma talebi, iş emri açma, fason listesi | Plan çıktısı | Excel (Faz 1) · API (Faz 2) | Smartchain | Yayın sonrası, istek üzerine | PlannedOrder.Id | Faz 1 Excel |
 
-### Staging_Material
+### stg.Material
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 1/2</sub>
 
 - Malzeme ve planlama ana verisi.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -139,7 +139,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | DefaultProcurement | nvarchar(10) |  | H | Üretim \| Satın alma \| Fason | ERP, yoksa kural | kural ya da elle |
 | Ownership | nvarchar(10) |  | H | Kendi \| Müşteri (müşteri temin malzemesi) | Kural ya da elle | varsayılan Kendi |
 
-### Staging_Material
+### stg.Material
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 2/2</sub>
 
 - Malzeme ve planlama ana verisi.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -161,7 +161,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_Location
+### stg.Location
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Ortak</sub>
 
 - Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -180,7 +180,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_UnitOfMeasure
+### stg.UnitOfMeasure
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Ortak</sub>
 
 - Ölçü birimi.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -190,7 +190,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Code | nvarchar(10) | PK | E | Birim kodu (AD, KG, SAAT…) | ERP | hata (satır atlanır) |
 | Name | nvarchar(50) |  | H | Birim adı | ERP | boş kalır |
 
-### Staging_UomConversion
+### stg.UomConversion
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Ortak</sub>
 
 - Malzeme bazında birim dönüşümü.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -202,7 +202,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ToUom | nvarchar(10) | REF | E | Hedef birim | ERP | hata (satır atlanır) |
 | Factor | decimal(18,6) |  | E | Çarpan | ERP | hata (satır atlanır) |
 
-### Staging_ProductionVersion
+### stg.ProductionVersion
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
 
 - Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode ile bağlanır. Faz 1'de varsayılan versiyon kullanılır.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -219,7 +219,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_BOM
+### stg.BOM
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
 
 - Ürün ağacı satırı.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -236,7 +236,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_Routing
+### stg.Routing
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 1/2</sub>
 
 - Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OpNo, sonra SeqNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -253,7 +253,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ResourceNumber | int |  | E | Operasyonda aynı anda kullanılan kaynak adedi | ERP, yoksa kural | varsayılan 1 |
 | IsSubcontracted | bit |  | H | Fason operasyon | ERP | varsayılan 0 |
 
-### Staging_Routing
+### stg.Routing
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 2/2</sub>
 
 - Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OpNo, sonra SeqNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -269,7 +269,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_Resource
+### stg.Resource
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak · 1/2</sub>
 
 - Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -286,7 +286,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | CapacityUnit | nvarchar(10) | REF | E | Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir | ERP, yoksa kural | kural ya da elle |
 | DailyCapacity | decimal(18,4) |  | E | Bir adet kaynağın bir çalışma günündeki kapasitesi | ERP, yoksa kural | kural ya da elle |
 
-### Staging_Resource
+### stg.Resource
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak · 2/2</sub>
 
 - Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -303,7 +303,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_ResourceGroup
+### stg.ResourceGroup
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
 - Kaynak grubu (makine grubu, işçi kaynak grubu).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -316,7 +316,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_ResourceCapacityProfile
+### stg.ResourceCapacityProfile
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
 - Günlük kapasitenin dönemsel değişikliği. Birim kontrol için gelir; ana tabloda saklanmaz.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -329,7 +329,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ValidTo | date |  | E | Bitiş | Kural ya da elle | hata (satır atlanır) |
 | DailyCapacity | decimal(18,4) |  | E | Bu aralıktaki günlük kapasite | Kural ya da elle | hata (satır atlanır) |
 
-### Staging_Calendar
+### stg.Calendar
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Ortak</sub>
 
 - Çalışma takvimi başlığı (kaynaklara bağlanır).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -339,7 +339,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Code | nvarchar(30) | UK | E | Takvim kodu | ERP, yoksa kural | kural ya da elle |
 | Name | nvarchar(100) |  | H | Takvim adı | ERP, yoksa kural | kural ya da elle |
 
-### Staging_CalendarDay
+### stg.CalendarDay
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Ortak</sub>
 
 - Takvimin gün bazında çalışma durumu.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -351,7 +351,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | IsWorkingDay | bit |  | E | Çalışma günü mü | ERP, yoksa kural | kural ya da elle |
 | WorkingFraction | decimal(5,4) |  | H | Günün çalışılan oranı (yarım gün 0,5) | Kural ya da elle | varsayılan 1 |
 
-### Staging_Shift
+### stg.Shift
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
 - Vardiya tanımı.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -364,7 +364,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | EndTime | time |  | E | Bitiş saati | ERP, yoksa kural | kural ya da elle |
 | BreakMinutes | int |  | H | Mola süresi (dk) | ERP, yoksa kural | kural ya da elle |
 
-### Staging_ShiftPlan
+### stg.ShiftPlan
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
 - Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -378,7 +378,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ValidTo | date |  | E | Bitiş | ERP, yoksa kural | kural ya da elle |
 | Headcount | int |  | E | Kişi sayısı | ERP, yoksa kural | kural ya da elle |
 
-### Staging_ResourceDowntime
+### stg.ResourceDowntime
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
 - Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -391,7 +391,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | EndAt | datetime2 |  | E | Bitiş | ERP, yoksa kural | kural ya da elle |
 | AffectedQuantity | int |  | E | Etkilenen kaynak adedi | ERP, yoksa kural | kural ya da elle |
 
-### Staging_Supplier
+### stg.Supplier
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
 
 - Tedarikçi ve fasoncu.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -405,7 +405,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_MaterialSupplier
+### stg.MaterialSupplier
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
 
 - Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -426,7 +426,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_Customer
+### stg.Customer
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Talep</sub>
 
 - Müşteri.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -440,7 +440,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_ProjectGroup
+### stg.ProjectGroup
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
 
 - Proje grubu (grup içi paylaşım için).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -451,7 +451,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Name | nvarchar(200) |  | H | Proje grubu adı | Kural ya da elle | kural ya da elle |
 | IsolationRule | nvarchar(20) |  | H | Tam izolasyon \| Ortaktan beslenir \| Grup içi paylaşım | Kural ya da elle | varsayılan Ortaktan beslenir |
 
-### Staging_Project
+### stg.Project
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
 
 - Proje.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -467,7 +467,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_SalesOrderLine
+### stg.SalesOrderLine
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Talep</sub>
 
 - Müşteri sipariş satırı; teklifler Type = Teklif ile gelir. Vade: teyit tarihi, yoksa istek tarihi.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -491,7 +491,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_Forecast
+### stg.Forecast
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Talep</sub>
 
 - Talep tahmini (netleme ön hesapta).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -507,7 +507,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_Stock
+### stg.Stock
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
 - Stok; lot ve durum bazında. Sahip: proje ya da ortak.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -526,7 +526,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_WorkOrder
+### stg.WorkOrder
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
 - Açık iş emri (üretim, fason, yeniden işleme).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -550,7 +550,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_WorkOrderComponent
+### stg.WorkOrderComponent
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
 - İş emrinin bileşenleri ve çekilen miktar.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -564,7 +564,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_WorkOrderOperation
+### stg.WorkOrderOperation
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
 - İş emrinin operasyonları ve kalan iş.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -581,7 +581,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_PurchaseOrderLine
+### stg.PurchaseOrderLine
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
 - Açık satın alma ve fason siparişi satırı (ve talep).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
@@ -603,7 +603,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | boş kalır |
 
-### Staging_ProductionConfirmation
+### stg.ProductionConfirmation
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
 - Üretim gerçekleşmeleri; ilk günden tutulur (verim önerisi ve ileriki fazlar).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
