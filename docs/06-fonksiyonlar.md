@@ -39,7 +39,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ÇIKTI**
   - Dolu ham veri tabloları (stg.*) ve ImportBatch kaydı: varlık bazında durum, satır ve hata sayısı
   - Çekim logu (deneme, süre, hata metni) · Entegrasyon ekranında 'son çağrı' bilgisi
-  - Sabah ekranında gece akışı satırı; elle çekimde ekranda sonuç özeti
+  - Ana sayfada gece akışı satırı; elle çekimde ekranda sonuç özeti
 - **06:** Parti tamamlanınca doğrulama (04) otomatik başlar. Gece akışında doğrulama sonrası tam yükleme (05) devam eder.
 
 ### 01 · Veri çekme · kurallar ve etkiler
@@ -58,7 +58,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Şema uyumsuzluğu (ERP'de alan değişmiş): varlık hata, Entegrasyon ekranında 'eşlenmemiş alan' uyarısı.
 - **ETKISI VE TETIKLENENLER**
   - Doğrulama (04) otomatik başlar.
-  - Sabah ekranı 'gece akışı' ve Entegrasyon ekranı 'son çağrı' güncellenir.
+  - Ana sayfa 'gece akışı' ve Entegrasyon ekranı 'son çağrı' güncellenir.
   - Elle tetikleme denetim izine (AuditLog) yazılır.
   - Sistem sağlığı: iş kuyruğu ve süre kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez. Çekim yalnız ham veriyi doldurur; geçerli tablolar, kurallar ve planlar yüklemeyle (05 / 06) etkilenir.
@@ -259,12 +259,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hangi kontrolün hata, hangisinin uyarı olduğu uyarı tanımlarıyla parametriktir.
 - **HATA VE ISTISNA**
   - Doğrulama çökerse parti 'doğrulanamadı', yükleme butonları kapalı; hata Sistem sağlığında.
-  - Hata eşiği aşılan varlık gece akışında yüklenmez, önceki versiyon kalır; sabah ekranına düşer.
+  - Hata eşiği aşılan varlık gece akışında yüklenmez, önceki versiyon kalır; ana sayfaya düşer.
   - Elle yüklemede kullanıcı varlığı dışarıda bırakma ya da hatalı satırları atlama kararını verir.
 - **ETKISI VE TETIKLENENLER**
   - Gece akışında tam yükleme (05) devam eder.
   - Veri yükleme ekranında varlık durumları ve detay çekmecesi.
-  - Sabah ekranında doğrulama satırı (uyarı sayısıyla).
+  - Ana sayfada doğrulama satırı (uyarı sayısıyla).
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; doğrulama yazmaz.
 - **ÖRNEK:** Parti #1187: Rota 6.230 satır, 3 hata (iki eksik kaynak referansı, bir negatif süre), 5 uyarı. Eşik %5, hata oranı %0,05 → Rota hatalı satırlar atlanarak yüklenebilir.
 
@@ -325,14 +325,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hata eşiğini aşan varlık yüklenmez: gece akışında otomatik dışarıda kalır (yükleme kısmiye döner), elle yüklemede kullanıcıya sorulur.
   - Yükleme sırasında ikinci yükleme ve çekim başlatılamaz.
 - **HATA VE ISTISNA**
-  - Veritabanı hatası: işlem geri alınır, sabah ekranı ve Sistem sağlığı kaydı; ham veri partisi yeniden kullanılabilir.
+  - Veritabanı hatası: işlem geri alınır, ana sayfa ve Sistem sağlığı kaydı; ham veri partisi yeniden kullanılabilir.
   - Kural hatası (ör. bölme sıfıra): kural atlanır, uyarı; yükleme devam eder.
   - Süre aşımı (parametre, öneri 30 dk): işlem geri alınır, destek paketi için log.
   - Yükleme sonrası veri kalitesi kontrolü çökerse yükleme geçerli kalır, kontrol 'tamamlanmadı' işaretlenir.
 - **ETKISI VE TETIKLENENLER**
   - Gece akışında senaryolar (40) başlar.
   - Açık çalışmalarda 'yeni veri var' bildirimi.
-  - Veri kalitesi listesi ve sabah ekranı 'dünden bugüne' güncellenir.
+  - Veri kalitesi listesi ve ana sayfa 'dünden bugüne' güncellenir.
   - Ana veri ekranları yeni versiyonu gösterir; yükleme geçmişi ve denetim izi.
 - **ÖRNEK:** Parti #1187 → v232: 9 varlık, 90 yeni, 1.158 değişen, 15 silinen; Rota'da 3 satır atlandı. Kurallar 14 kaydı değiştirdi, veri kalitesi 3 yeni uyarı üretti. Süre 2 dk 48 sn.
 
@@ -345,7 +345,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **En alt seviye kodu (LLC):** Material Ürün ağacı değiştiyse yeniden hesaplanır
 - **Türetilmiş alanlar:** Birim dönüşümü, varsayılanlar Yeni ve değişen kayıtlar için
 - **Veri kalitesi uyarıları:** Veri kalitesi listesi Yeni versiyon üzerinde baştan üretilir; kapatılanlar kapalı kalır
-- **Dünden bugüne farkı:** Sabah ekranı Önceki versiyonla karşılaştırma
+- **Dünden bugüne farkı:** Ana sayfa Önceki versiyonla karşılaştırma
 - **Plan:** Senaryolar · çalışmalar Otomatik değil: gece senaryoları yeni versiyonla çalışır, açık çalışma eski versiyonda kalır
 
 ### 05 · Tam yükleme · Onay
@@ -418,7 +418,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Açık çalışmalara 'yeni veri var' bildirimi (seçime bağlı).
   - Veri kalitesi listesi kapsam dahilinde güncellenir.
-  - Sabah ekranı 'dünden bugüne' ve ana veri ekranları.
+  - Ana sayfa 'dünden bugüne' ve ana veri ekranları.
 - **ÖRNEK:** Öğleden sonra stok ve siparişler tazelenir: Stok + Satış siparişi seçilir; sistem 2 yeni proje kodu için Proje'yi de önerir. v232 kısmi: 3 varlık partiden, 6 varlık v231'den. 38 sn.
 
 ### 06 · Kısmi yükleme · yeniden hesaplanacak alanlar
@@ -501,7 +501,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Fark raporu büyükse (> 50.000 satır) özet gösterilir, detay Excel'e alınır.
   - Sıkıştırma işi hata verirse versiyon olduğu gibi kalır, Sistem sağlığına düşer.
 - **ETKISI VE TETIKLENENLER**
-  - Sabah ekranı 'dünden bugüne' karşılaştırması.
+  - Ana sayfa 'dünden bugüne' karşılaştırması.
   - Yayın kontrolleri: 'daha yeni veri var'.
   - Raporlarda veri versiyonu bilgisi.
   - Disk kullanımı: Sistem sağlığında versiyon sayısı ve boyut.
@@ -817,7 +817,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Türetilmiş alanlar (dönem kapasitesi) güncellenir.
   - Veri kalitesi uyarısı kapanabilir ya da yeni uyarı doğabilir.
-  - Sabah ekranı 'dünden bugüne' değişiklik sayısı.
+  - Ana sayfa 'dünden bugüne' değişiklik sayısı.
   - Plan: çalışmada 'yeniden hesapla' gerekir; gece senaryoları yeni değerle çalışır.
 - **ÖRNEK:** Freze merkezi verimi kural 3 ile %80. Ekim ölçümü %85: elle değer girilir, ERP ve kuralı ezer. Haftalık net kapasite 180 → 191 sa; H46 doluluğu tahmini %108 → %101; 'düşük verim' uyarısı kapanır.
 - **AÇIK KONU:** Elle değer için varsayılan geçerlilik süresi olmalı mı (ör. 90 gün sonra hatırlatma)? Öneri: süresiz, ama 90 günü geçen elle değerler veri kalitesinde 'gözden geçir' uyarısı alsın.
@@ -1032,7 +1032,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Türetilmiş alanlar (kapasite) kapsam için güncellenir.
   - Veri kalitesi uyarıları kapanabilir.
   - Plan: çalışmada yeniden hesap gerekir.
-  - Sabah ekranı değişiklik sayısı.
+  - Ana sayfa değişiklik sayısı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Geçerli değer ve kaynağı:** FieldValueSource Değişen her hücre 'elle' olur
 - **Türetilmiş kapasite:** Dönem kapasitesi Kapsamdaki kaynaklar için
@@ -1291,7 +1291,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Uygulama geçerli veri versiyonu içinde yapılır; yeni versiyon açmaz.
   - Süre sınırı (parametre, öneri 10 dk); aşılırsa geri alınır ve Sistem sağlığına düşer.
 - **HATA VE ISTISNA**
-  - Kural çalışma hatası (ör. tip dönüşümü): o kural atlanır, 'uygulanamadı' işareti; diğerleri devam eder; sabah ekranında uyarı.
+  - Kural çalışma hatası (ör. tip dönüşümü): o kural atlanır, 'uygulanamadı' işareti; diğerleri devam eder; ana sayfada uyarı.
   - Kilit çakışması (yükleme sürüyor): uygulama kuyruğa alınır, yükleme bitince çalışır.
   - Geri alma gerekirse tüm işlem geri alınır; rapor 'başarısız' olarak kalır.
 - **ETKISI VE TETIKLENENLER**
@@ -1350,8 +1350,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ÇIKTI**
   - Veri kalitesi uyarı listesi (durum, önem, kategori, kayıt, sorun, öneri, ilk görülme)
   - Değişim özeti: yeni, kapanan, açık, bilerek böyle
-  - Sabah ekranı ve uyarı iş listesi (20. ekran) için kaynak
-- **06:** Özet sayılar (kritik, yüksek, orta), dağılım ve 'dünden bugüne' güncellenir; sabah ekranına yansır; kritik yeni uyarı varsa bildirim.
+  - Ana sayfa ve uyarı iş listesi (20. ekran) için kaynak
+- **06:** Özet sayılar (kritik, yüksek, orta), dağılım ve 'dünden bugüne' güncellenir; ana sayfaya yansır; kritik yeni uyarı varsa bildirim.
 
 ### 20 · Veri kalitesi kontrolü · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
@@ -1367,12 +1367,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Süre 2 dk'yı aşarsa (parametre) arka planda sürer, bitince bildirim.
   - Uyarı tanımı pasifse o kontrol atlanır; açık uyarıları 'tanım pasif' notuyla kapanır.
 - **ETKISI VE TETIKLENENLER**
-  - Sabah ekranı 'kritik uyarılar' ve 'dünden bugüne'.
+  - Ana sayfa 'kritik uyarılar' ve 'dünden bugüne'.
   - Uyarı iş listesi (83) ana veri ve işlem verisi kategorileri.
-  - Kritik yeni uyarıda bildirim (ekran ve sabah ekranı).
+  - Kritik yeni uyarıda bildirim (ekran ve ana sayfa).
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Uyarı listesi:** Veri kalitesi uyarıları Kapsamdaki kayıtlar için baştan üretilir, eşleştirilir
-- **Özet sayılar ve dağılım:** Veri kalitesi ekranı · sabah ekranı Her kontrolde
+- **Özet sayılar ve dağılım:** Veri kalitesi ekranı · ana sayfa Her kontrolde
 - **Uyarı iş listesi:** Uyarılar ekranı (ana veri, işlem verisi kategorileri) Yeni ve kapanan uyarılar yansır
 - **Plan:** — Kontrol planı değiştirmez; kritik uyarı plan hesabını engelleyebilir (motor kuralı)
 - **ÖRNEK:** Kural uygulaması sonrası kontrol 38 sn: 3 yeni (kural 2 fırınları ton yapınca rota tüketim birimi uyumsuz), 23 kapanan (21'i kural 7 ile temin süresi). Açık 44, bilerek böyle 4.
@@ -1436,13 +1436,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Atanan kullanıcı kapalıysa atama reddedilir.
 - **ETKISI VE TETIKLENENLER**
   - 12 / 15 / 19'un etkileri (değer kaynağı, türetilmiş alanlar).
-  - Uyarı listesi ve özet sayılar; sabah ekranı.
+  - Uyarı listesi ve özet sayılar; ana sayfa.
   - Uyarı iş listesi atama ve not.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Uyarı durumu:** Veri kalitesi uyarıları Aksiyon sonrası ilgili kayıt için kontrol yeniden çalışır
 - **Geçerli değer ve kaynağı:** FieldValueSource Düzelt ya da uygula seçildiyse (12 / 19)
 - **Türetilmiş alanlar:** Kapasite, LLC Düzeltilen alana göre
-- **Özet sayılar:** Veri kalitesi · sabah ekranı Her aksiyonda
+- **Özet sayılar:** Veri kalitesi · ana sayfa Her aksiyonda
 - **Plan:** Senaryolar · çalışmalar Otomatik değil; düzeltme plan girdisini değiştirdiyse yeniden hesap
 - **ÖRNEK:** 'Temin süresi boş' 21 malzeme toplu seçilir, 'Uygula' ile kural 7 doldurur: 21 uyarı kapanır. K-22'de 'minimum parti > talep' tedarikçi şartı: gerekçeyle 90 gün 'bilerek böyle'.
 
@@ -1472,7 +1472,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![21 · Kalite düzeltme aksiyonu · Sonuç](mockups/m24f-0427-21-kalite-duzeltme-aksiyonu-sonuc.png)
 
 - **Kapanan satırlar üstte:** 21 kapanan ve 1 bilerek böyle, nedeniyle; liste yeniden sıralanır.
-- **Sayılar güncel:** Yüksek −22, bugün kapanan 23; sabah ekranı aynı sayıları gösterir.
+- **Sayılar güncel:** Yüksek −22, bugün kapanan 23; ana sayfa aynı sayıları gösterir.
 - **Geri alınabilir:** Bildirimde geri alma bağlantısı (kural ayarı ya da elle değer).
 - **Kalanlar:** Kritik 2 uyarı 'bilerek böyle' kapatılamaz; düzeltme bekler.
 
@@ -1814,7 +1814,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü
   - Nereden: Parametre setleri · 'Uyarı eşikleri' sekmesi · uyarı iş listesinden 'tanımı aç'
 - **01:** Liste kategoriye göre açılır; her satırda eşik hücresi, önem seçimi ve aktif anahtarı doğrudan düzenlenir; değiştirilen eşikler işaretli.
-- **02:** Satır çekmecesi: eşik ayrıntısı (çoklu eşik: bucket sayısı + yüzde), mesaj şablonu ve örnek çıktı, nerede görüneceği (iş listesi, sabah ekranı, planlama satırı, rapor), bildirim davranışı.
+- **02:** Satır çekmecesi: eşik ayrıntısı (çoklu eşik: bucket sayısı + yüzde), mesaj şablonu ve örnek çıktı, nerede görüneceği (iş listesi, ana sayfa, planlama satırı, rapor), bildirim davranışı.
 - **GIRDI**
   - WarningDefinition listesi: kod, kategori (teslim, kapasite, malzeme, ana veri, işlem verisi, proje, plan kalitesi), eşik(ler), önem, aktif, mesaj şablonu
   - Mevcut plan çıktısı ve veri (önizleme için)
@@ -1841,7 +1841,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çelişkili eşik (risk %90 > aşırı yük %85): uyarı, kaydedilebilir ama işaretli.
   - Önizleme büyük planda uzun sürerse arka planda; bitince sayılar güncellenir.
 - **ETKISI VE TETIKLENENLER**
-  - Uyarı iş listesi, sabah ekranı ve Veri kalitesi sayıları hemen değişir.
+  - Uyarı iş listesi, ana sayfa ve Veri kalitesi sayıları hemen değişir.
   - Planlama ekranlarındaki uyarı işaretleri (sipariş satırı, doluluk hücresi) yeni eşiklerle.
   - Motor ve veri kalitesi kontrolü sonraki çalışmada yeni tanımları kullanır.
 - **ÖRNEK:** 'Ard arda yüksek doluluk' eşiği 3 bucket · %95: önizlemede 3 → 5 uyarı. 'Kritik gecikme' 7 → 10 gün: 2 kritik uyarıdan biri yüksek seviyeye iner. Kaydedince liste planı yeniden hesaplamadan güncellenir.
@@ -1852,7 +1852,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Plan uyarıları:** PlanWarning Mevcut plan çıktısı üzerinden yeni eşiklerle hemen yeniden üretilir
 - **Veri kalitesi uyarıları:** Veri kalitesi listesi Ana veri ve işlem verisi kategorileri hemen
-- **Özet sayılar:** Sabah ekranı · Uyarı iş listesi · Veri kalitesi KPI Hemen
+- **Özet sayılar:** Ana sayfa · Uyarı iş listesi · Veri kalitesi KPI Hemen
 - **Doluluk hücre renkleri:** Kaynak doluluk raporu (risk / aşırı yük eşikleri) Hemen (görüntüleme)
 - **Plan sonucu:** PlanMetric · PlannedOrder Değişmez; eşikler planı etkilemez
 
@@ -1873,7 +1873,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Eşik ve önem:** Ayrıntılı eşik, önem ve aktiflik; önceki değer notu.
 - **Mesaj şablonu:** Yer tutucularla şablon ve gerçek veriyle örnek; LLM kapalı, metin buradan.
-- **Nerede görünür:** İş listesi, sabah ekranı, planlama satırı, rapor; seçilebilir.
+- **Nerede görünür:** İş listesi, ana sayfa, planlama satırı, rapor; seçilebilir.
 - **Etki notu:** Bu değişiklikle kaç uyarının seviye değiştireceği.
 
 ### 27 · Gece senaryo tanımı
@@ -1968,7 +1968,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Güncel NightlyPriority ve IsActive
   - Gece zamanlaması tahmini
   - Denetim izi
-- **05:** 'Yalnız bu gece' kapatılan senaryo ertesi gün otomatik açılır; sabah ekranında not düşer.
+- **05:** 'Yalnız bu gece' kapatılan senaryo ertesi gün otomatik açılır; ana sayfada not düşer.
 
 ### 28 · Senaryo sırası ve aç / kapa · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F28 · C Parametre · Çalışma prensibi 2/2</sub>
@@ -1986,7 +1986,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Gece akışı zamanlaması ve tahmini bitiş.
   - Senaryolar ekranı sütun düzeni ve 'çalışmadı' işareti.
-  - Sabah ekranı gece akışı satırları.
+  - Ana sayfa gece akışı satırları.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Gece akışı zamanlaması:** Job planı (gece kanalı) Sıra ve aktiflik değişince hemen
 - **Senaryo sonuçları:** Scenario · PlanRun Bir sonraki gece; kapalı senaryo için üretilmez
@@ -2371,7 +2371,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Teslim ve gecikme:** DemandFulfillment Her talep yerleştikçe
 - **Metrikler:** PlanMetric Aynı tanımla; EngineUsed = kurallı
 - **Plan kalitesi uyarısı:** PlanWarning Yöntem kurallıysa
-- **ÖRNEK:** Kısıtlı malzeme senaryosu: MILP 30 dk'da uygun çözüm bulamadı. Kurallı yerleştirme 50 sn'de plan üretti (gecikme 112 gün), yerel iyileştirme 4 dk'da 96 güne indirdi. Senaryo 'kurallı' etiketiyle sabah ekranında.
+- **ÖRNEK:** Kısıtlı malzeme senaryosu: MILP 30 dk'da uygun çözüm bulamadı. Kurallı yerleştirme 50 sn'de plan üretti (gecikme 112 gün), yerel iyileştirme 4 dk'da 96 güne indirdi. Senaryo 'kurallı' etiketiyle ana sayfada.
 - **AÇIK KONU:** Sezgisel iyileştirmenin kapsamı (yalnız gecikme mi, fazla mesai de mi) ve varsayılan açık olup olmayacağı (öneri: açık).
 
 ### 33 · Kurallı yerleştirme ve sezgisel · Kurallı senaryo
@@ -2402,7 +2402,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Gap eşiği (optimal sayma sınırı)
 - **03:** Çözücüye zaman limiti ve 'en iyi uygun çözümü sakla' parametresi geçilir; ilerleme (süre, gap) ekrana düşer.
 - **04:** Süre dolunca: uygun çözüm varsa durum 'süre bütçesi · gap %x' ile plan yazılır; yoksa kurallı yerleştirme (33).
-- **05:** Gece bitiş sınırı ayrıdır: 06:00'ı aşan senaryo durdurulur, en iyi çözüm saklanır, sabah ekranında 'süre aşımı' görünür.
+- **05:** Gece bitiş sınırı ayrıdır: 06:00'ı aşan senaryo durdurulur, en iyi çözüm saklanır, ana sayfada 'süre aşımı' görünür.
 - **ÇIKTI**
   - PlanRun.Status: optimal / süre bütçesi / kurallı / hata
   - Çalışma şeridinde süre ve gap; gece senaryosunda etiket
@@ -2419,7 +2419,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Bütçe hesap türü bazında; aynı çalışmada tekrar hesap aynı bütçeyle.
 - **HATA VE ISTISNA**
   - Bütçe dolmadan çözücü hata verirse 32 kuralları (tekrar, kurallı).
-  - Gece bitiş sınırında birden fazla senaryo durursa sabah ekranı hepsini listeler; 41 ile gündüz yeniden çalıştırılır.
+  - Gece bitiş sınırında birden fazla senaryo durursa ana sayfa hepsini listeler; 41 ile gündüz yeniden çalıştırılır.
   - Çok kısa bütçe (model kurulumu bile sığmıyor): hesap 'bütçe yetersiz' ile durur, sistem sahibine uyarı.
 - **ETKISI VE TETIKLENENLER**
   - Senaryolar ve çalışma özeti durum etiketi.
@@ -2589,7 +2589,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (her plan hesabının sonunda) · eşikler: admin ve üstü (parametre seti)
-  - Nereden: Plan hesabı aşaması · görünüm: Uyarı iş listesi (20), Sabah ekranı, çalışma özeti
+  - Nereden: Plan hesabı aşaması · görünüm: Uyarı iş listesi (20), Ana sayfa, çalışma özeti
 - **01:** Uyarı tanımları okunur; kapalı tanımlar atlanır.
 - **02:** Teslim: gecikme > eşik; kapasite: doluluk > %100, ardışık bucket > %95, %30 altı; malzeme: temin süresi içinde eksik, güvenlik stoğu altı, fazla stok; raf ömrü yalnız uyarı.
 - **03:** Ana veri ve işlem verisi: hesapta tespit edilen varsayımlar (rota yok, takvimsiz kaynak, negatif stok, parti kuralı yok); proje: ayrılmış stok yetersiz; plan kalitesi: gevşetme, süre bütçesi, kurallı yöntem, LP parti uyumsuzluğu.
@@ -2603,7 +2603,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ÇIKTI**
   - PlanWarning kayıtları (kategori, önem, nesne, değer, mesaj)
   - Yeni / güncellenen / kapanan işaretleri
-  - Sabah ekranı ve çalışma özeti sayıları
+  - Ana sayfa ve çalışma özeti sayıları
 
 ### 37 · Uyarı üretme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F37 · D Planlama motoru · Çalışma prensibi 2/2</sub>
@@ -2618,14 +2618,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çok sayıda uyarı (> 5.000): kategori bazında özetlenir, detay Excel'e.
   - Eşleme belirsiz (nesne anahtarı değişti): uyarı yeni sayılır, eskisi kapanır.
 - **ETKISI VE TETIKLENENLER**
-  - Uyarı iş listesi (20), sabah ekranı kritikler.
+  - Uyarı iş listesi (20), ana sayfa kritikler.
   - Yayın öncesi kontrol (76) kritik uyarı sayısı.
   - Çalışma özeti 'değişiklik etkisi' uyarı farkı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Plan uyarıları:** PlanWarning Her hesapta baştan üretilir
 - **Yeni / güncellenen / kapanan:** PlanWarning karşılaştırma Önceki hesaba göre
 - **İş listesi kayıtları:** Uyarı iş listesi Yalnız yayında; notlar ve atamalar korunur
-- **Sabah ekranı sayıları:** Sabah ekranı Gece senaryoları bitince
+- **Ana sayfa sayıları:** Ana sayfa Gece senaryoları bitince
 - **ÖRNEK:** Freze merkezi H46 doluluk %108 → kapasite, kritik (eşik %100), 'güncellendi: 104 → 108'. Rulman R-12 H45 400 eksik, temin 14 gün → malzeme, yüksek, 'yeni'. Boya hattı 4 hafta %28 → kapandı (bu hesapta %32).
 
 ### 37 · Uyarı üretme · Hesap sonu uyarıları
@@ -2647,7 +2647,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (her plan hesabının sonunda) · metrik seti ve ağırlıklar: admin ve üstü
-  - Nereden: Plan hesabı aşaması · görünüm: Senaryolar (karşılaştırma), Çalışma özeti, Sabah ekranı
+  - Nereden: Plan hesabı aşaması · görünüm: Senaryolar (karşılaştırma), Çalışma özeti, Ana sayfa
 - **01:** Metrik tanımları okunur (sabit küme + parametreler); her metrik için kaynak tablo ve formül bellidir.
 - **02:** Teslim metrikleri DemandFulfillment'tan: zamanında oran, geciken satır, toplam gecikme (gün, isteğe bağlı miktar ağırlıklı).
 - **GIRDI**
@@ -2676,14 +2676,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Maliyet verisi kısmen boş: stok değeri 'eksik maliyet' uyarısıyla.
   - Referans hesap silinmiş: fark '—', bilgi.
 - **ETKISI VE TETIKLENENLER**
-  - Senaryo karşılaştırma (42), çalışma özeti, sabah ekranı 'dünden bugüne'.
+  - Senaryo karşılaştırma (42), çalışma özeti, ana sayfa 'dünden bugüne'.
   - Yayın öncesi fark tablosu (80).
   - Değişiklik izi etki sütunu (44).
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Metrik değerleri:** PlanMetric Her hesapta baştan
 - **Fark sütunları:** Senaryo karşılaştırma, çalışma özeti Referans değişince ya da yeni hesapta
 - **Değişiklik etkisi:** Değişiklik izi Değişiklikten sonraki hesapta
-- **Dünden bugüne:** Sabah ekranı Gece senaryoları bitince, dünkü özetle
+- **Dünden bugüne:** Ana sayfa Gece senaryoları bitince, dünkü özetle
 - **ÖRNEK:** Fazla mesai senaryosu: zamanında teslim 402/421 = %95,5… Çalışmada WO-5521 taşındıktan sonra hesap: gecikme 9 → 2 gün, fazla mesai 200 → 224 sa; etki satırı değişikliğe bağlanır.
 
 ### 38 · Metrik hesaplama · Metrik tanımları
@@ -2704,7 +2704,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Üç referans:** Kaynak senaryo, önceki hesap, bu hesap; fark renkli.
 - **Değişiklik etkisi:** Her değişikliğin metrik farkı; neyin işe yaradığı görünür.
 - **Kötüleşen de görünür:** Fazla mesai artışı kırmızı; takas açık.
-- **Çalışma çubuğu:** Özet sekmesi; yeniden hesap ve yayın buradan.
+- **Çalışma özeti:** Menüde Çalışma › Özet; yeniden hesap ve yayın buradan (K-82).
 
 ### 39 · Açıklama üretme
 <sub>24. Ekranlar ve fonksiyonlar · F39 · D Planlama motoru · Çalışma prensibi 1/2</sub>
@@ -2746,7 +2746,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Pegging, Sipariş bazlı, Uyarılar, Öneriler ekranlarındaki metinler.
   - Yayın notuna otomatik özet (isteğe bağlı).
-  - Sabah ekranı kritik uyarı metinleri.
+  - Ana sayfa kritik uyarı metinleri.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Neden metinleri:** DemandFulfillment (açıklama) Her hesapta; pegging ya da doluluk değişince
 - **Ne yapılabilir:** Öneri bağlantıları SupplyRecommendation ve limitler değişince
@@ -2799,7 +2799,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (zamanlanmış) · zamanlama ve senaryo tanımları: admin ve üstü
-  - Nereden: Zamanlanmış iş (21:30 silme, 22:00 çekim) · görünüm: Sabah ekranı, Gece senaryoları, Sistem sağlığı
+  - Nereden: Zamanlanmış iş (21:30 silme, 22:00 çekim) · görünüm: Ana sayfa, Gece senaryoları, Sistem sağlığı
 - **01:** 21:30 temizlik: önceki gecenin senaryoları ve yayınlanmamış çalışmalar silinir; onaylı planlar ve bağlı veri versiyonları kalır (49).
 - **02:** 22:00 veri çekme (01) → doğrulama (04) → tam yükleme (05): yeni veri versiyonu. Hata eşiği aşan varlık dışarıda kalır (kısmiye döner).
 - **GIRDI**
@@ -2811,9 +2811,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05:** Süre bütçesi senaryo tanımından; 06:00 bitiş sınırını aşan senaryo durdurulur, en iyi çözüm saklanır (34).
 - **ÇIKTI**
   - Yeni veri versiyonu ve 4–6 senaryo (Scenario + PlanRun ve bağlı tablolar)
-  - Sabah ekranı özeti ve Sistem sağlığı kayıtları
+  - Ana sayfa özeti ve Sistem sağlığı kayıtları
   - Kritik uyarılar ve 'dünden bugüne' karşılaştırması
-- **06:** Akış bitince sabah ekranı özeti hazırlanır: adımlar, süreler, hatalar, kritik uyarılar, dünden bugüne (82). Bildirim uygulama içidir (kapalı ağ).
+- **06:** Akış bitince ana sayfa özeti hazırlanır: adımlar, süreler, hatalar, kritik uyarılar, dünden bugüne (82). Bildirim uygulama içidir (kapalı ağ).
 
 ### 40 · Gece akışı · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F40 · E Senaryo ve çalışma · Çalışma prensibi 2/2</sub>
@@ -2826,18 +2826,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Akış saatleri ve paralellik admin ayarıdır; bitiş sınırı sistem sahibi ayarıdır.
 - **HATA VE ISTISNA**
   - Veri çekme başarısız: 01 kuralları; senaryolar son versiyonla ya da atlanır (parametre).
-  - Bir senaryo hata verirse diğerleri devam eder; hata sabah ekranında kırmızı.
+  - Bir senaryo hata verirse diğerleri devam eder; hata ana sayfada kırmızı.
   - Sunucu yeniden başlarsa yarım kalan işler kuyruktan yeniden alınır (heartbeat); tamamlanan adımlar tekrarlanmaz.
   - 06:00'a yetişmeyen senaryo durdurulur; gündüz yeniden çalıştırılabilir (41).
 - **ETKISI VE TETIKLENENLER**
-  - Sabah ekranı (82) ve Senaryolar (42).
+  - Ana sayfa (82) ve Senaryolar (42).
   - Veri kalitesi listesi ve uyarılar (yayınla).
   - Sistem sağlığı: süreler, hatalar, kuyruk.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Veri versiyonu ve türetilmiş alanlar:** DataVersion, FieldValueSource, LLC Tam yükleme ile (05)
 - **Senaryo plan çıktıları:** PlanRun → CapacityLoad, PlannedOrder, Pegging, DemandFulfillment Her senaryoda baştan
 - **Uyarı ve metrik:** PlanWarning, PlanMetric Her senaryoda
-- **Dünden bugüne:** Sabah ekranı Dünkü senaryo özetiyle
+- **Dünden bugüne:** Ana sayfa Dünkü senaryo özetiyle
 - **Silinen senaryolar:** Scenario, Workspace 21:30 temizlikte
 - **ÖRNEK:** 21:30 silme → 22:00 çekim 21 dk → 22:18 yükleme v231 → 22:30 Baz ve Fazla mesai paralel (41 / 47 dk) → 23:20 Fason ve Talep +%10 → 00:30 Kısıtlı malzeme 30 dk bütçeyi aştı → 00:58 akış bitti, 4/5 senaryo tamam.
 - **AÇIK KONU:** Yükleme başarısız olduğunda senaryoların eski veriyle çalışması (öneri) kararı. Paralel senaryo sayısı sunucu boyutuna göre belirlenecek.
@@ -2850,7 +2850,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Tek çizelge:** Silme, çekim, yükleme ve senaryolar saat ekseninde; paralellik görünür.
 - **Canlı durum:** Şu an çizgisi ve çalışan senaryo kırmızı; bitiş sınırı sağda.
 - **Sıra ve paralellik:** Öncelik sırası ve en fazla 2 paralel senaryo altta yazılı.
-- **Yönetim erişimi:** Zamanlamayı düzenleme ve sabah ekranına geçiş butonları.
+- **Yönetim erişimi:** Zamanlamayı düzenleme ve ana sayfaya geçiş butonları.
 
 ### 40 · Gece akışı · Sabah özeti çekmecesi
 <sub>24. Ekranlar ve fonksiyonlar · F40 · E Senaryo ve çalışma · Mockup 2/2</sub>
@@ -2871,7 +2871,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Senaryolar ekranı · senaryo kartı menüsü 'Yeniden çalıştır' · Sabah ekranı hata satırı
+  - Nereden: Senaryolar ekranı · senaryo kartı menüsü 'Yeniden çalıştır' · Ana sayfa hata satırı
 - **01:** Kullanıcı senaryo kartından 'Yeniden çalıştır' seçer; pencere senaryonun dünkü durumunu (hata, süre aşımı, kurallı) özetler.
 - **02:** Veri versiyonu seçilir: gece versiyonu (karşılaştırma bozulmaz) ya da güncel versiyon (gün içi yükleme varsa, uyarıyla).
 - **GIRDI**
@@ -2885,7 +2885,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Senaryo kartında 'yeniden çalıştırıldı · kim · saat' bilgisi
   - Bildirim ve denetim izi
 - **05:** Hesap bitince yeni sonuç eskisinin yerine geçer; bildirim (48) gelir. Bu senaryodan açılmış çalışmalar eski PlanRun'a bağlı kalır ve uyarı alır.
-- **06:** Sabah ekranı ve senaryo karşılaştırması güncellenir; işlem denetim izine yazılır.
+- **06:** Ana sayfa ve senaryo karşılaştırması güncellenir; işlem denetim izine yazılır.
 
 ### 41 · Senaryoyu yeniden çalıştırma (öneri) · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F41 · E Senaryo ve çalışma · Çalışma prensibi 2/2</sub>
@@ -2901,16 +2901,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Senaryo tanımı bu arada silindiyse: işlem reddedilir, açıklama.
   - Gece akışı başladıysa (21:30 sonrası) gündüz yeniden çalıştırma kapalıdır.
 - **ETKISI VE TETIKLENENLER**
-  - Senaryolar ve sabah ekranı güncellenir.
+  - Senaryolar ve ana sayfa güncellenir.
   - Bağlı açık çalışmalara 'kaynak senaryo yenilendi' uyarısı.
   - Sistem sağlığı: iş kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Senaryo plan çıktıları:** PlanRun ve bağlı tablolar Yeni hesapta baştan; eskisi bitince değiştirilir
 - **Metrik ve karşılaştırma:** PlanMetric Yeni hesapta
-- **Sabah ekranı satırı:** Sabah ekranı Hesap bitince
+- **Ana sayfa satırı:** Ana sayfa Hesap bitince
 - **Bağlı çalışma uyarısı:** Workspace Kaynak senaryo yenilendi işareti
 - **ÖRNEK:** Kısıtlı malzeme gece 30 dk'da süre aştı (kurallı plan). 09:50'de Cavide 60 dk bütçeyle, v231 ile yeniden başlattı; 10:38'de MILP gap %0,9 ile bitti, kart güncellendi, bildirim geldi.
-- **AÇIK KONU:** Öneri fonksiyon; kabul edilirse Senaryolar ekranına menü ve sabah ekranına kısayol eklenir.
+- **AÇIK KONU:** Öneri fonksiyon; kabul edilirse Senaryolar ekranına menü ve ana sayfaya kısayol eklenir.
 
 ### 41 · Senaryoyu yeniden çalıştırma (öneri) · Menüden başlatma
 <sub>24. Ekranlar ve fonksiyonlar · F41 · E Senaryo ve çalışma · Mockup 1/3</sub>
@@ -2920,7 +2920,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kart menüsü:** Senaryo kartında menü: yeniden çalıştır, çalışma aç, Excel, tanıma git.
 - **Hatalı senaryo:** Süre aşan senaryo kartı farklı renkte; menü aynı yerde.
 - **Yetki:** End user menüyü görmez; key user ve üstü.
-- **Sabah ekranı kısayolu:** Hata satırından da aynı pencere açılır.
+- **Ana sayfa kısayolu:** Hata satırından da aynı pencere açılır.
 
 ### 41 · Senaryoyu yeniden çalıştırma (öneri) · Seçenekler ve onay
 <sub>24. Ekranlar ve fonksiyonlar · F41 · E Senaryo ve çalışma · Mockup 2/3</sub>
@@ -3015,7 +3015,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü · end user açamaz
-  - Nereden: Senaryolar ekranı 'Çalışma aç' · senaryo kartı menüsü · Sabah ekranı 'Baz senaryoda çalışma aç'
+  - Nereden: Senaryolar ekranı 'Çalışma aç' · senaryo kartı menüsü · Ana sayfa 'Baz senaryoda çalışma aç'
 - **01:** Kullanıcı senaryo seçer, 'Çalışma aç' der; pencere senaryo bilgisini, açık çalışmaları ve slot durumunu gösterir.
 - **02:** Sınır kontrolü: 3 aktif sıcak çalışma varsa açılmaz; kullanıcı sıraya girer ya da kendi çalışmasını kapatır (47, 49).
 - **GIRDI**
@@ -3023,9 +3023,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çalışma adı (varsayılan senaryo + kullanıcı)
   - Eş zamanlı sınır ve açık çalışma listesi (47)
 - **03:** Workspace kaydı: sahip, senaryo, durum = açık, CurrentPlanRunId = senaryonun hesabı. Veri kopyalanmaz; değişiklikler WorkspaceOverride'da tutulur.
-- **04:** Çalışma çubuğu açılır (özet, doluluk, manuel planlama görünümleri, malzeme, öneriler, pegging, termin, yayın); çalışma veri versiyonuna bağlı kalır.
+- **04:** Menüde Çalışma grubunun ekranları açılır ve bağlam çubuğunda çalışmanın adı görünür (K-82) (özet, doluluk, manuel planlama görünümleri, malzeme, öneriler, pegging, termin, yayın); çalışma veri versiyonuna bağlı kalır.
 - **ÇIKTI**
-  - Workspace kaydı ve çalışma çubuğu
+  - Workspace kaydı; menüde çalışma ekranları ve bağlam çubuğunda çalışma adı
   - Bildirim: çalışma açıldı
   - Denetim izi kaydı
 - **05:** Başkaları çalışmayı yalnız sahibi izin verirse salt okunur görür; aynı çalışmada iki kişi değişiklik yapamaz.
@@ -3067,7 +3067,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![43 · Çalışma açma · Çalışma açıldı](mockups/m24f-0522-43-calisma-acma-calisma-acildi.png)
 
-- **Çalışma çubuğu:** Üstte çalışma adı ve sekmeler; planlama ekranları bu bağlamda.
+- **Çalışma bağlamı:** Bağlam çubuğunda çalışma adı; planlama ekranları menüde Çalışma grubunun altında, üst sekme yok (K-82).
 - **Bildirim:** Yeşil bildirim: kaynak senaryo ve değişiklik yok.
 - **Özet aynı:** Değişiklik yapılmadan metrikler senaryoyla aynı.
 - **Geri dönüş:** Sonraki girişte kullanıcı açık çalışmasına döner.
@@ -3383,7 +3383,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Bağlantı durumu
 - **03:** Kullanıcı ilgili çalışma ekranındaysa ekran tazelenir ve değişen hücreler vurgulanır; başka ekrandaysa bildirimden tek tıkla gider.
 - **04:** Bağlantı koparsa istemci 10 sn'de yeniden bağlanır ve son durumu sorgular (yedek: 30 sn'de bir sorgu); kaçan bildirim merkeze düşer.
-- **05:** Gece işleri bildirim merkezi yerine sabah ekranına yazılır (gece kimse bağlı değildir).
+- **05:** Gece işleri bildirim merkezi yerine ana sayfaya yazılır (gece kimse bağlı değildir).
 - **ÇIKTI**
   - Ekran bildirimi ve bildirim merkezi kaydı
   - Ekran tazeleme ve değişen hücre vurguları
@@ -3395,7 +3395,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Bildirim yalnız iş sahibine; paylaşılan çalışmada salt okunur izleyenlere de (isteğe bağlı).
-  - Bildirimler saklanmaz; son 20 oturum boyunca, sabah ekranı gece için.
+  - Bildirimler saklanmaz; son 20 oturum boyunca, ana sayfa gece için.
   - Ekran tazeleme kullanıcının kaydedilmemiş girişini silmez; önce uyarır.
   - Kapalı ağ: uygulama içi bildirim dışında kanal yok.
 - **HATA VE ISTISNA**
@@ -3405,7 +3405,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Çalışma ekranları tazelenir.
   - Kuyruk (47) sıradaki iş başladı bildirimi.
-  - Sabah ekranı (gece işleri).
+  - Ana sayfa (gece işleri).
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; bildirim ve ekran tazeleme. Değişen hücre vurguları hesabın (46) kendi çıktısından okunur.
 - **ÖRNEK:** 09:46 Cavide Sipariş bazlı ekranındayken hesap biter: yeşil bildirim, tablo tazelenir, SO-1182 planlanan H48 → H46 vurgulanır. Mert başka ekranda; bildirimden tek tıkla doluluk ekranına gider.
 
@@ -3438,7 +3438,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Çalışma sahibi · admin (işlem yapılmayan çalışmayı kapatma) · sistem (gece 21:30)
-  - Nereden: Çalışma çubuğu 'Çalışmayı kapat' · Sistem sağlığı açık çalışmalar · gece akışı temizliği
+  - Nereden: Bağlam çubuğu 'Çalışmayı kapat' · Sistem sağlığı açık çalışmalar · gece akışı temizliği
 - **01:** Kullanıcı 'Çalışmayı kapat' der; pencere kaydedilmemiş değişiklik, yayın durumu ve sonuçları gösterir; 'önce yayınla' seçeneği sunulur.
 - **02:** Onayla: Workspace durumu = kapalı, slot boşalır (47), sıradaki iş başlar; kaydedilmemiş değişiklik atılır, kayıtlı değişiklikler iz olarak kalır.
 - **GIRDI**
@@ -3465,7 +3465,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **HATA VE ISTISNA**
   - Hesap sürerken kapatma: hesap iptal edilir, sonra kapanır (uyarı).
   - Kapatma sırasında yayın başladıysa: yayın öncelikli, kapatma beklemeye alınır.
-  - Gece temizliğinde kilitli kayıt: tekrar denenir, sabah ekranına not.
+  - Gece temizliğinde kilitli kayıt: tekrar denenir, ana sayfaya not.
 - **ETKISI VE TETIKLENENLER**
   - Eş zamanlı sınır (47) slot boşalır.
   - Senaryolar ekranı 'çalışma aç' yeniden mümkün.
@@ -4611,7 +4611,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (çalışma içinde) · end user onaylı planın aynı görünümünü raporda salt okunur görür
-  - Nereden: Çalışma çubuğu 'Malzeme planı' · Pegging ve uyarı ekranlarından malzeme bağlantısı · Raporlar (onaylı plan)
+  - Nereden: Menü · Çalışma › 'Malzeme planı' · Pegging ve uyarı ekranlarından malzeme bağlantısı · Raporlar (onaylı plan)
 - **01:** Malzeme listesi yüklenir; eksiği olanlar üstte, eksik miktarı yanında. Filtreler: sadece eksikler (65), tedarik tipi, proje, tedarikçi.
 - **02:** Seçilen malzeme için dönem satırları gösterilir: brüt ihtiyaç, açık arz (kesin), planlı sipariş (öneri), stok projeksiyonu, eksik. Değerler plan hesabından okunur; ekranda hesap yapılmaz.
 - **GIRDI**
@@ -4677,7 +4677,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü · end user raporda aynı filtreyi kullanır
-  - Nereden: Malzeme planı ekranı · 'Sadece eksikler' anahtarı ve sıralama menüsü · Sabah ekranı 'malzeme' uyarısından
+  - Nereden: Malzeme planı ekranı · 'Sadece eksikler' anahtarı ve sıralama menüsü · Ana sayfa 'malzeme' uyarısından
 - **01:** 'Sadece eksikler' açılınca liste, herhangi bir dönemde stok projeksiyonu sıfırın altına inen malzemelerle sınırlanır; isteğe bağlı 'güvenlik stoğu altı' da sayılır.
 - **02:** Her malzeme için ilk eksik dönemi ve miktarı hesaplanır; liste varsayılan olarak ilk eksik tarihine göre sıralanır (miktar ve ada göre de sıralanabilir).
 - **GIRDI**
@@ -5064,7 +5064,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (çalışma) · end user onaylı plan pegging'ini raporda salt okunur görür
-  - Nereden: Çalışma çubuğu 'Pegging' · Sipariş bazlı, Malzeme planı ve Uyarılar ekranlarından 'pegging' bağlantısı
+  - Nereden: Menü · Çalışma › 'Pegging' · Sipariş bazlı, Malzeme planı ve Uyarılar ekranlarından 'pegging' bağlantısı
 - **01:** Başlangıç seçilir: arama kutusuna sipariş, malzeme, proje ya da arz belgesi yazılır; ya da başka ekrandan bağlantıyla gelinir. Yön: talepten aşağı ya da arzdan yukarı.
 - **02:** Ağaç Pegging tablosundan kurulur: talep → arz (stok, iş emri, satın alma, planlı sipariş) → alt seviye ihtiyaç → …; her düğümde miktar, dönem, proje etiketi.
 - **GIRDI**
@@ -5212,7 +5212,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü · end user sorgu çalıştıramaz
-  - Nereden: Çalışma çubuğu 'Termin ve olaylar' · Sipariş bazlı ekranda 'yeni talep dene' · Sabah ekranı kısayolu
+  - Nereden: Menü · Çalışma › 'Termin ve olaylar' · Sipariş bazlı ekranda 'yeni talep dene' · Ana sayfa kısayolu
 - **01:** Form doldurulur; ürün mevcut ürünlerden seçilir (taslak ürün için 74). Kısıt seçenekleri işaretlenir; varsayılan 'mevcut plan korunur'.
 - **02:** Geçici hesap etkileşim kanalında kuyruğa girer (yüksek öncelik, kısa süre bütçesi): talep çalışmanın plan kopyasına eklenir, diğer talepler sabit tutulur, kalan kapasite ve stokla ileriye doğru çizelgelenir.
 - **GIRDI**
@@ -5288,7 +5288,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Çalışma çubuğu 'Termin ve olaylar' · Pegging 'ertelenirse' bağlantısı · Gecikme nedeni 'Dene' · Kaynak doluluk ekranından 'duruş dene'
+  - Nereden: Menü · Çalışma › 'Termin ve olaylar' · Pegging 'ertelenirse' bağlantısı · Gecikme nedeni 'Dene' · Kaynak doluluk ekranından 'duruş dene'
 - **01:** Olay tipi seçilir, parametreler girilir; kaynak ve sipariş alanları mevcut kayıtlardan seçilir (yazarak arama).
 - **02:** 'Etkiyi hesapla' ile geçici hesap etkileşim kanalına girer: olay çalışmanın plan kopyasına uygulanır (duruş → dönem kapasitesi düşer; gecikme → arz tarihi kayar; iptal → talep çıkar).
 - **GIRDI**
@@ -5365,7 +5365,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Çalışma çubuğu 'Termin ve olaylar' · ürün simülasyonu sekmesi · Termin sorgusunda 'ürünü değiştirerek dene'
+  - Nereden: Menü · Çalışma › 'Termin ve olaylar' · ürün simülasyonu sekmesi · Termin sorgusunda 'ürünü değiştirerek dene'
 - **01:** Taslak ürün oluşturulur: mevcut ürün seçilir, ağacı ve rotası çalışma kapsamına kopyalanır; ya da boş taslak açılır.
 - **02:** Ağaç ve rota düzenlenir: bileşen adedi değiştirilir, yeni bileşen eklenir (tedarik tipi ve temin süresiyle), operasyon eklenir (kaynak ve süre). Düzenlemeler yalnız bu çalışmada tutulur.
 - **GIRDI**
@@ -5518,7 +5518,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **76 · Yayın öncesi kontrol:** Çalışmayı onaylı plan yapmadan önce veri yaşı, daha yeni veri, çakışan yayın, bekleyen karar, kritik uyarı ve hesap güncelliğini otomatik kontrol etmek; engelleri kapatmak, uyarıları görünür kılmak ve kontrol sonucunu yayın kaydına yazmak.
 - **77 · Onaylı plan yayınlama:** Bir çalışmanın son plan hesabını, kararlarıyla birlikte dondurup onaylı plan versiyonu yapmak; veri versiyonunu sabitlemek, çalışmayı salt okunur hale getirmek ve istenirse yeni planı varsayılan ilan etmek. Onaylı plan yalnız çalışmadan yayınlanır.
 - **78 · Varsayılan yap:** Birden fazla onaylı plan arasında raporların, uyarı listesinin ve end user görünümünün kaynağı olan 'varsayılan' planı belirlemek; yayın sırasında ya da sonradan, geri alınabilir şekilde.
-- **79 · Yayın notu:** Her onaylı plana, neden ve hangi varsayımlarla yayınlandığını anlatan kısa bir not eklemek; notun planla birlikte saklanmasını ve listede, rapor kapağında ve sabah ekranında görünmesini sağlamak.
+- **79 · Yayın notu:** Her onaylı plana, neden ve hangi varsayımlarla yayınlandığını anlatan kısa bir not eklemek; notun planla birlikte saklanmasını ve listede, rapor kapağında ve ana sayfada görünmesini sağlamak.
 - **80 · Plan karşılaştırma:** İki planı (onaylı plan, gece senaryosu ya da çalışma) metrik, sipariş, kaynak ve öneri düzeyinde yan yana karşılaştırmak; yayın kararı, çakışma değerlendirmesi ve 'ne değişti' sorusu için tek görünüm.
 - **81 · Onaylı plan saklama:** Yayınlanmış her planı, bağlı plan çıktılarını, kararları, değişiklik izini ve veri versiyonunu kalıcı olarak saklamak; gece temizliğinin yalnız senaryoları ve yayınlanmamış çalışmaları silmesini garanti etmek.
 
@@ -5531,7 +5531,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (Yayın ekranı açılınca ve her değişiklikte otomatik) · görüntüleme: key user ve üstü
-  - Nereden: Çalışma çubuğu 'Yayın' · Çalışma özeti 'Yayına hazırla' · yayın onay penceresinden önce
+  - Nereden: Menü · Çalışma › 'Yayın' · Çalışma özeti 'Yayına hazırla' · yayın onay penceresinden önce
 - **01:** Yayın ekranı açılınca kontroller çalışır; her çalışma değişikliğinde ve yeniden hesap bitince yenilenir (anlık).
 - **02:** Veri yaşı: çalışmanın veri versiyonunun yaşı; eşik (öneri 36 saat) aşılırsa uyarı. Daha yeni veri: çalışmanın versiyonundan sonra yükleme varsa uyarı, hangi varlıklar olduğu yazılır.
 - **GIRDI**
@@ -5633,7 +5633,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kontroller engel verirse (hesap eskidi): yayın başlamaz.
   - Çalışma sahibi değilse: buton görünmez.
 - **ETKISI VE TETIKLENENLER**
-  - Varsayılan plan değişir (78); raporlar (21), uyarı iş listesi (20) ve sabah ekranı yeni plana bağlanır.
+  - Varsayılan plan değişir (78); raporlar (21), uyarı iş listesi (20) ve ana sayfa yeni plana bağlanır.
   - End user görünümü v15 olur.
   - ERP işlem listesi dışa aktarılabilir (69).
   - Çalışma salt okunur; gece temizliğinde silinmez (yayınlandı).
@@ -5650,7 +5650,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Çalışma durumu:** Workspace.Status Yayında; salt okunur
 - **Raporların kaynağı:** Raporlar (21) · varsayılan plan Varsayılan değiştiyse anında
 - **Uyarı listesi bağlamı:** Uyarı iş listesi (20) · PlanWarning Varsayılan plana göre yeniden listelenir; notlar ve atamalar korunur
-- **Sabah ekranı 'dünden bugüne':** Sabah ekranı Ertesi sabah; onaylı plan karşılaştırması v15'e göre
+- **Ana sayfa 'dünden bugüne':** Ana sayfa Ertesi sabah; onaylı plan karşılaştırması v15'e göre
 - **Yayın kaydı ve denetim izi:** AuditLog · yayın kaydı Yayında
 
 ### 77 · Onaylı plan yayınlama · Onay penceresi
@@ -5698,9 +5698,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - PlanVersion listesi (IsCurrent, yayınlayan, zaman, veri versiyonu, not)
   - Hedef plan ve neden (sonradan değiştirmede zorunlu, öneri)
-  - Varsayılana bağlı tüketiciler: raporlar, uyarı iş listesi, sabah ekranı, end user görünümü, ERP işlem listesi
+  - Varsayılana bağlı tüketiciler: raporlar, uyarı iş listesi, ana sayfa, end user görünümü, ERP işlem listesi
 - **03:** Onayla: IsCurrent tek bir planda olacak şekilde değiştirilir (aynı anda tek geçerli); denetim izine neden ve kullanıcı yazılır.
-- **04:** Tüketiciler yeni varsayılana bağlanır: raporlar, uyarı iş listesi (notlar ve atamalar korunur, uyarılar yeni plana göre yeniden listelenir), sabah ekranı, end user görünümü, ERP işlem listesi.
+- **04:** Tüketiciler yeni varsayılana bağlanır: raporlar, uyarı iş listesi (notlar ve atamalar korunur, uyarılar yeni plana göre yeniden listelenir), ana sayfa, end user görünümü, ERP işlem listesi.
 - **05:** Çalışması açık kullanıcılara bildirim: 'varsayılan plan v14 oldu' (çalışmalar etkilenmez; onlar senaryoya bağlı).
 - **ÇIKTI**
   - PlanVersion.IsCurrent değişimi; denetim izi (neden, kim, zaman)
@@ -5723,7 +5723,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veritabanı hatası: değişim geri alınır, eski varsayılan kalır.
   - Hedef planın veri versiyonu sıkıştırılmışsa (81): raporlar özet verir, detay kısıtlı; uyarı.
 - **ETKISI VE TETIKLENENLER**
-  - Raporlar (21), uyarı iş listesi (20), sabah ekranı (82) ve end user görünümü yeni plana geçer.
+  - Raporlar (21), uyarı iş listesi (20), ana sayfa (82) ve end user görünümü yeni plana geçer.
   - ERP işlem listesi (69) yeni planın kararlarından.
   - Bildirim: açık çalışması olan ve admin kullanıcılara.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
@@ -5731,7 +5731,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Raporların kaynağı:** Raporlar (21) Anında; sonraki rapor yeni plandan
 - **Uyarı iş listesi:** Uyarı iş listesi (20) · PlanWarning Anında yeniden listelenir; not ve atamalar korunur
 - **End user görünümü:** Onaylı plan salt okunur ekranlar Anında
-- **Sabah ekranı karşılaştırması:** Sabah ekranı (82) Ertesi sabah, yeni varsayılana göre
+- **Ana sayfa karşılaştırması:** Ana sayfa (82) Ertesi sabah, yeni varsayılana göre
 - **ERP işlem listesi:** Dışa aktarma (69) Sonraki dışa aktarımda
 - **ÖRNEK:** Fazla mesai onayı alınamayınca admin v15 yerine v14'ü (fason planı) varsayılan yaptı; neden yazıldı. Raporlar ve end user v14'e döndü; v15 'önceki' olarak kaldı, iki gün sonra tekrar varsayılan yapıldı.
 
@@ -5751,14 +5751,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![78 · Varsayılan yap · Onay ve etkiler](mockups/m24f-0691-78-varsayilan-yap-onay-ve-etkiler.png)
 
 - **Şu anki → yeni:** İki plan yan yana; kim, ne zaman.
-- **Etkiler listesi:** Raporlar, uyarılar, sabah ekranı, ERP listesi; kullanıcı ne değişeceğini bilir.
+- **Etkiler listesi:** Raporlar, uyarılar, ana sayfa, ERP listesi; kullanıcı ne değişeceğini bilir.
 - **Neden zorunlu:** Sonradan değiştirmede neden; denetim izine gider.
 - **Geri alınabilir:** Planlar silinmez; eski plan tekrar varsayılan yapılabilir.
 
 ### 79 · Yayın notu
 <sub>24. Ekranlar ve fonksiyonlar · F79 · I Yayın · Çalışma prensibi 1/2</sub>
 
-- Her onaylı plana, neden ve hangi varsayımlarla yayınlandığını anlatan kısa bir not eklemek; notun planla birlikte saklanmasını ve listede, rapor kapağında ve sabah ekranında görünmesini sağlamak.
+- Her onaylı plana, neden ve hangi varsayımlarla yayınlandığını anlatan kısa bir not eklemek; notun planla birlikte saklanmasını ve listede, rapor kapağında ve ana sayfada görünmesini sağlamak.
 
 #### NASIL ÇALIŞIR
 
@@ -5772,7 +5772,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Başlık ve serbest metin; etiketler (isteğe bağlı)
   - Otomatik özet: kaynak senaryo, değişiklik listesi, varsayımlar (geçici kayıtlar), yayın uyarıları
   - Düzenleme geçmişi (önceki sürümler)
-- **04:** Not onaylı planlar listesinde, rapor kapağında, sabah ekranı 'onaylı plan' kartında ve end user görünümünde gösterilir.
+- **04:** Not onaylı planlar listesinde, rapor kapağında, ana sayfa 'onaylı plan' kartında ve end user görünümünde gösterilir.
 - **05:** Sonradan düzenleme: admin ve üstü; her düzenleme geçmişe eklenir (kim, ne zaman, önceki metin); yayın anındaki not değişmez olarak kalır.
 - **06:** Notlar arama ile bulunur (başlık, etiket, metin).
 - **ÇIKTI**
@@ -5793,7 +5793,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çok uzun not (> 4.000 karakter): kısaltma uyarısı.
   - Düzenleme çakışması (iki admin aynı anda): ikinci kaydeden uyarı alır, önceki metin gösterilir.
 - **ETKISI VE TETIKLENENLER**
-  - Onaylı planlar listesi, rapor kapağı, sabah ekranı ve end user görünümü metni güncellenir.
+  - Onaylı planlar listesi, rapor kapağı, ana sayfa ve end user görünümü metni güncellenir.
   - Denetim izi: düzenleme kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; not metin alanıdır, plan hesabını etkilemez.
 - **ÖRNEK:** v15 notu: 'Fazla mesai ile SO-1182 öne alındı. 40 sa fazla mesai onayı bekleniyor; alınamazsa v14 planına dönülür. PO-7781 teyidi Mekan Rulman'dan.' Otomatik özet eklendi; etiketler: fazla mesai, SO-1182.
@@ -5950,7 +5950,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (tam görünüm) · end user: onaylı plan ve uyarılar, salt okunur
-  - Nereden: Giriş sonrası açılış ekranı · menü 'Sabah ekranı' · gece akışı bitince otomatik tazelenir
+  - Nereden: Giriş sonrası açılış ekranı · menü 'Ana sayfa' · gece akışı bitince otomatik tazelenir
 - **01:** Ekran açılınca son gece akışının iş kayıtları okunur: her adımın başlangıcı, süresi, durumu; süre aşımı ve hata kırmızı işaretlenir.
 - **02:** Özet kartlar dolar: biten senaryo sayısı, kritik uyarı sayısı (dünle fark), ana senaryonun zamanında teslim oranı, veri durumu (son yükleme ve uyarı sayısı).
 - **GIRDI**
@@ -6031,7 +6031,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Not, atama, kapatma: key user ve üstü · end user: onaylı plan uyarılarını görür ve Excel'e alır
-  - Nereden: Menü 'Uyarılar' · sabah ekranı 'Uyarılara git' · ekranlardaki uyarı çipleri
+  - Nereden: Menü 'Uyarılar' · ana sayfa 'Uyarılara git' · ekranlardaki uyarı çipleri
 - **01:** Liste açılır: varsayılan kaynak onaylı plan ve geçerli veri versiyonu; açık uyarılar önem sırasıyla, kategori çipleri sayılarıyla.
 - **02:** Filtreler daraltır (kategori çipi, önem, durum, sorumlu, metin); filtre kullanıcı bazında hatırlanır ve kaydedilebilir.
 - **GIRDI**
@@ -6040,7 +6040,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Uyarı iş kaydı: durum, sorumlu, notlar (öneri: PlanWarning'e bağlı yeni tablo)
   - Filtreler: kategori, önem, durum, sorumlu, kayıt araması
 - **03:** Satır seçilince sağ panel: nesne, değer ve eşik, ilk görülme, kaç gündür açık, notlar (zaman damgalı), sorumlu, durum.
-- **04:** Not eklenir; sorumlu atanır (atanan kullanıcının sabah ekranında 'size atanan' sayacı, öneri); durum 'izleniyor' yapılabilir.
+- **04:** Not eklenir; sorumlu atanır (atanan kullanıcının ana sayfada 'size atanan' sayacı, öneri); durum 'izleniyor' yapılabilir.
 - **05:** Kapatma: neden zorunlu (çözüldü / kabul edildi / yanlış uyarı); onay penceresi; aynı nesnenin benzer uyarıları birlikte kapatılabilir.
 - **06:** Uyarı kimliği nesne + uyarı kodudur: sonraki hesapta aynı koşul sürüyorsa kayıt güncellenir (ilk görülme korunur); koşul kalkmışsa otomatik 'çözüldü'.
 - **ÇIKTI**
@@ -6064,14 +6064,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Atanan kullanıcı kapatılırsa atama kaldırılır, uyarı 'sorumsuz' listesine düşer.
   - Uyarı nesnesi ERP'de silinmişse (iptal sipariş) 'kayıt artık yok' etiketi; kapatmaya aday.
 - **ETKISI VE TETIKLENENLER**
-  - Uyarı sayaçları (sabah ekranı, kategori çipleri) anında güncellenir.
+  - Uyarı sayaçları (ana sayfa, kategori çipleri) anında güncellenir.
   - Atama → sorumluya bildirim; kapatma → denetim izi.
   - 'Kaynağa git' → ilgili ekran (84).
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Uyarı sayaçları:** Sabah ekranı · kategori çipleri Her kapatma, açma ve yeni plan hesabında
+- **Uyarı sayaçları:** Ana sayfa · kategori çipleri Her kapatma, açma ve yeni plan hesabında
 - **Uyarı eşlemesi:** PlanWarning ↔ uyarı iş kaydı Yeni plan hesabında aynı nesne + kod eşleştirilir; ilk görülme korunur
 - **Otomatik kapanış:** Uyarı iş kaydı Yeni hesapta koşul oluşmadıysa 'çözüldü'
-- **Sorumlu özeti:** Sabah ekranı 'size atanan' Atama değişince (öneri)
+- **Sorumlu özeti:** Ana sayfa 'size atanan' Atama değişince (öneri)
 - **Eşik inceleme listesi:** WarningDefinition 'Yanlış uyarı' nedeniyle kapatılınca (öneri)
 - **ÖRNEK:** Freze merkezi H46–H47 %108 uyarısı 22.10'da açıldı; Cavide not ekledi, Mert'e atadı. Fazla mesai çalışması v15 olarak yayınlanınca sonraki hesapta koşul kalktı → otomatik 'çözüldü'.
 
@@ -6114,7 +6114,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (hedefte değişiklik yapabilir) · end user: salt okunur hedefler
-  - Nereden: Uyarı iş listesi 'Kaynağa git' · sabah ekranı uyarı satırı · ekranlardaki uyarı çipleri
+  - Nereden: Uyarı iş listesi 'Kaynağa git' · ana sayfa uyarı satırı · ekranlardaki uyarı çipleri
 - **01:** Uyarı koduna ve nesne tipine göre hedefler listelenir: teslim → sipariş bazlı; kapasite → kaynak doluluk ya da kaynak bazlı; malzeme → malzeme planı; ana veri → kayıt; işlem verisi → veri kalitesi; proje → pegging.
 - **02:** Bağlam belirlenir: uyarı bir çalışmaya aitse o çalışma içinde açılır; onaylı plana aitse ve kullanıcının açık çalışması yoksa hedef salt okunur açılır, 'çalışma aç' önerilir.
 - **GIRDI**
@@ -6478,7 +6478,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Tüm kullanıcılar · politika ayarları: sistem sahibi · kilit açma: admin ve üstü
   - Nereden: Giriş sayfası · sağ üst kullanıcı menüsü 'Şifre değiştir' · oturum zaman aşımı penceresi
 - **01:** Giriş sayfası kullanıcı adı ve şifre alır; hata mesajı geneldir ('kullanıcı adı ya da şifre hatalı'), kullanıcının varlığı sızdırılmaz; kalan deneme sayısı gösterilir.
-- **02:** Başarılı girişte sunucu oturumu açılır (HttpOnly çerez, kurum sertifikasıyla HTTPS); giriş denetim izine yazılır; sabah ekranı açılır.
+- **02:** Başarılı girişte sunucu oturumu açılır (HttpOnly çerez, kurum sertifikasıyla HTTPS); giriş denetim izine yazılır; ana sayfa açılır.
 - **GIRDI**
   - Kullanıcı adı ve şifre; AppUser (şifre özeti, durum, kilit, ilk giriş işareti)
   - SystemSetting: şifre politikası (en az 10 karakter, harf + rakam, son 5 şifreden farklı, 90 gün; öneri), hareketsizlik sınırı 30 dk (öneri), 5 hatalı girişte 15 dk kilit
@@ -6507,7 +6507,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Politika ihlali: alan altında hangi kuralın sağlanmadığı; buton pasif.
 - **ETKISI VE TETIKLENENLER**
   - Rol bazlı yetki (90) oturuma bağlanır.
-  - Sabah ekranı (82) açılır.
+  - Ana sayfa (82) açılır.
   - Denetim izi (98).
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; oturum ve yetki bilgisi her istekte doğrulanır.
 - **ÖRNEK:** Burak geçici şifreyle girer, politikaya uygun yeni şifre belirler. Cavide 25 dk hareketsiz kalınca uyarı alır, 'Devam et' der; oturum uzar, kaydedilmemiş değişiklikleri kaybolmaz.
@@ -6647,7 +6647,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - SQL arayüz tabloları ara veritabanındadır; ERP tablolarına doğrudan bağlanılmaz, ERP tarafı tabloları doldurur (öneri).
 - **HATA VE ISTISNA**
   - Test başarısız: hangi adımda (kimlik, ağ, yetki, şema) ve ne yapılacağı; tanım yine de kaydedilebilir.
-  - Şema değişikliği (ERP alanı kalkmış): varlık 'eşleme bozuk', çekimde atlanır, sabah ekranına düşer.
+  - Şema değişikliği (ERP alanı kalkmış): varlık 'eşleme bozuk', çekimde atlanır, ana sayfaya düşer.
   - Dönüşüm tablosunda olmayan kod (yeni kaynak tipi): çekimde satır uyarıyla gelir, kod 'eşlenmemiş' listesine düşer.
   - Servis hesabı süresi dolmuş: test ve çekim hata; Sistem sağlığında.
 - **ETKISI VE TETIKLENENLER**
@@ -6715,7 +6715,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - İş tanımları ve sonraki çalışma zamanları
   - Job kayıtları (her çalıştırma)
   - Denetim izi: tanım değişikliği ve elle tetikleme
-- **06:** Bitiş sınırı aşılınca çalışan senaryo durdurulur, o ana kadarki en iyi çözüm saklanır (34); her çalışma Job tablosuna, sonuç sabah ekranına ve Sistem sağlığına yazılır.
+- **06:** Bitiş sınırı aşılınca çalışan senaryo durdurulur, o ana kadarki en iyi çözüm saklanır (34); her çalışma Job tablosuna, sonuç ana sayfaya ve Sistem sağlığına yazılır.
 
 ### 92 · Zamanlanmış işler · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F92 · K Yönetim ve sistem · Çalışma prensibi 2/2</sub>
@@ -6727,12 +6727,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hafta sonu çalışması parametredir (varsayılan açık).
   - Gece akışı saatinde (22:00–06:00) sürüm güncelleme (97) ve elle tam yükleme yapılamaz.
 - **HATA VE ISTISNA**
-  - İş başlatılamadı (işçi servisi kapalı): bir sonraki döngüde yeniden; Sistem sağlığı ve sabah ekranına uyarı.
+  - İş başlatılamadı (işçi servisi kapalı): bir sonraki döngüde yeniden; Sistem sağlığı ve ana sayfaya uyarı.
   - Zincir ortasında hata: kalan adımların davranışı parametreyle (devam / dur).
   - Sunucu saati kayması (yaz saati): işler sunucu saatine göre; değişimde bir kez uyarı (öneri).
   - Çakışan tanım kaydedilemez; hangi işle çakıştığı yazılır.
 - **ETKISI VE TETIKLENENLER**
-  - Gece akışı (40), sabah ekranı (82), Sistem sağlığı (94).
+  - Gece akışı (40), ana sayfa (82), Sistem sağlığı (94).
   - Job tablosu ve iş kuyruğu (93).
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Sonraki çalışma zamanları:** Zamanlanmış iş listesi Saat, gün ya da aktiflik değişince
@@ -6840,7 +6840,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Admin ve üstü · sistem sahibi tüm detayı görür
-  - Nereden: Menü 'Sistem sağlığı' · sabah ekranı hata satırı bağlantısı · hata bildirimleri
+  - Nereden: Menü 'Sistem sağlığı' · ana sayfa hata satırı bağlantısı · hata bildirimleri
 - **01:** Üst kartlar: kuyruk, sıcak çalışma sayacı, son 7 gün hata, disk kullanımı; eşik aşımı kırmızı.
 - **02:** Servis durumu: uygulama servisi, işçi servisi (meşgul işçi), SQL Server bağlantısı ve havuzu, zamanlayıcı, WebSocket bağlantı sayısı; son kalp atışıyla.
 - **GIRDI**
@@ -6849,10 +6849,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Disk ve veritabanı boyutu, versiyon sayısı; eşikler (SystemSetting)
 - **03:** Son çalışmalar ve süre trendi: gece senaryoları ve sıcak hesaplar; süre bütçesine yaklaşma (bütçenin %90'ı) sarı, aşım kırmızı.
 - **04:** Hatalar: zaman, bileşen, mesaj, sistemin yaptığı (otomatik tekrar, en iyi çözüm); satırdan detay çekmecesi ve 'destek paketine ekle' (95).
-- **05:** Eşikler: disk %85, kuyruk bekleme > 10 dk, süre bütçesinin %90'ı → ekranda ve sabah ekranında uyarı (öneri).
+- **05:** Eşikler: disk %85, kuyruk bekleme > 10 dk, süre bütçesinin %90'ı → ekranda ve ana sayfada uyarı (öneri).
 - **06:** Ekran canlıdır (WebSocket, 30 sn yedek yenileme); servis yanıt vermiyorsa son bilinen durum ve zamanı gösterilir.
 - **ÇIKTI**
-  - Görünüm; eşik uyarıları (sabah ekranı)
+  - Görünüm; eşik uyarıları (ana sayfa)
   - Hata detayı ve çözüm logu özeti
   - Destek paketi (95) bağlantısı
 
@@ -6866,16 +6866,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hata kayıtları 90 gün ekranda, sonra yalnız logda (öneri).
 - **HATA VE ISTISNA**
   - Veritabanı bağlantısı yok: uygulama 'bakım' sayfası; ekran açılamaz, servis loglarına bakılır.
-  - İşçi servisi kapalı: kuyruk büyür, kart kırmızı, sabah ekranına uyarı.
+  - İşçi servisi kapalı: kuyruk büyür, kart kırmızı, ana sayfaya uyarı.
   - Kalp atışı gecikmesi (yük): 'yavaş' etiketi, 2 dk üstü 'yanıt vermiyor'.
 - **ETKISI VE TETIKLENENLER**
   - Destek paketi (95), iş kuyruğu (93).
-  - Sabah ekranı (82) eşik uyarıları.
+  - Ana sayfa (82) eşik uyarıları.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Özet kartlar ve servis durumu:** Sistem sağlığı 30 sn ya da WebSocket olayında
 - **Süre trendleri:** SolverLog · Job Her hesap bitince
 - **Disk ve versiyon metrikleri:** Sistem sağlığı Yükleme (05), temizlik (09), sıkıştırma (07) sonrası
-- **Eşik uyarıları:** Sabah ekranı Eşik aşılınca (öneri)
+- **Eşik uyarıları:** Ana sayfa Eşik aşılınca (öneri)
 - **ÖRNEK:** Baz senaryosu son 7 gün 38–41 dk; bütçe 45 dk → %91, sarı. Kısıtlı malzeme 30 dk bütçeyi aştı, boşluk %4,7 ile en iyi çözüm saklandı; öneri bütçeyi 45 dk yapmak.
 
 ### 94 · Sistem sağlığı · Genel görünüm
@@ -7053,7 +7053,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Çevrimdışı doğrulama:** İmza yerelde kontrol edilir; internet gerekmez.
 - **Mevcut → yeni:** Kullanıcı, bitiş, modüller karşılaştırmalı.
 - **Bitiş davranışı:** Giriş engellenmez, yeni çalışma açılmaz; önceden yazılı.
-- **Uyarı süresi:** 30 gün kala sabah ekranında.
+- **Uyarı süresi:** 30 gün kala ana sayfada.
 
 ### 97 · Sürüm güncelleme (öneri)
 <sub>24. Ekranlar ve fonksiyonlar · F97 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
@@ -7074,7 +7074,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kuyruk ve oturum durumu
 - **04:** Yedek: veritabanı tam yedek + uygulama klasörü; yedek alınamazsa güncelleme başlamaz.
 - **05:** Uygula: dosyalar kopyalanır, şema geçişi işlem içinde çalışır, servisler yeniden başlar.
-- **06:** Sağlık kontrolü: giriş, sabah ekranı, küçük test hesabı; geçmezse yedekten otomatik geri alma; geçerse bakım modu kapanır, kullanıcılara sürüm notu gösterilir. Tümü denetim izine yazılır.
+- **06:** Sağlık kontrolü: giriş, ana sayfa, küçük test hesabı; geçmezse yedekten otomatik geri alma; geçerse bakım modu kapanır, kullanıcılara sürüm notu gösterilir. Tümü denetim izine yazılır.
 - **ÇIKTI**
   - Yeni sürüm ve şema; yedek
   - Güncelleme raporu (adımlar, süreler, sonuç)

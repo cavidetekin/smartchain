@@ -25,7 +25,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 1 · Arayüz temeli
 
-- [ ] 1.1 Kabuk: menü, daraltılabilir kenar menü, bağlam çubuğu (U-22)
+- [ ] 1.1 Kabuk: React iskeleti, gruplu menü (iki seviye, arama), daraltılabilir kenar menü, bağlam çubuğu (U-17, U-22, K-81, K-82)
 - [ ] 1.2 Stil sistemi: palet, gömülü fontlar, durum renkleri, dört yazı boyutu seviyesi (U-1–U-5, U-23)
 - [ ] 1.3 Ortak tablo bileşeni: alan ekle/çıkar, çoklu sıralama, filtre tipleri (U-6–U-8)
 - [ ] 1.4 Görünüm: kayıtlı görünüm, kolon düzeni ve sabitleme, gruplama, aktif filtre, boş değer (U-9–U-13)
@@ -108,7 +108,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 9 · Takip ve rapor
 
-- [ ] 9.1 Sabah ekranı (01) · 82
+- [ ] 9.1 Ana sayfa (01) · 82
 - [ ] 9.2 Uyarı iş listesi (20) · 83, 84
 - [ ] 9.3 Rapor altyapısı (21) · 85, 87
 - [ ] 9.4 Raporlar tek tek: 25. adımdaki gerçekleşme gerektirmeyen raporlar

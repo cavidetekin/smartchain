@@ -174,7 +174,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Eş zamanlılık:** Gece belirlenen kadar senaryo 3 aktif çalışma (parametre); fazlası sıraya girer ve sırasını görür
 - **Sıcak çalışma:** Çalışma açıkken verisi ve çözümü motor sürecinin belleğinde durur. Değişiklikte sadece etkilenen kısım yeniden hesaplanır, optimizasyon mevcut çözümden başlar.
 - **Anlık bildirim:** İlerleme ve sonuç ekrana itilir (WebSocket); ekran sürekli sormaz.
-- **Gece akışı:** Ön kontroller → veri çekimi → otomatik yükleme → senaryolar paralel → sabah ekranında özet: bitti, kısmen, hata.
+- **Gece akışı:** Ön kontroller → veri çekimi → otomatik yükleme → senaryolar paralel → ana sayfada özet: bitti, kısmen, hata.
 
 ### Veri yükleme (ETL) ve veri versiyonları
 <sub>19. Mimari kararlar · Veri yükleme</sub>

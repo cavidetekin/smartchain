@@ -33,7 +33,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### BAŞLANGIÇ
 
-- **01 · Sabah ekranı:** Gece akışının özeti (hangi senaryo bitti, hata verdi), kritik uyarılar, dünden bugüne veride ve planda ne değişti.
+- **01 · Ana sayfa:** Gece akışının özeti (hangi senaryo bitti, hata verdi), kritik uyarılar, dünden bugüne veride ve planda ne değişti.
 
 #### VERI
 
@@ -250,10 +250,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **97 · Sürüm güncelleme:** Kapalı ağda kurulum paketiyle. (öneri)
 - **98 · Denetim izi:** Tüm veri, parametre, plan ve kullanıcı değişikliklerinin merkezi kaydı. (öneri)
 
-### Sabah ekranı
+### Ana sayfa
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 01/25</sub>
 
-![Sabah ekranı](mockups/m24e-0310-sabah-ekrani.png)
+![Ana sayfa](mockups/m24e-0310-sabah-ekrani.png)
 
 - **Gece akışı özeti:** Veri çekmeden senaryolara kadar her adımın süresi ve durumu tek tabloda.
 - **Hata görünür:** Süre aşımı ya da hata veren senaryo kırmızı; kalan senaryolar yine kullanılabilir.
@@ -338,7 +338,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Senaryo üzerinde çalışma:** Gece senaryosundan açılır; değişiklikler bu çalışmaya yazılır.
 - **Değişiklik izi:** Hangi ekranda ne değişti ve etkisi; tek tek geri alınabilir.
 - **Yeniden hesap:** Değişiklikten sonra etkilenen kısım yeniden çözülür; kuyruk durumu görünür.
-- **Çalışma çubuğu:** Üstteki çubuk çalışmanın ekranlarını açar: doluluk, manuel planlama, Gantt, yayın…
+- **Çalışmanın ekranları (K-82):** Doluluk, manuel planlama, Gantt, yayın… menüde Çalışma grubunun altında açılır; mockup'taki üst çubuk kullanılmaz. Bağlam çubuğunda çalışmanın adı durur.
 
 ### Kaynak doluluk raporu
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 10/25</sub>

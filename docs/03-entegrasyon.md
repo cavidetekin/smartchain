@@ -671,11 +671,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | DÜZEY | ÖRNEK | DAVRANIŞ | NEREDE GÖRÜNÜR |
 |---|---|---|---|
 | Bağlantı | API ulaşılamıyor, SQL kimlik hatası, zaman aşımı | 3 deneme artan aralıkla; sonra varlık 'hata', önceki ham veri korunur; diğer varlıklar devam | Veri yükleme ekranı, Entegrasyon 'son çağrı', Sistem sağlığı |
-| Varlık | Şema uyumsuzluğu, eşlenmemiş alan, hata eşiği (%5) aşımı | Varlık yüklenmez, önceki versiyonun satırları taşınır (kısmi); sabah ekranında kırmızı | Veri yükleme, Entegrasyon 'eşlenmemiş alan', Sabah ekranı |
+| Varlık | Şema uyumsuzluğu, eşlenmemiş alan, hata eşiği (%5) aşımı | Varlık yüklenmez, önceki versiyonun satırları taşınır (kısmi); ana sayfada kırmızı | Veri yükleme, Entegrasyon 'eşlenmemiş alan', Ana sayfa |
 | Satır | Zorunlu alan boş, referans yok, negatif süre, döngü | Satır atlanır, bulgu listesine yazılır; eşik altındaysa varlık yüklenir | Doğrulama detayı, hata raporu (xlsx) |
 | Alan | Boş temin süresi, boş takvim, bilinmeyen birim | Veri kuralı ya da varsayılan ile tamamlanır; uyarı olarak Veri kalitesi listesine düşer | Veri kalitesi, Ana veri (kaynak etiketi) |
 | Yükleme | Veritabanı hatası, süre aşımı (30 dk) | Ya hep ya hiç: geri alınır, önceki versiyon geçerli; parti yeniden kullanılabilir | Veri yükleme, Sistem sağlığı, destek paketi |
-| Sessiz hata | Satır sayısı dünden %30 az, sipariş sayısı sıfır | Tutarlılık uyarısı: yükleme durmaz ama 'şüpheli parti' etiketi, sabah ekranında (öneri) | Sabah ekranı, Veri yükleme |
+| Sessiz hata | Satır sayısı dünden %30 az, sipariş sayısı sıfır | Tutarlılık uyarısı: yükleme durmaz ama 'şüpheli parti' etiketi, ana sayfada (öneri) | Ana sayfa, Veri yükleme |
 
 ### Smartchain'den ERP'ye · Faz 1 Excel, Faz 2 API
 <sub>26. Entegrasyon tasarımı · Smartchain'den ERP'ye</sub>
@@ -702,7 +702,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **2 · Eşleme:** Alan eşleme tanımı varlık başına; kod listeleri; Smartchain'e özgü alanlar için kural taslakları. Çıktı: entegrasyon tanımı ve şablonlar.
 - **3 · Test çekimi:** Her varlık için örnek çekim (ilk 200 satır), doğrulama raporu, eşlenmemiş alan ve hata listesi. Çıktı: düzeltme listesi (müşteri BT + biz).
 - **4 · Tam yükleme ve kalite:** İlk tam yükleme, veri kalitesi raporu, kurallarla tamamlama; sentetik yerine gerçek veriyle ilk plan. Çıktı: v1 veri versiyonu.
-- **5 · Paralel çalışma:** 2–4 hafta gece akışı; sabah ekranı ve dünden bugüne ile izleme; ERP'ye Excel listesiyle giriş denemesi. Çıktı: hata eşiği ve zamanlama kararı.
+- **5 · Paralel çalışma:** 2–4 hafta gece akışı; ana sayfa ve dünden bugüne ile izleme; ERP'ye Excel listesiyle giriş denemesi. Çıktı: hata eşiği ve zamanlama kararı.
 - **6 · Canlı:** Onaylı plan yayını; aksiyon listesi ile ERP girişi; destek paketi ve geri bildirim düzeni.
 
 ### Devreye almada sorumluluklar
@@ -718,7 +718,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Excel | Şablonlar, yükleme eğitimi | Doldurma ve yükleme (key user) |
 | Eşleme ve kurallar | Taslak, kalite kontrolü | Onay, kod listelerinin anlamı |
 | Zamanlama | Varsayılan 22:00, bitiş 06:00 | ERP gece işleriyle çakışma kontrolü |
-| İzleme ve destek | Destek paketi, sürüm güncelleme | Sabah ekranı, hata bildirimi, paket iletimi |
+| İzleme ve destek | Destek paketi, sürüm güncelleme | Ana sayfa, hata bildirimi, paket iletimi |
 
 ### Doğruluk raporları için ek veri ihtiyacı (A-22)
 <sub>26. Entegrasyon tasarımı · Raporlar için ek veri (A-22)</sub>

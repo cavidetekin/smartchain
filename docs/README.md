@@ -16,3 +16,4 @@ Master Design Document'tan (MDD) türetilmiş tasarım dokümanları. Tek kaynak
 | 09-motor-arayuzu.md | Geliştirme 0.5: motor arayüzü ve sahte motor |
 | 10-kurulum.md | Geliştirme 0.6: kurulum iskeleti (27'nin ilk parçası) |
 | 11-sentetik-veri.md | 22 |
+| 12-on-yuz.md | 23–24 · Geliştirme 1.1: ön yüz ve kabuk |

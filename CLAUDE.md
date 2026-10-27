@@ -32,6 +32,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 
 - U-1…U-23 bağlayıcıdır (`docs/04-arayuz-prensipleri.md`). Ekran ağırlıkla nötr, indigo aksiyon, durum renkleri yalnız durum için; her tablo sıralanır, filtrelenir, alanları açılıp kapanır; ana tablo ekrana sığar, kenar menü daraltılır; varsayılan yazı sıkıdır, kullanıcı dört boyuttan birini seçer.
 - Yazı tipleri Instrument Sans ve JetBrains Mono, pakete gömülü. Sayı ve tarih Türkçe biçimde.
+- Ön yüz React (TypeScript), internetsiz; tablolar kendi bileşenimiz (TanStack Table üzerine). Ekranlar kenar menüde gruplu, en çok iki seviye; üst sekmeyle ekran geçişi yok (K-81, K-82, `docs/12-on-yuz.md`).
 
 ## Dil ve adlandırma
 
@@ -59,6 +60,7 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/09-motor-arayuzu.md` | Motor arayüzü, sahte motor, motor servisi (geliştirme 0.5) |
 | `docs/10-kurulum.md` | Kurulum iskeleti: paket, Windows servisleri, IIS, SQL Server, temiz makine testi (geliştirme 0.6) |
 | `docs/11-sentetik-veri.md` | Sentetik veri seti: hayali şirket, boyut, bilerek konmuş durumlar, temiz ve kirli hâl (MDD 22) |
+| `docs/12-on-yuz.md` | Ön yüz teknolojisi ve kabuk: menü, bağlam çubuğu, daraltma (geliştirme 1.1) |
 | `docs/mockups/` | Mockup görselleri |
 
 Motorun iç tasarımı (MDD 18), raporlar (25), kurulum paketinin tamamı (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
