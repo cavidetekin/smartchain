@@ -23,7 +23,8 @@ Adım 0.6'da kurulan iskelet. Kurulum paketinin tamamı (MSI, imza, kod korumas�
 | `app\`, `db\` | Uygulama ve veritabanı geçişleri |
 | `requirements-runtime.txt`, `wheels\` | Çalışma zamanı paketleri (test paketleri girmez) |
 | `prereqs\` | Python 3.13 (amd64), VC++ yeniden dağıtılabilir, ODBC Driver 18, IIS URL Rewrite 2.1, IIS ARR 3.0, WinSW 2.12 |
-| `templates\` | WinSW servis tanımları, IIS `web.config`, yer tutucu `index.html` |
+| `web\` | Derlenmiş arayüz (`index.html`, `assets\`: JS, CSS, woff2); IIS köküne kopyalanır |
+| `templates\` | WinSW servis tanımları, IIS `web.config`, yer tutucu `index.html` (arayüz yoksa) |
 | `sql\ConfigurationFile.ini` | SQL Server instance'ını sessiz kurmak için örnek yanıt dosyası |
 | `manifest.json` | Sürüm ve her dosyanın SHA-256'sı; kurulum başta doğrular |
 
@@ -74,6 +75,8 @@ Servisler ayarları `SMARTCHAIN_CONFIG` ortam değişkeniyle verilen dosyadan ok
 7. Servisler başlatılır; IIS sitesi ve ters vekil kurulur.
 8. Sağlık kontrolü IIS üzerinden yapılır (`/api/health`). Geçmezse 7 → 3 geri alınır (ön koşullar ve veritabanı yerinde kalır), neden yazılır.
 
+**Arayüz:** `web.config` `/api` ve `/api/ws`'i API servisine yönlendirir; dosya olmayan diğer adresler `index.html`'e gider (tek sayfa uygulaması, adres yenilenince de çalışır); `.woff2` türü tanımlıdır.
+
 IIS portunu "Default Web Site" kullanıyorsa o site durdurulur ve kaldırmada yeniden başlatılır. Başka bir site kullanıyorsa kurulum durur.
 
 ## Üçüncü taraf bileşenler ve lisansları
@@ -91,6 +94,9 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 | typing_extensions | 4.16.0 | PSF-2.0 |
 | opentelemetry-api | 1.45.1 | Apache-2.0 |
 | WinSW (servis sarmalayıcı) | 2.12.0 | MIT |
+| React, react-dom, react-router (arayüz) | 19.3 · 19.3 · 8.5 | MIT |
+| Lucide ikonları (lucide-react) | 1.62 | ISC |
+| Instrument Sans, JetBrains Mono (@fontsource) | 5.3 | OFL-1.1 |
 | ODBC Driver 18 for SQL Server, Visual C++ yeniden dağıtılabilir, IIS URL Rewrite 2.1, IIS ARR 3.0 | — | Microsoft lisansları; yeniden dağıtım ürünle birlikte kurulum amacıyla |
 
 ## Kaldırma

@@ -79,4 +79,6 @@ python -m app.data.synthetic load                  # sentetik veri v0'ı ana tab
 python -m app.data.synthetic excel                 # sentetik verinin kirli hâli (entegrasyon Excel'i)
 python -m pytest                                   # testler
 powershell -File installer\build.ps1               # internetsiz kurulum paketi (dist\), yalnız geliştirmede
+cd app/web; npm ci; npm run dev                    # arayüz (http://localhost:5173; API 8000'de açık olmalı)
+cd app/web; npm test; npm run build                # arayüz testleri ve derleme (docs/12)
 ```

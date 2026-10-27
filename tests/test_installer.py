@@ -261,3 +261,25 @@ def test_setup_db_on_local_server():
             assert c.execute("SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')").fetchone()[0] == setup_db.COLLATION
     finally:
         setup_db.drop_database(master, name)
+
+
+def test_web_config_serves_single_page_app_and_fonts():
+    """Arayüz (K-81): /api dışındaki dosya olmayan adresler index.html'e; woff2 türü tanımlı."""
+    root = ET.fromstring(render("web.config", API_PORT=8000))
+    rules = root.findall("./system.webServer/rewrite/rules/rule")
+    assert [r.get("name") for r in rules] == ["Smartchain API", "Smartchain arayüz"]  # API önce, stopProcessing
+    assert all(r.get("stopProcessing") == "true" for r in rules)
+    spa = rules[1]
+    conds = {(c.get("input"), c.get("matchType"), c.get("negate")) for c in spa.findall("./conditions/add")}
+    assert conds == {("{REQUEST_FILENAME}", "IsFile", "true"), ("{REQUEST_FILENAME}", "IsDirectory", "true")}
+    assert spa.find("action").get("url") == "/index.html"
+    mimes = {m.get("fileExtension"): m.get("mimeType") for m in root.findall("./system.webServer/staticContent/mimeMap")}
+    assert mimes[".woff2"] == "font/woff2"
+
+
+def test_build_and_install_handle_web():
+    build = (INSTALLER / "build.ps1").read_text(encoding="utf-8-sig")
+    assert "'npm.cmd' @('ci'" in build and "'npm.cmd' @('run', 'build')" in build
+    assert "Copy-Tree (Join-Path $WebSrc 'dist') (Join-Path $Dist 'web')" in build
+    install = (INSTALLER / "install.ps1").read_text(encoding="utf-8-sig")
+    assert "Join-Path $Package 'web\*'" in install

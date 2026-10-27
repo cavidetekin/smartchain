@@ -25,7 +25,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 1 · Arayüz temeli
 
-- [ ] 1.1 Kabuk: React iskeleti, gruplu menü (iki seviye, arama), daraltılabilir kenar menü, bağlam çubuğu (U-17, U-22, K-81, K-82)
+- [x] 1.1 Kabuk: React iskeleti, gruplu menü (iki seviye, arama), daraltılabilir kenar menü, bağlam çubuğu (U-17, U-22, K-81, K-82) · K-83; `app/web`
 - [ ] 1.2 Stil sistemi: palet, gömülü fontlar, durum renkleri, dört yazı boyutu seviyesi (U-1–U-5, U-23)
 - [ ] 1.3 Ortak tablo bileşeni: alan ekle/çıkar, çoklu sıralama, filtre tipleri (U-6–U-8)
 - [ ] 1.4 Görünüm: kayıtlı görünüm, kolon düzeni ve sabitleme, gruplama, aktif filtre, boş değer (U-9–U-13)

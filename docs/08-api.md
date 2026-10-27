@@ -54,6 +54,7 @@ Ortam değişkenleri (`SMARTCHAIN_` önekiyle) ya da kök klasördeki `.env` dos
 | `GET /api/jobs?user_id=` | Çalışan, sıradaki ve son 24 saatte biten işler (önce çalışan, sonra sıra); kanal sayaçları (çalışan, sırada, sınır). `user_id` verilirse yalnız o kullanıcının işleri (geçici, A-36). Bağlantı kopunca istemcinin son durumu sorguladığı yer (fonksiyon 48). | uygulandı (0.4) |
 | `GET /api/jobs/{id}` | İşin durumu, ilerlemesi, sıra numarası, süresi, `is_stale` (kalp atışı eşiği aşıldı). Yoksa 404 `job_not_found`. | uygulandı (0.4) |
 | `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder. Çalışan iş 409 `job_not_cancellable` (durdurma motorda, fonksiyon 93). Yetki kuralı 2.2'de. | uygulandı (0.4) |
+| `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
 | `WS /api/ws?user_id=` | Anlık bildirim kanalı (fonksiyon 48). Kullanıcı şimdilik parametreyle (A-36). | uygulandı (0.4) |
 
 İş eklemek için uç nokta yoktur: işi ilgili fonksiyon (yeniden hesap 46, yükleme…) kendi servisinden `app.jobs.queue.enqueue` ile ekler.

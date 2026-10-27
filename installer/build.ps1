@@ -59,18 +59,31 @@ Invoke-Native $DevPython @('-m', 'pip', 'download', '--disable-pip-version-check
     '-r', (Join-Path $PSScriptRoot 'requirements-runtime.txt'), '-d', $wheels) | Out-Null
 Write-Log "Wheel'ler hazır: $(@(Get-ChildItem $wheels -Filter *.whl).Count) dosya" 'OK'
 
+# --- Arayüz (K-81, K-83): derlenir, pakete web\ olarak girer ---
+$WebSrc = Join-Path $Root 'app\web'
+if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
+    throw 'Arayüzü derlemek için Node.js (npm) gerekir; yalnız geliştirme bilgisayarında. Müşteride gerekmez.'
+}
+Push-Location $WebSrc
+try {
+    Invoke-Native 'npm.cmd' @('ci', '--no-audit', '--no-fund') | Out-Null
+    Invoke-Native 'npm.cmd' @('run', 'build') | Out-Null
+} finally { Pop-Location }
+Write-Log "Arayüz derlendi: $(@(Get-ChildItem (Join-Path $WebSrc 'dist') -Recurse -File).Count) dosya" 'OK'
+
 # --- Paket klasörü ---
 if (Test-Path -LiteralPath $Dist) { Remove-Item -LiteralPath $Dist -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 
-function Copy-Tree([string]$From, [string]$To) {
+function Copy-Tree([string]$From, [string]$To, [string[]]$ExcludeDirs = @()) {
     # __pycache__ ve derlenmiş dosyalar pakete girmez.
-    $r = Invoke-Native 'robocopy.exe' @($From, $To, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NP',
-        '/XD', '__pycache__', '/XF', '*.pyc', '*.pyo') -AllowFailure
+    $r = Invoke-Native 'robocopy.exe' (@($From, $To, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NP',
+        '/XD', '__pycache__') + $ExcludeDirs + @('/XF', '*.pyc', '*.pyo')) -AllowFailure
     if ($r.Code -ge 8) { throw "Kopyalanamadı: $From ($($r.Code)) $($r.Output -join ' ')" }
 }
 
-Copy-Tree (Join-Path $Root 'app') (Join-Path $Dist 'app')
+Copy-Tree (Join-Path $Root 'app') (Join-Path $Dist 'app') @($WebSrc)  # arayüz kaynağı değil, derlenmiş hâli
+Copy-Tree (Join-Path $WebSrc 'dist') (Join-Path $Dist 'web')
 New-Item -ItemType Directory -Force -Path (Join-Path $Dist 'db') | Out-Null
 Copy-Item -LiteralPath (Join-Path $Root 'db\models.py'), (Join-Path $Root 'db\alembic.ini') -Destination (Join-Path $Dist 'db')
 Copy-Tree (Join-Path $Root 'db\migrations') (Join-Path $Dist 'db\migrations')

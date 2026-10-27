@@ -1,0 +1,41 @@
+/* Palet ve ölçüler (docs/04 · U-1…U-5). 1.2'de stil sistemine genişler. Ölçüler rem: U-23 kök boyutu değiştirir. */
+:root {
+  /* Kurşun: zemin, metin, çizgi */
+  --lead-50: #f4f5f7;
+  --lead-100: #e6e8ec;
+  --lead-300: #b4b9c2;
+  --lead-600: #5a606b;
+  --lead-700: #3f444d;
+  --lead-900: #1f2329;   /* kenar menü (mockup m24e-0310) */
+  --lead-950: #171a1f;
+
+  /* İndigo: aksiyon, seçim, aktif durum (U-4) */
+  --indigo-50: #eef0fb;
+  --indigo-100: #dce0f7;
+  --indigo-300: #8f98e3;
+  --indigo-500: #4f5bd5;
+  --indigo-700: #333a94;
+  --indigo-900: #1e2257;
+
+  /* Durum (U-2): yalnız durum için; 1.2'de kesinleşir */
+  --status-ok: #2f8f5b;
+  --status-risk: #d9a521;
+  --status-over: #c8452f;
+
+  --bg: var(--lead-50);
+  --surface: #ffffff;
+  --text: #1f2430;
+  --text-muted: var(--lead-600);
+  --line: var(--lead-100);
+
+  --font-sans: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --sidebar-width: 15rem;
+  --sidebar-collapsed: 3.5rem;
+  --context-height: 3rem;
+  --radius: 0.375rem;
+  --icon: 1.15rem;
+
+  font-size: 13px; /* Standart (U-23); kullanıcı seçimi bunu ezer */
+}

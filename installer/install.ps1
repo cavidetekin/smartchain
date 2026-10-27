@@ -246,7 +246,15 @@ try {
     Invoke-Step 'IIS sitesi ve ters vekil' {
         $values = @{ API_PORT = $ApiPort; VERSION = $script:Version }
         Write-Utf8NoBom -Path (Join-Path $WebDir 'web.config') -Text (Expand-Template -Path (Join-Path $Package 'templates\web.config') -Values $values -Xml)
-        Write-Utf8NoBom -Path (Join-Path $WebDir 'index.html') -Text (Expand-Template -Path (Join-Path $Package 'templates\index.html') -Values $values)
+        # Derlenmiş arayüz (K-81): paketteki web\ kopyalanır; yoksa yer tutucu sayfa.
+        Get-ChildItem -LiteralPath $WebDir -Force | Where-Object { $_.Name -ne 'web.config' } | Remove-Item -Recurse -Force
+        if (Test-Path -LiteralPath (Join-Path $Package 'web\index.html')) {
+            Copy-Item -Path (Join-Path $Package 'web\*') -Destination $WebDir -Recurse -Force
+            Write-Log 'Arayüz dosyaları kopyalandı' 'OK'
+        } else {
+            Write-Utf8NoBom -Path (Join-Path $WebDir 'index.html') -Text (Expand-Template -Path (Join-Path $Package 'templates\index.html') -Values $values)
+            Write-Log 'Pakette arayüz yok; yer tutucu sayfa yazıldı' 'WARN'
+        }
 
         # ARR ters vekil sunucu düzeyinde açılır.
         Invoke-Native $AppCmd @('set', 'config', '-section:system.webServer/proxy', '/enabled:True', '/preserveHostHeader:True',

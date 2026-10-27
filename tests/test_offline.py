@@ -8,9 +8,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCANNED = ["app", "db", "installer"]
-ALLOWED_FILES = {"installer/build.ps1", "installer/prereqs.json"}
-SUFFIXES = {".py", ".ps1", ".html", ".js", ".css", ".xml", ".config", ".json", ".ini", ".txt", ".mako", ".sql"}
-SKIP_DIRS = {"__pycache__", "cache"}
+ALLOWED_FILES = {"installer/build.ps1", "installer/prereqs.json",
+                 "app/web/package-lock.json"}  # paket adresleri yalnız geliştirmede (npm ci)
+SUFFIXES = {".py", ".ps1", ".html", ".js", ".css", ".xml", ".config", ".json", ".ini", ".txt", ".mako", ".sql",
+            ".ts", ".tsx"}
+SKIP_DIRS = {"__pycache__", "cache", "node_modules", "dist"}  # dist ayrıca, kendi kurallarıyla taranır
 
 URL = re.compile(r"\b(?:https?|wss?|ftp)://(?!(?:localhost|127\.0\.0\.1|\{\{))[^\s\"'<>)]+", re.IGNORECASE)
 CDN = re.compile(r"cdnjs|jsdelivr|unpkg|googleapis|gstatic|\bcdn\b", re.IGNORECASE)
@@ -59,3 +61,43 @@ def test_solver_package_only_imported_by_adapters():
                 offenders.append(rel)
     assert not offenders, f"highspy yalnız {SOLVER_DIR} altında import edilir: {offenders}"
     assert SOLVER_IMPORT.search((ROOT / SOLVER_DIR / "highs.py").read_text(encoding="utf-8"))
+
+
+# --- Derlenmiş arayüz (K-81, K-83): app/web/dist ---
+
+WEB_DIST = ROOT / "app" / "web" / "dist"
+# Kütüphanelerin içinde geçen ama hiçbir şey indirmeyen adresler:
+DIST_ALLOWED = (
+    "http://www.w3.org/",              # SVG/MathML/XML ad alanları (xmlns), ağ isteği değil
+    "https://react.dev/errors/",       # React'in hata mesajındaki belge bağlantısı (yalnız metin)
+    "https://reactrouter.com/",        # react-router uyarı mesajındaki belge bağlantısı (yalnız metin)
+    "http://localhost",                # react-router'ın adres ayrıştırmada kullandığı taban (ağ isteği değil)
+)
+DIST_URL = re.compile(r"(?:https?|wss?)://[^\s\"'`<>)]+", re.IGNORECASE)
+LOAD = re.compile(r"""(?:src|href)\s*=\s*["']?(?:https?:)?//|url\(\s*["']?(?:https?:)?//|@import\s+["']?(?:https?:)?//|"""
+                  r"""fetch\(\s*["'`](?:https?|wss?):|import\(\s*["'`]https?:|WebSocket\(\s*["'`]wss?:""", re.IGNORECASE)
+
+
+def test_built_web_has_no_external_resources():
+    if not (WEB_DIST / "index.html").exists():
+        import pytest
+        pytest.skip("app/web/dist yok (npm run build ile üretilir)")
+    problems = []
+    for p in WEB_DIST.rglob("*"):
+        if p.suffix.lower() not in (".html", ".js", ".css"):
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        rel = p.relative_to(ROOT).as_posix()
+        problems += [f"{rel}: dış kaynak yükleme: {m.group(0)}" for m in LOAD.finditer(text)]
+        problems += [f"{rel}: {u}" for u in DIST_URL.findall(text) if not u.startswith(DIST_ALLOWED)]
+    fonts = list(WEB_DIST.rglob("*.woff2"))
+    assert fonts and any("instrument-sans" in f.name for f in fonts) and any("jetbrains-mono" in f.name for f in fonts)
+    assert not problems, "\n".join(sorted(set(problems)))
+
+
+def test_dist_scanner_catches_loads():
+    assert LOAD.search('<link href="https://fonts.googleapis.com/css2">')
+    assert LOAD.search("src:url(//cdn.example.com/a.woff2)")
+    assert LOAD.search('fetch("https://example.com/api")')
+    assert not LOAD.search('fetch("/api/jobs")')
+    assert not LOAD.search('src:url(/assets/a.woff2)')
