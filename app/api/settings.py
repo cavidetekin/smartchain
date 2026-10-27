@@ -1,4 +1,8 @@
-"""Uygulama ayarları. Ortam değişkenlerinden (SMARTCHAIN_*) ya da kök klasördeki .env dosyasından okunur."""
+"""Uygulama ayarları. Sıra (sonraki ezer): kök klasördeki .env → SMARTCHAIN_CONFIG dosyası → ortam değişkenleri (SMARTCHAIN_*).
+
+Kurulumda servisler SMARTCHAIN_CONFIG ile ProgramData altındaki smartchain.env'i okur (docs/10-kurulum.md).
+"""
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -26,6 +30,11 @@ class Settings(BaseSettings):
     job_watch_seconds: float = 1.0
 
 
+def config_files() -> tuple[Path, ...]:
+    extra = os.environ.get("SMARTCHAIN_CONFIG")
+    return (ROOT / ".env", Path(extra)) if extra else (ROOT / ".env",)
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings(_env_file=config_files())

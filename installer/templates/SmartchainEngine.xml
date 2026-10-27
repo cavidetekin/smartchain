@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Smartchain motor servisi (K-71, K-73). install.ps1 doldurur; WinSW 2.x tanımı. -->
+<service>
+  <id>SmartchainEngine</id>
+  <name>Smartchain Motor</name>
+  <description>Smartchain planlama motoru servisi. Her plan hesabı ayrı süreçte çalışır; kalp atışını servis yazar.</description>
+  <executable>{{PYTHON}}</executable>
+  <arguments>-m app.engine.service</arguments>
+  <workingdirectory>{{INSTALL_DIR}}</workingdirectory>
+  <env name="SMARTCHAIN_CONFIG" value="{{CONFIG_FILE}}" />
+  <env name="PYTHONUTF8" value="1" />
+  <startmode>Automatic</startmode>
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="30 sec" />
+  <onfailure action="restart" delay="60 sec" />
+  <resetfailure>1 hour</resetfailure>
+  <!-- Durdurmada önce Ctrl+C: servis çalışan iş süreçlerini kapatır; işler kalp atışı kesilince geri alınır (K-67). -->
+  <stoptimeout>30 sec</stoptimeout>
+  <stopparentprocessfirst>true</stopparentprocessfirst>
+  <logpath>{{LOG_DIR}}</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+</service>

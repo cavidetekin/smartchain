@@ -13,3 +13,4 @@ build/
 ~$*
 logs/
 .pytest_cache/
+installer/cache/

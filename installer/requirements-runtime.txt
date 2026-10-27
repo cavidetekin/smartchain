@@ -1,0 +1,9 @@
+# Kurulum paketine giren çalışma zamanı paketleri (K-72). Test paketleri (pytest, httpx) girmez.
+# Sürümler geliştirme ortamıyla aynı tutulur; değişince requirements.txt ile birlikte güncellenir.
+SQLAlchemy==2.1.6
+alembic==1.20.1
+pyodbc==5.3.0
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+pydantic-settings==2.16.1
+websockets==17.3

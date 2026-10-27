@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Smartchain API servisi (K-73, K-74). install.ps1 doldurur; WinSW 2.x tanımı. -->
+<service>
+  <id>SmartchainApi</id>
+  <name>Smartchain API</name>
+  <description>Smartchain web API (FastAPI). Yalnız 127.0.0.1'i dinler; dışarıya IIS açılır.</description>
+  <executable>{{PYTHON}}</executable>
+  <arguments>-m uvicorn app.api.main:app --host 127.0.0.1 --port {{API_PORT}} --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log</arguments>
+  <workingdirectory>{{INSTALL_DIR}}</workingdirectory>
+  <env name="SMARTCHAIN_CONFIG" value="{{CONFIG_FILE}}" />
+  <env name="PYTHONUTF8" value="1" />
+  <startmode>Automatic</startmode>
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="30 sec" />
+  <onfailure action="restart" delay="60 sec" />
+  <resetfailure>1 hour</resetfailure>
+  <stoptimeout>30 sec</stoptimeout>
+  <logpath>{{LOG_DIR}}</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+</service>

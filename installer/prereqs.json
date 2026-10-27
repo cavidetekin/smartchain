@@ -1,0 +1,11 @@
+{
+  "_note": "Ön koşullar (K-72). Adresler yalnız build.ps1'de, geliştirme bilgisayarında kullanılır; kurulum internete çıkmaz. sha256 boşsa build.ps1 -UpdateHashes ile doldurulur ve commit edilir; sonraki indirmeler bu değerle doğrulanır.",
+  "items": [
+    {"name": "python", "title": "Python 3.13 (amd64)", "version": "3.13.7", "file": "python-3.13.7-amd64.exe", "url": "https://www.python.org/ftp/python/3.13.7/python-3.13.7-amd64.exe", "sha256": "b12e2e82461ac8e51fc43289050bc8eb937a32d84ce4d242e2c88258c37cf2bb"},
+    {"name": "vcredist", "title": "Microsoft Visual C++ yeniden dağıtılabilir (x64)", "version": "14", "file": "VC_redist.x64.exe", "url": "https://aka.ms/vs/17/release/vc_redist.x64.exe", "sha256": "cc0ff0eb1dc3f5188ae6300faef32bf5beeba4bdd6e8e445a9184072096b713b"},
+    {"name": "odbc18", "title": "ODBC Driver 18 for SQL Server (x64)", "version": "18", "file": "msodbcsql.msi", "url": "https://go.microsoft.com/fwlink/?linkid=2280794", "sha256": "b0fe5feb86975837c3297bf09e843c30241512aac4d10a4d40377c54039016bb"},
+    {"name": "urlrewrite", "title": "IIS URL Rewrite 2.1 (x64)", "version": "2.1", "file": "rewrite_amd64_en-US.msi", "url": "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi", "sha256": "37342ff2f585f263f34f48e9de59eb1051d61015a8e967dbde4075716230a32a"},
+    {"name": "arr", "title": "IIS Application Request Routing 3.0 (x64)", "version": "3.0", "file": "requestRouter_amd64.msi", "url": "https://download.microsoft.com/download/E/9/8/E9849D6A-020E-47E4-9FD0-A023E99B54EB/requestRouter_amd64.msi", "sha256": "fb61fdb7101795a34d5129cb37eee43ab675c7ed76ba3a3b23b039d8c90c2a4b"},
+    {"name": "winsw", "title": "WinSW 2.12 (Windows servis sarmalayıcı, MIT)", "version": "2.12.0", "file": "WinSW-x64.exe", "url": "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe", "sha256": "05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da"}
+  ]
+}

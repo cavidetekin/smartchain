@@ -57,9 +57,10 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/07-veritabani.md` | Veritabanı haritası: şemalar ve tablolar (üretilmiş) |
 | `docs/08-api.md` | API kuralları: katmanlar, adresler, hata cevabı, log, ayarlar |
 | `docs/09-motor-arayuzu.md` | Motor arayüzü, sahte motor, motor servisi (geliştirme 0.5) |
+| `docs/10-kurulum.md` | Kurulum iskeleti: paket, Windows servisleri, IIS, SQL Server, temiz makine testi (geliştirme 0.6) |
 | `docs/mockups/` | Mockup görselleri |
 
-Motorun iç tasarımı (MDD 18), raporlar (25), kurulum (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
+Motorun iç tasarımı (MDD 18), raporlar (25), kurulum paketinin tamamı (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
 
 ## Komutlar
 
@@ -72,4 +73,5 @@ alembic -c db/alembic.ini downgrade -1             # son geçişi geri al
 uvicorn app.api.main:app --reload --port 8000      # API'yi başlat (geliştirme)
 python -m app.engine.service                       # motor servisini başlat (geliştirme; sahte motor)
 python -m pytest                                   # testler
+powershell -File installer\build.ps1               # internetsiz kurulum paketi (dist\), yalnız geliştirmede
 ```
