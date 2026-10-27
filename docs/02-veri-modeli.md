@@ -248,6 +248,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | CityCode | nvarchar(20) |  | Şehir kodu | ERP | H | H |  |
 | AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H |  |
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H |  |
+| IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) | Sistem | H | H | 0 |
 
 ### UnitOfMeasure
 <sub>21. Veri modeli · Ortak</sub>
@@ -600,7 +601,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Priority | int |  | Öncelik | ERP, yoksa kural | H | H | 1 |
 | QuotaPct | decimal(6,2) |  | Kota (%) | ERP, yoksa kural | H | H |  |
 | LeadTimeDays | decimal(9,2) |  | Tedarik süresi | ERP | H | E |  |
-| LeadTimeBasis | nvarchar(10) |  | Takvim günü \| İş günü | Kural ya da elle | H | H | Takvim günü |
+| LeadTimeBasis | nvarchar(15) |  | Takvim günü \| İş günü | Kural ya da elle | H | H | Takvim günü |
 | MinOrderQty | decimal(18,4) |  | Minimum sipariş miktarı | ERP | H | H |  |
 | OrderMultiple | decimal(18,4) |  | Kat | ERP | H | H |  |
 | MaxOrderQty | decimal(18,4) |  | Maksimum | ERP | H | H |  |
@@ -898,7 +899,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LocationId | int | FK | Lokasyon | ERP | H | E |  |
 | OrderNo | nvarchar(30) | UK | Sipariş no | ERP | H | E |  |
 | LineNo | int | UK | Satır no | ERP | H | E |  |
-| OrderType | nvarchar(15) |  | Satın alma talebi \| Satın alma \| Fason | ERP | H | E |  |
+| OrderType | nvarchar(20) |  | Satın alma talebi \| Satın alma \| Fason | ERP | H | E |  |
 | SupplierId | bigint | FK | Tedarikçi | ERP | H | H |  |
 | MaterialId | bigint | FK | Malzeme | ERP | H | E |  |
 | OpenQty | decimal(18,4) |  | Açık miktar | ERP | H | E |  |
@@ -963,6 +964,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Id | int | PK | Set kimliği | Sistem | H | E |  |
 | Name | nvarchar(100) |  | Set adı | Kullanıcı | H | E |  |
 | IsDefault | bit |  | Varsayılan set | Kullanıcı | H | H | 0 |
+| IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) | Sistem | H | H | 0 |
 
 ### PlanningSetting
 <sub>21. Veri modeli · Parametre</sub>
@@ -1000,7 +1002,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ParameterSetId | int | PK,FK | Parametre seti | Smartchain (parametre) | H | E |  |
 | Seq | int | PK | Sıra | Smartchain (parametre) | H | E |  |
 | Criterion | nvarchar(30) |  | Kriter | Smartchain (parametre) | E | E |  |
-| Direction | nvarchar(4) |  | Artan \| Azalan | Smartchain (parametre) | H | H | Artan |
+| Direction | nvarchar(10) |  | Artan \| Azalan | Smartchain (parametre) | H | H | Artan |
 
 ### AllocationRule
 <sub>21. Veri modeli · Parametre</sub>
@@ -1164,6 +1166,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LoadType | nvarchar(10) |  | Tam \| Kısmi | Sistem | H | E |  |
 | CreatedBy | int | FK | Kullanıcı ya da sistem kullanıcısı | Sistem | H | H |  |
 | IsPinned | bit |  | Onaylı plana bağlı; silinmez | Sistem | H | H | 0 |
+| IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) | Sistem | H | H | 0 |
 
 ### DataVersionEntity
 <sub>21. Veri modeli · Veri yönetimi</sub>

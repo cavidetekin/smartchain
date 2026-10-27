@@ -46,7 +46,7 @@
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `core.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Ana veri |  | 20 |
+| `core.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Ana veri |  | 21 |
 | `core.UnitOfMeasure` | Ölçü birimi. | Ana veri |  | 2 |
 | `core.UomConversion` | Malzeme bazında birim dönüşümü. | Ana veri | evet | 5 |
 | `core.Calendar` | Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 3 |
@@ -88,7 +88,7 @@
 | `param.ResourcePeriodLimit` | Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın kapasite birimi. | Parametre |  | 6 |
 | `param.OvertimeLimit` | Fazla mesai üst limiti (vardiya ve dönem bazında). | Parametre |  | 4 |
 | `param.SupplierLimit` | Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66). | Parametre |  | 7 |
-| `param.ParameterSet` | Parametre seti; gece senaryoları farklı setlerle çalışır. | Parametre |  | 3 |
+| `param.ParameterSet` | Parametre seti; gece senaryoları farklı setlerle çalışır. | Parametre |  | 4 |
 | `param.PlanningSetting` | Genel planlama parametreleri (anahtar–değer); ör. model tipi, fazla mesai dahil mi, fix dönem, toleranslar, MRP öncelik ve kısıt ayarları. | Parametre |  | 3 |
 | `param.TimeBucketDefinition` | Zaman yapısı: planlama ufku ve dinamik bucket dizisi. | Parametre |  | 4 |
 | `param.PriorityRule` | Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih). | Parametre |  | 4 |
@@ -123,7 +123,7 @@
 | `adm.ManualValue` | Kayıt bazında elle girilen değer. | Veri yönetimi |  | 8 |
 | `adm.FieldValueSource` | Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır). | Veri yönetimi |  | 6 |
 | `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. | Veri yönetimi |  | 8 |
-| `adm.DataVersion` | Yükleme ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi. | Veri yönetimi |  | 6 |
+| `adm.DataVersion` | Yükleme ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi. | Veri yönetimi |  | 7 |
 | `adm.DataVersionEntity` | Kısmi yüklemede hangi varlıkların yüklendiği. | Veri yönetimi |  | 3 |
 | `adm.AppUser` | Uygulama kullanıcısı (Faz 1'de yerel). | Sistem |  | 9 |
 | `adm.Job` | İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler. | Sistem |  | 15 |

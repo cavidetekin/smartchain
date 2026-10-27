@@ -38,16 +38,16 @@ def demo_refs(session: Session, step: float) -> dict:
     q("IF NOT EXISTS (SELECT 1 FROM adm.AppUser WHERE UserName = N'demo') INSERT INTO adm.AppUser "
       "(UserName, FullName, Role, PasswordHash) VALUES (N'demo', N'Demo kullanıcı', N'Key user', 0x00)")
     q("IF NOT EXISTS (SELECT 1 FROM core.Location WHERE Code = N'DEMO') "
-      "INSERT INTO core.Location (Code, Name, Type) VALUES (N'DEMO', N'Demo fabrikası', N'Tesis')")
+      "INSERT INTO core.Location (Code, Name, Type, IsSynthetic) VALUES (N'DEMO', N'Demo fabrikası', N'Tesis', 1)")
     user = q("SELECT Id FROM adm.AppUser WHERE UserName = N'demo'").scalar_one()
     loc = q("SELECT Id FROM core.Location WHERE Code = N'DEMO'").scalar_one()
     dv = q("SELECT TOP 1 Id FROM adm.DataVersion WHERE LocationId = :l ORDER BY Id", l=loc).scalar()
     if dv is None:
-        dv = q("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType) OUTPUT inserted.Id "
-               "VALUES (:l, SYSUTCDATETIME(), N'Tam')", l=loc).scalar_one()
+        dv = q("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType, IsSynthetic) OUTPUT inserted.Id "
+               "VALUES (:l, SYSUTCDATETIME(), N'Tam', 1)", l=loc).scalar_one()
     ps = q("SELECT TOP 1 Id FROM param.ParameterSet WHERE Name = N'Demo · sahte motor'").scalar()
     if ps is None:
-        ps = q("INSERT INTO param.ParameterSet (Name) OUTPUT inserted.Id VALUES (N'Demo · sahte motor')").scalar_one()
+        ps = q("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id VALUES (N'Demo · sahte motor', 1)").scalar_one()
     q("DELETE FROM param.PlanningSetting WHERE ParameterSetId = :p", p=ps)
     for k, v in {"ModelType": "LP", "FakeEngineStepSeconds": str(step), "FakeEngineMode": "normal"}.items():
         q("INSERT INTO param.PlanningSetting (ParameterSetId, SettingKey, Value) VALUES (:p, :k, :v)", p=ps, k=k, v=v)

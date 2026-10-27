@@ -350,8 +350,36 @@ def write_initial_migration():
     (ROOT / "db" / "migrations" / "versions" / "0001_ilk_sema.py").write_text(body, encoding="utf-8")
 
 
+def value_list(desc: str) -> list[str]:
+    """Açıklamadaki değer listesi: 'A | B | C'. 'Fasonda: …' gibi ön ek, parantez içi açıklama ve '…' atılır."""
+    if "|" not in desc:
+        return []
+    head = desc.split("|", 1)[0]
+    if ":" in head:
+        desc = desc.split(":", 1)[1]
+    return [v for v in (re.sub(r"\s*\(.*?\)", "", v).strip(" …") for v in desc.split("|")) if v]
+
+
+def length_problems(spec) -> list[str]:
+    """K-80: değer listesindeki en uzun değer ve varsayılan değer alan uzunluğuna sığmalı."""
+    problems = []
+    for t in spec:
+        for f in t["fields"]:
+            m = re.match(r"n?varchar\((\d+)\)", f["type"].lower())
+            if not m:
+                continue
+            size = int(m.group(1))
+            for v in value_list(f["desc"]) + ([f["default"].strip()] if f["default"].strip() else []):
+                if len(v) > size:
+                    problems.append(f"{t['schema']}.{t['name']}.{f['name']} {f['type']}: '{v}' ({len(v)} karakter)")
+    return problems
+
+
 def main():
     spec = build_spec()
+    problems = length_problems(spec)
+    if problems:
+        raise SystemExit("Değer alanına sığmıyor (K-80):\n  " + "\n  ".join(problems))
     (ROOT / "db" / "models.py").write_text(render_models(spec) + "\n", encoding="utf-8")
     (DOCS / "07-veritabani.md").write_text(render_map(spec) + "\n", encoding="utf-8")
     counts = {s: sum(1 for t in spec if t["schema"] == s) for s in SCHEMA_TITLE}

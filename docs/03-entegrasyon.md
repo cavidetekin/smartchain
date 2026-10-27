@@ -389,7 +389,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Priority | int |  | H | Öncelik | ERP, yoksa kural | kural ya da elle |
 | QuotaPct | decimal(6,2) |  | H | Kota (%) | ERP, yoksa kural | kural ya da elle |
 | LeadTimeDays | decimal(9,2) |  | E | Tedarik süresi | ERP | hata (satır atlanır) |
-| LeadTimeBasis | nvarchar(10) |  | H | Takvim günü \| İş günü | Kural ya da elle | varsayılan Takvim günü |
+| LeadTimeBasis | nvarchar(15) |  | H | Takvim günü \| İş günü | Kural ya da elle | varsayılan Takvim günü |
 | MinOrderQty | decimal(18,4) |  | H | Minimum sipariş miktarı | ERP | boş kalır |
 | OrderMultiple | decimal(18,4) |  | H | Kat | ERP | boş kalır |
 | MaxOrderQty | decimal(18,4) |  | H | Maksimum | ERP | boş kalır |
@@ -563,7 +563,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LocationCode | nvarchar(30) | REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
 | OrderNo | nvarchar(30) | UK | E | Sipariş no | ERP | hata (satır atlanır) |
 | LineNo | int | UK | E | Satır no | ERP | hata (satır atlanır) |
-| OrderType | nvarchar(15) |  | E | Satın alma talebi \| Satın alma \| Fason | ERP | hata (satır atlanır) |
+| OrderType | nvarchar(20) |  | E | Satın alma talebi \| Satın alma \| Fason | ERP | hata (satır atlanır) |
 | SupplierCode | nvarchar(50) | REF | H | Tedarikçi | ERP | boş kalır |
 | MaterialCode | nvarchar(50) | REF | E | Malzeme | ERP | hata (satır atlanır) |
 | OpenQty | decimal(18,4) |  | E | Açık miktar | ERP | hata (satır atlanır) |

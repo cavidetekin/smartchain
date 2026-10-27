@@ -257,7 +257,7 @@ def test_setup_db_on_local_server():
         assert names and names[0].upper().endswith("\\MSSQLSERVER")
         setup_db.migrate(ROOT, db)
         with setup_db._connect(db) as c:
-            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0003"
+            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0005"
             assert c.execute("SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')").fetchone()[0] == setup_db.COLLATION
     finally:
         setup_db.drop_database(master, name)

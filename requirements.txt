@@ -8,6 +8,9 @@ fastapi>=0.115
 uvicorn[standard]>=0.30
 pydantic-settings>=2.4
 
+# Sentetik veri: kirli hâlin Excel'i (adım 0.8; MIT). Excel okuyucu 3.2'de çalışma zamanına alınır.
+openpyxl==3.1.5
+
 # Çözücü (adım 0.7, K-76)
 highspy==1.15.1
 numpy==2.5.4

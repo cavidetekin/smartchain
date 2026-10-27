@@ -105,12 +105,12 @@ def engine_refs(db_engine, test_users):
     with Session(db_engine) as s:
         ensure_fixture_warning_definitions(s)
         s.execute(text("IF NOT EXISTS (SELECT 1 FROM core.Location WHERE Code = N'TEST-ENG') "
-                       "INSERT INTO core.Location (Code, Name, Type) VALUES (N'TEST-ENG', N'Motor testi', N'Tesis')"))
+                       "INSERT INTO core.Location (Code, Name, Type, IsSynthetic) VALUES (N'TEST-ENG', N'Motor testi', N'Tesis', 1)"))
         loc = s.execute(text("SELECT Id FROM core.Location WHERE Code = N'TEST-ENG'")).scalar_one()
-        dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType) "
-                            "OUTPUT inserted.Id VALUES (:l, SYSUTCDATETIME(), N'Tam')"), {"l": loc}).scalar_one()
-        ps = s.execute(text("INSERT INTO param.ParameterSet (Name) OUTPUT inserted.Id "
-                            "VALUES (N'Motor testi')")).scalar_one()
+        dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType, IsSynthetic) "
+                            "OUTPUT inserted.Id VALUES (:l, SYSUTCDATETIME(), N'Tam', 1)"), {"l": loc}).scalar_one()
+        ps = s.execute(text("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id "
+                            "VALUES (N'Motor testi', 1)")).scalar_one()
         s.commit()
     yield {"location_id": loc, "data_version_id": dv, "parameter_set_id": ps, "user_id": test_users[0]}
     _clear_plan_runs(db_engine, dv)
@@ -123,16 +123,9 @@ def engine_refs(db_engine, test_users):
 
 def _clear_plan_runs(engine, data_version_id):
     from sqlalchemy import text
-    runs = "(SELECT Id FROM planning.PlanRun WHERE DataVersionId = :d)"
+    from app.data.cleanup import delete_plan_data
     with engine.begin() as c:
-        for t in ("PlanWarning", "Pegging", "CapacityLoad", "DemandFulfillment", "SupplyRecommendation",
-                  "PlannedOrder", "PlanMetric", "PlanVersion"):
-            c.execute(text(f"DELETE FROM planning.{t} WHERE PlanRunId IN {runs}"), {"d": data_version_id})
-        c.execute(text(f"DELETE FROM adm.SolverLog WHERE PlanRunId IN {runs}"), {"d": data_version_id})
-        c.execute(text("DELETE FROM planning.Workspace WHERE ScenarioId IN "
-                       "(SELECT Id FROM planning.Scenario WHERE DataVersionId = :d)"), {"d": data_version_id})
-        c.execute(text("DELETE FROM planning.PlanRun WHERE DataVersionId = :d"), {"d": data_version_id})
-        c.execute(text("DELETE FROM planning.Scenario WHERE DataVersionId = :d"), {"d": data_version_id})
+        delete_plan_data(c, [data_version_id])
         c.execute(text("DELETE FROM param.ScenarioDefinition WHERE Name = N'Motor testi'"))
 
 

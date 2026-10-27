@@ -73,6 +73,8 @@ alembic -c db/alembic.ini upgrade head --sql       # bağlantısız: SQL betiği
 alembic -c db/alembic.ini downgrade -1             # son geçişi geri al
 uvicorn app.api.main:app --reload --port 8000      # API'yi başlat (geliştirme)
 python -m app.engine.service                       # motor servisini başlat (geliştirme; sahte motor)
+python -m app.data.synthetic load                  # sentetik veri v0'ı ana tablolara yükle (docs/11, K-79)
+python -m app.data.synthetic excel                 # sentetik verinin kirli hâli (entegrasyon Excel'i)
 python -m pytest                                   # testler
 powershell -File installer\build.ps1               # internetsiz kurulum paketi (dist\), yalnız geliştirmede
 ```

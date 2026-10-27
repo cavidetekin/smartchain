@@ -52,12 +52,12 @@ def check_engine(timeout: int) -> str:
     db = get_engine()
     with Session(db) as s:
         ensure_fixture_warning_definitions(s)
-        loc = s.execute(text("INSERT INTO core.Location (Code, Name, Type) OUTPUT inserted.Id "
-                             "VALUES (:c, N'Kurulum testi', N'Tesis')"), {"c": TEST_LOCATION}).scalar_one()
-        dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType) OUTPUT inserted.Id "
-                            "VALUES (:l, SYSUTCDATETIME(), N'Tam')"), {"l": loc}).scalar_one()
-        ps = s.execute(text("INSERT INTO param.ParameterSet (Name) OUTPUT inserted.Id VALUES (N'Kurulum testi')")
-                       ).scalar_one()
+        loc = s.execute(text("INSERT INTO core.Location (Code, Name, Type, IsSynthetic) OUTPUT inserted.Id "
+                             "VALUES (:c, N'Kurulum testi', N'Tesis', 1)"), {"c": TEST_LOCATION}).scalar_one()
+        dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType, IsSynthetic) OUTPUT inserted.Id "
+                            "VALUES (:l, SYSUTCDATETIME(), N'Tam', 1)"), {"l": loc}).scalar_one()
+        ps = s.execute(text("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id "
+                            "VALUES (N'Kurulum testi', 1)")).scalar_one()
         s.commit()
         run_id = job_id = None
         try:
