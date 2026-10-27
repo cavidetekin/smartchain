@@ -120,6 +120,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 10.3 Kurallı yerleştirme ve sezgisel (33)
 - [ ] 10.4 Model kurma, LP (31)
 - [ ] 10.5 Çözücü adaptörü ve süre bütçesi (32, 34)
+  - [ ] Çalışan modelin LP dosyası, çözüm (solution) dosyası ve çözücü logu her plan hesabı için ayrı klasöre yazılır
 - [ ] 10.6 Son hesap (35)
 - [ ] 10.7 Mevcut arz önerileri, uyarı üretme, metrikler, açıklama (36–39)
 - [ ] 10.8 Sahte motorun yerine gerçek motor; plan fikstürü altın plan kabul testi olur
