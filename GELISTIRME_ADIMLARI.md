@@ -26,7 +26,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 ## Aşama 1 · Arayüz temeli
 
 - [ ] 1.1 Kabuk: menü, daraltılabilir kenar menü, bağlam çubuğu (U-22)
-- [ ] 1.2 Stil sistemi: palet, gömülü fontlar, durum renkleri (U-1–U-5)
+- [ ] 1.2 Stil sistemi: palet, gömülü fontlar, durum renkleri, dört yazı boyutu seviyesi (U-1–U-5, U-23)
 - [ ] 1.3 Ortak tablo bileşeni: alan ekle/çıkar, çoklu sıralama, filtre tipleri (U-6–U-8)
 - [ ] 1.4 Görünüm: kayıtlı görünüm, kolon düzeni ve sabitleme, gruplama, aktif filtre, boş değer (U-9–U-13)
 - [ ] 1.5 Veri giriş ve dışa aktarım: Excel'e aktarma (86), yapıştırma, Türkçe sayı ve tarih (U-14–U-16)
@@ -35,7 +35,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [ ] 2.1 Giriş ve oturum (89)
 - [ ] 2.2 Rol bazlı yetki altyapısı (90)
-- [ ] 2.3 Kullanıcılar ekranı (22) · kullanıcı yönetimi (88)
+- [ ] 2.3 Kullanıcılar ekranı (22) · kullanıcı yönetimi (88) · kullanıcının yazı boyutu tercihinin saklanması (U-23)
 - [ ] 2.4 Sistem sahibi ayarları (25) · veri sözlüğü ve ek alan etiketleri (96)
 - [ ] 2.5 Sistem sağlığı (24) · sağlık (94), iş kuyruğu (93)
 - [ ] 2.6 Denetim izi altyapısı (98)

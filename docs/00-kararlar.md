@@ -36,7 +36,7 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | K-28 | Proje bazlı planlama, envanteri proje sayısıyla çoğaltmadan kompakt bir yöntemle çözülür. | 18 |
 | K-29 | MRP patlatmadaki öncelikler ve kısıtlar parametrik yönetilir. | 18 |
 | K-30 | Ürün paleti indigo + kurşun; durum renkleri hardal (risk) ve kiremit (aşırı yük). Yazı tipleri Instrument Sans ve JetBrains Mono. | 23 |
-| K-31 | U-1…U-22 arayüz prensipleri tüm ekran ve raporlar için bağlayıcıdır; yeni ekran bu listeye göre gözden geçirilir. | 23 |
+| K-31 | U-1…U-23 arayüz prensipleri tüm ekran ve raporlar için bağlayıcıdır; yeni ekran bu listeye göre gözden geçirilir. | 23 |
 | K-32 | Faz 1 hedefi müşterinin sunucusu, kapalı ağ; işletme bizde, uzaktan erişim yok. Tek paket bulutu engellemez. | 19 |
 | K-33 | Windows Server, Python; ürüne ayrılmış, en güncel sürümde MS SQL Server. | 19 |
 | K-34 | Entegrasyon ERP'den bağımsız: API, Excel, SQL arayüz tabloları; tek veri sözleşmesi. | 19 |
