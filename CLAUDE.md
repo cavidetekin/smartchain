@@ -56,9 +56,10 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/06-fonksiyonlar.md` | 98 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
 | `docs/07-veritabani.md` | Veritabanı haritası: şemalar ve tablolar (üretilmiş) |
 | `docs/08-api.md` | API kuralları: katmanlar, adresler, hata cevabı, log, ayarlar |
+| `docs/09-motor-arayuzu.md` | Motor arayüzü, sahte motor, motor servisi (geliştirme 0.5) |
 | `docs/mockups/` | Mockup görselleri |
 
-Motor (MDD 18), raporlar (25), kurulum (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
+Motorun iç tasarımı (MDD 18), raporlar (25), kurulum (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
 
 ## Komutlar
 
@@ -69,5 +70,6 @@ alembic -c db/alembic.ini upgrade head             # veritabanını güncelle (S
 alembic -c db/alembic.ini upgrade head --sql       # bağlantısız: SQL betiğini yazdır
 alembic -c db/alembic.ini downgrade -1             # son geçişi geri al
 uvicorn app.api.main:app --reload --port 8000      # API'yi başlat (geliştirme)
+python -m app.engine.service                       # motor servisini başlat (geliştirme; sahte motor)
 python -m pytest                                   # testler
 ```

@@ -1279,7 +1279,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### PlannedOrder
 <sub>21. Veri modeli · Plan</sub>
 
-- Plan · versiyonlu · Faz 1
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
 - Planlı sipariş: üretim, satın alma ya da fason önerisi. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
@@ -1295,12 +1295,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | StartDate | date |  | Başlangıç | Motor | H | H |  |
 | DueDate | date |  | Bitiş | Motor | H | E |  |
 | BucketStart | date |  | Dönem | Motor | H | H |  |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
 
 ### SupplyRecommendation
 <sub>21. Veri modeli · Plan</sub>
 
-- Plan · versiyonlu · Faz 1
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
 - Mevcut arz için öneri: öne çek, ertele, iptal, azalt, hızlandır.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
@@ -1313,12 +1313,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | CurrentDate | date |  | Mevcut tarih | Motor | H | H |  |
 | ProposedDate | date |  | Önerilen tarih | Motor | H | H |  |
 | ProposedQty | decimal(18,4) |  | Önerilen miktar | Motor | H | H |  |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
 
 ### DemandFulfillment
 <sub>21. Veri modeli · Plan</sub>
 
-- Plan · versiyonlu · Faz 1
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
 - Talebin planlanan karşılanması ve gecikmesi.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
@@ -1331,12 +1331,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PlannedDate | date |  | Planlanan karşılama | Motor | H | H |  |
 | ShortQty | decimal(18,4) |  | Karşılanamayan miktar | Motor | H | H |  |
 | DelayDays | int |  | Gecikme (gün) | Motor | H | H |  |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
 
 ### CapacityLoad
 <sub>21. Veri modeli · Plan</sub>
 
-- Plan · versiyonlu · Faz 1
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
 - Kaynak ve dönem bazında kapasite ve kapasite yükü.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
@@ -1350,12 +1350,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | NetCapacity | decimal(18,4) |  | Kalan kapasite (verim sonrası) | Motor | H | H |  |
 | Load | decimal(18,4) |  | Kapasite yükü | Motor | H | H |  |
 | Overtime | decimal(18,4) |  | Fazla mesai | Motor | H | H |  |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
 
 ### Pegging
 <sub>21. Veri modeli · Plan</sub>
 
-- Plan · versiyonlu · Faz 1
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
 - Arz–talep bağı (full pegging).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
@@ -1369,12 +1369,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | RootDemandId | bigint |  | Kök talep | Motor | H | H |  |
 | Quantity | decimal(18,4) |  | Miktar | Motor | H | E |  |
 | IsFixed | bit |  | Sabit ya da manuel bağ | Kullanıcı | H | H | 0 |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
 
 ### PlanWarning
 <sub>21. Veri modeli · Plan</sub>
 
-- Plan · versiyonlu · Faz 1
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
 - Plan hesabının ürettiği uyarılar.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
@@ -1386,7 +1386,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ObjectId | bigint |  | İlgili nesne | Motor | H | H |  |
 | Value | decimal(18,4) |  | Ölçülen değer | Motor | H | H |  |
 | Message | nvarchar(400) |  | Mesaj (şablon tabanlı açıklama) | Motor | H | H |  |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
 
 ### PlanMetric
 <sub>21. Veri modeli · Plan</sub>
@@ -1492,6 +1492,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `JobLimitNight`: gece kanalında aynı anda çalışan iş (2)
   - `JobHeartbeatTimeoutSeconds`: kalp atışı bu kadar saniye gelmezse iş takılmış sayılır (120)
   - `JobMaxAttempts`: takılan iş en fazla bu kadar denenir, sonra Hata (2)
+- Motor ayarları (K-71; fonksiyon 34):
+  - `EngineTimeBudgetInteractiveSeconds`: etkileşim kanalında hesap süre bütçesi (180)
+  - `EngineTimeBudgetNightSeconds`: gece kanalında hesap süre bütçesi (1800; senaryo bazlı bütçe parametrelerde gelecek)
+  - `EngineKillGraceSeconds`: bütçe aşıldıktan sonra motor servisinin işi sonlandırmadan önce beklediği pay (60)
+  - `EngineHeartbeatSeconds`: motor servisinin çalışan iş için kalp atışı yazma aralığı (15)
 
 ### License
 <sub>21. Veri modeli · Sistem</sub>

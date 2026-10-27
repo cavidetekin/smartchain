@@ -17,7 +17,8 @@ class TraceIdFilter(logging.Filter):
 FORMAT = "%(asctime)s %(levelname)-7s [%(trace_id)s] %(name)s: %(message)s"
 
 
-def setup_logging(settings: Settings) -> None:
+def setup_logging(settings: Settings, file_name: str = "smartchain.log") -> None:
+    """file_name: her süreç kendi dosyasına yazar (API smartchain.log, motor servisi engine.log); dönen dosya paylaşılmaz."""
     root = logging.getLogger()
     if getattr(root, "_smartchain_configured", False):
         return
@@ -32,7 +33,7 @@ def setup_logging(settings: Settings) -> None:
 
     settings.log_dir.mkdir(parents=True, exist_ok=True)
     file_handler = TimedRotatingFileHandler(
-        settings.log_dir / "smartchain.log", when="midnight", backupCount=settings.log_retention_days,
+        settings.log_dir / file_name, when="midnight", backupCount=settings.log_retention_days,
         encoding="utf-8",
     )
     file_handler.setFormatter(fmt)

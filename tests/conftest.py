@@ -92,3 +92,64 @@ def job_settings(db_session):
 def db_client(db_engine, clean_jobs):
     """Gerçek veritabanıyla API istemcisi (izleyici kapalı; lifespan çalışmaz)."""
     return TestClient(create_app(), raise_server_exceptions=False)
+
+
+# --- Motor testleri (0.5): referans satırları ve PlanRun temizliği ---
+
+@pytest.fixture(scope="session")
+def engine_refs(db_engine, test_users):
+    """Test lokasyonu, veri versiyonu ve parametre seti; oturum sonunda silinir."""
+    from sqlalchemy import text
+    from app.engine.fake import ensure_fixture_warning_definitions
+    from sqlalchemy.orm import Session
+    with Session(db_engine) as s:
+        ensure_fixture_warning_definitions(s)
+        s.execute(text("IF NOT EXISTS (SELECT 1 FROM core.Location WHERE Code = N'TEST-ENG') "
+                       "INSERT INTO core.Location (Code, Name, Type) VALUES (N'TEST-ENG', N'Motor testi', N'Tesis')"))
+        loc = s.execute(text("SELECT Id FROM core.Location WHERE Code = N'TEST-ENG'")).scalar_one()
+        dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType) "
+                            "OUTPUT inserted.Id VALUES (:l, SYSUTCDATETIME(), N'Tam')"), {"l": loc}).scalar_one()
+        ps = s.execute(text("INSERT INTO param.ParameterSet (Name) OUTPUT inserted.Id "
+                            "VALUES (N'Motor testi')")).scalar_one()
+        s.commit()
+    yield {"location_id": loc, "data_version_id": dv, "parameter_set_id": ps, "user_id": test_users[0]}
+    _clear_plan_runs(db_engine, dv)
+    with db_engine.begin() as c:
+        c.execute(text("DELETE FROM param.PlanningSetting WHERE ParameterSetId = :p"), {"p": ps})
+        c.execute(text("DELETE FROM param.ParameterSet WHERE Id = :p"), {"p": ps})
+        c.execute(text("DELETE FROM adm.DataVersion WHERE Id = :d"), {"d": dv})
+        c.execute(text("DELETE FROM core.Location WHERE Id = :l"), {"l": loc})
+
+
+def _clear_plan_runs(engine, data_version_id):
+    from sqlalchemy import text
+    runs = "(SELECT Id FROM planning.PlanRun WHERE DataVersionId = :d)"
+    with engine.begin() as c:
+        for t in ("PlanWarning", "Pegging", "CapacityLoad", "DemandFulfillment", "SupplyRecommendation",
+                  "PlannedOrder", "PlanMetric", "PlanVersion"):
+            c.execute(text(f"DELETE FROM planning.{t} WHERE PlanRunId IN {runs}"), {"d": data_version_id})
+        c.execute(text(f"DELETE FROM adm.SolverLog WHERE PlanRunId IN {runs}"), {"d": data_version_id})
+        c.execute(text("DELETE FROM planning.Workspace WHERE ScenarioId IN "
+                       "(SELECT Id FROM planning.Scenario WHERE DataVersionId = :d)"), {"d": data_version_id})
+        c.execute(text("DELETE FROM planning.PlanRun WHERE DataVersionId = :d"), {"d": data_version_id})
+        c.execute(text("DELETE FROM planning.Scenario WHERE DataVersionId = :d"), {"d": data_version_id})
+        c.execute(text("DELETE FROM param.ScenarioDefinition WHERE Name = N'Motor testi'"))
+
+
+@pytest.fixture
+def plan_env(db_engine, engine_refs, clean_jobs):
+    """Her motor testi temiz PlanRun ve iş tablosuyla başlar; sahte motor ayarları sıfırlanır."""
+    _clear_plan_runs(db_engine, engine_refs["data_version_id"])
+    set_fake(db_engine, engine_refs["parameter_set_id"])
+    yield engine_refs
+    _clear_plan_runs(db_engine, engine_refs["data_version_id"])
+
+
+def set_fake(engine, parameter_set_id, step=0, mode="normal"):
+    """Sahte motorun PlanningSetting ayarları (docs/09)."""
+    from sqlalchemy import text
+    with engine.begin() as c:
+        c.execute(text("DELETE FROM param.PlanningSetting WHERE ParameterSetId = :p"), {"p": parameter_set_id})
+        for k, v in {"ModelType": "LP", "FakeEngineStepSeconds": str(step), "FakeEngineMode": mode}.items():
+            c.execute(text("INSERT INTO param.PlanningSetting (ParameterSetId, SettingKey, Value) VALUES (:p, :k, :v)"),
+                      {"p": parameter_set_id, "k": k, "v": v})

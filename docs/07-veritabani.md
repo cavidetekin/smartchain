@@ -105,12 +105,12 @@
 | `planning.WorkspaceOverride` | Çalışmadaki geçici değişiklikler: parametreler ve çalışmada değiştirilebilir ana veri alanları. | Plan |  | 7 |
 | `planning.PlanRun` | Bir plan hesabı (senaryo ya da çalışma); bütün plan çıktıları buna bağlı. | Plan |  | 10 |
 | `planning.PlanVersion` | Onaylı plan versiyonu; hep saklanır. Aynı anda tek geçerli. | Plan |  | 7 |
-| `planning.PlannedOrder` | Planlı sipariş: üretim, satın alma ya da fason önerisi. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca. | Plan | evet | 11 |
-| `planning.SupplyRecommendation` | Mevcut arz için öneri: öne çek, ertele, iptal, azalt, hızlandır. | Plan | evet | 8 |
-| `planning.DemandFulfillment` | Talebin planlanan karşılanması ve gecikmesi. | Plan | evet | 8 |
-| `planning.CapacityLoad` | Kaynak ve dönem bazında kapasite ve kapasite yükü. | Plan | evet | 9 |
-| `planning.Pegging` | Arz–talep bağı (full pegging). | Plan | evet | 9 |
-| `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan | evet | 7 |
+| `planning.PlannedOrder` | Planlı sipariş: üretim, satın alma ya da fason önerisi. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca. | Plan |  | 12 |
+| `planning.SupplyRecommendation` | Mevcut arz için öneri: öne çek, ertele, iptal, azalt, hızlandır. | Plan |  | 9 |
+| `planning.DemandFulfillment` | Talebin planlanan karşılanması ve gecikmesi. | Plan |  | 9 |
+| `planning.CapacityLoad` | Kaynak ve dönem bazında kapasite ve kapasite yükü. | Plan |  | 10 |
+| `planning.Pegging` | Arz–talep bağı (full pegging). | Plan |  | 10 |
+| `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan |  | 8 |
 | `planning.PlanMetric` | Senaryo karşılaştırma metrikleri; senaryo silinse de özet kısa süre kalır. | Plan |  | 3 |
 
 ## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (14 tablo)

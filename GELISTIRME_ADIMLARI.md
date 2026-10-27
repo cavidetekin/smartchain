@@ -18,7 +18,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 0.2 Veritabanı: ana tablolar, stg.*, veri yönetimi ve sistem tabloları; ileri ve geri geçiş betikleri
 - [x] 0.3 Uygulama iskeleti: FastAPI katmanları, hata yönetimi, log
 - [x] 0.4 İş kuyruğu (Job) ve WebSocket bildirim iskeleti (47, 48 çekirdeği · K-67–K-69, A-36)
-- [ ] 0.5 Motor arayüzü ve sahte motor (fikstür döndürür)
+- [x] 0.5 Motor arayüzü ve sahte motor (fikstür döndürür) · K-70, K-71; `docs/09-motor-arayuzu.md`
 - [ ] 0.6 Kurulum iskeleti: Windows servisleri, IIS, ayrı SQL Server; temiz makineye kurulum
 - [ ] 0.7 HiGHS paketleme denemesi (yalnız paket, model yok)
 - [ ] 0.8 Sentetik veri v0 (22): ana veri ve işlem verisi

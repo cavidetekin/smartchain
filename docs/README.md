@@ -13,3 +13,4 @@ Master Design Document'tan (MDD) türetilmiş tasarım dokümanları. Tek kaynak
 | 06-fonksiyonlar.md | 24 (fonksiyonlar) |
 | 07-veritabani.md | Üretilmiş: şemalar ve tablolar (db/generate.py) |
 | 08-api.md | Geliştirme 0.3: API kuralları |
+| 09-motor-arayuzu.md | Geliştirme 0.5: motor arayüzü ve sahte motor |

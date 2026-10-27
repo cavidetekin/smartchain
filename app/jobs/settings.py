@@ -28,13 +28,14 @@ class JobSettings:
         return {CHANNEL_INTERACTIVE: self.limit_interactive, CHANNEL_NIGHT: self.limit_night}[channel]
 
 
-def read_settings(session: Session) -> JobSettings:
+def read_int_settings(session: Session, defaults: dict[str, int]) -> dict[str, int]:
+    """SystemSetting'den pozitif tamsayı ayarları; satır yoksa ya da bozuksa varsayılan."""
     rows = session.execute(
         text("SELECT SettingKey, Value FROM adm.SystemSetting WHERE SettingKey IN :keys")
         .bindparams(bindparam("keys", expanding=True)),
-        {"keys": list(DEFAULTS)},
+        {"keys": list(defaults)},
     ).all()
-    values = dict(DEFAULTS)
+    values = dict(defaults)
     for key, raw in rows:
         try:
             value = int(raw)
@@ -42,7 +43,12 @@ def read_settings(session: Session) -> JobSettings:
                 raise ValueError
             values[key] = value
         except (TypeError, ValueError):
-            log.warning("SystemSetting %s geçersiz (%r); varsayılan %s kullanılıyor", key, raw, DEFAULTS[key])
+            log.warning("SystemSetting %s geçersiz (%r); varsayılan %s kullanılıyor", key, raw, defaults[key])
+    return values
+
+
+def read_settings(session: Session) -> JobSettings:
+    values = read_int_settings(session, DEFAULTS)
     return JobSettings(
         limit_interactive=values["JobLimitInteractive"],
         limit_night=values["JobLimitNight"],

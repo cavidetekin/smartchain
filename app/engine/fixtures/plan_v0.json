@@ -1,0 +1,37 @@
+{
+  "_note": "Sahte motorun fikstürü (0.5). Malzeme, kaynak, sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; 8.0'da sentetik veriye uygun plan fikstürüyle değişir. Alan adları docs/02 ile birebir.",
+  "status": "Bitti",
+  "planned_orders": [
+    {"ref": "P1", "MaterialId": 1001, "OrderType": "Üretim", "Quantity": 120, "RoundedQty": 120,
+     "StartDate": "2026-11-09", "DueDate": "2026-11-13", "BucketStart": "2026-11-09"},
+    {"ref": "P2", "MaterialId": 2001, "OrderType": "Satın alma", "SupplierId": 501, "Quantity": 243.5, "RoundedQty": 250,
+     "StartDate": "2026-11-02", "DueDate": "2026-11-06", "BucketStart": "2026-11-02"},
+    {"ref": "P3", "MaterialId": 1002, "OrderType": "Fason", "SupplierId": 502, "Quantity": 40, "RoundedQty": 40,
+     "StartDate": "2026-11-16", "DueDate": "2026-11-20", "BucketStart": "2026-11-16"}
+  ],
+  "supply_recommendations": [
+    {"SupplyType": "İş emri", "SupplyId": 3001, "Action": "Öne çek",
+     "CurrentDate": "2026-11-20", "ProposedDate": "2026-11-13", "ProposedQty": 60}
+  ],
+  "demand_fulfillment": [
+    {"DemandType": "Sipariş", "DemandId": 7001, "DueDate": "2026-11-13", "PlannedDate": "2026-11-13", "ShortQty": 0, "DelayDays": 0},
+    {"DemandType": "Sipariş", "DemandId": 7002, "DueDate": "2026-11-17", "PlannedDate": "2026-11-20", "ShortQty": 0, "DelayDays": 3}
+  ],
+  "capacity_loads": [
+    {"ResourceId": 11, "BucketStart": "2026-11-09", "GrossCapacity": 80, "DowntimeLoss": 0, "NetCapacity": 72, "Load": 81, "Overtime": 9},
+    {"ResourceId": 11, "BucketStart": "2026-11-16", "GrossCapacity": 80, "DowntimeLoss": 8, "NetCapacity": 64.8, "Load": 50, "Overtime": 0}
+  ],
+  "pegging": [
+    {"supply_ref": "P1", "DemandType": "Sipariş", "DemandId": 7001, "RootDemandId": 7001, "Quantity": 120},
+    {"SupplyType": "Stok", "SupplyId": 9001, "DemandType": "Sipariş", "DemandId": 7002, "RootDemandId": 7002, "Quantity": 40},
+    {"supply_ref": "P2", "DemandType": "Bağımlı talep", "DemandId": 1, "RootDemandId": 7001, "Quantity": 240}
+  ],
+  "warnings": [
+    {"WarningCode": "CAP_OVERLOAD", "ObjectType": "Kaynak", "ObjectId": 11, "Value": 112.5,
+     "Message": "Kaynak 11, 09.11.2026 haftasında %112,5 dolu; 9 saat fazla mesai gerekiyor."},
+    {"WarningCode": "ORDER_LATE", "ObjectType": "Sipariş", "ObjectId": 7002, "Value": 3,
+     "Message": "Sipariş 7002, fason teslimi nedeniyle 3 gün gecikiyor."}
+  ],
+  "metrics": {"OnTimePct": 50, "AvgDelayDays": 1.5, "MaxUtilizationPct": 112.5, "OvertimeHours": 9},
+  "solver_log": {"ModelSize": "Sahte motor: model kurulmadı", "SolveSeconds": 0, "Gap": 0, "Iterations": 0}
+}

@@ -21,6 +21,8 @@ log = logging.getLogger("smartchain.jobs")
 LOCK_TIMEOUT_MS = 10_000
 STALE_PROGRESS = "Yanıt vermedi, yeniden sıraya alındı"
 STALE_ERROR = "İş yanıt vermedi; deneme hakkı bitti."
+CRASH_PROGRESS = "İş süreci beklenmedik bitti, yeniden sıraya alındı"
+CRASH_ERROR = "İş süreci beklenmedik bitti; deneme hakkı bitti."
 
 # Sıra numarası kanal içinde: önce öncelik (büyük önce), sonra istek sırası (Id).
 JOB_SELECT = """
@@ -59,7 +61,7 @@ def _select(session: Session, settings: JobSettings, where: str, params: dict, o
 def _lock(session: Session) -> None:
     """Kuyruk kilidi; işlem (transaction) bitince kendiliğinden bırakılır."""
     result = session.execute(text(
-        "SET NOCOUNT ON; DECLARE @r int; "
+        "DECLARE @r int; "
         "EXEC @r = sp_getapplock @Resource = N'adm.Job', @LockMode = 'Exclusive', "
         "@LockOwner = 'Transaction', @LockTimeout = :ms; SELECT @r"), {"ms": LOCK_TIMEOUT_MS}).scalar()
     if result is None or result < 0:
@@ -84,7 +86,6 @@ def enqueue(session: Session, job_type: str, channel: str, requested_by: int | N
     if channel not in CHANNELS:
         raise ValueError(f"Bilinmeyen kanal: {channel}")
     job_id = session.execute(text(
-        "SET NOCOUNT ON; "
         "INSERT INTO adm.Job (JobType, Channel, Priority, Status, RequestedBy, Payload, Attempt, CreatedAt, UpdatedAt) "
         "OUTPUT inserted.Id "
         "VALUES (:type, :ch, :prio, :queued, :by, :payload, 0, SYSUTCDATETIME(), SYSUTCDATETIME())"),
@@ -130,33 +131,46 @@ def heartbeat(session: Session, job_id: int, attempt: int, progress: str | None 
         sql = "UPDATE adm.Job SET HeartbeatAt = SYSUTCDATETIME() "
     else:
         sql = "UPDATE adm.Job SET HeartbeatAt = SYSUTCDATETIME(), Progress = :progress, UpdatedAt = SYSUTCDATETIME() "
-    n = session.execute(text(sql + "WHERE Id = :id AND Status = :running AND Attempt = :attempt"),
-                        {"id": job_id, "attempt": attempt, "running": STATUS_RUNNING,
-                         "progress": progress}).rowcount
+    row = session.execute(text(sql + "OUTPUT inserted.Id WHERE Id = :id AND Status = :running AND Attempt = :attempt"),
+                          {"id": job_id, "attempt": attempt, "running": STATUS_RUNNING, "progress": progress}).first()
     session.commit()
-    return n == 1
+    return row is not None
 
 
-def _end(session: Session, job_id: int, attempt: int, status: str, error: str | None) -> bool:
-    n = session.execute(text(
+def set_progress(session: Session, job_id: int, attempt: int, progress: str) -> bool:
+    """Yalnız ilerleme (adım geçişi); kalp atışını motor servisi yazar (K-71). False: iş artık bu denemenin değil."""
+    row = session.execute(text(
+        "UPDATE adm.Job SET Progress = :progress, UpdatedAt = SYSUTCDATETIME() "
+        "OUTPUT inserted.Id WHERE Id = :id AND Status = :running AND Attempt = :attempt"),
+        {"progress": progress, "id": job_id, "attempt": attempt, "running": STATUS_RUNNING}).first()
+    session.commit()
+    return row is not None
+
+
+def _end(session: Session, job_id: int, attempt: int, status: str, error: str | None, commit: bool) -> bool:
+    # Satır sayısı yerine OUTPUT: bağlantıdaki NOCOUNT ayarından bağımsız doğrulama.
+    ok = session.execute(text(
         "UPDATE adm.Job SET Status = :status, EndedAt = SYSUTCDATETIME(), ErrorText = :error, "
-        "UpdatedAt = SYSUTCDATETIME() WHERE Id = :id AND Status = :running AND Attempt = :attempt"),
-        {"status": status, "error": error, "id": job_id, "attempt": attempt, "running": STATUS_RUNNING}).rowcount
-    session.commit()
-    if n != 1:
+        "UpdatedAt = SYSUTCDATETIME() OUTPUT inserted.Id WHERE Id = :id AND Status = :running AND Attempt = :attempt"),
+        {"status": status, "error": error, "id": job_id, "attempt": attempt,
+         "running": STATUS_RUNNING}).first() is not None
+    if commit:
+        session.commit()
+    if not ok:
         log.warning("İş %s (deneme %s) %s yapılamadı: artık çalışmıyor", job_id, attempt, status)
-    return n == 1
+    return ok
 
 
-def finish(session: Session, job_id: int, attempt: int, progress: str | None = None) -> bool:
+def finish(session: Session, job_id: int, attempt: int, progress: str | None = None, commit: bool = True) -> bool:
+    """İşi Bitti yapar. commit=False: çağıran başka yazmalarla birlikte tek işlemde commit eder (motor, K-70)."""
     if progress is not None:
-        session.execute(text("UPDATE adm.Job SET Progress = :p WHERE Id = :id AND Attempt = :a"),
-                        {"p": progress, "id": job_id, "a": attempt})
-    return _end(session, job_id, attempt, STATUS_DONE, None)
+        session.execute(text("UPDATE adm.Job SET Progress = :p WHERE Id = :id AND Status = :running AND Attempt = :a"),
+                        {"p": progress, "id": job_id, "a": attempt, "running": STATUS_RUNNING})
+    return _end(session, job_id, attempt, STATUS_DONE, None, commit)
 
 
-def fail(session: Session, job_id: int, attempt: int, error: str) -> bool:
-    return _end(session, job_id, attempt, STATUS_FAILED, error)
+def fail(session: Session, job_id: int, attempt: int, error: str, commit: bool = True) -> bool:
+    return _end(session, job_id, attempt, STATUS_FAILED, error, commit)
 
 
 def cancel(session: Session, job_id: int) -> None:
@@ -182,8 +196,9 @@ def cancel(session: Session, job_id: int) -> None:
     log.info("İş %s iptal edildi", job_id)
 
 
-def requeue_stale(session: Session, settings: JobSettings) -> list[int]:
-    """Kalp atışı eşiği aşılan işleri geri alır: deneme hakkı varsa sıraya, yoksa Hata (K-67)."""
+def _requeue_where(session: Session, settings: JobSettings, where: str, params: dict,
+                   progress: str, error: str) -> list:
+    """Çalışan işi geri alır: deneme hakkı varsa Sırada, yoksa Hata (K-67). Kuyruk kilidiyle, tek işlemde."""
     try:
         _lock(session)
         rows = session.execute(text(
@@ -194,21 +209,36 @@ def requeue_stale(session: Session, settings: JobSettings) -> list[int]:
             "  Progress = CASE WHEN ISNULL(Attempt, 0) < :max THEN :progress ELSE Progress END, "
             "  ErrorText = CASE WHEN ISNULL(Attempt, 0) < :max THEN NULL ELSE :error END, "
             "  UpdatedAt = SYSUTCDATETIME() "
-            "OUTPUT inserted.Id, inserted.Channel, inserted.Status "
-            "WHERE Status = :running AND (HeartbeatAt IS NULL "
-            "      OR HeartbeatAt < DATEADD(second, -1 * :timeout, SYSUTCDATETIME()))"),
+            f"OUTPUT inserted.Id, inserted.Channel, inserted.Status WHERE Status = :running AND {where}"),
             {"max": settings.max_attempts, "queued": STATUS_QUEUED, "failed": STATUS_FAILED,
-             "progress": STALE_PROGRESS, "error": STALE_ERROR, "running": STATUS_RUNNING,
-             "timeout": settings.heartbeat_timeout_seconds}).all()
+             "progress": progress, "error": error, "running": STATUS_RUNNING, **params}).all()
         for channel in {r.Channel for r in rows}:
             _touch_queued(session, channel)
         session.commit()
     except Exception:
         session.rollback()
         raise
+    return rows
+
+
+def requeue_stale(session: Session, settings: JobSettings) -> list[int]:
+    """Kalp atışı eşiği aşılan işleri geri alır (K-67)."""
+    rows = _requeue_where(session, settings,
+                          "(HeartbeatAt IS NULL OR HeartbeatAt < DATEADD(second, -1 * :timeout, SYSUTCDATETIME()))",
+                          {"timeout": settings.heartbeat_timeout_seconds}, STALE_PROGRESS, STALE_ERROR)
     for r in rows:
         log.warning("İş %s yanıt vermedi → %s", r.Id, r.Status)
     return [r.Id for r in rows]
+
+
+def requeue(session: Session, job_id: int, attempt: int, settings: JobSettings) -> str | None:
+    """İş süreci beklenmedik bitti (K-71): işi hemen geri alır. Yeni durumu döndürür; iş artık bu denemenin değilse None."""
+    rows = _requeue_where(session, settings, "Id = :id AND Attempt = :attempt", {"id": job_id, "attempt": attempt},
+                          CRASH_PROGRESS, CRASH_ERROR)
+    if not rows:
+        return None
+    log.warning("İş %s (deneme %s) süreci beklenmedik bitti → %s", job_id, attempt, rows[0].Status)
+    return rows[0].Status
 
 
 def get_job(session: Session, job_id: int, settings: JobSettings) -> dict | None:
