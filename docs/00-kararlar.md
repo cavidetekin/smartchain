@@ -81,6 +81,7 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | K-73 | API ve motor iki Windows servisidir (WinSW ile sarılır, sanal servis hesaplarıyla çalışır: NT SERVICE\SmartchainApi, NT SERVICE\SmartchainEngine). Hata durumunda kendini yeniden başlatır, açılışta otomatik başlar. Yetkilerde grup adı değil SID kullanılır (Türkçe Windows'ta grup adları farklıdır). | Geliştirme 0.6 |
 | K-74 | IIS ters vekildir (URL Rewrite + ARR, WebSocket açık). API yalnız 127.0.0.1:8000'i dinler; dışarıya yalnız IIS açılır. HTTPS bağlantısı müşterinin sertifikasıyla kurulur; sertifika yoksa (yalnız test) HTTP. | Geliştirme 0.6 |
 | K-75 | SQL Server'ı müşteri kurar (ürüne ayrılmış instance, lisans müşteride). Kurulum verilen instance'ta veritabanını bizim collation'la açar, servis hesaplarına kendi veritabanında yetki verir ve geçişleri çalıştırır. Bağlantı Windows kimliğiyle, SQL kimliği seçeneğiyle (A-27). ODBC Driver 18 şifreli bağlantıyı varsayılan ister: Encrypt açık; SQL Server'da güvenilir sertifika yoksa TrustServerCertificate açılır. | Geliştirme 0.6 |
+| K-76 | HiGHS (Python paketi highspy, MIT lisansı) kurulum paketine girer. Çözücüye yalnız app/engine/solvers/ altındaki adaptör erişir; motorun başka hiçbir yeri highspy'yi import etmez (K-35, fonksiyon 32). Çözücü seçimi (A-16, A-31) açıktır; HiGHS adaydır. | Geliştirme 0.7 |
 
 ## Açık konular
 

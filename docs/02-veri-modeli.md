@@ -1497,6 +1497,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `EngineTimeBudgetNightSeconds`: gece kanalında hesap süre bütçesi (1800; senaryo bazlı bütçe parametrelerde gelecek)
   - `EngineKillGraceSeconds`: bütçe aşıldıktan sonra motor servisinin işi sonlandırmadan önce beklediği pay (60)
   - `EngineHeartbeatSeconds`: motor servisinin çalışan iş için kalp atışı yazma aralığı (15)
+- Çözücü ayarları (K-76; fonksiyon 32):
+  - `SolverThreads`: bir plan hesabında çözücünün kullanacağı iş parçacığı sayısı (2)
 
 ### License
 <sub>21. Veri modeli · Sistem</sub>

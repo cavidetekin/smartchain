@@ -42,3 +42,20 @@ def test_scanner_catches_addresses():
     assert URL.search("ws://example.com/api/ws")
     assert not URL.search("http://127.0.0.1:{{API_PORT}}/{R:0}")
     assert not URL.search("ws://localhost:8000/api/ws")
+
+
+# --- Çözücüden bağımsızlık bekçisi (K-35, K-76) ---
+
+SOLVER_IMPORT = re.compile(r"^\s*(?:import\s+highspy|from\s+highspy\b)", re.MULTILINE)
+SOLVER_DIR = "app/engine/solvers/"
+
+
+def test_solver_package_only_imported_by_adapters():
+    offenders = []
+    for top in ("app", "installer", "scripts", "db"):
+        for p in (ROOT / top).rglob("*.py"):
+            rel = p.relative_to(ROOT).as_posix()
+            if not rel.startswith(SOLVER_DIR) and SOLVER_IMPORT.search(p.read_text(encoding="utf-8")):
+                offenders.append(rel)
+    assert not offenders, f"highspy yalnız {SOLVER_DIR} altında import edilir: {offenders}"
+    assert SOLVER_IMPORT.search((ROOT / SOLVER_DIR / "highs.py").read_text(encoding="utf-8"))

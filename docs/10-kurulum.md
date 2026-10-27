@@ -76,6 +76,23 @@ Servisler ayarları `SMARTCHAIN_CONFIG` ortam değişkeniyle verilen dosyadan ok
 
 IIS portunu "Default Web Site" kullanıyorsa o site durdurulur ve kaldırmada yeniden başlatılır. Başka bir site kullanıyorsa kurulum durur.
 
+## Üçüncü taraf bileşenler ve lisansları
+
+Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin pakete toplanması 11.4'te.
+
+| Bileşen | Sürüm | Lisans |
+|---|---|---|
+| Python | 3.13.7 | PSF-2.0 |
+| **HiGHS (highspy)** — çözücü | 1.15.1 | **MIT** |
+| numpy (highspy bağımlılığı) | 2.5.4 | BSD-3-Clause (içinde 0BSD, MIT, Zlib, CC0-1.0 parçaları) |
+| FastAPI, pydantic, pydantic-core, pydantic-settings, annotated-doc, annotated-types, typing-inspection | 0.162.0 · 2.14.1 · 2.50.1 · 2.16.1 · 0.0.5 · 0.8.0 · 0.4.4 | MIT |
+| starlette, uvicorn, websockets, click, idna, python-dotenv, MarkupSafe | 1.10.0 · 0.54.0 · 17.3 · 8.5.0 · 3.20 · 1.2.4 · 3.0.4 | BSD-3-Clause |
+| SQLAlchemy, alembic, Mako, pyodbc, anyio, h11, httptools, watchfiles, PyYAML | 2.1.6 · 1.20.1 · 1.4.3 · 5.3.0 · 4.15.1 · 0.16.0 · 0.9.0 · 1.3.0 · 6.0.3 | MIT |
+| typing_extensions | 4.16.0 | PSF-2.0 |
+| opentelemetry-api | 1.45.1 | Apache-2.0 |
+| WinSW (servis sarmalayıcı) | 2.12.0 | MIT |
+| ODBC Driver 18 for SQL Server, Visual C++ yeniden dağıtılabilir, IIS URL Rewrite 2.1, IIS ARR 3.0 | — | Microsoft lisansları; yeniden dağıtım ürünle birlikte kurulum amacıyla |
+
 ## Kaldırma
 
 `.\uninstall.ps1`: servisler, IIS sitesi ve uygulama klasörü kaldırılır. Veritabanı, ayarlar ve loglar yalnız `-RemoveData` ile silinir. Ön koşullar (Python dışında) ortak bileşen olduğu için kalır.
@@ -85,6 +102,7 @@ IIS portunu "Default Web Site" kullanıyorsa o site durdurulur ve kaldırmada ye
 - Servisler çalışıyor ve açılışta otomatik başlıyor.
 - IIS üzerinden `/api/health` ok; WebSocket'te `hello` geliyor.
 - Motor bir deneme plan hesabını bitiriyor (deneme verisi açılır ve silinir).
+- Çözücü (HiGHS) pakette çalışıyor: sabit LP ve MILP modelleri bilinen sonuçla çözülüyor (K-76).
 - API süreci öldürülünce servis kendini yeniden başlatıyor.
 - `-CheckOffline`: makineden dışarıya bağlantı kurulamadığını doğrular (yalnız test ortamında).
 

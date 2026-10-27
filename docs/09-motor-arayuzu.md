@@ -43,6 +43,19 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 - **Geri alınan iş:** Kalp atışı yazılamıyorsa (iş başka denemeye geçti) servis süreci sonlandırır.
 - Log: servis `logs/engine.log`, iş süreçleri servisin konsoluna.
 
+## Çözücü (K-35, K-76)
+
+- **Yer:** Çözücüye özel kod yalnız `app/engine/solvers/` altındadır; motorun başka hiçbir yeri çözücü paketini (`highspy`) import etmez (bekçi testi: `tests/test_offline.py`). Adaptör arayüzü (kur / çöz / oku, fonksiyon 32) 10.5'te yazılır; yeni çözücü yeni adaptör demektir.
+- **Aday:** HiGHS (`highspy` 1.15.1, MIT). LP ve MILP aynı pakette. Çözücü seçimi açık (A-16, A-31).
+- **Süre:** Çözücünün zaman limiti, işin süre bütçesinden (`EngineInput.time_budget_seconds`) ön hesap ve MRP payı düşülerek verilir (fonksiyon 34-02, 10.5). HiGHS'te `time_limit` seçeneği. Servisin öldürme payı (K-71) bunun üstünde son güvencedir.
+- **İş parçacığı:** `SolverThreads` sistem ayarı (2) → HiGHS'in `threads` seçeneği. HiGHS bu değeri süreç başına bir kez alır; her iş kendi sürecinde çalıştığı için (K-71) iş başına ayarlanmış olur. Öneri: (`JobLimitInteractive` + `JobLimitNight`) × `SolverThreads` ≤ sunucunun çekirdek sayısı.
+- **Günlük:** Çözücü konsola yazmaz (`output_flag` kapalı); SolverLog'a yazılması 10.5'te.
+- **Paket kontrolü:** `app/engine/solvers/highs.py: smoke_test(time_limit, threads)` iki sabit modeli çözer ve bilinen sonucu doğrular:
+  - LP: max 3x + 5y; x ≤ 4, 2y ≤ 12, 3x + 2y ≤ 18 → x = 2, y = 6, amaç 36, gölge fiyatlar 0, 1,5, 1.
+  - MILP: aynı model, 3x + 2y ≤ 17 ve x, y tamsayı → x = 1, y = 6, amaç 33 (gevşetilmiş LP 35).
+
+  Kurulumdan sonra `verify.ps1` (duman testi) bunu da yürütür.
+
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.
@@ -60,6 +73,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 | Parça | Durum |
 |---|---|
 | Arayüz, sahte motor, yazıcı, iş süreci, motor servisi (konsol) | uygulandı (0.5) |
+| Çözücünün yeri, HiGHS paketi ve paket kontrolü | uygulandı (0.7) |
 | Windows servisi olarak kurulum | 0.6 |
 | Gerçek motor (29–39), sıcak çalışma belleği | Aşama 10 |
 

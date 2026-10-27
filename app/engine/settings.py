@@ -11,6 +11,7 @@ DEFAULTS = {
     "EngineTimeBudgetNightSeconds": 1800,
     "EngineKillGraceSeconds": 60,
     "EngineHeartbeatSeconds": 15,
+    "SolverThreads": 2,
 }
 
 
@@ -20,6 +21,8 @@ class EngineSettings:
     time_budget_night: float = DEFAULTS["EngineTimeBudgetNightSeconds"]
     kill_grace: float = DEFAULTS["EngineKillGraceSeconds"]
     heartbeat_seconds: float = DEFAULTS["EngineHeartbeatSeconds"]
+    # Çözücünün iş parçacığı sayısı (K-76); adaptör 10.5'te kullanır. docs/09-motor-arayuzu.md · Çözücü
+    solver_threads: int = DEFAULTS["SolverThreads"]
 
     def time_budget(self, channel: str) -> float:
         return {CHANNEL_INTERACTIVE: self.time_budget_interactive, CHANNEL_NIGHT: self.time_budget_night}[channel]
@@ -32,4 +35,5 @@ def read_engine_settings(session: Session) -> EngineSettings:
         time_budget_night=v["EngineTimeBudgetNightSeconds"],
         kill_grace=v["EngineKillGraceSeconds"],
         heartbeat_seconds=v["EngineHeartbeatSeconds"],
+        solver_threads=v["SolverThreads"],
     )

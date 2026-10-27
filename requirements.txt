@@ -8,6 +8,10 @@ fastapi>=0.115
 uvicorn[standard]>=0.30
 pydantic-settings>=2.4
 
+# Çözücü (adım 0.7, K-76)
+highspy==1.15.1
+numpy==2.5.4
+
 # Test
 pytest>=8.0
 httpx>=0.27

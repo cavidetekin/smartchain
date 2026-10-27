@@ -1,6 +1,7 @@
 """Kurulum sonrası duman testi (verify.ps1 çağırır; docs/10-kurulum.md · Kontrol).
 
-IIS üzerinden sağlık ve WebSocket, motor servisiyle bir deneme plan hesabı. Deneme verisi açılır ve silinir.
+IIS üzerinden sağlık ve WebSocket, motor servisiyle bir deneme plan hesabı, çözücü (HiGHS) paket kontrolü.
+Deneme verisi açılır ve silinir.
 Ayarlar SMARTCHAIN_CONFIG'ten okunur; paketteki Python ile, kurulum klasöründen çalıştırılır.
 """
 import argparse
@@ -92,17 +93,27 @@ def check_engine(timeout: int) -> str:
             s.commit()
 
 
+def check_solver() -> str:
+    from app.engine.solvers.highs import smoke_test
+    r = smoke_test(time_limit=10.0, threads=1)
+    return (f"{r['solver']} {r['version']}: LP optimal, amaç {r['lp']['objective']:g} · "
+            f"MILP optimal, amaç {r['milp']['objective']:g}")
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--base-url", default="http://localhost")
     p.add_argument("--engine-timeout", type=int, default=120)
     p.add_argument("--skip-engine", action="store_true")
+    p.add_argument("--solver-only", action="store_true", help="yalnız çözücü paket kontrolü (IIS ve veritabanı gerekmez)")
     a = p.parse_args()
     sys.path.insert(0, str(Path.cwd()))
-    checks = [("Sağlık (IIS)", lambda: check_health(a.base_url)),
-              ("WebSocket (IIS)", lambda: check_websocket(a.base_url))]
-    if not a.skip_engine:
-        checks.append(("Motor: deneme plan hesabı", lambda: check_engine(a.engine_timeout)))
+    checks = [("Çözücü (HiGHS)", check_solver)]
+    if not a.solver_only:
+        checks += [("Sağlık (IIS)", lambda: check_health(a.base_url)),
+                   ("WebSocket (IIS)", lambda: check_websocket(a.base_url))]
+        if not a.skip_engine:
+            checks.append(("Motor: deneme plan hesabı", lambda: check_engine(a.engine_timeout)))
     failed = 0
     for name, fn in checks:
         try:

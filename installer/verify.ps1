@@ -54,6 +54,9 @@ Test-Check 'API yalnız 127.0.0.1:8000 dinliyor' {
 # Sağlık, WebSocket ve motor: IIS üzerinden, paketteki Python ile.
 Test-Check 'Duman testi (sağlık, WebSocket, motor)' {
     $env:SMARTCHAIN_CONFIG = Join-Path $DataDir 'config\smartchain.env'
+    # Python çıktısı UTF-8, PowerShell de UTF-8 okusun (Türkçe Windows'ta varsayılan kod sayfaları farklı).
+    $env:PYTHONIOENCODING = 'utf-8'
+    [Console]::OutputEncoding = [Text.Encoding]::UTF8
     Push-Location $InstallDir
     try {
         $r = Invoke-Native $Python @((Join-Path $InstallDir 'setup\smoke.py'), '--base-url', $BaseUrl) -AllowFailure
