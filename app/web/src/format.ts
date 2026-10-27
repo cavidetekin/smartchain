@@ -36,3 +36,20 @@ export function weekLabel(d: Date): string {
 export function fold(text: string): string {
   return text.toLocaleLowerCase(LOCALE);
 }
+
+/** Türkçe sayı girişi: "1.234,5", "1234,5", "-12" → sayı; geçersizse null (U-19). */
+export function parseTrNumber(text: string): number | null {
+  const t = text.trim().replace(/\s/g, "");
+  if (!t) return null;
+  if (!/^-?(\d{1,3}(\.\d{3})+|\d+)(,\d+)?$/.test(t)) return null;
+  return Number(t.replace(/\./g, "").replace(",", "."));
+}
+
+/** gg.aa.yyyy → Date (yerel); geçersiz ya da takvimde olmayan tarih null. */
+export function parseTrDate(text: string): Date | null {
+  const m = text.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!m) return null;
+  const [d, mo, y] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(y, mo - 1, d);
+  return date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d ? date : null;
+}

@@ -71,7 +71,7 @@ export function DataVersionBadge() {
     : state.kind === "apiDown" ? tr.context.apiDown
     : "…";
   return (
-    <span className={`sc-badge${state.kind === "apiDown" || state.kind === "dbDown" ? " is-muted" : ""}`}
+    <span className={`sc-chip${state.kind === "apiDown" || state.kind === "dbDown" ? " is-muted" : ""}`}
           data-testid="data-version">
       <Database aria-hidden="true" />
       <span>{text}</span>

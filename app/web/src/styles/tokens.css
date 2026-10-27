@@ -17,10 +17,79 @@
   --indigo-700: #333a94;
   --indigo-900: #1e2257;
 
-  /* Durum (U-2): yalnız durum için; 1.2'de kesinleşir */
-  --status-ok: #2f8f5b;
-  --status-risk: #d9a521;
-  --status-over: #c8452f;
+  /* Durum renkleri (U-2, K-85): yalnız durum için; her zaman yazı, değer ya da ikonla (U-3).
+     Yazı-zemin kontrastları docs/12 · Stil sistemi; tokens.test.ts hesaplar. */
+  --status-risk: #d9a521;            /* hardal: risk */
+  --status-risk-bg: #f7ebc4;         /* rozet */
+  --status-risk-bg-soft: #fbf3da;    /* uyarı kutusu */
+  --status-risk-text: #6b5200;
+  --status-risk-border: #edd99a;
+  --status-over: #c8452f;            /* kiremit: aşırı yük, gecikme, hata */
+  --status-over-bg: #f7dcd5;         /* rozet */
+  --status-over-bg-soft: #fbede8;    /* uyarı kutusu */
+  --status-over-text: #9a2e1a;       /* rozet yazısı */
+  --status-over-text-strong: #8a3612;/* uyarı kutusu ve form hatası yazısı */
+  --status-over-border: #ebcab8;
+  --status-over-on: #ffffff;         /* kiremit zemin üzerinde yazı */
+  --status-ok: #2f8f5b;              /* yeşil: olumlu */
+  --status-ok-bg: #ddf0e4;
+  --status-ok-bg-soft: #e8f5ec;
+  --status-ok-text: #254d3b;
+  --status-ok-border: #bfe0cb;
+  /* Bilgi indigo'dur (U-4), durum rengi değildir */
+  --info: var(--indigo-500);
+  --info-bg: var(--indigo-50);
+  --info-text: var(--indigo-900);
+  --info-border: var(--indigo-100);
+  --neutral-bg: var(--lead-100);
+  --neutral-text: var(--lead-700);
+
+  /* Doluluk skalası (K-85; mockup m23-0291/0292). Eşikler parametre: ui/occupancy.ts */
+  --occ-low-bg: var(--lead-50);      --occ-low-text: var(--lead-600);     /* < %40 */
+  --occ-normal-bg: var(--indigo-50); --occ-normal-text: var(--lead-900); /* %40–69 */
+  --occ-high-bg: #c5cbf2;            --occ-high-text: var(--indigo-900); /* %70–89 */
+  --occ-risk-bg: #f2d98e;            --occ-risk-text: #5c4300;           /* risk %90–100 */
+  --occ-over-bg: var(--status-over); --occ-over-text: var(--status-over-on); /* aşırı yük > %100 */
+
+  /* Grafik serileri (U-5): sıra sabit; kiremit seri olmaz */
+  --chart-1: var(--indigo-500);      /* indigo */
+  --chart-2: #2e7d7a;                /* petrol */
+  --chart-3: var(--status-risk);     /* hardal */
+  --chart-4: var(--lead-600);        /* kurşun */
+
+  /* Form alanları (mockup m24f-0757) */
+  --field-bg: #ffffff;
+  --field-border: var(--lead-300);
+  --field-border-focus: var(--indigo-500);
+  --focus-ring: #dfe1f7;
+  --field-disabled-bg: var(--lead-50);
+
+  /* Hücre işaretleri (1.3 tablosu): manuel değişiklik (U-4/U-16), dondurulmuş */
+  --cell-manual-border: var(--indigo-500);
+  --cell-frozen-bg: var(--lead-100);
+  --cell-frozen-text: var(--lead-600);
+
+  /* Yazı ölçeği (K-85): 1rem = kullanıcının yazı boyutu (U-23); standart 13 px'teki karşılıkları */
+  --fs-xs: 0.8462rem;   /* 11 px */
+  --fs-sm: 0.9231rem;   /* 12 px */
+  --fs-base: 1rem;      /* 13 px */
+  --fs-md: 1.0769rem;   /* 14 px */
+  --fs-lg: 1.2308rem;   /* 16 px */
+  --fs-xl: 1.3846rem;   /* 18 px */
+  --fs-2xl: 1.8462rem;  /* 24 px: sayfa başlığı */
+  --fs-kpi: 2.1538rem;  /* 28 px: KPI değeri */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  /* Boşluk ölçeği: 4, 8, 12, 16, 20, 24, 32 px (standart boyutta) */
+  --space-1: 0.3077rem;
+  --space-2: 0.6154rem;
+  --space-3: 0.9231rem;
+  --space-4: 1.2308rem;
+  --space-5: 1.5385rem;
+  --space-6: 1.8462rem;
+  --space-8: 2.4615rem;
 
   /* Kenar menü: açık indigo (K-84, seçenek F; docs/12). Kontrast --sidebar-bg üzerinde:
      ekran adı 13,9:1 · grup 6,7:1 · alt ekran 8,6:1 · pasif 5,2:1 · ikon 5,2:1 / 3,8:1 · seçili (beyaz/indigo) 5,5:1 */
@@ -66,6 +135,8 @@
   --sidebar-collapsed: 3.5rem;
   --context-height: 3rem;
   --radius: 0.375rem;
+  --radius-lg: 0.6154rem;                   /* kart: 8 px */
+  --card-border: var(--lead-100);
   --icon: 1.15rem;
 
   font-size: 13px; /* Standart (U-23); kullanıcı seçimi bunu ezer */

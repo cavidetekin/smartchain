@@ -4,6 +4,7 @@ import { Outlet } from "react-router";
 
 import { applyFontSize, type FontSize, userPrefs } from "../prefs";
 import { ContextBar } from "./ContextBar";
+import { ShellContext } from "./ShellContext";
 import { Sidebar } from "./Sidebar";
 
 export function Shell({ userId }: { userId: number }) {
@@ -36,7 +37,13 @@ export function Shell({ userId }: { userId: number }) {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const changeFontSize = (size: FontSize) => {
+    setFontSize(size);
+    prefs.setFontSize(size);
+  };
+
   return (
+    <ShellContext.Provider value={{ fontSize, setFontSize: changeFontSize }}>
     <div className={`sc-shell${collapsed ? " is-collapsed" : ""}`}>
       <Sidebar
         collapsed={collapsed}
@@ -47,18 +54,12 @@ export function Shell({ userId }: { userId: number }) {
         prefs={prefs}
       />
       <div className="sc-main">
-        <ContextBar
-          userId={userId}
-          fontSize={fontSize}
-          onFontSize={(size) => {
-            setFontSize(size);
-            prefs.setFontSize(size);
-          }}
-        />
+        <ContextBar userId={userId} fontSize={fontSize} onFontSize={changeFontSize} />
         <main className="sc-content">
           <Outlet />
         </main>
       </div>
     </div>
+    </ShellContext.Provider>
   );
 }

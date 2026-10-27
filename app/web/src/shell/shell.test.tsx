@@ -194,7 +194,7 @@ describe("kullanıcı menüsü", () => {
     await user.click(screen.getByRole("button", { name: "Kullanıcı #3" }));
     expect(screen.getByText(/oturum 2.1'de gelir/)).toBeInTheDocument();
     expect(document.documentElement.style.fontSize).toBe("13px");
-    await user.click(screen.getByRole("button", { name: /Büyük/ }));
+    await user.click(screen.getByRole("radio", { name: /Büyük/ }));
     expect(document.documentElement.style.fontSize).toBe("16px");
     expect(screen.getByRole("button", { name: "Çıkış" })).toBeDisabled();
     unmount();

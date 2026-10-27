@@ -59,7 +59,7 @@ export function JobIndicator({ userId }: { userId: number }) {
 
   return (
     <div className="sc-jobs">
-      <button type="button" className="sc-badge sc-badge-btn" aria-haspopup="dialog" aria-expanded={open}
+      <button type="button" className="sc-chip sc-chip-btn" aria-haspopup="dialog" aria-expanded={open}
               onClick={() => setOpen(!open)} title={connText} data-testid="job-indicator">
         {running ? <LoaderCircle aria-hidden="true" className="sc-spin" /> : <Activity aria-hidden="true" />}
         <span>{tr.jobs.count(running, queued)}</span>

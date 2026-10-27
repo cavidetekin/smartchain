@@ -1,0 +1,132 @@
+/* Ortak bileşenler (K-85, docs/12 · Stil sistemi). Değerler yalnız tokens.css'ten; ölçüler rem (U-23).
+   Durum renkleri (--status-*, --occ-*) yalnız durum bileşenlerinde kullanılır (U-2; tokens.test.ts denetler). */
+
+/* Buton */
+.sc-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 2.4615rem; padding: 0 var(--space-4); border: 1px solid var(--lead-300); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font-size: var(--fs-base); font-weight: var(--fw-medium);
+  cursor: pointer; white-space: nowrap; }
+.sc-btn:hover:not(:disabled) { border-color: var(--lead-600); }
+.sc-btn:focus-visible, .sc-input:focus-visible, .sc-segment button:focus-visible, .sc-check input:focus-visible,
+.sc-alert-close:focus-visible { outline: 2px solid var(--field-border-focus); outline-offset: 1px;
+  box-shadow: 0 0 0 0.3077rem var(--focus-ring); }
+.sc-btn:disabled { cursor: not-allowed; color: var(--text-muted); background: var(--field-disabled-bg);
+  border-color: var(--lead-100); }
+.sc-btn--primary { background: var(--indigo-500); border-color: var(--indigo-500); color: var(--sidebar-active-text); }
+.sc-btn--primary:hover:not(:disabled) { background: var(--indigo-700); border-color: var(--indigo-700); }
+.sc-btn--ghost { border-color: transparent; background: transparent; color: var(--indigo-700); }
+.sc-btn--ghost:hover:not(:disabled) { background: var(--indigo-50); border-color: transparent; }
+/* Geri alınamaz işlem (mockup m24f-0757): U-2'nin tek istisnası, yalnız onay penceresinde */
+.sc-btn--danger { background: var(--status-over); border-color: var(--status-over); color: var(--status-over-on); }
+.sc-btn--danger:hover:not(:disabled) { background: var(--status-over-text); border-color: var(--status-over-text); }
+.sc-btn--sm { min-height: 1.8462rem; padding: 0 var(--space-3); font-size: var(--fs-sm); }
+
+/* Rozet (her zaman yazılı, U-3) */
+.sc-tag { display: inline-flex; align-items: center; padding: 0.1538rem var(--space-2); border-radius: 999rem;
+  font-size: var(--fs-sm); font-weight: var(--fw-medium); white-space: nowrap;
+  background: var(--neutral-bg); color: var(--neutral-text); }
+.sc-tag--info { background: var(--info-bg); color: var(--info-text); }
+.sc-tag--ok { background: var(--status-ok-bg); color: var(--status-ok-text); }
+.sc-tag--risk { background: var(--status-risk-bg); color: var(--status-risk-text); }
+.sc-tag--critical { background: var(--status-over-bg); color: var(--status-over-text); }
+
+/* Kart ve KPI kartı */
+.sc-card { padding: var(--space-5); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+  background: var(--surface); }
+.sc-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4);
+  margin-bottom: var(--space-3); }
+.sc-card-title { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+.sc-card-sub { margin: var(--space-1) 0 0; color: var(--text-muted); font-size: var(--fs-sm); }
+.sc-card-actions { display: flex; gap: var(--space-2); }
+.sc-kpi-label { margin: 0; color: var(--text-muted); }
+.sc-kpi-value { margin: var(--space-2) 0; font-family: var(--font-mono); font-size: var(--fs-kpi);
+  font-weight: var(--fw-medium); color: var(--text); }
+.sc-kpi--over { color: var(--status-over); }
+.sc-kpi--risk { color: var(--status-risk-text); }
+.sc-kpi--ok { color: var(--status-ok-text); }
+.sc-kpi-note { margin: 0; color: var(--text-muted); font-size: var(--fs-sm); }
+
+/* Form alanları */
+.sc-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.sc-field-label { color: var(--text-muted); font-size: var(--fs-sm); padding: 0; }
+.sc-field-required { color: var(--text-muted); }
+.sc-input { width: 100%; min-height: 2.4615rem; padding: 0 var(--space-3); border: 1px solid var(--field-border);
+  border-radius: var(--radius); background: var(--field-bg); color: var(--text); font: inherit; }
+.sc-input:focus { border-color: var(--field-border-focus); outline: none; box-shadow: 0 0 0 0.2308rem var(--focus-ring); }
+.sc-input:disabled { background: var(--field-disabled-bg); color: var(--text-muted); cursor: not-allowed; }
+.sc-input--number { font-family: var(--font-mono); text-align: right; }
+.sc-input--mono { font-family: var(--font-mono); }
+.sc-textarea { min-height: 4.9231rem; padding: var(--space-2) var(--space-3); resize: vertical; }
+.sc-field-help { margin: 0; color: var(--text-muted); font-size: var(--fs-sm); }
+.sc-field.is-invalid .sc-input { border-color: var(--status-over); }
+.sc-field-error { display: flex; align-items: center; gap: var(--space-1); margin: 0; color: var(--status-over-text-strong);
+  font-size: var(--fs-sm); }
+.sc-field-error svg { width: 1rem; height: 1rem; }
+.sc-check { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.sc-check input { width: 1.0769rem; height: 1.0769rem; margin: 0; accent-color: var(--indigo-500); }
+.sc-check.is-disabled { color: var(--text-muted); cursor: not-allowed; }
+.sc-radio-group { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; padding: 0; border: 0; }
+.sc-radio-group legend { width: 100%; margin-bottom: var(--space-1); }
+.sc-segment { display: inline-flex; padding: 0.1538rem; border: 1px solid var(--lead-300); border-radius: var(--radius);
+  background: var(--surface); }
+.sc-segment button { padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--text); cursor: pointer; }
+.sc-segment button[aria-checked="true"] { background: var(--indigo-50); color: var(--indigo-700);
+  font-weight: var(--fw-semibold); }
+.sc-search-field { display: flex; align-items: center; gap: var(--space-2); min-height: 2.4615rem;
+  padding: 0 var(--space-3); border: 1px solid var(--field-border); border-radius: var(--radius); background: var(--field-bg);
+  color: var(--text-muted); }
+.sc-search-field input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--text); }
+
+/* Uyarı kutusu (her tonun ikonu, U-3) */
+.sc-alert { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--info-border); border-radius: var(--radius); background: var(--info-bg); color: var(--info-text); }
+.sc-alert-icon { margin-top: 0.0769rem; }
+.sc-alert-body { flex: 1; min-width: 0; }
+.sc-alert-title { margin: 0 0 var(--space-1); font-weight: var(--fw-semibold); }
+.sc-alert-close { display: grid; place-items: center; width: 1.8462rem; height: 1.8462rem; margin: -0.3077rem;
+  border: 0; border-radius: var(--radius); background: transparent; color: inherit; cursor: pointer; }
+.sc-alert--ok { border-color: var(--status-ok-border); background: var(--status-ok-bg-soft); color: var(--status-ok-text); }
+.sc-alert--risk { border-color: var(--status-risk-border); background: var(--status-risk-bg-soft); color: var(--status-risk-text); }
+.sc-alert--error { border-color: var(--status-over-border); background: var(--status-over-bg-soft);
+  color: var(--status-over-text-strong); }
+
+/* Doluluk hücresi ve lejantı (her hücrede değer, U-3) */
+.sc-occ { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.0769rem;
+  min-width: 4.3077rem; padding: var(--space-2) var(--space-2); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: var(--fs-base); }
+.sc-occ-delta { font-size: var(--fs-xs); opacity: 0.85; }
+.sc-occ--low { background: var(--occ-low-bg); color: var(--occ-low-text); }
+.sc-occ--normal { background: var(--occ-normal-bg); color: var(--occ-normal-text); }
+.sc-occ--high { background: var(--occ-high-bg); color: var(--occ-high-text); }
+.sc-occ--risk { background: var(--occ-risk-bg); color: var(--occ-risk-text); }
+.sc-occ--over { background: var(--occ-over-bg); color: var(--occ-over-text); font-weight: var(--fw-semibold); }
+.sc-occ-legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0;
+  list-style: none; color: var(--text-muted); font-size: var(--fs-sm); }
+.sc-occ-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.sc-occ-swatch { display: inline-block; width: 1rem; height: 1rem; min-width: 0; padding: 0; border-radius: 0.2308rem; }
+
+/* Hücre işaretleri (1.3 tablosu kullanır) */
+.sc-cell { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-1);
+  min-width: 4.9231rem; min-height: 2.4615rem; padding: 0 var(--space-3); border: 1px solid var(--lead-100);
+  border-radius: var(--radius); background: var(--surface); font-family: var(--font-mono); }
+.sc-cell--manual { border: 2px solid var(--cell-manual-border); }
+.sc-cell--frozen { background: var(--cell-frozen-bg); color: var(--cell-frozen-text); }
+.sc-cell--frozen svg { width: 0.8462rem; height: 0.8462rem; }
+.sc-cell--shortage { color: var(--status-over-text); font-weight: var(--fw-semibold); }
+
+/* Örnek sayfa düzeni */
+.sc-guide { display: flex; flex-direction: column; gap: var(--space-6); max-width: 76.9231rem; }
+.sc-guide h2 { margin: 0 0 var(--space-3); font-size: var(--fs-xl); font-weight: var(--fw-semibold); }
+.sc-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15.3846rem, 1fr)); gap: var(--space-4); }
+.sc-swatch { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--fs-sm); }
+.sc-swatch-color { height: 2.4615rem; border: 1px solid var(--lead-100); border-radius: var(--radius); }
+.sc-type-row { display: flex; align-items: baseline; gap: var(--space-4); }
+.sc-type-row code { min-width: 9.2308rem; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-sm); }
+.sc-chart-swatch { display: inline-flex; align-items: center; gap: var(--space-2); }
+.sc-chart-swatch span:first-child { width: 2.4615rem; height: 0.6154rem; border-radius: 0.1538rem; }
+.sc-chart-1 { background: var(--chart-1); }
+.sc-chart-2 { background: var(--chart-2); }
+.sc-chart-3 { background: var(--chart-3); }
+.sc-chart-4 { background: var(--chart-4); }
