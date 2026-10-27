@@ -60,7 +60,11 @@ def test_columns_types_filters_and_labels():
     assert cols["MaterialLevel"]["values"] == ["Hammadde", "Yarı mamul", "Nihai ürün"]
     assert (cols["MaterialGroup"]["filter"], cols["MaterialGroup"]["values_from_server"]) == ("list", True)
     assert (cols["IsSellable"]["type"], cols["IsSellable"]["values"]) == ("bool", [True, False])
-    assert (cols["SafetyStock"]["type"], cols["SafetyStock"]["decimals"]) == ("number", 2)
+    assert (cols["SafetyStock"]["type"], cols["SafetyStock"]["decimals"]) == ("number", None)
+    assert cols["SafetyStock"]["decimals_from_unit"] and cols["MinLot"]["decimals_from_unit"]
+    assert (cols["AssemblyScrapPct"]["decimals"], cols["AssemblyScrapPct"]["decimals_from_unit"]) == (1, False)
+    assert (cols["ProductionLeadTimeDays"]["decimals"], cols["GoodsReceiptDays"]["decimals"]) == (0, 0)  # gün
+    assert (cols["ShelfLifeDays"]["decimals"], cols["Code"]["decimals"]) == (0, None)
     assert (cols["ShelfLifeDays"]["type"], cols["ShelfLifeDays"]["filter"]) == ("integer", "number")
     assert (cols["UpdatedAt"]["type"], cols["UpdatedAt"]["filter"]) == ("datetime", "date")
     assert not any(f.startswith("Additional") for f in cols)  # etiketsiz ek alan görünmez
@@ -103,7 +107,7 @@ def test_missing_or_wrong_values_are_rejected(item, problem_part):
 
 
 def test_values_are_parameters_and_like_is_escaped():
-    q = builder().rows_query(QueryRequest(filters=[FilterItem(field="Name", op="contains", value="50%_[x]'; DROP")]))
+    q = builder().rows_query(QueryRequest(filters=[FilterItem(field="Name", op="contains", value="50%_[x]'; DROP")]), 100)
     text = sql(q)
     assert "DROP" not in text and "COLLATE Turkish_100_CI_AS" in text and "ESCAPE" in text
     assert "upper(" in text.lower() and "Latin1_General_100_BIN2" in text
@@ -111,17 +115,16 @@ def test_values_are_parameters_and_like_is_escaped():
 
 
 def test_sort_is_turkish_and_stable():
-    text = sql(builder().rows_query(QueryRequest(sort=[SortItem(field="MaterialLevel"), SortItem(field="SafetyStock", dir="desc")])))
+    text = sql(builder().rows_query(QueryRequest(sort=[SortItem(field="MaterialLevel"), SortItem(field="SafetyStock", dir="desc")]), 100))
     order = text.split("ORDER BY", 1)[1]
     assert order.index("MaterialLevel") < order.index("SafetyStock") < order.index("Id")
     assert '"MaterialLevel" COLLATE Turkish_100_CI_AS' in order or "MaterialLevel] COLLATE Turkish_100_CI_AS" in order
 
 
 def test_default_fields_and_sort():
-    q = builder().rows_query(QueryRequest())
+    q = builder().rows_query(QueryRequest(), 100)
     names = [c.name for c in q.selected_columns]
-    assert names[0] == "Id" and names[1:] == list(MATERIALS.default_visible)
-    assert "Code" in sql(q).split("ORDER BY", 1)[1]
+    assert names[0] == "Id" and names[1:-1] == list(MATERIALS.default_visible) and names[-1] == "_unit"
 
 
 @pytest.mark.parametrize("today, value, expected", [
@@ -131,6 +134,26 @@ def test_default_fields_and_sort():
 ])
 def test_relative_ranges_are_iso_weeks(today, value, expected):
     assert relative_range(value, today) == expected
+
+
+@pytest.mark.parametrize("defn", LISTS, ids=lambda d: d.name)
+def test_every_number_field_declares_decimals(defn):
+    """docs/12: ondalık liste tanımından; veritabanı ölçeğinden alınmaz."""
+    from app.api.lists.definition import column_type
+    numbers = {f for f in defn.fields if column_type(defn.sa_table.c[f]) == "number"}
+    fixed, unit = set(defn.decimals), set(defn.unit_decimals)
+    assert fixed & unit == set()                      # ikisi birden olmaz
+    assert numbers - fixed - unit == set()            # hiçbiri olmaz
+    assert fixed | unit <= numbers
+    assert not unit or defn.unit_field in defn.sa_table.c
+
+
+def test_limit_defaults_to_chunk_size_and_is_bounded_by_it():
+    q = builder().rows_query(QueryRequest(), 150)
+    assert q._limit_clause.value == 150
+    with pytest.raises(ListQueryError) as e:
+        builder().rows_query(QueryRequest(limit=151), 150)
+    assert e.value.details[0]["field"] == "body.limit"
 
 
 def test_limit_is_bounded():

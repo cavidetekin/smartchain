@@ -9,7 +9,8 @@ import type { ListColumn, QueryRequest } from "./types";
 
 const col = (field: string, label: string, type: ListColumn["type"], filter: ListColumn["filter"],
              extra: Partial<ListColumn> = {}): ListColumn => ({
-  field, label, type, filter, values: null, values_from_server: false, decimals: null, default_visible: true, ...extra,
+  field, label, type, filter, values: null, values_from_server: false, decimals: null, decimals_from_unit: false,
+  default_visible: true, ...extra,
 });
 
 const COLUMNS: ListColumn[] = [
@@ -18,7 +19,7 @@ const COLUMNS: ListColumn[] = [
   col("MaterialLevel", "Malzeme seviyesi", "text", "list", { values: ["Hammadde", "Yarı mamul", "Nihai ürün"] }),
   col("MaterialGroup", "Malzeme grubu", "text", "list", { values_from_server: true }),
   col("IsSellable", "Satılabilir", "bool", "list", { values: [true, false] }),
-  col("SafetyStock", "Güvenlik stoğu", "number", "number", { decimals: 2 }),
+  col("SafetyStock", "Güvenlik stoğu", "number", "number", { decimals_from_unit: true }),
   col("UpdatedAt", "Son değişiklik zamanı", "datetime", "date"),
   col("AdditionalText1", "Malzeme sınıfı", "text", "text", { default_visible: false }),
 ];
@@ -27,11 +28,11 @@ const VIEW_PX = 560;
 let queries: QueryRequest[] = [];
 let valueRequests: unknown[] = [];
 
-function backend({ filtered = 1234, total = 50000, status = 200 } = {}) {
+function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100 } = {}) {
   queries = [];
   valueRequests = [];
   return mockApi({
-    "/api/materials/columns": { body: COLUMNS },
+    "/api/materials/columns": { body: { chunk_size: chunk, columns: COLUMNS } },
     "/api/materials/query": (_url, init): Reply => {
       const body = JSON.parse(String(init?.body)) as QueryRequest;
       queries.push(body);
@@ -40,7 +41,8 @@ function backend({ filtered = 1234, total = 50000, status = 200 } = {}) {
       const rows = Array.from({ length: n }, (_, k) => {
         const i = body.offset + k;
         return { Id: i + 1, Code: `M-${i}`, Name: `Malzeme ${i}`, MaterialLevel: "Hammadde", MaterialGroup: "Çubuk",
-                 IsSellable: i % 2 === 0, SafetyStock: 1234.5, UpdatedAt: "2026-10-27T09:20:00+00:00", AdditionalText1: "A" };
+                 IsSellable: i % 2 === 0, SafetyStock: i % 2 === 0 ? 1234 : 12.25, _unit_decimals: i % 2 === 0 ? 0 : 3,
+                 UpdatedAt: "2026-10-27T09:20:00+00:00", AdditionalText1: "A" };
       });
       return { body: { rows, offset: body.offset, filtered, total } };
     },
@@ -90,7 +92,8 @@ describe("sayaç ve sözleşme", () => {
     expect(await screen.findByLabelText("Kayıt sayısı (gösterilen / toplam)")).toHaveTextContent("1.234 / 50.000");
     expect(await screen.findByText("M-0")).toBeInTheDocument();
     const first = dataRows()[0];
-    expect(within(first as HTMLElement).getByText("1.234,50")).toHaveClass("is-num");
+    expect(within(first as HTMLElement).getByText("1.234")).toHaveClass("is-num");          // ADET: 0 ondalık
+    expect(within(dataRows()[1] as HTMLElement).getByText("12,250")).toHaveClass("is-num");  // KG: 3 ondalık (K-88)
     expect(within(first as HTMLElement).getByText("Evet")).toBeInTheDocument();
     expect(within(first as HTMLElement).getByText("27.10.2026 12:20")).toBeInTheDocument();
   });
@@ -99,6 +102,41 @@ describe("sayaç ve sözleşme", () => {
     await open();
     expect(screen.queryByRole("link", { name: /Tablo bileşeni/ })).toBeNull();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Tablo bileşeni");
+  });
+});
+
+describe("parça büyüklüğü (ListChunkSize)", () => {
+  it("tablo kolonlar cevabındaki parça büyüklüğünden fazlasını istemez", async () => {
+    await open({ filtered: 100_000, total: 100_000, chunk: 30 });
+    await screen.findByText("M-0");
+    const scroller = screen.getByTestId("table-scroll");
+    await act(async () => {
+      scroller.scrollTop = 1_000 * Math.round(13 * ROW_REM);
+      fireEvent.scroll(scroller);
+    });
+    await screen.findByText("M-1000");
+    expect(queries.every((q) => q.limit === 30 && q.offset % 30 === 0)).toBe(true);
+    expect(queries.length).toBeGreaterThan(1);
+  });
+});
+
+describe("araç çubuğu", () => {
+  it("'Filtreleri temizle' ve 'Sıralamayı temizle' yalnız etkinken görünür", async () => {
+    const user = userEvent.setup();
+    await open();
+    expect(screen.queryByRole("button", { name: "Filtreleri temizle" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sıralamayı temizle" })).toBeNull();
+    await user.click(sortButton("Malzeme kodu"));
+    await user.click(screen.getByRole("button", { name: "Malzeme adı filtresi" }));
+    await user.type(within(screen.getByRole("dialog", { name: "Malzeme adı filtresi" })).getByLabelText("Değer"), "mil{Enter}");
+    await waitFor(() => expect(last().filters).toHaveLength(1));
+    await user.click(screen.getByRole("button", { name: "Filtreleri temizle" }));
+    await waitFor(() => expect(last().filters).toEqual([]));
+    expect(screen.queryByRole("button", { name: "Filtreleri temizle" })).toBeNull();
+    expect(last().sort).toEqual([{ field: "Code", dir: "asc" }]);
+    await user.click(screen.getByRole("button", { name: "Sıralamayı temizle" }));
+    await waitFor(() => expect(last().sort).toEqual([]));
+    expect(screen.queryByRole("button", { name: "Sıralamayı temizle" })).toBeNull();
   });
 });
 
@@ -207,13 +245,28 @@ describe("filtreler (U-8)", () => {
     await waitFor(() => expect(last().filters).toEqual([{ field: "UpdatedAt", op: "relative", value: "next_4_weeks" }]));
   });
 
+  it("tarih: takvimden seçim; Esc yalnız takvimi kapatır", async () => {
+    const user = userEvent.setup();
+    await open();
+    const menu = await openFilter(user, "Son değişiklik zamanı");
+    await user.click(within(menu).getByRole("button", { name: "Başlangıç: Takvimden seç" }));
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "Son değişiklik zamanı filtresi" })).toBeInTheDocument();
+    await user.click(within(menu).getByRole("button", { name: "Başlangıç: Takvimden seç" }));
+    await user.click(screen.getByRole("button", { name: "Bugün" }));
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    await user.click(within(menu).getByRole("button", { name: "Uygula" }));
+    await waitFor(() => expect(last().filters).toEqual([{ field: "UpdatedAt", op: "between", from: iso }]));
+  });
+
   it("temizle filtreyi kaldırır; eşleşme yoksa 'Filtreleri temizle'", async () => {
     const user = userEvent.setup();
     await open({ filtered: 0, total: 200 });
     const menu = await openFilter(user, "Malzeme adı");
     await user.type(within(menu).getByLabelText("Değer"), "yok{Enter}");
     expect(await screen.findByText(/Eşleşen kayıt yok/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Filtreleri temizle" }));
+    await user.click(within(screen.getByRole("row", { name: /Eşleşen kayıt yok/ })).getByRole("button", { name: "Filtreleri temizle" }));
     await waitFor(() => expect(last().filters).toEqual([]));
   });
 });
@@ -226,6 +279,7 @@ describe("alan paneli (U-6)", () => {
     const panel = screen.getByRole("dialog", { name: "Alanlar (7/8)" });
     await user.type(within(panel).getByRole("searchbox"), "SINIF");
     expect(within(panel).getAllByRole("checkbox")).toHaveLength(1);
+    expect(within(panel).getByRole("checkbox").closest("[title]")).toHaveAttribute("title", "Malzeme sınıfı");
     await user.click(within(panel).getByRole("checkbox", { name: "Malzeme sınıfı" }));
     await waitFor(() => expect(last().fields).toContain("AdditionalText1"));
     expect(screen.getByRole("columnheader", { name: /Malzeme sınıfı/ })).toBeInTheDocument();

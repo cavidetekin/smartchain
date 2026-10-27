@@ -47,7 +47,7 @@
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
 | `core.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Ana veri |  | 21 |
-| `core.UnitOfMeasure` | Ölçü birimi. | Ana veri |  | 2 |
+| `core.UnitOfMeasure` | Ölçü birimi. | Ana veri |  | 3 |
 | `core.UomConversion` | Malzeme bazında birim dönüşümü. | Ana veri | evet | 5 |
 | `core.Calendar` | Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 3 |
 | `core.CalendarDay` | Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 4 |

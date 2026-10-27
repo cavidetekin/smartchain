@@ -29,11 +29,39 @@ def query(api, **body):
     return r.json()
 
 
+def all_rows(api, **body) -> list[dict]:
+    """Bütün satırlar, parça parça (ListChunkSize)."""
+    rows, offset = [], 0
+    while True:
+        page = query(api, **body, offset=offset)
+        rows += page["rows"]
+        offset += len(page["rows"])
+        if not page["rows"] or offset >= page["filtered"]:
+            return rows
+
+
 def test_columns_include_labelled_additional_field(api):
-    cols = {c["field"]: c for c in api.get("/api/materials/columns").json()}
+    body = api.get("/api/materials/columns").json()
+    assert body["chunk_size"] == 100
+    cols = {c["field"]: c for c in body["columns"]}
+    assert (cols["ProductionLeadTimeDays"]["decimals"], cols["SafetyStock"]["decimals"]) == (0, None)
+    assert cols["SafetyStock"]["decimals_from_unit"] is True
     assert cols["AdditionalText1"]["label"] == "Malzeme sınıfı"
     assert "AdditionalText2" not in cols
     assert cols["MaterialLevel"]["label"] == "Malzeme seviyesi"
+
+
+def test_rows_carry_unit_decimals(api, db_engine):
+    rows = {r["Code"]: r for r in all_rows(api, fields=["Code", "BaseUom"])}
+    assert {r["_unit_decimals"] for r in rows.values() if r["BaseUom"] == "ADET"} == {0}
+    assert {r["_unit_decimals"] for r in rows.values() if r["BaseUom"] == "KG"} == {3}
+    try:  # Smartchain'de değiştirilen ondalık hemen yansır; bilinmeyen birim 2
+        with db_engine.begin() as conn:
+            conn.execute(text("UPDATE core.UnitOfMeasure SET Decimals = NULL WHERE Code = 'KG'"))
+        assert query(api, fields=["Code"], filters=[{"field": "BaseUom", "op": "in", "values": ["KG"]}])["rows"][0]["_unit_decimals"] == 2
+    finally:
+        with db_engine.begin() as conn:
+            conn.execute(text("UPDATE core.UnitOfMeasure SET Decimals = 3 WHERE Code = 'KG'"))
 
 
 def test_counts_and_chunks_cover_all_rows_once(api):
@@ -47,8 +75,9 @@ def test_counts_and_chunks_cover_all_rows_once(api):
 
 
 def test_multi_sort(api):
-    rows = query(api, fields=["Code", "MaterialLevel"], limit=500,
-                 sort=[{"field": "MaterialLevel", "dir": "asc"}, {"field": "Code", "dir": "desc"}])["rows"]
+    rows = all_rows(api, fields=["Code", "MaterialLevel"],
+                    sort=[{"field": "MaterialLevel", "dir": "asc"}, {"field": "Code", "dir": "desc"}])
+    assert len(rows) == 200
     levels = [r["MaterialLevel"] for r in rows]
     assert levels == sorted(levels, key=["Hammadde", "Nihai ürün", "Yarı mamul"].index)
     ham = [r["Code"] for r in rows if r["MaterialLevel"] == "Hammadde"]
@@ -75,10 +104,11 @@ def test_turkish_sort_and_case_insensitive_search(api):
     ({"field": "ProductionLeadTimeDays", "op": "lt", "value": 3}, None),
 ])
 def test_filter_operators(api, flt, expected):
-    body = query(api, filters=[flt], limit=500)
+    body = query(api, filters=[flt])
     if expected is not None:
         assert body["filtered"] == expected
-    assert body["total"] == 200 and len(body["rows"]) == body["filtered"]
+    assert body["total"] == 200 and len(body["rows"]) == min(body["filtered"], 100)
+    assert len(all_rows(api, filters=[flt])) == body["filtered"]
 
 
 def test_not_contains_is_complement_of_contains(api):
@@ -135,6 +165,23 @@ def test_values_with_search_and_other_filters(api):
     assert r.status_code == 200
     assert r.json() == [{"value": "Çubuk", "count": 20}]
     assert api.post("/api/materials/values", json={"field": "Name"}).status_code == 422
+
+
+def test_chunk_size_comes_from_system_setting(api, db_engine):
+    assert len(query(api)["rows"]) == 100  # limit boş: ListChunkSize
+    r = api.post("/api/materials/query", json={"limit": 101})
+    assert r.status_code == 422 and r.json()["error"]["details"][0]["field"] == "body.limit"
+    try:
+        with db_engine.begin() as conn:
+            conn.execute(text("INSERT INTO adm.SystemSetting (SettingKey, Value) VALUES ('ListChunkSize', '150')"))
+        assert api.get("/api/materials/columns").json()["chunk_size"] == 150
+        assert len(query(api)["rows"]) == 150
+        with db_engine.begin() as conn:
+            conn.execute(text("UPDATE adm.SystemSetting SET Value = '900' WHERE SettingKey = 'ListChunkSize'"))
+        assert api.get("/api/materials/columns").json()["chunk_size"] == 500  # en çok 500
+    finally:
+        with db_engine.begin() as conn:
+            conn.execute(text("DELETE FROM adm.SystemSetting WHERE SettingKey = 'ListChunkSize'"))
 
 
 def test_validation_errors(api):

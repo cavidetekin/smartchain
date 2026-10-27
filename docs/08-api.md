@@ -53,12 +53,19 @@ Bütün tablolar (ana veri, plan, rapor) aynı sözleşmeyle okunur. Filtre, sı
 ### Kolonlar · `GET /api/<liste>/columns`
 
 ```json
-[{"field": "MaterialLevel", "label": "Malzeme seviyesi", "type": "text", "filter": "list",
-  "values": ["Hammadde", "Yarı mamul", "Nihai ürün"], "values_from_server": false, "decimals": null, "default_visible": true}]
+{"chunk_size": 100,
+ "columns": [{"field": "MaterialLevel", "label": "Malzeme seviyesi", "type": "text", "filter": "list",
+              "values": ["Hammadde", "Yarı mamul", "Nihai ürün"], "values_from_server": false, "decimals": null,
+              "default_visible": true}]}
 ```
 
+- **Parça büyüklüğü** (`chunk_size`): SystemSetting `ListChunkSize` (varsayılan 100, en çok 500; docs/02). Tablo bir istekte hiçbir zaman bundan fazla satır istemez; sunucu da fazlasını reddeder.
+
 - **Etiket:** docs/02 AÇIKLAMA'sından üretilir; FieldDefinition.Label varsa onu kullanır. Ek alan (K-59) yalnız Label'ı varsa listelenir (K-88).
-- **Tip** (`type`) veritabanı tipinden gelir: `text`, `integer`, `number` (`decimals` ile), `bool`, `date`, `datetime`.
+- **Tip** (`type`) veritabanı tipinden gelir: `text`, `integer`, `number`, `bool`, `date`, `datetime`.
+- **Ondalık** (`decimals`): gösterilecek ondalık sayısı liste tanımından gelir, veritabanı ölçeğinden değil (gün ve adet gibi tam sayı anlamındaki alanlar 0). `integer` için 0; sayı dışı alanlarda `null`.
+- **Ondalık birimden** (`decimals_from_unit: true`, `decimals: null`): miktar kolonları; her satırda temel birimin ondalığı (UnitOfMeasure.Decimals, K-88) kullanılır. Sorgu cevabında her satır bunu `_unit_decimals` alanında taşır (birim bilinmiyorsa 2).
+- Liste tanımında her `number` alanı ya sabit ondalıkla ya da "ondalık birimden" işaretlenir; ikisi birden ya da hiçbiri hatadır (testte).
 - **Filtre tipi** (`filter`) tipten gelir: metin → `text`; değer listeli metin (K-80) ve `bool` → `list` (değerler `values`'ta; bool için Evet / Hayır = `true` / `false`); liste tanımında işaretli kodlu alanlar → `list`, değerler `values` uç noktasından (`values_from_server: true`); sayı → `number`; tarih → `date`.
 
 ### Sorgu · `POST /api/<liste>/query`
@@ -73,7 +80,7 @@ Bütün tablolar (ana veri, plan, rapor) aynı sözleşmeyle okunur. Filtre, sı
  "offset": 0, "limit": 100}
 ```
 
-Cevap: `{"rows": [{"Id": 7, "Code": "…", …}], "offset": 0, "filtered": 120, "total": 840}`. `Id` her satırda vardır. `filtered` filtreli sayı, `total` filtresiz sayıdır; arayüzdeki "120 / 840" sayacı bunlardır (U-12). Sayılar JSON sayısı, tarihler ISO döner (`2026-10-27`); zamanlı alanlar veritabanında UTC tutulur ve saat dilimiyle döner (`2026-10-27T09:20:00+00:00`), tarih filtresinin gün sınırı yerel gece yarısıdır.
+Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset": 0, "filtered": 120, "total": 840}`. `Id` her satırda vardır; `_unit_decimals` listenin birim alanı varsa (malzemede `BaseUom`) bulunur. `filtered` filtreli sayı, `total` filtresiz sayıdır; arayüzdeki "120 / 840" sayacı bunlardır (U-12). Sayılar JSON sayısı, tarihler ISO döner (`2026-10-27`); zamanlı alanlar veritabanında UTC tutulur ve saat dilimiyle döner (`2026-10-27T09:20:00+00:00`), tarih filtresinin gün sınırı yerel gece yarısıdır.
 
 | Filtre tipi | `op` | Alanlar |
 |---|---|---|
@@ -87,7 +94,7 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …}], "offset": 0, "filtered": 120, 
 - **Türkçe:** metin karşılaştırma ve sıralama `Turkish_100_CI_AS` ile; büyük/küçük harf duyarsız, "İ/i" ve "I/ı" doğru.
 - **Güvenlik:** alan ve operatör liste tanımındaki beyaz listeden; değerler parametreyle gider; `LIKE` içinde `%`, `_`, `[` düz karakterdir.
 - **Kararlı parçalar:** sıralamanın sonuna her zaman `Id` eklenir; parçalar örtüşmez. Sıralama verilmezse liste tanımındaki varsayılan kullanılır.
-- **Sınırlar:** `limit` varsayılan 100, en çok 500; `offset` ≥ 0.
+- **Sınırlar:** `limit` varsayılan ve en çok `ListChunkSize` (kolonlar cevabındaki `chunk_size`); `offset` ≥ 0.
 - **Hatalar:** bilinmeyen alan, operatör, eksik değer ya da sınır dışı `limit` → 422 `validation` (`details`: `field`, `problem`); veritabanı yoksa 503 `database_unavailable`; veri versiyonu yoksa 404 `no_data_version`.
 - **Versiyon:** liste güncel veri versiyonunu okur (`VersionFrom ≤ v` ve `VersionTo` boş ya da `≥ v`; motorun okuduğu koşulla aynı).
 

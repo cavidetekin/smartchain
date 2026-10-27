@@ -25,7 +25,7 @@ export function FieldPanel({ columns, visibility, onToggle, onReset }: {
           const on = Boolean(visibility[c.field]);
           const last = on && visibleCount === 1;
           return (
-            <div key={c.field} className="sc-table-pop-option" title={last ? T.lastField : undefined}>
+            <div key={c.field} className="sc-table-pop-option" title={last ? `${c.label} · ${T.lastField}` : c.label}>
               <Checkbox label={c.label} checked={on} disabled={last} onChange={(v) => onToggle(c.field, v)} />
             </div>
           );

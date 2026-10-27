@@ -122,7 +122,8 @@ def load(engine: Engine, ds: Dataset) -> dict:
                                    .returning(_table("Location").c.Id)).scalar_one()
         for u in ds.rows("UnitOfMeasure"):
             conn.execute(text("IF NOT EXISTS (SELECT 1 FROM core.UnitOfMeasure WHERE Code = :c) "
-                              "INSERT INTO core.UnitOfMeasure (Code, Name) VALUES (:c, :n)"), {"c": u["Code"], "n": u["Name"]})
+                              "INSERT INTO core.UnitOfMeasure (Code, Name, Decimals) VALUES (:c, :n, :d)"),
+                         {"c": u["Code"], "n": u["Name"], "d": u["Decimals"]})
         # Ek alan etiketi (K-88): yoksa eklenir; sistem sahibinin tanımı varsa dokunulmaz.
         fd = _table("FieldDefinition", "adm")
         for d in FIELD_DEFINITIONS:

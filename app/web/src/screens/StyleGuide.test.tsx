@@ -34,3 +34,9 @@ it("yazı boyutu seçince bütün arayüz ölçeklenir", async () => {
   await userEvent.click(typeSegment.querySelector('[data-value="16"]')!);
   expect(document.documentElement.style.fontSize).toBe("16px");
 });
+
+it("tarih alanında takvim düğmesi var", async () => {
+  renderApp("/stil");
+  await userEvent.click(screen.getByRole("button", { name: "Teslim tarihi: Takvimden seç" }));
+  expect(screen.getByRole("dialog", { name: "Ekim 2026" })).toBeInTheDocument();
+});

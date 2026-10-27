@@ -11,8 +11,8 @@ from ..services import lists as service
 def list_router(defn: ListDefinition) -> APIRouter:
     router = APIRouter(prefix=f"/{defn.name}", tags=["Listeler"])
 
-    @router.get("/columns", summary=f"{defn.table}: kolonlar (etiket, tip, filtre tipi)")
-    def columns(session: Session = Depends(get_session)) -> list[dict]:
+    @router.get("/columns", summary=f"{defn.table}: kolonlar (etiket, tip, filtre tipi) ve parça büyüklüğü")
+    def columns(session: Session = Depends(get_session)) -> dict:
         return service.columns(session, defn)
 
     @router.post("/query", summary=f"{defn.table}: alanlar, sıralama, filtre, parça ve sayılar")

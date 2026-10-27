@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..errors import AppError
 from ..lists.definition import ListDefinition, columns as column_list
-from ..lists.query import Builder, ListQueryError
+from ..lists.query import DEFAULT_UNIT_DECIMALS, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists.request import QueryRequest, ValuesRequest
 from ..repositories import data_versions, lists as repo
 
@@ -47,14 +47,21 @@ def _builder(session: Session, defn: ListDefinition) -> Builder:
     return Builder(defn, repo.read_labels(session, defn.table_name), current["Id"], today())
 
 
-def columns(session: Session | None, defn: ListDefinition) -> list[dict]:
-    return _run(session, lambda: column_list(defn, repo.read_labels(session, defn.table_name)))
+def columns(session: Session | None, defn: ListDefinition) -> dict:
+    return _run(session, lambda: {"chunk_size": repo.read_chunk_size(session),
+                                  "columns": column_list(defn, repo.read_labels(session, defn.table_name))})
 
 
 def query(session: Session | None, defn: ListDefinition, req: QueryRequest) -> dict:
     def work():
         b = _builder(session, defn)
-        rows = [{k: _json(v) for k, v in r.items()} for r in repo.fetch_rows(session, b.rows_query(req))]
+        rows_q = b.rows_query(req, repo.read_chunk_size(session))
+        rows = [{k: _json(v) for k, v in r.items()} for r in repo.fetch_rows(session, rows_q)]
+        if defn.unit_field:  # her satırda temel birimin ondalığı (K-88); birim bilinmiyorsa 2
+            units = repo.read_unit_decimals(session)
+            for r in rows:
+                d = units.get(r.pop(UNIT))
+                r[UNIT_DECIMALS] = DEFAULT_UNIT_DECIMALS if d is None else int(d)
         total = repo.fetch_count(session, b.total_query())
         filtered = repo.fetch_count(session, b.filtered_query(req.filters)) if req.filters else total
         return {"rows": rows, "offset": req.offset, "filtered": filtered, "total": total}

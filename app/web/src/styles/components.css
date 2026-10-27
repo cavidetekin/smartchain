@@ -172,11 +172,55 @@
 .sc-table-grid tbody tr:not(.sc-table-spacer):not(.sc-table-state):hover td { background: var(--indigo-50); }
 .sc-table-grid tr.is-placeholder td { background: var(--lead-50); }
 .sc-table-state td { padding: var(--space-4) var(--space-3); color: var(--text-muted); }
-.sc-table-pop { position: absolute; z-index: 40; width: 21.5385rem; max-width: 100%; padding: var(--space-3);
+.sc-table-pop { position: absolute; z-index: 40; width: max-content; min-width: 21.5385rem; max-width: calc(100vw - 2rem);
+  padding: var(--space-3);
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-popover); }
 .sc-table-fields { top: calc(100% + var(--space-1)); right: 0; }
 .sc-table-pop-form, .sc-table-fields { display: flex; flex-direction: column; gap: var(--space-3); }
 .sc-table-pop-list { display: flex; flex-direction: column; gap: var(--space-1); max-height: 18.4615rem; overflow: auto; }
 .sc-table-pop-option { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.sc-table-pop-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+/* İki alan yan yana; menü ekrana sığmazsa alt alta (docs/12) */
+.sc-table-pop-pair { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.sc-table-pop-pair > .sc-field { flex: 1 1 0; min-width: min-content; }
 .sc-table-pop-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+
+/* Araç çubuğu düğmeleri ve alan paneli (1.3 demo düzeltmeleri, docs/12) */
+.sc-table-actions { display: flex; flex: 1; gap: var(--space-2); }
+.sc-table-fields { width: 23.0769rem; min-width: 18rem; max-width: calc(100vw - 2rem); }
+.sc-table-pop-option { min-width: 0; }
+.sc-table-pop-option .sc-check { min-width: 0; }
+.sc-table-pop-option .sc-check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Tarih alanı ve takvim (docs/12 · Form alanları) */
+/* Giriş kutusu, takvim düğmesi hariç, "gg.aa.yyyy"yi her yazı boyutunda tam gösterir (ch, eşit genişlikte rakam; U-23) */
+.sc-date { position: relative; display: flex; }
+.sc-date .sc-input { flex: 1 1 auto; width: var(--date-input-min); min-width: var(--date-input-min);
+  border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.sc-date-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 2.4615rem;
+  border: 1px solid var(--field-border); border-left: 0; border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--field-bg); color: var(--text-muted); cursor: pointer; }
+.sc-date-btn:hover { color: var(--indigo-500); }
+.sc-date-btn:focus-visible { outline: none; box-shadow: 0 0 0 0.2308rem var(--focus-ring); }
+.sc-date-btn:disabled { background: var(--field-disabled-bg); cursor: not-allowed; }
+.sc-date-btn svg { width: 1.0769rem; height: 1.0769rem; }
+.sc-cal-pop { position: fixed; z-index: 60; }
+.sc-cal { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  box-shadow: var(--shadow-popover); }
+.sc-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
+.sc-cal-title { font-weight: var(--fw-semibold); }
+.sc-cal-nav { display: inline-flex; padding: var(--space-1); border: 0; border-radius: var(--radius); background: transparent;
+  color: var(--text-muted); cursor: pointer; }
+.sc-cal-nav:hover { background: var(--lead-50); color: var(--text); }
+.sc-cal-nav svg { width: 1.0769rem; height: 1.0769rem; }
+.sc-cal-grid { border-collapse: collapse; }
+.sc-cal-grid th { padding: 0 0 var(--space-1); color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-medium); }
+.sc-cal-grid tbody th.sc-cal-week { padding: 0 var(--space-2) 0 0; text-align: right; }
+.sc-cal-grid td { padding: 0.0769rem; }
+.sc-cal-day { width: 2.1538rem; height: 2.1538rem; border: 1px solid transparent; border-radius: var(--radius);
+  background: transparent; color: var(--text); cursor: pointer; }
+.sc-cal-day:hover { background: var(--indigo-50); }
+.sc-cal-day.is-outside { color: var(--text-muted); }
+.sc-cal-day[aria-current="date"] { border-color: var(--indigo-500); }
+.sc-cal-day.is-selected { background: var(--indigo-500); color: var(--surface); font-weight: var(--fw-semibold); }
+.sc-cal-day:focus-visible { outline: none; box-shadow: 0 0 0 0.2308rem var(--focus-ring); }
+.sc-cal-foot { display: flex; justify-content: flex-end; margin-top: var(--space-2); }

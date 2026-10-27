@@ -68,6 +68,7 @@ python -m app.data.synthetic check                                     # sayıla
 - **Güvenlik kilidi:** Sentetik kayıtlar `IsSynthetic = 1` taşır (DataVersion, Location, ParameterSet). Veritabanında sentetik olmayan bir kayıt varsa `load` ve `unload` hiçbir şey silmeden durur ve kayıtları adıyla yazar.
 - **Parametre seti "Sentetik v0":** ModelType LP, 13 haftalık zaman yapısı, öncelik kuralı ve tedarikçi limiti.
 - **Boş kalanlar:** Forecast (tahmin üretilmez), TransferOrder (tek lokasyon); ek alanlar (K-59); yalnız Material.AdditionalText1 doludur: FieldDefinition etiketi "Malzeme sınıfı", değerler A / B / C (tablo bileşeni denemesi, 1.3).
+- **Birimler:** ADET (0 ondalık), KG (3), M (2), SAAT (2); UnitOfMeasure.Decimals (K-88).
 
 **Bilerek konmuş durumların kurulumu.** `check` ve testler bunları veriden hesaplayarak doğrular; ölçüler kabadır, plan değildir.
 
@@ -107,3 +108,5 @@ Faz 1 dışı konular (set-up, kalıp, fırın, raf ömrü kuralları, çoklu lo
 | v0 tasarımı | karar verildi (K-78) |
 | v0 üretici ve temiz hâl | uygulandı (0.8) |
 | Kirli hâl (entegrasyon Excel'i) | üretildi (0.8); ETL ile denenmesi Aşama 3–5 |
+| Birim ondalıkları (ADET 0, KG 3, M 2, SAAT 2) | uygulandı (1.3) |
+| Kilogramlı malzemelere miktar (güvenlik stoğu, lot) | açık: sonraya bırakıldı (1.3 demosu); KG'de 3 ondalık şimdilik yalnız testte görülür |

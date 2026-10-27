@@ -1,11 +1,9 @@
-// Parça parça yükleme (K-87): 100 satırlık parçalar önbellekte; aynı parça iki kez istenmez.
+// Parça parça yükleme (K-87): parçalar (ListChunkSize satır) önbellekte; aynı parça iki kez istenmez.
 // Alan, sıralama ya da filtre değişince önbellek sıfırlanır ve eski istekler iptal edilir.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { listApi, type ListFilter, type Row, type SortItem } from "./types";
-
-export const CHUNK = 100;
 
 export interface ListRequest {
   fields: string[];
@@ -25,7 +23,7 @@ export interface ListState {
   retry(): void;
 }
 
-export function useListQuery(list: string, request: ListRequest | null): ListState {
+export function useListQuery(list: string, request: ListRequest | null, chunkSize: number): ListState {
   const api = useMemo(() => listApi(list), [list]);
   const key = request ? JSON.stringify(request) : "";
   const chunks = useRef(new Map<number, Row[]>());
@@ -41,7 +39,7 @@ export function useListQuery(list: string, request: ListRequest | null): ListSta
     const gen = generation.current;
     const ctrl = new AbortController();
     inflight.current.set(chunk, ctrl);
-    api.query({ ...request, offset: chunk * CHUNK, limit: CHUNK }, ctrl.signal)
+    api.query({ ...request, offset: chunk * chunkSize, limit: chunkSize }, ctrl.signal)
       .then((r) => {
         if (gen !== generation.current) return;
         chunks.current.set(chunk, r.rows);
@@ -56,7 +54,7 @@ export function useListQuery(list: string, request: ListRequest | null): ListSta
       .finally(() => {
         if (inflight.current.get(chunk) === ctrl) inflight.current.delete(chunk);
       });
-  }, [api, key]);
+  }, [api, key, chunkSize]);
 
   const reset = useCallback(() => {
     generation.current += 1;
@@ -78,15 +76,16 @@ export function useListQuery(list: string, request: ListRequest | null): ListSta
   }, [key, load, reset]);
 
   const ensure = useCallback((first: number, last: number) => {
-    for (let c = Math.floor(first / CHUNK); c <= Math.floor(last / CHUNK); c++) load(c);
-  }, [load]);
+    for (let c = Math.floor(first / chunkSize); c <= Math.floor(last / chunkSize); c++) load(c);
+  }, [load, chunkSize]);
 
   const retry = useCallback(() => {
     reset();
     load(0);
   }, [reset, load]);
 
-  const row = useCallback((index: number) => chunks.current.get(Math.floor(index / CHUNK))?.[index % CHUNK], []);
+  const row = useCallback((index: number) => chunks.current.get(Math.floor(index / chunkSize))?.[index % chunkSize],
+    [chunkSize]);
 
   return { ...state, row, ensure, retry };
 }

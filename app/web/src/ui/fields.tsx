@@ -1,13 +1,15 @@
 // Form alanları (mockup m24f-0757): etiket, yardım, zorunlu işareti, hata (kiremit, ikonlu, U-3), pasif.
 // Sayı ve tarih Türkçe girilir ve gösterilir (U-19).
-import { CircleAlert, Search } from "lucide-react";
+import { CalendarDays, CircleAlert, Search } from "lucide-react";
 import {
   type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes,
-  useId, useState,
+  useEffect, useId, useLayoutEffect, useRef, useState,
 } from "react";
 
 import { formatDate, formatNumber, parseTrDate, parseTrNumber } from "../format";
 import { tr } from "../i18n/tr";
+import { Calendar } from "./Calendar";
+import { placePopover, viewportSize } from "./popover";
 
 interface FieldProps {
   label: string;
@@ -82,13 +84,45 @@ export function NumberField({ label, help, error, required, value, onChange, dec
   );
 }
 
-/** Tarih: gg.aa.yyyy (U-19); geçersizse hata. */
+/** Tarih: gg.aa.yyyy (U-19) elle ya da takvimden; geçersizse hata. */
 export function DateField({ label, help, error, required, value, onChange, ...rest }: InputProps & {
   value: Date | null; onChange(v: Date | null): void;
 }) {
   const id = useId();
   const [text, setText] = useState(value ? formatDate(value) : "");
   const [invalid, setInvalid] = useState(false);
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {  // takvim görünür alana sığacak şekilde (docs/12)
+    const pop = popRef.current?.firstElementChild as HTMLElement | null | undefined;
+    if (!open || !pop || !wrapRef.current) return;
+    const at = placePopover(wrapRef.current.getBoundingClientRect(), pop.getBoundingClientRect(), viewportSize());
+    popRef.current!.style.left = `${at.left}px`;
+    popRef.current!.style.top = `${at.top}px`;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const close = () => {
+    setOpen(false);
+    buttonRef.current?.focus();
+  };
+  const pick = (d: Date) => {
+    setText(formatDate(d));
+    setInvalid(false);
+    onChange(d);
+    close();
+  };
   const commit = () => {
     if (!text.trim()) {
       setInvalid(false);
@@ -105,11 +139,22 @@ export function DateField({ label, help, error, required, value, onChange, ...re
   const shownError = error ?? (invalid ? tr.ui.invalidDate : undefined);
   return (
     <Field {...{ label, help, error: shownError, required, id }}>
-      <input id={id} className="sc-input sc-input--date" placeholder={tr.ui.datePlaceholder} value={text}
-             required={required} aria-invalid={Boolean(shownError)}
-             aria-describedby={describedBy(id, { label, help, error: shownError })}
-             onChange={(e) => setText(e.target.value)} onBlur={commit}
-             onKeyDown={(e) => e.key === "Enter" && commit()} {...rest} />
+      <div className="sc-date" ref={wrapRef}>
+        <input id={id} className="sc-input sc-input--date" placeholder={tr.ui.datePlaceholder} value={text}
+               required={required} aria-invalid={Boolean(shownError)}
+               aria-describedby={describedBy(id, { label, help, error: shownError })}
+               onChange={(e) => setText(e.target.value)} onBlur={commit}
+               onKeyDown={(e) => e.key === "Enter" && commit()} {...rest} />
+        <button type="button" className="sc-date-btn" ref={buttonRef} aria-label={`${label}: ${tr.ui.calendar.open}`}
+                aria-haspopup="dialog" aria-expanded={open} disabled={rest.disabled} onClick={() => setOpen((o) => !o)}>
+          <CalendarDays aria-hidden="true" />
+        </button>
+        {open && (
+          <div className="sc-cal-pop" ref={popRef}>
+            <Calendar value={parseTrDate(text) ?? value} onSelect={pick} onClose={close} />
+          </div>
+        )}
+      </div>
     </Field>
   );
 }

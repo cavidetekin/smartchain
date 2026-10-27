@@ -13,6 +13,9 @@ from .request import FilterItem, QueryRequest, SortItem
 TURKISH = "Turkish_100_CI_AS"
 BINARY = "Latin1_General_100_BIN2"
 RELATIVE = ("this_week", "next_4_weeks")
+UNIT_DECIMALS = "_unit_decimals"
+UNIT = "_unit"
+DEFAULT_UNIT_DECIMALS = 2  # birim bilinmiyorsa (docs/02 UnitOfMeasure.Decimals)
 OPS = {
     "text": ("contains", "not_contains", "equals", "starts_with"),
     "list": ("in",),
@@ -183,12 +186,19 @@ class Builder:
         return sa.and_(*parts)
 
     # --- sorgular ------------------------------------------------------------------------------------------
-    def rows_query(self, req: QueryRequest) -> sa.Select:
+    def rows_query(self, req: QueryRequest, chunk_size: int) -> sa.Select:
+        """Parça satırları; limit boşsa parça büyüklüğü, büyükse hata (ListChunkSize, docs/08)."""
+        limit = req.limit or chunk_size
+        problems = [{"field": "body.limit", "problem": f"En çok {chunk_size} satır istenebilir (ListChunkSize)"}]             if limit > chunk_size else []
         cols = self.select_columns(req.fields)
         where = self.where(req.filters)
         order = self.order_by(req.sort)
-        return (sa.select(*cols).where(self.version_clause(), *where).order_by(*order)
-                .offset(req.offset).limit(req.limit))
+        if problems:
+            raise ListQueryError(problems)
+        q = sa.select(*cols)
+        if self.defn.unit_field:  # satırın birimi (K-88): ondalığı serviste UnitOfMeasure'dan eklenir
+            q = q.add_columns(self.table.c[self.defn.unit_field].label(UNIT))
+        return q.where(self.version_clause(), *where).order_by(*order).offset(req.offset).limit(limit)
 
     def total_query(self) -> sa.Select:
         """Filtresiz sayı (güncel versiyondaki bütün kayıtlar)."""

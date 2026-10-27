@@ -175,6 +175,7 @@ def sa_type(t: str) -> str:
     t = t.strip().lower()
     if t == "bigint": return "sa.BigInteger()"
     if t == "int": return "sa.Integer()"
+    if t == "tinyint": return "mssql.TINYINT()"
     if t == "bit": return "sa.Boolean()"
     if t == "date": return "mssql.DATE()"
     if t == "time": return "mssql.TIME()"
@@ -197,7 +198,7 @@ def default_sql(f) -> str | None:
     t = f["type"].lower()
     if t == "bit":
         return "1" if d in ("1", "E", "true") else "0"
-    if t.startswith(("int", "bigint", "decimal")):
+    if t.startswith(("int", "bigint", "tinyint", "decimal")):
         return d.replace(",", ".") if re.match(r"^-?\d+([.,]\d+)?$", d) else None
     if t.startswith("nvarchar"):
         return "N'" + d.replace("'", "''") + "'"

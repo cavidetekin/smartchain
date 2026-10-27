@@ -4,7 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-MAX_LIMIT = 500
+MAX_LIMIT = 500             # ListChunkSize'ın üst sınırı (docs/02)
+DEFAULT_CHUNK_SIZE = 100
 
 
 class SortItem(BaseModel):
@@ -30,7 +31,7 @@ class QueryRequest(BaseModel):
     sort: list[SortItem] = []
     filters: list[FilterItem] = []
     offset: int = Field(default=0, ge=0)
-    limit: int = Field(default=100, ge=1, le=MAX_LIMIT)
+    limit: int | None = Field(default=None, ge=1, le=MAX_LIMIT)  # boşsa ListChunkSize
 
 
 class ValuesRequest(BaseModel):

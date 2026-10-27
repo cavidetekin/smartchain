@@ -13,7 +13,15 @@ export interface ListColumn {
   values: ListValue[] | null;
   values_from_server: boolean;
   decimals: number | null;
+  /** Miktar kolonu: ondalık her satırda birimden (satırdaki _unit_decimals; K-88). */
+  decimals_from_unit: boolean;
   default_visible: boolean;
+}
+
+export interface ColumnsResponse {
+  /** Parça büyüklüğü: SystemSetting ListChunkSize; tablo bir istekte bundan fazlasını istemez. */
+  chunk_size: number;
+  columns: ListColumn[];
 }
 
 export type TextOp = "contains" | "not_contains" | "equals" | "starts_with";
@@ -61,7 +69,7 @@ export interface ValueCount {
 export function listApi(list: string) {
   const base = `/api/${list}`;
   return {
-    columns: (signal?: AbortSignal) => getJson<ListColumn[]>(`${base}/columns`, signal),
+    columns: (signal?: AbortSignal) => getJson<ColumnsResponse>(`${base}/columns`, signal),
     query: (body: QueryRequest, signal?: AbortSignal) => postJson<QueryResponse>(`${base}/query`, body, signal),
     values: (body: { field: string; search: string; filters: ListFilter[] }, signal?: AbortSignal) =>
       postJson<ValueCount[]>(`${base}/values`, body, signal),

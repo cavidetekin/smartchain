@@ -116,7 +116,7 @@ function NumberFilter({ column, filter, onApply }: MenuProps) {
   const [min, setMin, getMin] = useLatest<number | null>(filter?.min ?? null);
   const [max, setMax, getMax] = useLatest<number | null>(filter?.max ?? null);
   const [value, setValue, getValue] = useLatest<number | null>(typeof filter?.value === "number" ? filter.value : null);
-  const decimals = column.decimals ?? 0;
+  const decimals = column.decimals ?? 3;  // birimden gelen miktarda girişi yuvarlamamak için en çok 3
   const ready = op === "between" ? min !== null || max !== null : value !== null;
   const submit = (e: FormEvent) => {
     e.preventDefault();

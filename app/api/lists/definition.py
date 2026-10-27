@@ -3,6 +3,7 @@
 Kolonun etiketi ve değer listesi docs'tan üretilen modelde (`info`), tipi veritabanı tipinden gelir.
 """
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 import sqlalchemy as sa
@@ -20,6 +21,11 @@ class ListDefinition:
     default_visible: tuple[str, ...]
     default_sort: tuple[tuple[str, str], ...]
     server_values: frozenset[str] = field(default_factory=frozenset)  # liste filtresi, değerler sunucudan
+    # Gösterilecek ondalık (K-88, docs/12): veritabanı ölçeğinden değil, alanın anlamından. Her number alanı ya burada
+    # ya da unit_decimals'ta ("ondalık birimden": satırın birimi unit_field'dan, ondalığı UnitOfMeasure.Decimals'tan).
+    decimals: Mapping[str, int] = field(default_factory=dict)
+    unit_field: str | None = None
+    unit_decimals: frozenset[str] = field(default_factory=frozenset)
 
     @property
     def sa_table(self) -> sa.Table:
@@ -66,7 +72,9 @@ def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
         out.append({
             "field": name, "label": label, "type": kind, "filter": filter_type(defn, col),
             "values": values, "values_from_server": name in defn.server_values,
-            "decimals": min(col.type.scale or 0, 2) if kind == "number" else None,
+            "decimals": (None if name in defn.unit_decimals else defn.decimals[name]) if kind == "number"
+                        else 0 if kind == "integer" else None,
+            "decimals_from_unit": name in defn.unit_decimals,
             "default_visible": name in defn.default_visible,
         })
     return out

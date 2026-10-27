@@ -16,4 +16,11 @@ MATERIALS = ListDefinition(
                      "ProductionLeadTimeDays", "SafetyStock", "UpdatedAt"),
     default_sort=(("Code", "asc"),),
     server_values=frozenset({"MaterialGroup", "BaseUom"}),
+    # Gün ondalıksız, yüzde 1; miktarlar temel birimin ondalığıyla (K-88).
+    decimals={
+        "ProductionLeadTimeDays": 0, "GoodsReceiptDays": 0, "AssemblyScrapPct": 1,
+        "AdditionalNumber1": 2, "AdditionalNumber2": 2, "AdditionalNumber3": 2,
+    },
+    unit_field="BaseUom",
+    unit_decimals=frozenset({"SafetyStock", "MaxStock", "MinLot", "MaxLot", "LotMultiple"}),
 )

@@ -6,14 +6,15 @@ import {
   tableFeatures, useTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, Columns3, Funnel } from "lucide-react";
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Funnel, FunnelX } from "lucide-react";
+import { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { formatDate, formatDateTime, formatNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { useShell } from "../shell/ShellContext";
 import { Alert, Button } from "../ui";
+import { type Box, placePopover, viewportSize } from "../ui/popover";
 import { FieldPanel } from "./FieldPanel";
 import { FilterMenu, valueLabel } from "./filters";
 import { listApi, type ListColumn, type ListFilter, type Row } from "./types";
@@ -30,10 +31,17 @@ const features = tableFeatures({ rowSortingFeature, columnVisibilityFeature });
 const helper = createColumnHelper<typeof features, Row>();
 const NO_DATA: Row[] = [];
 
-export function formatCell(col: ListColumn, v: unknown): string {
+/** Birim bilinmiyorsa miktar ondalığı (docs/02 UnitOfMeasure.Decimals). */
+const DEFAULT_UNIT_DECIMALS = 2;
+
+export function formatCell(col: ListColumn, v: unknown, row?: Row): string {
   if (v === null || v === undefined || v === "") return "";
   switch (col.type) {
-    case "number": return formatNumber(Number(v), col.decimals ?? 0);
+    case "number": {
+      const unit = row?._unit_decimals;
+      const decimals = col.decimals_from_unit ? (typeof unit === "number" ? unit : DEFAULT_UNIT_DECIMALS) : col.decimals ?? 0;
+      return formatNumber(Number(v), decimals);
+    }
     case "integer": return formatNumber(Number(v));
     case "bool": return valueLabel(Boolean(v));
     case "date": {
@@ -67,13 +75,14 @@ function useDismiss(ref: RefObject<HTMLElement | null>, active: boolean, close: 
 export function DataTable({ list }: { list: string }) {
   const { fontSize } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
+  const [chunkSize, setChunkSize] = useState(0);
   const [columnsError, setColumnsError] = useState<ApiError | null>(null);
   const [columnsAttempt, setColumnsAttempt] = useState(0);
   const [visibility, setVisibility] = useState<ColumnVisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<Record<string, ListFilter>>({});
   const [panelOpen, setPanelOpen] = useState(false);
-  const [menu, setMenu] = useState<{ field: string; left: number; top: number } | null>(null);
+  const [menu, setMenu] = useState<{ field: string; anchor: Box } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -82,8 +91,9 @@ export function DataTable({ list }: { list: string }) {
   useEffect(() => {
     const ctrl = new AbortController();
     listApi(list).columns(ctrl.signal)
-      .then((cols) => {
+      .then(({ columns: cols, chunk_size }) => {
         setColumns(cols);
+        setChunkSize(chunk_size);
         setColumnsError(null);
         setVisibility(Object.fromEntries(cols.map((c) => [c.field, c.default_visible])));
       })
@@ -106,12 +116,12 @@ export function DataTable({ list }: { list: string }) {
   const visible = table.getVisibleLeafColumns().map((c) => byField.get(c.id)).filter((c): c is ListColumn => Boolean(c));
 
   const visibleKey = visible.map((c) => c.field).join(",");
-  const request: ListRequest | null = useMemo(() => (columns && visibleKey ? {
+  const request: ListRequest | null = useMemo(() => (columns && visibleKey && chunkSize ? {
     fields: visibleKey.split(","),
     sort: sorting.map((s) => ({ field: s.id, dir: s.desc ? "desc" as const : "asc" as const })),
     filters: Object.values(filters),
-  } : null), [columns, visibleKey, sorting, filters]);
-  const q = useListQuery(list, request);
+  } : null), [columns, visibleKey, chunkSize, sorting, filters]);
+  const q = useListQuery(list, request, chunkSize);
 
   const rowPx = Math.round(fontSize * ROW_REM);
   const virtualizer = useVirtualizer({
@@ -133,10 +143,20 @@ export function DataTable({ list }: { list: string }) {
 
   const openMenu = (field: string, button: HTMLElement) => {
     if (menu?.field === field) return setMenu(null);
-    const root = rootRef.current!.getBoundingClientRect();
     const r = button.getBoundingClientRect();
-    setMenu({ field, left: Math.max(0, r.left - root.left), top: r.bottom - root.top });
+    setMenu({ field, anchor: { left: r.left, top: r.top, right: r.right, bottom: r.bottom } });
   };
+  // Menü görünür alana sığar (docs/12): ölçülür, ekran koordinatında yerleştirilir, köke göre yazılır.
+  useLayoutEffect(() => {
+    const el = menuRef.current;
+    if (!menu || !el || !rootRef.current) return;
+    el.style.left = "0px";  // genişlik konumdan bağımsız ölçülsün
+    el.style.top = "0px";
+    const at = placePopover(menu.anchor, el.getBoundingClientRect(), viewportSize());
+    const root = rootRef.current.getBoundingClientRect();
+    el.style.left = `${at.left - root.left}px`;
+    el.style.top = `${at.top - root.top}px`;
+  }, [menu]);
   const applyFilter = (field: string, f: ListFilter | null) => {
     setFilters((all) => {
       const next = { ...all };
@@ -168,6 +188,14 @@ export function DataTable({ list }: { list: string }) {
         <output className="sc-table-count sc-num" aria-label={T.countLabel}>
           {T.count(formatNumber(q.filtered), formatNumber(q.total))}
         </output>
+        <div className="sc-table-actions">
+          {Object.keys(filters).length > 0 && (
+            <Button size="sm" variant="ghost" icon={FunnelX} onClick={() => setFilters({})}>{T.clearFilters}</Button>
+          )}
+          {sorting.length > 0 && (
+            <Button size="sm" variant="ghost" icon={ArrowUpDown} onClick={() => setSorting([])}>{T.clearSort}</Button>
+          )}
+        </div>
         <div className="sc-table-anchor" ref={panelRef}>
           <Button size="sm" icon={Columns3} aria-expanded={panelOpen} onClick={() => setPanelOpen((o) => !o)}>
             {T.fields(visible.length, columns.length)}
@@ -246,7 +274,7 @@ export function DataTable({ list }: { list: string }) {
                 <tr key={it.key} aria-rowindex={it.index + 2} className={row ? undefined : "is-placeholder"}>
                   {visible.map((c) => (
                     <td key={c.field} className={isNumeric(c) ? "is-num sc-num" : undefined}>
-                      {row ? formatCell(c, row[c.field]) : ""}
+                      {row ? formatCell(c, row[c.field], row) : ""}
                     </td>
                   ))}
                 </tr>
@@ -258,8 +286,7 @@ export function DataTable({ list }: { list: string }) {
       </div>
 
       {menu && menuColumn && (
-        <div className="sc-table-pop" ref={menuRef} role="dialog" aria-label={T.filterOf(menuColumn.label)}
-             style={{ left: menu.left, top: menu.top }}>
+        <div className="sc-table-pop" ref={menuRef} role="dialog" aria-label={T.filterOf(menuColumn.label)}>
           <FilterMenu list={list} column={menuColumn} filter={filters[menuColumn.field]} others={others}
                       onApply={(f) => applyFilter(menuColumn.field, f)} />
         </div>

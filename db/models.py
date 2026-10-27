@@ -44,6 +44,7 @@ UnitOfMeasure = sa.Table(
     "UnitOfMeasure", metadata,
     sa.Column("Code", sa.Unicode(10), primary_key=True, autoincrement=False, comment="Birim kodu (AD, KG, SAAT…)", info={'label': "Birim kodu (AD, KG, SAAT…)"}),
     sa.Column("Name", sa.Unicode(50), nullable=True, comment="Birim adı", info={'label': "Birim adı"}),
+    sa.Column("Decimals", mssql.TINYINT(), nullable=True, server_default=sa.text("2"), comment="Miktar ondalığı; ERP'den gelmez, Smartchain'de tutulur (K-88)", info={'label': "Miktar ondalığı"}),
     schema="core",
     comment="Ölçü birimi.",
 )

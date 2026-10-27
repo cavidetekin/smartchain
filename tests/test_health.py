@@ -3,18 +3,18 @@ from app.api.services.health import expected_schema_version
 
 
 def test_expected_schema_version_is_head():
-    assert expected_schema_version() == "0006"
+    assert expected_schema_version() == "0007"
 
 
 def test_health_ok(client, monkeypatch):
-    monkeypatch.setattr(repo, "read_schema_version", lambda s: "0006")
+    monkeypatch.setattr(repo, "read_schema_version", lambda s: "0007")
     monkeypatch.setattr(repo, "read_server_version", lambda s: "17.0.1000.7")
     r = client.get("/api/health")
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
     assert body["database"]["connected"] is True
-    assert body["database"]["schema_version"] == "0006"
+    assert body["database"]["schema_version"] == "0007"
     assert r.headers["X-Trace-Id"]
 
 

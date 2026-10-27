@@ -135,6 +135,27 @@ describe("tek kaynak ve ölçek (K-85, U-23)", () => {
     expect([1, 2, 3, 4, 5, 6, 8].map((i) => px(`space-${i}`))).toEqual([4, 8, 12, 16, 20, 24, 32]);
   });
 
+  it("tarih kutusu gg.aa.yyyy'yi her yazı boyutunda tam gösterir: en az 10 ch + iç boşluk, eşit genişlikte rakam", () => {
+    const min = tokens.match(/--date-input-min:\s*calc\((\d+(?:\.\d+)?)ch \+ 2 \* var\(--space-3\) \+ 2px\)/);
+    expect(min).not.toBeNull();
+    expect(Number(min![1])).toBeGreaterThanOrEqual(10);  // ch yazı boyutuyla ölçeklenir (U-23); px sabit yok
+    const css = rules(sheets["components.css"]);
+    const input = css.find((r) => r.selector === ".sc-date .sc-input")!;
+    expect(input.body).toMatch(/min-width:\s*var\(--date-input-min\)/);
+    expect(input.body).not.toMatch(/min-width:\s*0/);
+    const date = css.find((r) => r.selector === ".sc-input--date")!;
+    expect(date.body).toMatch(/var\(--font-num\)/);
+    expect(date.body).toMatch(/tabular-nums/);
+  });
+
+  it("filtre menüsü içeriğe göre genişler; iki alan sığmazsa alt alta", () => {
+    const css = rules(sheets["components.css"]);
+    expect(css.find((r) => r.selector === ".sc-table-pop")!.body).toMatch(/width:\s*max-content/);
+    const pair = css.find((r) => r.selector === ".sc-table-pop-pair")!.body;
+    expect(pair).toMatch(/display:\s*flex/);
+    expect(pair).toMatch(/flex-wrap:\s*wrap/);
+  });
+
   it("tablo satırı 13 px'te 28 px; DataTable aynı değeri kullanır (U-23)", () => {
     expect(token("row-height")).toBe(`${ROW_REM}rem`);
     expect(Math.round(ROW_REM * 13)).toBe(28);

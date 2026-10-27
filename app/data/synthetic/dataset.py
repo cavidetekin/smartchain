@@ -153,8 +153,9 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
     ds = b.ds
     b.add("Location", Code=LOCATION_CODE, Name="Örnek Makina A.Ş. · Merkez fabrika", Type="Tesis",
           Country="Türkiye", CountryCode="TR", City="Kocaeli")
-    for code, name in [("ADET", "Adet"), ("KG", "Kilogram"), ("M", "Metre"), ("SAAT", "Saat")]:
-        b.add("UnitOfMeasure", with_id=False, Code=code, Name=name)
+    # Decimals: miktar ondalığı (K-88); ERP'den gelmez, Smartchain'de tutulur.
+    for code, name, decimals in [("ADET", "Adet", 0), ("KG", "Kilogram", 3), ("M", "Metre", 2), ("SAAT", "Saat", 2)]:
+        b.add("UnitOfMeasure", with_id=False, Code=code, Name=name, Decimals=decimals)
 
     cal = b.add("Calendar", Code="STD", Name="Standart · hafta içi")
     d = ds.start - timedelta(days=HISTORY_DAYS)

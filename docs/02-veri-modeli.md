@@ -260,6 +260,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | Code | nvarchar(10) | PK | Birim kodu (AD, KG, SAAT…) | ERP | H | E |  |
 | Name | nvarchar(50) |  | Birim adı | ERP | H | H |  |
+| Decimals | tinyint |  | Miktar ondalığı; ERP'den gelmez, Smartchain'de tutulur (K-88) | Smartchain (parametre) | H | H | 2 |
+
+- **Decimals:** bu birimdeki miktarlar ekranda bu kadar ondalıkla gösterilir (K-88). ERP aktarımı ezmez. Önerilen değerler: ADET 0, KG 3, M 2, SAAT 2; bilinmeyen birim 2 (varsayılan). Birim ilk geldiğinde öneri uygulanır, sonra Smartchain'de değiştirilir.
 
 ### UomConversion
 <sub>21. Veri modeli · Ortak</sub>
@@ -1503,6 +1506,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `EngineHeartbeatSeconds`: motor servisinin çalışan iş için kalp atışı yazma aralığı (15)
 - Çözücü ayarları (K-76; fonksiyon 32):
   - `SolverThreads`: bir plan hesabında çözücünün kullanacağı iş parçacığı sayısı (2)
+- Liste ayarları (K-87; docs/08 "Liste sorgusu"):
+  - `ListChunkSize`: tablonun bir istekte okuduğu en çok satır (parça büyüklüğü) (100; en çok 500, büyüğü 500 sayılır)
 
 ### License
 <sub>21. Veri modeli · Sistem</sub>
