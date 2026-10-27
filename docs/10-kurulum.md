@@ -96,7 +96,7 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 | WinSW (servis sarmalayıcı) | 2.12.0 | MIT |
 | React, react-dom, react-router (arayüz) | 19.3 · 19.3 · 8.5 | MIT |
 | Lucide ikonları (lucide-react) | 1.62 | ISC |
-| Instrument Sans, JetBrains Mono (@fontsource) | 5.3 | OFL-1.1 |
+| Instrument Sans, Inter (@fontsource) | 5.3 | OFL-1.1 |
 | ODBC Driver 18 for SQL Server, Visual C++ yeniden dağıtılabilir, IIS URL Rewrite 2.1, IIS ARR 3.0 | — | Microsoft lisansları; yeniden dağıtım ürünle birlikte kurulum amacıyla |
 
 ## Kaldırma

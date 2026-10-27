@@ -4,7 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { Alert, Badge, Button, Checkbox, DateField, KpiCard, NumberField, OccupancyCell, OccupancyLegend, Segment } from ".";
+import {
+  Alert, Badge, Button, Checkbox, DateField, KpiCard, NumberField, OccupancyCell, OccupancyLegend, RadioGroup, SearchField,
+  Segment,
+} from ".";
 
 describe("rozet ve uyarı (U-3)", () => {
   it("rozet yazısız oluşturulamaz", () => {
@@ -114,6 +117,35 @@ describe("form alanları (U-19)", () => {
     screen.getByRole("checkbox", { name: "Fazla mesai" }).focus();
     await user.keyboard(" ");
     expect(screen.getByRole("checkbox", { name: "Fazla mesai" })).toBeChecked();
+  });
+
+  it("segment ve seçenek grubunun etiketi üstte görünür; hideLabel yalnız erişilebilir ad bırakır", () => {
+    const opts = [{ value: "a", label: "A" }, { value: "b", label: "B" }];
+    render(
+      <>
+        <Segment<string> label="Dönem" value="a" onChange={() => {}} options={opts} />
+        <Segment<string> label="Yazı boyutu" hideLabel value="a" onChange={() => {}} options={opts} />
+        <RadioGroup label="Kaynak kısıtı" value="a" onChange={() => {}} options={opts} />
+      </>,
+    );
+    const seg = screen.getByRole("radiogroup", { name: "Dönem" });
+    expect(seg.previousElementSibling).toHaveTextContent("Dönem");
+    expect(seg.previousElementSibling).toHaveClass("sc-field-label");
+    expect(screen.getByRole("radiogroup", { name: "Yazı boyutu" }).closest(".sc-segment-field")).toBeNull();
+    expect(screen.queryByText("Yazı boyutu")).toBeNull();
+    const group = screen.getByRole("group", { name: "Kaynak kısıtı" });
+    expect(group.firstElementChild?.tagName).toBe("LEGEND");
+    expect(group.firstElementChild).toHaveClass("sc-field-label");
+    expect(group.querySelector(".sc-radio-options")?.querySelectorAll("input[type=radio]")).toHaveLength(2);
+  });
+
+  it("arama kutusu tek satır, aranabilir", async () => {
+    const onChange = vi.fn();
+    render(<SearchField label="Malzeme ara" value="" onChange={onChange} />);
+    const box = screen.getByRole("searchbox", { name: "Malzeme ara" });
+    expect(box.closest("label")).toHaveClass("sc-search-field");
+    await userEvent.type(box, "x");
+    expect(onChange).toHaveBeenCalledWith("x");
   });
 });
 

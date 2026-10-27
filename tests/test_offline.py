@@ -91,7 +91,8 @@ def test_built_web_has_no_external_resources():
         problems += [f"{rel}: dış kaynak yükleme: {m.group(0)}" for m in LOAD.finditer(text)]
         problems += [f"{rel}: {u}" for u in DIST_URL.findall(text) if not u.startswith(DIST_ALLOWED)]
     fonts = list(WEB_DIST.rglob("*.woff2"))
-    assert fonts and any("instrument-sans" in f.name for f in fonts) and any("jetbrains-mono" in f.name for f in fonts)
+    assert fonts and any("instrument-sans" in f.name for f in fonts) and any("inter-" in f.name for f in fonts)
+    assert not any("jetbrains" in f.name for f in fonts)  # K-86: paketten çıktı
     assert not problems, "\n".join(sorted(set(problems)))
 
 

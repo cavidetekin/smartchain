@@ -15,7 +15,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 6/7  Veri giriş ve dışa aktarım
   - 7/7  Tutarlılık ve teknik ilkeler
 - **Kararlar**
-  - K-30  Ürün paleti indigo + kurşun; durum renkleri hardal (risk) ve kiremit (aşırı yük). Yazı tipleri Instrument Sans ve JetBrains Mono.
+  - K-30  Ürün paleti indigo + kurşun; durum renkleri hardal (risk) ve kiremit (aşırı yük). Yazı tipleri Instrument Sans ve Inter (K-86).
   - K-31  U-1…U-23 arayüz prensipleri tüm ekran ve raporlar için bağlayıcıdır; yeni ekran bu listeye göre gözden geçirilir.
 - **Açık konular:** A-14  Manuel girilen miktar, optimizasyon yeniden çalıştığında sabit mi kalır, yoksa başlangıç önerisi mi sayılır? Cevaba göre hücre bazında kilit gerekir.
 
@@ -39,9 +39,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |  |  |  |  | İndigo aksiyon ve seçimdir U-4 |
 |  |  |  |  | Ana buton, seçili satır, aktif menü. Manuel değişiklik indigo çerçeveyle işaretlenir. |
 | %40–69 | %70–89 | risk | aşırı yük | olumlu bilgi |
-| Yazı tipleri  Instrument Sans (metin) · JetBrains Mono (sayı, tarih, kod) |  |  |  | Grafik serileri sabit sıradadır |
+| Yazı tipleri  Instrument Sans (metin) · Inter, eşit genişlikte rakamlar (sayı, tarih, kod; K-86) |  |  |  | Grafik serileri sabit sıradadır |
 |  |  |  |  | U-5 |
-|  |  |  |  | İndigo, petrol, hardal, kurşun. Kiremit hiçbir grafikte seri rengi olmaz. |
+|  |  |  |  | İndigo, petrol, hardal, kurşun, erik, kahve. Her seri beyaz zeminde en az 3:1. Kiremit ve kırmızı hiçbir zaman seri rengi olmaz; durum rengidir. |
 
 ### Örnek ekran: kaynak doluluk raporu
 <sub>23. Arayüz prensipleri · 2/7</sub>
@@ -99,5 +99,5 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **U-17 · Global bağlam:** Senaryo, plan versiyonu ve bucket seçimi her ekranın başlığında aynı yerde durur ve ekranlar arasında taşınır.
 - **U-18 · Detaya iniş:** Hücreye tıklayınca ilgili kayıtlara filtresiyle gidilir (örn. aşırı yüklü hafta → o haftanın iş emirleri).
 - **U-19 · Format standardı:** Sayılar 1.234,5; tarihler gg.aa.yyyy; haftalar H44. Birimler kolon başlığında yazılır.
-- **U-20 · Fontlar ürünle paketlenir:** Kurulum internetsiz olduğu için yazı tipleri ve tüm arayüz varlıkları dışarıdan yüklenmez.
+- **U-20 · Fontlar ürünle paketlenir:** Kurulum internetsiz olduğu için yazı tipleri ve tüm arayüz varlıkları dışarıdan yüklenmez. Metin Instrument Sans; sayı, tarih ve kod Inter, rakamlar eşit genişlikte (K-86).
 - **U-21 · Sunucu tarafı işlem:** Filtre, sıralama ve gruplama sunucuda yapılır; binlerce satırda ekran yavaşlamaz.

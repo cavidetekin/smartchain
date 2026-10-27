@@ -44,18 +44,20 @@
   --neutral-bg: var(--lead-100);
   --neutral-text: var(--lead-700);
 
-  /* Doluluk skalası (K-85; mockup m23-0291/0292). Eşikler parametre: ui/occupancy.ts */
+  /* Doluluk skalası (K-85; mockup m23-0291/0292). Eşikler parametre: ui/occupancyScale.ts */
   --occ-low-bg: var(--lead-50);      --occ-low-text: var(--lead-600);     /* < %40 */
   --occ-normal-bg: var(--indigo-50); --occ-normal-text: var(--lead-900); /* %40–69 */
   --occ-high-bg: #c5cbf2;            --occ-high-text: var(--indigo-900); /* %70–89 */
   --occ-risk-bg: #f2d98e;            --occ-risk-text: #5c4300;           /* risk %90–100 */
-  --occ-over-bg: var(--status-over); --occ-over-text: var(--status-over-on); /* aşırı yük > %100 */
+  --occ-over-bg: #f4cfc4;            --occ-over-text: var(--status-over-text-strong); /* aşırı yük > %100: açık kiremit, kalın yazı */
 
-  /* Grafik serileri (U-5): sıra sabit; kiremit seri olmaz */
+  /* Grafik serileri (U-5, K-85): sıra sabit; beyazda ≥ 3:1; kiremit ve kırmızı seri olmaz */
   --chart-1: var(--indigo-500);      /* indigo */
   --chart-2: #2e7d7a;                /* petrol */
-  --chart-3: var(--status-risk);     /* hardal */
+  --chart-3: #b8860b;                /* hardal; durum hardalının koyu tonu (#d9a521 beyazda 2,2:1) */
   --chart-4: var(--lead-600);        /* kurşun */
+  --chart-5: #8e4585;                /* erik */
+  --chart-6: #8a6440;                /* kahve */
 
   /* Form alanları (mockup m24f-0757) */
   --field-bg: #ffffff;
@@ -129,7 +131,7 @@
   --shadow-popover: 0 0.5rem 1.5rem rgba(31, 36, 48, 0.12);
 
   --font-sans: "Instrument Sans", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-num: "Inter", system-ui, sans-serif; /* sayı, tarih, kod; hep tabular-nums ile (K-86) */
 
   --sidebar-width: 19.6923rem;              /* 256 px standart boyutta (256 / 13); yazı boyutuyla ölçeklenir (K-84) */
   --sidebar-collapsed: 3.5rem;

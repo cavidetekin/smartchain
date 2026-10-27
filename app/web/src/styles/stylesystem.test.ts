@@ -39,7 +39,7 @@ describe("K-85 değerleri (mockup'lardan)", () => {
     ["status-ok", "#2f8f5b"], ["status-ok-bg", "#ddf0e4"], ["status-ok-text", "#254d3b"],
     ["info-bg", "#eef0fb"], ["info-text", "#1e2257"], ["info-border", "#dce0f7"],
     ["occ-low-bg", "#f4f5f7"], ["occ-normal-bg", "#eef0fb"], ["occ-high-bg", "#c5cbf2"], ["occ-risk-bg", "#f2d98e"],
-    ["occ-over-bg", "#c8452f"], ["field-border", "#b4b9c2"], ["field-border-focus", "#4f5bd5"], ["focus-ring", "#dfe1f7"],
+    ["occ-over-bg", "#f4cfc4"], ["occ-over-text", "#8a3612"], ["field-border", "#b4b9c2"], ["field-border-focus", "#4f5bd5"], ["focus-ring", "#dfe1f7"],
     ["cell-frozen-bg", "#e6e8ec"],
   ])("--%s = %s", (name, value) => {
     expect(token(name)).toBe(value);
@@ -81,9 +81,38 @@ describe("U-2: durum renkleri yalnız durum bileşenlerinde", () => {
 });
 
 describe("U-5: grafik serileri", () => {
-  it("sıra indigo, petrol, hardal, kurşun; kiremit seri değil", () => {
-    expect([1, 2, 3, 4].map((i) => token(`chart-${i}`))).toEqual(["#4f5bd5", "#2e7d7a", "#d9a521", "#5a606b"]);
-    expect([1, 2, 3, 4].map((i) => token(`chart-${i}`))).not.toContain(token("status-over"));
+  const series = [1, 2, 3, 4, 5, 6].map((i) => `chart-${i}`);
+
+  it("sıra indigo, petrol, hardal, kurşun, erik, kahve", () => {
+    expect(series.map(token)).toEqual(["#4f5bd5", "#2e7d7a", "#b8860b", "#5a606b", "#8e4585", "#8a6440"]);
+  });
+
+  it.each(series)("%s beyaz zeminde ≥ 3:1", (name) => {
+    expect(contrast(name, "surface")).toBeGreaterThanOrEqual(3);
+  });
+
+  it("kiremit ve kırmızı seri değil (durum rengi)", () => {
+    const over = ["status-over", "status-over-text", "status-over-text-strong", "occ-over-bg"].map(token);
+    for (const name of series) {
+      expect(over).not.toContain(token(name));
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(token(name).slice(i, i + 2), 16));
+      expect(r > 1.5 * g && r > 1.5 * b).toBe(false); // baskın kırmızı ton yok
+    }
+  });
+});
+
+describe("K-86: yazı tipleri", () => {
+  it("sayı fontu Inter; JetBrains Mono ve --font-mono yok", () => {
+    expect(tokens).toMatch(/--font-num:\s*"Inter"/);
+    expect(tokens).toMatch(/--font-sans:\s*"Instrument Sans"/);
+    for (const css of [tokens, ...Object.values(sheets)]) expect(css).not.toMatch(/font-mono|JetBrains/);
+  });
+
+  it.each(Object.entries(sheets))("%s: --font-num her yerde eşit genişlikte rakamla", (_, css) => {
+    const loose = rules(css)
+      .filter((r) => r.body.includes("var(--font-num)") && !r.body.includes("tabular-nums"))
+      .map((r) => r.selector);
+    expect(loose).toEqual([]);
   });
 });
 

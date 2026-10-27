@@ -75,7 +75,7 @@ export function JobIndicator({ userId }: { userId: number }) {
             <ul className="sc-job-list">
               {recent.map((j) => (
                 <li key={j.id}>
-                  <span className="sc-mono">#{j.id}</span> {j.job_type} · {j.status}
+                  <span className="sc-num">#{j.id}</span> {j.job_type} · {j.status}
                   {j.queue_position ? ` · ${tr.jobs.queuePosition(j.queue_position)}` : j.progress ? ` · ${j.progress}` : ""}
                 </li>
               ))}

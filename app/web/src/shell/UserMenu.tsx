@@ -25,9 +25,9 @@ export function UserMenu({ userId, fontSize, onFontSize }: Props) {
         <div className="sc-popover sc-popover-right" role="dialog" aria-label={tr.user.label(userId)}>
           <p className="sc-muted">{tr.user.temporary}</p>
           <div className="sc-popover-title">{tr.user.fontSize}</div>
-          <Segment label={tr.user.fontSize} value={fontSize} onChange={onFontSize}
+          <Segment label={tr.user.fontSize} hideLabel value={fontSize} onChange={onFontSize}
                    options={FONT_SIZES.map((size) => ({
-                     value: size, label: <>{tr.user.fontSizes[size]} <span className="sc-mono">{size}</span></>,
+                     value: size, label: <>{tr.user.fontSizes[size]} <span className="sc-num">{size}</span></>,
                    }))} />
           <button type="button" className="sc-menu-btn" disabled title={tr.user.logoutLater}>
             {tr.user.logout}

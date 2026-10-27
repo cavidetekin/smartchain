@@ -51,7 +51,7 @@ export function TextField({ label, help, error, required, value, onChange, ...re
   );
 }
 
-/** Sayı: mono, sağa yaslı; "1.234,5" biçiminde girilir; geçersizse hata ve değer değişmez. */
+/** Sayı: Inter, eşit genişlikte rakam (K-86), sağa yaslı; "1.234,5" biçiminde girilir; geçersizse hata ve değer değişmez. */
 export function NumberField({ label, help, error, required, value, onChange, decimals = 0, ...rest }: InputProps & {
   value: number | null; onChange(v: number | null): void; decimals?: number;
 }) {
@@ -105,7 +105,7 @@ export function DateField({ label, help, error, required, value, onChange, ...re
   const shownError = error ?? (invalid ? tr.ui.invalidDate : undefined);
   return (
     <Field {...{ label, help, error: shownError, required, id }}>
-      <input id={id} className="sc-input sc-input--mono" placeholder={tr.ui.datePlaceholder} value={text}
+      <input id={id} className="sc-input sc-input--date" placeholder={tr.ui.datePlaceholder} value={text}
              required={required} aria-invalid={Boolean(shownError)}
              aria-describedby={describedBy(id, { label, help, error: shownError })}
              onChange={(e) => setText(e.target.value)} onBlur={commit}
@@ -160,20 +160,24 @@ export function RadioGroup({ label, options, value, onChange }: {
   return (
     <fieldset className="sc-radio-group">
       <legend className="sc-field-label">{label}</legend>
-      {options.map((o) => (
-        <label key={o.value} className="sc-check">
-          <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} />
-          <span>{o.label}</span>
-        </label>
-      ))}
+      <div className="sc-radio-options">
+        {options.map((o) => (
+          <label key={o.value} className="sc-check">
+            <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} />
+            <span>{o.label}</span>
+          </label>
+        ))}
+      </div>
     </fieldset>
   );
 }
 
-/** Segment (ör. Günlük / Haftalık / Aylık): tek seçim; ok tuşlarıyla gezilir. */
-export function Segment<T extends string | number>({ label, options, value, onChange }: {
-  label: string; options: { value: T; label: ReactNode }[]; value: T; onChange(v: T): void;
+/** Segment (ör. Günlük / Haftalık / Aylık): tek seçim; ok tuşlarıyla gezilir. Etiket üstte görünür;
+ *  başlığı zaten yazan yerde (kullanıcı menüsü) hideLabel ile yalnız erişilebilir ad kalır. */
+export function Segment<T extends string | number>({ label, options, value, onChange, hideLabel }: {
+  label: string; options: { value: T; label: ReactNode }[]; value: T; onChange(v: T): void; hideLabel?: boolean;
 }) {
+  const id = useId();
   const index = options.findIndex((o) => o.value === value);
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
@@ -183,14 +187,22 @@ export function Segment<T extends string | number>({ label, options, value, onCh
     onChange(next.value);
     (e.currentTarget.querySelector(`[data-value="${String(next.value)}"]`) as HTMLElement | null)?.focus();
   };
-  return (
-    <div className="sc-segment" role="radiogroup" aria-label={label} onKeyDown={onKey}>
+  const group = (
+    <div className="sc-segment" role="radiogroup" aria-label={hideLabel ? label : undefined}
+         aria-labelledby={hideLabel ? undefined : id} onKeyDown={onKey}>
       {options.map((o) => (
         <button key={String(o.value)} type="button" role="radio" aria-checked={o.value === value}
                 data-value={String(o.value)} tabIndex={o.value === value ? 0 : -1} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}
+    </div>
+  );
+  if (hideLabel) return group;
+  return (
+    <div className="sc-field sc-segment-field">
+      <span className="sc-field-label" id={id}>{label}</span>
+      {group}
     </div>
   );
 }

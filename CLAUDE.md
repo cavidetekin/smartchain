@@ -31,7 +31,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 ## Arayüz
 
 - U-1…U-23 bağlayıcıdır (`docs/04-arayuz-prensipleri.md`). Ekran ağırlıkla nötr, indigo aksiyon, durum renkleri yalnız durum için; her tablo sıralanır, filtrelenir, alanları açılıp kapanır; ana tablo ekrana sığar, kenar menü daraltılır; varsayılan yazı sıkıdır, kullanıcı dört boyuttan birini seçer.
-- Yazı tipleri Instrument Sans ve JetBrains Mono, pakete gömülü. Sayı ve tarih Türkçe biçimde.
+- Yazı tipleri Instrument Sans (metin) ve Inter (sayı, tarih, kod; eşit genişlikte rakamlar), pakete gömülü (K-86). Sayı ve tarih Türkçe biçimde.
 - Ön yüz React (TypeScript), internetsiz; tablolar kendi bileşenimiz (TanStack Table üzerine). Ekranlar kenar menüde gruplu, en çok iki seviye; üst sekmeyle ekran geçişi yok (K-81, K-82, `docs/12-on-yuz.md`).
 
 ## Dil ve adlandırma

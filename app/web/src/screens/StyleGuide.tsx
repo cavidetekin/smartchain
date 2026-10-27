@@ -24,7 +24,7 @@ function Swatch({ token, label }: { token: string; label?: string }) {
     <div className="sc-swatch">
       <span className="sc-swatch-color" style={{ background: `var(--${token})` }} />
       <span>{label ?? token}</span>
-      <code className="sc-mono sc-muted">--{token} {value}</code>
+      <code className="sc-num sc-muted">--{token} {value}</code>
     </div>
   );
 }
@@ -99,8 +99,8 @@ export function StyleGuide() {
             </div>
           ))}
           <div className="sc-type-row">
-            <code>--font-mono</code>
-            <span className="sc-mono">{formatNumber(1234.5, 1)} · 27.10.2026 · H44</span>
+            <code>--font-num</code>
+            <span className="sc-num">{formatNumber(1234.5, 1)} · 27.10.2026 · H44</span>
           </div>
         </Section>
 
@@ -142,25 +142,29 @@ export function StyleGuide() {
         </Section>
 
         <Section title={T.sections.forms}>
-          <div className="sc-grid">
-            <TextField label="Senaryo adı" value={text} onChange={setText} required help="En çok 100 karakter" />
-            <NumberField label="Planlanan miktar (adet)" value={qty} onChange={setQty} decimals={1} />
-            <NumberField label="Fazla mesai (sa)" value={null} onChange={() => {}} error="Fazla mesai sınırı 20 sa" />
-            <DateField label="Teslim tarihi" value={date} onChange={setDate} />
-            <SelectField label="Model tipi" value={model} onChange={setModel}
-                         options={[{ value: "LP", label: "LP" }, { value: "MILP", label: "MILP" }]} />
-            <TextField label="Veri versiyonu" value="v43" onChange={() => {}} disabled />
-            <TextareaField label="Neden (bildirimde görünür)" value={note} onChange={setNote} />
+          <div className="sc-stack">
             <SearchField label="Malzeme ara" value={search} onChange={setSearch} />
+            <div className="sc-grid">
+              <TextField label="Senaryo adı" value={text} onChange={setText} required help="En çok 100 karakter" />
+              <NumberField label="Planlanan miktar (adet)" value={qty} onChange={setQty} decimals={1} />
+              <NumberField label="Fazla mesai (sa)" value={null} onChange={() => {}} error="Fazla mesai sınırı 20 sa" />
+              <DateField label="Teslim tarihi" value={date} onChange={setDate} />
+              <SelectField label="Model tipi" value={model} onChange={setModel}
+                           options={[{ value: "LP", label: "LP" }, { value: "MILP", label: "MILP" }]} />
+              <TextField label="Veri versiyonu" value="v43" onChange={() => {}} disabled />
+              <TextareaField label="Neden (bildirimde görünür)" value={note} onChange={setNote} />
+            </div>
+            <div className="sc-row sc-row--top">
+              <Segment<string> label="Dönem" value={bucket} onChange={setBucket}
+                       options={[{ value: "gun", label: "Günlük" }, { value: "hafta", label: "Haftalık" }, { value: "ay", label: "Aylık" }]} />
+              <RadioGroup label="Kaynak kısıtı" value="Kısıtlı" onChange={() => {}}
+                          options={["Kısıtsız", "Kısıtlı", "Kısmi"].map((v) => ({ value: v, label: v }))} />
+            </div>
+            <div className="sc-row">
+              <Checkbox label="Fazla mesai dahil" checked={check} onChange={setCheck} />
+              <Checkbox label="Dondurulmuş dönem" checked onChange={() => {}} disabled />
+            </div>
           </div>
-          <div className="sc-row">
-            <Segment<string> label="Dönem" value={bucket} onChange={setBucket}
-                     options={[{ value: "gun", label: "Günlük" }, { value: "hafta", label: "Haftalık" }, { value: "ay", label: "Aylık" }]} />
-            <Checkbox label="Fazla mesai dahil" checked={check} onChange={setCheck} />
-            <Checkbox label="Dondurulmuş dönem" checked onChange={() => {}} disabled />
-          </div>
-          <RadioGroup label="Kaynak kısıtı" value="Kısıtlı" onChange={() => {}}
-                      options={["Kısıtsız", "Kısıtlı", "Kısmi"].map((v) => ({ value: v, label: v }))} />
         </Section>
 
         <Section title={T.sections.alerts}>
@@ -188,7 +192,7 @@ export function StyleGuide() {
 
         <Section title={T.sections.chart}>
           <div className="sc-row">
-            {["İndigo", "Petrol", "Hardal", "Kurşun"].map((name, i) => (
+            {["İndigo", "Petrol", "Hardal", "Kurşun", "Erik", "Kahve"].map((name, i) => (
               <span key={name} className="sc-chart-swatch"><span className={`sc-chart-${i + 1}`} />{i + 1}. {name}</span>
             ))}
           </div>

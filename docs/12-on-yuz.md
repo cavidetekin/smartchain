@@ -5,7 +5,7 @@ Arayüzün teknolojisi ve bütün ekranların içine oturduğu kabuk: kenar men�
 ## Teknoloji (K-81)
 
 - **React** (TypeScript). Arayüz geliştirme bilgisayarında bir kez derlenir, düz dosyalar (HTML, JS, CSS, font, ikon) olarak pakete girer; müşteride IIS bu dosyaları sunar, `/api` arka uca gider (K-74). Müşteride Node.js ya da başka kurulum gerekmez.
-- **İnternetsiz:** CDN, dış font, dış ikon, çevrimiçi servis yok. Fontlar (Instrument Sans, JetBrains Mono) ve ikonlar pakete gömülüdür. İnternetsizlik bekçisi (`tests/test_offline.py`) arayüz kaynaklarını ve derlenmiş dosyaları da tarar.
+- **İnternetsiz:** CDN, dış font, dış ikon, çevrimiçi servis yok. Fontlar (Instrument Sans; sayılar için Inter, K-86) ve ikonlar pakete gömülüdür. İnternetsizlik bekçisi (`tests/test_offline.py`) arayüz kaynaklarını ve derlenmiş dosyaları da tarar.
 - **Tablo bileşeni bizim:** Tablolar hazır bir tablo ürünü değil, TanStack Table (MIT, yalnız altyapı) üzerine kendi bileşenimizdir. Alan ekle/çıkar, çoklu sıralama, filtre tipleri, kayıtlı görünüm, kolon düzeni, gruplama, Excel'e aktarım ve Excel'den yapıştırma (U-6…U-16) bu bileşende toplanır; lisans kısıtı yoktur. Filtre, sıralama ve gruplama sunucuda yapılır (U-21).
 - **Metinler tek yerde:** Bütün arayüz metinleri tek bir sözlük dosyasındadır. Faz 1'de yalnız Türkçe; sayı ve tarih Türkçe biçimde (U-19).
 - **Tema ve ekran:** Faz 1'de yalnız açık tema. En küçük hedef ekran 1366×768; büyük ekranda alan doldurulur (U-22).
@@ -73,7 +73,7 @@ Daraltılmış menü ve yandan açılan alt panel aynı renkleri kullanır.
 - **Komutlar** (`app/web` klasöründe): `npm ci` (paketleri kur) · `npm run dev` (http://localhost:5173; `/api` ve `/api/ws` 127.0.0.1:8000'deki API'ye gider) · `npm test` · `npm run build` (`dist/`).
 - **Menünün tek tanımı:** `src/screens/catalog.ts`. Her ekranın numarası, adı, adresi, grubu, ikonu, geleceği geliştirme adımı ve tek satırlık tanımı buradadır. Yeni ekran önce buraya eklenir.
 - **Metinler:** `src/i18n/tr.ts`; sayı ve tarih biçimi `src/format.ts` (U-19).
-- **İkonlar ve fontlar:** Lucide (ISC); Instrument Sans ve JetBrains Mono (OFL-1.1) `@fontsource` paketlerinden derlemeye gömülür. Dış adres yoktur; `tests/test_offline.py` kaynakları ve derlenmiş `dist`'i tarar.
+- **İkonlar ve fontlar:** Lucide (ISC); Instrument Sans ve Inter (OFL-1.1) `@fontsource` paketlerinden derlemeye gömülür. Dış adres yoktur; `tests/test_offline.py` kaynakları ve derlenmiş `dist`'i tarar.
 - **Kullanıcı (A-36):** Oturum 2.1'de gelir. O zamana kadar kullanıcı Id'si adres çubuğunda `?user_id=3` ile bir kez verilir ve tarayıcıda hatırlanır; verilmezse 0. İş göstergesi bu kullanıcının işlerini gösterir.
 - **Hatırlanan tercihler:** Açık gruplar, menünün daraltılmış hâli ve yazı boyutu (U-23) tarayıcıda tutulur; 2.3'te kullanıcı ayarına taşınır.
 - **Bağlam çubuğu:**
@@ -108,7 +108,7 @@ Durum renkleri yalnız durum gösterir; her zaman bir yazı, değer ya da ikonla
 | Normal | %40–69 | #EEF0FB | #1F2329 (13,9:1) |
 | Yüksek | %70–89 | #C5CBF2 | #1E2257 (9,3:1) |
 | Risk | %90–100 | #F2D98E | #5C4300 (6,7:1) |
-| Aşırı yük | > %100 | #C8452F | beyaz (4,8:1) |
+| Aşırı yük | > %100 | #F4CFC4 (açık kiremit, risk hücresiyle aynı yoğunlukta) | #8A3612 kalın (5,6:1) |
 
 - Her hücrede değer yazar (U-3); renk yalnız vurgudur.
 - Eşik, ekranda yazan yuvarlanmış değere uygulanır: %100,4 "%100" yazar ve risk rengindedir.
@@ -117,7 +117,7 @@ Durum renkleri yalnız durum gösterir; her zaman bir yazı, değer ya da ikonla
 
 ### Grafik serileri (U-5)
 
-Sıra sabittir: indigo #4F5BD5 · petrol #2E7D7A · hardal #D9A521 · kurşun #5A606B. Kiremit hiçbir grafikte seri olmaz.
+Sıra sabittir: indigo #4F5BD5 · petrol #2E7D7A · hardal #B8860B · kurşun #5A606B · erik #8E4585 · kahve #8A6440. Her seri beyaz zeminde en az 3:1 (testte). Grafikteki hardal, durum rengi hardalın (#D9A521, beyazda 2,2:1) koyu tonudur. Kiremit ve kırmızı hiçbir zaman seri olmaz; durum rengidir.
 
 ### Yazı ve boşluk
 
@@ -134,7 +134,7 @@ Sıra sabittir: indigo #4F5BD5 · petrol #2E7D7A · hardal #D9A521 · kurşun #5
 | 2xl | 1,846 | 24 px | sayfa başlığı |
 | kpi | 2,154 | 28 px | KPI değeri |
 
-Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. Metin Instrument Sans; sayı, tarih ve kod JetBrains Mono.
+Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. Metin Instrument Sans (`--font-sans`); sayı, tarih ve kod Inter, rakamlar eşit genişlikte (`--font-num`, `tabular-nums`; K-86).
 
 ### Ortak bileşenler (`app/web/src/ui/`)
 
@@ -143,7 +143,7 @@ Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. M
 | Button | birincil, ikincil, sessiz, geri alınamaz işlem; normal ve küçük; ikonlu; pasif; meşgul |
 | Badge | nötr, bilgi, olumlu, risk, kritik; her zaman yazılı |
 | Card, KpiCard | başlık, alt başlık, aksiyon; KPI değeri mono, durum varsa durum renginde |
-| Form alanları | metin, sayı (Türkçe 1.234,5; sağa yaslı), tarih (gg.aa.yyyy), seçim, çok satırlı metin, onay kutusu, seçenek grubu, segment, arama; etiket, yardım, zorunlu işareti, hata |
+| Form alanları | metin, sayı (Türkçe 1.234,5; sağa yaslı), tarih (gg.aa.yyyy), seçim, çok satırlı metin, onay kutusu, seçenek grubu, segment, arama; etiket, yardım, zorunlu işareti, hata. Etiket alanın üstünde, her alanda aynı boşlukla (seçenek grubu ve segment dahil). Arama kutusu tek satır yüksekliğinde, genişliği içeriğine göre. Çerçeve #B4B9C2 (mockup değeri) |
 | Alert | bilgi, olumlu, risk, hata; her tonun ikonu var; hata `role="alert"` |
 | OccupancyCell, OccupancyLegend | doluluk hücresi ve lejantı (eşikler parametre) |
 | Hücre işaretleri | manuel değişiklik (indigo çerçeve, U-4/U-16), dondurulmuş (gri ve kilit), kümülatif eksik (kiremit yazı); tablo 1.3'te kullanır |
