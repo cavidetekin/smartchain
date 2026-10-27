@@ -23,6 +23,16 @@ def test_no_data_version(client, monkeypatch):
     assert r.status_code == 404 and r.json()["error"]["code"] == "no_data_version"
 
 
+def test_database_down_is_503(client, monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    def boom(s):
+        raise OperationalError("SELECT 1", {}, Exception("bağlantı yok"))
+    monkeypatch.setattr(repo, "read_current", boom)
+    r = client.get("/api/data-versions/current")
+    assert r.status_code == 503 and r.json()["error"]["code"] == "database_unavailable"
+
+
 @pytest.mark.db
 def test_current_is_latest_in_database(db_client, db_engine):
     with db_engine.connect() as c:

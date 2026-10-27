@@ -35,6 +35,11 @@ describe("kenar menü", () => {
     renderApp();
     const gantt = within(menu()).getByText("Gantt").closest("[aria-disabled]")!;
     expect(gantt).toHaveAttribute("title", "Önce bir çalışma açın");
+    // U-3: pasiflik yalnız renkle değil, kilit ikonuyla da gösterilir; açık ekranlarda kilit yok.
+    expect(within(gantt as HTMLElement).getByTestId("lock")).toBeInTheDocument();
+    expect(within(menu()).getAllByTestId("lock")).toHaveLength(10);
+    const senaryolar = within(menu()).getByRole("link", { name: /Senaryolar/ });
+    expect(within(senaryolar).queryByTestId("lock")).toBeNull();
     await user.click(gantt);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana sayfa");
   });
@@ -83,7 +88,9 @@ describe("daraltılmış menü", () => {
     await user.hover(within(menu()).getByRole("button", { name: "Planlama" }));
     const panel = within(menu()).getByRole("menu", { name: "Planlama" });
     expect(within(panel).getByRole("menuitem", { name: "Senaryolar" })).toBeInTheDocument();
-    expect(within(panel).getByText("Yayın")).toHaveAttribute("aria-disabled", "true");
+    const yayin = within(panel).getByText("Yayın").closest("[aria-disabled]")!;
+    expect(yayin).toHaveAttribute("aria-disabled", "true");
+    expect(within(yayin as HTMLElement).getByTestId("lock")).toBeInTheDocument();
     unmount();
     renderApp();
     expect(screen.getByRole("button", { name: "Menüyü aç" })).toBeInTheDocument();
@@ -117,14 +124,18 @@ describe("bağlam çubuğu", () => {
     expect(screen.queryByText(/sentetik/i)).toBeNull();
   });
 
-  it("veri yoksa ve bağlantı yoksa", async () => {
+  it("veri yoksa, API cevap vermiyorsa, veritabanına ulaşılamıyorsa", async () => {
     mockApi({ "/api/data-versions/current": { status: 404, body: { error: { code: "no_data_version", message: "", trace_id: "" } } } });
     const { unmount } = renderApp();
     await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veri yüklenmedi"));
     unmount();
     mockApi({ "/api/data-versions/current": "offline" });
+    const second = renderApp();
+    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("API'ye ulaşılamıyor"));
+    second.unmount();
+    mockApi({ "/api/data-versions/current": { status: 503, body: { error: { code: "database_unavailable", message: "", trace_id: "" } } } });
     renderApp();
-    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Bağlantı yok"));
+    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veritabanına ulaşılamıyor"));
   });
 
   it("senaryo, plan versiyonu ve dönem yerleri pasif", () => {

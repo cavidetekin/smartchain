@@ -36,7 +36,9 @@ export function ContextBar({ userId, fontSize, onFontSize }: Props) {
   );
 }
 
-type DvState = { kind: "loading" } | { kind: "ok"; dv: DataVersion } | { kind: "none" } | { kind: "offline" };
+// Veri yok (404) · API veritabanına bağlanamıyor (503) · API cevap vermiyor (ağ hatası, vekil 5xx).
+type DvState =
+  | { kind: "loading" } | { kind: "ok"; dv: DataVersion } | { kind: "none" } | { kind: "dbDown" } | { kind: "apiDown" };
 
 export function DataVersionBadge() {
   const [state, setState] = useState<DvState>({ kind: "loading" });
@@ -48,7 +50,10 @@ export function DataVersionBadge() {
         const dv = await api.currentDataVersion();
         if (alive) setState({ kind: "ok", dv });
       } catch (e) {
-        if (alive) setState(e instanceof ApiError && e.code === "no_data_version" ? { kind: "none" } : { kind: "offline" });
+        if (!alive) return;
+        if (e instanceof ApiError && e.code === "no_data_version") setState({ kind: "none" });
+        else if (e instanceof ApiError && e.status === 503) setState({ kind: "dbDown" });
+        else setState({ kind: "apiDown" });
       }
     };
     load();
@@ -62,10 +67,12 @@ export function DataVersionBadge() {
   const text =
     state.kind === "ok" ? tr.context.dataVersion(state.dv.id, formatDateTime(new Date(state.dv.created_at)))
     : state.kind === "none" ? tr.context.noData
-    : state.kind === "offline" ? tr.context.offline
+    : state.kind === "dbDown" ? tr.context.dbDown
+    : state.kind === "apiDown" ? tr.context.apiDown
     : "…";
   return (
-    <span className={`sc-badge${state.kind === "offline" ? " is-muted" : ""}`} data-testid="data-version">
+    <span className={`sc-badge${state.kind === "apiDown" || state.kind === "dbDown" ? " is-muted" : ""}`}
+          data-testid="data-version">
       <Database aria-hidden="true" />
       <span>{text}</span>
     </span>

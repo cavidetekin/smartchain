@@ -46,6 +46,27 @@ Her ekranın üstünde aynı yerde:
 
 Kenar menü ve bağlam çubuğu dışında kalan alanın tamamı ekranındır; ana tablo bu alanı doldurur (U-22).
 
+## Kenar menü görünüşü (K-84, seçenek F)
+
+Kenar menü açık indigodur. Değerler yalnız `app/web/src/styles/tokens.css`'te durur; kodda renk ve ölçü sabit yazılmaz. Kontrastlar menü zeminine göredir.
+
+| Öğe | Değer | Kontrast |
+|---|---|---|
+| Menü zemini · sağ çizgi | #EEF0FB · 1 px #DCE0F7 | — |
+| Genişlik | standart yazı boyutunda 256 px; yazı boyutuyla ölçeklenir (bu projede 1rem = yazı boyutu, standart 13 px → 19,69rem); daraltılmış hâl değişmez | — |
+| Logo yazısı | #1E2257 | — |
+| İç boşluk | menü içeriği kenardan 10 px içeride (0,7692rem), öğelerin kendi iç boşluğu 8 px (0,6154rem); standart boyutta, yazı boyutuyla ölçeklenir. Seçili öğenin zemini kenarlara değmez. Logo, arama kutusunun içi, grup başlıkları ve ekran ikonları aynı sol hizadadır (10 + 8 px) | — |
+| Grup başlığı (PLANLAMA, TAKİP…) | #4A5180, 11 px (standart boyutta; yazı boyutuyla ölçeklenir), yarı kalın, harf aralığı 0.08em | 6,7:1 |
+| Ekran adı · ikonu | #1F2329 · #5A6290 | 13,9:1 · 5,2:1 |
+| Çalışma altındaki ekranlar · ikonu | #3F444D · #6E76A8 | 8,6:1 · 3,8:1 |
+| Seçili ekran | zemin #4F5BD5, yazı ve ikon beyaz, yarı kalın | 5,5:1 |
+| Üzerine gelince | zemin #DCE0F7 | ekran adı 12,1:1 |
+| Çalışma kapalıyken ekranlar | yazı #5A6290 ve sağda küçük kilit ikonu; soluk görünüm yok (U-3) | 5,2:1 |
+| Arama kutusu | beyaz, çerçeve #DCE0F7 | — |
+| Çalışma alanı | zemin #F7F8FA; kart ve tablolar beyaz | — |
+
+Daraltılmış menü ve yandan açılan alt panel aynı renkleri kullanır.
+
 ## Uygulama (1.1, K-83)
 
 - **Yer:** `app/web/` (Vite + React + TypeScript). Paket sürümleri `package-lock.json`'da sabit; `node_modules` ve `dist` git dışı.
@@ -56,7 +77,7 @@ Kenar menü ve bağlam çubuğu dışında kalan alanın tamamı ekranındır; a
 - **Kullanıcı (A-36):** Oturum 2.1'de gelir. O zamana kadar kullanıcı Id'si adres çubuğunda `?user_id=3` ile bir kez verilir ve tarayıcıda hatırlanır; verilmezse 0. İş göstergesi bu kullanıcının işlerini gösterir.
 - **Hatırlanan tercihler:** Açık gruplar, menünün daraltılmış hâli ve yazı boyutu (U-23) tarayıcıda tutulur; 2.3'te kullanıcı ayarına taşınır.
 - **Bağlam çubuğu:**
-  - **Veri versiyonu:** `GET /api/data-versions/current` → "Veri v35 · 27.10.2026 12:20".
+  - **Veri versiyonu:** `GET /api/data-versions/current` → "Veri v35 · 27.10.2026 12:20". Veri yoksa "Veri yüklenmedi"; API cevap vermiyorsa "API'ye ulaşılamıyor"; API veritabanına bağlanamıyorsa (503) "Veritabanına ulaşılamıyor".
   - **İş göstergesi:** `GET /api/jobs` + `WS /api/ws`. Bağlantı koparsa 10 sn'de yeniden bağlanır, arada 30 sn'de bir sorgular (fonksiyon 48).
   - **Senaryo, plan versiyonu, dönem:** pasif yer tutucu (8.1).
 - **Boş ekranlar:** Her ekran "Bu ekran X adımında gelecek" yazan sayfayla açılır. Adım, `catalog.ts`'teki GELISTIRME_ADIMLARI eşlemesinden gelir.

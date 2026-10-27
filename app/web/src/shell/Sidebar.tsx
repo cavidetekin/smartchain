@@ -1,5 +1,5 @@
 // Kenar menü (docs/12, K-82): gruplar, en çok iki seviye, arama (Ctrl+K), daraltma ve yandan açılan alt panel.
-import { ChartLine, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { ChartLine, ChevronDown, ChevronRight, Lock, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { NavLink, useNavigate } from "react-router";
 
@@ -67,6 +67,7 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
         <span className={`${cls} is-disabled`} aria-disabled="true" title={tr.menu.needsWorkspace}>
           <Icon aria-hidden="true" />
           {!collapsed && <span>{s.name}</span>}
+          {!collapsed && <Lock aria-hidden="true" className="sc-lock" data-testid="lock" />}
         </span>
       );
     }
@@ -186,7 +187,10 @@ function FlyoutList({ group, disabled }: { group: GroupId; disabled: (s: Screen)
   const row = (s: Screen, sub = false) =>
     disabled(s) ? (
       <span className={`sc-flyout-item is-disabled${sub ? " is-sub" : ""}`} aria-disabled="true"
-            title={tr.menu.needsWorkspace}>{s.name}</span>
+            title={tr.menu.needsWorkspace}>
+        <span>{s.name}</span>
+        <Lock aria-hidden="true" className="sc-lock" data-testid="lock" />
+      </span>
     ) : (
       <NavLink to={s.path} role="menuitem" className={`sc-flyout-item${sub ? " is-sub" : ""}`}>{s.name}</NavLink>
     );

@@ -24,7 +24,8 @@ export const tr = {
     notYet: "Senaryo ve dönem seçimi 8.1'de gelir",
     dataVersion: (id: number, when: string) => `Veri v${id} · ${when}`,
     noData: "Veri yüklenmedi",
-    offline: "Bağlantı yok",
+    apiDown: "API'ye ulaşılamıyor",
+    dbDown: "Veritabanına ulaşılamıyor",
   },
   jobs: {
     title: "Arka plandaki işler",
