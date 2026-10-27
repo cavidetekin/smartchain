@@ -1437,6 +1437,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | HeartbeatAt | datetime2 |  | Son yaşam sinyali | Sistem | H | H |  |
 | Attempt | int |  | Deneme sayısı | Sistem | H | H | 0 |
 | ErrorText | nvarchar(max) |  | Hata | Sistem | H | H |  |
+| CreatedAt | datetime2 |  | İstek zamanı (UTC); sıra buna göre görünür | Sistem | H | E |  |
+| StartedAt | datetime2 |  | Çalışmaya başlama (UTC) | Sistem | H | H |  |
+| EndedAt | datetime2 |  | Bitiş, hata ya da iptal (UTC) | Sistem | H | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik (UTC); API bildirim için izler (K-69) | Sistem | H | E |  |
+
+- Durum değerleri tabloda yazıldığı gibi saklanır; 'takıldı' saklanmaz, kalp atışından hesaplanır (K-67). İş alma sırası: Priority büyükten küçüğe, sonra Id (K-68).
 
 ### SolverLog
 <sub>21. Veri modeli · Sistem</sub>
@@ -1480,6 +1486,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | SettingKey | nvarchar(60) | PK | Ayar | Sistem | H | E |  |
 | Value | nvarchar(200) |  | Değer | Sistem | H | E |  |
+
+- İş kuyruğu ayarları (K-68); satır yoksa varsayılan geçerlidir:
+  - `JobLimitInteractive`: etkileşim kanalında aynı anda çalışan iş (3)
+  - `JobLimitNight`: gece kanalında aynı anda çalışan iş (2)
+  - `JobHeartbeatTimeoutSeconds`: kalp atışı bu kadar saniye gelmezse iş takılmış sayılır (120)
+  - `JobMaxAttempts`: takılan iş en fazla bu kadar denenir, sonra Hata (2)
 
 ### License
 <sub>21. Veri modeli · Sistem</sub>

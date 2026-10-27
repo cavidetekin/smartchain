@@ -1,6 +1,6 @@
 # Smartchain · Geliştirme adımları
 
-Son güncelleme: 26.10.2026
+Son güncelleme: 27.10.2026
 
 Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur, ekran ve fonksiyonları netleşir, geliştirilir ve işaretlenir. Parantez içindeki numaralar 24. adımdaki ekran ve fonksiyon numaralarıdır.
 
@@ -17,7 +17,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 0.1 Repo, CLAUDE.md, docs taşıma (19, 21, 23, 24, 26)
 - [x] 0.2 Veritabanı: ana tablolar, stg.*, veri yönetimi ve sistem tabloları; ileri ve geri geçiş betikleri
 - [x] 0.3 Uygulama iskeleti: FastAPI katmanları, hata yönetimi, log
-- [ ] 0.4 İş kuyruğu (Job) ve WebSocket bildirim iskeleti
+- [x] 0.4 İş kuyruğu (Job) ve WebSocket bildirim iskeleti (47, 48 çekirdeği · K-67–K-69, A-36)
 - [ ] 0.5 Motor arayüzü ve sahte motor (fikstür döndürür)
 - [ ] 0.6 Kurulum iskeleti: Windows servisleri, IIS, ayrı SQL Server; temiz makineye kurulum
 - [ ] 0.7 HiGHS paketleme denemesi (yalnız paket, model yok)

@@ -1245,6 +1245,10 @@ Job = sa.Table(
     sa.Column("HeartbeatAt", mssql.DATETIME2(), nullable=True, comment="Son yaşam sinyali"),
     sa.Column("Attempt", sa.Integer(), nullable=True, server_default=sa.text("0"), comment="Deneme sayısı"),
     sa.Column("ErrorText", mssql.NVARCHAR(), nullable=True, comment="Hata"),
+    sa.Column("CreatedAt", mssql.DATETIME2(), nullable=False, comment="İstek zamanı (UTC); sıra buna göre görünür"),
+    sa.Column("StartedAt", mssql.DATETIME2(), nullable=True, comment="Çalışmaya başlama (UTC)"),
+    sa.Column("EndedAt", mssql.DATETIME2(), nullable=True, comment="Bitiş, hata ya da iptal (UTC)"),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik (UTC); API bildirim için izler (K-69)"),
     schema="adm",
     comment="İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler.",
 )

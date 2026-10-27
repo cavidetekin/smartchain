@@ -126,7 +126,7 @@
 | `adm.DataVersion` | Yükleme ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi. | Veri yönetimi |  | 6 |
 | `adm.DataVersionEntity` | Kısmi yüklemede hangi varlıkların yüklendiği. | Veri yönetimi |  | 3 |
 | `adm.AppUser` | Uygulama kullanıcısı (Faz 1'de yerel). | Sistem |  | 9 |
-| `adm.Job` | İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler. | Sistem |  | 11 |
+| `adm.Job` | İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler. | Sistem |  | 15 |
 | `adm.SolverLog` | Çözüm logu; ilk günden tutulur. | Sistem |  | 6 |
 | `adm.AuditLog` | Kim, ne zaman, neyi değiştirdi; giriş kayıtları; sistem sahibi işlemleri silinemez. | Sistem |  | 8 |
 | `adm.SystemSetting` | Sistem sahibinin ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri. | Sistem |  | 2 |

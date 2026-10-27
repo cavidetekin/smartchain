@@ -72,6 +72,9 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | K-64 | Veritabanı şeması docs'tan üretilir (db/generate.py); geçişler Alembic ile, her geçişin geri adımı vardır. Tablo ve alan açıklamaları veritabanına da yazılır. | Geliştirme 0.2 |
 | K-65 | Takvim (Calendar, CalendarDay), vardiya (Shift, ShiftPlan), duruş (ResourceDowntime) ve kapasite profili (ResourceCapacityProfile) Smartchain'de ekrandan tek tek girilir; entegrasyondan ve Excel'den gelmez, stg tabloları yoktur. Yetkinlik grubu, işçi, işçi–yetkinlik ve izin (CompetenceGroup, Worker, WorkerCompetence, WorkerAbsence) ERP'den gelir. | Geliştirme 0.2 |
 | K-66 | Tedarikçi kapasitesi ve kapalı dönemleri SupplierLimit parametre tablosunda tutulur (problem 39): malzeme bazında dönem üst limiti; malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Tedarikçide takvim alanı yoktur; Smartchain'de ekrandan girilir. | Geliştirme 0.2 |
+| K-67 | İş kuyruğu adm.Job tablosudur. Durum değerleri veri modelinde yazıldığı gibi saklanır (Sırada, Çalışıyor, Bitti, Hata, İptal); 'takıldı' ayrı durum değildir, kalp atışından hesaplanır. Takılan iş JobMaxAttempts'e kadar yeniden sıraya döner, sonra Hata olur (fonksiyon 47, 93). | Geliştirme 0.4 |
+| K-68 | İş alma tek SQL işleminde uygulama kilidiyle (sp_getapplock) sıraya konur; kanalın çalışan iş sayısı sınırın altındaysa en yüksek öncelikli, sonra en eski Sırada iş Çalışıyor olur. Sınır kanal bazındadır (etkileşim 3, gece ayrı) ve SystemSetting'den okunur, satır yoksa varsayılan geçerlidir (fonksiyon 47). | Geliştirme 0.4 |
+| K-69 | İşi motor ayrı süreçte çalıştırır; API Job tablosunu UpdatedAt ile kısa aralıkla izler ve değişen işi sahibine WebSocket'le iter. Ek bileşen (mesaj kuyruğu, Service Broker) yoktur (fonksiyon 48). | Geliştirme 0.4 |
 
 ## Açık konular
 
@@ -112,3 +115,4 @@ Kaynak: MDD 26.10.2026 adım kartları. Numaralar proje genelinde sıralıdır (
 | A-33 | Kalan 56 hikâyenin kabul kriterleri dilime alınırken yazılacak. | 20 |
 | A-34 | Aktarım filtresinin yöntemi: kapsam filtresi (pasif malzeme, kapalı sipariş, başka lokasyon gibi) nasıl tanımlanacak? Değişen kayıtlar K-40 ve A-23'e, hatalı satırlar 26. adımdaki hata yönetimine bağlı. | Geliştirme 4.3 |
 | A-35 | Kaynağın takvimi (Resource.CalendarId) şimdilik Smartchain'de atanır, entegrasyonla gelmez; ERP'den takvim kodu alınıp alınmayacağına sonra bakılacak. | Geliştirme 0.2 |
+| A-36 | Oturum (2.1) gelene kadar WebSocket (/api/ws) ve iş listesi (/api/jobs) kullanıcıyı user_id sorgu parametresiyle alır; geçicidir, 2.1'de oturumdan okunur. Admin'e sistem olayı ve başkasının işini iptal yetkisi 2.2'de. | Geliştirme 0.4 |

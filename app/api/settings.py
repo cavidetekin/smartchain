@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     db_connect_timeout: int = 5
     # API belgesi (/api/docs) dışarıdan JS yükler; kapalı ağ kuralı gereği yalnız geliştirmede açılır.
     enable_docs: bool = False
+    # İş kuyruğunu izleme aralığı (sn); değişen iş sahibine WebSocket'le iletilir (K-69). 0: izleme kapalı.
+    job_watch_seconds: float = 1.0
 
 
 @lru_cache
