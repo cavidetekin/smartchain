@@ -12,7 +12,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from db import models
 from ..cleanup import delete_plan_data
-from .dataset import LOCATION_CODE, SET_NAME, Dataset
+from .dataset import FIELD_DEFINITIONS, LOCATION_CODE, SET_NAME, Dataset
 
 log = logging.getLogger("smartchain.synthetic")
 
@@ -123,6 +123,13 @@ def load(engine: Engine, ds: Dataset) -> dict:
         for u in ds.rows("UnitOfMeasure"):
             conn.execute(text("IF NOT EXISTS (SELECT 1 FROM core.UnitOfMeasure WHERE Code = :c) "
                               "INSERT INTO core.UnitOfMeasure (Code, Name) VALUES (:c, :n)"), {"c": u["Code"], "n": u["Name"]})
+        # Ek alan etiketi (K-88): yoksa eklenir; sistem sahibinin tanımı varsa dokunulmaz.
+        fd = _table("FieldDefinition", "adm")
+        for d in FIELD_DEFINITIONS:
+            exists = conn.execute(sa.select(fd.c.TableName).where(fd.c.TableName == d["TableName"],
+                                                                  fd.c.FieldName == d["FieldName"])).first()
+            if not exists:
+                conn.execute(sa.insert(fd).values(**d))
         dv = _table("DataVersion", "adm")
         version = conn.execute(sa.insert(dv).values(LocationId=location_id, CreatedAt=now, LoadType="Tam",
                                                     IsPinned=False, IsSynthetic=True).returning(dv.c.Id)).scalar_one()

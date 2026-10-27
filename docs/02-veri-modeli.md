@@ -74,7 +74,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yapı ve işlem verisi · 5 alan
   - AdditionalText1–3 ve AdditionalNumber1–2. ProductionVersion, BOM, Routing, MaterialSupplier, SalesOrderLine, Forecast, Stock, iş emri tabloları, PurchaseOrderLine, TransferOrder, ProductionConfirmation.
   - Kullanım
-  - Etiket ve görünürlük FieldDefinition'da (ör. AdditionalText3 = 'Malzeme sınıfı'). Ekranda sıralanır ve filtrelenir (U-6–U-8); veri kurallarında koşul olarak kullanılabilir.
+  - Etiket ve görünürlük FieldDefinition'da (ör. AdditionalText3 = 'Malzeme sınıfı'): Label'ı olmayan ek alan listede görünmez (K-88). Ekranda sıralanır ve filtrelenir (U-6–U-8); veri kurallarında koşul olarak kullanılabilir.
 
 ### Alanların ana kaynağı
 <sub>21. Veri modeli · Alan kaynakları</sub>
@@ -540,12 +540,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Name | nvarchar(200) |  | Malzeme adı | ERP | H | H |  |
 | BaseUom | nvarchar(10) | FK | Temel birim | ERP | H | E |  |
 | MaterialGroup | nvarchar(50) |  | Malzeme grubu | ERP | H | H |  |
-| MaterialLevel | nvarchar(15) |  | Hammadde \| Yarı mamul \| Nihai ürün | ERP, yoksa kural | H | H |  |
+| MaterialLevel | nvarchar(15) |  | Malzeme seviyesi: Hammadde \| Yarı mamul \| Nihai ürün | ERP, yoksa kural | H | H |  |
 | IsPurchasable | bit |  | Satın alınabilir | ERP, yoksa kural | H | H | 0 |
 | IsProducible | bit |  | Üretilebilir | ERP, yoksa kural | H | H | 0 |
 | IsSellable | bit |  | Satılabilir | ERP, yoksa kural | H | H | 0 |
-| DefaultProcurement | nvarchar(10) |  | Üretim \| Satın alma \| Fason | ERP, yoksa kural | H | H |  |
-| Ownership | nvarchar(10) |  | Kendi \| Müşteri (müşteri temin malzemesi) | Kural ya da elle | H | H | Kendi |
+| DefaultProcurement | nvarchar(10) |  | Tedarik türü: Üretim \| Satın alma \| Fason | ERP, yoksa kural | H | H |  |
+| Ownership | nvarchar(10) |  | Sahiplik: Kendi \| Müşteri (müşteri temin malzemesi) | Kural ya da elle | H | H | Kendi |
 
 ### Material
 <sub>21. Veri modeli · Malzeme · 2/2</sub>
@@ -555,13 +555,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
-| IsProjectTracked | bit |  | Proje bazlı takip edilir mi (değilse her zaman ortak) | Kural ya da elle | H | H | 0 |
+| IsProjectTracked | bit |  | Proje bazlı takip; değilse her zaman ortak | Kural ya da elle | H | H | 0 |
 | IsPhantom | bit |  | Hayalet yarı mamul | ERP | H | H | 0 |
 | ProductionLeadTimeDays | decimal(9,2) |  | Üretim süresi (gün) | ERP, yoksa kural | H | H |  |
 | GoodsReceiptDays | decimal(9,2) |  | Mal kabul süresi (iş günü) | ERP, yoksa kural | H | H | 0 |
 | SafetyStock | decimal(18,4) |  | Güvenlik stoğu | ERP | H | H | 0 |
 | MaxStock | decimal(18,4) |  | Maksimum stok | ERP | H | H |  |
-| LotSizePolicy | nvarchar(15) |  | Üretimde: Lot-for-lot \| Sabit \| Dönemsel | ERP, yoksa kural | H | H | Lot-for-lot |
+| LotSizePolicy | nvarchar(15) |  | Lot politikası (üretimde): Lot-for-lot \| Sabit \| Dönemsel | ERP, yoksa kural | H | H | Lot-for-lot |
 | MinLot | decimal(18,4) |  | Üretimde minimum | ERP | H | H |  |
 | MaxLot | decimal(18,4) |  | Üretimde maksimum | ERP | H | H |  |
 | LotMultiple | decimal(18,4) |  | Üretimde kat | ERP | H | H |  |
@@ -1052,6 +1052,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ManualOverrides | bit |  | Elle değer her şeyi ezer mi | Sistem | H | H | 1 |
 | DefaultValue | nvarchar(200) |  | Varsayılan | Sistem | H | H |  |
 | IsRequired | bit |  | Zorunlu mu | Sistem | H | H | 0 |
+| Label | nvarchar(100) |  | Ekranda görünen etiket; standart alanın etiketini ezer, ek alanda boşsa alan gösterilmez (K-88) | Sistem | H | H |  |
 
 ### DataRule
 <sub>21. Veri modeli · Veri yönetimi</sub>

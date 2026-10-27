@@ -46,6 +46,55 @@ Ortam değişkenleri (`SMARTCHAIN_` önekiyle) ya da kök klasördeki `.env` dos
 | `SMARTCHAIN_ENABLE_DOCS` | `false` |
 | `SMARTCHAIN_JOB_WATCH_SECONDS` | `1.0` · iş kuyruğunu izleme aralığı; `0` izlemeyi kapatır |
 
+## Liste sorgusu (K-87)
+
+Bütün tablolar (ana veri, plan, rapor) aynı sözleşmeyle okunur. Filtre, sıralama ve parça parça yükleme sunucuda yapılır (U-21); ön yüzdeki ortak tablo bileşeni (docs/12) bu sözleşmeyi kullanır. Her liste sunucuda bir liste tanımıdır (`app/api/lists/`): tablo, alanlar ve sırası, varsayılan görünür alanlar, varsayılan sıralama.
+
+### Kolonlar · `GET /api/<liste>/columns`
+
+```json
+[{"field": "MaterialLevel", "label": "Malzeme seviyesi", "type": "text", "filter": "list",
+  "values": ["Hammadde", "Yarı mamul", "Nihai ürün"], "values_from_server": false, "decimals": null, "default_visible": true}]
+```
+
+- **Etiket:** docs/02 AÇIKLAMA'sından üretilir; FieldDefinition.Label varsa onu kullanır. Ek alan (K-59) yalnız Label'ı varsa listelenir (K-88).
+- **Tip** (`type`) veritabanı tipinden gelir: `text`, `integer`, `number` (`decimals` ile), `bool`, `date`, `datetime`.
+- **Filtre tipi** (`filter`) tipten gelir: metin → `text`; değer listeli metin (K-80) ve `bool` → `list` (değerler `values`'ta; bool için Evet / Hayır = `true` / `false`); liste tanımında işaretli kodlu alanlar → `list`, değerler `values` uç noktasından (`values_from_server: true`); sayı → `number`; tarih → `date`.
+
+### Sorgu · `POST /api/<liste>/query`
+
+```json
+{"fields": ["Code", "Name", "MaterialLevel"],
+ "sort": [{"field": "MaterialLevel", "dir": "asc"}, {"field": "Code", "dir": "desc"}],
+ "filters": [{"field": "Name", "op": "contains", "value": "mil"},
+             {"field": "MaterialLevel", "op": "in", "values": ["Hammadde"]},
+             {"field": "SafetyStock", "op": "between", "min": 10, "max": 100},
+             {"field": "UpdatedAt", "op": "relative", "value": "this_week"}],
+ "offset": 0, "limit": 100}
+```
+
+Cevap: `{"rows": [{"Id": 7, "Code": "…", …}], "offset": 0, "filtered": 120, "total": 840}`. `Id` her satırda vardır. `filtered` filtreli sayı, `total` filtresiz sayıdır; arayüzdeki "120 / 840" sayacı bunlardır (U-12). Sayılar JSON sayısı, tarihler ISO döner (`2026-10-27`); zamanlı alanlar veritabanında UTC tutulur ve saat dilimiyle döner (`2026-10-27T09:20:00+00:00`), tarih filtresinin gün sınırı yerel gece yarısıdır.
+
+| Filtre tipi | `op` | Alanlar |
+|---|---|---|
+| Metin | `contains`, `not_contains`, `equals`, `starts_with` | `value` |
+| Liste | `in` | `values` (en az bir değer) |
+| Sayı | `between` (`min`, `max`; biri boş olabilir), `eq`, `gt`, `lt` | `min`/`max` ya da `value` |
+| Tarih | `between` (`from`, `to`; ISO tarih, biri boş olabilir), `relative` | `value`: `this_week` (bu hafta), `next_4_weeks` (bu haftanın başından dört hafta) |
+
+- Birden fazla filtre birlikte (VE) uygulanır. `empty` (boş değer, U-13) 1.4'te eklenir.
+- **Hafta:** ISO hafta, Pazartesi başlar; "bugün" API sunucusunun yerel tarihidir (kurulum müşterinin sunucusunda, yerel saat diliminde).
+- **Türkçe:** metin karşılaştırma ve sıralama `Turkish_100_CI_AS` ile; büyük/küçük harf duyarsız, "İ/i" ve "I/ı" doğru.
+- **Güvenlik:** alan ve operatör liste tanımındaki beyaz listeden; değerler parametreyle gider; `LIKE` içinde `%`, `_`, `[` düz karakterdir.
+- **Kararlı parçalar:** sıralamanın sonuna her zaman `Id` eklenir; parçalar örtüşmez. Sıralama verilmezse liste tanımındaki varsayılan kullanılır.
+- **Sınırlar:** `limit` varsayılan 100, en çok 500; `offset` ≥ 0.
+- **Hatalar:** bilinmeyen alan, operatör, eksik değer ya da sınır dışı `limit` → 422 `validation` (`details`: `field`, `problem`); veritabanı yoksa 503 `database_unavailable`; veri versiyonu yoksa 404 `no_data_version`.
+- **Versiyon:** liste güncel veri versiyonunu okur (`VersionFrom ≤ v` ve `VersionTo` boş ya da `≥ v`; motorun okuduğu koşulla aynı).
+
+### Değerler · `POST /api/<liste>/values`
+
+Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "filters": [...]}` → `[{"value": "Dövme", "count": 12}, …]`. Diğer filtreler uygulanmış hâldeki ilk 100 farklı değer, değere göre sıralı; `search` içerir araması yapar. Yalnız `filter: "list"` alanlarda çalışır.
+
 ## Uç noktalar
 
 | Adres | Ne | Durum |
@@ -55,6 +104,7 @@ Ortam değişkenleri (`SMARTCHAIN_` önekiyle) ya da kök klasördeki `.env` dos
 | `GET /api/jobs/{id}` | İşin durumu, ilerlemesi, sıra numarası, süresi, `is_stale` (kalp atışı eşiği aşıldı). Yoksa 404 `job_not_found`. | uygulandı (0.4) |
 | `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder. Çalışan iş 409 `job_not_cancellable` (durdurma motorda, fonksiyon 93). Yetki kuralı 2.2'de. | uygulandı (0.4) |
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
+| `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
 | `WS /api/ws?user_id=` | Anlık bildirim kanalı (fonksiyon 48). Kullanıcı şimdilik parametreyle (A-36). | uygulandı (0.4) |
 
 İş eklemek için uç nokta yoktur: işi ilgili fonksiyon (yeniden hesap 46, yükleme…) kendi servisinden `app.jobs.queue.enqueue` ile ekler.

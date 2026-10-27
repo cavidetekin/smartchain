@@ -53,3 +53,8 @@ export function parseTrDate(text: string): Date | null {
   const date = new Date(y, mo - 1, d);
   return date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d ? date : null;
 }
+
+/** Sözleşmedeki tarih (docs/08): yerel gün, ISO "yyyy-aa-gg". */
+export function toIsoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}

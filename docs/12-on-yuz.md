@@ -150,6 +150,26 @@ Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. M
 
 **Örnek sayfa:** `/stil`. Menüde yoktur (ekran değildir); bütün renkleri ve bileşenleri dört yazı boyutunda gösterir; geliştirme ve gözden geçirme içindir.
 
+## Tablo bileşeni (1.3, K-87)
+
+Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack Table (manuel mod) ve TanStack Virtual üzerine kurulur. Veri liste sorgu sözleşmesiyle sunucudan gelir (docs/08, K-87); filtre ve sıralama sunucuda yapılır (U-21).
+
+| Parça | Davranış |
+|---|---|
+| Araç çubuğu | Kayıt sayacı "120 / 840" (filtreli / toplam, Türkçe biçim; U-12). "Alanlar (9/34)" düğmesi alan panelini açar |
+| Alan paneli (U-6) | Listenin bütün alanları aramalı onay kutusu listesinde; kapalı alanlar buradan geri açılır. "Varsayılana dön". En az bir alan açık kalır. Kapatılan alan sunucudan istenmez |
+| Sıralama (U-7) | Başlığa tıklama: artan → azalan → kapalı (tek sıralama). Shift+tıklama: ek sıralama ekler ya da yönünü değiştirir. Birden çok sıralamada başlıkta ok ve öncelik numarası (1, 2…) görünür |
+| Filtre (U-8) | Başlıktaki filtre ikonundan alan tipine göre menü: metin (içerir, içermez, eşittir, ile başlar), liste (aramalı çoklu seçim, değer sayılarıyla), sayı (aralık, eşit, büyük, küçük; Türkçe giriş), tarih (aralık; "Bu hafta", "Sonraki 4 hafta"). Uygula ve Temizle. Filtreli alanın ikonu indigo (U-4); filtreler birlikte uygulanır |
+| Gövde | Sanal kaydırma: yalnız görünen satırlar ve kısa bir tampon çizilir; veri 100 satırlık parçalarla, kaydırdıkça gelir. Başlık yapışkan. Sayılar sağa yaslı, Inter, eşit genişlikte rakamlar (K-86); tarih gg.aa.yyyy; evet/hayır yazıyla; boş hücre boş |
+| Durumlar | Yükleniyor; hata ve "Yeniden dene"; eşleşme yoksa "Eşleşen kayıt yok" ve "Filtreleri temizle" |
+
+- **Ekrana sığar (U-22):** tablo çalışma alanının kalan yüksekliğini doldurur, kaydırma tablonun içindedir; kenar menü daraltılınca tablo genişler.
+- **Satır yüksekliği (U-23):** `--row-height: 2.1538rem` (standart 13 px'te 28 px); yazı boyutuyla birlikte ölçeklenir.
+- **Tercihler:** açık alanlar ve sıralama 1.4'teki kayıtlı görünüme kadar sayfa açıkken tutulur.
+- **Performans hedefi:** 50.000 satırlık tabloda filtre + iki alanlı sıralama + ilk 100 satır + iki sayım geliştirme makinesinde ortanca 300 ms altında (`tests/test_lists_perf.py`); 100.000 satırda DOM'da yalnız görünen satırlar ve en çok 2 × 10 tampon satır bulunur; aynı parça ikinci kez istenmez.
+- **Deneme sayfası:** `/tablo` menüde yer almaz; sentetik malzeme listesini gösterir (geliştirme ve gözden geçirme içindir). Gerçek malzeme ekranı 6.1'de.
+- 1.4'te: kayıtlı görünüm, kolon sürükleme ve sabitleme, gruplama, aktif filtre etiketleri, boş değer filtresi. 1.5'te: Excel'e aktarım ve yapıştırma.
+
 ## Durum
 
 | Parça | Durum |
@@ -157,3 +177,4 @@ Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. M
 | Teknoloji ve kabuk kararları | karar verildi (K-81, K-82) |
 | Kabuk | uygulandı (1.1) |
 | Stil sistemi ve ortak bileşenler | uygulandı (1.2) |
+| Tablo bileşeni ve liste sorgu sözleşmesi | uygulandı (1.3) |

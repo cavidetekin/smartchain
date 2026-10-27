@@ -5,7 +5,9 @@ import { vi } from "vitest";
 
 import { App } from "../App";
 
-export type Routes = Record<string, { status?: number; body: unknown } | "offline">;
+export type Reply = { status?: number; body: unknown };
+/** Sabit cevap, "offline" ya da isteğe göre cevap üreten işlev (yöntem ve gövde ile). */
+export type Routes = Record<string, Reply | "offline" | ((url: string, init?: RequestInit) => Reply)>;
 
 export const DATA_VERSION = {
   id: 35, location_code: "ORM-01", created_at: "2026-10-27T09:20:00+00:00", load_type: "Tam", is_synthetic: true,
@@ -17,13 +19,14 @@ export function mockApi(routes: Routes = {}) {
     "/api/jobs": { body: { jobs: [], counters: {} } },
     ...routes,
   };
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const key = Object.keys(all).find((k) => url.startsWith(k));
     const route = key ? all[key] : undefined;
     if (!route || route === "offline") throw new TypeError("Failed to fetch");
-    return new Response(JSON.stringify(route.body), {
-      status: route.status ?? 200, headers: { "Content-Type": "application/json" },
+    const reply = typeof route === "function" ? route(url, init) : route;
+    return new Response(JSON.stringify(reply.body), {
+      status: reply.status ?? 200, headers: { "Content-Type": "application/json" },
     });
   });
   vi.stubGlobal("fetch", fetchMock);

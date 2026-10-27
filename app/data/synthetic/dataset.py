@@ -236,6 +236,11 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
 
 # --- Malzemeler ---
 
+# Ek alan örneği (K-59, K-88; tablo bileşeni denemesi 1.3): Material.AdditionalText1 "Malzeme sınıfı".
+MATERIAL_CLASS = {"Nihai ürün": "A", "Yarı mamul": "B", "Hammadde": "C"}
+FIELD_DEFINITIONS = [dict(TableName="Material", FieldName="AdditionalText1", FieldClass="Ana veri",
+                          EditableInWorkspace=False, Label="Malzeme sınıfı")]
+
 def _materials(b: _Builder, rng: random.Random) -> None:
     def mat(code, name, level, group, uom, producible, lead=None, **extra):
         row = dict(LocationId=1, Code=code, Name=name, BaseUom=uom, MaterialGroup=group,
@@ -244,7 +249,8 @@ def _materials(b: _Builder, rng: random.Random) -> None:
                    Ownership="Kendi", IsProjectTracked=False, IsPhantom=False,
                    ProductionLeadTimeDays=lead if producible else None,
                    GoodsReceiptDays=None if producible else 1,
-                   LotSizePolicy="Lot-for-lot" if producible else None)
+                   LotSizePolicy="Lot-for-lot" if producible else None,
+                   AdditionalText1=MATERIAL_CLASS[level])
         return b.add("Material", **{**row, **extra})
 
     for code, name, _ in FINISHED:

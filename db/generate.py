@@ -39,7 +39,7 @@ VERSION_COLS = [
     ("VersionFrom", "int", "Kaydın geçerli olduğu ilk veri versiyonu", True),
     ("VersionTo", "int", "Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş", False),
     ("ImportBatchId", "bigint", "Kaydı getiren yükleme partisi", False),
-    ("BusinessKey", "nvarchar(200)", "İş anahtarı (kod ya da kodların birleşimi)", True),
+    ("BusinessKey", "nvarchar(200)", "İş anahtarı; kod ya da kodların birleşimi", True),
     ("UpdatedAt", "datetime2", "Son değişiklik zamanı", True),
 ]
 # Entegrasyon tablolarının standart alanları
@@ -274,6 +274,10 @@ def render_models(spec) -> str:
                 kw.append(f"server_default=sa.text({q(d)})")
             if f["desc"]:
                 kw.append(f"comment={q(f['desc'])}")
+            label, values = field_label(f), value_list(f["desc"])
+            if schema != "stg" and (label or values):
+                info = ([f"'label': {q(label)}"] if label else []) + ([f"'values': {json.dumps(values, ensure_ascii=False)}"] if values else [])
+                kw.append(f"info={{{', '.join(info)}}}")
             cols.append(f"    sa.Column({', '.join(args + kw)}),")
         if uk:
             where = ', mssql_where=sa.text("VersionTo IS NULL")' if t["versioned"] else ""
@@ -360,6 +364,40 @@ def value_list(desc: str) -> list[str]:
     return [v for v in (re.sub(r"\s*\(.*?\)", "", v).strip(" …") for v in desc.split("|")) if v]
 
 
+# Liste tanımı olan tablolar (app/api/lists): etiketleri K-88 kontrolüne girer. Yeni liste eklenince buraya da yazılır.
+LIST_TABLES = {("core", "Material")}
+LABEL_MAX = 40
+ADDITIONAL_FIELD = re.compile(r"Additional(Text|Number)\d+$")
+
+
+def field_label(f) -> str:
+    """K-88: kolon etiketi AÇIKLAMA'dan. Değer listesinde ':' öncesi, diğerlerinde ilk ';' öncesi.
+    Ek alanların (K-59) etiketi FieldDefinition.Label'dadır; burada boş kalır."""
+    desc = f["desc"].strip()
+    if ADDITIONAL_FIELD.match(f["name"]):
+        return ""
+    if "|" in desc:
+        head = desc.split("|", 1)[0]
+        return head.split(":", 1)[0].strip() if ":" in head else ""
+    return desc.split(";", 1)[0].strip()
+
+
+def label_problems(spec) -> list[str]:
+    """K-88: liste tablolarında her alanın (ek alanlar hariç) 1–40 karakterlik etiketi olmalı."""
+    problems = []
+    for t in spec:
+        if (t["schema"], t["name"]) not in LIST_TABLES:
+            continue
+        common = [dict(name=n, desc=d) for n, _, d, _ in VERSION_COLS] if t["versioned"] else []
+        for f in list(t["fields"]) + common:
+            if ADDITIONAL_FIELD.match(f["name"]):
+                continue
+            label = field_label(f)
+            if not label or len(label) > LABEL_MAX:
+                problems.append(f"{t['schema']}.{t['name']}.{f['name']}: '{label}' ({len(label)} karakter)")
+    return problems
+
+
 def length_problems(spec) -> list[str]:
     """K-80: değer listesindeki en uzun değer ve varsayılan değer alan uzunluğuna sığmalı."""
     problems = []
@@ -380,6 +418,9 @@ def main():
     problems = length_problems(spec)
     if problems:
         raise SystemExit("Değer alanına sığmıyor (K-80):\n  " + "\n  ".join(problems))
+    problems = label_problems(spec)
+    if problems:
+        raise SystemExit("Etiket eksik ya da uzun (K-88):\n  " + "\n  ".join(problems))
     (ROOT / "db" / "models.py").write_text(render_models(spec) + "\n", encoding="utf-8")
     (DOCS / "07-veritabani.md").write_text(render_map(spec) + "\n", encoding="utf-8")
     counts = {s: sum(1 for t in spec if t["schema"] == s) for s in SCHEMA_TITLE}

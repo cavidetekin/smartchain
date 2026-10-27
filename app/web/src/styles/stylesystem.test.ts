@@ -2,6 +2,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+import { ROW_REM } from "../table/DataTable";
+
 const read = (name: string) => readFileSync(new URL(name, import.meta.url), "utf-8");
 const tokens = read("./tokens.css");
 const sheets = { "app.css": read("./app.css"), "components.css": read("./components.css") };
@@ -131,5 +133,10 @@ describe("tek kaynak ve ölçek (K-85, U-23)", () => {
     expect(["xs", "sm", "base", "md", "lg", "xl", "2xl", "kpi"].map((s) => px(`fs-${s}`)))
       .toEqual([11, 12, 13, 14, 16, 18, 24, 28]);
     expect([1, 2, 3, 4, 5, 6, 8].map((i) => px(`space-${i}`))).toEqual([4, 8, 12, 16, 20, 24, 32]);
+  });
+
+  it("tablo satırı 13 px'te 28 px; DataTable aynı değeri kullanır (U-23)", () => {
+    expect(token("row-height")).toBe(`${ROW_REM}rem`);
+    expect(Math.round(ROW_REM * 13)).toBe(28);
   });
 });

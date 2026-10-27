@@ -136,6 +136,7 @@
   --sidebar-width: 19.6923rem;              /* 256 px standart boyutta (256 / 13); yazı boyutuyla ölçeklenir (K-84) */
   --sidebar-collapsed: 3.5rem;
   --context-height: 3rem;
+  --row-height: 2.1538rem;                  /* tablo satırı: 28 px standart boyutta; yazı boyutuyla ölçeklenir (U-23). DataTable ROW_REM ile aynı */
   --radius: 0.375rem;
   --radius-lg: 0.6154rem;                   /* kart: 8 px */
   --card-border: var(--lead-100);

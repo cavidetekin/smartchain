@@ -67,7 +67,7 @@ python -m app.data.synthetic check                                     # sayıla
 - **Yeniden yükleme:** Önce `ORM-01`'in veri versiyonlarına bağlı her şey silinir: ana tablo satırları, o versiyonlarla açılmış plan hesapları, senaryolar, çalışmalar ve "Sentetik v0" parametre seti. Hepsi tek işlemde yapılır.
 - **Güvenlik kilidi:** Sentetik kayıtlar `IsSynthetic = 1` taşır (DataVersion, Location, ParameterSet). Veritabanında sentetik olmayan bir kayıt varsa `load` ve `unload` hiçbir şey silmeden durur ve kayıtları adıyla yazar.
 - **Parametre seti "Sentetik v0":** ModelType LP, 13 haftalık zaman yapısı, öncelik kuralı ve tedarikçi limiti.
-- **Boş kalanlar:** Forecast (tahmin üretilmez), TransferOrder (tek lokasyon); ek alanlar (K-59).
+- **Boş kalanlar:** Forecast (tahmin üretilmez), TransferOrder (tek lokasyon); ek alanlar (K-59); yalnız Material.AdditionalText1 doludur: FieldDefinition etiketi "Malzeme sınıfı", değerler A / B / C (tablo bileşeni denemesi, 1.3).
 
 **Bilerek konmuş durumların kurulumu.** `check` ve testler bunları veriden hesaplayarak doğrular; ölçüler kabadır, plan değildir.
 

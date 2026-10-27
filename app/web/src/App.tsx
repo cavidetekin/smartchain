@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from "react-router";
 import { HOME, SCREENS } from "./screens/catalog";
 import { NotFound, Placeholder } from "./screens/Placeholder";
 import { StyleGuide } from "./screens/StyleGuide";
+import { TableDemo } from "./screens/TableDemo";
 import { Shell } from "./shell/Shell";
 
 export function App({ userId }: { userId: number }) {
@@ -16,6 +17,8 @@ export function App({ userId }: { userId: number }) {
         ))}
         {/* Stil örnekleri (K-85): ekran değildir, menüde yoktur */}
         <Route path="/stil" element={<StyleGuide />} />
+        {/* Tablo bileşeni denemesi (K-87): ekran değildir, menüde yoktur */}
+        <Route path="/tablo" element={<TableDemo />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
