@@ -128,6 +128,7 @@
   --text: #1f2430;
   --text-muted: var(--lead-600);
   --line: var(--lead-100);
+  --backdrop: rgba(31, 36, 48, 0.32);       /* pencere arkası (Dialog) */
   --shadow-popover: 0 0.5rem 1.5rem rgba(31, 36, 48, 0.12);
 
   --font-sans: "Instrument Sans", system-ui, sans-serif;

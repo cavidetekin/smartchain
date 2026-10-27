@@ -64,7 +64,7 @@ REF_TARGET = {
     "OwnerUserId": "AppUser", "UserId": "AppUser", "CompetenceGroupId": "CompetenceGroup",
     "ShiftPlanId": "ShiftPlan", "ShiftId": "Shift", "ScenarioDefinitionId": "ScenarioDefinition",
     "SalesOrderLineId": "SalesOrderLine", "ProjectGroupId": "ProjectGroup",
-    "ProductionVersionId": "ProductionVersion",
+    "ProductionVersionId": "ProductionVersion", "ViewId": "TableView",
     "BaseUom": ("UnitOfMeasure", "Code"), "FromUom": ("UnitOfMeasure", "Code"),
     "ToUom": ("UnitOfMeasure", "Code"), "CapacityUnit": ("UnitOfMeasure", "Code"),
     "WarningCode": ("WarningDefinition", "Code"),

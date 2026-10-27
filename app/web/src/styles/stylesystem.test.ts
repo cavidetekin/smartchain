@@ -123,6 +123,14 @@ describe("tek kaynak ve ölçek (K-85, U-23)", () => {
     expect(css.match(/#[0-9a-f]{3,8}\b|rgba?\(/gi)).toBeNull();
   });
 
+  it("app.css (kabuk) ile components.css aynı sınıfı tanımlamaz", () => {
+    // Tanımlanan sınıf, seçicinin ilk sınıfıdır (".sc-popover .sc-segment" sc-popover'ı tanımlar, segmenti yalnız ayarlar).
+    const defined = (css: string) => new Set(rules(css).flatMap((r) => r.selector.split(","))
+      .map((sel) => sel.trim().match(/^\.(sc-[\w-]+)/)?.[1]).filter((c): c is string => Boolean(c)));
+    const shell = defined(sheets["app.css"]);
+    expect([...defined(sheets["components.css"])].filter((c) => shell.has(c))).toEqual([]);
+  });
+
   it("components.css ölçüleri rem; px yalnız 1–2 px çizgi", () => {
     const px = [...sheets["components.css"].matchAll(/(\d*\.?\d+)px/g)].map((m) => m[1]);
     expect(px.filter((v) => v !== "1" && v !== "2")).toEqual([]);

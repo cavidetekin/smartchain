@@ -166,10 +166,27 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 - **Ekrana sığar (U-22):** tablo çalışma alanının kalan yüksekliğini doldurur, kaydırma tablonun içindedir; kenar menü daraltılınca tablo genişler.
 - **Ondalık (K-88):** sayı kolonunun ondalığı liste tanımında yazılır (`app/api/lists/`), veritabanı ölçeğinden alınmaz. Gün, adet gibi tam sayı anlamındaki alanlar ondalıksız (0); oran ve yüzde 1. Miktar kolonları "ondalık birimden" işaretlenir: her satır malzemenin temel biriminin ondalığıyla yazılır (UnitOfMeasure.Decimals; ADET 0, KG 3, M 2, SAAT 2, bilinmeyen 2), aynı kolonda birimi farklı satırlar farklı ondalık taşıyabilir. Ondalığı belirsiz sayı alanı testte hata verir.
 - **Satır yüksekliği (U-23):** `--row-height: 2.1538rem` (standart 13 px'te 28 px); yazı boyutuyla birlikte ölçeklenir.
-- **Tercihler:** açık alanlar ve sıralama 1.4'teki kayıtlı görünüme kadar sayfa açıkken tutulur.
+- **Tercihler:** alanlar, sıra, genişlik, sabitleme, sıralama, filtre ve gruplama kayıtlı görünümde saklanır (1.4, K-89).
 - **Performans hedefi:** 50.000 satırlık tabloda filtre + iki alanlı sıralama + ilk 100 satır + iki sayım geliştirme makinesinde ortanca 300 ms altında (`tests/test_lists_perf.py`); 100.000 satırda DOM'da yalnız görünen satırlar ve en çok 2 × 10 tampon satır bulunur; aynı parça ikinci kez istenmez.
 - **Deneme sayfası:** `/tablo` menüde yer almaz; sentetik malzeme listesini gösterir (geliştirme ve gözden geçirme içindir). Gerçek malzeme ekranı 6.1'de.
 - 1.4'te: kayıtlı görünüm, kolon sürükleme ve sabitleme, gruplama, aktif filtre etiketleri, boş değer filtresi. 1.5'te: Excel'e aktarım ve yapıştırma.
+
+## Görünüm (1.4, K-89, K-90)
+
+| Parça | Davranış |
+|---|---|
+| Görünüm seçici (U-9) | Araç çubuğunun solunda: "Standart" (liste tanımından, silinemez), kendi görünümlerim, paylaşılanlar (sahibin adıyla). Varsayılan görünümün yanında yıldız. Değişiklik varsa adın yanında "•" (ipucu "Kaydedilmemiş değişiklik"); "Kaydet" (yalnız sahibiysem) ve "Farklı kaydet" (ad, "Paylaşılan"). Menüde "Varsayılan yap" ve "Sil". Değişiklik varken başka görünüme geçince onay penceresi |
+| Kolon menüsü | Başlıktaki "⋯": sola / sağa taşı, buraya kadar sabitle / sabitlemeyi kaldır, bu alana göre grupla, alanı gizle, genişliği sıfırla |
+| Genişlik (U-10) | Başlığın sağ kenarındaki tutamak sürüklenir; tutamaktayken ← / → 0,5rem. En az 4rem. Genişlik rem olarak saklanır, yazı boyutuyla ölçeklenir (U-23) |
+| Sıra (U-10) | Başlık sürüklenip bırakılır, bırakılacak yer indigo çizgiyle görünür; başlıktayken Alt+← / Alt+→ |
+| Sabitleme (U-10) | İlk N kolon yatay kaydırmada yerinde kalır; sabit bölgenin sağında ince çizgi |
+| Gruplama (U-11) | "Grupla ▾" ile bir ya da birden çok alan (sıralı). Tablonun üstünde "Malzeme seviyesi › Malzeme grubu ile gruplu". Gruplar açık başlar (mockup m24f-0720); başlık satırına tıklayınca ya da Enter / boşlukla daralır; "Tümünü daralt / aç". Grup başlığı kalın ve düzeye göre girintili: ad, satır sayısı, ara toplamlar kendi kolonlarında; birimleri farklı miktarda boş, ipucunda "birimler farklı" |
+| Aktif filtreler (U-12) | Sayacın yanında her filtre bir etiket ("Malzeme adı: içerir 'mil'", "Güvenlik stoğu: 10–100", "Son değişiklik: bu hafta", "Malzeme grubu: Çubuk, Levha +2", "…: boş"). Etikete tıklayınca filtre menüsü açılır; × tek tıkla kaldırır |
+| Boş (U-13) | Metin, sayı ve tarih menüsünde "Boş olanlar"; liste menüsünde değerlerin başında "(Boş)" ve sayısı |
+
+- **Göreli tarih filtresi** görünümde göreli saklanır; görünüm başka gün açılınca o günün haftasına göre çalışır.
+- **2.2'de:** paylaşılan görünümü kimin göreceğine rol kuralı; admin'in bir paylaşılan görünümü herkes ya da bir rol için varsayılan yapması. Şimdi yapılmaz.
+- **Performans hedefi:** 50.000 satırda iki alanla gruplama + filtre + ara toplamlar ortanca 300 ms altında; 1.000 grup ve 100.000 satırda DOM'da yalnız görünen satırlar ve tampon.
 
 ## Durum
 
@@ -179,3 +196,4 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 | Kabuk | uygulandı (1.1) |
 | Stil sistemi ve ortak bileşenler | uygulandı (1.2) |
 | Tablo bileşeni ve liste sorgu sözleşmesi | uygulandı (1.3) |
+| Görünüm: kayıtlı görünüm, kolon düzeni, gruplama, filtre etiketleri, boş | uygulandı (1.4) |

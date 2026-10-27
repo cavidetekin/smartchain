@@ -43,7 +43,7 @@ export function Shell({ userId }: { userId: number }) {
   };
 
   return (
-    <ShellContext.Provider value={{ fontSize, setFontSize: changeFontSize }}>
+    <ShellContext.Provider value={{ userId, fontSize, setFontSize: changeFontSize }}>
     <div className={`sc-shell${collapsed ? " is-collapsed" : ""}`}>
       <Sidebar
         collapsed={collapsed}

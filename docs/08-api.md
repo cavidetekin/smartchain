@@ -98,6 +98,58 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset":
 - **Hatalar:** bilinmeyen alan, operatör, eksik değer ya da sınır dışı `limit` → 422 `validation` (`details`: `field`, `problem`); veritabanı yoksa 503 `database_unavailable`; veri versiyonu yoksa 404 `no_data_version`.
 - **Versiyon:** liste güncel veri versiyonunu okur (`VersionFrom ≤ v` ve `VersionTo` boş ya da `≥ v`; motorun okuduğu koşulla aynı).
 
+### Boş değer (U-13)
+
+- Her filtre tipinde `{"field": …, "op": "empty"}`: değeri boş olanlar. Metinde boş metin de boş sayılır.
+- Liste filtresinde `{"op": "in", "values": [...], "empty": true}`: değerlerden biri ya da boş. Yalnız boş için `values` boş bırakılabilir.
+- `values` cevabında boş satırlar varsa başta `{"value": null, "count": n}` döner.
+
+### Gruplama · `POST /api/<liste>/groups` (K-90)
+
+İstek: `{"group_by": ["MaterialLevel", "MaterialGroup"], "fields": ["SafetyStock", …], "filters": [...], "sort": [...]}`; `fields` görünen kolonlardır, ara toplam yalnız onlar için hesaplanır (boşsa bütün toplanabilen kolonlar). Cevap:
+
+```json
+{"groups": [{"key": ["Hammadde"], "count": 80, "aggregates": {"SafetyStock": 120.0}, "mixed_units": ["SafetyStock"],
+             "children": [{"key": ["Hammadde", "Çubuk"], "count": 20, "aggregates": {"SafetyStock": null}, "mixed_units": []}]}],
+ "aggregates": {"SafetyStock": 120.0}, "leaf_groups": 12, "filtered": 200, "total": 200}
+```
+
+- `key` kökten o gruba kadar değerlerdir; `null` boş gruptur ("(Boş)", sırada en sonda). Grup sırası: grup alanı sıralamadaysa onun yönü, değilse artan, Türkçe.
+- `aggregates` liste tanımındaki kolonlar için: `sum` toplam, `avg` boş olmayan değerlerin ortalaması (üst gruplarda ağırlıklı). En dıştaki `aggregates` bütün filtreli satırlarındır.
+- `mixed_units`: birimden ondalıklı (miktar) kolonlarda grupta birden çok birim varsa kolon burada listelenir ve değeri `null` döner (K-88, K-90). Tek birimliyse `unit_decimals` o birimin ondalığını verir (`{"SafetyStock": 0}`).
+- `filtered` / `total`: "120 / 840" sayacı (U-12).
+- Ortalama arayüzde kolonun ondalığından bir fazla ondalıkla yazılır.
+- Yaprak grup sayısı `ListMaxGroups`'u (SystemSetting, 1.000) aşarsa 422 `too_many_groups`.
+- **Performans:** gruplama sorgusu SQL Server'a paralel plan tercihini bildirir (`OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'))`); 50.000 satırda iki alanla gruplama ortanca ~110 ms (hedef 300 ms). Birim karışıklığı, birim gizli son grup düzeyi yapılarak bulunur; ara toplam yalnız görünen kolonlar (`fields`) için hesaplanır.
+- **Grubun satırları:** `query` isteğine `"group_key": [{"field": "MaterialLevel", "value": "Hammadde"}, …]` eklenir (değer `null` ise boş); parça kuralı aynıdır (K-87).
+- Kolonlar cevabında her kolon `aggregate: "sum" | "avg" | null` taşır.
+
+### Görünümler (K-89)
+
+Kullanıcı şimdilik `user_id` sorgu parametresiyle gelir (A-36).
+
+| Adres | Ne |
+|---|---|
+| `GET /api/<liste>/views?user_id=` | `{"views": [...], "default_view_id": 4 \| null}`; kendi görünümleri ve başkalarının paylaşılanları. Her görünüm: `id`, `name`, `owner_user_id`, `owner_name`, `is_shared`, `is_owner`, `updated_at`, `definition`, `warnings` |
+| `POST /api/<liste>/views?user_id=` | Yeni görünüm: `{"name", "is_shared", "definition"}` → 201 ve görünüm |
+| `PUT /api/<liste>/views/{id}?user_id=` | Ad, paylaşım ya da içerik değişir; yalnız sahibi |
+| `DELETE /api/<liste>/views/{id}?user_id=` | Siler (varsayılan yapılmışsa o seçimler de kalkar); yalnız sahibi |
+| `PUT /api/<liste>/views/default?user_id=` | `{"view_id": 4}` ya da `{"view_id": null}` (Standart) |
+
+**İçerik** (`definition`, sürüm 1):
+
+```json
+{"v": 1, "columns": [{"field": "Code", "width": 7.5}, {"field": "Name", "width": null}], "pinned": 1,
+ "sort": [{"field": "Code", "dir": "asc"}], "filters": [{"field": "UpdatedAt", "op": "relative", "value": "this_week"}],
+ "group_by": ["MaterialLevel"]}
+```
+
+- `columns` görünen alanlar, görünen sırada; `width` rem (boşsa tipin varsayılanı). `pinned` soldan sabit kolon sayısı.
+- Göreli tarih filtresi göreli saklanır; görünüm açıldığı günün haftasına göre çalışır.
+- Kaydederken alanlar ve filtreler liste tanımına göre doğrulanır (422). Açılırken artık olmayan alanlar atılır, `warnings`'te yazar.
+- Hatalar: sahibi değilse 403 `view_not_owner`; aynı adda görünüm varsa 409 `view_name_taken`; görünüm yoksa 404 `view_not_found`; kullanıcı yoksa 404 `user_not_found`.
+- "Standart" görünüm veritabanında değildir: liste tanımındaki varsayılan alanlar ve sıralamadır, silinemez.
+
 ### Değerler · `POST /api/<liste>/values`
 
 Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "filters": [...]}` → `[{"value": "Dövme", "count": 12}, …]`. Diğer filtreler uygulanmış hâldeki ilk 100 farklı değer, değere göre sıralı; `search` içerir araması yapar. Yalnız `filter: "list"` alanlarda çalışır.
@@ -112,6 +164,7 @@ Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "f
 | `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder. Çalışan iş 409 `job_not_cancellable` (durdurma motorda, fonksiyon 93). Yetki kuralı 2.2'de. | uygulandı (0.4) |
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
+| `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
 | `WS /api/ws?user_id=` | Anlık bildirim kanalı (fonksiyon 48). Kullanıcı şimdilik parametreyle (A-36). | uygulandı (0.4) |
 
 İş eklemek için uç nokta yoktur: işi ilgili fonksiyon (yeniden hesap 46, yükleme…) kendi servisinden `app.jobs.queue.enqueue` ile ekler.

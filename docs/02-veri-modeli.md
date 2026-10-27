@@ -1508,6 +1508,38 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `SolverThreads`: bir plan hesabında çözücünün kullanacağı iş parçacığı sayısı (2)
 - Liste ayarları (K-87; docs/08 "Liste sorgusu"):
   - `ListChunkSize`: tablonun bir istekte okuduğu en çok satır (parça büyüklüğü) (100; en çok 500, büyüğü 500 sayılır)
+  - `ListMaxGroups`: gruplamada en çok yaprak grup (1000; K-90)
+
+### TableView
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Kayıtlı tablo görünümü (K-89): kolon seti ve sırası, genişlikler, sabitleme, sıralama, filtreler, gruplama.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | int | PK | Görünüm kimliği | Sistem | H | E |  |
+| ListName | nvarchar(60) | UK | Liste adı (ör. materials) | Sistem | H | E |  |
+| OwnerUserId | int | FK,UK | Sahibi | Kullanıcı | H | E |  |
+| Name | nvarchar(100) | UK | Görünüm adı | Kullanıcı | H | E |  |
+| IsShared | bit |  | Paylaşılan | Kullanıcı | H | E | 0 |
+| Definition | nvarchar(max) |  | Görünüm içeriği; JSON, sürümlü (docs/08) | Kullanıcı | H | E |  |
+| CreatedAt | datetime2 |  | Oluşturulma zamanı | Sistem | H | E |  |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı | Sistem | H | E |  |
+
+- Ad, aynı kullanıcının aynı listesinde tekildir. Paylaşılan görünümü şimdilik herkes görür; yalnız sahibi değiştirir ya da siler (rol kuralı 2.2).
+
+### TableViewDefault
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Kullanıcının bir liste için varsayılan görünümü (K-89). Satır yoksa liste tanımındaki "Standart" görünüm açılır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| UserId | int | PK,FK | Kullanıcı | Kullanıcı | H | E |  |
+| ListName | nvarchar(60) | PK | Liste adı | Sistem | H | E |  |
+| ViewId | int | FK | Varsayılan görünüm | Kullanıcı | H | E |  |
 
 ### License
 <sub>21. Veri modeli · Sistem</sub>

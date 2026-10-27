@@ -23,4 +23,6 @@ MATERIALS = ListDefinition(
     },
     unit_field="BaseUom",
     unit_decimals=frozenset({"SafetyStock", "MaxStock", "MinLot", "MaxLot", "LotMultiple"}),
+    aggregates={"SafetyStock": "sum", "MaxStock": "sum",
+                "ProductionLeadTimeDays": "avg", "GoodsReceiptDays": "avg", "AssemblyScrapPct": "avg"},
 )

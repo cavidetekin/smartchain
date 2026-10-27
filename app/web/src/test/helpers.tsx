@@ -25,7 +25,7 @@ export function mockApi(routes: Routes = {}) {
     const route = key ? all[key] : undefined;
     if (!route || route === "offline") throw new TypeError("Failed to fetch");
     const reply = typeof route === "function" ? route(url, init) : route;
-    return new Response(JSON.stringify(reply.body), {
+    return new Response(reply.status === 204 ? null : JSON.stringify(reply.body), {
       status: reply.status ?? 200, headers: { "Content-Type": "application/json" },
     });
   });

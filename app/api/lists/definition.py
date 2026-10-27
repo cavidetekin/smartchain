@@ -26,6 +26,8 @@ class ListDefinition:
     decimals: Mapping[str, int] = field(default_factory=dict)
     unit_field: str | None = None
     unit_decimals: frozenset[str] = field(default_factory=frozenset)
+    # Gruplamada ara toplam (K-90): "sum" toplam, "avg" boş olmayanların ortalaması; yazılmayan kolon toplanmaz.
+    aggregates: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def sa_table(self) -> sa.Table:
@@ -75,6 +77,7 @@ def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
             "decimals": (None if name in defn.unit_decimals else defn.decimals[name]) if kind == "number"
                         else 0 if kind == "integer" else None,
             "decimals_from_unit": name in defn.unit_decimals,
+            "aggregate": defn.aggregates.get(name),
             "default_visible": name in defn.default_visible,
         })
     return out

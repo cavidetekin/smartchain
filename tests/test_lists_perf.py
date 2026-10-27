@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.lists import MATERIALS
-from app.api.lists.request import FilterItem, QueryRequest, SortItem, ValuesRequest
+from app.api.lists.request import FilterItem, GroupsRequest, QueryRequest, SortItem, ValuesRequest
 from app.api.services import lists as service
 
 pytestmark = [pytest.mark.db, pytest.mark.perf]
@@ -80,4 +80,16 @@ def test_values_under_target(big_session):
     assert service.values(big_session, MATERIALS, req)
     ms = median_ms(lambda: service.values(big_session, MATERIALS, req))
     print(f"\ndeğerler: ortanca {ms:.0f} ms")
+    assert ms < TARGET_MS
+
+
+def test_groups_under_target(big_session):
+    """K-90: iki alanla gruplama + filtre + ara toplamlar (toplam, ortalama, birim karışıklığı)."""
+    req = GroupsRequest(group_by=["MaterialLevel", "MaterialGroup"], fields=list(MATERIALS.default_visible),
+                        filters=[FilterItem(field="Name", op="contains", value="e")],
+                        sort=[SortItem(field="MaterialLevel", dir="desc")])
+    tree = service.groups(big_session, MATERIALS, req)
+    assert sum(g["count"] for g in tree["groups"]) > ROWS / 2
+    ms = median_ms(lambda: service.groups(big_session, MATERIALS, req))
+    print(f"\ngruplama (2 alan, filtre, ara toplamlar): ortanca {ms:.0f} ms")
     assert ms < TARGET_MS

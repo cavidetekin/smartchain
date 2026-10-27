@@ -8,19 +8,21 @@ from datetime import date, datetime, time, timedelta, timezone
 import sqlalchemy as sa
 
 from .definition import ListDefinition, column_type, columns, filter_type
-from .request import FilterItem, QueryRequest, SortItem
+from .request import FilterItem, GroupKeyItem, QueryRequest, SortItem
 
 TURKISH = "Turkish_100_CI_AS"
 BINARY = "Latin1_General_100_BIN2"
 RELATIVE = ("this_week", "next_4_weeks")
+# Gruplamada SQL Server maliyet tahmini seri plan seçiyor; paralel plan 50.000 satırda ~4 kat hızlı (K-90, docs/08).
+PARALLEL_HINT = "OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'))"
 UNIT_DECIMALS = "_unit_decimals"
 UNIT = "_unit"
 DEFAULT_UNIT_DECIMALS = 2  # birim bilinmiyorsa (docs/02 UnitOfMeasure.Decimals)
-OPS = {
-    "text": ("contains", "not_contains", "equals", "starts_with"),
-    "list": ("in",),
-    "number": ("between", "eq", "gt", "lt"),
-    "date": ("between", "relative"),
+OPS = {  # her tipte "empty": değeri boş olanlar (U-13)
+    "text": ("contains", "not_contains", "equals", "starts_with", "empty"),
+    "list": ("in", "empty"),
+    "number": ("between", "eq", "gt", "lt", "empty"),
+    "date": ("between", "relative", "empty"),
 }
 
 
@@ -136,6 +138,9 @@ class Builder:
         def bad(problem: str, part: str = "value"):
             problems.append({"field": f"{where}.{part}", "problem": problem})
 
+        if f.op == "empty":
+            return self.is_empty(col)
+
         if kind == "text":
             if not isinstance(f.value, str) or not f.value.strip():
                 return bad("Metin girilmeli")
@@ -151,14 +156,16 @@ class Builder:
             return sa.or_(col.is_(None), sa.not_(turkish_like(col, pattern)))
 
         if kind == "list":
-            if not f.values:
-                return bad("En az bir değer seçilmeli", "values")
+            values = f.values or []
+            if not values and not f.empty:
+                return bad("En az bir değer ya da boş seçilmeli", "values")
             if column_type(col) == "bool":
-                if any(not isinstance(v, bool) for v in f.values):
+                if any(not isinstance(v, bool) for v in values):
                     return bad("Evet/Hayır değeri true ya da false olmalı", "values")
-            elif any(not isinstance(v, str) for v in f.values):
+            elif any(not isinstance(v, str) for v in values):
                 return bad("Değerler metin olmalı", "values")
-            return col.in_(f.values)
+            parts = ([col.in_(values)] if values else []) + ([self.is_empty(col)] if f.empty else [])
+            return sa.or_(*parts)
 
         if kind == "number":
             if f.op == "between":
@@ -185,13 +192,34 @@ class Builder:
         parts = ([col >= lo] if lo is not None else []) + ([col < hi] if hi is not None else [])
         return sa.and_(*parts)
 
+    def is_empty(self, col: sa.Column) -> sa.ColumnElement:
+        """Boş: NULL; metinde boş metin de (U-13)."""
+        return sa.or_(col.is_(None), col == "") if column_type(col) == "text" else col.is_(None)
+
+    def group_expr(self, col: sa.Column) -> sa.ColumnElement:
+        """Grup değeri: metinde boş metin de boş gruba (NULL) düşer."""
+        # boş metin sabit yazılır: parametre olursa SELECT ile GROUP BY'daki ifade SQL Server'da farklı sayılır
+        return sa.func.nullif(col, sa.literal_column("N''")) if column_type(col) == "text" else col
+
+    def group_key_clauses(self, keys: list[GroupKeyItem]) -> list[sa.ColumnElement]:
+        problems: list[dict] = []
+        out = []
+        for i, k in enumerate(keys):
+            col = self._col(k.field, f"group_key.{i}.field", problems)
+            if col is not None:
+                out.append(self.is_empty(col) if k.value is None else col == k.value)
+        if problems:
+            raise ListQueryError(problems)
+        return out
+
     # --- sorgular ------------------------------------------------------------------------------------------
     def rows_query(self, req: QueryRequest, chunk_size: int) -> sa.Select:
         """Parça satırları; limit boşsa parça büyüklüğü, büyükse hata (ListChunkSize, docs/08)."""
         limit = req.limit or chunk_size
-        problems = [{"field": "body.limit", "problem": f"En çok {chunk_size} satır istenebilir (ListChunkSize)"}]             if limit > chunk_size else []
+        problems = ([{"field": "body.limit", "problem": f"En çok {chunk_size} satır istenebilir (ListChunkSize)"}]
+                    if limit > chunk_size else [])
         cols = self.select_columns(req.fields)
-        where = self.where(req.filters)
+        where = self.where(req.filters) + self.group_key_clauses(req.group_key)
         order = self.order_by(req.sort)
         if problems:
             raise ListQueryError(problems)
@@ -204,9 +232,10 @@ class Builder:
         """Filtresiz sayı (güncel versiyondaki bütün kayıtlar)."""
         return sa.select(sa.func.count()).select_from(self.table).where(self.version_clause())
 
-    def filtered_query(self, filters: list[FilterItem]) -> sa.Select:
-        """Filtreli sayı; filtre yoksa sorulmaz (toplamla aynı)."""
-        return sa.select(sa.func.count()).select_from(self.table).where(self.version_clause(), *self.where(filters))
+    def filtered_query(self, filters: list[FilterItem], group_key: list[GroupKeyItem] = ()) -> sa.Select:
+        """Filtreli sayı (grubun satırlarında grup içi); filtre yoksa sorulmaz (toplamla aynı)."""
+        where = self.where(filters) + self.group_key_clauses(list(group_key))
+        return sa.select(sa.func.count()).select_from(self.table).where(self.version_clause(), *where)
 
     def values_query(self, field_name: str, search: str, filters: list[FilterItem], limit: int = 100) -> sa.Select:
         problems: list[dict] = []
@@ -218,7 +247,46 @@ class Builder:
         where = self.where(filters, skip_field=field_name)  # kendi filtresi seçenekleri daraltmaz
         if search.strip():
             where.append(turkish_like(col, "%" + like_escape(search.strip()) + "%"))
-        order = turkish(col) if column_type(col) == "text" else col
-        return (sa.select(col.label("value"), sa.func.count().label("count"))
-                .where(self.version_clause(), col.is_not(None), *where)
-                .group_by(col).order_by(order).limit(limit))
+        g = self.group_expr(col)
+        inner = (sa.select(g.label("value"), sa.func.count().label("count"))
+                 .where(self.version_clause(), *where).group_by(g).subquery())
+        v = inner.c.value
+        order = [sa.case((v.is_(None), 0), else_=1), turkish(v) if column_type(col) == "text" else v]
+        return sa.select(inner).order_by(*order).limit(limit + 1)  # boş (U-13) başta, sonra ilk 100 değer
+
+    def groups_query(self, group_by: list[str], filters: list[FilterItem], sort: list[SortItem],
+                     aggregate: list[str], limit: int) -> tuple[sa.Select, list[str]]:
+        """Yaprak gruplar (K-90): grup değerleri, satır sayısı, aggregate kolonları için toplam ve boş olmayan sayı.
+        Birimden ondalıklı kolon varsa birim gizli son düzeydir ("u"): karışık birim Python'da bulunur (metin
+        MIN/MAX'tan ucuz). Sıra: grup alanı sıralamadaysa onun yönü, değilse artan, Türkçe; boş grup en sonda."""
+        problems: list[dict] = []
+        cols = [self._col(f, f"group_by.{i}", problems) for i, f in enumerate(group_by)]
+        if len(set(group_by)) != len(group_by):
+            problems.append({"field": "group_by", "problem": "Aynı alan iki kez seçilemez"})
+        if problems:
+            raise ListQueryError(problems)
+        where = self.where(filters)
+        keys = [self.group_expr(c).label(f"g{i}") for i, c in enumerate(cols)]
+        measures = [sa.func.count().label("n")]
+        for f in aggregate:
+            c = self.table.c[f]
+            measures += [sa.func.sum(c).label(f"s_{f}"), sa.func.count(c).label(f"c_{f}")]
+        grouping = [self.group_expr(c) for c in cols]
+        if self.defn.unit_field and any(f in self.defn.unit_decimals for f in aggregate):
+            unit = self.table.c[self.defn.unit_field]
+            keys.append(unit.label("u"))
+            grouping.append(unit)
+        inner = (sa.select(*keys, *measures).where(self.version_clause(), *where).group_by(*grouping).subquery())
+        dirs = {s.field: s.dir for s in sort}
+        order = []
+        for i, c in enumerate(cols):
+            g = inner.c[f"g{i}"]
+            order.append(sa.case((g.is_(None), 1), else_=0))
+            expr = turkish(g) if column_type(c) == "text" else g
+            order.append(expr.desc() if dirs.get(group_by[i]) == "desc" else expr.asc())
+        q = sa.select(inner).order_by(*order).limit(limit).with_statement_hint(PARALLEL_HINT, "mssql")
+        return q, [c.name for c in cols]
+
+    def aggregated(self, fields: list[str] | None = None) -> list[str]:
+        """Ara toplamı olan ve listede görünebilen kolonlar; fields verilirse yalnız onlar (görünen kolonlar)."""
+        return [f for f in self.defn.aggregates if f in self.columns and (fields is None or f in fields)]

@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from app.jobs.settings import read_int_settings
 from db.models import metadata
 
-from ..lists.request import DEFAULT_CHUNK_SIZE, MAX_LIMIT
+from ..lists.request import DEFAULT_CHUNK_SIZE, DEFAULT_MAX_GROUPS, MAX_LIMIT
+
+
+def read_max_groups(session: Session) -> int:
+    """SystemSetting ListMaxGroups (K-90): gruplamada en çok yaprak grup, varsayılan 1000."""
+    return read_int_settings(session, {"ListMaxGroups": DEFAULT_MAX_GROUPS})["ListMaxGroups"]
 
 
 def read_chunk_size(session: Session) -> int:

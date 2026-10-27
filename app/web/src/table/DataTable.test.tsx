@@ -1,84 +1,14 @@
 // Tablo bileşeni (1.3, docs/12): sözleşmeye giden istekler (K-87), U-6/U-7/U-8/U-12, sanal gövde ve U-23.
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { mockApi, mockSocket, renderApp, type Reply } from "../test/helpers";
 import { OVERSCAN, ROW_REM } from "./DataTable";
-import type { ListColumn, QueryRequest } from "./types";
+import { calls, dataRows, lastQuery as last, openTable as open, useTableTestSetup, VIEW_PX } from "./testBackend";
 
-const col = (field: string, label: string, type: ListColumn["type"], filter: ListColumn["filter"],
-             extra: Partial<ListColumn> = {}): ListColumn => ({
-  field, label, type, filter, values: null, values_from_server: false, decimals: null, decimals_from_unit: false,
-  default_visible: true, ...extra,
-});
+useTableTestSetup();
+const queries = calls.queries;
 
-const COLUMNS: ListColumn[] = [
-  col("Code", "Malzeme kodu", "text", "text"),
-  col("Name", "Malzeme adı", "text", "text"),
-  col("MaterialLevel", "Malzeme seviyesi", "text", "list", { values: ["Hammadde", "Yarı mamul", "Nihai ürün"] }),
-  col("MaterialGroup", "Malzeme grubu", "text", "list", { values_from_server: true }),
-  col("IsSellable", "Satılabilir", "bool", "list", { values: [true, false] }),
-  col("SafetyStock", "Güvenlik stoğu", "number", "number", { decimals_from_unit: true }),
-  col("UpdatedAt", "Son değişiklik zamanı", "datetime", "date"),
-  col("AdditionalText1", "Malzeme sınıfı", "text", "text", { default_visible: false }),
-];
-
-const VIEW_PX = 560;
-let queries: QueryRequest[] = [];
-let valueRequests: unknown[] = [];
-
-function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100 } = {}) {
-  queries = [];
-  valueRequests = [];
-  return mockApi({
-    "/api/materials/columns": { body: { chunk_size: chunk, columns: COLUMNS } },
-    "/api/materials/query": (_url, init): Reply => {
-      const body = JSON.parse(String(init?.body)) as QueryRequest;
-      queries.push(body);
-      if (status !== 200) return { status, body: { error: { code: "database_unavailable", message: "Veritabanına bağlanılamıyor.", trace_id: "x" } } };
-      const n = Math.max(0, Math.min(body.limit, filtered - body.offset));
-      const rows = Array.from({ length: n }, (_, k) => {
-        const i = body.offset + k;
-        return { Id: i + 1, Code: `M-${i}`, Name: `Malzeme ${i}`, MaterialLevel: "Hammadde", MaterialGroup: "Çubuk",
-                 IsSellable: i % 2 === 0, SafetyStock: i % 2 === 0 ? 1234 : 12.25, _unit_decimals: i % 2 === 0 ? 0 : 3,
-                 UpdatedAt: "2026-10-27T09:20:00+00:00", AdditionalText1: "A" };
-      });
-      return { body: { rows, offset: body.offset, filtered, total } };
-    },
-    "/api/materials/values": (_url, init): Reply => {
-      valueRequests.push(JSON.parse(String(init?.body)));
-      return { body: [{ value: "Çubuk", count: 20 }, { value: "Levha", count: 20 }] };
-    },
-  });
-}
-
-const last = () => queries[queries.length - 1];
-
-// jsdom ölçü vermez: sanal kaydırıcı kap boyunu offsetHeight'tan okur (test yardımcısı).
-const sizes = Object.getOwnPropertyDescriptors(HTMLElement.prototype);
-beforeEach(() => {
-  mockSocket();
-  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
-    configurable: true, get() { return (this as HTMLElement).dataset.testid === "table-scroll" ? VIEW_PX : 0; },
-  });
-  Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
-    configurable: true, get() { return (this as HTMLElement).dataset.testid === "table-scroll" ? 1000 : 0; },
-  });
-});
-afterEach(() => {
-  Object.defineProperty(HTMLElement.prototype, "offsetHeight", sizes.offsetHeight);
-  Object.defineProperty(HTMLElement.prototype, "offsetWidth", sizes.offsetWidth);
-});
-
-async function open(opts?: Parameters<typeof backend>[0]) {
-  backend(opts);
-  renderApp("/tablo");
-  await screen.findByRole("columnheader", { name: /Malzeme kodu/ });
-  await waitFor(() => expect(queries.length).toBeGreaterThan(0));
-}
-
-const dataRows = () => [...document.querySelectorAll("tbody tr[aria-rowindex]")];
 const sortButton = (label: string) => within(screen.getByRole("columnheader", { name: new RegExp(label) }))
   .getAllByRole("button")[0];
 
@@ -213,7 +143,7 @@ describe("filtreler (U-8)", () => {
     menu = await openFilter(user, "Malzeme grubu");
     await user.click(await within(menu).findByRole("checkbox", { name: "Çubuk" }));
     expect(within(menu).getAllByText("20")).toHaveLength(2);
-    expect(valueRequests[0]).toEqual({ field: "MaterialGroup", search: "",
+    expect(calls.values[0]).toEqual({ field: "MaterialGroup", search: "",
                                        filters: [{ field: "MaterialLevel", op: "in", values: ["Hammadde"] }] });
     await user.click(within(menu).getByRole("button", { name: "Uygula" }));
     await waitFor(() => expect(last().filters[1]).toEqual({ field: "MaterialGroup", op: "in", values: ["Çubuk"] }));
@@ -275,8 +205,8 @@ describe("alan paneli (U-6)", () => {
   it("aramalı liste; açılan alan istenir ve başlıkta görünür, kapatılan çıkar", async () => {
     const user = userEvent.setup();
     await open();
-    await user.click(screen.getByRole("button", { name: "Alanlar (7/8)" }));
-    const panel = screen.getByRole("dialog", { name: "Alanlar (7/8)" });
+    await user.click(screen.getByRole("button", { name: "Alanlar (7/9)" }));
+    const panel = screen.getByRole("dialog", { name: "Alanlar (7/9)" });
     await user.type(within(panel).getByRole("searchbox"), "SINIF");
     expect(within(panel).getAllByRole("checkbox")).toHaveLength(1);
     expect(within(panel).getByRole("checkbox").closest("[title]")).toHaveAttribute("title", "Malzeme sınıfı");

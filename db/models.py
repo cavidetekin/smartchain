@@ -1268,6 +1268,30 @@ SystemSetting = sa.Table(
     comment="Sistem sahibinin ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri.",
 )
 
+TableView = sa.Table(
+    "TableView", metadata,
+    sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Görünüm kimliği", info={'label': "Görünüm kimliği"}),
+    sa.Column("ListName", sa.Unicode(60), nullable=False, comment="Liste adı (ör. materials)", info={'label': "Liste adı (ör. materials)"}),
+    sa.Column("OwnerUserId", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=False, comment="Sahibi", info={'label': "Sahibi"}),
+    sa.Column("Name", sa.Unicode(100), nullable=False, comment="Görünüm adı", info={'label': "Görünüm adı"}),
+    sa.Column("IsShared", sa.Boolean(), nullable=False, server_default=sa.text("0"), comment="Paylaşılan", info={'label': "Paylaşılan"}),
+    sa.Column("Definition", mssql.NVARCHAR(), nullable=False, comment="Görünüm içeriği; JSON, sürümlü (docs/08)", info={'label': "Görünüm içeriği"}),
+    sa.Column("CreatedAt", mssql.DATETIME2(), nullable=False, comment="Oluşturulma zamanı", info={'label': "Oluşturulma zamanı"}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı"}),
+    sa.Index("UX_TableView_ListName_OwnerUserId_Name", "ListName", "OwnerUserId", "Name", unique=True),
+    schema="adm",
+    comment="Kayıtlı tablo görünümü (K-89): kolon seti ve sırası, genişlikler, sabitleme, sıralama, filtreler, gruplama.",
+)
+
+TableViewDefault = sa.Table(
+    "TableViewDefault", metadata,
+    sa.Column("UserId", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), primary_key=True, autoincrement=False, comment="Kullanıcı", info={'label': "Kullanıcı"}),
+    sa.Column("ListName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Liste adı", info={'label': "Liste adı"}),
+    sa.Column("ViewId", sa.Integer(), sa.ForeignKey("adm.TableView.Id"), nullable=False, comment="Varsayılan görünüm", info={'label': "Varsayılan görünüm"}),
+    schema="adm",
+    comment="Kullanıcının bir liste için varsayılan görünümü (K-89). Satır yoksa liste tanımındaki \"Standart\" görünüm açılır.",
+)
+
 License = sa.Table(
     "License", metadata,
     sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Kimlik", info={'label': "Kimlik"}),

@@ -30,6 +30,7 @@ async function readJson<T>(r: Response): Promise<T> {
     }
     throw new ApiError(r.status, code, message, details);
   }
+  if (r.status === 204) return undefined as T;
   return (await r.json()) as T;
 }
 
@@ -38,10 +39,15 @@ export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T>
 }
 
 export async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return sendJson<T>("POST", path, body, signal);
+}
+
+export async function sendJson<T>(method: "POST" | "PUT" | "DELETE", path: string, body?: unknown,
+                                  signal?: AbortSignal): Promise<T> {
   return readJson<T>(await fetch(path, {
-    method: "POST",
+    method,
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   }));
 }
