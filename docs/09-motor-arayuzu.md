@@ -50,6 +50,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 - **Süre:** Çözücünün zaman limiti, işin süre bütçesinden (`EngineInput.time_budget_seconds`) ön hesap ve MRP payı düşülerek verilir (fonksiyon 34-02, 10.5). HiGHS'te `time_limit` seçeneği. Servisin öldürme payı (K-71) bunun üstünde son güvencedir.
 - **İş parçacığı:** `SolverThreads` sistem ayarı (2) → HiGHS'in `threads` seçeneği. HiGHS bu değeri süreç başına bir kez alır; her iş kendi sürecinde çalıştığı için (K-71) iş başına ayarlanmış olur. Öneri: (`JobLimitInteractive` + `JobLimitNight`) × `SolverThreads` ≤ sunucunun çekirdek sayısı.
 - **Günlük:** Çözücü konsola yazmaz (`output_flag` kapalı); SolverLog'a yazılması 10.5'te.
+- **Model ve çözüm dosyaları (K-77):** Her plan hesabı için `ProgramData\Smartchain\solver\<tarih>\PlanRun-<Id>\` klasörüne model dosyası (LP), çözüm dosyası ve çözücü logu yazılır. Değişken ve kısıt adları okunur (ör. `Uretim[MAT-001,H44]`). Yazma kipi (her zaman / yalnız hata ya da süre aşımında / kapalı) ve saklama süresi sistem ayarıdır; ayar adları 10.5'te 02-veri-modeli SystemSetting listesine eklenir. Dosyalar destek paketine (95) girer. Uygulama 10.5'te, adaptörle birlikte.
 - **Paket kontrolü:** `app/engine/solvers/highs.py: smoke_test(time_limit, threads)` iki sabit modeli çözer ve bilinen sonucu doğrular:
   - LP: max 3x + 5y; x ≤ 4, 2y ≤ 12, 3x + 2y ≤ 18 → x = 2, y = 6, amaç 36, gölge fiyatlar 0, 1,5, 1.
   - MILP: aynı model, 3x + 2y ≤ 17 ve x, y tamsayı → x = 1, y = 6, amaç 33 (gevşetilmiş LP 35).
@@ -74,6 +75,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 |---|---|
 | Arayüz, sahte motor, yazıcı, iş süreci, motor servisi (konsol) | uygulandı (0.5) |
 | Çözücünün yeri, HiGHS paketi ve paket kontrolü | uygulandı (0.7) |
+| Model ve çözüm dosyalarının klasöre yazılması (K-77) | 10.5 |
 | Windows servisi olarak kurulum | 0.6 |
 | Gerçek motor (29–39), sıcak çalışma belleği | Aşama 10 |
 

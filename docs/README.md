@@ -15,3 +15,4 @@ Master Design Document'tan (MDD) türetilmiş tasarım dokümanları. Tek kaynak
 | 08-api.md | Geliştirme 0.3: API kuralları |
 | 09-motor-arayuzu.md | Geliştirme 0.5: motor arayüzü ve sahte motor |
 | 10-kurulum.md | Geliştirme 0.6: kurulum iskeleti (27'nin ilk parçası) |
+| 11-sentetik-veri.md | 22 |

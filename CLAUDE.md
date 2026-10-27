@@ -58,6 +58,7 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/08-api.md` | API kuralları: katmanlar, adresler, hata cevabı, log, ayarlar |
 | `docs/09-motor-arayuzu.md` | Motor arayüzü, sahte motor, motor servisi (geliştirme 0.5) |
 | `docs/10-kurulum.md` | Kurulum iskeleti: paket, Windows servisleri, IIS, SQL Server, temiz makine testi (geliştirme 0.6) |
+| `docs/11-sentetik-veri.md` | Sentetik veri seti: hayali şirket, boyut, bilerek konmuş durumlar, temiz ve kirli hâl (MDD 22) |
 | `docs/mockups/` | Mockup görselleri |
 
 Motorun iç tasarımı (MDD 18), raporlar (25), kurulum paketinin tamamı (27) ve fazlama (28) ilgili aşamaya gelince eklenir.
