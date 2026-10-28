@@ -1,5 +1,6 @@
 // Gruplama paneli (U-11, K-90): bir ya da birden çok alan, sıralı; yukarı / aşağı / kaldır, alan ekle.
 import { ArrowDown, ArrowUp, X } from "lucide-react";
+import type { Ref } from "react";
 
 import { tr } from "../i18n/tr";
 import { Button, SelectField } from "../ui";
@@ -9,7 +10,8 @@ import { MAX_GROUP_FIELDS } from "./viewState";
 
 const T = tr.table;
 
-export function GroupPanel({ columns, groupBy, onChange }: {
+export function GroupPanel({ ref, columns, groupBy, onChange }: {
+  ref?: Ref<HTMLDivElement>;
   columns: ListColumn[];
   groupBy: string[];
   onChange(groupBy: string[]): void;
@@ -22,7 +24,7 @@ export function GroupPanel({ columns, groupBy, onChange }: {
   };
   const candidates = columns.filter((c) => isGroupable(c) && !groupBy.includes(c.field));
   return (
-    <div className="sc-table-pop sc-table-group-panel" role="dialog" aria-label={T.groupPanel}>
+    <div ref={ref} className="sc-table-pop sc-table-group-panel sc-floating" role="dialog" aria-label={T.groupPanel}>
       {groupBy.length > 0 && (
         <ol className="sc-tgroup-list">
           {groupBy.map((f, i) => (

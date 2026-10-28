@@ -45,7 +45,8 @@ def listed(api, user):
 def test_create_update_delete(api, users):
     me, _ = users
     v = create(api, me, "pytest A")
-    assert v["definition"] == {"v": 1, **{**DEFINITION, "columns": [{"field": "Code", "width": 8.0}, {"field": "Name"}]}}
+    assert v["definition"] == {"v": 1, **{**DEFINITION, "columns": [{"field": "Code", "width": 8.0}, {"field": "Name"}]},
+                               "aggregates": {}}
     assert v["is_owner"] and v["warnings"] == []
     r = api.put(f"/api/materials/views/{v['id']}?user_id={me}", json={"name": "pytest B", "is_shared": True})
     assert r.status_code == 200 and (r.json()["name"], r.json()["is_shared"]) == ("pytest B", True)
@@ -97,6 +98,8 @@ def test_default_view(api, users):
     ({"columns": [{"field": "Code"}], "sort": [{"field": "Nope"}]}, "definition.sort.0.field"),
     ({"columns": [{"field": "Code"}], "filters": [{"field": "Name", "op": "gt", "value": 1}]}, "definition.filters.0.op"),
     ({"columns": [{"field": "Code"}], "group_by": ["Nope"]}, "definition.group_by.0"),
+    ({"columns": [{"field": "Code"}], "aggregates": {"Name": {"fn": "sum"}}}, "definition.aggregates.Name"),
+    ({"columns": [{"field": "Code"}], "aggregates": {"SafetyStock": {"fn": "wavg"}}}, "definition.aggregates.SafetyStock.weight"),
 ])
 def test_invalid_definition(api, users, definition, field):
     r = api.post(f"/api/materials/views?user_id={users[0]}", json={"name": "pytest Bozuk", "definition": definition})
@@ -130,6 +133,14 @@ def test_relative_date_filter_is_stored_relative(api, users, db_engine, monkeypa
     assert query(api, filters=filters)["filtered"] == 200
     monkeypatch.setattr(list_service, "today", lambda: load_day + timedelta(weeks=3))
     assert query(api, filters=filters)["filtered"] == 0
+
+
+def test_aggregate_choice_is_saved_with_view(api, users):
+    agg = {"ProductionLeadTimeDays": {"fn": "wavg", "weight": "SafetyStock"}, "SafetyStock": {"fn": "max"}}
+    v = create(api, users[0], "pytest Ara toplam", {**DEFINITION, "aggregates": agg})
+    assert v["definition"]["aggregates"] == agg
+    got = next(x for x in listed(api, users[0])["views"] if x["id"] == v["id"])
+    assert got["definition"]["aggregates"] == agg
 
 
 def test_views_are_per_list(api, users):

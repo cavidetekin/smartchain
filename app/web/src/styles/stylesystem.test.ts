@@ -63,6 +63,17 @@ describe("kontrast (WCAG AA)", () => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it.each(["table-group-1-bg", "table-group-2-bg", "table-row-selected-bg", "table-row-hover-bg", "surface"])(
+    "tablo zemini %s: yazı ve soluk yazı ≥ 4,5:1", (bg) => {
+      expect(contrast("text", bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast("text-muted", bg)).toBeGreaterThanOrEqual(4.5);
+    });
+
+  it("tablo başlığı: #1E2257 yazı ve soluk ikon zeminde ≥ 4,5:1", () => {
+    expect(contrast("table-head-text", "table-head-bg")).toBeGreaterThanOrEqual(4.5);
+    expect(contrast("text-muted", "table-head-bg")).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("KPI'daki kiremit değer beyaz kartta ≥ 4,5:1", () => {
     expect(contrast("status-over", "surface")).toBeGreaterThanOrEqual(4.5);
   });
@@ -79,6 +90,51 @@ describe("U-2: durum renkleri yalnız durum bileşenlerinde", () => {
       .filter((r) => !ALLOWED.test(r.selector))
       .map((r) => r.selector);
     expect(misuse).toEqual([]);
+  });
+});
+
+describe("tablo renkleri (K-85, docs/12; bütün tablolar ortak)", () => {
+  it.each([
+    ["table-head-bg", "#dce0f7"], ["table-head-text", "#1e2257"], ["table-head-border", "#c5cbf2"], ["table-border", "#c5cbf2"],
+    ["table-group-1-bg", "#eceef7"], ["table-group-1-border", "#e1e4ee"], ["table-group-2-bg", "#f7f8fc"],
+    ["table-row-selected-bg", "#eef0fb"], ["table-row-hover-bg", "#f4f5fb"],
+  ])("--%s = %s", (name, value) => expect(token(name)).toBe(value));
+
+  it("başlık, grup, seçili, üzerine gelinen ve normal satır birbirinden ayrı; gruplar başlıktan açık", () => {
+    const names = ["table-head-bg", "table-group-1-bg", "table-group-2-bg", "table-row-selected-bg", "table-row-hover-bg", "surface"];
+    expect(new Set(names.map(token)).size).toBe(names.length);
+    const lum = (n: string) => luminance(token(n));
+    expect(lum("table-group-1-bg")).toBeGreaterThan(lum("table-head-bg"));
+    expect(lum("table-group-2-bg")).toBeGreaterThan(lum("table-group-1-bg"));
+    expect(lum("surface")).toBeGreaterThan(lum("table-group-2-bg"));
+  });
+
+  it("tablo stilleri değerleri değişkenlerden alır; grup satırı üzerine gelince değişmez", () => {
+    const css = rules(sheets["components.css"]);
+    const body = (sel: string) => css.find((r) => r.selector === sel)?.body ?? "";
+    expect(body(".sc-table-grid thead th")).toMatch(/var\(--table-head-bg\)/);
+    expect(body(".sc-table-grid thead th")).toMatch(/var\(--table-head-text\)/);
+    expect(body(".sc-table-scroll")).toMatch(/var\(--table-border\)/);  // çerçeve başlık satırından başlar
+    expect(body(".sc-table-toolbar")).not.toMatch(/background|border/);    // araç çubuğu sayfa zemininde
+    expect(body(".sc-table-status")).not.toMatch(/background|border/);
+    expect(body(".sc-table")).toMatch(/gap:\s*var\(--table-toolbar-gap\)/);
+    expect(token("table-toolbar-gap")).toBe("0.5rem");
+    expect(body(".sc-table-grid tr.sc-table-row:hover td")).toMatch(/var\(--table-row-hover-bg\)/);
+    expect(body(".sc-table-grid tr.sc-table-row.is-selected td")).toMatch(/var\(--table-row-selected-bg\)/);
+    expect(css.filter((r) => r.selector.includes("sc-table-group") && r.selector.includes(":hover"))).toEqual([]);
+  });
+
+  it("grup adı 1. düzey 600, alt düzey 500; başlık ikonları üzerine gelince ya da odakta, aktif filtre her zaman", () => {
+    const css = rules(sheets["components.css"]);
+    const body = (sel: string) => css.find((r) => r.selector === sel)?.body ?? "";
+    expect(body(".sc-table-group--1 .sc-tgroup-value")).toMatch(/var\(--fw-semibold\)/);
+    expect(body(".sc-table-group--2 .sc-tgroup-value")).toMatch(/var\(--fw-medium\)/);
+    expect(token("fw-semibold")).toBe("600");
+    expect(token("fw-medium")).toBe("500");
+    expect(body(".sc-table-head-tools .sc-table-filter-btn")).toMatch(/opacity:\s*0/);
+    const shown = css.find((r) => r.selector.includes("th:hover") && r.selector.includes("th:focus-within")
+                                  && r.selector.includes(".is-active"));
+    expect(shown?.body).toMatch(/opacity:\s*1/);
   });
 });
 

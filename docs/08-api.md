@@ -106,7 +106,7 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset":
 
 ### Gruplama · `POST /api/<liste>/groups` (K-90)
 
-İstek: `{"group_by": ["MaterialLevel", "MaterialGroup"], "fields": ["SafetyStock", …], "filters": [...], "sort": [...]}`; `fields` görünen kolonlardır, ara toplam yalnız onlar için hesaplanır (boşsa bütün toplanabilen kolonlar). Cevap:
+İstek: `{"group_by": ["MaterialLevel", "MaterialGroup"], "fields": ["SafetyStock", …], "aggregates": {"SafetyStock": {"fn": "sum"}, "ProductionLeadTimeDays": {"fn": "wavg", "weight": "SafetyStock"}}, "filters": [...], "sort": [...]}`. `aggregates` verilmezse görünen kolonlarda (`fields`) liste tanımının varsayılanı kullanılır. Cevap:
 
 ```json
 {"groups": [{"key": ["Hammadde"], "count": 80, "aggregates": {"SafetyStock": 120.0}, "mixed_units": ["SafetyStock"],
@@ -115,14 +115,26 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset":
 ```
 
 - `key` kökten o gruba kadar değerlerdir; `null` boş gruptur ("(Boş)", sırada en sonda). Grup sırası: grup alanı sıralamadaysa onun yönü, değilse artan, Türkçe.
-- `aggregates` liste tanımındaki kolonlar için: `sum` toplam, `avg` boş olmayan değerlerin ortalaması (üst gruplarda ağırlıklı). En dıştaki `aggregates` bütün filtreli satırlarındır.
-- `mixed_units`: birimden ondalıklı (miktar) kolonlarda grupta birden çok birim varsa kolon burada listelenir ve değeri `null` döner (K-88, K-90). Tek birimliyse `unit_decimals` o birimin ondalığını verir (`{"SafetyStock": 0}`).
+- **Ara toplam türleri** (`fn`, yalnız sayı alanları; K-90):
+
+  | `fn` | Arayüzde | Hesap |
+  |---|---|---|
+  | `sum` | Toplam | dolu değerlerin toplamı |
+  | `avg` | Ortalama (boşlar hariç) | toplam / dolu değer sayısı |
+  | `avg_nonzero` | Ortalama (sıfırlar hariç) | toplam / sıfırdan farklı dolu değer sayısı |
+  | `wavg` | Ağırlıklı ortalama | Σ(değer × ağırlık) / Σ ağırlık; değeri ya da ağırlığı (`weight`, bir sayı alanı) boş satır girmez; Σ ağırlık 0 ise `null` |
+  | `min` / `max` | En küçük / En büyük | dolu değerlerin en küçüğü / en büyüğü |
+  | `count` | Sayı (dolu satır) | değeri dolu satır sayısı; birimden bağımsız |
+  | `none` | Yok | hesaplanmaz |
+
+  Üst gruplar alt gruplardan tam türetilir (ortalamalar ağırlıklı birleşir). En dıştaki `aggregates` bütün filtreli satırlarındır. Bilinmeyen alan, sayı olmayan alan, bilinmeyen tür ya da `wavg`'de eksik ve geçersiz ağırlık 422.
+- `mixed_units`: birimden ondalıklı (miktar) kolonlarda (ya da ağırlık miktar alanıysa) katkı veren satırlarda birden çok birim varsa kolon burada listelenir ve değeri `null` döner; `count` bu kurala girmez (K-88, K-90). Tek birimliyse `unit_decimals` o birimin ondalığını verir (`{"SafetyStock": 0}`).
 - `filtered` / `total`: "120 / 840" sayacı (U-12).
-- Ortalama arayüzde kolonun ondalığından bir fazla ondalıkla yazılır.
+- Arayüzde ortalamalar kolonun ondalığından bir fazla ondalıkla, sayı ondalıksız yazılır.
 - Yaprak grup sayısı `ListMaxGroups`'u (SystemSetting, 1.000) aşarsa 422 `too_many_groups`.
 - **Performans:** gruplama sorgusu SQL Server'a paralel plan tercihini bildirir (`OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'))`); 50.000 satırda iki alanla gruplama ortanca ~110 ms (hedef 300 ms). Birim karışıklığı, birim gizli son grup düzeyi yapılarak bulunur; ara toplam yalnız görünen kolonlar (`fields`) için hesaplanır.
 - **Grubun satırları:** `query` isteğine `"group_key": [{"field": "MaterialLevel", "value": "Hammadde"}, …]` eklenir (değer `null` ise boş); parça kuralı aynıdır (K-87).
-- Kolonlar cevabında her kolon `aggregate: "sum" | "avg" | null` taşır.
+- Kolonlar cevabında her kolon varsayılan türü taşır: `aggregate: "sum" | "avg" | … | null`.
 
 ### Görünümler (K-89)
 
@@ -141,10 +153,10 @@ Kullanıcı şimdilik `user_id` sorgu parametresiyle gelir (A-36).
 ```json
 {"v": 1, "columns": [{"field": "Code", "width": 7.5}, {"field": "Name", "width": null}], "pinned": 1,
  "sort": [{"field": "Code", "dir": "asc"}], "filters": [{"field": "UpdatedAt", "op": "relative", "value": "this_week"}],
- "group_by": ["MaterialLevel"]}
+ "group_by": ["MaterialLevel"], "aggregates": {"ProductionLeadTimeDays": {"fn": "wavg", "weight": "SafetyStock"}}}
 ```
 
-- `columns` görünen alanlar, görünen sırada; `width` rem (boşsa tipin varsayılanı). `pinned` soldan sabit kolon sayısı.
+- `columns` görünen alanlar, görünen sırada; `width` rem (boşsa tipin varsayılanı). `pinned` soldan sabit kolon sayısı. `aggregates` kullanıcının varsayılandan farklı seçtiği ara toplam türleri (K-90).
 - Göreli tarih filtresi göreli saklanır; görünüm açıldığı günün haftasına göre çalışır.
 - Kaydederken alanlar ve filtreler liste tanımına göre doğrulanır (422). Açılırken artık olmayan alanlar atılır, `warnings`'te yazar.
 - Hatalar: sahibi değilse 403 `view_not_owner`; aynı adda görünüm varsa 409 `view_name_taken`; görünüm yoksa 404 `view_not_found`; kullanıcı yoksa 404 `user_not_found`.

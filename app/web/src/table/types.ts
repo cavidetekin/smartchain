@@ -5,6 +5,14 @@ export type ColumnType = "text" | "integer" | "number" | "bool" | "date" | "date
 export type FilterType = "text" | "list" | "number" | "date";
 export type ListValue = string | boolean;
 
+/** Ara toplam türü (K-90, docs/08). */
+export type AggFn = "sum" | "avg" | "avg_nonzero" | "wavg" | "min" | "max" | "count" | "none";
+export interface AggSpec {
+  fn: AggFn;
+  /** Yalnız wavg: ağırlık alanı (sayı). */
+  weight?: string;
+}
+
 export interface ListColumn {
   field: string;
   label: string;
@@ -15,8 +23,8 @@ export interface ListColumn {
   decimals: number | null;
   /** Miktar kolonu: ondalık her satırda birimden (satırdaki _unit_decimals; K-88). */
   decimals_from_unit: boolean;
-  /** Gruplamada ara toplam (K-90). */
-  aggregate: "sum" | "avg" | null;
+  /** Gruplamada varsayılan ara toplam (K-90). */
+  aggregate: AggFn | null;
   default_visible: boolean;
 }
 
@@ -88,6 +96,8 @@ export interface ViewDefinition {
   sort: SortItem[];
   filters: ListFilter[];
   group_by: string[];
+  /** Varsayılandan farklı seçilen ara toplam türleri (K-90). */
+  aggregates?: Record<string, AggSpec>;
 }
 
 export interface SavedView {
@@ -129,7 +139,8 @@ export function listApi(list: string) {
     query: (body: QueryRequest, signal?: AbortSignal) => postJson<QueryResponse>(`${base}/query`, body, signal),
     values: (body: { field: string; search: string; filters: ListFilter[] }, signal?: AbortSignal) =>
       postJson<ValueCount[]>(`${base}/values`, body, signal),
-    groups: (body: { group_by: string[]; fields: string[]; filters: ListFilter[]; sort: SortItem[] }, signal?: AbortSignal) =>
+    groups: (body: { group_by: string[]; fields: string[]; aggregates: Record<string, AggSpec>; filters: ListFilter[];
+                     sort: SortItem[] }, signal?: AbortSignal) =>
       postJson<GroupsResponse>(`${base}/groups`, body, signal),
     views: (userId: number, signal?: AbortSignal) => getJson<ViewsResponse>(`${base}/views?user_id=${userId}`, signal),
     createView: (userId: number, body: { name: string; is_shared: boolean; definition: ViewDefinition }) =>

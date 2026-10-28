@@ -3,13 +3,13 @@
 import { CalendarDays, CircleAlert, Search } from "lucide-react";
 import {
   type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes,
-  useEffect, useId, useLayoutEffect, useRef, useState,
+  useEffect, useId, useRef, useState,
 } from "react";
 
 import { formatDate, formatNumber, parseTrDate, parseTrNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { Calendar } from "./Calendar";
-import { placePopover, viewportSize } from "./popover";
+import { useFloating } from "./popover";
 
 interface FieldProps {
   label: string;
@@ -96,13 +96,7 @@ export function DateField({ label, help, error, required, value, onChange, ...re
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {  // takvim görünür alana sığacak şekilde (docs/12)
-    const pop = popRef.current?.firstElementChild as HTMLElement | null | undefined;
-    if (!open || !pop || !wrapRef.current) return;
-    const at = placePopover(wrapRef.current.getBoundingClientRect(), pop.getBoundingClientRect(), viewportSize());
-    popRef.current!.style.left = `${at.left}px`;
-    popRef.current!.style.top = `${at.top}px`;
-  }, [open]);
+  useFloating(popRef, wrapRef, open);  // takvim görünür alana sığar (docs/12, ui/popover)
 
   useEffect(() => {
     if (!open) return;

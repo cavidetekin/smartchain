@@ -9,11 +9,12 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Columns3, Ellipsis, Funnel, FunnelX, Rows3,
+  ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Columns3, Ellipsis, FoldVertical, Funnel, FunnelX,
+  ListCollapse, Rows3, UnfoldVertical,
 } from "lucide-react";
 import {
   type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject,
-  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 
 import { ApiError } from "../api/client";
@@ -21,19 +22,19 @@ import { formatDate, formatDateTime, formatNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { useShell } from "../shell/ShellContext";
 import { Alert, Button } from "../ui";
-import { type Box, placePopover, viewportSize } from "../ui/popover";
+import { useFloating } from "../ui/popover";
 import { type ColumnAction, ColumnMenu } from "./ColumnMenu";
 import { FieldPanel } from "./FieldPanel";
 import { FilterChips } from "./FilterChips";
 import { FilterMenu, valueLabel } from "./filters";
 import { GroupPanel } from "./GroupPanel";
-import { listApi, type GroupNode, type ListColumn, type ListFilter, type Row } from "./types";
+import { type AggSpec, listApi, type GroupNode, type ListColumn, type ListFilter, type Row } from "./types";
 import { type DisplayItem, flatten, useGroupedQuery } from "./useGroupedQuery";
 import { type ListRequest, useListQuery } from "./useListQuery";
 import { useViews, ViewBar } from "./ViewBar";
 import {
-  clampWidth, DEFAULT_WIDTH_REM, dropField, MAX_WIDTH_REM, MIN_WIDTH_REM, moveField, standardState, type TableState,
-  withFilter, withOrder,
+  aggregateOf, clampWidth, DEFAULT_WIDTH_REM, dropField, MAX_WIDTH_REM, MIN_WIDTH_REM, moveField, requestAggregates,
+  standardState, type TableState, withAggregate, withFilter, withOrder,
 } from "./viewState";
 
 const T = tr.table;
@@ -42,6 +43,9 @@ const T = tr.table;
 export const ROW_REM = 2.1538;
 /** Görünen satırların üstünde ve altında çizilen tampon satır sayısı (docs/12 performans hedefi). */
 export const OVERSCAN = 10;
+/** Grup düzeyi başına girinti ve grup okunun (ikon + boşluk) genişliği (rem); veri satırı hizası bunlardan. */
+export const GROUP_INDENT_REM = 1.2308;
+export const GROUP_ARROW_REM = 1.3077;
 /** Klavyeyle genişlik adımı (rem). */
 export const WIDTH_STEP_REM = 0.5;
 
@@ -79,12 +83,14 @@ function groupLabel(col: ListColumn | undefined, v: unknown): string {
   return col ? formatCell(col, v) : String(v);
 }
 
-/** Ara toplam (K-90): miktarda tek birimin ondalığı; ortalama bir ondalık fazla. */
-function formatAggregate(col: ListColumn, node: { aggregates: Record<string, number | null>; unit_decimals: Record<string, number> }) {
+/** Ara toplam (K-90): miktarda tek birimin ondalığı; ortalamalar bir ondalık fazla, sayı ondalıksız. */
+function formatAggregate(col: ListColumn, spec: AggSpec,
+                         node: { aggregates: Record<string, number | null>; unit_decimals: Record<string, number> }) {
   const v = node.aggregates[col.field];
   if (v === null || v === undefined) return "";
+  if (spec.fn === "count") return formatNumber(v, 0);
   const base = col.decimals_from_unit ? node.unit_decimals[col.field] ?? DEFAULT_UNIT_DECIMALS : col.decimals ?? 0;
-  return formatNumber(v, col.aggregate === "avg" ? base + 1 : base);
+  return formatNumber(v, ["avg", "avg_nonzero", "wavg"].includes(spec.fn) ? base + 1 : base);
 }
 
 const isNumeric = (c: ListColumn) => c.type === "number" || c.type === "integer";
@@ -105,11 +111,6 @@ function useDismiss(ref: RefObject<HTMLElement | null>, active: boolean, close: 
     };
   }, [ref, active, close]);
 }
-
-const toBox = (el: HTMLElement): Box => {
-  const r = el.getBoundingClientRect();
-  return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
-};
 
 /** Başlığın sağ kenarındaki genişlik tutamağı (U-10): fareyle sürüklenir, odaktayken ← / → 0,5rem. */
 function ResizeHandle({ label, width, remPx, onWidth }: {
@@ -141,7 +142,7 @@ function ResizeHandle({ label, width, remPx, onWidth }: {
   );
 }
 
-type Pop = { kind: "filter" | "column"; field: string; anchor: Box } | null;
+type Pop = { kind: "filter" | "column"; field: string; anchor: HTMLElement } | null;
 
 export function DataTable({ list }: { list: string }) {
   const { fontSize, userId } = useShell();
@@ -158,6 +159,10 @@ export function DataTable({ list }: { list: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
+  const groupBtnRef = useRef<HTMLButtonElement>(null);
+  const fieldsBtnRef = useRef<HTMLButtonElement>(null);
+  const panelPopRef = useRef<HTMLDivElement>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -209,7 +214,9 @@ export function DataTable({ list }: { list: string }) {
     [ready, requestKey]); // requestKey alanları, sıralamayı ve filtreleri taşır
   const grouped = s.groupBy.length > 0;
   const flat = useListQuery(list, grouped ? null : request, chunkSize);
-  const g = useGroupedQuery(list, grouped ? request : null, s.groupBy, chunkSize);
+  const aggKey = JSON.stringify(requestAggregates(columns ?? [], s));
+  const aggregates = useMemo(() => JSON.parse(aggKey) as Record<string, AggSpec>, [aggKey]);
+  const g = useGroupedQuery(list, grouped ? request : null, s.groupBy, chunkSize, aggregates);
   const groupKey = JSON.stringify([s.groupBy, s.filters]);
   useEffect(() => setCollapsed(new Set()), [groupKey]);
   const display: DisplayItem[] | null = useMemo(
@@ -255,18 +262,10 @@ export function DataTable({ list }: { list: string }) {
   useDismiss(panelRef, panel !== null, closePanel);
 
   const openPop = (kind: "filter" | "column", field: string, anchor: HTMLElement) =>
-    setPop((p) => (p?.kind === kind && p.field === field ? null : { kind, field, anchor: toBox(anchor) }));
-  // Açılır pencere görünür alana sığar (docs/12): ölçülür, ekran koordinatında yerleştirilir, köke göre yazılır.
-  useLayoutEffect(() => {
-    const el = popRef.current;
-    if (!pop || !el || !rootRef.current) return;
-    el.style.left = "0px";  // genişlik konumdan bağımsız ölçülsün
-    el.style.top = "0px";
-    const at = placePopover(pop.anchor, el.getBoundingClientRect(), viewportSize());
-    const root = rootRef.current.getBoundingClientRect();
-    el.style.left = `${at.left - root.left}px`;
-    el.style.top = `${at.top - root.top}px`;
-  }, [pop]);
+    setPop((p) => (p?.kind === kind && p.field === field ? null : { kind, field, anchor }));
+  // Bütün açılır öğeler ortak yerleşimle görünür alana sığar (docs/12, ui/popover).
+  useFloating(popRef, pop?.anchor ?? null, pop !== null);
+  useFloating(panelPopRef, panel === "group" ? groupBtnRef : fieldsBtnRef, panel !== null);
 
   const setFilter = (field: string, f: ListFilter | null) => {
     update((st) => ({ ...st, filters: withFilter(st.filters, field, f) }));
@@ -313,12 +312,24 @@ export function DataTable({ list }: { list: string }) {
     }
     setDrag(null);
   };
-  const allGroupIds = useMemo(() => {
-    const ids: string[] = [];
-    const walk = (nodes: GroupNode[]) => nodes.forEach((n) => { ids.push(JSON.stringify(n.key)); if (n.children) walk(n.children); });
-    walk(g.tree?.groups ?? []);
-    return ids;
+  /** Düzey başına grup kimlikleri (toplu daralt / aç, Alt+tıklama). */
+  const idsByLevel = useMemo(() => {
+    const levels: string[][] = [];
+    const walk = (nodes: GroupNode[], depth: number) => nodes.forEach((n) => {
+      (levels[depth] ??= []).push(JSON.stringify(n.key));
+      if (n.children) walk(n.children, depth + 1);
+    });
+    walk(g.tree?.groups ?? [], 0);
+    return levels;
   }, [g.tree]);
+  const allGroupIds = idsByLevel.flat();
+  /** Alt+tıklama: bu düzeydeki bütün gruplar, tıklanan grubun tersi duruma geçer (U-11). */
+  const toggleLevel = (depth: number, id: string) => setCollapsed((c) => {
+    const close = !c.has(id);
+    const next = new Set(c);
+    (idsByLevel[depth] ?? []).forEach((x) => (close ? next.add(x) : next.delete(x)));
+    return next;
+  });
   const toggleGroup = (id: string) => setCollapsed((c) => {
     const next = new Set(c);
     if (next.has(id)) next.delete(id);
@@ -345,33 +356,51 @@ export function DataTable({ list }: { list: string }) {
   const cellClass = (c: ListColumn, i: number) =>
     [isNumeric(c) ? "is-num sc-num" : "", pinnedCell(i).className].filter(Boolean).join(" ") || undefined;
 
+  // Gruplu görünümde veri satırının ilk hücresi, en alt grubun adıyla aynı hizada başlar (girinti + ok + boşluk).
+  const rowIndent = grouped ? `calc(var(--space-2) + ${(s.groupBy.length - 1) * GROUP_INDENT_REM + GROUP_ARROW_REM}rem)` : undefined;
   const renderRow = (key: string | number | bigint, index: number, row: Row | undefined) => (
-    <tr key={String(key)} aria-rowindex={index + 2} className={row ? undefined : "is-placeholder"}>
+    <tr key={String(key)} aria-rowindex={index + 2} aria-current={row && row.Id === selectedId ? true : undefined}
+        className={row ? `sc-table-row${row.Id === selectedId ? " is-selected" : ""}` : "is-placeholder"}
+        onClick={row ? () => setSelectedId(row.Id) : undefined}>
       {visible.map((c, i) => (
-        <td key={c.field} className={cellClass(c, i)} style={pinnedCell(i).style}>
+        <td key={c.field} className={cellClass(c, i)}
+            style={i === 0 && rowIndent ? { ...pinnedCell(i).style, paddingLeft: rowIndent } : pinnedCell(i).style}>
           {row ? formatCell(c, row[c.field], row) : ""}
         </td>
       ))}
     </tr>
   );
   // Grup adı, ara toplamı olmayan baştaki kolonları kaplar (kesilmesin); sabit kolon varsa sabit bölgeyi aşmaz.
-  const leading = Math.max(1, visible.findIndex((c) => c.aggregate) === -1 ? visible.length : visible.findIndex((c) => c.aggregate));
+  const firstAgg = visible.findIndex((c) => aggregateOf(c, s).fn !== "none");
+  const leading = Math.max(1, firstAgg === -1 ? visible.length : firstAgg);
+  const aggCell = (c: ListColumn, node: GroupNode) => {
+    const spec = aggregateOf(c, s);
+    if (spec.fn === "none") return "";
+    if (node.mixed_units.includes(c.field)) {
+      return <span className="sc-muted" title={T.mixedUnits} aria-label={T.mixedUnits}>—</span>;
+    }
+    const label = spec.fn === "wavg" ? T.weightedBy(byField.get(spec.weight ?? "")?.label ?? "") : T.aggFns[spec.fn];
+    const value = formatAggregate(c, spec, node);
+    return value && <span title={label}><span className="sc-agg-fn">{T.aggShort[spec.fn]}</span>{value}</span>;
+  };
   const labelSpan = s.pinned > 0 ? Math.min(leading, s.pinned) : leading;
   const renderGroup = (key: string | number | bigint, index: number, it: DisplayItem & { kind: "group" }) => {
     const open = !collapsed.has(it.id);
     const field = s.groupBy[it.depth];
     return (
       <tr key={String(key)} aria-rowindex={index + 2} aria-level={it.depth + 1} aria-expanded={open} tabIndex={0}
-          className="sc-table-group" onClick={() => toggleGroup(it.id)}
+          className={`sc-table-group sc-table-group--${it.depth === 0 ? 1 : 2}`} title={T.groupToggleHint}
+          onClick={(e) => (e.altKey ? toggleLevel(it.depth, it.id) : toggleGroup(it.id))}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              toggleGroup(it.id);
+              if (e.altKey) toggleLevel(it.depth, it.id);
+              else toggleGroup(it.id);
             }
           }}>
         <td colSpan={labelSpan} className={labelSpan === s.pinned ? "is-pinned is-pinned-last" : pinnedCell(0).className || undefined}
             style={pinnedCell(0).style}>
-          <span className="sc-tgroup-head" style={{ paddingLeft: `${it.depth * 1.2308}rem` }}>
+          <span className="sc-tgroup-head" style={{ paddingLeft: `${it.depth * GROUP_INDENT_REM}rem` }}>
             {open ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
             <span className="sc-tgroup-value">{groupLabel(byField.get(field), it.node.key[it.depth])}</span>
             <span className="sc-muted sc-num">· {T.groupRows(formatNumber(it.node.count))}</span>
@@ -379,9 +408,7 @@ export function DataTable({ list }: { list: string }) {
         </td>
         {visible.slice(labelSpan).map((c, j) => (
           <td key={c.field} className={cellClass(c, j + labelSpan)} style={pinnedCell(j + labelSpan).style}>
-            {it.node.mixed_units.includes(c.field) ? (
-              <span className="sc-muted" title={T.mixedUnits} aria-label={T.mixedUnits}>—</span>
-            ) : c.aggregate ? formatAggregate(c, it.node) : ""}
+            {aggCell(c, it.node)}
           </td>
         ))}
       </tr>
@@ -390,51 +417,6 @@ export function DataTable({ list }: { list: string }) {
 
   return (
     <div className="sc-table" ref={rootRef}>
-      <div className="sc-table-toolbar">
-        <ViewBar views={views} state={s} />
-        <div className="sc-table-tools" ref={panelRef}>
-          <div className="sc-table-anchor">
-            <Button size="sm" icon={Rows3} aria-expanded={panel === "group"} onClick={() => setPanel((p) => (p === "group" ? null : "group"))}>
-              {T.group(s.groupBy.length)}
-            </Button>
-            {panel === "group" && (
-              <GroupPanel columns={columns} groupBy={s.groupBy} onChange={(groupBy) => update((st) => ({ ...st, groupBy }))} />
-            )}
-          </div>
-          <div className="sc-table-anchor">
-            <Button size="sm" icon={Columns3} aria-expanded={panel === "fields"} onClick={() => setPanel((p) => (p === "fields" ? null : "fields"))}>
-              {T.fields(visible.length, columns.length)}
-            </Button>
-            {panel === "fields" && (
-              <FieldPanel columns={columns} visibility={Object.fromEntries(columns.map((c) => [c.field, s.order.includes(c.field)]))}
-                          onToggle={(field, on) => update((st) => withOrder(st, on ? [...st.order, field] : st.order.filter((f) => f !== field)))}
-                          onReset={() => update((st) => withOrder(st, standardState(columns).order))} />
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="sc-table-status">
-        <output className="sc-table-count sc-num" aria-label={T.countLabel}>
-          {T.count(formatNumber(filtered), formatNumber(total))}
-        </output>
-        <FilterChips filters={s.filters} byField={byField} onRemove={(f) => setFilter(f, null)}
-                     onEdit={(f, el) => openPop("filter", f, el)} />
-        {s.filters.length > 0 && (
-          <Button size="sm" variant="ghost" icon={FunnelX} onClick={() => update((st) => ({ ...st, filters: [] }))}>{T.clearFilters}</Button>
-        )}
-        {s.sort.length > 0 && (
-          <Button size="sm" variant="ghost" icon={ArrowUpDown} onClick={() => update((st) => ({ ...st, sort: [] }))}>{T.clearSort}</Button>
-        )}
-        {grouped && (
-          <span className="sc-table-grouped">
-            {T.groupedBy(s.groupBy.map((f) => byField.get(f)?.label ?? f).join(" › "))}
-            <Button size="sm" variant="ghost" onClick={() => setCollapsed(new Set(allGroupIds))}>{T.collapseAll}</Button>
-            <Button size="sm" variant="ghost" onClick={() => setCollapsed(new Set())}>{T.expandAll}</Button>
-          </span>
-        )}
-      </div>
-
       {views.error && <Alert tone="risk">{views.error}</Alert>}
       {views.warnings.length > 0 && (
         <Alert tone="info" title={T.viewWarnings} onClose={views.dismissWarnings}>{views.warnings.join(" ")}</Alert>
@@ -443,6 +425,65 @@ export function DataTable({ list }: { list: string }) {
         <Alert tone="error" title={T.loadError}>
           {error?.message} <Button size="sm" onClick={grouped ? g.retry : flat.retry}>{T.retry}</Button>
         </Alert>
+      )}
+
+      {/* Araç çubuğu ve filtre / gruplama satırı sayfa zemininde; tablo çerçevesi başlık satırından başlar (U-22, docs/12) */}
+      <div className="sc-table-toolbar">
+        <div className="sc-table-toolbar-main">
+          <ViewBar views={views} state={s} />
+          <output className="sc-table-count sc-num" aria-label={T.countLabel}>
+            {T.count(formatNumber(filtered), formatNumber(total))}
+          </output>
+          {s.sort.length > 0 && (
+            <button type="button" className="sc-tool-btn" aria-label={T.clearSort} title={T.clearSort}
+                    onClick={() => update((st) => ({ ...st, sort: [] }))}><ArrowUpDown aria-hidden="true" /></button>
+          )}
+        </div>
+        <div className="sc-table-tools" ref={panelRef}>
+          <Button size="sm" icon={Rows3} ref={groupBtnRef} aria-expanded={panel === "group"}
+                  onClick={() => setPanel((p) => (p === "group" ? null : "group"))}>
+            {T.group(s.groupBy.length)}
+          </Button>
+          {grouped && (
+            <div className="sc-btn-group" role="group" aria-label={T.groupToggles}>
+              <button type="button" className="sc-tool-btn" aria-label={T.collapseAll} title={T.collapseAll}
+                      onClick={() => setCollapsed(new Set(allGroupIds))}><FoldVertical aria-hidden="true" /></button>
+              <button type="button" className="sc-tool-btn" aria-label={T.expandAll} title={T.expandAll}
+                      onClick={() => setCollapsed(new Set())}><UnfoldVertical aria-hidden="true" /></button>
+              {s.groupBy.length >= 2 && (
+                <button type="button" className="sc-tool-btn" aria-label={T.expandLevel1} title={T.expandLevel1}
+                        onClick={() => setCollapsed(new Set(idsByLevel.slice(1).flat()))}><ListCollapse aria-hidden="true" /></button>
+              )}
+            </div>
+          )}
+          <Button size="sm" icon={Columns3} ref={fieldsBtnRef} aria-expanded={panel === "fields"}
+                  onClick={() => setPanel((p) => (p === "fields" ? null : "fields"))}>
+            {T.fields(visible.length, columns.length)}
+          </Button>
+          {panel === "group" && (
+            <GroupPanel ref={panelPopRef} columns={columns} groupBy={s.groupBy}
+                        onChange={(groupBy) => update((st) => ({ ...st, groupBy }))} />
+          )}
+          {panel === "fields" && (
+            <FieldPanel ref={panelPopRef} columns={columns}
+                        visibility={Object.fromEntries(columns.map((c) => [c.field, s.order.includes(c.field)]))}
+                        onToggle={(field, on) => update((st) => withOrder(st, on ? [...st.order, field] : st.order.filter((f) => f !== field)))}
+                        onReset={() => update((st) => withOrder(st, standardState(columns).order))} />
+          )}
+        </div>
+      </div>
+
+      {(s.filters.length > 0 || grouped) && (
+        <div className="sc-table-status">
+          <FilterChips filters={s.filters} byField={byField} onRemove={(f) => setFilter(f, null)}
+                       onEdit={(f, el) => openPop("filter", f, el)} />
+          {s.filters.length > 0 && (
+            <Button size="sm" variant="ghost" icon={FunnelX} onClick={() => update((st) => ({ ...st, filters: [] }))}>{T.clearFilters}</Button>
+          )}
+          {grouped && (
+            <span className="sc-table-grouped">{T.groupedBy(s.groupBy.map((f) => byField.get(f)?.label ?? f).join(" › "))}</span>
+          )}
+        </div>
       )}
 
       <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll">
@@ -480,15 +521,17 @@ export function DataTable({ list }: { list: string }) {
                             </span>
                           )}
                         </button>
-                        <button type="button" className={`sc-table-filter-btn${isFiltered ? " is-active" : ""}`}
-                                aria-label={T.filterOf(col.label)} aria-pressed={isFiltered} aria-haspopup="dialog"
-                                onClick={(e) => openPop("filter", col.field, e.currentTarget)}>
-                          <Funnel aria-hidden="true" />
-                        </button>
-                        <button type="button" className="sc-table-filter-btn" aria-label={T.columnMenu(col.label)}
-                                aria-haspopup="menu" onClick={(e) => openPop("column", col.field, e.currentTarget)}>
-                          <Ellipsis aria-hidden="true" />
-                        </button>
+                        <span className={`sc-table-head-tools${isFiltered ? " has-filter" : ""}`}>
+                          <button type="button" className={`sc-table-filter-btn${isFiltered ? " is-active" : ""}`}
+                                  aria-label={T.filterOf(col.label)} aria-pressed={isFiltered} aria-haspopup="dialog"
+                                  onClick={(e) => openPop("filter", col.field, e.currentTarget)}>
+                            <Funnel aria-hidden="true" />
+                          </button>
+                          <button type="button" className="sc-table-filter-btn sc-table-menu-btn" aria-label={T.columnMenu(col.label)}
+                                  aria-haspopup="menu" onClick={(e) => openPop("column", col.field, e.currentTarget)}>
+                            <Ellipsis aria-hidden="true" />
+                          </button>
+                        </span>
                       </div>
                       <ResizeHandle label={col.label} width={width(col.field)} remPx={fontSize}
                                     onWidth={(rem) => update((st) => ({ ...st, widths: { ...st.widths, [col.field]: rem } }))} />
@@ -525,14 +568,15 @@ export function DataTable({ list }: { list: string }) {
       </div>
 
       {pop && popColumn && (
-        <div className={pop.kind === "filter" ? "sc-table-pop" : "sc-table-pop sc-table-pop--menu"} ref={popRef}
+        <div className={pop.kind === "filter" ? "sc-table-pop sc-floating" : "sc-table-pop sc-table-pop--menu sc-floating"} ref={popRef}
              role={pop.kind === "filter" ? "dialog" : undefined}
              aria-label={pop.kind === "filter" ? T.filterOf(popColumn.label) : undefined}>
           {pop.kind === "filter" ? (
             <FilterMenu list={list} column={popColumn} filter={filterOf(popColumn.field)} others={others}
                         onApply={(f) => setFilter(popColumn.field, f)} />
           ) : (
-            <ColumnMenu column={popColumn} state={s} onAction={(a) => columnAction(popColumn.field, a)} />
+            <ColumnMenu column={popColumn} columns={columns} state={s} onAction={(a) => columnAction(popColumn.field, a)}
+                        onAggregate={(spec) => { update((st) => withAggregate(st, popColumn, spec)); setPop(null); }} />
           )}
         </div>
       )}

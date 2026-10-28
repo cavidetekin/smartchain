@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
 import { Button, Checkbox, ConfirmDialog, Dialog, TextField } from "../ui";
+import { useFloating } from "../ui/popover";
 import { listApi, type ListColumn, type SavedView, type ViewDefinition } from "./types";
 import { fromDefinition, isDirty, standardState, type TableState, toDefinition } from "./viewState";
 
@@ -107,6 +108,9 @@ export function ViewBar({ views, state }: { views: Views; state: TableState }) {
   const [saveAs, setSaveAs] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuPopRef = useRef<HTMLDivElement>(null);
+  useFloating(menuPopRef, menuButtonRef, menuOpen);
   const current = views.views.find((v) => v.id === views.currentId) ?? null;
   const dirty = views.baseline ? isDirty(state, views.baseline) : false;
 
@@ -137,15 +141,20 @@ export function ViewBar({ views, state }: { views: Views; state: TableState }) {
         <option value="">{T.standard}{views.defaultId === null ? ` (${T.defaultMark})` : ""}</option>
         {views.views.map((v) => <option key={v.id} value={v.id}>{label(v)}</option>)}
       </select>
-      {dirty && <span className="sc-viewbar-dirty" role="img" aria-label={T.unsaved} title={T.unsaved}>•</span>}
+      {dirty && (
+        <span className="sc-viewbar-unsaved" title={T.unsaved}>
+          <span className="sc-viewbar-dirty" role="img" aria-label={T.unsaved}>•</span>
+          <span className="sc-muted">{T.unsavedShort}</span>
+        </span>
+      )}
       {dirty && current?.is_owner && <Button size="sm" variant="primary" onClick={() => views.save(state)}>{T.save}</Button>}
       <Button size="sm" variant="ghost" onClick={() => setSaveAs(true)}>{T.saveAs}</Button>
       {current && (
         <div className="sc-table-anchor" ref={menuRef}>
-          <button type="button" className="sc-tool-btn" aria-label={T.viewMenu} aria-haspopup="menu" aria-expanded={menuOpen}
+          <button type="button" className="sc-tool-btn" ref={menuButtonRef} aria-label={T.viewMenu} aria-haspopup="menu" aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((o) => !o)}><Ellipsis aria-hidden="true" /></button>
           {menuOpen && (
-            <div className="sc-table-pop sc-popmenu sc-viewbar-menu" role="menu" aria-label={T.viewMenu}>
+            <div ref={menuPopRef} className="sc-table-pop sc-popmenu sc-viewbar-menu sc-floating" role="menu" aria-label={T.viewMenu}>
               <button type="button" role="menuitem" className="sc-popmenu-item"
                       onClick={() => { setMenuOpen(false); views.toggleDefault(); }}>
                 {views.defaultId === current.id ? T.removeDefault : T.makeDefault}

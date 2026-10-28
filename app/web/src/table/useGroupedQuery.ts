@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
-import { listApi, type GroupKey, type GroupNode, type GroupsResponse, type Row } from "./types";
+import { type AggSpec, listApi, type GroupKey, type GroupNode, type GroupsResponse, type Row } from "./types";
 import type { ListRequest } from "./useListQuery";
 
 export type DisplayItem =
@@ -43,10 +43,10 @@ export interface GroupedState {
 }
 
 export function useGroupedQuery(list: string, request: ListRequest | null, groupBy: string[],
-                                chunkSize: number): GroupedState {
+                                chunkSize: number, aggregates: Record<string, AggSpec>): GroupedState {
   const api = useMemo(() => listApi(list), [list]);
   const active = Boolean(request && groupBy.length && chunkSize);
-  const key = active ? JSON.stringify([request, groupBy]) : "";
+  const key = active ? JSON.stringify([request, groupBy, aggregates]) : "";
   const chunks = useRef(new Map<string, Row[]>());
   const inflight = useRef(new Set<string>());
   const generation = useRef(0);
@@ -67,7 +67,8 @@ export function useGroupedQuery(list: string, request: ListRequest | null, group
     const gen = generation.current;
     const ctrl = new AbortController();
     setState((s) => ({ ...s, status: "loading", error: null }));
-    api.groups({ group_by: groupBy, fields: request.fields, filters: request.filters, sort: request.sort }, ctrl.signal)
+    api.groups({ group_by: groupBy, fields: request.fields, aggregates, filters: request.filters, sort: request.sort },
+               ctrl.signal)
       .then((tree) => gen === generation.current && setState({ status: "ready", error: null, tree }))
       .catch((e: unknown) => {
         if (gen !== generation.current || ctrl.signal.aborted) return;

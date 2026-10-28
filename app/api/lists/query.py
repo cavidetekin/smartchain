@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta, timezone
 import sqlalchemy as sa
 
 from .definition import ListDefinition, column_type, columns, filter_type
-from .request import FilterItem, GroupKeyItem, QueryRequest, SortItem
+from .request import AggSpec, FilterItem, GroupKeyItem, QueryRequest, SortItem
 
 TURKISH = "Turkish_100_CI_AS"
 BINARY = "Latin1_General_100_BIN2"
@@ -255,10 +255,11 @@ class Builder:
         return sa.select(inner).order_by(*order).limit(limit + 1)  # boş (U-13) başta, sonra ilk 100 değer
 
     def groups_query(self, group_by: list[str], filters: list[FilterItem], sort: list[SortItem],
-                     aggregate: list[str], limit: int) -> tuple[sa.Select, list[str]]:
-        """Yaprak gruplar (K-90): grup değerleri, satır sayısı, aggregate kolonları için toplam ve boş olmayan sayı.
-        Birimden ondalıklı kolon varsa birim gizli son düzeydir ("u"): karışık birim Python'da bulunur (metin
-        MIN/MAX'tan ucuz). Sıra: grup alanı sıralamadaysa onun yönü, değilse artan, Türkçe; boş grup en sonda."""
+                     specs: dict[str, AggSpec], limit: int) -> tuple[sa.Select, list[str]]:
+        """Yaprak gruplar (K-90): grup değerleri, satır sayısı ve her ara toplam için yaprak ölçüleri:
+        k_ katkı veren satır sayısı (birim karışıklığı ve "sayı" için), s_ pay, d_ payda (ortalamalar), v_ en küçük /
+        en büyük. Birimden ondalıklı kolon (ya da ağırlık) varsa birim gizli son düzeydir ("u"); karışıklık Python'da
+        bulunur. Sıra: grup alanı sıralamadaysa onun yönü, değilse artan, Türkçe; boş grup en sonda."""
         problems: list[dict] = []
         cols = [self._col(f, f"group_by.{i}", problems) for i, f in enumerate(group_by)]
         if len(set(group_by)) != len(group_by):
@@ -268,11 +269,10 @@ class Builder:
         where = self.where(filters)
         keys = [self.group_expr(c).label(f"g{i}") for i, c in enumerate(cols)]
         measures = [sa.func.count().label("n")]
-        for f in aggregate:
-            c = self.table.c[f]
-            measures += [sa.func.sum(c).label(f"s_{f}"), sa.func.count(c).label(f"c_{f}")]
+        for f, spec in specs.items():
+            measures += self._measures(f, spec)
         grouping = [self.group_expr(c) for c in cols]
-        if self.defn.unit_field and any(f in self.defn.unit_decimals for f in aggregate):
+        if self.defn.unit_field and any(self.unit_relevant(f, spec) for f, spec in specs.items()):
             unit = self.table.c[self.defn.unit_field]
             keys.append(unit.label("u"))
             grouping.append(unit)
@@ -287,6 +287,45 @@ class Builder:
         q = sa.select(inner).order_by(*order).limit(limit).with_statement_hint(PARALLEL_HINT, "mssql")
         return q, [c.name for c in cols]
 
-    def aggregated(self, fields: list[str] | None = None) -> list[str]:
-        """Ara toplamı olan ve listede görünebilen kolonlar; fields verilirse yalnız onlar (görünen kolonlar)."""
-        return [f for f in self.defn.aggregates if f in self.columns and (fields is None or f in fields)]
+    def _measures(self, f: str, spec: AggSpec) -> list[sa.ColumnElement]:
+        c = self.table.c[f]
+        if spec.fn == "wavg":
+            w = self.table.c[spec.weight]
+            both = sa.and_(c.is_not(None), w.is_not(None))
+            return [sa.func.count(sa.case((both, 1))).label(f"k_{f}"),
+                    sa.func.sum(sa.case((both, c * w))).label(f"s_{f}"),
+                    sa.func.sum(sa.case((both, w))).label(f"d_{f}")]
+        out = [sa.func.count(c).label(f"k_{f}")]
+        if spec.fn in ("sum", "avg"):
+            out += [sa.func.sum(c).label(f"s_{f}"), sa.func.count(c).label(f"d_{f}")]
+        elif spec.fn == "avg_nonzero":
+            out += [sa.func.sum(c).label(f"s_{f}"), sa.func.count(sa.case((c != 0, 1))).label(f"d_{f}")]
+        elif spec.fn in ("min", "max"):
+            out.append(getattr(sa.func, spec.fn)(c).label(f"v_{f}"))
+        return out
+
+    def unit_relevant(self, f: str, spec: AggSpec) -> bool:
+        """Birim karışıklığı bu ara toplamı geçersiz kılar mı (K-88, K-90): miktar alanı ya da miktar ağırlığı; sayı hariç."""
+        units = self.defn.unit_decimals
+        return spec.fn != "count" and (f in units or (spec.fn == "wavg" and spec.weight in units))
+
+    def aggregate_specs(self, fields: list[str] | None, specs: dict[str, AggSpec] | None,
+                        where: str = "aggregates") -> dict[str, AggSpec]:
+        """Ara toplam türleri: verilmezse görünen kolonlarda liste tanımının varsayılanı. "none" atılır.
+        Yalnız sayı alanları; ağırlıklı ortalamada ağırlık başka bir sayı alanı olmalı (422)."""
+        if specs is None:
+            return {f: AggSpec(fn=fn) for f, fn in self.defn.aggregates.items()
+                    if f in self.columns and (fields is None or f in fields)}
+        problems: list[dict] = []
+        numeric = {f for f, c in self.columns.items() if c["type"] in ("number", "integer")}
+        out = {}
+        for f, spec in specs.items():
+            if f not in numeric:
+                problems.append({"field": f"{where}.{f}", "problem": f"Ara toplam yalnız sayı alanında: {f}"})
+            elif spec.fn == "wavg" and (spec.weight not in numeric or spec.weight == f):
+                problems.append({"field": f"{where}.{f}.weight", "problem": "Ağırlıklı ortalama için başka bir sayı alanı seçilmeli"})
+            elif spec.fn != "none":
+                out[f] = spec if spec.fn == "wavg" else AggSpec(fn=spec.fn)
+        if problems:
+            raise ListQueryError(problems)
+        return out

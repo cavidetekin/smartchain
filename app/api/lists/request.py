@@ -43,9 +43,21 @@ class QueryRequest(BaseModel):
     group_key: list[GroupKeyItem] = []
 
 
+# Ara toplam türleri (K-90, docs/08): toplam, ortalama (boşlar / sıfırlar hariç), ağırlıklı ortalama, en küçük,
+# en büyük, dolu satır sayısı, yok.
+AGG_FNS = ("sum", "avg", "avg_nonzero", "wavg", "min", "max", "count", "none")
+AggFn = Literal["sum", "avg", "avg_nonzero", "wavg", "min", "max", "count", "none"]
+
+
+class AggSpec(BaseModel):
+    fn: AggFn
+    weight: str | None = None  # yalnız wavg: ağırlık alanı (sayı)
+
+
 class GroupsRequest(BaseModel):
     group_by: list[str] = Field(min_length=1, max_length=4)
-    fields: list[str] | None = None  # ara toplam yalnız bu (görünen) kolonlar için; boşsa bütün toplanabilenler
+    fields: list[str] | None = None  # görünen kolonlar: varsayılan ara toplamlar yalnız bunlar için
+    aggregates: dict[str, AggSpec] | None = None  # verilirse tam bu türler (görünen kolonlar için istemci gönderir)
     filters: list[FilterItem] = []
     sort: list[SortItem] = []
 
@@ -74,6 +86,7 @@ class ViewDefinition(BaseModel):
     sort: list[SortItem] = []
     filters: list[FilterItem] = []
     group_by: list[str] = Field(default=[], max_length=4)
+    aggregates: dict[str, AggSpec] = {}  # varsayılandan farklı seçilen ara toplam türleri (K-90)
 
 
 class ViewCreate(BaseModel):

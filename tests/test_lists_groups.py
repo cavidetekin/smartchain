@@ -7,35 +7,41 @@ from app.api.lists.groups import build_tree
 from test_lists_api import all_rows, api, query  # noqa: F401  (fikstür ve yardımcılar)
 
 
-def leaf(g, n, s=None, c=0, unit=None):
-    return {**{f"g{i}": v for i, v in enumerate(g)}, "n": n, "s_Q": s, "c_Q": c, "u": unit, "s_D": s, "c_D": c}
+def leaf(g, n, unit=None, **m):
+    """Yaprak satırı: m ölçüleri (k_X, s_X, d_X, v_X)."""
+    return {**{f"g{i}": v for i, v in enumerate(g)}, "n": n, "u": unit, **m}
 
 
 # --- birim: ağaç ve ara toplamlar -------------------------------------------------------------------------------
 
-def test_tree_sums_weighted_average_and_mixed_units():
-    leaves = [leaf(["A", "x"], 2, 10, 2, "ADET"), leaf(["A", "y"], 3, 6, 1, "KG"), leaf(["B", None], 1, None, 0, "KG")]
-    t = build_tree(leaves, 2, {"Q": "sum", "D": "avg"}, {"Q"})
-    a, b = t["groups"]
-    assert (a["key"], a["count"], b["key"], b["count"]) == (["A"], 5, ["B"], 1)
-    assert [ch["key"] for ch in a["children"]] == [["A", "x"], ["A", "y"]]
-    assert a["children"][0]["aggregates"] == {"Q": 10.0, "D": 5.0}
-    assert a["aggregates"] == {"Q": None, "D": 16 / 3} and a["mixed_units"] == ["Q"]  # ADET + KG: toplam yok
-    assert a["children"][0]["unit_decimals"] == {"Q": 2}  # birim ondalığı verilmedi: 2
-    assert b["aggregates"] == {"Q": None, "D": None} and b["children"][0]["key"] == ["B", None]
-    assert t["aggregates"]["D"] == 16 / 3 and t["leaf_groups"] == 3
+def test_each_function_combines_exactly_upwards():
+    """Üst grup alt gruplardan tam türetilir: toplam/sayı toplanır, ortalamalar pay ve paydayla, en küçük/büyük karşılaştırılır."""
+    leaves = [leaf(["A", "x"], 3, k_Q=2, s_Q=10, d_Q=2, k_M=2, v_M=4), leaf(["A", "y"], 2, k_Q=2, s_Q=2, d_Q=1, k_M=1, v_M=1),
+              leaf(["B", "z"], 1, k_Q=0, s_Q=None, d_Q=0, k_M=0, v_M=None)]
+    for fn, a, b in [("sum", 12.0, None), ("avg", 4.0, None), ("avg_nonzero", 4.0, None), ("wavg", 4.0, None),
+                     ("count", 4, 0)]:
+        t = build_tree(leaves, 2, {"Q": fn}, set())
+        assert (t["groups"][0]["aggregates"]["Q"], t["groups"][1]["aggregates"]["Q"]) == (a, b), fn
+    t = build_tree(leaves, 2, {"M": "min"}, set())
+    assert [t["groups"][0]["aggregates"]["M"], t["groups"][0]["children"][0]["aggregates"]["M"]] == [1.0, 4.0]
+    assert build_tree(leaves, 2, {"M": "max"}, set())["aggregates"]["M"] == 4.0
 
 
-def test_unit_level_rows_merge_into_one_group():
-    """Birim gizli düzey: aynı grup iki birimde iki satır gelir, tek grup olur; değersiz birim karışıklık sayılmaz."""
-    leaves = [leaf(["A"], 2, 10, 2, "ADET"), leaf(["A"], 3, None, 0, "KG"), leaf(["B"], 1, 4, 1, "ADET"),
-              leaf(["B"], 1, 1.5, 1, "KG")]
-    t = build_tree(leaves, 1, {"Q": "sum"}, {"Q"})
+def test_weighted_average_zero_weight_is_empty():
+    t = build_tree([leaf(["A"], 2, k_W=2, s_W=0, d_W=0)], 1, {"W": "wavg"}, set())
+    assert t["groups"][0]["aggregates"]["W"] is None
+
+
+def test_mixed_units_hide_value_but_not_count():
+    leaves = [leaf(["A"], 2, "ADET", k_Q=2, s_Q=10, d_Q=2), leaf(["A"], 1, "KG", k_Q=1, s_Q=1.5, d_Q=1),
+              leaf(["B"], 1, "KG", k_Q=0, s_Q=None, d_Q=0), leaf(["B"], 2, "ADET", k_Q=2, s_Q=4, d_Q=2)]
+    t = build_tree(leaves, 1, {"Q": "sum"}, {"Q"}, unit_decimals={"ADET": 0})
     a, b = t["groups"]
-    assert (a["count"], a["aggregates"]["Q"], a["mixed_units"]) == (5, 10.0, [])
-    assert build_tree(leaves, 1, {"Q": "sum"}, {"Q"}, unit_decimals={"ADET": 0})["groups"][0]["unit_decimals"] == {"Q": 0}
-    assert (b["count"], b["aggregates"]["Q"], b["mixed_units"]) == (2, None, ["Q"])
+    assert (a["count"], a["aggregates"]["Q"], a["mixed_units"]) == (3, None, ["Q"])
+    assert (b["count"], b["aggregates"]["Q"], b["mixed_units"], b["unit_decimals"]) == (3, 4.0, [], {"Q": 0})  # değersiz KG sayılmaz
     assert t["leaf_groups"] == 2
+    t = build_tree(leaves, 1, {"Q": "count"}, set())  # sayı birim kuralına girmez
+    assert [g["aggregates"]["Q"] for g in t["groups"]] == [3, 2]
 
 
 def test_tree_keeps_server_order():
@@ -157,3 +163,59 @@ def test_group_validation(api):
     assert api.post("/api/materials/groups", json={"group_by": []}).status_code == 422
     assert api.post("/api/materials/groups", json={"group_by": ["Nope"]}).status_code == 422
     assert api.post("/api/materials/groups", json={"group_by": ["Code", "Code"]}).status_code == 422
+
+
+@needs_db
+def test_each_aggregate_function_matches_database(api, db_engine):
+    """Her tür için sonuç doğrudan SQL'le karşılaştırılır (K-90). Geçici veri: bir sıfır süre ve bazı satırlara ağırlık."""
+    level = "Yarı mamul"
+    where = "VersionTo IS NULL AND MaterialLevel = N'Yarı mamul'"
+    try:
+        with db_engine.begin() as conn:
+            conn.execute(text(f"UPDATE core.Material SET ProductionLeadTimeDays = 0 WHERE Code = 'ALT-001' AND VersionTo IS NULL"))
+            conn.execute(text(f"UPDATE core.Material SET MaxStock = Id % 5 + 1 WHERE {where} AND Id % 2 = 0"))
+            row = conn.execute(text(f"""SELECT SUM(ProductionLeadTimeDays), AVG(ProductionLeadTimeDays),
+                SUM(ProductionLeadTimeDays) / NULLIF(SUM(CASE WHEN ProductionLeadTimeDays <> 0 THEN 1 END), 0),
+                MIN(ProductionLeadTimeDays), MAX(ProductionLeadTimeDays), COUNT(ProductionLeadTimeDays),
+                SUM(ProductionLeadTimeDays * MaxStock) / SUM(CASE WHEN ProductionLeadTimeDays IS NOT NULL THEN MaxStock END)
+                FROM core.Material WHERE {where}""")).one()
+        expected = dict(zip(["sum", "avg", "avg_nonzero", "min", "max", "count", "wavg"], row))
+        for fn, want in expected.items():
+            spec = {"fn": fn, "weight": "MaxStock"} if fn == "wavg" else {"fn": fn}
+            t = groups(api, group_by=["MaterialLevel"], aggregates={"ProductionLeadTimeDays": spec})
+            got = next(g for g in t["groups"] if g["key"] == [level])["aggregates"]["ProductionLeadTimeDays"]
+            assert got == pytest.approx(float(want)), fn
+        assert expected["avg_nonzero"] != expected["avg"]  # sıfır gerçekten fark yaratıyor
+    finally:
+        with db_engine.begin() as conn:
+            conn.execute(text("UPDATE core.Material SET ProductionLeadTimeDays = 2 WHERE Code = 'ALT-001' AND VersionTo IS NULL"))
+            conn.execute(text(f"UPDATE core.Material SET MaxStock = NULL WHERE {where}"))
+
+
+@needs_db
+def test_weighted_average_with_empty_weight_is_empty(api):
+    t = groups(api, group_by=["MaterialLevel"], aggregates={"ProductionLeadTimeDays": {"fn": "wavg", "weight": "MaxStock"}})
+    assert all(g["aggregates"]["ProductionLeadTimeDays"] is None for g in t["groups"])  # MaxStock hep boş
+    assert t["aggregate_specs"] == {"ProductionLeadTimeDays": {"fn": "wavg", "weight": "MaxStock"}}
+
+
+@needs_db
+def test_default_aggregates_come_from_list_definition(api):
+    t = groups(api, group_by=["MaterialLevel"], fields=["Code", "SafetyStock", "ProductionLeadTimeDays"])
+    assert t["aggregate_specs"] == {"SafetyStock": {"fn": "sum"}, "ProductionLeadTimeDays": {"fn": "avg"}}
+    t = groups(api, group_by=["MaterialLevel"], aggregates={"SafetyStock": {"fn": "none"}})
+    assert t["aggregate_specs"] == {} and t["groups"][0]["aggregates"] == {}
+
+
+@needs_db
+@pytest.mark.parametrize("aggregates, field", [
+    ({"Name": {"fn": "sum"}}, "aggregates.Name"),
+    ({"SafetyStock": {"fn": "wavg"}}, "aggregates.SafetyStock.weight"),
+    ({"SafetyStock": {"fn": "wavg", "weight": "Name"}}, "aggregates.SafetyStock.weight"),
+    ({"SafetyStock": {"fn": "wavg", "weight": "SafetyStock"}}, "aggregates.SafetyStock.weight"),
+])
+def test_invalid_aggregates(api, aggregates, field):
+    r = api.post("/api/materials/groups", json={"group_by": ["MaterialLevel"], "aggregates": aggregates})
+    assert r.status_code == 422 and r.json()["error"]["details"][0]["field"] == field
+    assert api.post("/api/materials/groups", json={"group_by": ["MaterialLevel"],
+                                                   "aggregates": {"SafetyStock": {"fn": "median"}}}).status_code == 422

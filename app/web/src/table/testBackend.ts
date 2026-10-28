@@ -30,7 +30,7 @@ export const VIEW_PX = 560;
 export interface Calls {
   queries: QueryRequest[];
   values: unknown[];
-  groups: { group_by: string[]; fields: string[]; filters: unknown[]; sort: unknown[] }[];
+  groups: { group_by: string[]; fields: string[]; aggregates: Record<string, { fn: string; weight?: string }>; filters: unknown[]; sort: unknown[] }[];
   views: { method: string; url: string; body: unknown }[];
 }
 export const calls: Calls = { queries: [], values: [], groups: [], views: [] };

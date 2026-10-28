@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from ..errors import AppError
 from ..lists.definition import ListDefinition
 from ..lists.query import Builder, ListQueryError
-from ..lists.request import DefaultViewRequest, FilterItem, ViewCreate, ViewDefinition, ViewUpdate
+from ..lists.request import AggSpec, DefaultViewRequest, FilterItem, ViewCreate, ViewDefinition, ViewUpdate
 from ..repositories import lists as list_repo, views as repo
 
 DB_DOWN = "Veritabanına bağlanılamıyor; görünümler okunamadı."
@@ -45,6 +45,10 @@ def _problems(b: Builder, d: ViewDefinition) -> list[dict]:
     for i, f in enumerate(d.group_by):
         if f not in b.columns or d.group_by.index(f) != i:
             problems.append({"field": f"definition.group_by.{i}", "problem": f"Geçersiz gruplama alanı: {f}"})
+    try:
+        b.aggregate_specs(None, d.aggregates, "definition.aggregates")
+    except ListQueryError as exc:
+        problems += exc.details
     return problems
 
 
@@ -82,8 +86,18 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
             else:
                 gone(f.get("field"))
     group_by = known(data.get("group_by", []), lambda g: g)
+    aggregates = {}
+    for f, spec in (data.get("aggregates") or {}).items():
+        try:
+            b.aggregate_specs(None, {f: AggSpec.model_validate(spec)})
+            aggregates[f] = spec
+        except (ListQueryError, ValidationError):
+            if f in b.columns:
+                warnings.append(f"'{f}' ara toplamı artık geçerli değil; görünümden çıkarıldı.")
+            else:
+                gone(f)
     definition = {"v": 1, "columns": columns, "pinned": min(int(data.get("pinned", 0)), len(columns)),
-                  "sort": sort, "filters": filters, "group_by": group_by}
+                  "sort": sort, "filters": filters, "group_by": group_by, "aggregates": aggregates}
     return definition, warnings
 
 

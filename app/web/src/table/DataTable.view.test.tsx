@@ -2,7 +2,7 @@
 // aktif filtre etiketleri (U-12), boş değer (U-13).
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ROW_REM } from "./DataTable";
 import { describeFilter } from "./filters";
@@ -221,7 +221,8 @@ describe("gruplama ve ara toplam (U-11, K-90)", () => {
     await openTable({ groups });
     await user.click(screen.getByRole("button", { name: "Grupla" }));
     await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialLevel");
-    await waitFor(() => expect(calls.groups[0]).toEqual({ group_by: ["MaterialLevel"], fields: STANDARD_FIELDS, filters: [], sort: [] }));
+    await waitFor(() => expect(calls.groups[0]).toEqual({ group_by: ["MaterialLevel"], fields: STANDARD_FIELDS,
+                                                         aggregates: { SafetyStock: { fn: "sum" } }, filters: [], sort: [] }));
     expect(screen.getByText("Malzeme seviyesi ile gruplu")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Grupla (1)" })).toBeInTheDocument();
     const rows = await screen.findAllByRole("row", { expanded: true });
@@ -233,6 +234,43 @@ describe("gruplama ve ara toplam (U-11, K-90)", () => {
     expect(calls.queries.some((q) => JSON.stringify(q.group_key) === JSON.stringify([{ field: "MaterialLevel", value: "Hammadde" }]))).toBe(true);
     expect(calls.queries.some((q) => JSON.stringify(q.group_key) === JSON.stringify([{ field: "MaterialLevel", value: null }]))).toBe(true);
     expect(screen.getByLabelText("Kayıt sayısı (gösterilen / toplam)")).toHaveTextContent("6 / 50.000");
+  });
+
+  it("satır tonları: 1. düzey ve alt düzey grup ayrı sınıf, veri satırı grup sınıfı taşımaz", async () => {
+    const tree = [group(["Hammadde"], 2, { children: [group(["Hammadde", "Çubuk"], 2)] })];
+    await openTable({ groups: tree, views: { views: [savedView(3, "G", { columns: [{ field: "Code" }], group_by: ["MaterialLevel", "MaterialGroup"] })], default_view_id: 3 } });
+    const [top, sub] = await screen.findAllByRole("row", { expanded: true });
+    expect(top).toHaveClass("sc-table-group", "sc-table-group--1");
+    expect(sub).toHaveClass("sc-table-group", "sc-table-group--2");
+    expect((await screen.findByText("Hammadde/Çubuk-0")).closest("tr")).not.toHaveClass("sc-table-group");
+  });
+
+  it("araç çubuğunda toplu daralt / aç; iki düzeyde '1. düzeye kadar aç'; Alt+tıklama bütün düzey", async () => {
+    const user = userEvent.setup();
+    const tree = [group(["Hammadde"], 2, { children: [group(["Hammadde", "Çubuk"], 1), group(["Hammadde", "Levha"], 1)] }),
+                  group(["Yarı mamul"], 1, { children: [group(["Yarı mamul", "Alt montaj"], 1)] })];
+    await openTable({ groups: tree, views: { views: [savedView(3, "G", { columns: [{ field: "Code" }], group_by: ["MaterialLevel"] })], default_view_id: 3 } });
+    expect(await screen.findByRole("button", { name: "Tümünü daralt" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "1. düzeye kadar aç" })).toBeNull();  // tek düzey
+    await user.click(screen.getByRole("button", { name: "Grupla (1)" }));
+    await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialGroup");
+    await user.click(await screen.findByRole("button", { name: "1. düzeye kadar aç" }));
+    const level = (n: number) => screen.getAllByRole("row").filter((r) => r.getAttribute("aria-level") === String(n));
+    expect(level(1).map((r) => r.getAttribute("aria-expanded"))).toEqual(["true", "true"]);
+    expect(level(2).map((r) => r.getAttribute("aria-expanded"))).toEqual(["false", "false", "false"]);
+    await user.click(screen.getByRole("button", { name: "Tümünü aç" }));
+    expect(level(2).every((r) => r.getAttribute("aria-expanded") === "true")).toBe(true);
+    await user.keyboard("{Alt>}");
+    await user.click(level(2)[0]);  // Alt+tıklama: 2. düzeyin hepsi kapanır
+    await user.keyboard("{/Alt}");
+    expect(level(2).map((r) => r.getAttribute("aria-expanded"))).toEqual(["false", "false", "false"]);
+    expect(level(1).every((r) => r.getAttribute("aria-expanded") === "true")).toBe(true);
+    level(1)[0].focus();
+    await user.keyboard("{Alt>}{Enter}{/Alt}");  // Alt+Enter: 1. düzeyin hepsi kapanır
+    expect(level(1).map((r) => r.getAttribute("aria-expanded"))).toEqual(["false", "false"]);
+    await user.click(screen.getByRole("button", { name: "Grupla (2)" }));
+    await user.click(screen.getByRole("button", { name: "Gruplamayı kaldır" }));
+    expect(screen.queryByRole("button", { name: "Tümünü daralt" })).toBeNull();
   });
 
   it("daralt ve aç: tıklama, Enter, Tümünü daralt / aç", async () => {
@@ -368,5 +406,262 @@ describe("boş değer (U-13)", () => {
     await user.click(within(menu).getByRole("checkbox", { name: "(Boş)" }));
     await user.click(within(menu).getByRole("button", { name: "Uygula" }));
     await waitFor(() => expect(lastQuery().filters[1]).toEqual({ field: "MaterialLevel", op: "empty" }));
+  });
+});
+
+describe("ara toplam türü (K-90)", () => {
+  const view = savedView(4, "Süre", { columns: [{ field: "Code" }, { field: "SafetyStock" }, { field: "ProductionLeadTimeDays" }],
+                                       group_by: ["MaterialLevel"] });
+  const tree = [group(["Hammadde"], 4, { aggregates: { SafetyStock: 7, ProductionLeadTimeDays: 2.7833 },
+                                        unit_decimals: { SafetyStock: 0 } })];
+  const openMenu = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
+    await user.click(screen.getByRole("button", { name: `${label} kolon işlemleri` }));
+    await user.click(screen.getByRole("menuitem", { name: /Ara toplam/ }));
+    return screen.getByRole("group", { name: "Ara toplam" });
+  };
+  const lastGroups = () => calls.groups[calls.groups.length - 1];
+
+  it("varsayılan liste tanımından; menüden her tür seçilir ve sunucuya gider", async () => {
+    const user = userEvent.setup();
+    await openTable({ groups: tree, views: { views: [view], default_view_id: 4 } });
+    await waitFor(() => expect(lastGroups().aggregates).toEqual({ SafetyStock: { fn: "sum" }, ProductionLeadTimeDays: { fn: "avg" } }));
+    let menu = await openMenu(user, "Güvenlik stoğu");
+    expect(within(menu).getAllByRole("menuitemradio").map((b) => b.textContent)).toEqual([
+      "Toplam", "Ortalama (boşlar hariç)", "Ortalama (sıfırlar hariç)", "Ağırlıklı ortalama…", "En küçük", "En büyük",
+      "Sayı (dolu satır)", "Yok"]);
+    expect(within(menu).getByRole("menuitemradio", { name: "Toplam" })).toHaveAttribute("aria-checked", "true");
+    for (const [name, fn] of [["En büyük", "max"], ["En küçük", "min"], ["Ortalama (sıfırlar hariç)", "avg_nonzero"],
+                              ["Sayı (dolu satır)", "count"]] as const) {
+      menu = await openMenu(user, "Güvenlik stoğu");
+      await user.click(within(menu).getByRole("menuitemradio", { name }));
+      await waitFor(() => expect(lastGroups().aggregates.SafetyStock).toEqual({ fn }));
+    }
+    const row = (await screen.findAllByRole("row", { expanded: true }))[0];
+    expect(within(row).getByTitle("Sayı (dolu satır)")).toHaveTextContent(/^n7$/);  // tür öneki "n", sayı ondalıksız
+    menu = await openMenu(user, "Güvenlik stoğu");
+    await user.click(within(menu).getByRole("menuitemradio", { name: "Yok" }));
+    await waitFor(() => expect(lastGroups().aggregates).toEqual({ ProductionLeadTimeDays: { fn: "avg" } }));
+  });
+
+  it("ağırlıklı ortalama: ağırlık alanı seçilir; ortalama bir ondalık fazla; görünümle kaydedilir", async () => {
+    const user = userEvent.setup();
+    await openTable({ groups: tree, views: { views: [view], default_view_id: 4 } });
+    const menu = await openMenu(user, "Üretim süresi (gün)");
+    await user.click(within(menu).getByRole("menuitemradio", { name: "Ağırlıklı ortalama…" }));
+    const weight = within(menu).getByLabelText("Ağırlık alanı");
+    expect([...(weight as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(["Alan seçin", "Güvenlik stoğu"]);
+    await user.selectOptions(weight, "SafetyStock");
+    await waitFor(() => expect(lastGroups().aggregates.ProductionLeadTimeDays).toEqual({ fn: "wavg", weight: "SafetyStock" }));
+    const row = (await screen.findAllByRole("row", { expanded: true }))[0];
+    expect(within(row).getByTitle("Ağırlıklı ortalama (ağırlık: Güvenlik stoğu)")).toHaveTextContent("2,8");
+    expect(screen.getByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect((lastViewCall("PUT")?.body as { definition: { aggregates: unknown } }).definition.aggregates)
+      .toEqual({ ProductionLeadTimeDays: { fn: "wavg", weight: "SafetyStock" } }));
+  });
+
+  it("kayıtlı görünümdeki seçim açılışta uygulanır; metin alanında Ara toplam yok", async () => {
+    const user = userEvent.setup();
+    const saved = savedView(6, "Max", { ...view.definition, aggregates: { SafetyStock: { fn: "max" } } });
+    await openTable({ groups: tree, views: { views: [saved], default_view_id: 6 } });
+    await waitFor(() => expect(lastGroups().aggregates.SafetyStock).toEqual({ fn: "max" }));
+    await user.click(screen.getByRole("button", { name: "Malzeme kodu kolon işlemleri" }));
+    expect(screen.queryByRole("menuitem", { name: /Ara toplam/ })).toBeNull();
+  });
+});
+
+describe("satır seçimi (K-85)", () => {
+  it("veri satırına tıklayınca seçilir; başka satır seçilince seçim taşınır", async () => {
+    const user = userEvent.setup();
+    await openTable();
+    const first = (await screen.findByText("M-0")).closest("tr")!;
+    expect(first).toHaveClass("sc-table-row");
+    await user.click(first);
+    expect(first).toHaveClass("is-selected");
+    expect(first).toHaveAttribute("aria-current", "true");
+    const second = screen.getByText("M-1").closest("tr")!;
+    await user.click(second);
+    expect(second).toHaveClass("is-selected");
+    expect(first).not.toHaveClass("is-selected");
+  });
+});
+
+describe("açılır menülerin yerleşimi (docs/12, ui/popover)", () => {
+  type R = { left: number; top: number; width: number; height: number };
+  const rect = ({ left, top, width, height }: R) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) }) as DOMRect;
+  /** jsdom ölçü vermez: açan öğelerin yeri ve menülerin boyu test içinde verilir (görünür alan 1024 × 768). */
+  const mockRects = (place: (el: Element) => R | undefined) =>
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      return rect(place(this) ?? { left: 0, top: 0, width: 0, height: 0 });
+    });
+  const px = (el: Element) => ({ left: parseFloat((el as HTMLElement).style.left), top: parseFloat((el as HTMLElement).style.top) });
+
+  it("en sağdaki kolonun menüsü ve 'Ara toplam' alt menüsü ekrandan taşmaz: sola açılır", async () => {
+    const user = userEvent.setup();
+    const view = savedView(4, "Sağ", { columns: [{ field: "Code" }, { field: "SafetyStock" }] });
+    await openTable({ views: { views: [view], default_view_id: 4 } });
+    mockRects((el) => {
+      if (el.getAttribute("aria-label") === "Güvenlik stoğu kolon işlemleri") return { left: 1000, top: 40, width: 18, height: 28 };
+      if (el.classList.contains("sc-popmenu-subpanel")) return { left: 0, top: 0, width: 220, height: 300 };
+      if (el.classList.contains("sc-floating")) return { left: 0, top: 0, width: 200, height: 260 };
+      if (el.getAttribute("aria-haspopup") === "menu" && el.getAttribute("role") === "menuitem") {
+        return { left: 818, top: 180, width: 198, height: 28 };
+      }
+    });
+    await user.click(screen.getByRole("button", { name: "Güvenlik stoğu kolon işlemleri" }));
+    const menu = screen.getByRole("menu", { name: "Güvenlik stoğu kolon işlemleri" }).closest(".sc-floating")!;
+    expect(px(menu)).toEqual({ left: 1024 - 8 - 200, top: 72 });  // sola açılır; ekran kenarından 8 px içeride
+    await user.click(screen.getByRole("menuitem", { name: /Ara toplam/ }));
+    const sub = screen.getByRole("group", { name: "Ara toplam" });
+    expect(sub).toHaveClass("sc-floating");
+    expect(px(sub)).toEqual({ left: 818 - 220, top: 180 });  // sağda yer yok: ana menünün soluna
+  });
+
+  it("alta yakın açan öğede menü yukarı açılır; alt menü alttan taşmaz", async () => {
+    const user = userEvent.setup();
+    const view = savedView(4, "Alt", { columns: [{ field: "Code" }, { field: "SafetyStock" }] });
+    await openTable({ views: { views: [view], default_view_id: 4 } });
+    mockRects((el) => {
+      if (el.tagName === "BUTTON" && el.getAttribute("aria-label") === "Malzeme kodu filtresi") {
+        return { left: 100, top: 700, width: 18, height: 28 };
+      }
+      if (el.getAttribute("aria-label") === "Güvenlik stoğu kolon işlemleri") return { left: 300, top: 700, width: 18, height: 28 };
+      if (el.classList.contains("sc-popmenu-subpanel")) return { left: 0, top: 0, width: 220, height: 300 };
+      if (el.classList.contains("sc-floating")) return { left: 0, top: 0, width: 260, height: 260 };
+      if (el.getAttribute("aria-haspopup") === "menu" && el.getAttribute("role") === "menuitem") {
+        return { left: 300, top: 600, width: 200, height: 28 };
+      }
+    });
+    await user.click(screen.getByRole("button", { name: "Malzeme kodu filtresi" }));
+    expect(px(screen.getByRole("dialog", { name: "Malzeme kodu filtresi" }))).toEqual({ left: 100, top: 700 - 4 - 260 });
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Güvenlik stoğu kolon işlemleri" }));
+    await user.click(screen.getByRole("menuitem", { name: /Ara toplam/ }));
+    expect(px(screen.getByRole("group", { name: "Ara toplam" }))).toEqual({ left: 500, top: 768 - 8 - 300 });
+  });
+
+  it("Alanlar, Grupla ve görünüm menüsü de aynı yardımcıyla görünür alana sığar", async () => {
+    const user = userEvent.setup();
+    await openTable({ views: { views: [savedView(5, "Benim", {})], default_view_id: 5 } });
+    mockRects((el) => {
+      const label = el.textContent ?? "";
+      if (el.tagName === "BUTTON" && label.startsWith("Alanlar")) return { left: 960, top: 10, width: 60, height: 30 };
+      if (el.tagName === "BUTTON" && label.startsWith("Grupla")) return { left: 880, top: 10, width: 70, height: 30 };
+      if (el.tagName === "BUTTON" && el.getAttribute("aria-label") === "Görünüm işlemleri") return { left: 1000, top: 10, width: 20, height: 20 };
+      if (el.classList.contains("sc-floating")) return { left: 0, top: 0, width: 300, height: 200 };
+    });
+    await user.click(screen.getByRole("button", { name: /^Alanlar/ }));
+    expect(px(screen.getByRole("dialog", { name: /^Alanlar/ }))).toEqual({ left: 1024 - 8 - 300, top: 44 });
+    await user.click(screen.getByRole("button", { name: /^Grupla/ }));
+    expect(px(screen.getByRole("dialog", { name: "Gruplama" }))).toEqual({ left: 950 - 300, top: 44 });
+    await user.click(screen.getByRole("button", { name: "Görünüm işlemleri" }));
+    expect(px(screen.getByRole("menu", { name: "Görünüm işlemleri" }))).toEqual({ left: 1024 - 8 - 300, top: 34 });
+  });
+});
+
+describe("tablo ayrıntıları (docs/12)", () => {
+  const two = [group(["Hammadde"], 2, { children: [group(["Hammadde", "Çubuk"], 2)] })];
+  const twoLevels = savedView(3, "G", { columns: [{ field: "Code" }, { field: "SafetyStock" }], group_by: ["MaterialLevel", "MaterialGroup"] });
+
+  it("gruplu görünümde veri satırının ilk hücresi en alt grubun adıyla aynı hizada", async () => {
+    await openTable({ groups: two, views: { views: [twoLevels], default_view_id: 3 } });
+    const cell = (await screen.findByText("Hammadde/Çubuk-0")).closest("td")!;
+    expect(cell.style.paddingLeft).toBe("calc(var(--space-2) + 2.5385rem)");  // 1 düzey girinti + ok
+    const [, sub] = screen.getAllByRole("row", { expanded: true });
+    expect((sub.querySelector(".sc-tgroup-head") as HTMLElement).style.paddingLeft).toBe("1.2308rem");
+    expect(within(dataRows()[2] as HTMLElement).getAllByRole("cell")[1].style.paddingLeft).toBe("");  // yalnız ilk hücre
+  });
+
+  it("başlık ikonları ayrı kapta; aktif filtre işaretli; düğmeler klavyeyle ulaşılır", async () => {
+    const user = userEvent.setup();
+    await openTable();
+    const tools = header("Malzeme adı").querySelector(".sc-table-head-tools")!;
+    expect(within(tools as HTMLElement).getAllByRole("button")).toHaveLength(2);
+    expect(tools).not.toHaveClass("has-filter");
+    await user.click(screen.getByRole("button", { name: "Malzeme adı filtresi" }));
+    await user.type(within(screen.getByRole("dialog", { name: "Malzeme adı filtresi" })).getByLabelText("Değer"), "mil{Enter}");
+    expect(tools).toHaveClass("has-filter");
+    expect(screen.getByRole("button", { name: "Malzeme adı filtresi" })).toHaveClass("is-active");
+    sortButton("Malzeme adı").focus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Malzeme adı filtresi" })).toHaveFocus();
+  });
+
+  it("ara toplamın önünde tür kısaltması", async () => {
+    const user = userEvent.setup();
+    const tree = [group(["Hammadde"], 4, { aggregates: { SafetyStock: 7 }, unit_decimals: { SafetyStock: 0 } })];
+    const view = savedView(4, "S", { columns: [{ field: "Code" }, { field: "SafetyStock" }], group_by: ["MaterialLevel"] });
+    await openTable({ groups: tree, views: { views: [view], default_view_id: 4 } });
+    const fnOf = async () => (await screen.findAllByRole("row", { expanded: true }))[0].querySelector(".sc-agg-fn")?.textContent;
+    expect(await fnOf()).toBe("Σ");
+    for (const [name, short] of [["Ortalama (boşlar hariç)", "ort."], ["Ortalama (sıfırlar hariç)", "ort."], ["En küçük", "en az"],
+                                 ["En büyük", "en çok"], ["Sayı (dolu satır)", "n"]] as const) {
+      await user.click(screen.getByRole("button", { name: "Güvenlik stoğu kolon işlemleri" }));
+      await user.click(screen.getByRole("menuitem", { name: /Ara toplam/ }));
+      await user.click(within(screen.getByRole("group", { name: "Ara toplam" })).getByRole("menuitemradio", { name }));
+      await waitFor(async () => expect(await fnOf()).toBe(short));
+    }
+  });
+
+  it("toplu daralt / aç: Grupla'nın yanında ikonlu düğme grubu, adları ipucunda", async () => {
+    await openTable({ groups: two, views: { views: [twoLevels], default_view_id: 3 } });
+    const toggles = await screen.findByRole("group", { name: "Grupları daralt ve aç" });
+    expect(within(toggles).getAllByRole("button").map((b) => b.getAttribute("title")))
+      .toEqual(["Tümünü daralt", "Tümünü aç", "1. düzeye kadar aç"]);
+    expect(toggles.previousElementSibling).toHaveTextContent("Grupla (2)");
+  });
+
+  it("kaydedilmemiş değişiklikte • ve soluk 'Kaydedilmedi'", async () => {
+    const user = userEvent.setup();
+    await openTable();
+    expect(screen.queryByText("Kaydedilmedi")).toBeNull();
+    await user.click(sortButton("Malzeme adı"));
+    expect(screen.getByText("Kaydedilmedi")).toHaveClass("sc-muted");
+    expect(screen.getByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeInTheDocument();
+  });
+});
+
+describe("araç çubuğu düzeni (U-22, docs/12)", () => {
+  const root = () => document.querySelector(".sc-table")!;
+  const status = () => document.querySelector(".sc-table-status");
+  const toolbarEl = () => root().querySelector(":scope > .sc-table-toolbar")!;
+
+  it("araç çubuğu (görünüm, sayaç | Grupla, Alanlar) tablonun hemen üstünde, çerçevenin dışında; filtre ya da gruplama yoksa ikinci satır yok", async () => {
+    await openTable();
+    const toolbar = toolbarEl();
+    expect(toolbar.nextElementSibling).toHaveAttribute("data-testid", "table-scroll");
+    const main = toolbar.querySelector(".sc-table-toolbar-main")!;
+    expect(within(main as HTMLElement).getByRole("combobox", { name: "Görünüm" })).toBeInTheDocument();
+    expect(within(main as HTMLElement).getByLabelText("Kayıt sayısı (gösterilen / toplam)")).toHaveTextContent("1.234 / 50.000");
+    const tools = toolbar.querySelector(".sc-table-tools")!;
+    expect(within(tools as HTMLElement).getAllByRole("button").map((b) => b.textContent)).toEqual(["Grupla", "Alanlar (7/9)"]);
+    expect(status()).toBeNull();
+  });
+
+  it("filtre ya da gruplama varken araç çubuğunun altında tek satır; kalkınca satır da kalkar", async () => {
+    const user = userEvent.setup();
+    await openTable({ groups: [group(["Hammadde"], 2)] });
+    await user.click(screen.getByRole("button", { name: "Malzeme adı filtresi" }));
+    await user.type(within(screen.getByRole("dialog", { name: "Malzeme adı filtresi" })).getByLabelText("Değer"), "mil{Enter}");
+    expect(status()).toBe(toolbarEl().nextElementSibling);
+    expect(status()!.nextElementSibling).toHaveAttribute("data-testid", "table-scroll");
+    expect(within(status() as HTMLElement).getByRole("list", { name: "Aktif filtreler" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Filtreleri temizle" }));
+    await waitFor(() => expect(status()).toBeNull());
+    await user.click(screen.getByRole("button", { name: "Grupla" }));
+    await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialLevel");
+    expect(await within(root() as HTMLElement).findByText("Malzeme seviyesi ile gruplu")).toBeInTheDocument();
+    expect(status()).not.toBeNull();
+  });
+
+  it("sıralama varken 'Sıralamayı temizle' araç çubuğunda ikon", async () => {
+    const user = userEvent.setup();
+    await openTable();
+    await user.click(sortButton("Malzeme kodu"));
+    const clear = screen.getByRole("button", { name: "Sıralamayı temizle" });
+    expect(clear.closest(".sc-table-toolbar-main")).not.toBeNull();
+    expect(clear).toHaveAttribute("title", "Sıralamayı temizle");
+    expect(status()).toBeNull();
   });
 });

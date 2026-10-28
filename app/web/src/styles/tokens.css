@@ -138,6 +138,17 @@
   --sidebar-collapsed: 3.5rem;
   --context-height: 3rem;
   --date-input-min: calc(10.5ch + 2 * var(--space-3) + 2px); /* gg.aa.yyyy + iç boşluk + çerçeve; ch kutunun fontunda (Inter) çözülür */
+  /* Tablo renkleri (K-85, docs/12; bütün tablolar ortak): başlık belirgin indigo, grup satırları ondan açık, veri beyaz */
+  --table-head-bg: var(--indigo-100);         /* #DCE0F7 */
+  --table-head-text: var(--indigo-900);       /* #1E2257, yarı kalın */
+  --table-head-border: #c5cbf2;
+  --table-border: #c5cbf2;                    /* tablonun dış çerçevesi */
+  --table-toolbar-gap: 0.5rem;                /* araç çubuğu, filtre satırı ve tablo arası (docs/12) */
+  --table-group-1-bg: #eceef7;
+  --table-group-1-border: #e1e4ee;
+  --table-group-2-bg: #f7f8fc;
+  --table-row-selected-bg: var(--indigo-50);  /* #EEF0FB */
+  --table-row-hover-bg: #f4f5fb;
   --row-height: 2.1538rem;                  /* tablo satırı: 28 px standart boyutta; yazı boyutuyla ölçeklenir (U-23). DataTable ROW_REM ile aynı */
   --radius: 0.375rem;
   --radius-lg: 0.6154rem;                   /* kart: 8 px */

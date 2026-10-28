@@ -26,7 +26,7 @@ class ListDefinition:
     decimals: Mapping[str, int] = field(default_factory=dict)
     unit_field: str | None = None
     unit_decimals: frozenset[str] = field(default_factory=frozenset)
-    # Gruplamada ara toplam (K-90): "sum" toplam, "avg" boş olmayanların ortalaması; yazılmayan kolon toplanmaz.
+    # Gruplamada varsayılan ara toplam (K-90): request.AGG_FNS'ten biri; yazılmayan kolonun varsayılanı yok.
     aggregates: Mapping[str, str] = field(default_factory=dict)
 
     @property

@@ -83,13 +83,14 @@ def groups(session: Session | None, defn: ListDefinition, req: GroupsRequest) ->
     def work():
         b = _builder(session, defn)
         max_groups = repo.read_max_groups(session)
-        aggregate = b.aggregated(req.fields)
+        specs = b.aggregate_specs(req.fields, req.aggregates)
         # birim gizli düzey olabilir: satır sayısı yaprak grup sayısından fazla olabilir; üst sınır geniş tutulur
-        q, fields = b.groups_query(req.group_by, req.filters, req.sort, aggregate, (max_groups + 1) * 20)
+        q, fields = b.groups_query(req.group_by, req.filters, req.sort, specs, (max_groups + 1) * 20)
         leaves = repo.fetch_rows(session, q)
         units = repo.read_unit_decimals(session) if defn.unit_field else {}
-        tree = build_tree(leaves, len(fields), {f: defn.aggregates[f] for f in aggregate}, set(defn.unit_decimals),
-                          _json, units)
+        unit_relevant = {f for f, spec in specs.items() if b.unit_relevant(f, spec)}
+        tree = build_tree(leaves, len(fields), {f: s.fn for f, s in specs.items()}, unit_relevant, _json, units)
+        tree["aggregate_specs"] = {f: s.model_dump(exclude_none=True) for f, s in specs.items()}
         if tree["leaf_groups"] > max_groups:
             raise AppError("too_many_groups", f"Gruplama {max_groups} grubu aşıyor; daha az alanla gruplayın ya da "
                                               "filtreleyin.", 422)

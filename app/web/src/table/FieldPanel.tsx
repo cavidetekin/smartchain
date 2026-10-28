@@ -1,5 +1,5 @@
 // Alan paneli (U-6): listenin bütün alanları aramalı onay kutusu listesinde; kapalı alanlar buradan geri açılır.
-import { useState } from "react";
+import { type Ref, useState } from "react";
 
 import { fold } from "../format";
 import { tr } from "../i18n/tr";
@@ -8,7 +8,8 @@ import type { ListColumn } from "./types";
 
 const T = tr.table;
 
-export function FieldPanel({ columns, visibility, onToggle, onReset }: {
+export function FieldPanel({ ref, columns, visibility, onToggle, onReset }: {
+  ref?: Ref<HTMLDivElement>;
   columns: ListColumn[];
   visibility: Record<string, boolean>;
   onToggle(field: string, on: boolean): void;
@@ -18,7 +19,7 @@ export function FieldPanel({ columns, visibility, onToggle, onReset }: {
   const q = fold(search.trim());
   const visibleCount = columns.filter((c) => visibility[c.field]).length;
   return (
-    <div className="sc-table-pop sc-table-fields" role="dialog" aria-label={T.fields(visibleCount, columns.length)}>
+    <div ref={ref} className="sc-table-pop sc-table-fields sc-floating" role="dialog" aria-label={T.fields(visibleCount, columns.length)}>
       <SearchField label={T.fieldSearch} value={search} onChange={setSearch} />
       <div className="sc-table-pop-list">
         {columns.filter((c) => !q || fold(c.label).includes(q)).map((c) => {

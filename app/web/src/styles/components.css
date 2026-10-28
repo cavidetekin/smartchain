@@ -140,16 +140,21 @@
 
 /* Tablo bileşeni (1.3, K-87, docs/12): ekrana sığar (U-22), satır yüksekliği yazı boyutuyla (U-23) */
 .sc-page--fill { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.sc-table { position: relative; display: flex; flex: 1; flex-direction: column; gap: var(--space-2); min-height: 0; }
-.sc-table-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.sc-table { position: relative; display: flex; flex: 1; flex-direction: column; gap: var(--table-toolbar-gap); min-height: 0; }
+/* Araç çubuğu (U-22): sayfa zemininde, kendi zemini, çerçevesi ve çizgisi yok; tabloyla arası --table-toolbar-gap.
+   Sığmazsa sağ grup alt satıra sarar */
+.sc-table-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: var(--space-1) var(--space-3); }
+.sc-table-toolbar-main { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .sc-table-count { color: var(--text-muted); font-size: var(--fs-sm); }
 .sc-table-anchor { position: relative; }
-.sc-table-scroll { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--card-border); border-radius: var(--radius);
+.sc-table-scroll { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--table-border); border-radius: var(--radius);
   background: var(--surface); }
 .sc-table-grid { width: max-content; min-width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
-.sc-table-grid thead th { position: sticky; top: 0; z-index: 1; height: var(--row-height); padding: 0; border-bottom: 1px solid var(--line);
-  background: var(--lead-50); color: var(--text-muted); font-size: var(--fs-sm); font-weight: var(--fw-medium); text-align: left; }
-.sc-table-head { display: flex; align-items: center; min-width: 0; }
+.sc-table-grid thead th { position: sticky; top: 0; z-index: 1; height: var(--row-height); padding: 0;
+  border-bottom: 1px solid var(--table-head-border); background: var(--table-head-bg); color: var(--table-head-text);
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: left; }
+.sc-table-head { position: relative; display: flex; align-items: center; min-width: 0; }
 .sc-table-sort { display: inline-flex; flex: 1; align-items: center; gap: var(--space-1); min-width: 0; height: var(--row-height);
   padding: 0 var(--space-2); border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .sc-table-grid th.is-num .sc-table-sort { justify-content: flex-end; }
@@ -157,21 +162,23 @@
 .sc-table-sort svg, .sc-table-filter-btn svg { flex: none; width: 0.9231rem; height: 0.9231rem; }
 .sc-table-sort-n { color: var(--indigo-700); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
 .sc-table-filter-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 1.8462rem;
-  height: var(--row-height); padding: 0; border: 0; background: transparent; color: var(--lead-300); cursor: pointer; }
-.sc-table-filter-btn:hover { color: var(--text-muted); }
+  height: var(--row-height); padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.sc-table-filter-btn:hover { color: var(--table-head-text); }
 .sc-table-filter-btn.is-active { color: var(--indigo-500); }
 .sc-table-sort:focus-visible, .sc-table-filter-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .sc-table-grid tbody tr { height: var(--row-height); }
 .sc-table-grid tbody td { overflow: hidden; padding: 0 var(--space-2); border-bottom: 1px solid var(--line);
   text-overflow: ellipsis; white-space: nowrap; }
 .sc-table-grid td.is-num { text-align: right; }
-.sc-table-grid tbody tr:not(.sc-table-spacer):not(.sc-table-state):hover td { background: var(--indigo-50); }
+/* Veri satırı: üzerine gelince ve seçili (seçili baskın); grup satırı üzerine gelince değişmez */
+.sc-table-grid tr.sc-table-row { cursor: default; }
+.sc-table-grid tr.sc-table-row:hover td { background: var(--table-row-hover-bg); }
+.sc-table-grid tr.sc-table-row.is-selected td { background: var(--table-row-selected-bg); }
 .sc-table-grid tr.is-placeholder td { background: var(--lead-50); }
 .sc-table-state td { padding: var(--space-4) var(--space-3); color: var(--text-muted); }
 .sc-table-pop { position: absolute; z-index: 40; width: max-content; min-width: 21.5385rem; max-width: calc(100vw - 2rem);
   padding: var(--space-3);
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-popover); }
-.sc-table-fields { top: calc(100% + var(--space-1)); right: 0; }
 .sc-table-pop-form, .sc-table-fields { display: flex; flex-direction: column; gap: var(--space-3); }
 .sc-table-pop-list { display: flex; flex-direction: column; gap: var(--space-1); max-height: 18.4615rem; overflow: auto; }
 .sc-table-pop-option { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
@@ -221,12 +228,11 @@
 .sc-cal-foot { display: flex; justify-content: flex-end; margin-top: var(--space-2); }
 
 /* Görünüm (1.4, K-89, K-90; docs/12) */
-.sc-table-tools { display: flex; gap: var(--space-2); }
+.sc-table-tools { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
 .sc-viewbar { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .sc-viewbar-select { width: auto; min-width: 12.3077rem; max-width: 24.6154rem; min-height: 2.1538rem; }
 .sc-viewbar-dirty { color: var(--indigo-500); font-size: var(--fs-xl); font-weight: var(--fw-semibold); line-height: 1; }
-.sc-viewbar-menu { top: calc(100% + var(--space-1)); left: 0; }
-.sc-table-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-height: 2.1538rem; }
+.sc-table-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font-size: var(--fs-sm); }
 .sc-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .sc-chip-filter { display: inline-flex; align-items: center; border: 1px solid var(--info-border); border-radius: var(--radius);
   background: var(--info-bg); color: var(--info-text); font-size: var(--fs-sm); }
@@ -248,7 +254,14 @@
 .sc-popmenu-item:hover:not(:disabled), .sc-popmenu-item:focus-visible { background: var(--indigo-50); outline: none; }
 .sc-popmenu-item:disabled { color: var(--text-muted); cursor: not-allowed; }
 .sc-table-pop--menu { min-width: 0; padding: 0; }
-.sc-table-group-panel { top: calc(100% + var(--space-1)); right: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.sc-popmenu-sub { display: flex; align-items: center; gap: var(--space-2); }
+.sc-popmenu-sub span:first-child { flex: 1; }
+.sc-popmenu-sub svg { width: 0.9231rem; height: 0.9231rem; }
+.sc-popmenu-subpanel { min-width: 15.3846rem; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); box-shadow: var(--shadow-popover); }
+.sc-popmenu-subpanel .sc-popmenu-item[aria-checked="true"] { font-weight: var(--fw-semibold); }
+.sc-popmenu-field { padding: var(--space-1) var(--space-3) var(--space-2); }
+.sc-table-group-panel { display: flex; flex-direction: column; gap: var(--space-3); }
 .sc-tgroup-list { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0 0 0 var(--space-4); }
 .sc-tgroup-list li { display: flex; align-items: center; gap: var(--space-1); }
 .sc-tgroup-name { flex: 1; }
@@ -258,10 +271,16 @@
 .sc-table-grid th.is-drop-before { box-shadow: inset 2px 0 0 var(--indigo-500); }
 .sc-table-grid th.is-drop-after { box-shadow: inset -2px 0 0 var(--indigo-500); }
 .sc-table-grid .is-pinned { position: sticky; z-index: 1; background: var(--surface); }
-.sc-table-grid thead th.is-pinned { z-index: 3; background: var(--lead-50); }
+.sc-table-grid thead th.is-pinned { z-index: 3; background: var(--table-head-bg); }
 .sc-table-grid .is-pinned-last { box-shadow: inset -1px 0 0 var(--lead-300); }
 /* Gruplama (U-11): grup başlık satırı */
-.sc-table-group td { background: var(--lead-50); font-weight: var(--fw-semibold); cursor: pointer; }
+.sc-table-grid tr.sc-table-group td { cursor: pointer; }
+.sc-table-grid tr.sc-table-group--1 td { border-bottom-color: var(--table-group-1-border); background: var(--table-group-1-bg);
+  font-weight: var(--fw-semibold); }
+.sc-table-grid tr.sc-table-group--2 td { background: var(--table-group-2-bg); font-weight: var(--fw-medium); }
+/* Grup adı: 1. düzey kalın (600), alt düzeyler yarı kalın (500) */
+.sc-table-group--1 .sc-tgroup-value { font-weight: var(--fw-semibold); }
+.sc-table-group--2 .sc-tgroup-value { font-weight: var(--fw-medium); }
 .sc-table-group:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .sc-tgroup-head { display: inline-flex; align-items: center; gap: var(--space-1); }
 .sc-tgroup-head svg { flex: none; width: 1rem; height: 1rem; }
@@ -274,3 +293,22 @@
 .sc-dialog-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .sc-dialog-message { margin: 0; }
 .sc-dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+
+/* Açılır öğelerin ortak yerleşimi (ui/popover useFloating): ekranda sabit konum, görünür alana sığar */
+.sc-floating { position: fixed; z-index: 50; }
+
+/* Başlık ikonları (docs/12): yalnız başlığın üzerine gelince ya da başlıkta odak varken görünür; başlık metninin üstüne
+   biner, yer kaplamaz. Saydamlıkla gizlenir, klavyeyle her zaman ulaşılır (odaklanınca görünür). Aktif filtrenin ikonu
+   her zaman görünür (indigo) ve metin onun için yer bırakır. */
+.sc-table-head-tools { position: absolute; top: 0; right: 0.4615rem; display: flex; height: 100%; }
+.sc-table-head-tools .sc-table-filter-btn { opacity: 0; background: var(--table-head-bg); }
+.sc-table-grid thead th:hover .sc-table-head-tools .sc-table-filter-btn,
+.sc-table-grid thead th:focus-within .sc-table-head-tools .sc-table-filter-btn,
+.sc-table-head-tools .sc-table-filter-btn.is-active { opacity: 1; }
+.sc-table-head:has(.has-filter) .sc-table-sort { padding-right: 2.3077rem; }
+/* Ara toplam türü (Σ, ort., …) değerin önünde soluk ve küçük */
+.sc-agg-fn { margin-right: var(--space-1); color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-regular); }
+/* Toplu daralt / aç düğme grubu */
+.sc-btn-group { display: inline-flex; align-items: center; gap: 0.1538rem; padding: 0 var(--space-1);
+  border: 1px solid var(--line); border-radius: var(--radius); }
+.sc-viewbar-unsaved { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-sm); }

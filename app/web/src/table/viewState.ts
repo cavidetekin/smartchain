@@ -1,5 +1,5 @@
 // Tablo durumu ve kayıtlı görünüm içeriği (K-89, docs/08 "Görünümler"). Saf işlevler: dönüşüm, karşılaştırma, taşıma.
-import type { ColumnType, ListColumn, ListFilter, SortItem, ViewDefinition } from "./types";
+import type { AggSpec, ColumnType, ListColumn, ListFilter, SortItem, ViewDefinition } from "./types";
 
 export interface TableState {
   /** Görünen alanlar, görünen sırada. */
@@ -12,6 +12,8 @@ export interface TableState {
   /** Alan başına en çok bir filtre. */
   filters: ListFilter[];
   groupBy: string[];
+  /** Varsayılandan farklı seçilen ara toplam türleri (K-90). */
+  aggregates: Record<string, AggSpec>;
 }
 
 /** Tipin varsayılan genişliği (rem; 13 px'te 180 / 120 / 140 / 100 px). */
@@ -27,7 +29,7 @@ export const clampWidth = (rem: number) => Math.min(MAX_WIDTH_REM, Math.max(MIN_
 /** "Standart" görünüm: liste tanımındaki varsayılan alanlar ve sunucunun varsayılan sıralaması (K-89). */
 export function standardState(columns: ListColumn[]): TableState {
   return { order: columns.filter((c) => c.default_visible).map((c) => c.field), widths: {}, pinned: 0, sort: [],
-           filters: [], groupBy: [] };
+           filters: [], groupBy: [], aggregates: {} };
 }
 
 export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): TableState {
@@ -41,6 +43,7 @@ export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): Tabl
     sort: def.sort.filter((s) => known.has(s.field)),
     filters: def.filters.filter((f) => known.has(f.field)),
     groupBy: def.group_by.filter((g) => known.has(g)),
+    aggregates: Object.fromEntries(Object.entries(def.aggregates ?? {}).filter(([f]) => known.has(f))),
   };
 }
 
@@ -52,6 +55,7 @@ export function toDefinition(s: TableState): ViewDefinition {
     sort: s.sort,
     filters: s.filters,
     group_by: s.groupBy,
+    aggregates: s.aggregates,
   };
 }
 
@@ -65,6 +69,8 @@ function normalize(def: ViewDefinition): string {
     sort: def.sort.map((s) => [s.field, s.dir]),
     filters: [...def.filters].sort((a, b) => a.field.localeCompare(b.field)).map(clean),
     group_by: def.group_by,
+    aggregates: Object.entries(def.aggregates ?? {}).sort(([a], [b]) => a.localeCompare(b))
+      .map(([f, a]) => [f, a.fn, a.weight ?? null]),
   });
 }
 
@@ -89,6 +95,28 @@ export function dropField(order: string[], field: string, target: string, side: 
   const rest = order.filter((f) => f !== field);
   const at = rest.indexOf(target) + (side === "after" ? 1 : 0);
   return [...rest.slice(0, at), field, ...rest.slice(at)];
+}
+
+const isNumber = (c: ListColumn) => c.type === "number" || c.type === "integer";
+
+/** Kolonun geçerli ara toplamı: kullanıcının seçimi, yoksa liste tanımının varsayılanı (K-90). */
+export function aggregateOf(col: ListColumn, s: TableState): AggSpec {
+  if (!isNumber(col)) return { fn: "none" };
+  return s.aggregates[col.field] ?? { fn: col.aggregate ?? "none" };
+}
+
+/** Seçimi yazar; varsayılanla aynıysa kaydı siler (görünüm temiz kalsın). */
+export function withAggregate(s: TableState, col: ListColumn, spec: AggSpec): TableState {
+  const aggregates = { ...s.aggregates };
+  if (spec.fn === (col.aggregate ?? "none") && spec.fn !== "wavg") delete aggregates[col.field];
+  else aggregates[col.field] = spec.fn === "wavg" ? { fn: "wavg", weight: spec.weight } : { fn: spec.fn };
+  return { ...s, aggregates };
+}
+
+/** Gruplama isteğinin ara toplamları: görünen sayı kolonlarında "yok" olmayanlar. */
+export function requestAggregates(columns: ListColumn[], s: TableState): Record<string, AggSpec> {
+  return Object.fromEntries(columns.filter((c) => s.order.includes(c.field)).map((c) => [c.field, aggregateOf(c, s)])
+    .filter(([, a]) => (a as AggSpec).fn !== "none"));
 }
 
 export function withFilter(filters: ListFilter[], field: string, f: ListFilter | null): ListFilter[] {
