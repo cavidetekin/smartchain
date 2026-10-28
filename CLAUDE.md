@@ -30,7 +30,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 
 ## Arayüz
 
-- U-1…U-23 bağlayıcıdır (`docs/04-arayuz-prensipleri.md`). Ekran ağırlıkla nötr, indigo aksiyon, durum renkleri yalnız durum için; her tablo sıralanır, filtrelenir, alanları açılıp kapanır; ana tablo ekrana sığar, kenar menü daraltılır; varsayılan yazı sıkıdır, kullanıcı dört boyuttan birini seçer.
+- U-1…U-24 bağlayıcıdır (`docs/04-arayuz-prensipleri.md`). Ekran ağırlıkla nötr, indigo aksiyon, durum renkleri yalnız durum için; her tablo sıralanır, filtrelenir, alanları açılıp kapanır; ana tablo ekrana sığar, kenar menü daraltılır; varsayılan yazı sıkıdır, kullanıcı dört boyuttan birini seçer.
 - Yazı tipleri Instrument Sans (metin) ve Inter (sayı, tarih, kod; eşit genişlikte rakamlar), pakete gömülü (K-86). Sayı ve tarih Türkçe biçimde.
 - Ön yüz React (TypeScript), internetsiz; tablolar kendi bileşenimiz (TanStack Table üzerine). Ekranlar kenar menüde gruplu, en çok iki seviye; üst sekmeyle ekran geçişi yok (K-81, K-82, `docs/12-on-yuz.md`).
 
@@ -52,7 +52,7 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/01-mimari.md` | Mimari kararlar (MDD 19) |
 | `docs/02-veri-modeli.md` | Ana tablolar ve alanlar (MDD 21) |
 | `docs/03-entegrasyon.md` | Entegrasyon tasarımı ve `stg.*` tabloları (MDD 26) |
-| `docs/04-arayuz-prensipleri.md` | U-1…U-23 (MDD 23) |
+| `docs/04-arayuz-prensipleri.md` | U-1…U-24 (MDD 23) |
 | `docs/05-ekranlar.md` | 25 ekran ve ekran mockupları (MDD 24) |
 | `docs/06-fonksiyonlar.md` | 98 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
 | `docs/07-veritabani.md` | Veritabanı haritası: şemalar ve tablolar (üretilmiş) |

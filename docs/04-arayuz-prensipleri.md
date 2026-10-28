@@ -5,7 +5,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 23. Arayüz prensipleri
 <sub>tamamlandı</sub>
 
-- **Ne yapılacak:** Tüm ekranlarda geçerli görsel kimlik ve arayüz standartları: renk paleti ve kullanım kuralları, tablo davranışı (alanlar, sıralama, filtre), görünümler, veri giriş ve dışa aktarım, tutarlılık ve teknik ilkeler. 24. adımdaki ekran tasarımları bu prensiplere uyar. Çıktı: U-1…U-23 arayüz prensipleri, renk paleti, örnek ekranlar
+- **Ne yapılacak:** Tüm ekranlarda geçerli görsel kimlik ve arayüz standartları: renk paleti ve kullanım kuralları, tablo davranışı (alanlar, sıralama, filtre), görünümler, veri giriş ve dışa aktarım, tutarlılık ve teknik ilkeler. 24. adımdaki ekran tasarımları bu prensiplere uyar. Çıktı: U-1…U-24 arayüz prensipleri, renk paleti, örnek ekranlar
 - **Bu adımın slaytları**
   - 1/7  Renk paleti ve kullanım kuralları
   - 2/7  Örnek ekran: kaynak doluluk raporu
@@ -16,7 +16,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 7/7  Tutarlılık ve teknik ilkeler
 - **Kararlar**
   - K-30  Ürün paleti indigo + kurşun; durum renkleri hardal (risk) ve kiremit (aşırı yük). Yazı tipleri Instrument Sans ve Inter (K-86).
-  - K-31  U-1…U-23 arayüz prensipleri tüm ekran ve raporlar için bağlayıcıdır; yeni ekran bu listeye göre gözden geçirilir.
+  - K-31  U-1…U-24 arayüz prensipleri tüm ekran ve raporlar için bağlayıcıdır; yeni ekran bu listeye göre gözden geçirilir.
 - **Açık konular:** A-14  Manuel girilen miktar, optimizasyon yeniden çalıştığında sabit mi kalır, yoksa başlangıç önerisi mi sayılır? Cevaba göre hücre bazında kilit gerekir.
 
 ### Renk paleti ve kullanım kuralları
@@ -85,6 +85,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **U-13 · Boş değer seçeneği:** Her filtrede "boş" seçilebilir; eksik veri ayrıca bulunabilir.
 - **U-22 · Ana tablo ekrana sığar:** Ekranın ana tablosu görünür alanı doldurur ve görünürlüğü en yüksek öğedir. Kenar menü daraltılıp açılabilir; daraltılınca alan tabloya geçer.
 - **U-23 · Yazı boyutu kullanıcıya göre ayarlanır:** Varsayılan yazı boyutu sıkıdır; ekrana en çok bilgi sığar (U-22). Kullanıcı kendi ayarından dört seviyeden birini seçer: Küçük 12 px · Standart 13 px (varsayılan) · Rahat 14 px · Büyük 16 px. Seviye yalnız yazıyı değil bütün arayüzü ölçekler: satır yüksekliği, boşluk, ikon ve menü birlikte değişir, düzen bozulmaz. Ayar kullanıcıya özeldir, kaydedilir ve her girişte hatırlanır. Excel çıktısını ve rapor baskısını etkilemez.
+- **U-24 · Koşullu biçimlendirme:** Kullanıcı her tabloda kolon bazında kural tanımlar: koşul ve biçim. Koşul, alanın tipine göre gelir: sayı ve tarihte büyük, küçük, arası, eşittir, boş (tarihte göreli seçimler de); metin ve liste alanlarında eşittir, içerir, ile başlar, listedekilerden biri, boş. Biçim: hücre zemin rengi, yazı rengi, kalın yazı ve hücreye ikon (sabit ikon setinden); bunlar ayrı ayrı ya da birlikte seçilir. Renk, Excel'deki gibi bir paletten serbestçe seçilir; paletin başında ürün renkleri (indigo, hardal, kiremit, yeşil, petrol, kurşun tonları) öneri olarak durur. Seçilen zemin ve yazı rengi okunur değilse (kontrast 4,5:1 altında) uyarı verilir ve okunur yazı rengi önerilir. Hücredeki değer her zaman yazar; biçim değeri gizlemez (U-3). Bir kolona birden fazla kural sırayla uygulanır; aynı biçim özelliğinde üstteki kural geçerlidir. Kurallar görünümle kaydedilir (U-9) ve Excel'e aktarımda taşınır (U-14). Durum renklerinin anlamı (U-2) sistemin kendi gösterimleri için geçerlidir; kullanıcı kuralları kullanıcının sorumluluğundadır.
 
 ### Veri giriş ve dışa aktarım
 <sub>23. Arayüz prensipleri · 6/7</sub>
