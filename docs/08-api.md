@@ -12,6 +12,15 @@ Uygulama iskeletinin (adım 0.3) ve iş kuyruğunun (adım 0.4) kuralları. Yeni
 | İş kuyruğu | `app/jobs/` | `adm.Job` sorguları; API ile motor servisinin ortak kütüphanesi. İş kuyruğu servisi repository yerine bunu kullanır. |
 | Motor | `app/engine/` | Motor arayüzü, sahte motor, motor servisi (`docs/09-motor-arayuzu.md`). API motoru çağırmaz; plan hesabını `submit_plan_run` ile kuyruğa koyar. |
 
+## Veritabanı oturumu
+
+- Her istek kendi oturumunu `get_session` bağımlılığından alır; oturum kapanınca bağlantı havuza döner (havuz 5 + 10).
+- **Dosya ve akış yanıtı veren uç noktalarda** (dışa aktarım, indirme) oturum yanıt gönderilmeden kapanır:
+  `Depends(get_session, scope="function")`. Dosya istemciye akarken bağlantı havuzdadır; yavaş ya da kopan istemci
+  bağlantı tutamaz. Akış hâlinde okunan sorgu sonucu (stream_results) hata olsa da kapatılır.
+- Test: arka arkaya 30 aktarım ve yarıda kopan indirmeden sonra havuzdan alınmış bağlantı sayısı başlangıçtaki gibi
+  (`tests/test_export_connections.py`).
+
 ## Adresler
 
 - Bütün uç noktalar `/api` ile başlar. Adlar İngilizce ve küçük harf (`/api/health`, ileride `/api/materials`).
@@ -27,6 +36,7 @@ Her hata aynı biçimde döner; mesaj Türkçe ve kullanıcıya gösterilebilir:
 
 - **İş kuralı hatası:** servis `AppError(code, message, status_code)` fırlatır.
 - **Girdi hatası (422):** `code = "validation"`; `details` her hatalı alanı (`field`, `problem`) listeler.
+- **Veritabanına ulaşılamıyor (503):** bağlantı kurulamaz ya da havuzda boş bağlantı kalmazsa (havuz zaman aşımı) her uç nokta `code = "database_unavailable"` döner; 500 değildir. Ön yüz bunu "Veritabanına ulaşılamıyor" diye gösterir.
 - **Beklenmeyen hata (500):** kullanıcıya yalnız takip numarası gösterilir; ayrıntı ve yığın izi loga yazılır. Kapalı ağda destek bu numarayla verilir.
 
 ## Takip numarası ve log
@@ -45,6 +55,7 @@ Ortam değişkenleri (`SMARTCHAIN_` önekiyle) ya da kök klasördeki `.env` dos
 | `SMARTCHAIN_LOG_LEVEL` | `INFO` |
 | `SMARTCHAIN_ENABLE_DOCS` | `false` |
 | `SMARTCHAIN_JOB_WATCH_SECONDS` | `1.0` · iş kuyruğunu izleme aralığı; `0` izlemeyi kapatır |
+| `SMARTCHAIN_EXPORT_DIR` | `exports` · arka planda hazırlanan Excel dosyaları (K-93); süresi geçenleri motor servisi siler |
 
 ## Liste sorgusu (K-87)
 
@@ -56,9 +67,12 @@ Bütün tablolar (ana veri, plan, rapor) aynı sözleşmeyle okunur. Filtre, sı
 {"chunk_size": 100,
  "columns": [{"field": "MaterialLevel", "label": "Malzeme seviyesi", "type": "text", "filter": "list",
               "values": ["Hammadde", "Yarı mamul", "Nihai ürün"], "values_from_server": false, "decimals": null,
-              "default_visible": true}]}
+              "default_visible": true}],
+ "export": {"title": "Malzeme listesi", "file_slug": "malzeme", "sync_max_rows": 10000, "max_rows": 500000,
+            "file_hours": 24}}
 ```
 
+- **Dışa aktarım** (`export`, K-91): kapsam penceresi listenin adını, dosya adındaki kısa adı eşikleri (`ExportSyncMaxRows`, `ExportMaxRows`) ve arka plan dosyasının saklama süresini (`ExportFileHours`) buradan okur; anlık mı arka planda mı olacağını ve sınır aşımını önceden söyler.
 - **Parça büyüklüğü** (`chunk_size`): SystemSetting `ListChunkSize` (varsayılan 100, en çok 500; docs/02). Tablo bir istekte hiçbir zaman bundan fazla satır istemez; sunucu da fazlasını reddeder.
 
 - **Etiket:** docs/02 AÇIKLAMA'sından üretilir; FieldDefinition.Label varsa onu kullanır. Ek alan (K-59) yalnız Label'ı varsa listelenir (K-88).
@@ -166,6 +180,33 @@ Kullanıcı şimdilik `user_id` sorgu parametresiyle gelir (A-36).
 
 Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "filters": [...]}` → `[{"value": "Dövme", "count": 12}, …]`. Diğer filtreler uygulanmış hâldeki ilk 100 farklı değer, değere göre sıralı; `search` içerir araması yapar. Yalnız `filter: "list"` alanlarda çalışır.
 
+## Dışa aktarım (K-91, fonksiyon 86)
+
+`POST /api/<liste>/export?user_id=` (kullanıcı A-36 gereği şimdilik parametreyle). İstek, ekrandaki görünüm durumu ve kapsam:
+
+```json
+{"fields": ["Code", "Name", "SafetyStock"], "widths": {"Code": 7.5}, "sort": [{"field": "Code", "dir": "asc"}],
+ "filters": [...], "group_by": ["MaterialLevel"], "aggregates": {"SafetyStock": {"fn": "sum"}},
+ "scope": {"rows": "filtered", "columns": "visible"}}
+```
+
+- `scope.rows`: `filtered` (ekrandaki filtrelerle) ya da `all` (filtresiz); `scope.columns`: `visible` (`fields`, ekrandaki sırayla) ya da `all` (listenin bütün alanları: önce görünenler, sonra diğerleri). Gruplama ve ara toplamlar istekteki gibi (ekrandaki gibi) her zaman yazılır; Bilgi sayfası her dosyada vardır (K-91).
+- Satır sayısı `ExportSyncMaxRows` (10.000) ve altıysa **200**: dosya gövdede (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`), adı `Content-Disposition`'da.
+- Üstüyse **202** `{"job_id": 81, "file_name": "…", "rows": 142000}`: iş "Dışa aktarım" kanalında (K-93). İlerleme ve bitiş WebSocket iş mesajlarıyla gelir; iş sonucu `{"file_name", "size", "rows"}`.
+- `ExportMaxRows`'u (500.000) aşarsa 422 `export_too_large` ("filtreyi daraltın").
+- İz: her aktarım `adm.AuditLog`'a yazılır (Action "Dışa aktarım", ObjectType liste adı, ObjectKey dosya adı, NewValue JSON: kapsam, filtreler, kolonlar, satır sayısı, boyut, süre, veri versiyonu); arka planda iz, dosya hazır olunca iş bitişiyle aynı işlemde yazılır. İz yazılamazsa dosya verilmez (anlıkta 503, arka planda iş Hata).
+
+`GET /api/exports/{job_id}/file?user_id=`: arka planda hazırlanan dosya. Yalnız işi başlatan indirir (başkası 403 `export_not_owner`); iş bitmediyse 409 `export_not_ready`; süresi (`ExportFileHours`, 24 saat) geçtiyse ya da dosya silindiyse 410 `export_expired`.
+
+Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri ekrandan; başlık ve grup satırları ekrandaki tonlarla; grup başlığında ad, satır sayısı ve ara toplamlar değer olarak) ve Bilgi sayfası. Sayılar sayı, tarihler tarih, Türkçe biçim (K-92).
+
+## Testler
+
+- `python -m pytest`: bütün testler, **performans testleri hariç** (`pyproject.toml`: `-m 'not perf'`). Veritabanı testleri (`db` işareti) yerel SQL Server'a bağlanamazsa atlanır.
+- `python -m pytest -m perf`: performans testleri ayrıca çalıştırılır. Büyük veriyi bir işlem içinde üretir, ölçer ve geri alır; her ölçüm birkaç denemenin ortancasıdır (makine yükündeki tek seferlik sıçramalar sonucu bozmasın).
+- Ön yüz: `cd app/web; npm test; npx tsc --noEmit; npm run build`. Test süresi sınırı 15 sn (`vite.config.ts`): dosyalar paralel çalıştığı için yük altında jsdom testleri varsayılan 5 sn'yi aşabilir; tek başına bir test 2 sn'nin altındadır.
+- Bunların hepsi geçmeden commit ve push yapılmaz (CLAUDE.md).
+
 ## Uç noktalar
 
 | Adres | Ne | Durum |
@@ -177,6 +218,7 @@ Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "f
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
+| `POST /api/materials/export` · `GET /api/exports/{job_id}/file` | Excel'e aktarım: anlık ya da arka planda (K-91, K-93) | uygulandı (1.5) |
 | `WS /api/ws?user_id=` | Anlık bildirim kanalı (fonksiyon 48). Kullanıcı şimdilik parametreyle (A-36). | uygulandı (0.4) |
 
 İş eklemek için uç nokta yoktur: işi ilgili fonksiyon (yeniden hesap 46, yükleme…) kendi servisinden `app.jobs.queue.enqueue` ile ekler.

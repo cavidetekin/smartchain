@@ -627,7 +627,7 @@ describe("araç çubuğu düzeni (U-22, docs/12)", () => {
   const status = () => document.querySelector(".sc-table-status");
   const toolbarEl = () => root().querySelector(":scope > .sc-table-toolbar")!;
 
-  it("araç çubuğu (görünüm, sayaç | Grupla, Alanlar) tablonun hemen üstünde, çerçevenin dışında; filtre ya da gruplama yoksa ikinci satır yok", async () => {
+  it("araç çubuğu (görünüm, sayaç | Grupla, Alanlar, Excel'e aktar) tablonun hemen üstünde, çerçevenin dışında; filtre ya da gruplama yoksa ikinci satır yok", async () => {
     await openTable();
     const toolbar = toolbarEl();
     expect(toolbar.nextElementSibling).toHaveAttribute("data-testid", "table-scroll");
@@ -635,7 +635,7 @@ describe("araç çubuğu düzeni (U-22, docs/12)", () => {
     expect(within(main as HTMLElement).getByRole("combobox", { name: "Görünüm" })).toBeInTheDocument();
     expect(within(main as HTMLElement).getByLabelText("Kayıt sayısı (gösterilen / toplam)")).toHaveTextContent("1.234 / 50.000");
     const tools = toolbar.querySelector(".sc-table-tools")!;
-    expect(within(tools as HTMLElement).getAllByRole("button").map((b) => b.textContent)).toEqual(["Grupla", "Alanlar (7/9)"]);
+    expect(within(tools as HTMLElement).getAllByRole("button").map((b) => b.textContent)).toEqual(["Grupla", "Alanlar (7/9)", "Excel'e aktar"]);
     expect(status()).toBeNull();
   });
 

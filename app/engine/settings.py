@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from app.jobs.constants import CHANNEL_INTERACTIVE, CHANNEL_NIGHT
+from app.jobs.constants import CHANNEL_EXPORT, CHANNEL_INTERACTIVE, CHANNEL_NIGHT
 from app.jobs.settings import read_int_settings
 
 DEFAULTS = {
@@ -25,7 +25,9 @@ class EngineSettings:
     solver_threads: int = DEFAULTS["SolverThreads"]
 
     def time_budget(self, channel: str) -> float:
-        return {CHANNEL_INTERACTIVE: self.time_budget_interactive, CHANNEL_NIGHT: self.time_budget_night}[channel]
+        # Dışa aktarım (K-93): 500.000 satır sığsın diye etkileşim bütçesinin on katı
+        return {CHANNEL_INTERACTIVE: self.time_budget_interactive, CHANNEL_NIGHT: self.time_budget_night,
+                CHANNEL_EXPORT: self.time_budget_interactive * 10}[channel]
 
 
 def read_engine_settings(session: Session) -> EngineSettings:

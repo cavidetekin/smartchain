@@ -1,6 +1,6 @@
 // Ortak tablo bileşeni (K-81, K-87, docs/12 "Tablo bileşeni" ve "Görünüm"): alan ekle/çıkar (U-6), çoklu sıralama
 // (U-7), tipe göre filtre (U-8), kayıtlı görünüm (U-9), kolon düzeni (U-10), gruplama ve ara toplam (U-11), aktif
-// filtre etiketleri ve sayaç (U-12), boş değer (U-13). Sıralama, filtre ve gruplama sunucuda (U-21); gövde sanal.
+// filtre etiketleri ve sayaç (U-12), boş değer (U-13), Excel'e aktarım (U-14). Sıralama, filtre ve gruplama sunucuda (U-21); gövde sanal.
 // Durum tek yerde (TableState, görünüm içeriğiyle birebir); TanStack Table başlık, sıra, sabitleme ve genişliği ondan
 // alır. Satırlar parça önbelleğinden (düz) ya da grup başına (gruplu) gelir.
 import {
@@ -9,7 +9,8 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Columns3, Ellipsis, FoldVertical, Funnel, FunnelX,
+  ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Columns3, Ellipsis, FileSpreadsheet, FoldVertical, Funnel,
+  FunnelX,
   ListCollapse, Rows3, UnfoldVertical,
 } from "lucide-react";
 import {
@@ -17,18 +18,21 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 
-import { ApiError } from "../api/client";
+import { ApiError, saveBlob } from "../api/client";
 import { formatDate, formatDateTime, formatNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { useShell } from "../shell/ShellContext";
 import { Alert, Button } from "../ui";
 import { useFloating } from "../ui/popover";
 import { type ColumnAction, ColumnMenu } from "./ColumnMenu";
+import { ExportDialog } from "./ExportDialog";
 import { FieldPanel } from "./FieldPanel";
 import { FilterChips } from "./FilterChips";
 import { FilterMenu, valueLabel } from "./filters";
 import { GroupPanel } from "./GroupPanel";
-import { type AggSpec, listApi, type GroupNode, type ListColumn, type ListFilter, type Row } from "./types";
+import {
+  type AggSpec, type ExportInfo, type ExportScope, listApi, type GroupNode, type ListColumn, type ListFilter, type Row,
+} from "./types";
 import { type DisplayItem, flatten, useGroupedQuery } from "./useGroupedQuery";
 import { type ListRequest, useListQuery } from "./useListQuery";
 import { useViews, ViewBar } from "./ViewBar";
@@ -145,9 +149,11 @@ function ResizeHandle({ label, width, remPx, onWidth }: {
 type Pop = { kind: "filter" | "column"; field: string; anchor: HTMLElement } | null;
 
 export function DataTable({ list }: { list: string }) {
-  const { fontSize, userId } = useShell();
+  const { fontSize, userId, trackExport } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
   const [chunkSize, setChunkSize] = useState(0);
+  const [exportInfo, setExportInfo] = useState<ExportInfo | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [columnsError, setColumnsError] = useState<ApiError | null>(null);
   const [columnsAttempt, setColumnsAttempt] = useState(0);
   const [state, setState] = useState<TableState | null>(null);
@@ -167,9 +173,10 @@ export function DataTable({ list }: { list: string }) {
   useEffect(() => {
     const ctrl = new AbortController();
     listApi(list).columns(ctrl.signal)
-      .then(({ columns: cols, chunk_size }) => {
+      .then(({ columns: cols, chunk_size, export: info }) => {
         setColumns(cols);
         setChunkSize(chunk_size);
+        setExportInfo(info);
         setColumnsError(null);
       })
       .catch((e: unknown) => {
@@ -337,6 +344,16 @@ export function DataTable({ list }: { list: string }) {
     return next;
   });
 
+  /** Ekrandaki görünüm durumu + kapsam (K-91): anlık dosya iner, arka plandaki iş bildirimle izlenir. */
+  const runExport = async (scope: ExportScope) => {
+    const result = await listApi(list).export(userId, {
+      fields: s.order, widths: s.widths, sort: s.sort, filters: s.filters, group_by: s.groupBy, aggregates, scope,
+    });
+    if (result.kind === "file") saveBlob(result.blob, result.fileName);
+    else trackExport({ jobId: result.job_id, title: exportInfo?.title ?? list, fileName: result.file_name, rows: result.rows });
+    setExporting(false);
+  };
+
   if (columnsError) {
     return (
       <Alert tone="error" title={T.loadError}>
@@ -460,6 +477,9 @@ export function DataTable({ list }: { list: string }) {
                   onClick={() => setPanel((p) => (p === "fields" ? null : "fields"))}>
             {T.fields(visible.length, columns.length)}
           </Button>
+          {exportInfo && (
+            <Button size="sm" icon={FileSpreadsheet} onClick={() => setExporting(true)}>{T.exportButton}</Button>
+          )}
           {panel === "group" && (
             <GroupPanel ref={panelPopRef} columns={columns} groupBy={s.groupBy}
                         onChange={(groupBy) => update((st) => ({ ...st, groupBy }))} />
@@ -566,6 +586,12 @@ export function DataTable({ list }: { list: string }) {
           </tbody>
         </table>
       </div>
+
+      {exporting && exportInfo && (
+        <ExportDialog info={exportInfo} filtered={filtered} total={total} visibleColumns={visible.length}
+                      allColumns={columns.length} hasFilters={s.filters.length > 0}
+                      onClose={() => setExporting(false)} onExport={runExport} />
+      )}
 
       {pop && popColumn && (
         <div className={pop.kind === "filter" ? "sc-table-pop sc-floating" : "sc-table-pop sc-table-pop--menu sc-floating"} ref={popRef}

@@ -1,11 +1,13 @@
 {
   "name": "smartchain-web",
   "private": true,
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Smartchain arayüzü (docs/12, K-81, K-83). Derlenip pakete girer; müşteride Node.js gerekmez.",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "tokens": "node scripts/tokens.mjs",
+    "prebuild": "node scripts/tokens.mjs",
     "build": "tsc --noEmit -p . && vite build",
     "preview": "vite preview",
     "test": "vitest run",

@@ -10,7 +10,7 @@ from ..lists.definition import ListDefinition, columns as column_list
 from ..lists.query import DEFAULT_UNIT_DECIMALS, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists.groups import build_tree
 from ..lists.request import GroupsRequest, QueryRequest, ValuesRequest
-from ..repositories import data_versions, lists as repo
+from ..repositories import data_versions, export as export_repo, lists as repo
 
 DB_DOWN = "Veritabanına bağlanılamıyor; liste okunamadı."
 
@@ -49,8 +49,14 @@ def _builder(session: Session, defn: ListDefinition) -> Builder:
 
 
 def columns(session: Session | None, defn: ListDefinition) -> dict:
-    return _run(session, lambda: {"chunk_size": repo.read_chunk_size(session),
-                                  "columns": column_list(defn, repo.read_labels(session, defn.table_name))})
+    def work():
+        limits = export_repo.read_settings(session)
+        return {"chunk_size": repo.read_chunk_size(session),
+                "columns": column_list(defn, repo.read_labels(session, defn.table_name)),
+                "export": {"title": defn.title or defn.name, "file_slug": defn.file_slug or defn.name,
+                           "sync_max_rows": limits["ExportSyncMaxRows"], "max_rows": limits["ExportMaxRows"],
+                           "file_hours": limits["ExportFileHours"]}}
+    return _run(session, work)
 
 
 def query(session: Session | None, defn: ListDefinition, req: QueryRequest) -> dict:

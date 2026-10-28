@@ -19,7 +19,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 0.3 Uygulama iskeleti: FastAPI katmanları, hata yönetimi, log
 - [x] 0.4 İş kuyruğu (Job) ve WebSocket bildirim iskeleti (47, 48 çekirdeği · K-67–K-69, A-36)
 - [x] 0.5 Motor arayüzü ve sahte motor (fikstür döndürür) · K-70, K-71; `docs/09-motor-arayuzu.md`
-- [~] 0.6 Kurulum iskeleti: Windows servisleri, IIS, ayrı SQL Server; temiz makineye kurulum · K-72–K-75; `docs/10-kurulum.md`. Paket, betikler ve testler hazır; temiz makine (Hyper-V, Windows Server 2025) testi bekliyor
+- [~] 0.6 Kurulum iskeleti: Windows servisleri, IIS, ayrı SQL Server; temiz makineye kurulum · K-72–K-75; `docs/10-kurulum.md`. Paket, betikler ve testler hazır; temiz makine (Hyper-V, Windows Server 2025) testi bekliyor; bu turda SQL Server bellek ön kontrolü (K-94) de denenir: sınırsız max server memory'de uyarı, kurulum durmaz
 - [x] 0.7 HiGHS paketleme denemesi (yalnız paket, model yok) · K-76; highspy 1.15.1 (MIT) pakette, LP ve MILP paket kontrolü internetsiz geçti; sanal makinede 0.6'nın `verify.ps1` turunda da denenecek
 - [x] 0.8 Sentetik veri v0 (22): ana veri ve işlem verisi; temiz hâli ana tablolara, kirli hâli entegrasyon Excel'i (docs/11, K-78) · K-79, K-80
 
@@ -29,7 +29,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 1.2 Stil sistemi: palet, gömülü fontlar, durum renkleri, dört yazı boyutu seviyesi (U-1–U-5, U-23) · K-85, K-86; örnek sayfa /stil
 - [x] 1.3 Ortak tablo bileşeni: alan ekle/çıkar, çoklu sıralama, filtre tipleri (U-6–U-8) · K-87, K-88; deneme sayfası /tablo
 - [x] 1.4 Görünüm: kayıtlı görünüm, kolon düzeni ve sabitleme, gruplama, aktif filtre, boş değer (U-9–U-13) · K-89, K-90
-- [ ] 1.5 Veri giriş ve dışa aktarım: Excel'e aktarma (86), yapıştırma, Türkçe sayı ve tarih (U-14–U-16)
+- [x] 1.5 Dışa aktarım: Excel'e aktarma (86), ekranda ne görünüyorsa (U-14); Türkçe sayı ve tarih biçimi (U-19); biçim tanımı U-24'ün (1.6) Excel'e taşınabileceği yapıda. Yapıştırma ve toplu düzenleme 6.2'de · K-91, K-92, K-93
 - [ ] 1.6 Koşullu biçimlendirme: kolon bazında kural, hücre ve yazı rengi (paletten), kalın yazı, ikon; görünümle kaydedilir ve Excel'e taşınır (U-24)
 
 ## Aşama 2 · Yönetim ve sistem
@@ -77,7 +77,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
   - [ ] Proje
   - [ ] Takvim
   - [ ] Vardiya
-- [ ] 6.2 Değerin kaynağı (11), elle değer girme ve kaldırma (12, 13)
+- [ ] 6.2 Değerin kaynağı (11), elle değer girme ve kaldırma (12, 13) · U-15, U-16: yapıştırma, toplu düzenleme, doğrulama, kaydetme
 - [ ] 6.3 Değişiklik geçmişi (14)
 - [ ] 6.4 Excel ile toplu düzeltme (15)
 - [ ] 6.5 Veri kalitesi ekranı (05) · kontrol, düzeltme aksiyonu (20, 21)

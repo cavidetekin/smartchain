@@ -1434,8 +1434,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu … | Sistem | H | E |  |
-| Channel | nvarchar(10) |  | Gece \| Etkileşim | Sistem | H | E |  |
+| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım … | Sistem | H | E |  |
+| Channel | nvarchar(15) |  | Gece \| Etkileşim \| Dışa aktarım | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |
 | RequestedBy | int | FK | Başlatan | Sistem | H | H |  |
@@ -1497,6 +1497,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İş kuyruğu ayarları (K-68); satır yoksa varsayılan geçerlidir:
   - `JobLimitInteractive`: etkileşim kanalında aynı anda çalışan iş (3)
   - `JobLimitNight`: gece kanalında aynı anda çalışan iş (2)
+  - `JobLimitExport`: dışa aktarım kanalında aynı anda çalışan iş (2; K-93)
   - `JobHeartbeatTimeoutSeconds`: kalp atışı bu kadar saniye gelmezse iş takılmış sayılır (120)
   - `JobMaxAttempts`: takılan iş en fazla bu kadar denenir, sonra Hata (2)
 - Motor ayarları (K-71; fonksiyon 34):
@@ -1509,6 +1510,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Liste ayarları (K-87; docs/08 "Liste sorgusu"):
   - `ListChunkSize`: tablonun bir istekte okuduğu en çok satır (parça büyüklüğü) (100; en çok 500, büyüğü 500 sayılır)
   - `ListMaxGroups`: gruplamada en çok yaprak grup (1000; K-90)
+- Dışa aktarım ayarları (K-91):
+  - `ExportSyncMaxRows`: bu kadar satıra kadar dosya anlık iner, üstü arka planda hazırlanır (10000)
+  - `ExportMaxRows`: bir aktarımda en çok satır (500000)
+  - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
 
 ### TableView
 <sub>21. Veri modeli · Sistem</sub>

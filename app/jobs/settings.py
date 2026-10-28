@@ -5,13 +5,14 @@ from dataclasses import dataclass
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
-from .constants import CHANNEL_INTERACTIVE, CHANNEL_NIGHT
+from .constants import CHANNEL_EXPORT, CHANNEL_INTERACTIVE, CHANNEL_NIGHT
 
 log = logging.getLogger("smartchain.jobs")
 
 DEFAULTS = {
     "JobLimitInteractive": 3,
     "JobLimitNight": 2,
+    "JobLimitExport": 2,
     "JobHeartbeatTimeoutSeconds": 120,
     "JobMaxAttempts": 2,
 }
@@ -21,11 +22,13 @@ DEFAULTS = {
 class JobSettings:
     limit_interactive: int = DEFAULTS["JobLimitInteractive"]
     limit_night: int = DEFAULTS["JobLimitNight"]
+    limit_export: int = DEFAULTS["JobLimitExport"]
     heartbeat_timeout_seconds: int = DEFAULTS["JobHeartbeatTimeoutSeconds"]
     max_attempts: int = DEFAULTS["JobMaxAttempts"]
 
     def limit(self, channel: str) -> int:
-        return {CHANNEL_INTERACTIVE: self.limit_interactive, CHANNEL_NIGHT: self.limit_night}[channel]
+        return {CHANNEL_INTERACTIVE: self.limit_interactive, CHANNEL_NIGHT: self.limit_night,
+                CHANNEL_EXPORT: self.limit_export}[channel]
 
 
 def read_int_settings(session: Session, defaults: dict[str, int]) -> dict[str, int]:
@@ -52,6 +55,7 @@ def read_settings(session: Session) -> JobSettings:
     return JobSettings(
         limit_interactive=values["JobLimitInteractive"],
         limit_night=values["JobLimitNight"],
+        limit_export=values["JobLimitExport"],
         heartbeat_timeout_seconds=values["JobHeartbeatTimeoutSeconds"],
         max_attempts=values["JobMaxAttempts"],
     )

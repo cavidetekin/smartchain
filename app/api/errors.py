@@ -7,11 +7,14 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeout
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .logging_setup import trace_id_var
 
 log = logging.getLogger("smartchain.errors")
+
+DB_UNAVAILABLE = "Veritabanına bağlanılamıyor; biraz sonra yeniden deneyin."
 
 
 class AppError(Exception):
@@ -55,5 +58,13 @@ def install_error_handlers(app: FastAPI) -> None:
         details = [{"field": ".".join(str(p) for p in e.get("loc", [])), "problem": e.get("msg", "")}
                    for e in exc.errors()]
         return JSONResponse(error_body("validation", "Gönderilen veri geçersiz.", details), status_code=422)
+
+    # Veritabanına ulaşılamıyor (docs/08): bağlantı kurulamadı ya da havuzda boş bağlantı yok. Servis kendi 503'ünü
+    # vermediyse burada yakalanır; kullanıcı "beklenmeyen hata" değil, anlamlı mesaj görür.
+    @app.exception_handler(PoolTimeout)
+    @app.exception_handler(OperationalError)
+    async def database_unavailable(request: Request, exc: Exception):
+        log.warning("database_unavailable: %s", str(exc).splitlines()[0][:200])
+        return JSONResponse(error_body("database_unavailable", DB_UNAVAILABLE), status_code=503)
 
     # Beklenmeyen hatalar TraceMiddleware'de yakalanır (takip numarasıyla).

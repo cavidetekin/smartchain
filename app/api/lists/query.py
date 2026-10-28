@@ -228,6 +228,32 @@ class Builder:
             q = q.add_columns(self.table.c[self.defn.unit_field].label(UNIT))
         return q.where(self.version_clause(), *where).order_by(*order).offset(req.offset).limit(limit)
 
+    def export_query(self, fields: list[str], sort: list[SortItem], filters: list[FilterItem],
+                     group_by: list[str]) -> sa.Select:
+        """Dışa aktarım (K-91): bütün satırlar tek sorguda, parçasız (akıtılarak okunur). Gruplu ise önce grup sırası
+        (groups_query ile aynı: grup alanı sıralamadaysa onun yönü, Türkçe, boş grup sonda), sonra ekran sıralaması.
+        Grup değerleri _g0…, birim _unit kolonlarında."""
+        problems: list[dict] = []
+        cols = [self._col(f, "fields", problems) for f in fields]
+        gcols = [self._col(f, f"group_by.{i}", problems) for i, f in enumerate(group_by)]
+        if problems:
+            raise ListQueryError(problems)
+        where = self.where(filters)
+        dirs = {s.field: s.dir for s in sort}
+        order = []
+        sel = [self.table.c.Id] + [c for c in cols if c.name != "Id"]
+        for i, c in enumerate(gcols):
+            g = self.group_expr(c)
+            sel.append(g.label(f"_g{i}"))
+            order.append(sa.case((g.is_(None), 1), else_=0))
+            expr = turkish(g) if column_type(c) == "text" else g
+            order.append(expr.desc() if dirs.get(group_by[i]) == "desc" else expr.asc())
+        if self.defn.unit_field:
+            sel.append(self.table.c[self.defn.unit_field].label(UNIT))
+        order += self.order_by(sort)
+        return (sa.select(*sel).where(self.version_clause(), *where).order_by(*order)
+                .with_statement_hint(PARALLEL_HINT, "mssql"))
+
     def total_query(self) -> sa.Select:
         """Filtresiz sayı (güncel versiyondaki bütün kayıtlar)."""
         return sa.select(sa.func.count()).select_from(self.table).where(self.version_clause())

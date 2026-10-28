@@ -15,7 +15,8 @@ export class ApiError extends Error {
   }
 }
 
-async function readJson<T>(r: Response): Promise<T> {
+/** Hata cevabını (docs/08) ApiError'a çevirir; başarılıysa cevabı olduğu gibi döndürür. */
+export async function ensureOk(r: Response): Promise<Response> {
   if (!r.ok) {
     let code = `http_${r.status}`;
     let message = r.statusText;
@@ -30,6 +31,11 @@ async function readJson<T>(r: Response): Promise<T> {
     }
     throw new ApiError(r.status, code, message, details);
   }
+  return r;
+}
+
+async function readJson<T>(r: Response): Promise<T> {
+  await ensureOk(r);
   if (r.status === 204) return undefined as T;
   return (await r.json()) as T;
 }
@@ -52,6 +58,32 @@ export async function sendJson<T>(method: "POST" | "PUT" | "DELETE", path: strin
   }));
 }
 
+/** Content-Disposition'daki dosya adı (filename*=UTF-8''… önce). */
+export function fileNameFrom(disposition: string | null, fallback: string): string {
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(disposition ?? "");
+  if (utf) return decodeURIComponent(utf[1]);
+  const plain = /filename="?([^";]+)"?/i.exec(disposition ?? "");
+  return plain ? plain[1] : fallback;
+}
+
+/** Dosyayı tarayıcının indirmesine verir (internetsiz; bağlantı bellekteki dosyaya). */
+export function saveBlob(blob: Blob, name: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/** Sunucudaki dosyayı indirir; hata (ör. 410 süresi geçti) ApiError olarak döner. */
+export async function downloadFile(path: string, fallback: string): Promise<void> {
+  const r = await ensureOk(await fetch(path));
+  saveBlob(await r.blob(), fileNameFrom(r.headers.get("Content-Disposition"), fallback));
+}
+
 export interface DataVersion {
   id: number;
   location_code: string;
@@ -66,6 +98,7 @@ export interface Job {
   channel: string;
   status: string;
   progress: string | null;
+  error_text?: string | null;
   queue_position: number | null;
   updated_at: string;
 }
@@ -78,4 +111,12 @@ export interface JobList {
 export const api = {
   currentDataVersion: () => getJson<DataVersion>("/api/data-versions/current"),
   jobs: (userId: number) => getJson<JobList>(`/api/jobs?user_id=${userId}`),
+  /** Arka planda hazırlanan Excel dosyası (K-91). */
+  downloadExport: (userId: number, jobId: number, fallback: string) =>
+    downloadFile(`/api/exports/${jobId}/file?user_id=${userId}`, fallback),
 };
+
+/** İş türü ve durumları (app/jobs/constants.py). */
+export const JOB_EXPORT = "Dışa aktarım";
+export const JOB_DONE = "Bitti";
+export const JOB_FAILED = "Hata";

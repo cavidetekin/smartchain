@@ -7,6 +7,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 - **Tek kaynak `docs/`.** Değişiklik önce docs'ta (karar, sözleşme, prensip), sonra kodda (K-54). Docs ile kod çelişirse dur ve sor.
 - **Sıra `GELISTIRME_ADIMLARI.md`.** Adımlar sırayla, ekran ekran ve fonksiyon fonksiyon ilerler. Sıradaki adım dışında iş yapma; kapsam büyütme.
 - **Motor en son.** Optimizasyon, çözüm motoru ve simülasyonlar Aşama 10'da. O zamana kadar ekranlar plan fikstürüyle ve sahte motorla çalışır; motor arayüzü baştan sabittir.
+- **Commit kuralı:** testler (pytest, `npm test`, `tsc`, `npm run build`) geçmeden commit ve push yapılmaz. Komut zincirinde biri başarısız olursa zincir durur (`&&`, `set -e`); başarısızlık incelenmeden devam edilmez.
 - **Bitti tanımı:** prensip slaytı ve mockup okundu → API, ekran ve test yazıldı → sentetik veriyle çalışıyor → docs'ta "uygulandı" işlendi → demo yapıldı. Biri eksikse adım kapanmaz (K-55).
 - **Kararlar numaralı.** Karar K-n, açık konu A-n (`docs/00-kararlar.md`). Kodda ve commit mesajında bu numaralara atıf yap.
 
@@ -77,7 +78,8 @@ uvicorn app.api.main:app --reload --port 8000      # API'yi başlat (geliştirme
 python -m app.engine.service                       # motor servisini başlat (geliştirme; sahte motor)
 python -m app.data.synthetic load                  # sentetik veri v0'ı ana tablolara yükle (docs/11, K-79)
 python -m app.data.synthetic excel                 # sentetik verinin kirli hâli (entegrasyon Excel'i)
-python -m pytest                                   # testler
+python -m pytest                                   # testler (performans testleri hariç)
+python -m pytest -m perf                           # performans testleri (ayrıca; ortanca ölçüm, docs/08)
 powershell -File installer\build.ps1               # internetsiz kurulum paketi (dist\), yalnız geliştirmede
 cd app/web; npm ci; npm run dev                    # arayüz (http://localhost:5173; API 8000'de açık olmalı)
 cd app/web; npm test; npm run build                # arayüz testleri ve derleme (docs/12)

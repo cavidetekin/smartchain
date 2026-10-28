@@ -173,3 +173,99 @@ function Read-InstallState {
     if (-not (Test-Path -LiteralPath $path)) { return $null }
     return (Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json)
 }
+
+# --- SQL Server belleği (K-94, docs/10 "Ön koşullar") ---
+# Ön kontrol Python kurulmadan çalışır; bağlantı .NET'in SqlClient'ıyla. Kontrol uyarı verir, kurulumu durdurmaz.
+$script:SqlUnlimitedMemoryMB = 2147483647
+$script:SqlMemoryWarnRatio = 0.8
+
+function Get-SqlMemoryAdvice {
+    # max server memory sınırsızsa ya da sunucu belleğinin %80'inden fazlaysa uyarı metni; uygunsa $null.
+    # Önerilen değerler docs/10 tablosuyla aynı: max belleğin %50–70'i, min belleğin 1/8'i (en az 1024 MB), 512 MB'a yuvarlı.
+    param([Parameter(Mandatory = $true)][long]$MaxServerMemoryMB, [Parameter(Mandatory = $true)][long]$TotalMemoryMB)
+    $low = [long][math]::Floor($TotalMemoryMB * 0.5 / 512) * 512
+    $high = [long][math]::Floor($TotalMemoryMB * 0.7 / 512) * 512
+    $min = [math]::Max(1024, [long][math]::Floor($TotalMemoryMB / 8 / 512) * 512)
+    $advice = "Önerilen: max server memory $low–$high MB, min server memory $min MB (docs/10, K-94). Kurulum devam ediyor."
+    if ($MaxServerMemoryMB -ge $script:SqlUnlimitedMemoryMB) {
+        return "SQL Server'da max server memory sınırsız (sunucu belleği $TotalMemoryMB MB). Bellek baskısında SQL Server oturum kabul etmeyebilir. $advice"
+    }
+    if ($MaxServerMemoryMB -gt $TotalMemoryMB * $script:SqlMemoryWarnRatio) {
+        $pct = [math]::Round(100 * $MaxServerMemoryMB / $TotalMemoryMB)
+        return "SQL Server'da max server memory $MaxServerMemoryMB MB, sunucu belleğinin (%$pct) %80'inden fazla; işletim sistemine ve Smartchain süreçlerine yer kalmayabilir. $advice"
+    }
+    return $null
+}
+
+function Get-SqlServerMemory {
+    # SQL Server'ın max ve min server memory ayarı ve gördüğü fiziksel bellek (MB).
+    param([Parameter(Mandatory = $true)][string]$Instance, [string]$Encrypt = 'yes', [switch]$TrustServerCertificate,
+          [string]$User = '', [string]$Password = '', [int]$TimeoutSeconds = 15)
+    $b = New-Object System.Data.SqlClient.SqlConnectionStringBuilder
+    $b['Data Source'] = $Instance
+    $b['Initial Catalog'] = 'master'
+    $b['Encrypt'] = ($Encrypt -ne 'no')   # 'strict' (TDS 8) bu istemcide yok; şifreli bağlantı yeterli
+    $b['TrustServerCertificate'] = [bool]$TrustServerCertificate
+    $b['Connect Timeout'] = $TimeoutSeconds
+    $b['Application Name'] = 'Smartchain kurulum'
+    if ($User) { $b['User ID'] = $User; $b['Password'] = $Password } else { $b['Integrated Security'] = $true }
+    $conn = New-Object System.Data.SqlClient.SqlConnection $b.ConnectionString
+    try {
+        $conn.Open()
+        $cmd = $conn.CreateCommand()
+        $cmd.CommandText = "SELECT (SELECT CAST(value_in_use AS bigint) FROM sys.configurations WHERE name = 'max server memory (MB)'), " +
+            "(SELECT CAST(value_in_use AS bigint) FROM sys.configurations WHERE name = 'min server memory (MB)'), " +
+            "(SELECT physical_memory_kb / 1024 FROM sys.dm_os_sys_info)"
+        $r = $cmd.ExecuteReader()
+        try {
+            [void]$r.Read()
+            return [pscustomobject]@{ MaxMB = [long]$r.GetValue(0); MinMB = [long]$r.GetValue(1); TotalMB = [long]$r.GetValue(2) }
+        } finally { $r.Close() }
+    } finally { $conn.Dispose() }
+}
+
+function Test-SqlServerMemory {
+    # Kurulum ön kontrolü (K-94). Uygunsa $true; uygun değilse ya da okunamazsa uyarı yazar ve $false. Hata fırlatmaz.
+    param([Parameter(Mandatory = $true)][string]$Instance, [string]$Encrypt = 'yes', [switch]$TrustServerCertificate,
+          [string]$User = '', [string]$Password = '', [int]$TimeoutSeconds = 15)
+    try {
+        $m = Get-SqlServerMemory @PSBoundParameters
+    } catch {
+        $reason = $_.Exception.Message
+        if ($_.Exception.InnerException) { $reason = $_.Exception.InnerException.Message }
+        Write-Log ("SQL Server bellek ayarı okunamadı ({0}): {1} max server memory'nin ayarlı olduğunu elle doğrulayın (docs/10, K-94). Kurulum devam ediyor." -f $Instance, $reason.Trim()) 'WARN'
+        return $false
+    }
+    $warning = Get-SqlMemoryAdvice -MaxServerMemoryMB $m.MaxMB -TotalMemoryMB $m.TotalMB
+    if ($warning) {
+        Write-Log $warning 'WARN'
+        return $false
+    }
+    Write-Log ("SQL Server belleği uygun: max server memory {0} MB, min {1} MB, sunucu {2} MB" -f $m.MaxMB, $m.MinMB, $m.TotalMB) 'OK'
+    return $true
+}
+
+# --- Arayüz geliştirme sunucusu (build.ps1; docs/10 "İnternetsiz") ---
+
+function Find-WebDevProcesses {
+    # Verilen süreçlerden (ProcessId, Name, CommandLine) komut satırı app\web klasörünü içeren node süreçleri.
+    # Bunlar açıkken npm ci node_modules'u silemez, yarıda bırakır (ör. npm run dev'in vite'ı, vitest).
+    param([Parameter(Mandatory = $true)][string]$WebDir, [object[]]$Processes = @())
+    $norm = { param($s) (($s -replace '/', '\') -replace '\\{2,}', '\').TrimEnd('\').ToLowerInvariant() }
+    $dir = (& $norm $WebDir) + '\'
+    return @($Processes | Where-Object {
+        $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -and ((& $norm $_.CommandLine) + '\').Contains($dir)
+    })
+}
+
+function Assert-NoWebDevServer {
+    # app\web'de çalışan node süreci varsa durur; süreçleri listeler.
+    param([Parameter(Mandatory = $true)][string]$WebDir)
+    # @(): boş sonuç $null'a açılmasın (StrictMode'da .Count hatası)
+    $running = @(Find-WebDevProcesses -WebDir $WebDir -Processes @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'"))
+    if ($running.Count) {
+        $list = ($running | ForEach-Object { "#$($_.ProcessId) $($_.CommandLine)" }) -join '; '
+        throw ("Arayüz klasöründe çalışan node süreci var ($WebDir): $list. Geliştirme sunucusunu (npm run dev) ve " +
+               "testleri kapatıp yeniden deneyin; açıkken npm ci node_modules'u yarıda silip bırakır.")
+    }
+}

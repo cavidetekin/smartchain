@@ -4,6 +4,8 @@
 - Süre bütçesi + pay aşılırsa süreci sonlandırır; iş ve PlanRun Hata.
 - İş süreci beklenmedik biterse işi hemen yeniden sıraya alır (deneme hakkı varsa, K-67).
 - Takılan işleri (requeue_stale) açılışta ve belli aralıkla kendisi de geri alır; API kapalıyken iş beklemez.
+- İşi tipine göre yönlendirir (K-93): "Dışa aktarım" işleri Excel dosyası üretir, diğerleri plan hesabıdır. Süresi
+  geçen dışa aktarım dosyalarını açılışta ve saatte bir siler.
 
 Çalıştırma (geliştirme):  python -m app.engine.service      Windows servisi olarak kurulum 0.6'da.
 """
@@ -11,12 +13,14 @@ import logging
 import multiprocessing as mp
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
 from app.jobs import queue
-from app.jobs.constants import CHANNELS
+from app.jobs.constants import CHANNELS, TYPE_EXPORT
 from app.jobs.settings import JobSettings, read_settings
+from .export_job import export_process_main
 from .job import plan_run_id_of, process_main
 from .settings import EngineSettings, read_engine_settings
 from .writer import write_failure
@@ -24,6 +28,7 @@ from .writer import write_failure
 log = logging.getLogger("smartchain.engine")
 
 STALE_CHECK_SECONDS = 15
+EXPORT_CLEANUP_SECONDS = 3600
 
 
 @dataclass
@@ -48,6 +53,7 @@ class EngineService:
         self.running: dict[int, RunningJob] = {}
         self._ctx = mp.get_context("spawn")
         self._last_stale_check = 0.0
+        self._last_cleanup = 0.0
         self.job_settings = job_settings or JobSettings()
         self.engine_settings = engine_settings or EngineSettings()
 
@@ -61,6 +67,7 @@ class EngineService:
         with Session(self.db) as s:
             self._refresh_settings(s)
             self._requeue_stale(s)
+            self.cleanup_exports(s)
         log.info("Motor servisi başladı (kanallar: %s)", ", ".join(self.channels))
 
     def _requeue_stale(self, session: Session) -> None:
@@ -74,6 +81,8 @@ class EngineService:
             if time.monotonic() - self._last_stale_check >= STALE_CHECK_SECONDS:
                 self._refresh_settings(s)
                 self._requeue_stale(s)
+            if time.monotonic() - self._last_cleanup >= EXPORT_CLEANUP_SECONDS:
+                self.cleanup_exports(s)
             for run in list(self.running.values()):
                 self._check(s, run)
             for channel in self.channels:
@@ -81,9 +90,11 @@ class EngineService:
                     self._spawn(s, job, channel)
 
     def _spawn(self, session: Session, job: dict, channel: str) -> None:
-        plan_run_id = plan_run_id_of(job["Payload"])
+        export = job["JobType"] == TYPE_EXPORT
+        plan_run_id = None if export else plan_run_id_of(job["Payload"])
         budget = self.engine_settings.time_budget(channel)
-        process = self._ctx.Process(target=process_main, args=(job["Id"], job["Attempt"], int(budget)),
+        target = export_process_main if export else process_main
+        process = self._ctx.Process(target=target, args=(job["Id"], job["Attempt"], int(budget)),
                                     name=f"smartchain-job-{job['Id']}", daemon=True)
         process.start()
         now = time.monotonic()
@@ -92,6 +103,24 @@ class EngineService:
                                              last_heartbeat=now)
         log.info("İş %s (deneme %s, PlanRun %s) süreç %s'de başladı", job["Id"], job["Attempt"], plan_run_id,
                  process.pid)
+
+    def cleanup_exports(self, session: Session) -> list[str]:
+        """Süresi (ExportFileHours) geçmiş dışa aktarım dosyalarını siler (K-93)."""
+        from app.api.repositories import export as export_repo
+        from app.api.settings import get_settings
+        self._last_cleanup = time.monotonic()
+        folder = Path(get_settings().export_dir)
+        if not folder.exists():
+            return []
+        limit = time.time() - export_repo.read_settings(session)["ExportFileHours"] * 3600
+        removed = []
+        for f in [*folder.glob("*.xlsx"), *folder.glob("*.tmp")]:
+            if f.stat().st_mtime < limit:
+                f.unlink(missing_ok=True)
+                removed.append(f.name)
+        if removed:
+            log.info("Süresi geçen dışa aktarım dosyaları silindi: %s", removed)
+        return removed
 
     def _stop(self, run: RunningJob) -> None:
         if run.process.is_alive():

@@ -24,6 +24,8 @@ $version = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'app\__init
 if (-not $version) { throw 'Sürüm okunamadı (app\__init__.py).' }
 $Dist = Join-Path $Root "dist\Smartchain-$version"
 Write-Log "Smartchain $version paketi hazırlanıyor" 'STEP'
+# Açık geliştirme sunucusu npm ci'yi yarıda bırakır (node_modules silinir); en başta dur.
+Assert-NoWebDevServer -WebDir (Join-Path $Root 'app\web')
 
 # --- Ön koşullar ---
 New-Item -ItemType Directory -Force -Path $Cache | Out-Null

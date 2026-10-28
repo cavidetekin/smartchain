@@ -156,7 +156,7 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 
 | Parça | Davranış |
 |---|---|
-| Araç çubuğu (U-22) | Tablonun hemen üstünde, sayfa zemininde tek satır: kendi zemini, çerçevesi ve ayırıcı çizgisi yoktur; tabloyla arasında 0.5rem boşluk (`--table-toolbar-gap`). Tablo çerçevesi başlık satırından başlar. Solda görünüm seçici, "Kaydedilmedi", "Kaydet" / "Farklı kaydet" ve soluk kayıt sayacı "120 / 840" (filtreli / toplam, Türkçe biçim; U-12); sıralama varken "Sıralamayı temizle" ikonu. Sağda Grupla, gruplama açıkken daralt / aç ikon grubu ve "Alanlar (9/34)" (1.5'te Excel de buraya gelir). Dar ekranda (1366) tek satıra sığar; sığmazsa sağ grup alt satıra sarar. Filtre etiketleri, "Filtreleri temizle" ve gruplama bilgisi ("Malzeme seviyesi › Malzeme grubu ile gruplu") yalnız aktif filtre ya da gruplama varken araç çubuğunun altında, yine sayfa zemininde tek ince satırda durur, sığmazsa sarar; hiçbiri yoksa bu satır yoktur |
+| Araç çubuğu (U-22) | Tablonun hemen üstünde, sayfa zemininde tek satır: kendi zemini, çerçevesi ve ayırıcı çizgisi yoktur; tabloyla arasında 0.5rem boşluk (`--table-toolbar-gap`). Tablo çerçevesi başlık satırından başlar. Solda görünüm seçici, "Kaydedilmedi", "Kaydet" / "Farklı kaydet" ve soluk kayıt sayacı "120 / 840" (filtreli / toplam, Türkçe biçim; U-12); sıralama varken "Sıralamayı temizle" ikonu. Sağda Grupla, gruplama açıkken daralt / aç ikon grubu ve "Alanlar (9/34)" ve "Excel'e aktar". Dar ekranda (1366) tek satıra sığar; sığmazsa sağ grup alt satıra sarar. Filtre etiketleri, "Filtreleri temizle" ve gruplama bilgisi ("Malzeme seviyesi › Malzeme grubu ile gruplu") yalnız aktif filtre ya da gruplama varken araç çubuğunun altında, yine sayfa zemininde tek ince satırda durur, sığmazsa sarar; hiçbiri yoksa bu satır yoktur |
 | Alan paneli (U-6) | Listenin bütün alanları aramalı onay kutusu listesinde; kapalı alanlar buradan geri açılır. "Varsayılana dön". En az bir alan açık kalır. Kapatılan alan sunucudan istenmez. Panel en az 18rem genişliktedir; etiket tek satır, sığmazsa üç noktayla kısalır, tam adı ipucunda (title) |
 | Sıralama (U-7) | Başlığa tıklama: artan → azalan → kapalı (tek sıralama). Shift+tıklama: ek sıralama ekler ya da yönünü değiştirir. Birden çok sıralamada başlıkta ok ve öncelik numarası (1, 2…) görünür |
 | Filtre (U-8) | Başlıktaki filtre ikonundan alan tipine göre menü: metin (içerir, içermez, eşittir, ile başlar), liste (aramalı çoklu seçim, değer sayılarıyla), sayı (aralık, eşit, büyük, küçük; Türkçe giriş), tarih (aralık; "Bu hafta", "Sonraki 4 hafta"). Uygula ve Temizle. Filtreli alanın ikonu indigo (U-4); filtreler birlikte uygulanır. Menü görünür alana sığacak şekilde açılır: sağ kenara yakınsa sola, altta yer yoksa yukarı. Menü içeriğine göre genişler: iki tarih (ya da iki sayı) alanı yan yana sığar, ekrana sığmazsa alt alta dizilir |
@@ -191,6 +191,13 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 - **2.2'de:** paylaşılan görünümü kimin göreceğine rol kuralı; admin'in bir paylaşılan görünümü herkes ya da bir rol için varsayılan yapması. Şimdi yapılmaz.
 - **Performans hedefi:** 50.000 satırda iki alanla gruplama + filtre + ara toplamlar ortanca 300 ms altında; 1.000 grup ve 100.000 satırda DOM'da yalnız görünen satırlar ve tampon.
 
+## Dışa aktarım (1.5, K-91, K-92)
+
+- **Excel'e aktar** (araç çubuğunun sağında) kapsam penceresini açar (mockup m24f-0724, 1.5 demosunda sadeleşti): yalnız Satırlar Filtrelenmiş (n) / Tümü (toplam) (filtre yoksa yalnız Tümü); Sütunlar Görünen (k) / Tümü; dosya adı önizlemesi; Vazgeç / İndir. Gruplama ve ara toplamlar ekrandaki gibi her zaman, Bilgi sayfası her dosyada gelir; seçenek olarak sorulmaz. Pencerede bilgi kutusu ve "ize yazılır" notu yoktur; iz yine yazılır (K-91). "Dosya sisteme geri yüklenemez" bilgisi yükleme ekranında (3.2) verilir. Yalnız duruma bağlı mesajlar çıkar: arka planda hazırlanacaksa, üst sınır aşıldıysa, sunucu hata verdiyse.
+- **Anlık:** 10.000 satıra kadar (`ExportSyncMaxRows`) dosya hemen iner (hedef 3 sn altı).
+- **Arka plan:** üstünde pencere "Arka planda hazırlanır; hazır olunca bildirim gelir" der; ilerleme iş göstergesinde görünür, bitince sağ altta "Malzeme listesi hazır · 4,8 MB · İndir" bildirimi (mockup m24f-0725). 500.000 satırı aşarsa İndir kapalı, "filtreyi daraltın". Dosya 24 saat indirilebilir; bildirim kapansa ya da sayfa yenilense de iş göstergesinin listesinde biten aktarımın yanında "İndir" vardır. Pencerenin eşikleri ve adları kolonlar cevabındaki `export`'tan gelir (docs/08).
+- **Biçim tanımı (K-92):** ekran ve Excel aynı kolon tanımından biçimlenir. Renkler tokens.css'te; derlemede `design-tokens.json` üretilir (`npm run build` öncesi `scripts/tokens.mjs`), Excel yazıcısı renkleri oradan okur. Hücre biçimi `CellFormat {zemin, yazı rengi, kalın, ikon}`; 1.6'da koşullu biçimler (U-24) aynı yapıdan geçer.
+
 ## Durum
 
 | Parça | Durum |
@@ -200,3 +207,4 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 | Stil sistemi ve ortak bileşenler | uygulandı (1.2) |
 | Tablo bileşeni ve liste sorgu sözleşmesi | uygulandı (1.3) |
 | Görünüm: kayıtlı görünüm, kolon düzeni, gruplama, filtre etiketleri, boş | uygulandı (1.4) |
+| Dışa aktarım: Excel'e aktarım, kapsam penceresi, arka plan ve bildirim | uygulandı (1.5) |

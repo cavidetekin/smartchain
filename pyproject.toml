@@ -1,9 +1,11 @@
 [project]
 name = "smartchain"
-version = "0.12.0"
+version = "0.13.0"
 requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-markers = ["db: yerel SQL Server (Smartchain) gerektirir; erişilemezse atlanır", "perf: performans hedefi (docs/12); büyük veriyi işlem içinde üretir ve geri alır"]
+markers = ["db: yerel SQL Server (Smartchain) gerektirir; erişilemezse atlanır", "perf: performans hedefi (docs/08); büyük veriyi işlem içinde üretir ve geri alır; varsayılan koşuda çalışmaz, pytest -m perf"]
+# Performans testleri makine yüküne duyarlıdır; varsayılan koşudan çıkarılır, ayrıca çalıştırılır (docs/08 "Testler").
+addopts = "-m 'not perf'"

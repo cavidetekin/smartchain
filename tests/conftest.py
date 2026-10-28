@@ -3,6 +3,7 @@ import tempfile
 
 os.environ.setdefault("SMARTCHAIN_LOG_DIR", tempfile.mkdtemp(prefix="smartchain-logs-"))
 os.environ.setdefault("SMARTCHAIN_JOB_WATCH_SECONDS", "0.2")
+os.environ.setdefault("SMARTCHAIN_EXPORT_DIR", tempfile.mkdtemp(prefix="smartchain-exports-"))  # iş süreçleri de görür
 
 import pytest
 from fastapi.testclient import TestClient

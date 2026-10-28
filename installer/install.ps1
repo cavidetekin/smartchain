@@ -29,6 +29,7 @@ $Package = $PSScriptRoot
 
 $ConfigDir = Join-Path $DataDir 'config'
 $LogDir = Join-Path $DataDir 'logs'
+$ExportDir = Join-Path $DataDir 'exports'   # arka planda hazırlanan Excel dosyaları (K-93)
 $ConfigFile = Join-Path $ConfigDir 'smartchain.env'
 $Python = Join-Path $InstallDir 'python\python.exe'
 $SetupDir = Join-Path $InstallDir 'setup'
@@ -99,7 +100,7 @@ function Remove-IisSite {
 }
 
 try {
-    New-Item -ItemType Directory -Force -Path $ConfigDir, $LogDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $ConfigDir, $LogDir, $ExportDir | Out-Null
     $log = Start-InstallLog -LogDir $LogDir -Prefix 'install'
     $env:SMARTCHAIN_INSTALL_SQL_PASSWORD = $SqlPassword
 
@@ -118,6 +119,9 @@ try {
         $state.Version = $manifest.version
         $script:Prereqs = (Get-Content -LiteralPath (Join-Path $Package 'prereqs.json') -Raw -Encoding UTF8 | ConvertFrom-Json).items
         Write-Log "Paket sağlam: Smartchain $($manifest.version), $(@($manifest.files.PSObject.Properties).Count) dosya" 'OK'
+        # SQL Server belleği (K-94): sınırsızsa ya da %80'in üstündeyse uyarı; kurulumu durdurmaz.
+        Test-SqlServerMemory -Instance $SqlInstance -Encrypt $SqlEncrypt -TrustServerCertificate:$SqlTrustServerCertificate `
+            -User $SqlUser -Password $SqlPassword | Out-Null
     }
 
     # --- 2 · Ön koşullar (kuruluysa atlanır; geri alınmaz: ortak bileşen) ---
@@ -187,6 +191,7 @@ try {
             '# Smartchain ayarları (install.ps1 yazdı; docs/10-kurulum.md). Yalnız SYSTEM, yönetici grubu ve servis hesapları okur.',
             "SMARTCHAIN_DB_URL=$url",
             "SMARTCHAIN_LOG_DIR=$LogDir",
+            "SMARTCHAIN_EXPORT_DIR=$ExportDir",
             'SMARTCHAIN_LOG_LEVEL=INFO',
             'SMARTCHAIN_ENABLE_DOCS=false',
             'SMARTCHAIN_JOB_WATCH_SECONDS=1.0'
@@ -217,12 +222,14 @@ try {
             Invoke-Native 'sc.exe' @('failure', $n, 'reset=', '3600', 'actions=', 'restart/5000/restart/30000/restart/60000') | Out-Null
             Write-Log "servis kuruldu: $n ($account)" 'OK'
         }
-        # Yetkiler SID ile (K-73): ayarlar yalnız okunur, loglar yazılır.
+        # Yetkiler SID ile (K-73): ayarlar yalnız okunur, loglar yazılır; Excel dosyalarını motor yazar, API okur (K-93).
         $services = @($ServiceSids.Values)
         Set-SidAcl -Path $ConfigDir -FullSids $script:SidSystem, $script:SidAdministrators -ReadSids $services
         Set-SidAcl -Path $ConfigFile -FullSids $script:SidSystem, $script:SidAdministrators -ReadSids $services
         Set-SidAcl -Path $LogDir -FullSids $script:SidSystem, $script:SidAdministrators -ModifySids $services
-        Write-Log 'Ayar ve log klasörü yetkileri verildi (SID)' 'OK'
+        Set-SidAcl -Path $ExportDir -FullSids $script:SidSystem, $script:SidAdministrators `
+            -ModifySids $ServiceSids['SmartchainEngine'] -ReadSids $ServiceSids['SmartchainApi']
+        Write-Log 'Ayar, log ve dışa aktarım klasörü yetkileri verildi (SID)' 'OK'
     } { Remove-SmartchainServices }
 
     # --- 6 · Veritabanı (geri alınmaz: veri korunur) ---

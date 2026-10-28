@@ -292,7 +292,9 @@
 .sc-dialog-title { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
 .sc-dialog-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .sc-dialog-message { margin: 0; }
-.sc-dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+.sc-dialog-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-2); }
+.sc-dialog--wide { width: min(46rem, calc(100vw - 2rem)); }
+.sc-dialog-subtitle { margin: var(--space-1) 0 0; color: var(--text-muted); }
 
 /* Açılır öğelerin ortak yerleşimi (ui/popover useFloating): ekranda sabit konum, görünür alana sığar */
 .sc-floating { position: fixed; z-index: 50; }
@@ -312,3 +314,28 @@
 .sc-btn-group { display: inline-flex; align-items: center; gap: 0.1538rem; padding: 0 var(--space-1);
   border: 1px solid var(--line); border-radius: var(--radius); }
 .sc-viewbar-unsaved { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-sm); }
+
+/* Excel'e aktarım (1.5, K-91; mockup m24f-0724, m24f-0725) */
+.sc-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.sc-export-grid .sc-radio-options { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.sc-export-file { display: block; padding: var(--space-2) var(--space-3); border: 1px solid var(--field-border);
+  border-radius: var(--radius); background: var(--field-disabled-bg); overflow-wrap: anywhere; }
+.sc-link-btn { padding: 0; border: 0; background: none; color: var(--indigo-700); font: inherit; text-decoration: underline;
+  cursor: pointer; }
+.sc-progress { display: inline-block; width: 4.5rem; height: 0.3846rem; border-radius: 0.1923rem; background: var(--progress-track);
+  overflow: hidden; }
+.sc-progress-fill { display: block; height: 100%; background: var(--progress-fill); }
+.sc-toasts { position: fixed; right: var(--space-5); bottom: var(--space-5); z-index: 90; display: flex; flex-direction: column;
+  gap: var(--space-2); max-width: min(36rem, calc(100vw - 2rem)); }
+.sc-toast { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-left: 0.2308rem solid var(--toast-ok); border-radius: var(--radius-lg); background: var(--toast-bg); color: var(--toast-text);
+  box-shadow: var(--shadow-popover); }
+.sc-toast.is-error { border-left-color: var(--toast-error); }
+.sc-toast-body { min-width: 0; flex: 1; }
+.sc-toast-title { margin: 0; font-weight: var(--fw-medium); }
+.sc-toast-sub { margin: var(--space-1) 0 0; color: var(--toast-muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.sc-toast-link { padding: 0; border: 0; background: none; color: var(--toast-link); font: inherit; font-weight: var(--fw-medium);
+  cursor: pointer; }
+.sc-toast-link:focus-visible, .sc-toast-close:focus-visible { outline: 2px solid var(--toast-link); outline-offset: 2px; }
+.sc-toast-close { display: inline-flex; padding: 0; border: 0; background: none; color: var(--toast-muted); cursor: pointer; }
+.sc-toast-close svg { width: 1rem; height: 1rem; }

@@ -1,5 +1,5 @@
 // Liste sorgu sözleşmesi (K-87, docs/08 "Liste sorgusu"): sunucuyla birebir.
-import { getJson, postJson, sendJson } from "../api/client";
+import { ensureOk, fileNameFrom, getJson, postJson, sendJson } from "../api/client";
 
 export type ColumnType = "text" | "integer" | "number" | "bool" | "date" | "datetime";
 export type FilterType = "text" | "list" | "number" | "date";
@@ -28,11 +28,43 @@ export interface ListColumn {
   default_visible: boolean;
 }
 
+/** Dışa aktarım bilgisi (K-91): listenin adı, dosya adındaki kısa ad, anlık eşik ve üst sınır. */
+export interface ExportInfo {
+  title: string;
+  file_slug: string;
+  sync_max_rows: number;
+  max_rows: number;
+  /** Arka planda hazırlanan dosyanın indirilebileceği süre (saat). */
+  file_hours: number;
+}
+
 export interface ColumnsResponse {
   /** Parça büyüklüğü: SystemSetting ListChunkSize; tablo bir istekte bundan fazlasını istemez. */
   chunk_size: number;
   columns: ListColumn[];
+  export: ExportInfo;
 }
+
+/** Excel'e aktarım kapsamı (K-91, docs/08 "Dışa aktarım"). */
+export interface ExportScope {
+  rows: "filtered" | "all";
+  columns: "visible" | "all";
+}
+
+export interface ExportRequest {
+  fields: string[];
+  widths: Record<string, number>;
+  sort: SortItem[];
+  filters: ListFilter[];
+  group_by: string[];
+  aggregates: Record<string, AggSpec>;
+  scope: ExportScope;
+}
+
+/** Anlık: dosya gövdede (200). Arka plan: iş (202), bitince bildirim. */
+export type ExportResult =
+  | { kind: "file"; blob: Blob; fileName: string }
+  | { kind: "job"; job_id: number; file_name: string; rows: number };
 
 export type TextOp = "contains" | "not_contains" | "equals" | "starts_with";
 export type NumberOp = "between" | "eq" | "gt" | "lt";
@@ -148,6 +180,13 @@ export function listApi(list: string) {
     updateView: (userId: number, id: number, body: { name?: string; is_shared?: boolean; definition?: ViewDefinition }) =>
       sendJson<SavedView>("PUT", `${base}/views/${id}?user_id=${userId}`, body),
     deleteView: (userId: number, id: number) => sendJson<void>("DELETE", `${base}/views/${id}?user_id=${userId}`),
+    export: async (userId: number, body: ExportRequest): Promise<ExportResult> => {
+      const r = await ensureOk(await fetch(`${base}/export?user_id=${userId}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      }));
+      if (r.status === 202) return { kind: "job", ...(await r.json() as { job_id: number; file_name: string; rows: number }) };
+      return { kind: "file", blob: await r.blob(), fileName: fileNameFrom(r.headers.get("Content-Disposition"), "smartchain.xlsx") };
+    },
     setDefaultView: (userId: number, viewId: number | null) =>
       sendJson<{ default_view_id: number | null }>("PUT", `${base}/views/default?user_id=${userId}`, { view_id: viewId }),
   };

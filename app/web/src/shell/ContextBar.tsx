@@ -2,7 +2,7 @@
 import { Database } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { api, ApiError, type DataVersion } from "../api/client";
+import { api, ApiError, type DataVersion, type Job } from "../api/client";
 import { formatDateTime } from "../format";
 import { tr } from "../i18n/tr";
 import type { FontSize } from "../prefs";
@@ -15,9 +15,11 @@ interface Props {
   userId: number;
   fontSize: FontSize;
   onFontSize(size: FontSize): void;
+  /** Her iş güncellemesi (dışa aktarım bildirimi, K-91). */
+  onJob?(job: Job): void;
 }
 
-export function ContextBar({ userId, fontSize, onFontSize }: Props) {
+export function ContextBar({ userId, fontSize, onFontSize, onJob }: Props) {
   return (
     <header className="sc-context">
       <div className="sc-context-left">
@@ -29,7 +31,7 @@ export function ContextBar({ userId, fontSize, onFontSize }: Props) {
       </div>
       <div className="sc-context-right">
         <DataVersionBadge />
-        <JobIndicator userId={userId} />
+        <JobIndicator userId={userId} onJob={onJob} />
         <UserMenu userId={userId} fontSize={fontSize} onFontSize={onFontSize} />
       </div>
     </header>

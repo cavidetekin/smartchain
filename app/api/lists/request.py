@@ -103,3 +103,22 @@ class ViewUpdate(BaseModel):
 
 class DefaultViewRequest(BaseModel):
     view_id: int | None = None
+
+
+# --- Dışa aktarım (K-91, docs/08 "Dışa aktarım") ------------------------------------------------------------------
+
+class ExportScope(BaseModel):
+    rows: Literal["filtered", "all"] = "filtered"      # ekrandaki filtrelerle ya da filtresiz
+    columns: Literal["visible", "all"] = "visible"     # görünen alanlar ya da listenin bütün alanları
+    # Gruplama, ara toplamlar ve Bilgi sayfası her zaman (K-91); seçenek değil.
+
+
+class ExportRequest(BaseModel):
+    """Ekrandaki görünüm durumu ve kapsam."""
+    fields: list[str] = Field(min_length=1)
+    widths: dict[str, float] = {}                      # rem
+    sort: list[SortItem] = []
+    filters: list[FilterItem] = []
+    group_by: list[str] = Field(default=[], max_length=4)
+    aggregates: dict[str, AggSpec] | None = None
+    scope: ExportScope = ExportScope()

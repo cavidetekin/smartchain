@@ -4,7 +4,7 @@ Adım 0.6'da kurulan iskelet. Kurulum paketinin tamamı (MSI, imza, kod korumas�
 
 ## İlkeler
 
-- **İnternetsiz (K-72):** Paket her şeyi içerir; kurulum hiçbir adreste internete çıkmaz. Paket yalnız geliştirme bilgisayarında, bir kez internetle hazırlanır (`installer/build.ps1`). Ön koşulların adresi ve SHA-256'sı `installer/prereqs.json`'da sabittir.
+- **İnternetsiz (K-72):** Paket her şeyi içerir; kurulum hiçbir adreste internete çıkmaz. Paket yalnız geliştirme bilgisayarında, bir kez internetle hazırlanır (`installer/build.ps1`). Ön koşulların adresi ve SHA-256'sı `installer/prereqs.json`'da sabittir. `build.ps1` arayüzü `npm ci` ile temiz kurup derler; `app\web`'de çalışan bir node süreci (ör. `npm run dev`'in vite'ı, vitest) varsa en başta durur ve süreçleri listeler: açık süreç dosyaları kilitlediği için `npm ci` node_modules'u yarıda silip bırakabilir.
 - **Tek komut, yönetici:** `install.ps1`. Adımlar tekrar çalıştırılabilir; bir adım başarısız olursa yapılanlar geri alınır.
 - **Servisler (K-73):** API ve motor iki Windows servisidir (WinSW). Sanal servis hesaplarıyla çalışırlar, açılışta başlarlar, çökünce kendilerini yeniden başlatırlar.
 - **IIS ters vekil (K-74):** API yalnız `127.0.0.1:8000`'i dinler; dışarıya IIS açılır.
@@ -35,6 +35,7 @@ Adım 0.6'da kurulan iskelet. Kurulum paketinin tamamı (MSI, imza, kod korumas�
 | `C:\Program Files\Smartchain\` | `python\` (ürüne ait Python), `app\`, `db\`, `services\` (WinSW ve XML), `web\` (IIS kökü) |
 | `C:\ProgramData\Smartchain\config\smartchain.env` | Ayarlar: bağlantı, log klasörü. Yalnız SYSTEM, Yöneticiler ve servis hesapları okur. |
 | `C:\ProgramData\Smartchain\logs\` | `smartchain.log` (API), `engine.log` (motor), servis çıktıları, `install-<tarih>.log` |
+| `C:\ProgramData\Smartchain\exports\` | Arka planda hazırlanan Excel dosyaları (`SMARTCHAIN_EXPORT_DIR`, K-93); motor servisi yazar (değiştirme yetkisi), API okur (okuma yetkisi; SID ile, K-73); süresi geçince motor servisi siler |
 
 Servisler ayarları `SMARTCHAIN_CONFIG` ortam değişkeniyle verilen dosyadan okur. Ortam değişkeni dosyadaki değeri ezer.
 
@@ -42,6 +43,22 @@ Servisler ayarları `SMARTCHAIN_CONFIG` ortam değişkeniyle verilen dosyadan ok
 
 - Windows Server 2022 ya da 2025, yönetici hesabı. Test için Windows 11 de kabul edilir.
 - Ürüne ayrılmış SQL Server instance'ı (en güncel sürüm). Önerilen collation `Latin1_General_100_CI_AS_SC`; veritabanı collation'ını kurulum zaten bununla açar. Kurulumu yapan kullanıcının instance'ta `sysadmin` olması gerekir (yalnız kurulum sırasında).
+- **SQL Server belleği (K-94):** ürüne ayrılmış instance'ta `max server memory` mutlaka ayarlanır: sunucu belleğinin yaklaşık %50–70'i, işletim sistemine ve Smartchain süreçlerine (API, motor servisi, her iş için ayrı süreç) yer kalacak şekilde. `min server memory` bir taban verir: SQL Server bellek baskısında bu sınırın altına inmez. Sınırsız (varsayılan 2.147.483.647 MB) bırakılan instance, işletim sistemi "bellek az" bildirdikçe önbelleklerini atar; bir süre sonra oturum kabul etmez ve 802 ("insufficient memory available in the buffer pool") hatası verir. API'de bu durum havuz zaman aşımı ve 503 olarak görünür. Örnek değerler:
+
+  | Sunucu belleği | max server memory | min server memory |
+  |---|---|---|
+  | 16 GB | 8192–11264 MB | 2048 MB |
+  | 32 GB | 16384–22528 MB | 4096 MB |
+
+  ```sql
+  -- 16 GB sunucu
+  EXEC sp_configure 'show advanced options', 1; RECONFIGURE;
+  EXEC sp_configure 'min server memory (MB)', 2048;
+  EXEC sp_configure 'max server memory (MB)', 10240;
+  RECONFIGURE;
+  ```
+
+  Instance yeni kuruluyorsa aynı değerler kurulum yanıt dosyasında da verilebilir (`SQLMINMEMORY`, `SQLMAXMEMORY`).
 - Güvenlik duvarı: kullanıcılara yalnız IIS portu (80 ya da 443). 8000 dışarıya açılmaz. SQL Server başka sunucudaysa Smartchain → SQL 1433.
 
 ## Kurulum
@@ -66,7 +83,7 @@ Servisler ayarları `SMARTCHAIN_CONFIG` ortam değişkeniyle verilen dosyadan ok
 **SQL bağlantısında şifreleme:** ODBC Driver 18 bağlantıyı varsayılan olarak şifreler ve sunucu sertifikasını doğrular. Yeni kurulmuş bir SQL Server kendi imzaladığı sertifikayı kullanır; bu durumda doğrulama başarısız olur. İki yol var: müşterinin BT'si SQL Server'a güvenilir sertifika yükler (önerilen), ya da kurulum `-SqlTrustServerCertificate` ile yapılır. Ayar `smartchain.env`'deki bağlantı cümlesine (`Encrypt`, `TrustServerCertificate`) yazılır.
 
 **Adımlar:**
-1. Ön kontrol: yönetici, işletim sistemi, disk, paket bütünlüğü (manifest).
+1. Ön kontrol: yönetici, işletim sistemi, disk, paket bütünlüğü (manifest). SQL Server instance'ında `max server memory` sınırsızsa ya da sunucu belleğinin %80'inden fazlaysa **uyarı** verilir (K-94): neden ve önerilen değer yazılır, kurulum durmaz.
 2. Ön koşullar paketten sessiz kurulur (kuruluysa atlanır). IIS ve WebSocket özelliği açılır.
 3. Python ve paketler `C:\Program Files\Smartchain\python`'a kurulur (`pip --no-index`).
 4. Uygulama kopyalanır, `smartchain.env` yazılır.
@@ -90,6 +107,7 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 | numpy (highspy bağımlılığı) | 2.5.4 | BSD-3-Clause (içinde 0BSD, MIT, Zlib, CC0-1.0 parçaları) |
 | FastAPI, pydantic, pydantic-core, pydantic-settings, annotated-doc, annotated-types, typing-inspection | 0.162.0 · 2.14.1 · 2.50.1 · 2.16.1 · 0.0.5 · 0.8.0 · 0.4.4 | MIT |
 | starlette, uvicorn, websockets, click, idna, python-dotenv, MarkupSafe | 1.10.0 · 0.54.0 · 17.3 · 8.5.0 · 3.20 · 1.2.4 · 3.0.4 | BSD-3-Clause |
+| XlsxWriter (Excel'e aktarım, K-91) | 3.3.0 | BSD-2-Clause |
 | SQLAlchemy, alembic, Mako, pyodbc, anyio, h11, httptools, watchfiles, PyYAML | 2.1.6 · 1.20.1 · 1.4.3 · 5.3.0 · 4.15.1 · 0.16.0 · 0.9.0 · 1.3.0 · 6.0.3 | MIT |
 | typing_extensions | 4.16.0 | PSF-2.0 |
 | opentelemetry-api | 1.45.1 | Apache-2.0 |
@@ -122,4 +140,5 @@ Hyper-V'de Windows Server 2025 Evaluation sanal makinesi; SQL Server ayrı `SMAR
 | Parça | Durum |
 |---|---|
 | Paket hazırlama, kurulum, kaldırma, kontrol betikleri | uygulandı (0.6), sanal makine testi bekliyor |
+| SQL Server bellek ön kontrolü (K-94; sınırsızsa ya da %80'in üstündeyse uyarı, kurulum durmaz) | uygulandı (1.5; `common.ps1` `Test-SqlServerMemory`, install.ps1 adım 1), sanal makine testi bekliyor (0.6) |
 | MSI, imza, kod koruması, sürüm güncelleme, yedek, lisans | 11. aşama |

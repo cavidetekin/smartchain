@@ -1216,8 +1216,8 @@ AppUser = sa.Table(
 Job = sa.Table(
     "Job", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
-    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Yükleme | Termin sorgusu …", info={'values': ["Gece senaryosu", "Çalışma", "Yükleme", "Termin sorgusu"]}),
-    sa.Column("Channel", sa.Unicode(10), nullable=False, comment="Gece | Etkileşim", info={'values': ["Gece", "Etkileşim"]}),
+    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Yükleme | Termin sorgusu | Dışa aktarım …", info={'values': ["Gece senaryosu", "Çalışma", "Yükleme", "Termin sorgusu", "Dışa aktarım"]}),
+    sa.Column("Channel", sa.Unicode(15), nullable=False, comment="Gece | Etkileşim | Dışa aktarım", info={'values': ["Gece", "Etkileşim", "Dışa aktarım"]}),
     sa.Column("Priority", sa.Integer(), nullable=True, comment="Öncelik", info={'label': "Öncelik"}),
     sa.Column("Status", sa.Unicode(15), nullable=False, comment="Sırada | Çalışıyor | Bitti | Hata | İptal", info={'values': ["Sırada", "Çalışıyor", "Bitti", "Hata", "İptal"]}),
     sa.Column("RequestedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Başlatan", info={'label': "Başlatan"}),

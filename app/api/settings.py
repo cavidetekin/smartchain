@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     enable_docs: bool = False
     # İş kuyruğunu izleme aralığı (sn); değişen iş sahibine WebSocket'le iletilir (K-69). 0: izleme kapalı.
     job_watch_seconds: float = 1.0
+    # Arka planda hazırlanan Excel dosyaları (K-93); motor servisi yazar, API okur, süresi geçince servis siler.
+    export_dir: Path = ROOT / "exports"
 
 
 def config_files() -> tuple[Path, ...]:

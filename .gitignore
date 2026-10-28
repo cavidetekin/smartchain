@@ -12,6 +12,7 @@ build/
 *.bak
 ~$*
 logs/
+exports/
 .pytest_cache/
 installer/cache/
 data/synthetic/v0/

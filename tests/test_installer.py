@@ -283,3 +283,99 @@ def test_build_and_install_handle_web():
     assert "Copy-Tree (Join-Path $WebSrc 'dist') (Join-Path $Dist 'web')" in build
     install = (INSTALLER / "install.ps1").read_text(encoding="utf-8-sig")
     assert "Join-Path $Package 'web\*'" in install
+
+
+# --- SQL Server belleği ön kontrolü (K-94): uyarı verir, kurulumu durdurmaz ---
+
+def memory_advice(max_mb: int, total_mb: int) -> str:
+    return ps(f"$a = Get-SqlMemoryAdvice -MaxServerMemoryMB {max_mb} -TotalMemoryMB {total_mb}; "
+              "if ($null -eq $a) { 'UYGUN' } else { $a }")
+
+
+@needs_ps
+def test_sql_memory_advice_thresholds():
+    unlimited = memory_advice(2147483647, 16384)
+    assert "sınırsız" in unlimited
+    assert "max server memory 8192–11264 MB, min server memory 2048 MB" in unlimited  # docs/10 tablosu
+    assert "max server memory 16384–22528 MB, min server memory 4096 MB" in memory_advice(2147483647, 32768)
+    over = memory_advice(14000, 16384)  # %85
+    assert "%80'inden fazla" in over and "%85" in over
+    assert memory_advice(13107, 16384) == "UYGUN"   # %80 sınırı: uyarı yok
+    assert memory_advice(13108, 16384) != "UYGUN"   # sınırın hemen üstü
+    assert memory_advice(3072, 16024) == "UYGUN"
+    assert "min server memory 1024 MB" in memory_advice(2147483647, 4096)  # taban en az 1024 MB
+
+
+@needs_ps
+def test_sql_memory_check_warns_but_never_throws_when_unreachable():
+    out = ps("$ok = Test-SqlServerMemory -Instance 'tcp:127.0.0.1,1' -TimeoutSeconds 3 -TrustServerCertificate; "
+             "\"SONUC=$ok\"")
+    assert "WARN" in out and "SQL Server bellek ayarı okunamadı (tcp:127.0.0.1,1)" in out
+    assert "Kurulum devam ediyor." in out and out.endswith("SONUC=False")
+
+
+@needs_ps
+def test_sql_memory_check_reads_local_server():
+    """Yerel SQL Server'dan okunan değerler pyodbc ile okunanla aynı; karar aynı eşikle verilir."""
+    try:
+        with setup_db._connect(setup_db.odbc_string("localhost", "master", encrypt="yes",
+                                                    trust_server_certificate=True)) as c:
+            expected = c.execute(
+                "SELECT (SELECT CAST(value_in_use AS bigint) FROM sys.configurations WHERE name = 'max server memory (MB)'), "
+                "(SELECT physical_memory_kb / 1024 FROM sys.dm_os_sys_info)").fetchone()
+    except Exception as exc:  # noqa: BLE001
+        pytest.skip(f"Yerel SQL Server'a bağlanılamadı: {exc}")
+    out = ps("$m = Get-SqlServerMemory -Instance 'localhost' -TrustServerCertificate; \"$($m.MaxMB)|$($m.TotalMB)\"; "
+             "$ok = Test-SqlServerMemory -Instance 'localhost' -TrustServerCertificate; \"SONUC=$ok\"")
+    assert out.splitlines()[0] == f"{expected[0]}|{expected[1]}"
+    fits = expected[0] < 2147483647 and expected[0] <= expected[1] * 0.8
+    assert out.endswith(f"SONUC={fits}")
+    assert ("SQL Server belleği uygun" in out) == fits
+
+
+def test_install_runs_sql_memory_check_in_precheck():
+    text = (INSTALLER / "install.ps1").read_text(encoding="utf-8-sig")
+    precheck = text[text.index("Invoke-Step 'Ön kontrol'"):text.index("# --- 2 ·")]
+    call = re.search(r"Test-SqlServerMemory -Instance \$SqlInstance -Encrypt \$SqlEncrypt "
+                     r"-TrustServerCertificate:\$SqlTrustServerCertificate `\s+-User \$SqlUser -Password \$SqlPassword \| Out-Null",
+                     precheck)
+    assert call, "Ön kontrol adımı SQL Server belleğini denetlemeli (K-94)"
+
+
+# --- build.ps1: açık arayüz geliştirme sunucusu varken durur (npm ci node_modules'u yarıda bırakmasın) ---
+
+@needs_ps
+def test_find_web_dev_processes():
+    web = str(ROOT / "app" / "web")
+    procs = [
+        (1, "node.exe", rf'"node" "{web}\node_modules\.bin\..\vite\bin\vite.js"'),           # npm run dev'in vite'ı
+        (2, "node.exe", f"node {web.replace(chr(92), '/')}/node_modules/vitest/vitest.mjs run"),  # eğik çizgili yol
+        (3, "node.exe", rf"node C:\Users\Hp\.cache\codex\node_modules\server.mjs"),              # başka klasör
+        (4, "node.exe", rf"node {web}-eski\node_modules\vite\bin\vite.js"),                       # benzer adlı klasör
+        (5, "python.exe", rf"python {web}\scripts\x.py"),                                         # node değil
+        (6, "node.exe", None),                                                                    # komut satırı okunamadı
+    ]
+    objs = ", ".join(
+        f"[pscustomobject]@{{ ProcessId = {pid}; Name = '{name}'; CommandLine = "
+        + ("$null" if cmd is None else "'" + cmd.replace("'", "''") + "'") + " }"
+        for pid, name, cmd in procs)
+    out = ps(f"(Find-WebDevProcesses -WebDir '{web}' -Processes @({objs}) | ForEach-Object {{ $_.ProcessId }}) -join ','")
+    assert out == "1,2"
+
+
+def test_build_checks_dev_server_before_npm_ci():
+    text = (INSTALLER / "build.ps1").read_text(encoding="utf-8-sig")
+    check = text.index(r"Assert-NoWebDevServer -WebDir (Join-Path $Root 'app\web')")
+    assert check < text.index("# --- Ön koşullar ---") < text.index("'ci', '--no-audit'")
+
+
+@needs_ps
+def test_assert_no_web_dev_server():
+    r"""Süreç yokken sessiz geçer (StrictMode altında); app\web'de node süreci varsa durur ve listeler."""
+    # Süreç yok: Get-CimInstance boş döner (testin kendi vitest'i çalışıyor olabilir; gerçek süreç listesi kullanılmaz)
+    assert ps("function Get-CimInstance { @() }; "
+              rf"Assert-NoWebDevServer -WebDir '{ROOT / 'app' / 'web'}'; 'GECTI'") == "GECTI"
+    out = ps("function Get-CimInstance { @([pscustomobject]@{ ProcessId = 42; Name = 'node.exe'; "
+             r"CommandLine = 'node C:\x\app\web\node_modules\vite\bin\vite.js' }) }; "
+             r"try { Assert-NoWebDevServer -WebDir 'C:\x\app\web'; 'GECTI' } catch { $_.Exception.Message }")
+    assert out.startswith("Arayüz klasöründe çalışan node süreci var") and "#42" in out

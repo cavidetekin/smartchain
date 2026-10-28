@@ -130,6 +130,15 @@
   --line: var(--lead-100);
   --backdrop: rgba(31, 36, 48, 0.32);       /* pencere arkası (Dialog) */
   --shadow-popover: 0 0.5rem 1.5rem rgba(31, 36, 48, 0.12);
+  /* Bildirim (sağ alt; mockup m24f-0725, K-91): koyu zemin, solda durum şeridi */
+  --toast-bg: var(--lead-900);              /* #1f2329 */
+  --toast-text: #ffffff;
+  --toast-muted: var(--lead-300);           /* dosya adı satırı */
+  --toast-link: var(--indigo-300);          /* "İndir" */
+  --toast-ok: var(--status-ok);
+  --toast-error: var(--status-over);
+  --progress-track: var(--lead-100);        /* iş göstergesindeki ilerleme çubuğu */
+  --progress-fill: var(--indigo-500);
 
   --font-sans: "Instrument Sans", system-ui, sans-serif;
   --font-num: "Inter", system-ui, sans-serif; /* sayı, tarih, kod; hep tabular-nums ile (K-86) */

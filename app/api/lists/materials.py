@@ -4,6 +4,8 @@ from .definition import ListDefinition
 MATERIALS = ListDefinition(
     name="materials",
     table="core.Material",
+    title="Malzeme listesi",
+    file_slug="malzeme",
     fields=(
         "Code", "Name", "MaterialLevel", "MaterialGroup", "BaseUom", "DefaultProcurement", "Ownership",
         "IsPurchasable", "IsProducible", "IsSellable", "IsProjectTracked", "IsPhantom",

@@ -4,7 +4,9 @@ import { screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect } from "vitest";
 
 import { mockApi, mockSocket, renderApp, type Reply } from "../test/helpers";
-import type { GroupNode, GroupsResponse, ListColumn, QueryRequest, SavedView, ViewDefinition, ViewsResponse } from "./types";
+import type {
+  ExportInfo, ExportRequest, GroupNode, GroupsResponse, ListColumn, QueryRequest, SavedView, ViewDefinition, ViewsResponse,
+} from "./types";
 
 export const col = (field: string, label: string, type: ListColumn["type"], filter: ListColumn["filter"],
                     extra: Partial<ListColumn> = {}): ListColumn => ({
@@ -32,8 +34,14 @@ export interface Calls {
   values: unknown[];
   groups: { group_by: string[]; fields: string[]; aggregates: Record<string, { fn: string; weight?: string }>; filters: unknown[]; sort: unknown[] }[];
   views: { method: string; url: string; body: unknown }[];
+  exports: { url: string; body: ExportRequest }[];
+  downloads: string[];
 }
-export const calls: Calls = { queries: [], values: [], groups: [], views: [] };
+export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [] };
+
+export const EXPORT_INFO: ExportInfo = { title: "Malzeme listesi", file_slug: "malzeme", sync_max_rows: 10_000,
+                                         max_rows: 500_000, file_hours: 24 };
+export const EXPORT_FILE = "smartchain_malzeme_veri-v35_2026-10-28_1706.xlsx";
 export const lastQuery = () => calls.queries[calls.queries.length - 1];
 
 export function savedView(id: number, name: string, definition: Partial<ViewDefinition>, extra: Partial<SavedView> = {}): SavedView {
@@ -56,9 +64,12 @@ export interface BackendOptions {
   chunk?: number;
   views?: ViewsResponse;
   groups?: GroupNode[];
+  /** Excel'e aktarım cevabı (varsayılan: anlık dosya, 200). */
+  exportReply?: Reply;
 }
 
-export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100, views, groups = [] }: BackendOptions = {}) {
+export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100, views, groups = [], exportReply }:
+                        BackendOptions = {}) {
   for (const list of Object.values(calls)) list.length = 0;  // yerinde: testler diziyi önceden tutabilir
   let saved = views ?? { views: [], default_view_id: null };
   let nextId = 100;
@@ -72,7 +83,15 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
     return node?.count ?? 0;
   };
   return mockApi({
-    "/api/materials/columns": { body: { chunk_size: chunk, columns: COLUMNS } },
+    "/api/materials/columns": { body: { chunk_size: chunk, columns: COLUMNS, export: EXPORT_INFO } },
+    "/api/materials/export": (url, init): Reply => {
+      calls.exports.push({ url, body: JSON.parse(String(init?.body)) });
+      return exportReply ?? { body: "xlsx", headers: { "Content-Disposition": `attachment; filename*=UTF-8''${EXPORT_FILE}` } };
+    },
+    "/api/exports/": (url): Reply => {
+      calls.downloads.push(url);
+      return { body: "xlsx", headers: { "Content-Disposition": `attachment; filename="${EXPORT_FILE}"` } };
+    },
     "/api/materials/query": (_url, init): Reply => {
       const body = JSON.parse(String(init?.body)) as QueryRequest;
       calls.queries.push(body);

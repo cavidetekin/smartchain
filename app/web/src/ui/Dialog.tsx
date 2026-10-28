@@ -5,8 +5,10 @@ import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useId, u
 import { tr } from "../i18n/tr";
 import { Button } from "./Button";
 
-export function Dialog({ title, children, onClose, onSubmit, submitLabel, busy, danger }: {
+export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, wide }: {
   title: string;
+  /** Başlığın altında sessiz satır (ör. kaynak ve satır sayısı). */
+  subtitle?: ReactNode;
   children: ReactNode;
   onClose(): void;
   onSubmit(): void;
@@ -14,6 +16,8 @@ export function Dialog({ title, children, onClose, onSubmit, submitLabel, busy, 
   busy?: boolean;
   /** Geri alınamaz işlem (kiremit düğme, K-85). */
   danger?: boolean;
+  submitDisabled?: boolean;
+  wide?: boolean;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLFormElement>(null);
@@ -45,18 +49,21 @@ export function Dialog({ title, children, onClose, onSubmit, submitLabel, busy, 
   };
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit();
+    if (!submitDisabled && !busy) onSubmit();
   };
 
   return (
     <div className="sc-dialog-backdrop">
-      <form ref={ref} className="sc-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}
+      <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
             onKeyDown={onKey} onSubmit={submit}>
-        <h2 id={titleId} className="sc-dialog-title">{title}</h2>
+        <div>
+          <h2 id={titleId} className="sc-dialog-title">{title}</h2>
+          {subtitle && <p className="sc-dialog-subtitle">{subtitle}</p>}
+        </div>
         <div className="sc-dialog-body">{children}</div>
         <div className="sc-dialog-actions">
           <Button variant="ghost" onClick={onClose}>{tr.ui.cancel}</Button>
-          <Button type="submit" variant={danger ? "danger" : "primary"} busy={busy}>{submitLabel}</Button>
+          <Button type="submit" variant={danger ? "danger" : "primary"} busy={busy} disabled={submitDisabled}>{submitLabel}</Button>
         </div>
       </form>
     </div>

@@ -34,6 +34,14 @@ export const tr = {
       running + queued === 0 ? "İş yok" : `${running} çalışıyor · ${queued} sırada`,
     empty: "Son 24 saatte iş yok",
     queuePosition: (n: number) => `sıra ${n}`,
+    // Dışa aktarım işi (K-91): iş göstergesinde ilerleme, bitince bildirim
+    exporting: (progress: string | null) => `Excel hazırlanıyor${progress ? ` · ${progress}` : ""}`,
+    exportQueued: "Excel sırada",
+    exportReady: (title: string, size: string) => `${title} hazır${size ? ` · ${size}` : ""}`,
+    exportFailed: (title: string) => `${title} hazırlanamadı`,
+    download: "İndir",
+    downloadOf: (name: string) => `${name} dosyasını indir`,
+    notifications: "Bildirimler",
     connection: {
       connected: "Bildirimler bağlı",
       reconnecting: "Bağlantı yeniden kuruluyor",
@@ -204,6 +212,23 @@ export const tr = {
     deleteMessage: (name: string) => `"${name}" görünümü silinsin mi? Geri alınamaz.`,
     viewWarnings: "Görünüm bugünkü listeye uyarlandı",
     viewsError: "Görünümler okunamadı; Standart görünüm açıldı.",
+    // Excel'e aktarım (U-14, fonksiyon 86, K-91)
+    exportButton: "Excel'e aktar",
+    exportTitle: (title: string) => `Excel'e aktar · ${title}`,
+    exportSubtitle: (version: number | null, rows: string) => `${version ? `Veri v${version} · ` : ""}${rows} satır`,
+    exportRows: "Satırlar",
+    exportRowsFiltered: (n: string) => `Filtrelenmiş (${n})`,
+    exportRowsAll: (n: string) => `Tümü (${n} satır)`,
+    exportColumns: "Sütunlar",
+    exportColumnsVisible: (n: number) => `Görünen (${n})`,
+    exportColumnsAll: (n: number) => `Tümü (${n})`,
+    exportFileName: "Dosya adı",
+    exportBackground: (rows: string, limit: string, hours: number) =>
+      `${rows} satır, anlık sınır olan ${limit} satırı aşıyor: dosya arka planda hazırlanır, ilerleme iş göstergesinde görünür, hazır olunca bildirim gelir. Dosya ${hours} saat indirilebilir.`,
+    exportTooLarge: (rows: string, limit: string) => `${rows} satır, bir aktarımın sınırı olan ${limit} satırı aşıyor; filtreyi daraltın.`,
+    exportSubmit: "İndir",
+    exportSubmitBackground: "Hazırla",
+    exportError: "Dışa aktarım yapılamadı",
   },
   demo: {
     title: "Tablo bileşeni",

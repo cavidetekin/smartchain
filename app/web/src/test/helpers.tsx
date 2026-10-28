@@ -5,7 +5,7 @@ import { vi } from "vitest";
 
 import { App } from "../App";
 
-export type Reply = { status?: number; body: unknown };
+export type Reply = { status?: number; body: unknown; headers?: Record<string, string> };
 /** Sabit cevap, "offline" ya da isteğe göre cevap üreten işlev (yöntem ve gövde ile). */
 export type Routes = Record<string, Reply | "offline" | ((url: string, init?: RequestInit) => Reply)>;
 
@@ -26,7 +26,7 @@ export function mockApi(routes: Routes = {}) {
     if (!route || route === "offline") throw new TypeError("Failed to fetch");
     const reply = typeof route === "function" ? route(url, init) : route;
     return new Response(reply.status === 204 ? null : JSON.stringify(reply.body), {
-      status: reply.status ?? 200, headers: { "Content-Type": "application/json" },
+      status: reply.status ?? 200, headers: { "Content-Type": "application/json", ...reply.headers },
     });
   });
   vi.stubGlobal("fetch", fetchMock);
