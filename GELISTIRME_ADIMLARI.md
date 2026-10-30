@@ -149,6 +149,16 @@ Adımı kapanmış ama elle denenmesi sonraya bırakılmış işler.
 - [ ] 1.5 · Dışa aktarım izi: `SELECT TOP 5 * FROM adm.AuditLog ORDER BY 1 DESC` ile aktarımların "Dışa aktarım" kaydı olarak yazıldığını gör.
 - [ ] 0.6 · Temiz makine (sanal makine) kurulum testi.
 
+## Sonraya bırakılanlar
+
+Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alınır.
+
+- **1.6 Koşullu biçimlendirme:** çoklu koşul (VE/VEYA), renk skalası ve veri çubuğu, grup başlığı ve ara toplam satırlarına kural.
+- **2.2 Roller:** admin'in bir paylaşılan görünümü ya da kural setini herkes veya bir rol için varsayılan yapması (K-89 notu).
+- **Sentetik veri:** kilogram ve metre birimli malzemelere kesirli miktar (güvenlik stoğu, lot) verilmesi (docs/11 açık iş).
+- **Performans:** gruplama sorgusundaki paralel plan ipucunun bir ayara bağlanması; çok kullanıcılı sunucuda işlemci kapışması (K-90).
+- **Tablo görünümü:** ilk kolonun farklı renkte gösterilmesi fikri (denenmedi).
+
 ## Açık konular
 
 - **A-34 · Aktarım filtresinin yöntemi.** Kapsam filtresi (pasif malzeme, kapalı sipariş, başka lokasyon gibi) nasıl tanımlanacak? Değişen kayıtlar K-40 ve A-23'e, hatalı satırların ayıklanması 26. adımdaki hata yönetimine bağlı.
