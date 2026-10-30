@@ -6,21 +6,28 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.api.db import get_session
+from app.api.deps import COOKIE, session_user
 from app.api.main import create_app
 from app.api.services import lists as service
+
+from auth_helpers import token
+from conftest import FAKE_USER
 
 pytestmark = pytest.mark.db
 
 
 @pytest.fixture(scope="module")
-def api(db_engine):
+def api(db_engine, test_users):
+    """Sentetik v0 üzerinde API istemcisi; ilk deneme kullanıcısının oturumuyla (başka kullanıcı: headers=auth(id))."""
     with db_engine.connect() as conn:
         synthetic, count = conn.execute(text(
             "SELECT TOP 1 v.IsSynthetic, (SELECT COUNT(*) FROM core.Material m WHERE m.VersionFrom <= v.Id "
             "AND (m.VersionTo IS NULL OR m.VersionTo >= v.Id)) FROM adm.DataVersion v ORDER BY v.Id DESC")).one()
     if not synthetic or count != 200:
         pytest.skip("Sentetik v0 yüklü değil (python -m app.data.synthetic load)")
-    return TestClient(create_app(), raise_server_exceptions=False)
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    client.cookies.set(COOKIE, token(test_users[0]))
+    return client
 
 
 def query(api, **body):
@@ -195,5 +202,6 @@ def test_validation_errors(api):
 def test_database_unavailable_is_503():
     app = create_app()
     app.dependency_overrides[get_session] = lambda: None
+    app.dependency_overrides[session_user] = lambda: FAKE_USER  # oturum denetimi ayrı; burada uç noktanın 503'ü
     r = TestClient(app, raise_server_exceptions=False).post("/api/materials/query", json={})
     assert r.status_code == 503 and r.json()["error"]["code"] == "database_unavailable"

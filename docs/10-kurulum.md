@@ -33,7 +33,7 @@ Adım 0.6'da kurulan iskelet. Kurulum paketinin tamamı (MSI, imza, kod korumas�
 | Yer | İçerik |
 |---|---|
 | `C:\Program Files\Smartchain\` | `python\` (ürüne ait Python), `app\`, `db\`, `services\` (WinSW ve XML), `web\` (IIS kökü) |
-| `C:\ProgramData\Smartchain\config\smartchain.env` | Ayarlar: bağlantı, log klasörü. Yalnız SYSTEM, Yöneticiler ve servis hesapları okur. |
+| `C:\ProgramData\Smartchain\config\smartchain.env` | Ayarlar: bağlantı, log klasörü, oturum çerezinin `Secure` bayrağı (`SMARTCHAIN_SESSION_COOKIE_SECURE`: `-CertThumbprint` verildiyse `true`, HTTPS'siz test kurulumunda `false`; K-97). Yalnız SYSTEM, Yöneticiler ve servis hesapları okur. |
 | `C:\ProgramData\Smartchain\logs\` | `smartchain.log` (API), `engine.log` (motor), servis çıktıları, `install-<tarih>.log` |
 | `C:\ProgramData\Smartchain\exports\` | Arka planda hazırlanan Excel dosyaları (`SMARTCHAIN_EXPORT_DIR`, K-93); motor servisi yazar (değiştirme yetkisi), API okur (okuma yetkisi; SID ile, K-73); süresi geçince motor servisi siler |
 
@@ -108,6 +108,9 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 | FastAPI, pydantic, pydantic-core, pydantic-settings, annotated-doc, annotated-types, typing-inspection | 0.162.0 · 2.14.1 · 2.50.1 · 2.16.1 · 0.0.5 · 0.8.0 · 0.4.4 | MIT |
 | starlette, uvicorn, websockets, click, idna, python-dotenv, MarkupSafe | 1.10.0 · 0.54.0 · 17.3 · 8.5.0 · 3.20 · 1.2.4 · 3.0.4 | BSD-3-Clause |
 | XlsxWriter (Excel'e aktarım, K-91) | 3.3.0 | BSD-2-Clause |
+| argon2-cffi, argon2-cffi-bindings (şifre özeti, K-98) | 25.1.0 · 26.1.0 | MIT |
+| cffi (argon2-cffi-bindings bağımlılığı) | 2.1.1 | MIT-0 |
+| pycparser (cffi bağımlılığı) | 3.12 | BSD-3-Clause |
 | SQLAlchemy, alembic, Mako, pyodbc, anyio, h11, httptools, watchfiles, PyYAML | 2.1.6 · 1.20.1 · 1.4.3 · 5.3.0 · 4.15.1 · 0.16.0 · 0.9.0 · 1.3.0 · 6.0.3 | MIT |
 | typing_extensions | 4.16.0 | PSF-2.0 |
 | opentelemetry-api | 1.45.1 | Apache-2.0 |
@@ -125,7 +128,7 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 ## Kontrol (`verify.ps1`)
 
 - Servisler çalışıyor ve açılışta otomatik başlıyor.
-- IIS üzerinden `/api/health` ok; WebSocket'te `hello` geliyor.
+- IIS üzerinden `/api/health` ok; WebSocket isteği IIS'ten API'ye ulaşıyor: oturumsuz el sıkışma API tarafından reddediliyor (403; oturum K-97). Kurulumda kullanıcı hesabı olmadığı için `hello` beklenmez; ilk hesap 2.3'te kurulumla açılır.
 - Motor bir deneme plan hesabını bitiriyor (deneme verisi açılır ve silinir).
 - Çözücü (HiGHS) pakette çalışıyor: sabit LP ve MILP modelleri bilinen sonuçla çözülüyor (K-76).
 - API süreci öldürülünce servis kendini yeniden başlatıyor.
@@ -141,4 +144,5 @@ Hyper-V'de Windows Server 2025 Evaluation sanal makinesi; SQL Server ayrı `SMAR
 |---|---|
 | Paket hazırlama, kurulum, kaldırma, kontrol betikleri | uygulandı (0.6), sanal makine testi bekliyor |
 | SQL Server bellek ön kontrolü (K-94; sınırsızsa ya da %80'in üstündeyse uyarı, kurulum durmaz) | uygulandı (1.5; `common.ps1` `Test-SqlServerMemory`, install.ps1 adım 1), sanal makine testi bekliyor (0.6) |
+| Oturum: çerezin `Secure` ayarı (`-CertThumbprint`'e göre), WebSocket duman testi oturumsuz reddi bekler, argon2-cffi wheel'leri (K-97, K-98) | uygulandı (2.1), sanal makine testi bekliyor (0.6) |
 | MSI, imza, kod koruması, sürüm güncelleme, yedek, lisans | 11. aşama |

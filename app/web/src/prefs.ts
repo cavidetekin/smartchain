@@ -21,16 +21,6 @@ function write(key: string, value: unknown): void {
   }
 }
 
-/** Geçici kullanıcı (A-36): adres çubuğundaki ?user_id= bir kez verilir, sonra hatırlanır. */
-export function resolveUserId(search: string = window.location.search): number {
-  const fromUrl = new URLSearchParams(search).get("user_id");
-  if (fromUrl !== null && /^\d+$/.test(fromUrl)) {
-    write("userId", Number(fromUrl));
-    return Number(fromUrl);
-  }
-  return read<number>("userId", 0);
-}
-
 export const FONT_SIZES = [12, 13, 14, 16] as const;
 export type FontSize = (typeof FONT_SIZES)[number];
 export const DEFAULT_FONT_SIZE: FontSize = 13;

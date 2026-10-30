@@ -1203,14 +1203,54 @@ AppUser = sa.Table(
     sa.Column("UserName", sa.Unicode(60), nullable=False, comment="Kullanıcı adı", info={'label': "Kullanıcı adı"}),
     sa.Column("FullName", sa.Unicode(150), nullable=True, comment="Ad soyad", info={'label': "Ad soyad"}),
     sa.Column("Role", sa.Unicode(15), nullable=False, comment="Sistem sahibi | Admin | Key user | End user", info={'values': ["Sistem sahibi", "Admin", "Key user", "End user"]}),
-    sa.Column("PasswordHash", mssql.VARBINARY(256), nullable=False, comment="Özetlenmiş şifre", info={'label': "Özetlenmiş şifre"}),
-    sa.Column("MustChangePassword", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="İlk girişte değiştir", info={'label': "İlk girişte değiştir"}),
-    sa.Column("FailedAttempts", sa.Integer(), nullable=True, server_default=sa.text("0"), comment="Hatalı deneme", info={'label': "Hatalı deneme"}),
-    sa.Column("IsLocked", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Kilitli", info={'label': "Kilitli"}),
+    sa.Column("PasswordHash", sa.Unicode(200), nullable=True, comment="Özetlenmiş şifre; Argon2id PHC metni, tuz içinde (K-98); boşsa hesap arayüzden giremez", info={'label': "Özetlenmiş şifre"}),
+    sa.Column("MustChangePassword", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Şifre değiştirilmeli; ilk giriş ya da sıfırlama sonrası", info={'label': "Şifre değiştirilmeli"}),
+    sa.Column("PasswordChangeReason", sa.Unicode(15), nullable=True, comment="İlk giriş | Sıfırlama | Süre doldu", info={'values': ["İlk giriş", "Sıfırlama", "Süre doldu"]}),
+    sa.Column("PasswordChangedAt", mssql.DATETIME2(), nullable=True, comment="Şifrenin son değiştiği zaman (UTC)", info={'label': "Şifrenin son değiştiği zaman (UTC)"}),
+    sa.Column("PasswordExpiresAt", mssql.DATETIME2(), nullable=True, comment="Şifrenin süresinin dolduğu zaman (UTC); değişiklik anındaki politikayla hesaplanır", info={'label': "Şifrenin süresinin dolduğu zaman (UTC)"}),
+    sa.Column("FailedAttempts", sa.Integer(), nullable=True, server_default=sa.text("0"), comment="Art arda hatalı giriş", info={'label': "Art arda hatalı giriş"}),
+    sa.Column("LockedUntil", mssql.DATETIME2(), nullable=True, comment="Kilit bitişi (UTC); geçmişse ya da boşsa kilit yok", info={'label': "Kilit bitişi (UTC)"}),
+    sa.Column("LastLoginAt", mssql.DATETIME2(), nullable=True, comment="Son başarılı giriş (UTC)", info={'label': "Son başarılı giriş (UTC)"}),
     sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Aktif", info={'label': "Aktif"}),
     sa.Index("UX_AppUser_UserName", "UserName", unique=True),
     schema="adm",
     comment="Uygulama kullanıcısı (Faz 1'de yerel).",
+)
+
+UserSession = sa.Table(
+    "UserSession", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Oturum kimliği", info={'label': "Oturum kimliği"}),
+    sa.Column("TokenHash", mssql.VARBINARY(32), nullable=False, comment="Çerezdeki anahtarın SHA-256 özeti", info={'label': "Çerezdeki anahtarın SHA-256 özeti"}),
+    sa.Column("UserId", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=False, comment="Kullanıcı", info={'label': "Kullanıcı"}),
+    sa.Column("CreatedAt", mssql.DATETIME2(), nullable=False, comment="Açılış (UTC)", info={'label': "Açılış (UTC)"}),
+    sa.Column("LastActivityAt", mssql.DATETIME2(), nullable=False, comment="Son kullanıcı etkinliği (UTC); hareketsizlik buna göre ölçülür", info={'label': "Son kullanıcı etkinliği (UTC)"}),
+    sa.Column("EndedAt", mssql.DATETIME2(), nullable=True, comment="Kapanış (UTC); boşsa açık", info={'label': "Kapanış (UTC)"}),
+    sa.Column("EndReason", sa.Unicode(15), nullable=True, comment="Çıkış | Zaman aşımı | Şifre değişti | Kapatıldı", info={'values': ["Çıkış", "Zaman aşımı", "Şifre değişti", "Kapatıldı"]}),
+    sa.Column("ClientAddress", sa.Unicode(45), nullable=True, comment="İstemci adresi", info={'label': "İstemci adresi"}),
+    sa.Column("UserAgent", sa.Unicode(200), nullable=True, comment="Tarayıcı", info={'label': "Tarayıcı"}),
+    sa.Index("UX_UserSession_TokenHash", "TokenHash", unique=True),
+    schema="adm",
+    comment="Sunucu tarafı oturum (K-97). Tarayıcıdaki çerez rastgele bir anahtar taşır; tabloda yalnız anahtarın SHA-256 özeti durur.",
+)
+
+PasswordHistory = sa.Table(
+    "PasswordHistory", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
+    sa.Column("UserId", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=False, comment="Kullanıcı", info={'label': "Kullanıcı"}),
+    sa.Column("PasswordHash", sa.Unicode(200), nullable=False, comment="Şifre özeti", info={'label': "Şifre özeti"}),
+    sa.Column("CreatedAt", mssql.DATETIME2(), nullable=False, comment="Şifrenin belirlendiği zaman (UTC)", info={'label': "Şifrenin belirlendiği zaman (UTC)"}),
+    schema="adm",
+    comment="Kullanıcının önceki şifre özetleri (K-98): yeni şifre son `PasswordHistoryCount` şifreden farklı olmalı.",
+)
+
+LoginThrottle = sa.Table(
+    "LoginThrottle", metadata,
+    sa.Column("UserName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Yazılan kullanıcı adı", info={'label': "Yazılan kullanıcı adı"}),
+    sa.Column("FailedAttempts", sa.Integer(), nullable=False, server_default=sa.text("0"), comment="Art arda hatalı giriş", info={'label': "Art arda hatalı giriş"}),
+    sa.Column("LockedUntil", mssql.DATETIME2(), nullable=True, comment="Kilit bitişi (UTC)", info={'label': "Kilit bitişi (UTC)"}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son deneme (UTC)", info={'label': "Son deneme (UTC)"}),
+    schema="adm",
+    comment="Bilinmeyen, şifresiz ya da pasif hesap adına yapılan hatalı girişlerin sayacı (K-98). Gerçek hesaptaki sayaçla aynı davranır; giriş cevabından hesabın var olup olmadığı anlaşılmaz.",
 )
 
 Job = sa.Table(

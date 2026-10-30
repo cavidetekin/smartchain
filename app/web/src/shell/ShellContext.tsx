@@ -1,4 +1,4 @@
-// Kabuğun paylaştığı durum: yazı boyutu (U-23), geçici kullanıcı (A-36; kayıtlı görünümler, K-89) ve arka planda
+// Kabuğun paylaştığı durum: yazı boyutu (U-23), oturumdaki kullanıcının Id'si (K-97; kişisel tercihler) ve arka planda
 // hazırlanan Excel aktarımları (K-91; bitince sağ altta bildirim).
 import { createContext, useContext } from "react";
 

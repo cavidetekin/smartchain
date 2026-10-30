@@ -18,6 +18,7 @@ from app.api.services import export as export_service, lists as list_service
 from test_export_api import user  # noqa: F401  (iz satırlarını temizleyen deneme kullanıcısı)
 from test_lists_api import all_rows, api, query  # noqa: F401
 from test_views_api import create, listed, users  # noqa: F401
+from auth_helpers import auth
 
 pytestmark = pytest.mark.db
 
@@ -241,7 +242,7 @@ def test_rules_saved_with_view(api, users):
     ([{**RULES[0], "condition": {"op": "lt", "field_ref": "Name"}}], "definition.rules.0.condition.field_ref"),
 ])
 def test_invalid_rules_in_view_are_422(api, users, rules, field):
-    r = api.post(f"/api/materials/views?user_id={users[0]}",
+    r = api.post("/api/materials/views", headers=auth(users[0]),
                  json={"name": "pytest Hatalı", "definition": {**VIEW, "rules": rules}})
     assert r.status_code == 422, r.text
     assert any(d["field"].startswith(field) for d in r.json()["error"]["details"]), r.json()
@@ -276,7 +277,7 @@ def test_excel_cells_follow_rules(api, user):  # noqa: F811
     ]
     body = {"fields": ["Code", "Name", "SafetyStock"], "rules": rules, "group_by": ["MaterialLevel"],
             "sort": [{"field": "Code", "dir": "asc"}]}
-    r = api.post(f"/api/materials/export?user_id={user}", json=body)
+    r = api.post("/api/materials/export", headers=auth(user), json=body)
     assert r.status_code == 200, r.text
     wb = load_workbook(io.BytesIO(r.content))
     ws = wb["Veri"]
@@ -325,7 +326,7 @@ def test_excel_auto_text_color_and_icon_side(api, user):  # noqa: F811
     """Koyu zeminde yazı rengi seçilmemişse beyaz (ekranla aynı hesap); ikon metinde sonda, sayıda başta (K-96)."""
     rules = [excel_rule("n", "Name", {"fill": "#002060", "icon": "flag", "icon_color": "#c00000"}, op="contains", value="a"),
              excel_rule("s", "SafetyStock", {"icon": "warning"}, op="empty")]
-    r = api.post(f"/api/materials/export?user_id={user}",
+    r = api.post("/api/materials/export", headers=auth(user),
                  json={"fields": ["Code", "Name", "SafetyStock"], "rules": rules, "sort": [{"field": "Code", "dir": "asc"}]})
     ws = load_workbook(io.BytesIO(r.content))["Veri"]
     names = [row[1] for row in ws.iter_rows(min_row=2) if row[1].fill.fgColor.rgb == "FF002060"]
@@ -338,7 +339,7 @@ def test_excel_auto_text_color_and_icon_side(api, user):  # noqa: F811
 def test_excel_always_rule_formats_every_cell(api, user):  # noqa: F811
     """"Her zaman" kolon biçimi Excel'de kolonun bütün veri hücrelerine (boşlar dahil) uygulanır; grup satırına değil."""
     rules = [excel_rule("k", "SafetyStock", {"fill": "#eef0fb", "bold": True}, op="always")]
-    r = api.post(f"/api/materials/export?user_id={user}",
+    r = api.post("/api/materials/export", headers=auth(user),
                  json={"fields": ["Code", "SafetyStock"], "rules": rules, "group_by": ["MaterialLevel"]})
     wb = load_workbook(io.BytesIO(r.content))
     data = [row for row in wb["Veri"].iter_rows(min_row=2) if row[0].value and not str(row[0].value).endswith(" satır")]

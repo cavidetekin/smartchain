@@ -49,7 +49,7 @@ describe("kapsam penceresi ve anlık indirme", () => {
 
     await userEvent.click(within(dialog).getByRole("button", { name: "İndir" }));
     await waitFor(() => expect(saved).toEqual([EXPORT_FILE]));
-    expect(calls.exports[0].url).toBe("/api/materials/export?user_id=3");
+    expect(calls.exports[0].url).toBe("/api/materials/export");
     expect(calls.exports[0].body).toEqual({
       fields: STANDARD_FIELDS, widths: {}, sort: [], filters: [], group_by: [], aggregates: { SafetyStock: { fn: "sum" } },
       rules: [], scope: { rows: "filtered", columns: "visible" },
@@ -128,7 +128,7 @@ describe("arka plan: ilerleme ve bildirim", () => {
     expect(toast).toHaveTextContent(EXPORT_FILE);
     await userEvent.click(within(toast).getByRole("button", { name: `${EXPORT_FILE} dosyasını indir` }));
     await waitFor(() => expect(saved).toEqual([EXPORT_FILE]));
-    expect(calls.downloads).toEqual(["/api/exports/81/file?user_id=3"]);
+    expect(calls.downloads).toEqual(["/api/exports/81/file"]);
     expect(screen.queryByRole("region", { name: "Bildirimler" })).toBeNull();
   });
 

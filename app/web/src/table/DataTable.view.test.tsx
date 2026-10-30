@@ -45,7 +45,7 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     await openTable({ views: { views: [mine], default_view_id: 5 } });
     expect(calls.queries[0]).toMatchObject({ fields: ["Name", "Code"], sort: [{ field: "Code", dir: "desc" }] });
     expect(selectedText()).toBe("Benim (varsayılan)");
-    expect(calls.views[0].url).toContain("user_id=3");
+    expect(calls.views[0].url).toBe("/api/materials/views");  // kullanıcı oturumdan (K-97)
   });
 
   it("varsayılan yoksa Standart; değişince • çıkar, Kaydet yeni içeriği gönderir", async () => {
@@ -59,7 +59,7 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     expect(screen.getByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeInTheDocument();
     await viewAction(user, "Kaydet");
     await waitFor(() => expect(lastViewCall("PUT")?.body).toMatchObject({ definition: { sort: [{ field: "Name", dir: "asc" }] } }));
-    expect(lastViewCall("PUT")?.url).toMatch(/\/views\/5\?user_id=3/);
+    expect(lastViewCall("PUT")?.url).toBe("/api/materials/views/5");
     await waitFor(() => expect(screen.queryByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeNull());
   });
 
@@ -117,7 +117,7 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     const dialog = screen.getByRole("dialog", { name: "Görünümü sil" });
     expect(within(dialog).getByText(/"Benim" görünümü silinsin mi/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Sil" }));
-    await waitFor(() => expect(lastViewCall("DELETE")?.url).toMatch(/\/views\/5\?user_id=3/));
+    await waitFor(() => expect(lastViewCall("DELETE")?.url).toBe("/api/materials/views/5"));
     await waitFor(() => expect(selectedText()).toBe("Standart (varsayılan)"));
     expect(lastQuery().fields).toEqual(STANDARD_FIELDS);
   });

@@ -221,20 +221,21 @@ export function listApi(list: string) {
     groups: (body: { group_by: string[]; fields: string[]; aggregates: Record<string, AggSpec>; filters: ListFilter[];
                      sort: SortItem[] }, signal?: AbortSignal) =>
       postJson<GroupsResponse>(`${base}/groups`, body, signal),
-    views: (userId: number, signal?: AbortSignal) => getJson<ViewsResponse>(`${base}/views?user_id=${userId}`, signal),
-    createView: (userId: number, body: { name: string; is_shared: boolean; definition: ViewDefinition }) =>
-      sendJson<SavedView>("POST", `${base}/views?user_id=${userId}`, body),
-    updateView: (userId: number, id: number, body: { name?: string; is_shared?: boolean; definition?: ViewDefinition }) =>
-      sendJson<SavedView>("PUT", `${base}/views/${id}?user_id=${userId}`, body),
-    deleteView: (userId: number, id: number) => sendJson<void>("DELETE", `${base}/views/${id}?user_id=${userId}`),
-    export: async (userId: number, body: ExportRequest): Promise<ExportResult> => {
-      const r = await ensureOk(await fetch(`${base}/export?user_id=${userId}`, {
+    // Kullanıcı oturumdan gelir (K-97).
+    views: (signal?: AbortSignal) => getJson<ViewsResponse>(`${base}/views`, signal),
+    createView: (body: { name: string; is_shared: boolean; definition: ViewDefinition }) =>
+      sendJson<SavedView>("POST", `${base}/views`, body),
+    updateView: (id: number, body: { name?: string; is_shared?: boolean; definition?: ViewDefinition }) =>
+      sendJson<SavedView>("PUT", `${base}/views/${id}`, body),
+    deleteView: (id: number) => sendJson<void>("DELETE", `${base}/views/${id}`),
+    export: async (body: ExportRequest): Promise<ExportResult> => {
+      const r = await ensureOk(await fetch(`${base}/export`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       }));
       if (r.status === 202) return { kind: "job", ...(await r.json() as { job_id: number; file_name: string; rows: number }) };
       return { kind: "file", blob: await r.blob(), fileName: fileNameFrom(r.headers.get("Content-Disposition"), "smartchain.xlsx") };
     },
-    setDefaultView: (userId: number, viewId: number | null) =>
-      sendJson<{ default_view_id: number | null }>("PUT", `${base}/views/default?user_id=${userId}`, { view_id: viewId }),
+    setDefaultView: (viewId: number | null) =>
+      sendJson<{ default_view_id: number | null }>("PUT", `${base}/views/default`, { view_id: viewId }),
   };
 }

@@ -76,8 +76,8 @@ describe("kontrast (WCAG AA)", () => {
 
 describe("U-2: durum renkleri yalnız durum bileşenlerinde", () => {
   // İzin verilen seçiciler: rozet, uyarı, doluluk, hücre işaretleri, form hatası, KPI durumu,
-  // geri alınamaz işlem butonu (K-85 istisnası), bağlantı noktası.
-  const ALLOWED = /\.sc-tag--(ok|risk|critical)|\.sc-alert--(ok|risk|error)|\.sc-occ--|\.sc-cell--shortage|\.sc-field(\.is-invalid|-error)|\.sc-kpi--(ok|risk|over)|\.sc-btn--danger|\.sc-dot/;
+  // geri alınamaz işlem butonu (K-85 istisnası), bağlantı noktası, şifre politikası kuralı (sağlanıyor / sağlanmıyor; 2.1).
+  const ALLOWED = /\.sc-tag--(ok|risk|critical)|\.sc-alert--(ok|risk|error)|\.sc-occ--|\.sc-cell--shortage|\.sc-field(\.is-invalid|-error)|\.sc-kpi--(ok|risk|over)|\.sc-btn--danger|\.sc-dot|\.sc-policy-item\.is-(ok|fail)/;
 
   it.each(Object.entries(sheets))("%s", (_, css) => {
     const misuse = rules(css)

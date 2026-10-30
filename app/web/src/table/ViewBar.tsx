@@ -55,7 +55,7 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
   useEffect(() => {
     if (!columns) return;
     const ctrl = new AbortController();
-    api.views(userId, ctrl.signal)
+    api.views(ctrl.signal)
       .then((r) => {
         setViews(r.views);
         setDefaultId(r.default_view_id);
@@ -77,12 +77,12 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
     select: (id) => use(views.find((v) => v.id === id) ?? null),
     async save(state) {
       if (!current) return;
-      const saved = await api.updateView(userId, current.id, { definition: toDefinition(state) });
+      const saved = await api.updateView(current.id, { definition: toDefinition(state) });
       setViews((vs) => vs.map((v) => (v.id === saved.id ? saved : v)));
       setBaseline(toDefinition(state));
     },
     async saveAs(state, name, shared) {
-      const saved = await api.createView(userId, { name, is_shared: shared, definition: toDefinition(state) });
+      const saved = await api.createView({ name, is_shared: shared, definition: toDefinition(state) });
       setViews((vs) => [...vs, saved].sort((a, b) => a.name.localeCompare(b.name, "tr")));
       setCurrentId(saved.id);
       setBaseline(toDefinition(state));
@@ -90,14 +90,14 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
     },
     async remove() {
       if (!current) return;
-      await api.deleteView(userId, current.id);
+      await api.deleteView(current.id);
       setViews((vs) => vs.filter((v) => v.id !== current.id));
       if (defaultId === current.id) setDefaultId(null);
       use(null);
     },
     async toggleDefault() {
       const next = defaultId === currentId ? null : currentId;
-      await api.setDefaultView(userId, next);
+      await api.setDefaultView(next);
       setDefaultId(next);
     },
     dismissWarnings: () => setWarnings([]),

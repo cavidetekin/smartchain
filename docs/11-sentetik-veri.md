@@ -93,6 +93,25 @@ python -m app.data.synthetic check                                     # sayıla
 | H3 | Negatif miktar | `PurchaseOrderLine`: `PO-2060/1` OpenQty −50 · `BOM`: `ALT-012` → `SAT-010` Quantity −2 | 04-03 mantıksal (3.4) · hata · satır yüklenmez | "OpenQty negatif olamaz (-50)." | `PO-2060/1` ve `ALT-012 → SAT-010` eksik |
 | H4 | Tekrar eden anahtar | `Material`: `SAT-040` iki satır, adları farklı | 04-01 yapısal (3.4) · hata · iki satır da yüklenmez | "Tekrar eden anahtar: Material.Code = SAT-040 (satır n ve n+1)." | `SAT-040` eksik (başka dosyada geçmez) |
 
+### Kullanıcılar (geliştirme 2.1, K-98)
+
+Örnek Makina A.Ş.'nin dört hesabı, her rol için bir tane:
+
+| Kullanıcı adı | Ad soyad | Rol |
+|---|---|---|
+| `sahip` | Sistem Sahibi | Sistem sahibi |
+| `yonetici` | Ayşe Yönetici | Admin |
+| `planlama` | Mert Planlama | Key user |
+| `izleme` | Deniz İzleme | End user |
+
+```
+python -m app.data.synthetic users   # hesapları açar ya da geçici şifreye döndürür, şifreleri bir kez gösterir
+```
+
+- Her çalıştırmada her hesaba yeni, rastgele bir geçici şifre verilir (12 karakter, harf ve rakam; politikaya uygun). Hesap "İlk giriş" ile şifre değiştirmeye zorlanır; şifre geçmişi, hatalı deneme sayacı ve kilit temizlenir, açık oturumları kapanır. Demoda her çalıştırma ilk giriş akışını yeniden gösterir.
+- Geçici şifreler kodda ve repoda yer almaz. Konsola bir kez yazılır ve git dışı `.local/gecici-sifreler.txt` dosyasına kaydedilir (yalnız geliştirme; kurulum paketine girmez).
+- `load` ve `unload` kullanıcılara dokunmaz.
+
 ### Beklenen plan çıktıları
 
 v0'da yoktur. Beklenen plan 8.0'daki plan fikstürüdür (bu setin üzerine elle hazırlanır); 10.8'de gerçek motorun kabul testine dönüşür.
@@ -109,4 +128,5 @@ Faz 1 dışı konular (set-up, kalıp, fırın, raf ömrü kuralları, çoklu lo
 | v0 üretici ve temiz hâl | uygulandı (0.8) |
 | Kirli hâl (entegrasyon Excel'i) | üretildi (0.8); ETL ile denenmesi Aşama 3–5 |
 | Birim ondalıkları (ADET 0, KG 3, M 2, SAAT 2) | uygulandı (1.3) |
+| Kullanıcılar ve geçici şifre komutu | uygulandı (2.1) |
 | Kilogramlı malzemelere miktar (güvenlik stoğu, lot) | açık: sonraya bırakıldı (1.3 demosu); KG'de 3 ondalık şimdilik yalnız testte görülür |

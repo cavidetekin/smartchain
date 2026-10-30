@@ -56,6 +56,43 @@ Ortam değişkenleri (`SMARTCHAIN_` önekiyle) ya da kök klasördeki `.env` dos
 | `SMARTCHAIN_ENABLE_DOCS` | `false` |
 | `SMARTCHAIN_JOB_WATCH_SECONDS` | `1.0` · iş kuyruğunu izleme aralığı; `0` izlemeyi kapatır |
 | `SMARTCHAIN_EXPORT_DIR` | `exports` · arka planda hazırlanan Excel dosyaları (K-93); süresi geçenleri motor servisi siler |
+| `SMARTCHAIN_SESSION_COOKIE_SECURE` | `true` · oturum çerezi yalnız HTTPS'te gider (K-97). HTTPS'siz test kurulumunda ve testlerde `false`. Edge ve Chrome `http://localhost`'ta da kabul eder |
+| `SMARTCHAIN_ALLOWED_ORIGINS` | boş · durum değiştiren isteklerde izin verilen `Origin`'ler, virgülle (ör. `http://localhost:5173`). Boşsa `Origin`'in host'u isteğin `Host`'u olmalı (K-97) |
+
+## Oturum ve kimlik (K-97, K-98, fonksiyon 89)
+
+Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz. Oturum `smartchain_session` çerezindedir (HttpOnly, SameSite=Strict, `Path=/api`, tarayıcı kapanınca biter). `/api/health` ve `POST /api/auth/login` dışındaki her uç nokta oturum ister.
+
+| Adres | Ne |
+|---|---|
+| `POST /api/auth/login` | `{"user_name", "password"}` → 200 `{"user": …}` ve çerez (cevap `GET /api/auth/me` ile aynı) |
+| `POST /api/auth/logout` | 204; oturum kapanır, çerez silinir, bu oturumun WebSocket'leri 4401 ile kapanır |
+| `GET /api/auth/me` | `{"id", "user_name", "full_name", "role", "must_change_password", "password_change_reason", "idle_seconds_left", "session": {"idle_minutes", "warning_minutes"}, "policy": {"min_length", "require_letter_and_digit", "history_count", "lock_after", "lock_minutes"}}`. Etkinlik sayılmaz |
+| `POST /api/auth/activity` | Hareketsizlik sayacını sıfırlar → `{"idle_seconds_left"}`. Arayüz yalnız kullanıcı girdisi olduysa, en çok dakikada bir çağırır |
+| `POST /api/auth/password` | `{"current_password", "new_password"}` → 204 |
+
+**Giriş hataları** (gövde hesabın varlığını sızdırmaz; bilinmeyen kullanıcı adı da aynı sayaçla işler, K-98):
+
+| Durum | Kod | Mesaj ve `details` |
+|---|---|---|
+| Kullanıcı adı ya da şifre hatalı | 401 `login_failed` | "Kullanıcı adı ya da şifre hatalı." · `[{"remaining_attempts": 2, "lock_after": 5, "lock_minutes": 15}]` |
+| Hesap kilitli | 403 `account_locked` | "Hesap kilitli. 12 dk sonra yeniden deneyin ya da yöneticinize başvurun." · `[{"minutes_left": 12}]` |
+| Hesap kapalı (yalnız şifre doğruysa) | 403 `account_inactive` | "Hesap kapalı. Yöneticinize başvurun." |
+
+**Oturum hataları:**
+
+| Durum | Kod |
+|---|---|
+| Çerez yok ya da oturum kapanmış | 401 `not_authenticated` |
+| Hareketsizlik sınırı geçti (oturum "Zaman aşımı" ile kapanır) | 401 `session_expired` |
+| Şifre değişikliği bekliyor (ilk giriş, sıfırlama, süre doldu); yalnız `me`, `activity`, `password`, `logout` açık | 403 `password_change_required` |
+| Durum değiştiren istekte izinsiz `Origin` | 403 `bad_origin` |
+
+**Şifre değiştirme hataları:** mevcut şifre yanlışsa 401 `current_password_wrong` (kilit sayacına girmez, denetim izine "Başarısız şifre değişikliği"); politika sağlanmazsa 422 `password_policy`, `details` sağlanmayan kurallar: `[{"field": "new_password", "problem": "min_length" | "letter_and_digit" | "contains_user_name" | "history" | "same_as_current"}]`. Başarılı değişiklik kullanıcının diğer oturumlarını "Şifre değişti" ile kapatır.
+
+**Etkinlik:** `UserSession.LastActivityAt` yalnız giriş, `activity` ve `password`'da güncellenir; liste sorguları, iş listesi, veri versiyonu ve WebSocket ping'i oturumu uzatmaz. Karşılaştırmalar veritabanı saatiyle (`SYSUTCDATETIME()`).
+
+**Şifre** hiçbir cevapta, logda ve denetim izinde yer almaz; 422 cevabı girilen değeri geri döndürmez.
 
 ## Liste sorgusu (K-87)
 
@@ -152,15 +189,15 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset":
 
 ### Görünümler (K-89)
 
-Kullanıcı şimdilik `user_id` sorgu parametresiyle gelir (A-36).
+Kullanıcı oturumdan gelir (K-97).
 
 | Adres | Ne |
 |---|---|
-| `GET /api/<liste>/views?user_id=` | `{"views": [...], "default_view_id": 4 \| null}`; kendi görünümleri ve başkalarının paylaşılanları. Her görünüm: `id`, `name`, `owner_user_id`, `owner_name`, `is_shared`, `is_owner`, `updated_at`, `definition`, `warnings` |
-| `POST /api/<liste>/views?user_id=` | Yeni görünüm: `{"name", "is_shared", "definition"}` → 201 ve görünüm |
-| `PUT /api/<liste>/views/{id}?user_id=` | Ad, paylaşım ya da içerik değişir; yalnız sahibi |
-| `DELETE /api/<liste>/views/{id}?user_id=` | Siler (varsayılan yapılmışsa o seçimler de kalkar); yalnız sahibi |
-| `PUT /api/<liste>/views/default?user_id=` | `{"view_id": 4}` ya da `{"view_id": null}` (Standart) |
+| `GET /api/<liste>/views` | `{"views": [...], "default_view_id": 4 \| null}`; kendi görünümleri ve başkalarının paylaşılanları. Her görünüm: `id`, `name`, `owner_user_id`, `owner_name`, `is_shared`, `is_owner`, `updated_at`, `definition`, `warnings` |
+| `POST /api/<liste>/views` | Yeni görünüm: `{"name", "is_shared", "definition"}` → 201 ve görünüm |
+| `PUT /api/<liste>/views/{id}` | Ad, paylaşım ya da içerik değişir; yalnız sahibi |
+| `DELETE /api/<liste>/views/{id}` | Siler (varsayılan yapılmışsa o seçimler de kalkar); yalnız sahibi |
+| `PUT /api/<liste>/views/default` | `{"view_id": 4}` ya da `{"view_id": null}` (Standart) |
 
 **İçerik** (`definition`, sürüm 1):
 
@@ -209,7 +246,7 @@ Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "f
 
 ## Dışa aktarım (K-91, fonksiyon 86)
 
-`POST /api/<liste>/export?user_id=` (kullanıcı A-36 gereği şimdilik parametreyle). İstek, ekrandaki görünüm durumu ve kapsam:
+`POST /api/<liste>/export` (kullanıcı oturumdan). İstek, ekrandaki görünüm durumu ve kapsam:
 
 ```json
 {"fields": ["Code", "Name", "SafetyStock"], "widths": {"Code": 7.5}, "sort": [{"field": "Code", "dir": "asc"}],
@@ -223,7 +260,7 @@ Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "f
 - `ExportMaxRows`'u (500.000) aşarsa 422 `export_too_large` ("filtreyi daraltın").
 - İz: her aktarım `adm.AuditLog`'a yazılır (Action "Dışa aktarım", ObjectType liste adı, ObjectKey dosya adı, NewValue JSON: kapsam, filtreler, kolonlar, satır sayısı, boyut, süre, veri versiyonu); arka planda iz, dosya hazır olunca iş bitişiyle aynı işlemde yazılır. İz yazılamazsa dosya verilmez (anlıkta 503, arka planda iş Hata).
 
-`GET /api/exports/{job_id}/file?user_id=`: arka planda hazırlanan dosya. Yalnız işi başlatan indirir (başkası 403 `export_not_owner`); iş bitmediyse 409 `export_not_ready`; süresi (`ExportFileHours`, 24 saat) geçtiyse ya da dosya silindiyse 410 `export_expired`.
+`GET /api/exports/{job_id}/file`: arka planda hazırlanan dosya. Yalnız işi başlatan indirir (başkası 403 `export_not_owner`); iş bitmediyse 409 `export_not_ready`; süresi (`ExportFileHours`, 24 saat) geçtiyse ya da dosya silindiyse 410 `export_expired`.
 
 Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri ekrandan; başlık ve grup satırları ekrandaki tonlarla; grup başlığında ad, satır sayısı ve ara toplamlar değer olarak) ve Bilgi sayfası. Sayılar sayı, tarihler tarih, Türkçe biçim (K-92).
 
@@ -239,7 +276,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | Adres | Ne | Durum |
 |---|---|---|
 | `GET /api/health` | Uygulama sürümü, veritabanı bağlantısı, şema sürümü (beklenen ile karşılaştırma). Sorun varsa 503 ve Türkçe açıklama. Sistem sağlığı ekranının (24) çekirdeği. | uygulandı (0.3) |
-| `GET /api/jobs?user_id=` | Çalışan, sıradaki ve son 24 saatte biten işler (önce çalışan, sonra sıra); kanal sayaçları (çalışan, sırada, sınır). `user_id` verilirse yalnız o kullanıcının işleri (geçici, A-36). Bağlantı kopunca istemcinin son durumu sorguladığı yer (fonksiyon 48). | uygulandı (0.4) |
+| `GET /api/jobs` | Oturumdaki kullanıcının çalışan, sıradaki ve son 24 saatte biten işleri (önce çalışan, sonra sıra); kanal sayaçları (çalışan, sırada, sınır). Bağlantı kopunca istemcinin son durumu sorguladığı yer (fonksiyon 48). | uygulandı (0.4) |
 | `GET /api/jobs/{id}` | İşin durumu, ilerlemesi, sıra numarası, süresi, `is_stale` (kalp atışı eşiği aşıldı). Yoksa 404 `job_not_found`. | uygulandı (0.4) |
 | `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder. Çalışan iş 409 `job_not_cancellable` (durdurma motorda, fonksiyon 93). Yetki kuralı 2.2'de. | uygulandı (0.4) |
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
@@ -247,7 +284,8 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
 | `POST /api/materials/export` · `GET /api/exports/{job_id}/file` | Excel'e aktarım: anlık ya da arka planda (K-91, K-93) | uygulandı (1.5) |
 | `query`'de `rules` | Koşullu biçim kuralları: satır başına tutan kurallar (K-95) | uygulandı (1.6) |
-| `WS /api/ws?user_id=` | Anlık bildirim kanalı (fonksiyon 48). Kullanıcı şimdilik parametreyle (A-36). | uygulandı (0.4) |
+| `WS /api/ws` | Anlık bildirim kanalı (fonksiyon 48). Oturumla açılır; oturum yoksa el sıkışma reddedilir (403). | uygulandı (0.4; oturum 2.1) |
+| `/api/auth/login` · `logout` · `me` · `activity` · `password` | Giriş, çıkış, oturumdaki kullanıcı, etkinlik, şifre değiştirme (K-97, K-98; fonksiyon 89) | uygulandı (2.1) |
 
 İş eklemek için uç nokta yoktur: işi ilgili fonksiyon (yeniden hesap 46, yükleme…) kendi servisinden `app.jobs.queue.enqueue` ile ekler.
 
@@ -268,6 +306,8 @@ API, `adm.Job`'u `UpdatedAt` ile izler ve değişen işi sahibinin bağlantılar
 {"type": "pong"}
 ```
 
-İstemci `ping` metni gönderirse `pong` döner (bağlantı denetimi).
+İstemci `ping` metni gönderirse `pong` döner (bağlantı denetimi; oturumu uzatmaz).
 
-Geliştirme demosu: API açıkken `python scripts/job_demo.py --url ws://127.0.0.1:8000/api/ws`; demo kullanıcısı adına iş ekler, sahte işçi gibi çalıştırır ve gelen bildirimleri yazdırır.
+Bağlantı oturumla açılır (çerez; `Origin` denetimi K-97). Oturum biterse (çıkış, zaman aşımı, şifre değişince diğer oturumlar) API soketi 4401 koduyla kapatır; arayüz yeniden bağlanmaz, oturumu denetler. Zaman aşımı API'nin iş izleyicisinde 30 sn'de bir taranır.
+
+Geliştirme demosu: API açıkken `python scripts/job_demo.py --url ws://127.0.0.1:8000/api/ws`; demo kullanıcısı adına iş ekler, sahte işçi gibi çalıştırır ve gelen bildirimleri yazdırır. Demo kullanıcısının şifresi yoktur (arayüzden giremez); script WebSocket için oturumu veritabanında kendisi açar.

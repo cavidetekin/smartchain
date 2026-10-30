@@ -1419,11 +1419,66 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | UserName | nvarchar(60) | UK | Kullanıcı adı | Kullanıcı | H | E |  |
 | FullName | nvarchar(150) |  | Ad soyad | Kullanıcı | H | H |  |
 | Role | nvarchar(15) |  | Sistem sahibi \| Admin \| Key user \| End user | Kullanıcı | H | E |  |
-| PasswordHash | varbinary(256) |  | Özetlenmiş şifre | Sistem | H | E |  |
-| MustChangePassword | bit |  | İlk girişte değiştir | Sistem | H | H | 1 |
-| FailedAttempts | int |  | Hatalı deneme | Sistem | H | H | 0 |
-| IsLocked | bit |  | Kilitli | Sistem | H | H | 0 |
+| PasswordHash | nvarchar(200) |  | Özetlenmiş şifre; Argon2id PHC metni, tuz içinde (K-98); boşsa hesap arayüzden giremez | Sistem | H | H |  |
+| MustChangePassword | bit |  | Şifre değiştirilmeli; ilk giriş ya da sıfırlama sonrası | Sistem | H | H | 1 |
+| PasswordChangeReason | nvarchar(15) |  | İlk giriş \| Sıfırlama \| Süre doldu | Sistem | H | H |  |
+| PasswordChangedAt | datetime2 |  | Şifrenin son değiştiği zaman (UTC) | Sistem | H | H |  |
+| PasswordExpiresAt | datetime2 |  | Şifrenin süresinin dolduğu zaman (UTC); değişiklik anındaki politikayla hesaplanır | Sistem | H | H |  |
+| FailedAttempts | int |  | Art arda hatalı giriş | Sistem | H | H | 0 |
+| LockedUntil | datetime2 |  | Kilit bitişi (UTC); geçmişse ya da boşsa kilit yok | Sistem | H | H |  |
+| LastLoginAt | datetime2 |  | Son başarılı giriş (UTC) | Sistem | H | H |  |
 | IsActive | bit |  | Aktif | Kullanıcı | H | H | 1 |
+
+- Giriş ve şifre kuralları fonksiyon 89'da ve K-98'de. Şifre ekranda, logda ve denetim izinde düz metin olarak hiç yer almaz.
+- Kilit süre dolunca kendiliğinden açılır; admin elle açınca (2.3) `LockedUntil` boşalır ve sayaç sıfırlanır.
+
+### UserSession
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Sunucu tarafı oturum (K-97). Tarayıcıdaki çerez rastgele bir anahtar taşır; tabloda yalnız anahtarın SHA-256 özeti durur.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Oturum kimliği | Sistem | H | E |  |
+| TokenHash | varbinary(32) | UK | Çerezdeki anahtarın SHA-256 özeti | Sistem | H | E |  |
+| UserId | int | FK | Kullanıcı | Sistem | H | E |  |
+| CreatedAt | datetime2 |  | Açılış (UTC) | Sistem | H | E |  |
+| LastActivityAt | datetime2 |  | Son kullanıcı etkinliği (UTC); hareketsizlik buna göre ölçülür | Sistem | H | E |  |
+| EndedAt | datetime2 |  | Kapanış (UTC); boşsa açık | Sistem | H | H |  |
+| EndReason | nvarchar(15) |  | Çıkış \| Zaman aşımı \| Şifre değişti \| Kapatıldı | Sistem | H | H |  |
+| ClientAddress | nvarchar(45) |  | İstemci adresi | Sistem | H | H |  |
+| UserAgent | nvarchar(200) |  | Tarayıcı | Sistem | H | H |  |
+
+- Aynı kullanıcı birden çok tarayıcıda oturum açabilir. "Kapatıldı": kullanıcı pasif edilince ya da admin kapatınca (2.3).
+
+### PasswordHistory
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Kullanıcının önceki şifre özetleri (K-98): yeni şifre son `PasswordHistoryCount` şifreden farklı olmalı.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| UserId | int | FK | Kullanıcı | Sistem | H | E |  |
+| PasswordHash | nvarchar(200) |  | Şifre özeti | Sistem | H | E |  |
+| CreatedAt | datetime2 |  | Şifrenin belirlendiği zaman (UTC) | Sistem | H | E |  |
+
+- Her değişiklikte eklenir; en yeni `PasswordHistoryCount` kaydın dışındakiler silinir.
+
+### LoginThrottle
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Bilinmeyen, şifresiz ya da pasif hesap adına yapılan hatalı girişlerin sayacı (K-98). Gerçek hesaptaki sayaçla aynı davranır; giriş cevabından hesabın var olup olmadığı anlaşılmaz.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| UserName | nvarchar(60) | PK | Yazılan kullanıcı adı | Sistem | H | E |  |
+| FailedAttempts | int |  | Art arda hatalı giriş | Sistem | H | E | 0 |
+| LockedUntil | datetime2 |  | Kilit bitişi (UTC) | Sistem | H | H |  |
+| UpdatedAt | datetime2 |  | Son deneme (UTC) | Sistem | H | E |  |
 
 ### Job
 <sub>21. Veri modeli · Sistem</sub>
@@ -1514,6 +1569,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `ExportSyncMaxRows`: bu kadar satıra kadar dosya anlık iner, üstü arka planda hazırlanır (10000)
   - `ExportMaxRows`: bir aktarımda en çok satır (500000)
   - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
+- Giriş, şifre ve oturum ayarları (K-97, K-98; fonksiyon 89). Şifre kuralı değişikliği bir sonraki şifre değişiminde geçerli olur:
+  - `PasswordMinLength`: şifrede en az karakter (10)
+  - `PasswordRequireLetterAndDigit`: şifrede harf ve rakam zorunlu, 1 ya da 0 (1)
+  - `PasswordHistoryCount`: yeni şifre bu kadar önceki şifreden farklı olmalı (5)
+  - `PasswordMaxAgeDays`: şifrenin geçerlilik süresi, gün (90)
+  - `SessionIdleMinutes`: bu kadar dakika kullanıcı etkinliği olmazsa oturum kapanır (30)
+  - `SessionWarningMinutes`: kapanmadan bu kadar dakika önce uyarı penceresi açılır (5)
+  - `LoginMaxFailedAttempts`: art arda bu kadar hatalı girişte hesap kilitlenir (5)
+  - `LoginLockMinutes`: kilit süresi, dakika (15)
 
 ### TableView
 <sub>21. Veri modeli · Sistem</sub>

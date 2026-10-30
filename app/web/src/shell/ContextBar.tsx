@@ -12,14 +12,13 @@ import { UserMenu } from "./UserMenu";
 const REFRESH_MS = 60_000;
 
 interface Props {
-  userId: number;
   fontSize: FontSize;
   onFontSize(size: FontSize): void;
   /** Her iş güncellemesi (dışa aktarım bildirimi, K-91). */
   onJob?(job: Job): void;
 }
 
-export function ContextBar({ userId, fontSize, onFontSize, onJob }: Props) {
+export function ContextBar({ fontSize, onFontSize, onJob }: Props) {
   return (
     <header className="sc-context">
       <div className="sc-context-left">
@@ -31,8 +30,8 @@ export function ContextBar({ userId, fontSize, onFontSize, onJob }: Props) {
       </div>
       <div className="sc-context-right">
         <DataVersionBadge />
-        <JobIndicator userId={userId} onJob={onJob} />
-        <UserMenu userId={userId} fontSize={fontSize} onFontSize={onFontSize} />
+        <JobIndicator onJob={onJob} />
+        <UserMenu fontSize={fontSize} onFontSize={onFontSize} />
       </div>
     </header>
   );

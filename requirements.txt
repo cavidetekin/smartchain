@@ -18,6 +18,9 @@ openpyxl==3.1.5
 highspy==1.15.1
 numpy==2.5.4
 
+# Şifre özeti (adım 2.1, K-98): Argon2id; MIT
+argon2-cffi==25.1.0
+
 # Test
 pytest>=8.0
 httpx>=0.27

@@ -6,7 +6,6 @@
 """
 import asyncio
 import json
-from urllib.parse import urlencode
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,6 +19,7 @@ from app.jobs.settings import JobSettings
 
 from test_export_api import FIELDS, export, setting, user  # noqa: F401  (fikstür ve yardımcılar)
 from test_lists_api import api  # noqa: F401
+from auth_helpers import auth
 
 pytestmark = pytest.mark.db
 
@@ -32,14 +32,14 @@ class ClientGone(Exception):
     """Sunucu (uvicorn) istemci koptuğunda send'de buna benzer bir hata alır."""
 
 
-def call(app, method: str, path: str, query: dict, body: dict | None = None, drop_after_chunks: int | None = None) -> dict:
+def call(app, method: str, path: str, user: int, body: dict | None = None, drop_after_chunks: int | None = None) -> dict:
     """Uygulamayı ASGI düzeyinde çağırır. Her gövde parçası gönderilirken havuzdaki alınmış bağlantı sayısını kaydeder;
     drop_after_chunks verilirse o kadar parçadan sonra istemci kopar (send hata fırlatır, ardından http.disconnect)."""
     raw = json.dumps(body).encode() if body is not None else b""
     scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": method, "scheme": "http",
-             "path": path, "raw_path": path.encode(), "query_string": urlencode(query).encode(), "root_path": "",
+             "path": path, "raw_path": path.encode(), "query_string": b"", "root_path": "",
              "headers": [(b"host", b"test"), (b"content-type", b"application/json"),
-                         (b"content-length", str(len(raw)).encode())],
+                         (b"content-length", str(len(raw)).encode()), (b"cookie", auth(user)["Cookie"].encode())],
              "client": ("127.0.0.1", 1), "server": ("test", 80)}
     sent = {"status": None, "chunks": 0, "during_body": [], "size": 0}
     received = False
@@ -101,12 +101,11 @@ def test_thirty_exports_leave_pool_as_found(api, user, db_engine, db_session):  
             assert export(api, user).status_code == 202
             setting(db_engine, "ExportSyncMaxRows", 10000)
         elif kind == 4:
-            assert api.get(f"/api/exports/{job_id}/file?user_id={user}").status_code == 200
+            assert api.get(f"/api/exports/{job_id}/file", headers=auth(user)).status_code == 200
         else:
             assert export(api, user, **(grouped if kind == 1 else {})).status_code == 200
         assert checked_out() == start, f"{i + 1}. aktarımdan sonra havuzda {checked_out() - start} bağlantı kaldı"
-    assert export(api, 987654).status_code == 404  # hata yolu da bırakır
-    assert export(api, user, fields=["Secret"]).status_code == 422
+    assert export(api, user, fields=["Secret"]).status_code == 422  # hata yolu da bırakır
     assert checked_out() == start
 
 
@@ -114,7 +113,7 @@ def test_download_releases_connection_before_streaming(app, api, user, db_engine
     job_id = background_file(api, user, db_engine, db_session)
     db_session.close()
     start = checked_out()
-    sent = call(app, "GET", f"/api/exports/{job_id}/file", {"user_id": user})
+    sent = call(app, "GET", f"/api/exports/{job_id}/file", user)
     assert sent["status"] == 200 and sent["size"] > 0
     assert sent["during_body"] and all(n == start for n in sent["during_body"]), sent["during_body"]
     assert checked_out() == start
@@ -125,9 +124,9 @@ def test_client_disconnect_returns_connection(app, api, user, db_engine, db_sess
     db_session.close()
     start = checked_out()
     for _ in range(5):
-        call(app, "GET", f"/api/exports/{job_id}/file", {"user_id": user}, drop_after_chunks=0)
-        call(app, "POST", "/api/materials/export", {"user_id": user}, {"fields": FIELDS}, drop_after_chunks=0)
+        call(app, "GET", f"/api/exports/{job_id}/file", user, drop_after_chunks=0)
+        call(app, "POST", "/api/materials/export", user, {"fields": FIELDS}, drop_after_chunks=0)
     assert checked_out() == start
     # kopmalardan sonra API çalışmaya devam eder
-    assert TestClient(app).get("/api/materials/columns").status_code == 200
+    assert TestClient(app).get("/api/materials/columns", headers=auth(user)).status_code == 200
     assert checked_out() == start

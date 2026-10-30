@@ -1,13 +1,11 @@
 """Dışa aktarım sorguları (K-91): ayarlar, dışa aktaran kullanıcı, iz (adm.AuditLog)."""
-import json
-
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from app.jobs.settings import read_int_settings
 from db.models import metadata
+from . import audit
 
-AUDIT = metadata.tables["adm.AuditLog"]
 USER = metadata.tables["adm.AppUser"]
 ACTION = "Dışa aktarım"
 
@@ -26,6 +24,4 @@ def user_name(session: Session, user_id: int) -> str | None:
 
 def write_audit(session: Session, user_id: int, list_name: str, file_name: str, details: dict) -> None:
     """İz (fonksiyon 87): commit çağırana bırakılır; dosya ancak iz yazılınca verilir."""
-    session.execute(sa.insert(AUDIT).values(
-        UserId=user_id, At=sa.func.sysutcdatetime(), Action=ACTION, ObjectType=list_name, ObjectKey=file_name,
-        NewValue=json.dumps(details, ensure_ascii=False, default=str)))
+    audit.write_audit(session, ACTION, user_id, list_name, file_name, details)

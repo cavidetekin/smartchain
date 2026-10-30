@@ -12,3 +12,8 @@ XlsxWriter==3.3.0
 # Çözücü (K-76): HiGHS, MIT; numpy bağımlılığı
 highspy==1.15.1
 numpy==2.5.4
+# Şifre özeti (K-98): Argon2id; argon2-cffi ve bağımlılıkları (hepsi hazır Windows wheel)
+argon2-cffi==25.1.0
+argon2-cffi-bindings==26.1.0
+cffi==2.1.1
+pycparser==3.12

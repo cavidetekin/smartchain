@@ -22,6 +22,8 @@ from sqlalchemy import text  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.api.db import get_engine  # noqa: E402
+from app.api.deps import COOKIE  # noqa: E402
+from app.api.services.auth import open_session  # noqa: E402
 from app.engine.fake import ensure_fixture_warning_definitions  # noqa: E402
 from app.engine.service import EngineService  # noqa: E402
 from app.engine.submit import submit_plan_run  # noqa: E402
@@ -36,7 +38,7 @@ def demo_refs(session: Session, step: float) -> dict:
     ensure_fixture_warning_definitions(session)
     q = lambda sql, **p: session.execute(text(sql), p)  # noqa: E731
     q("IF NOT EXISTS (SELECT 1 FROM adm.AppUser WHERE UserName = N'demo') INSERT INTO adm.AppUser "
-      "(UserName, FullName, Role, PasswordHash) VALUES (N'demo', N'Demo kullanıcı', N'Key user', 0x00)")
+      "(UserName, FullName, Role, MustChangePassword) VALUES (N'demo', N'Demo kullanıcı', N'Key user', 0)")  # şifresiz (K-98)
     q("IF NOT EXISTS (SELECT 1 FROM core.Location WHERE Code = N'DEMO') "
       "INSERT INTO core.Location (Code, Name, Type, IsSynthetic) VALUES (N'DEMO', N'Demo fabrikası', N'Tesis', 1)")
     user = q("SELECT Id FROM adm.AppUser WHERE UserName = N'demo'").scalar_one()
@@ -74,9 +76,9 @@ def run_service(db, job_ids: list[int], stop: threading.Event) -> None:
         svc.shutdown()
 
 
-async def listen(url: str, ready: asyncio.Event) -> None:
+async def listen(url: str, ready: asyncio.Event, token: str) -> None:
     try:
-        async with websockets.connect(url, open_timeout=5) as ws:
+        async with websockets.connect(url, open_timeout=5, additional_headers={"Cookie": f"{COOKIE}={token}"}) as ws:
             async for raw in ws:
                 msg = json.loads(raw)
                 if msg["type"] == "hello":
@@ -102,7 +104,9 @@ async def main() -> None:
     with Session(db) as s:
         refs = demo_refs(s, args.step)
     ready = asyncio.Event()
-    listener = asyncio.create_task(listen(f"{args.url}?user_id={refs['user']}", ready))
+    with Session(db) as s:  # WebSocket oturumla açılır (K-97); demo kullanıcısının oturumu doğrudan açılır
+        token = open_session(s, refs["user"], agent="engine_demo.py")
+    listener = asyncio.create_task(listen(args.url, ready, token))
     await asyncio.wait_for(ready.wait(), 10)
 
     with Session(db) as s:

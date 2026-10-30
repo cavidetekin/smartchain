@@ -395,3 +395,37 @@
 .sc-color-actions { display: flex; align-items: flex-end; gap: var(--space-2); flex-wrap: wrap; }
 .sc-color-other { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--fs-sm); color: var(--text-muted); }
 .sc-color-other .sc-input { width: 7.6923rem; }
+
+/* --- Giriş ve oturum (2.1; fonksiyon 89, mockup m24f-0738/0739/0740) --- */
+.sc-dialog-backdrop.is-blurred { backdrop-filter: blur(0.3077rem); }
+.sc-auth-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-4); padding: var(--space-6); background: var(--bg); }
+.sc-auth-card { display: flex; flex-direction: column; gap: var(--space-4); width: min(27.6923rem, calc(100vw - 2rem));
+  padding: var(--space-6); border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--surface);
+  box-shadow: var(--shadow-popover); }
+.sc-auth-brand { display: flex; align-items: center; gap: var(--space-3); }
+.sc-auth-brand .sc-logo { background: var(--indigo-500); color: var(--surface); }
+.sc-auth-title { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-semibold); }
+.sc-auth-submit { width: 100%; justify-content: center; }
+.sc-auth-note, .sc-auth-footer { margin: 0; text-align: center; font-size: var(--fs-sm); color: var(--text-muted); }
+.sc-auth-footer { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.sc-policy { display: flex; flex-direction: column; gap: var(--space-1); }
+.sc-policy-title { font-size: var(--fs-sm); color: var(--text-muted); }
+.sc-policy ul { margin: 0; padding: 0; list-style: none; }
+.sc-policy-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line); }
+.sc-policy-icon { width: var(--icon); height: var(--icon); flex: none; }
+.sc-policy-item.is-ok .sc-policy-icon { color: var(--status-ok); }
+.sc-policy-item.is-fail .sc-policy-icon { color: var(--status-over); }
+.sc-policy-item.is-pending .sc-policy-icon { color: var(--text-muted); width: 0.6154rem; height: 0.6154rem; margin: 0 0.1923rem; }
+
+.sc-idle { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+.sc-idle-count { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-kpi);
+  font-weight: var(--fw-medium); }
+.sc-idle-limit { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm);
+  color: var(--text-muted); }
+
+.sc-user-who { display: flex; flex-direction: column; gap: 0.1538rem; padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line); }
+.sc-user-note { font-size: var(--fs-sm); color: var(--text-muted); }

@@ -31,8 +31,8 @@ class JobSettings:
                 CHANNEL_EXPORT: self.limit_export}[channel]
 
 
-def read_int_settings(session: Session, defaults: dict[str, int]) -> dict[str, int]:
-    """SystemSetting'den pozitif tamsayı ayarları; satır yoksa ya da bozuksa varsayılan."""
+def read_int_settings(session: Session, defaults: dict[str, int], minimum: int = 1) -> dict[str, int]:
+    """SystemSetting'den tamsayı ayarları (en az `minimum`; 1/0 bayrakları için 0); satır yoksa ya da bozuksa varsayılan."""
     rows = session.execute(
         text("SELECT SettingKey, Value FROM adm.SystemSetting WHERE SettingKey IN :keys")
         .bindparams(bindparam("keys", expanding=True)),
@@ -42,7 +42,7 @@ def read_int_settings(session: Session, defaults: dict[str, int]) -> dict[str, i
     for key, raw in rows:
         try:
             value = int(raw)
-            if value < 1:
+            if value < minimum:
                 raise ValueError
             values[key] = value
         except (TypeError, ValueError):

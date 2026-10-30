@@ -4,12 +4,20 @@ import tempfile
 os.environ.setdefault("SMARTCHAIN_LOG_DIR", tempfile.mkdtemp(prefix="smartchain-logs-"))
 os.environ.setdefault("SMARTCHAIN_JOB_WATCH_SECONDS", "0.2")
 os.environ.setdefault("SMARTCHAIN_EXPORT_DIR", tempfile.mkdtemp(prefix="smartchain-exports-"))  # iş süreçleri de görür
+os.environ["SMARTCHAIN_SESSION_COOKIE_SECURE"] = "false"  # test istemcisi http; Secure çerez gönderilmezdi (K-97)
+os.environ["SMARTCHAIN_ALLOWED_ORIGINS"] = ""
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.db import get_session
+from app.api.deps import session_user
 from app.api.main import create_app
+from app.api.services.auth import CurrentUser
+
+# Veritabanısız testlerin oturumu (K-97): oturum denetimi veritabanı ister; bu testlerde sabit kullanıcıyla geçilir.
+FAKE_USER = CurrentUser(id=3, user_name="test", full_name="Test Kullanıcı", role="Key user", session_id=1,
+                        must_change_password=False, password_change_reason=None, idle_seconds_left=1800)
 
 
 class FakeSession:
@@ -20,6 +28,7 @@ class FakeSession:
 def app():
     application = create_app()
     application.dependency_overrides[get_session] = lambda: FakeSession()
+    application.dependency_overrides[session_user] = lambda: FAKE_USER
     return application
 
 
@@ -52,21 +61,14 @@ def _clear_jobs(engine):
 
 @pytest.fixture(scope="session")
 def test_users(db_engine):
-    """İki deneme kullanıcısı (Job.RequestedBy adm.AppUser'a bağlı). Oturum sonunda silinir."""
-    from sqlalchemy import text
-    names = ["test.job.1", "test.job.2"]
+    """İki şifresiz deneme kullanıcısı (Job.RequestedBy adm.AppUser'a bağlı). Oturum sonunda silinir."""
+    from auth_helpers import delete_users, ensure_user
     with db_engine.begin() as conn:
-        for n in names:
-            conn.execute(text("IF NOT EXISTS (SELECT 1 FROM adm.AppUser WHERE UserName = :n) "
-                              "INSERT INTO adm.AppUser (UserName, Role, PasswordHash) VALUES (:n, N'Key user', 0x00)"),
-                         {"n": n})
-        ids = [conn.execute(text("SELECT Id FROM adm.AppUser WHERE UserName = :n"), {"n": n}).scalar_one()
-               for n in names]
+        ids = [ensure_user(conn, n) for n in ("test.job.1", "test.job.2")]
     yield ids
     _clear_jobs(db_engine)
     with db_engine.begin() as conn:
-        for n in names:
-            conn.execute(text("DELETE FROM adm.AppUser WHERE UserName = :n"), {"n": n})
+        delete_users(conn, ids)
 
 
 @pytest.fixture
@@ -90,9 +92,13 @@ def job_settings(db_session):
 
 
 @pytest.fixture
-def db_client(db_engine, clean_jobs):
-    """Gerçek veritabanıyla API istemcisi (izleyici kapalı; lifespan çalışmaz)."""
-    return TestClient(create_app(), raise_server_exceptions=False)
+def db_client(db_engine, clean_jobs, test_users):
+    """Gerçek veritabanıyla API istemcisi (izleyici kapalı; lifespan çalışmaz); ilk deneme kullanıcısının oturumuyla."""
+    from auth_helpers import token
+    from app.api.deps import COOKIE
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    client.cookies.set(COOKIE, token(test_users[0]))
+    return client
 
 
 # --- Motor testleri (0.5): referans satırları ve PlanRun temizliği ---

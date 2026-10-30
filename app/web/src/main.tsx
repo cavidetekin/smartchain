@@ -14,12 +14,11 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 
 import { App } from "./App";
-import { resolveUserId } from "./prefs";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <App userId={resolveUserId()} />
+      <App />
     </BrowserRouter>
   </StrictMode>,
 );

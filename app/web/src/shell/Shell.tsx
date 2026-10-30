@@ -3,13 +3,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router";
 
 import type { Job } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import { IdleWatch } from "../auth/IdleWatch";
 import { applyFontSize, type FontSize, userPrefs } from "../prefs";
 import { ContextBar } from "./ContextBar";
 import { type ExportItem, ExportToasts } from "./ExportToasts";
 import { ShellContext, type TrackedExport } from "./ShellContext";
 import { Sidebar } from "./Sidebar";
 
-export function Shell({ userId }: { userId: number }) {
+/** Oturum kapısının (auth/AuthGate) içinde açılır; kullanıcı oturumdan gelir (K-97). */
+export function Shell() {
+  const me = useAuth().me!;
+  const userId = me.id;
   const prefs = useMemo(() => userPrefs(userId), [userId]);
   const [collapsed, setCollapsed] = useState(prefs.collapsed());
   const [fontSize, setFontSize] = useState<FontSize>(prefs.fontSize());
@@ -63,12 +68,13 @@ export function Shell({ userId }: { userId: number }) {
         prefs={prefs}
       />
       <div className="sc-main">
-        <ContextBar userId={userId} fontSize={fontSize} onFontSize={changeFontSize} onJob={onJob} />
+        <ContextBar fontSize={fontSize} onFontSize={changeFontSize} onJob={onJob} />
         <main className="sc-content">
           <Outlet />
         </main>
       </div>
-      <ExportToasts userId={userId} items={exports} onDismiss={dismissExport} />
+      <ExportToasts items={exports} onDismiss={dismissExport} />
+      <IdleWatch me={me} />
     </div>
     </ShellContext.Provider>
   );

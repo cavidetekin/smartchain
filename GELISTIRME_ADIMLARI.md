@@ -34,9 +34,9 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 2 · Yönetim ve sistem
 
-- [ ] 2.1 Giriş ve oturum (89)
+- [x] 2.1 Giriş ve oturum (89) · K-97, K-98
 - [ ] 2.2 Rol bazlı yetki altyapısı (90)
-- [ ] 2.3 Kullanıcılar ekranı (22) · kullanıcı yönetimi (88) · kullanıcının yazı boyutu tercihinin saklanması (U-23)
+- [ ] 2.3 Kullanıcılar ekranı (22) · kullanıcı yönetimi (88) · kullanıcının yazı boyutu tercihinin saklanması (U-23) · kurulumda ilk hesap: install.ps1 sonunda tek sistem sahibi hesabı geçici şifreyle açılır
 - [ ] 2.4 Sistem sahibi ayarları (25) · veri sözlüğü ve ek alan etiketleri (96)
 - [ ] 2.5 Sistem sağlığı (24) · sağlık (94), iş kuyruğu (93)
 - [ ] 2.6 Denetim izi altyapısı (98)
@@ -147,7 +147,7 @@ Adımı kapanmış ama elle denenmesi sonraya bırakılmış işler.
 
 - [ ] 1.5 · Arka plan aktarımı: eşiği geçici düşür (`INSERT INTO adm.SystemSetting (SettingKey, Value) VALUES ('ExportSyncMaxRows', '50')`), /tablo'da "Hazırla", iş göstergesi ve "İndir" bildirimi, iş listesinden indirme; sonra ayarı sil (`DELETE FROM adm.SystemSetting WHERE SettingKey = 'ExportSyncMaxRows'`).
 - [ ] 1.5 · Dışa aktarım izi: `SELECT TOP 5 * FROM adm.AuditLog ORDER BY 1 DESC` ile aktarımların "Dışa aktarım" kaydı olarak yazıldığını gör.
-- [ ] 0.6 · Temiz makine (sanal makine) kurulum testi.
+- [ ] 0.6 · Temiz makine (sanal makine) kurulum testi. Not (2.3): install.ps1 sonunda tek sistem sahibi hesabı geçici şifreyle açılır; sanal makine turunda bu da denenir.
 - [ ] 1.6 · Excel süresi: 10 kurallı 10.000 satır 30.10 sabah 0,9 sn, öğleden sonra 3,1 sn (aynı kod; makine kaynaklı görünüyor). Yeniden başlatma sonrası tekrar ölç.
 
 ## Sonraya bırakılanlar

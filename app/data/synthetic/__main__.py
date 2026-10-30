@@ -4,6 +4,7 @@
   python -m app.data.synthetic unload                                    sentetik veriyi siler
   python -m app.data.synthetic excel  [--out data/synthetic/v0/kirli]    kirli hâl: entegrasyon Excel'i + beklenen hatalar
   python -m app.data.synthetic check                                     sayılar ve bilerek konmuş durumlar
+  python -m app.data.synthetic users                                     kullanıcılar: geçici şifreler (docs/11, 2.1)
 """
 import argparse
 import sys
@@ -28,13 +29,25 @@ def _print_check(ds) -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m app.data.synthetic", description="Sentetik veri seti v0 (docs/11)")
-    p.add_argument("command", choices=["load", "unload", "excel", "check"])
+    p.add_argument("command", choices=["load", "unload", "excel", "check", "users"])
     p.add_argument("--date", type=date.fromisoformat, default=None, help="üretim günü (varsayılan bugün)")
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--out", type=Path, default=ROOT / "data" / "synthetic" / "v0" / "kirli")
     a = p.parse_args(argv)
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
+
+    if a.command == "users":
+        from app.api.db import get_engine
+        from .users import reset_users, write_file
+        users = reset_users(get_engine())
+        path = ROOT / ".local" / "gecici-sifreler.txt"
+        write_file(path, users)
+        print("Sentetik kullanıcılar geçici şifreye döndü; ilk girişte şifre değiştirilecek.")
+        for name, role, password in users:
+            print(f"  {name:<10} {role:<14} {password}")
+        print(f"Şifreler ayrıca: {path} (git dışı; yalnız geliştirme)")
+        return 0
 
     ds = generate(a.date, a.seed) if a.command != "unload" else None
     if a.command == "check":

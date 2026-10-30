@@ -157,7 +157,7 @@ describe("iş göstergesi", () => {
     renderApp();
     const indicator = screen.getByTestId("job-indicator");
     await waitFor(() => expect(indicator).toHaveTextContent("1 çalışıyor · 0 sırada"));
-    expect(Socket.instances[0].url).toMatch(/\/api\/ws\?user_id=3$/);
+    expect(Socket.instances[0].url).toMatch(/\/api\/ws$/);  // kullanıcı oturumdan (çerez), adreste değil (K-97)
     act(() => {
       Socket.instances[0].open();
       Socket.instances[0].send({ type: "job", job: job(6, "Sırada", { queue_position: 1 }) });
@@ -188,15 +188,16 @@ describe("iş göstergesi", () => {
 });
 
 describe("kullanıcı menüsü", () => {
-  it("geçici kullanıcıyı ve yazı boyutunu gösterir; boyut ölçekler ve hatırlanır", async () => {
+  it("oturumdaki kullanıcıyı ve yazı boyutunu gösterir; boyut ölçekler ve hatırlanır", async () => {
     const user = userEvent.setup();
     const { unmount } = renderApp();
-    await user.click(screen.getByRole("button", { name: "Kullanıcı #3" }));
-    expect(screen.getByText(/oturum 2.1'de gelir/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Kullanıcı menüsü: Mert Planlama" }));
+    expect(screen.getByRole("dialog", { name: "Kullanıcı menüsü" })).toHaveTextContent("Mert Planlamaplanlama · Key user");
     expect(document.documentElement.style.fontSize).toBe("13px");
     await user.click(screen.getByRole("radio", { name: /Büyük/ }));
     expect(document.documentElement.style.fontSize).toBe("16px");
-    expect(screen.getByRole("button", { name: "Çıkış" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Çıkış" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Şifre değiştir" })).toBeEnabled();
     unmount();
     renderApp();
     expect(document.documentElement.style.fontSize).toBe("16px");

@@ -15,6 +15,16 @@ export class ApiError extends Error {
   }
 }
 
+/** Oturum olayı (K-97): herhangi bir istek oturumun bittiğini (401) söylerse ya da WebSocket oturum bitti diye
+ *  kapanırsa yayılır; oturum sağlayıcısı (auth/AuthContext) giriş sayfasına döner. */
+export const AUTH_EVENT = "smartchain:auth";
+export type AuthEventDetail = { kind: "expired"; code: string; message: string } | { kind: "check" };
+const SESSION_CODES = new Set(["not_authenticated", "session_expired"]);
+
+export function emitAuth(detail: AuthEventDetail): void {
+  window.dispatchEvent(new CustomEvent<AuthEventDetail>(AUTH_EVENT, { detail }));
+}
+
 /** Hata cevabını (docs/08) ApiError'a çevirir; başarılıysa cevabı olduğu gibi döndürür. */
 export async function ensureOk(r: Response): Promise<Response> {
   if (!r.ok) {
@@ -29,6 +39,7 @@ export async function ensureOk(r: Response): Promise<Response> {
     } catch {
       // gövde JSON değil
     }
+    if (r.status === 401 && SESSION_CODES.has(code)) emitAuth({ kind: "expired", code, message });
     throw new ApiError(r.status, code, message, details);
   }
   return r;
@@ -110,10 +121,10 @@ export interface JobList {
 
 export const api = {
   currentDataVersion: () => getJson<DataVersion>("/api/data-versions/current"),
-  jobs: (userId: number) => getJson<JobList>(`/api/jobs?user_id=${userId}`),
+  /** Oturumdaki kullanıcının işleri (K-97). */
+  jobs: () => getJson<JobList>("/api/jobs"),
   /** Arka planda hazırlanan Excel dosyası (K-91). */
-  downloadExport: (userId: number, jobId: number, fallback: string) =>
-    downloadFile(`/api/exports/${jobId}/file?user_id=${userId}`, fallback),
+  downloadExport: (jobId: number, fallback: string) => downloadFile(`/api/exports/${jobId}/file`, fallback),
 };
 
 /** İş türü ve durumları (app/jobs/constants.py). */

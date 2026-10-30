@@ -194,7 +194,9 @@ try {
             "SMARTCHAIN_EXPORT_DIR=$ExportDir",
             'SMARTCHAIN_LOG_LEVEL=INFO',
             'SMARTCHAIN_ENABLE_DOCS=false',
-            'SMARTCHAIN_JOB_WATCH_SECONDS=1.0'
+            'SMARTCHAIN_JOB_WATCH_SECONDS=1.0',
+            # Oturum çerezi yalnız HTTPS'te gider (K-97); sertifikasız test kurulumunda HTTP olduğu için kapalı.
+            ('SMARTCHAIN_SESSION_COOKIE_SECURE={0}' -f $(if ($CertThumbprint) { 'true' } else { 'false' }))
         )
         Write-Utf8NoBom -Path $ConfigFile -Text (($lines -join "`r`n") + "`r`n")
         Write-Log "Ayarlar yazıldı: $ConfigFile" 'OK'

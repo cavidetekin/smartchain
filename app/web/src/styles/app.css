@@ -95,6 +95,7 @@ svg { width: var(--icon); height: var(--icon); flex: none; }
 .sc-spin { animation: sc-spin 1.2s linear infinite; }
 @keyframes sc-spin { to { transform: rotate(360deg); } }
 .sc-jobs, .sc-user { position: relative; }
+.sc-user { display: flex; align-items: center; gap: var(--space-2); }
 .sc-popover { position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 30; width: 22rem; padding: 0.75rem;
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
   box-shadow: var(--shadow-popover); }

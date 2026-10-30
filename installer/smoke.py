@@ -27,18 +27,52 @@ def check_health(base_url: str) -> str:
 
 
 def check_websocket(base_url: str) -> str:
+    """WebSocket IIS üzerinden: oturumsuz el sıkışma reddedilir (403); geçici bir test kullanıcısının oturumuyla
+    hello ve pong gelir (K-97). Test kullanıcısının şifresi yoktur (arayüzden giremez); sonunda silinir."""
     import websockets
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session
 
-    async def run():
-        url = base_url.replace("http", "ws", 1) + "/api/ws?user_id=0"
-        async with websockets.connect(url, open_timeout=10) as ws:
-            hello = json.loads(await asyncio.wait_for(ws.recv(), 10))
+    from app.api.db import get_engine
+    from app.api.deps import COOKIE
+    from app.api.services.auth import open_session
+
+    url = base_url.replace("http", "ws", 1) + "/api/ws"
+
+    async def rejected():
+        try:
+            async with websockets.connect(url, open_timeout=10):
+                pass
+        except websockets.exceptions.InvalidStatus as exc:
+            return exc.response.status_code
+        return None
+
+    async def hello(token: str):
+        async with websockets.connect(url, open_timeout=10, additional_headers={"Cookie": f"{COOKIE}={token}"}) as ws:
+            first = json.loads(await asyncio.wait_for(ws.recv(), 10))
             await ws.send("ping")
-            pong = json.loads(await asyncio.wait_for(ws.recv(), 10))
-        if hello.get("type") != "hello" or pong.get("type") != "pong":
-            raise AssertionError(f"WebSocket beklenmeyen yanıt: {hello} {pong}")
-    asyncio.run(run())
-    return "hello ve pong geldi (IIS üzerinden)"
+            second = json.loads(await asyncio.wait_for(ws.recv(), 10))
+        return first, second
+
+    status = asyncio.run(rejected())
+    if status != 403:
+        raise AssertionError(f"Oturumsuz WebSocket reddedilmedi (durum {status})")
+    with Session(get_engine()) as s:
+        s.execute(text("IF NOT EXISTS (SELECT 1 FROM adm.AppUser WHERE UserName = N'kurulum.testi') "
+                       "INSERT INTO adm.AppUser (UserName, FullName, Role, IsActive, MustChangePassword) "
+                       "VALUES (N'kurulum.testi', N'Kurulum testi', N'End user', 1, 0)"))
+        user = s.execute(text("SELECT Id FROM adm.AppUser WHERE UserName = N'kurulum.testi'")).scalar_one()
+        token = open_session(s, user, agent="smoke.py")
+    try:
+        first, second = asyncio.run(hello(token))
+    finally:
+        with Session(get_engine()) as s:
+            s.execute(text("DELETE FROM adm.UserSession WHERE UserId = :u"), {"u": user})
+            s.execute(text("DELETE FROM adm.AppUser WHERE Id = :u"), {"u": user})
+            s.commit()
+    if first.get("type") != "hello" or second.get("type") != "pong":
+        raise AssertionError(f"WebSocket beklenmeyen yanıt: {first} {second}")
+    return "oturumsuz 403; oturumla hello ve pong geldi (IIS üzerinden)"
 
 
 def check_engine(timeout: int) -> str:

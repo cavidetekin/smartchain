@@ -40,7 +40,7 @@ Her ekranın üstünde aynı yerde:
 - senaryo, plan versiyonu ve dönem (bucket) seçimi; çalışma açıksa çalışmanın adı ve çalışma aksiyonları (ör. çalışmayı kapat);
 - veri versiyonu;
 - arka planda süren işlerin göstergesi (iş kuyruğu bildirimleri, K-69);
-- kullanıcı menüsü: yazı boyutu (U-23), çıkış (2.1).
+- kullanıcı menüsü: ad ve rol, yazı boyutu (U-23), şifre değiştir, çıkış (2.1).
 
 ### Çalışma alanı
 
@@ -74,7 +74,7 @@ Daraltılmış menü ve yandan açılan alt panel aynı renkleri kullanır.
 - **Menünün tek tanımı:** `src/screens/catalog.ts`. Her ekranın numarası, adı, adresi, grubu, ikonu, geleceği geliştirme adımı ve tek satırlık tanımı buradadır. Yeni ekran önce buraya eklenir.
 - **Metinler:** `src/i18n/tr.ts`; sayı ve tarih biçimi `src/format.ts` (U-19).
 - **İkonlar ve fontlar:** Lucide (ISC); Instrument Sans ve Inter (OFL-1.1) `@fontsource` paketlerinden derlemeye gömülür. Dış adres yoktur; `tests/test_offline.py` kaynakları ve derlenmiş `dist`'i tarar.
-- **Kullanıcı (A-36):** Oturum 2.1'de gelir. O zamana kadar kullanıcı Id'si adres çubuğunda `?user_id=3` ile bir kez verilir ve tarayıcıda hatırlanır; verilmezse 0. İş göstergesi bu kullanıcının işlerini gösterir.
+- **Kullanıcı (K-97):** oturumdan gelir (2.1). Adreslerde kullanıcı Id'si yoktur; iş göstergesi oturumdaki kullanıcının işlerini gösterir. Kişisel tercihlerin tarayıcıdaki anahtarı kullanıcı Id'sine göredir.
 - **Hatırlanan tercihler:** Açık gruplar, menünün daraltılmış hâli ve yazı boyutu (U-23) tarayıcıda tutulur; 2.3'te kullanıcı ayarına taşınır.
 - **Bağlam çubuğu:**
   - **Veri versiyonu:** `GET /api/data-versions/current` → "Veri v35 · 27.10.2026 12:20". Veri yoksa "Veri yüklenmedi"; API cevap vermiyorsa "API'ye ulaşılamıyor"; API veritabanına bağlanamıyorsa (503) "Veritabanına ulaşılamıyor".
@@ -210,6 +210,16 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 - **Akış:** kurallar sunucuda değerlendirilir (K-95); kural değişince ekrandaki satırlar yeni parça gelene kadar kalır, yer tutucu görünmez.
 - **Çizim:** veri satırı belleğe alınır (memo): kaydırmada yalnız yeni giren ya da değişen satırlar çizilir, kural biçimi ve ipucu yalnız onlarda kurulur; kural özetleri kural başına bir kez, sayı biçimlendiricisi ondalık sayısı başına bir kez kurulur. Tarayıcıda ölçüm (1.6 demosu, bu geliştirme bilgisayarı, görünmez Chrome, 5 tekrarın ortancası; derleme / geliştirme modu): ilk satır kuralsız 293 / 647 ms, 5 kuralla 337 / 760 ms; kaydırma adımı kuralsız 21 / 90 ms, kurallı 21 / 92 ms. Geliştirme modu React'ın denetimleri nedeniyle birkaç kat yavaştır; kurulumdaki uygulama derlemedir.
 
+## Giriş ve oturum (2.1, K-97, K-98; fonksiyon 89)
+
+- **Yer:** `app/web/src/auth/`. Giriş sayfası `/giris` kabuğun dışındadır; diğer bütün adresler oturum kapısından (`AuthGate`) geçer. Açılışta `GET /api/auth/me`: oturum yoksa giriş sayfasına (dönülecek adres `?next=` ile, yalnız uygulama içi adres), şifre değişikliği bekliyorsa zorunlu şifre penceresine, değilse kabuğa.
+- **Giriş sayfası (mockup m24f-0738):** logo, "Kullanıcı adı", "Şifre", tek "Giriş" düğmesi. Hata şifre alanının altında: "Kullanıcı adı ya da şifre hatalı. 2 deneme kaldı; 5 hatalı girişte hesap 15 dk kilitlenir." (hesabın varlığı belli olmaz); kilitli ve kapalı hesapta sunucunun mesajı. Hatadan sonra şifre alanı boşalır. Not satırı "Şifrenizi unuttuysanız yöneticinize başvurun · beni hatırla yok"; altta "şirket içi kurulum · v0.15.0" (sürüm `/api/health`'ten; kurum adı lisansla, 2.4). Çıkış ya da zaman aşımından sonra üstte bilgi kutusu.
+- **Zorunlu şifre değişikliği (mockup m24f-0739):** bulanık arka plan üstünde "Şifrenizi belirleyin"; alt başlık sebep ve "politika sistem sahibi tarafından belirlenir". Alanlar: Geçici şifre (süre dolduysa "Mevcut şifre"), Yeni şifre, Yeni şifre (tekrar). Politika listesi yazarken ✓ / ✗: en az N karakter, harf ve rakam (politikada açıksa), kullanıcı adını içermez (Türkçe harf duyarsız), son N şifreden farklı (sunucuda özetle denetlenir: kaydedene kadar nötr "kaydederken denetlenir", sunucu reddederse ✗), tekrar alanı eşleşiyor. Eşleşmezse alan altında "Şifreler henüz eşleşmiyor.". "Kaydet ve devam et" kurallar sağlanınca açılır. Vazgeç yok, Esc kapatmaz.
+- **Kullanıcı menüsü:** ad soyad, kullanıcı adı ve rol; yazı boyutu; "Şifre değiştir" (aynı pencere, Vazgeç'li; başarıda "Şifreniz değiştirildi."); "Çıkış".
+- **Hareketsizlik (mockup m24f-0740):** yalnız kullanıcı girdisi etkinliktir (tuş, tıklama, tekerlek, dokunma; fare gezdirmek değil). Girdi olunca sunucuya en çok dakikada bir etkinlik bildirilir (`POST /api/auth/activity`); süre bu bildirimden ölçülür, böylece arayüz ve sunucu aynı anda doldurur. Arka plan istekleri (iş göstergesi, veri versiyonu) oturumu uzatmaz. Sekmeler etkinliği, girişi ve çıkışı paylaşır (BroadcastChannel). Sınırdan `SessionWarningMinutes` önce (25. dakika) pencere: "Oturumunuz kapanmak üzere", "25 dakikadır işlem yapılmadı", büyük geri sayım (Inter), "hareketsizlik · 30 dk sınırı"; "Şimdi çıkış yap" · "Devam et" (birincil, odakta). Pencere açılmadan sunucuya sorulur: başka sekmede çalışılıyorsa açılmaz. Pencere açıkken yalnız "Devam et" süreyi uzatır; Esc kapatmaz. Süre dolunca giriş sayfası ve "Oturumunuz 30 dakika hareketsizlik nedeniyle kapandı.". Kaydedilmemiş planlama taslağı kutusu taslak tutan ilk ekranla gelir.
+- **Oturum biterse:** herhangi bir istek 401 (`not_authenticated`, `session_expired`) dönerse ya da WebSocket 4401 ile kapanırsa (çıkış, şifre değişikliği, zaman aşımı) giriş sayfasına dönülür; WebSocket yeniden bağlanmaz.
+- **Testlerde** uygulama başlangıç kullanıcısıyla açılır (`App initialMe`); gerçek açılışta kullanıcı her zaman sunucudan gelir.
+
 ## Durum
 
 | Parça | Durum |
@@ -221,3 +231,4 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 | Görünüm: kayıtlı görünüm, kolon düzeni, gruplama, filtre etiketleri, boş | uygulandı (1.4) |
 | Dışa aktarım: Excel'e aktarım, kapsam penceresi, arka plan ve bildirim | uygulandı (1.5) |
 | Koşullu biçimlendirme: kurallar, palet, okunurluk, ikon, Excel'e taşınma | uygulandı (1.6) |
+| Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |

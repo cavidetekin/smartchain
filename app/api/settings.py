@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     job_watch_seconds: float = 1.0
     # Arka planda hazırlanan Excel dosyaları (K-93); motor servisi yazar, API okur, süresi geçince servis siler.
     export_dir: Path = ROOT / "exports"
+    # Oturum çerezi (K-97) yalnız HTTPS'te gider. HTTPS'siz test kurulumunda ve testlerde false.
+    session_cookie_secure: bool = True
+    # Durum değiştiren isteklerde izin verilen Origin'ler, virgülle (ör. http://localhost:5173). Boşsa Origin'in
+    # host'u isteğin Host'u olmalı (K-97).
+    allowed_origins: str = ""
+
+    def origins(self) -> set[str]:
+        return {o.strip().rstrip("/").lower() for o in self.allowed_origins.split(",") if o.strip()}
 
 
 def config_files() -> tuple[Path, ...]:

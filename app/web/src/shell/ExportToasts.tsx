@@ -12,26 +12,24 @@ export type ExportItem = TrackedExport & { job?: Job };
 /** "Hazır · 4,8 MB" → "4,8 MB" (iş ilerlemesi, services/export.run_job). */
 export const readySize = (progress: string | null | undefined) => progress?.split(" · ")[1] ?? "";
 
-export function ExportToasts({ userId, items, onDismiss }: {
-  userId: number; items: ExportItem[]; onDismiss(jobId: number): void;
-}) {
+export function ExportToasts({ items, onDismiss }: { items: ExportItem[]; onDismiss(jobId: number): void }) {
   const shown = items.filter((e) => e.job && (e.job.status === JOB_DONE || e.job.status === JOB_FAILED));
   if (!shown.length) return null;
   return (
     <div className="sc-toasts" role="region" aria-label={tr.jobs.notifications}>
-      {shown.map((e) => <ExportToast key={e.jobId} userId={userId} item={e} onDismiss={() => onDismiss(e.jobId)} />)}
+      {shown.map((e) => <ExportToast key={e.jobId} item={e} onDismiss={() => onDismiss(e.jobId)} />)}
     </div>
   );
 }
 
-function ExportToast({ userId, item, onDismiss }: { userId: number; item: ExportItem; onDismiss(): void }) {
+function ExportToast({ item, onDismiss }: { item: ExportItem; onDismiss(): void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const failed = item.job?.status === JOB_FAILED;
   const download = async () => {
     setBusy(true);
     try {
-      await api.downloadExport(userId, item.jobId, item.fileName);
+      await api.downloadExport(item.jobId, item.fileName);
       onDismiss();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

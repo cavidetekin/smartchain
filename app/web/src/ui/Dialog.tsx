@@ -1,11 +1,14 @@
 // Pencere ve onay penceresi (K-85: onay penceresi ilk kullanan ekranda; 1.4 kayıtlı görünüm). Kipli: arka plan
 // örtülür, odak pencerenin içinde döner, Esc ve "Vazgeç" kapatır, açılınca ilk alan ya da birincil düğme odaklanır.
+// Atlanamaz pencerede (dismissible=false; 2.1 zorunlu şifre değişikliği, zaman aşımı) Esc kapatmaz; ikincil düğme
+// yalnız cancelLabel verilirse görünür.
 import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from "react";
 
 import { tr } from "../i18n/tr";
 import { Button } from "./Button";
 
-export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, wide }: {
+export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, wide,
+                         dismissible = true, cancelLabel, blurred }: {
   title: string;
   /** Başlığın altında sessiz satır (ör. kaynak ve satır sayısı). */
   subtitle?: ReactNode;
@@ -18,6 +21,12 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   danger?: boolean;
   submitDisabled?: boolean;
   wide?: boolean;
+  /** false: Esc kapatmaz, Vazgeç yok (cancelLabel verilirse o düğme onClose'u çağırır). */
+  dismissible?: boolean;
+  /** İkincil düğmenin metni (ör. "Şimdi çıkış yap"); verilirse ikincil düğme biçiminde. */
+  cancelLabel?: string;
+  /** Arka plan bulanık (sayfa etkileşimi kilitli; 2.1). */
+  blurred?: boolean;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLFormElement>(null);
@@ -34,7 +43,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       e.stopPropagation();
-      onClose();
+      if (dismissible) onClose();
     } else if (e.key === "Tab" && ref.current) {  // odak pencerede döner
       const items = [...ref.current.querySelectorAll<HTMLElement>("input, select, textarea, button:not([disabled])")];
       const [first, last] = [items[0], items[items.length - 1]];
@@ -53,7 +62,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   };
 
   return (
-    <div className="sc-dialog-backdrop">
+    <div className={`sc-dialog-backdrop${blurred ? " is-blurred" : ""}`}>
       <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
             onKeyDown={onKey} onSubmit={submit}>
         <div>
@@ -62,7 +71,9 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
         </div>
         <div className="sc-dialog-body">{children}</div>
         <div className="sc-dialog-actions">
-          <Button variant="ghost" onClick={onClose}>{tr.ui.cancel}</Button>
+          {(dismissible || cancelLabel) && (
+            <Button variant={cancelLabel ? "secondary" : "ghost"} onClick={onClose}>{cancelLabel ?? tr.ui.cancel}</Button>
+          )}
           <Button type="submit" variant={danger ? "danger" : "primary"} busy={busy} disabled={submitDisabled}>{submitLabel}</Button>
         </div>
       </form>

@@ -441,7 +441,7 @@ export function DataTable({ list }: { list: string }) {
 
   /** Ekrandaki görünüm durumu + kapsam (K-91): anlık dosya iner, arka plandaki iş bildirimle izlenir. */
   const runExport = async (scope: ExportScope) => {
-    const result = await listApi(list).export(userId, {
+    const result = await listApi(list).export({
       fields: s.order, widths: s.widths, sort: s.sort, filters: s.filters, group_by: s.groupBy, aggregates, scope,
       rules: active,
     });

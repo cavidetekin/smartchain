@@ -12,7 +12,7 @@ def test_list_and_get(db_client, db_session, job_settings, test_users):
     job_id = queue.enqueue(db_session, TYPE_WORKSPACE, CHANNEL_INTERACTIVE, user)
     queue.enqueue(db_session, TYPE_WORKSPACE, CHANNEL_INTERACTIVE, test_users[1])
 
-    r = db_client.get("/api/jobs", params={"user_id": user})
+    r = db_client.get("/api/jobs")  # oturumdaki kullanıcının işleri (K-97)
     assert r.status_code == 200
     body = r.json()
     assert [j["id"] for j in body["jobs"]] == [job_id]

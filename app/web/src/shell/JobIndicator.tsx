@@ -21,7 +21,7 @@ export function progressRatio(progress: string | null | undefined): number | nul
   return all > 0 ? Math.min(1, done / all) : null;
 }
 
-export function JobIndicator({ userId, onJob }: { userId: number; onJob?: (job: Job) => void }) {
+export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
   const [jobs, setJobs] = useState<Map<number, Job>>(new Map());
   const [conn, setConn] = useState<ConnectionState>("reconnecting");
   const [open, setOpen] = useState(false);
@@ -33,18 +33,18 @@ export function JobIndicator({ userId, onJob }: { userId: number; onJob?: (job: 
 
   const refresh = useCallback(async () => {
     try {
-      const r = await api.jobs(userId);
+      const r = await api.jobs();
       setJobs(new Map(r.jobs.map((j) => [j.id, j])));
       r.jobs.forEach((j) => onJobRef.current?.(j));
     } catch {
       // bağlantı yok; gösterge son bilinen durumda kalır
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     refresh();
     const handle = connect(
-      socketUrl(`/api/ws?user_id=${userId}`),
+      socketUrl("/api/ws"),  // oturum çerezle (K-97)
       (msg) => {
         if (msg.type === "job") {
           const job = msg.job as Job;
@@ -58,7 +58,7 @@ export function JobIndicator({ userId, onJob }: { userId: number; onJob?: (job: 
       },
     );
     return () => handle.close();
-  }, [userId, refresh]);
+  }, [refresh]);
 
   useEffect(() => {
     if (conn === "connected") return;
@@ -80,7 +80,7 @@ export function JobIndicator({ userId, onJob }: { userId: number; onJob?: (job: 
   const download = async (j: Job) => {
     setDownloadError(null);
     try {
-      await api.downloadExport(userId, j.id, "smartchain.xlsx");
+      await api.downloadExport(j.id, "smartchain.xlsx");
     } catch (e) {
       setDownloadError(e instanceof Error ? e.message : String(e));
     }

@@ -16,3 +16,5 @@ exports/
 .pytest_cache/
 installer/cache/
 data/synthetic/v0/
+# Geliştirme sırları (sentetik kullanıcıların geçici şifreleri; docs/11)
+.local/

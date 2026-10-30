@@ -16,6 +16,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.api.db import get_session
+from app.api.deps import session_user
 from app.api.main import create_app
 from app.api.repositories import export as export_repo
 from app.api.services import export as export_service
@@ -27,6 +28,8 @@ from app.jobs.constants import (CHANNEL_EXPORT, CHANNEL_INTERACTIVE, STATUS_DONE
 from app.jobs.settings import JobSettings
 
 from test_lists_api import all_rows, api  # noqa: F401  (fikstür ve yardımcı)
+from auth_helpers import auth
+from conftest import FAKE_USER
 
 pytestmark = pytest.mark.db
 
@@ -55,7 +58,7 @@ def setting(db_engine, key, value):
 
 
 def export(api, user, **body):
-    return api.post(f"/api/materials/export?user_id={user}", json={"fields": FIELDS, **body})
+    return api.post("/api/materials/export", headers=auth(user), json={"fields": FIELDS, **body})
 
 
 def sheet(content: bytes):
@@ -150,8 +153,7 @@ def test_trace_failure_gives_no_file(api, user, monkeypatch):
 def test_validation_and_limits(api, user, db_engine):
     r = export(api, user, fields=["Secret"])
     assert r.status_code == 422 and r.json()["error"]["code"] == "validation"
-    assert api.post(f"/api/materials/export?user_id={user}", json={"fields": []}).status_code == 422
-    assert export(api, 987654).status_code == 404
+    assert api.post("/api/materials/export", headers=auth(user), json={"fields": []}).status_code == 422
     setting(db_engine, "ExportMaxRows", 10)
     r = export(api, user)
     assert r.status_code == 422 and r.json()["error"]["code"] == "export_too_large"
@@ -164,8 +166,9 @@ def test_database_unavailable_is_503():
     app = create_app()
     app.dependency_overrides[get_session] = lambda: None
     c = TestClient(app, raise_server_exceptions=False)
-    assert c.post("/api/materials/export?user_id=1", json={"fields": ["Code"]}).status_code == 503
-    assert c.get("/api/exports/1/file?user_id=1").status_code == 503
+    app.dependency_overrides[session_user] = lambda: FAKE_USER
+    assert c.post("/api/materials/export", json={"fields": ["Code"]}).status_code == 503
+    assert c.get("/api/exports/1/file").status_code == 503
 
 
 def enqueue_big(api, user, db_engine):
@@ -182,7 +185,7 @@ def test_above_threshold_becomes_export_job(api, user, db_engine, db_session):
     assert (job["JobType"], job["Channel"], job["Status"], job["RequestedBy"]) == (TYPE_EXPORT, CHANNEL_EXPORT,
                                                                                       STATUS_QUEUED, user)
     assert json.loads(job["Payload"])["request"]["filters"][0]["value"] == "zzz"
-    r = api.get(f"/api/exports/{out['job_id']}/file?user_id={user}")
+    r = api.get(f"/api/exports/{out['job_id']}/file", headers=auth(user))
     assert r.status_code == 409 and r.json()["error"]["code"] == "export_not_ready"
     assert audits(db_engine, user) == []  # iz dosya hazır olunca
 
@@ -200,19 +203,19 @@ def test_export_job_writes_file_audit_and_download(api, user, db_engine, db_sess
     [(_, key, value)] = audits(db_engine, user)
     assert key == out["file_name"] and json.loads(value)["background"] is True
 
-    r = api.get(f"/api/exports/{job['Id']}/file?user_id={user}")
+    r = api.get(f"/api/exports/{job['Id']}/file", headers=auth(user))
     assert r.status_code == 200 and r.headers["content-type"] == export_service.XLSX
     assert out["file_name"] in r.headers["content-disposition"] or "filename*=" in r.headers["content-disposition"]
     _, rows = sheet(r.content)
     assert len(rows) - 1 == out["rows"]
 
-    r = api.get(f"/api/exports/{job['Id']}/file?user_id={test_users[1]}")
+    r = api.get(f"/api/exports/{job['Id']}/file", headers=auth(test_users[1]))
     assert r.status_code == 403 and r.json()["error"]["code"] == "export_not_owner"
     with db_engine.begin() as c:
         c.execute(text("UPDATE adm.Job SET EndedAt = DATEADD(hour, -25, EndedAt) WHERE Id = :id"), {"id": job["Id"]})
-    r = api.get(f"/api/exports/{job['Id']}/file?user_id={user}")
+    r = api.get(f"/api/exports/{job['Id']}/file", headers=auth(user))
     assert r.status_code == 410 and r.json()["error"]["code"] == "export_expired"
-    assert api.get(f"/api/exports/987654/file?user_id={user}").status_code == 404
+    assert api.get("/api/exports/987654/file", headers=auth(user)).status_code == 404
 
 
 def test_export_job_failure_marks_job_failed(api, user, db_engine, db_session, monkeypatch):

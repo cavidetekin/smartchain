@@ -271,7 +271,7 @@ describe("sanal gövde (docs/12 performans hedefi, U-23)", () => {
       return parseFloat(spacer.style.height) / (100_000 - lastIndex - 1);
     };
     expect(rowPx()).toBe(28);
-    await user.click(screen.getByRole("button", { name: "Kullanıcı #3" }));
+    await user.click(screen.getByRole("button", { name: /^Kullanıcı menüsü/ }));
     await user.click(screen.getByRole("radio", { name: /Büyük/ }));
     await waitFor(() => expect(rowPx()).toBe(34));
   });
