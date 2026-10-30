@@ -8,6 +8,7 @@ import { IdleWatch } from "../auth/IdleWatch";
 import { applyFontSize, type FontSize, userPrefs } from "../prefs";
 import { ContextBar } from "./ContextBar";
 import { type ExportItem, ExportToasts } from "./ExportToasts";
+import { ForbiddenNotice } from "./ForbiddenNotice";
 import { ShellContext, type TrackedExport } from "./ShellContext";
 import { Sidebar } from "./Sidebar";
 
@@ -74,6 +75,7 @@ export function Shell() {
         </main>
       </div>
       <ExportToasts items={exports} onDismiss={dismissExport} />
+      <ForbiddenNotice />
       <IdleWatch me={me} />
     </div>
     </ShellContext.Provider>

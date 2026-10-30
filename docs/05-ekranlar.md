@@ -23,7 +23,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 433–483 Prensip · K Yönetim ve sistem
 - **Kararlar**
   - K-42  Manuel planlama dört görünümle yapılır: ürün bazlı, kaynak bazlı, sipariş bazlı ve bucket bazlı Gantt (sürükle-bırak). Dördü aynı planın farklı yüzleridir.
-  - K-43  Planlama ekranları bir çalışmanın içinde açılır; end user onaylı planı salt okunur görür.
+  - K-43  Planlama ekranları bir çalışmanın içinde açılır; End user onaylı planı salt okunur görür.
 - **Açık konular**
   - A-19  Fonksiyon listesi, prensipleri ve mockupları ilk taslak; öneri olanlar konuşulacak.
   - A-20  Mockuplar ilk taslak; ekran ekran gözden geçirilecek.
@@ -84,7 +84,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **22 · Kullanıcılar:** Kullanıcı açma, kapatma, rol atama, şifre sıfırlama.
 - **23 · Entegrasyon ve zamanlanmış işler:** API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması.
 - **24 · Sistem sağlığı:** Son çalışmalar, iş kuyruğu, hatalar, çözüm süreleri; destek paketi dışa alma.
-- **25 · Sistem sahibi ayarları:** Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı), lisans, sürüm.
+- **25 · System owner ayarları:** Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı), lisans, sürüm.
 
 ### Fonksiyon listesi
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon listesi · 1/8</sub>
@@ -219,7 +219,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **76 · Yayın öncesi kontrol:** Veri yaşı, daha yeni veri, çakışan yayın, bekleyen karar, kritik uyarı.
 - **77 · Onaylı plan yayınlama:** Yalnız çalışmadan; yeni plan versiyonu oluşur.
-- **78 · Varsayılan yap:** Raporlar ve end user bu planı görür.
+- **78 · Varsayılan yap:** Raporlar ve End user bu planı görür.
 - **79 · Yayın notu:** Yayına açıklama eklenir.
 - **80 · Plan karşılaştırma:** Onaylı plan, senaryo ve çalışma arasında fark.
 - **81 · Onaylı plan saklama:** Onaylı plan ve veri versiyonu silinmez.
@@ -230,7 +230,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **83 · Uyarı iş listesi:** Filtre, not, atama, izleme, kapatma.
 - **84 · Uyarıdan kayda gitme:** Uyarıdan ilgili ekrana ve kayda geçiş.
 - **85 · Rapor görüntüleme:** Kaynak: onaylı plan ya da senaryo.
-- **86 · Excel'e aktarma:** Her tablo ve rapor; end user da kullanabilir.
+- **86 · Excel'e aktarma:** Her tablo ve rapor; End user da kullanabilir.
 - **87 · Dışa aktarım izi:** Kim hangi raporu hangi plandan aldı.
 
 ### Fonksiyon listesi
@@ -240,13 +240,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **88 · Kullanıcı yönetimi:** Açma, kapatma, rol atama, şifre sıfırlama.
 - **89 · Giriş ve oturum:** Yerel kullanıcıyla giriş, şifre değiştirme, oturum zaman aşımı.
-- **90 · Rol bazlı yetki:** Sistem sahibi, admin, key user, end user; her fonksiyonda kontrol.
+- **90 · Rol bazlı yetki:** System owner, Admin, Key user, End user; her fonksiyonda kontrol.
 - **91 · Entegrasyon tanımı:** Bağlantı, test, alan eşleme, servis hesabı.
 - **92 · Zamanlanmış işler:** Veri çekme, senaryolar, ham veri ve senaryo temizliği.
 - **93 · İş kuyruğu yönetimi:** Çalışan ve bekleyen işler; iş iptal edilebilir. (öneri)
 - **94 · Sistem sağlığı:** Son çalışmalar, hatalar, süreler, disk.
 - **95 · Destek paketi:** Log ve ayarlar paket olarak dışa alınır; uzaktan erişim olmadığı için.
-- **96 · Sistem sahibi ayarları:** Veri sözlüğü (alan sınıfı, öncelik, elle ezme), motor ayarları, lisans.
+- **96 · System owner ayarları:** Veri sözlüğü (alan sınıfı, öncelik, elle ezme), motor ayarları, lisans.
 - **97 · Sürüm güncelleme:** Kapalı ağda kurulum paketiyle. (öneri)
 - **98 · Denetim izi:** Tüm veri, parametre, plan ve kullanıcı değişikliklerinin merkezi kaydı. (öneri)
 
@@ -438,7 +438,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kontrol listesi:** Veri yaşı, yeni veri, bekleyen kararlar ve kritik uyarılar yayından önce kontrol edilir.
 - **Çakışma uyarısı:** Çalışma açıldıktan sonra başka yayın yapıldıysa açıkça uyarılır.
 - **Fark özeti:** Yayınlanacak planın mevcut onaylı plandan farkı görünür.
-- **Varsayılan yap:** Yayınlanan plan istenirse varsayılan olur; raporlar ve end user onu görür.
+- **Varsayılan yap:** Yayınlanan plan istenirse varsayılan olur; raporlar ve End user onu görür.
 
 ### Uyarı iş listesi
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 20/25</sub>
@@ -457,7 +457,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Hazır raporlar:** Doluluk, malzeme, gecikme, satın alma, üretim, stok ve proje raporları.
 - **Kaynak seçimi:** Rapor onaylı plandan ya da bir senaryodan alınır.
-- **Excel’e aktarım:** Her rapor Excel’e indirilir; end user da indirebilir.
+- **Excel’e aktarım:** Her rapor Excel’e indirilir; End user da indirebilir.
 - **İz:** Kim hangi raporu hangi plandan aldı, listede görünür.
 
 ### Kullanıcılar
@@ -466,7 +466,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![Kullanıcılar](mockups/m24e-0331-kullanicilar.png)
 
 - **Yerel kullanıcı:** Kullanıcılar uygulamada açılır; kapalı ağda dış dizine bağlanmaz.
-- **Dört rol:** Sistem sahibi, admin, key user ve end user; yetkiler role bağlı.
+- **Dört rol:** System owner, Admin, Key user ve End user; yetkiler role bağlı.
 - **End user:** Yalnız görüntüler ve Excel’e indirir; hiçbir fonksiyonu çalıştırmaz.
 - **Yaşam döngüsü:** Kullanıcı açma, kapatma, rol değiştirme, şifre sıfırlama.
 
@@ -490,12 +490,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Hatalar ve çözüm:** Hata, bileşen ve sistemin nasıl toparladığı listelenir.
 - **Destek paketi:** Kapalı ağda uzaktan erişim yok; log ve ayarlar paket olarak dışa alınır.
 
-### Sistem sahibi ayarları
+### System owner ayarları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 25/25</sub>
 
-![Sistem sahibi ayarları](mockups/m24e-0334-sistem-sahibi-ayarlari.png)
+![System owner ayarları](mockups/m24e-0334-sistem-sahibi-ayarlari.png)
 
-- **Adminin ötesinde:** Bu ekranı yalnız sistem sahibi (bizim hesabımız) görür.
+- **Admin'in ötesinde:** Bu ekranı yalnız System owner (bizim hesabımız) görür.
 - **Motor ayarları:** Çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı.
 - **Veri sözlüğü:** Alan sınıfı, kaynak önceliği, elle ezme ve çalışmada değiştirilebilirlik.
 - **Lisans ve sürüm:** Kurulum tipi, sürüm ve lisans bilgisi.

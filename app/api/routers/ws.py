@@ -1,11 +1,15 @@
 """WS /api/ws: anlık bildirim kanalı (fonksiyon 48). Oturumla açılır (K-97): çerez ve Origin el sıkışmada denetlenir;
-oturum yoksa ya da şifre değişikliği bekliyorsa bağlantı kabul edilmez (403). Oturum bitince soket 4401 ile kapanır."""
+oturum yoksa, şifre değişikliği bekliyorsa ya da rolün 48'de (İş bitti bildirimi) okuma yetkisi yoksa bağlantı kabul
+edilmez (403; K-100). Oturum bitince soket 4401 ile kapanır."""
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 
 from ..deps import COOKIE, authenticate, origin_allowed
 from ..errors import AppError
 from ..notify import SESSION_CLOSED
+from ..permissions import Access, allows
+
+PERMISSION = (48, Access.READ)  # kapsam testi (tests/test_permissions.py) buradan okur
 
 router = APIRouter()
 
@@ -20,7 +24,7 @@ async def notifications(websocket: WebSocket) -> None:
         user = await run_in_threadpool(authenticate, websocket.cookies.get(COOKIE))
     except AppError:
         user = None
-    if user is None or user.must_change_password:
+    if user is None or user.must_change_password or not allows(user.role, *PERMISSION):
         await websocket.close(code=SESSION_CLOSED)  # kabul edilmeden kapanır: el sıkışma 403
         return
     await websocket.accept()
@@ -34,3 +38,6 @@ async def notifications(websocket: WebSocket) -> None:
         pass
     finally:
         manager.remove(user.id, websocket)
+
+
+notifications.permission = PERMISSION

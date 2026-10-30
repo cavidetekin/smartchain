@@ -99,7 +99,7 @@ python -m app.data.synthetic check                                     # sayıla
 
 | Kullanıcı adı | Ad soyad | Rol |
 |---|---|---|
-| `sahip` | Sistem Sahibi | Sistem sahibi |
+| `sahip` | System owner | System owner |
 | `yonetici` | Ayşe Yönetici | Admin |
 | `planlama` | Mert Planlama | Key user |
 | `izleme` | Deniz İzleme | End user |

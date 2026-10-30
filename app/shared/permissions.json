@@ -1,0 +1,1267 @@
+{
+  "source": "app/api/permissions.py",
+  "roles": [
+    "System owner",
+    "Admin",
+    "Key user",
+    "End user"
+  ],
+  "groups": [
+    {
+      "key": "A",
+      "letter": "A",
+      "name": "Veri alma",
+      "first": 1,
+      "last": 9,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "B",
+      "letter": "B",
+      "name": "Ana veri ve kurallar",
+      "first": 10,
+      "last": 21,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "key": "C",
+      "letter": "C",
+      "name": "Parametre",
+      "first": 22,
+      "last": 28,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "D",
+      "letter": "D",
+      "name": "Planlama motoru",
+      "first": 29,
+      "last": 39,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "E",
+      "letter": "E",
+      "name": "Senaryo ve çalışma",
+      "first": 40,
+      "last": 49,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "F",
+      "letter": "F",
+      "name": "Manuel planlama",
+      "first": 50,
+      "last": 63,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "G",
+      "letter": "G",
+      "name": "Malzeme ve öneriler",
+      "first": 64,
+      "last": 69,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "key": "H",
+      "letter": "H",
+      "name": "Analiz",
+      "first": 70,
+      "last": 75,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "key": "I",
+      "letter": "I",
+      "name": "Yayın",
+      "first": 76,
+      "last": 81,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "J",
+      "letter": "J",
+      "name": "Takip ve rapor",
+      "first": 82,
+      "last": 87,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "key": "K1",
+      "letter": "K",
+      "name": "Kullanıcı, entegrasyon, işler, sağlık",
+      "first": 88,
+      "last": 95,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "K2",
+      "letter": "K",
+      "name": "System owner ayarları, sürüm",
+      "first": 96,
+      "last": 97,
+      "levels": {
+        "System owner": "full",
+        "Admin": "none",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "K3",
+      "letter": "K",
+      "name": "Denetim izi",
+      "first": 98,
+      "last": 98,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "self",
+        "End user": "none"
+      }
+    }
+  ],
+  "functions": [
+    {
+      "no": 1,
+      "name": "Veri çekme",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 2,
+      "name": "Excel şablonu indirme",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 3,
+      "name": "Excel ile yükleme",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 4,
+      "name": "Doğrulama",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 5,
+      "name": "Tam yükleme",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 6,
+      "name": "Kısmi yükleme",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 7,
+      "name": "Veri versiyonlama",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 8,
+      "name": "Yükleme geçmişi",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 9,
+      "name": "Ham veri temizliği",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 10,
+      "name": "Ana veri görüntüleme",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 11,
+      "name": "Değerin kaynağını gösterme",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 12,
+      "name": "Elle değer girme",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 13,
+      "name": "Elle değeri kaldırma",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 14,
+      "name": "Değişiklik geçmişi",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 15,
+      "name": "Excel ile toplu düzeltme (öneri)",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 16,
+      "name": "Veri kuralı tanımlama",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 17,
+      "name": "Kural önizleme",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 18,
+      "name": "Kural sıralama ve aç / kapa",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 19,
+      "name": "Kural uygulama",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 20,
+      "name": "Veri kalitesi kontrolü",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 21,
+      "name": "Kalite düzeltme aksiyonu",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 22,
+      "name": "Parametre seti",
+      "group": "C",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 23,
+      "name": "Zaman yapısı",
+      "group": "C",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 24,
+      "name": "Kapasite parametreleri",
+      "group": "C",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 25,
+      "name": "Alokasyon ve öncelik kuralı",
+      "group": "C",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 26,
+      "name": "Uyarı eşikleri",
+      "group": "C",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 27,
+      "name": "Gece senaryo tanımı",
+      "group": "C",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 28,
+      "name": "Senaryo sırası ve aç / kapa",
+      "group": "C",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 29,
+      "name": "Ön hesap",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 30,
+      "name": "MRP patlatma",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 31,
+      "name": "Model kurma",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 32,
+      "name": "Çözücü adaptörü",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 33,
+      "name": "Kurallı yerleştirme ve sezgisel",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 34,
+      "name": "Süre bütçesi",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 35,
+      "name": "Son hesap",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 36,
+      "name": "Mevcut arz önerileri",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 37,
+      "name": "Uyarı üretme",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 38,
+      "name": "Metrik hesaplama",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 39,
+      "name": "Açıklama üretme",
+      "group": "D",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 40,
+      "name": "Gece akışı",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 41,
+      "name": "Senaryoyu yeniden çalıştırma (öneri)",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 42,
+      "name": "Senaryo karşılaştırma",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 43,
+      "name": "Çalışma açma",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 44,
+      "name": "Değişiklik izi",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 45,
+      "name": "Değişikliği geri alma",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 46,
+      "name": "Yeniden hesap",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 47,
+      "name": "Eş zamanlı çalışma sınırı",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 48,
+      "name": "İş bitti bildirimi",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "self"
+      }
+    },
+    {
+      "no": 49,
+      "name": "Çalışma kapatma",
+      "group": "E",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 50,
+      "name": "Ürün bazlı · üretim miktarı girme",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 51,
+      "name": "Ürün bazlı · talebe eşitle",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 52,
+      "name": "Kaynak bazlı · yük taşıma",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 53,
+      "name": "Kaynak bazlı · alternatif kaynağa aktarma",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 54,
+      "name": "Kaynak bazlı · fasona aktarma",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 55,
+      "name": "Geçici kaynak parametresi",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 56,
+      "name": "Sipariş bazlı · öncelik değiştirme",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 57,
+      "name": "Sipariş bazlı · hedef tarih ve koruma",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 58,
+      "name": "Manuel pegging",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 59,
+      "name": "Gantt · sürükle-bırak",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 60,
+      "name": "Gantt · bölme ve birleştirme",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 61,
+      "name": "Kilitleme ve kilit kaldırma",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 62,
+      "name": "Anlık etki önizlemesi",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 63,
+      "name": "Dondurulmuş dönem koruması",
+      "group": "F",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "owner",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 64,
+      "name": "Malzeme planı",
+      "group": "G",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 65,
+      "name": "Eksik filtresi",
+      "group": "G",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 66,
+      "name": "Planlı sipariş kararı",
+      "group": "G",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 67,
+      "name": "Toplu karar",
+      "group": "G",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 68,
+      "name": "Mevcut arz önerisi kararı",
+      "group": "G",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 69,
+      "name": "Önerileri dışa aktarma",
+      "group": "G",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 70,
+      "name": "Pegging",
+      "group": "H",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 71,
+      "name": "Gecikme nedeni",
+      "group": "H",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 72,
+      "name": "Termin sorgusu",
+      "group": "H",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 73,
+      "name": "Olay senaryosu",
+      "group": "H",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 74,
+      "name": "Ürün simülasyonu",
+      "group": "H",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 75,
+      "name": "Olayı çalışmaya uygulama",
+      "group": "H",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 76,
+      "name": "Yayın öncesi kontrol",
+      "group": "I",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 77,
+      "name": "Onaylı plan yayınlama",
+      "group": "I",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 78,
+      "name": "Varsayılan yap",
+      "group": "I",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 79,
+      "name": "Yayın notu",
+      "group": "I",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 80,
+      "name": "Plan karşılaştırma",
+      "group": "I",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 81,
+      "name": "Onaylı plan saklama",
+      "group": "I",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 82,
+      "name": "Sabah özeti",
+      "group": "J",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 83,
+      "name": "Uyarı iş listesi",
+      "group": "J",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 84,
+      "name": "Uyarıdan kayda gitme",
+      "group": "J",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 85,
+      "name": "Rapor görüntüleme",
+      "group": "J",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 86,
+      "name": "Excel'e aktarma",
+      "group": "J",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "full"
+      }
+    },
+    {
+      "no": 87,
+      "name": "Dışa aktarım izi",
+      "group": "J",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "self"
+      }
+    },
+    {
+      "no": 88,
+      "name": "Kullanıcı yönetimi",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 89,
+      "name": "Giriş ve oturum",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "full"
+      }
+    },
+    {
+      "no": 90,
+      "name": "Rol bazlı yetki",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "read",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 91,
+      "name": "Entegrasyon tanımı",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 92,
+      "name": "Zamanlanmış işler",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 93,
+      "name": "İş kuyruğu yönetimi (öneri)",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 94,
+      "name": "Sistem sağlığı",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 95,
+      "name": "Destek paketi",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 96,
+      "name": "System owner ayarları",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "none",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 97,
+      "name": "Sürüm güncelleme (öneri)",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "none",
+        "Key user": "none",
+        "End user": "none"
+      }
+    },
+    {
+      "no": 98,
+      "name": "Denetim izi (öneri)",
+      "group": "K",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "self",
+        "End user": "none"
+      }
+    }
+  ],
+  "exceptions": {
+    "48": "End user kendi işlerini görür: arka planda hazırlanan Excel'in bildirimi ve indirmesi (K-99)",
+    "86": "Excel'e aktarma End user'ın hakkı (K-99)",
+    "87": "End user yalnız kendi dışa aktarım kayıtlarını görür",
+    "89": "Giriş ve oturum herkese açık",
+    "90": "Admin matrisi görür, değiştiremez (Faz 1'de matris sabit)"
+  }
+}

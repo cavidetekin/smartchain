@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Smartchain API", version=__version__, redoc_url=None,
                   docs_url="/api/docs" if settings.enable_docs else None,
-                  openapi_url="/api/openapi.json", lifespan=lifespan)
+                  openapi_url="/api/openapi.json" if settings.enable_docs else None, lifespan=lifespan)
     app.state.notifier = ConnectionManager()
     app.add_middleware(TraceMiddleware)
     install_error_handlers(app)

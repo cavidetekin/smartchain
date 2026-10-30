@@ -137,11 +137,13 @@ export function ViewBar({ views, state, onClearSort }: { views: Views; state: Ta
 
   const owner = Boolean(current?.is_owner);
   const isDefault = views.defaultId === views.currentId;
-  const items: { label: string; disabled: boolean; strong?: boolean; run(): void }[] = [
-    { label: T.save, disabled: !(dirty && owner), strong: dirty && owner, run: () => views.save(state) },
+  // Nesne bağlamı (K-100): başkasının görünümü salt okunur; Kaydet ve Sil pasif, nedeni araç ipucunda.
+  const notOwner = current && !owner ? tr.authz.viewOwnerOnly : undefined;
+  const items: { label: string; disabled: boolean; strong?: boolean; reason?: string; run(): void }[] = [
+    { label: T.save, disabled: !(dirty && owner), strong: dirty && owner, reason: notOwner, run: () => views.save(state) },
     { label: T.saveAs, disabled: false, run: () => setSaveAs(true) },
     { label: isDefault && current ? T.removeDefault : T.makeDefault, disabled: isDefault && !current, run: () => views.toggleDefault() },
-    { label: T.deleteView, disabled: !owner, run: () => setConfirm({ kind: "delete" }) },
+    { label: T.deleteView, disabled: !owner, reason: notOwner, run: () => setConfirm({ kind: "delete" }) },
   ];
 
   return (
@@ -160,7 +162,7 @@ export function ViewBar({ views, state, onClearSort }: { views: Views; state: Ta
         {menuOpen && (
           <div ref={menuPopRef} className="sc-table-pop sc-popmenu sc-viewbar-menu sc-floating" role="menu" aria-label={T.viewMenu}>
             {items.map((it) => (
-              <button key={it.label} type="button" role="menuitem" disabled={it.disabled}
+              <button key={it.label} type="button" role="menuitem" disabled={it.disabled} title={it.reason}
                       className={`sc-popmenu-item${it.strong ? " is-strong" : ""}`}
                       onClick={() => { setMenuOpen(false); it.run(); }}>{it.label}</button>
             ))}

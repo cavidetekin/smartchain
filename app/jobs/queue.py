@@ -32,12 +32,12 @@ WITH q AS (
 )
 SELECT j.Id, j.JobType, j.Channel, j.Priority, j.Status, j.RequestedBy, j.Payload, j.Progress,
        j.HeartbeatAt, j.Attempt, j.ErrorText, j.CreatedAt, j.StartedAt, j.EndedAt, j.UpdatedAt,
-       q.QueuePosition,
+       q.QueuePosition, COALESCE(u.FullName, u.UserName) AS RequestedByName,
        DATEDIFF(second, j.StartedAt, ISNULL(j.EndedAt, SYSUTCDATETIME())) AS DurationSeconds,
        CAST(CASE WHEN j.Status = :running
                   AND j.HeartbeatAt < DATEADD(second, -1 * :timeout, SYSUTCDATETIME())
                  THEN 1 ELSE 0 END AS bit) AS IsStale
-FROM adm.Job j LEFT JOIN q ON q.Id = j.Id
+FROM adm.Job j LEFT JOIN q ON q.Id = j.Id LEFT JOIN adm.AppUser u ON u.Id = j.RequestedBy
 """
 
 

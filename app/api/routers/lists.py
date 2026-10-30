@@ -6,7 +6,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ..db import get_session
-from ..deps import current_user
+from ..deps import require
+from ..permissions import Access
 from ..lists import LISTS, ListDefinition
 from ..lists.request import (
     DefaultViewRequest, ExportRequest, GroupsRequest, QueryRequest, ValuesRequest, ViewCreate, ViewUpdate,
@@ -16,7 +17,10 @@ from ..services.auth import CurrentUser
 
 
 def list_router(defn: ListDefinition) -> APIRouter:
-    router = APIRouter(prefix=f"/{defn.name}", tags=["Listeler"], dependencies=[Depends(current_user)])
+    # Listeyi okumak, görünüm kaydetmek ve koşullu biçim listenin fonksiyonunun okuma yetkisiyle (K-99, K-100).
+    read = require(defn.function, Access.READ)
+    router = APIRouter(prefix=f"/{defn.name}", tags=["Listeler"], dependencies=[Depends(read)])
+    export_access = require(86, Access.WRITE)  # Excel'e aktarma (End user dahil, K-99)
 
     @router.get("/columns", summary=f"{defn.table}: kolonlar (etiket, tip, filtre tipi) ve parça büyüklüğü")
     def columns(session: Session = Depends(get_session)) -> dict:
@@ -36,7 +40,7 @@ def list_router(defn: ListDefinition) -> APIRouter:
 
     @router.post("/export", response_model=None,
                  summary=f"{defn.name}: Excel'e aktarım; anlık dosya (200) ya da arka plan işi (202) (K-91)")
-    def export_list(body: ExportRequest, user: CurrentUser = Depends(current_user),
+    def export_list(body: ExportRequest, user: CurrentUser = Depends(export_access),
                     session: Session = Depends(get_session, scope="function")) -> Response:
         # scope="function": dosya gönderilmeden oturum kapanır, bağlantı havuza döner (docs/08 "Veritabanı oturumu").
         out = export.start(session, defn, user.id, body)
@@ -47,26 +51,26 @@ def list_router(defn: ListDefinition) -> APIRouter:
 
     # Kayıtlı görünümler (K-89).
     @router.get("/views", summary=f"{defn.name}: görünümler ve kullanıcının varsayılanı")
-    def list_views(user: CurrentUser = Depends(current_user), session: Session = Depends(get_session)) -> dict:
+    def list_views(user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
         return views.list_views(session, defn, user.id)
 
     @router.post("/views", status_code=201, summary=f"{defn.name}: yeni görünüm")
-    def create_view(body: ViewCreate, user: CurrentUser = Depends(current_user), session: Session = Depends(get_session)) -> dict:
+    def create_view(body: ViewCreate, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
         return views.create(session, defn, user.id, body)
 
     @router.put("/views/default", summary=f"{defn.name}: varsayılan görünümü seç (boşsa Standart)")
-    def default_view(body: DefaultViewRequest, user: CurrentUser = Depends(current_user),
+    def default_view(body: DefaultViewRequest, user: CurrentUser = Depends(read),
                      session: Session = Depends(get_session)) -> dict:
         return views.set_default(session, defn, user.id, body)
 
     @router.put("/views/{view_id}", summary=f"{defn.name}: görünümü değiştir (yalnız sahibi)")
-    def update_view(view_id: int, body: ViewUpdate, user: CurrentUser = Depends(current_user),
+    def update_view(view_id: int, body: ViewUpdate, user: CurrentUser = Depends(read),
                     session: Session = Depends(get_session)) -> dict:
-        return views.update(session, defn, user.id, view_id, body)
+        return views.update(session, defn, user, view_id, body)
 
     @router.delete("/views/{view_id}", status_code=204, summary=f"{defn.name}: görünümü sil (yalnız sahibi)")
-    def delete_view(view_id: int, user: CurrentUser = Depends(current_user), session: Session = Depends(get_session)) -> Response:
-        views.delete(session, defn, user.id, view_id)
+    def delete_view(view_id: int, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> Response:
+        views.delete(session, defn, user, view_id)
         return Response(status_code=204)
 
     return router

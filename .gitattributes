@@ -3,3 +3,4 @@
 *.pptx binary
 # Üretilen dosya (tokens.mjs): testler üretilen metinle bayt bayt karşılaştırır, satır sonu her makinede LF
 app/shared/design-tokens.json text eol=lf
+app/shared/permissions.json text eol=lf

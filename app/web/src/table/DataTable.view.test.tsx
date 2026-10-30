@@ -78,7 +78,7 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     expect(screen.getByRole("dialog", { name: "Farklı kaydet" })).toBeInTheDocument();
   });
 
-  it("başkasının paylaştığı görünümde Kaydet ve Sil pasif, Farklı kaydet açık", async () => {
+  it("başkasının paylaştığı görünümde Kaydet ve Sil pasif, nedeni ipucunda (K-100); Farklı kaydet açık", async () => {
     const user = userEvent.setup();
     const shared = savedView(7, "Ekip", {}, { is_owner: false, is_shared: true, owner_user_id: 9, owner_name: "Ayşe" });
     await openTable({ views: { views: [shared], default_view_id: 7 } });
@@ -88,6 +88,10 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     const menu = await viewMenu(user);
     expect(within(menu).getByRole("menuitem", { name: "Kaydet" })).toBeDisabled();
     expect(within(menu).getByRole("menuitem", { name: "Sil" })).toBeDisabled();
+    for (const name of ["Kaydet", "Sil"]) {
+      expect(within(menu).getByRole("menuitem", { name })).toHaveAttribute(
+        "title", "Bu görünümü yalnız sahibi değiştirebilir; sizin için salt okunur.");
+    }
     expect(within(menu).getByRole("menuitem", { name: "Farklı kaydet" })).toBeEnabled();
   });
 

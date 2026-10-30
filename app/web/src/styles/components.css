@@ -429,3 +429,7 @@
 .sc-user-who { display: flex; flex-direction: column; gap: 0.1538rem; padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--line); }
 .sc-user-note { font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* --- Yetki (2.2; K-100) --- */
+.sc-toasts--notice { top: calc(var(--context-height) + var(--space-3)); bottom: auto; }
+.sc-toast-icon { width: var(--icon); height: var(--icon); flex: none; margin-top: 0.1538rem; }

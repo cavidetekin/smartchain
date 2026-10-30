@@ -919,7 +919,7 @@ FieldDefinition = sa.Table(
     sa.Column("IsRequired", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Zorunlu mu", info={'label': "Zorunlu mu"}),
     sa.Column("Label", sa.Unicode(100), nullable=True, comment="Ekranda görünen etiket; standart alanın etiketini ezer, ek alanda boşsa alan gösterilmez (K-88)", info={'label': "Ekranda görünen etiket"}),
     schema="adm",
-    comment="Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını sistem sahibi yönetir.",
+    comment="Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını System owner yönetir.",
 )
 
 DataRule = sa.Table(
@@ -1202,7 +1202,7 @@ AppUser = sa.Table(
     sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Kullanıcı kimliği", info={'label': "Kullanıcı kimliği"}),
     sa.Column("UserName", sa.Unicode(60), nullable=False, comment="Kullanıcı adı", info={'label': "Kullanıcı adı"}),
     sa.Column("FullName", sa.Unicode(150), nullable=True, comment="Ad soyad", info={'label': "Ad soyad"}),
-    sa.Column("Role", sa.Unicode(15), nullable=False, comment="Sistem sahibi | Admin | Key user | End user", info={'values': ["Sistem sahibi", "Admin", "Key user", "End user"]}),
+    sa.Column("Role", sa.Unicode(15), nullable=False, comment="System owner | Admin | Key user | End user", info={'values': ["System owner", "Admin", "Key user", "End user"]}),
     sa.Column("PasswordHash", sa.Unicode(200), nullable=True, comment="Özetlenmiş şifre; Argon2id PHC metni, tuz içinde (K-98); boşsa hesap arayüzden giremez", info={'label': "Özetlenmiş şifre"}),
     sa.Column("MustChangePassword", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Şifre değiştirilmeli; ilk giriş ya da sıfırlama sonrası", info={'label': "Şifre değiştirilmeli"}),
     sa.Column("PasswordChangeReason", sa.Unicode(15), nullable=True, comment="İlk giriş | Sıfırlama | Süre doldu", info={'values': ["İlk giriş", "Sıfırlama", "Süre doldu"]}),
@@ -1297,7 +1297,7 @@ AuditLog = sa.Table(
     sa.Column("OldValue", mssql.NVARCHAR(), nullable=True, comment="Önceki", info={'label': "Önceki"}),
     sa.Column("NewValue", mssql.NVARCHAR(), nullable=True, comment="Yeni", info={'label': "Yeni"}),
     schema="adm",
-    comment="Kim, ne zaman, neyi değiştirdi; giriş kayıtları; sistem sahibi işlemleri silinemez.",
+    comment="Kim, ne zaman, neyi değiştirdi; giriş kayıtları; System owner işlemleri silinemez.",
 )
 
 SystemSetting = sa.Table(
@@ -1305,7 +1305,7 @@ SystemSetting = sa.Table(
     sa.Column("SettingKey", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Ayar", info={'label': "Ayar"}),
     sa.Column("Value", sa.Unicode(200), nullable=False, comment="Değer", info={'label': "Değer"}),
     schema="adm",
-    comment="Sistem sahibinin ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri.",
+    comment="System owner'ın ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri.",
 )
 
 TableView = sa.Table(

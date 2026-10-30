@@ -114,7 +114,7 @@ describe("zorunlu şifre değişikliği (mockup m24f-0739)", () => {
     });
     renderApp("/ana-sayfa", MUST);
     const dialog = screen.getByRole("dialog", { name: "Şifrenizi belirleyin" });
-    expect(dialog).toHaveTextContent("İlk giriş · politika sistem sahibi tarafından belirlenir");
+    expect(dialog).toHaveTextContent("İlk giriş · politika System owner tarafından belirlenir");
     expect(within(dialog).queryByRole("button", { name: "Vazgeç" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Ana menü" })).toBeNull();  // kabuk açılmaz
     fireEvent.keyDown(dialog, { key: "Escape" });

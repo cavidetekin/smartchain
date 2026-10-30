@@ -24,7 +24,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (gece 22:00, zamanlanmış) · elle: key user ve üstü
+  - Kim: Sistem (gece 22:00, zamanlanmış) · elle: Key user ve üstü
   - Nereden: Zamanlanmış iş · Veri yükleme ekranı 'Yeniden çek' · Entegrasyon ekranı 'Bağlantıyı test et' (yalnız test)
 - **01:** İş kuyruğuna 'Veri çekme' işi yazılır (Job, gece kanalı). Aynı anda ikinci bir çekim başlatılamaz; gece akışı sırasında elle çekim kapalıdır.
 - **02:** Varlıklar tanımlı sırayla okunur: API sayfa sayfa, SQL arayüz tablosu toplu. Kaynağı Excel olan varlıklar atlanır.
@@ -231,7 +231,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (çekim ve Excel yüklemesi sonrası otomatik) · elle 'Yeniden doğrula': key user ve üstü
+  - Kim: Sistem (çekim ve Excel yüklemesi sonrası otomatik) · elle 'Yeniden doğrula': Key user ve üstü
   - Nereden: Çekim (01) ve Excel yüklemesinin (03) sonunda otomatik · Veri yükleme ekranı 'Yeniden doğrula'
 - **01:** Yapısal kontrol: zorunlu alan, tip, uzunluk, birim kodu, tekrar eden anahtar.
 - **02:** Referans kontrolü: rota → kaynak, ağaç → malzeme, sipariş → müşteri ve malzeme, stok → malzeme. Referans önce aynı partide, sonra geçerli veride aranır.
@@ -296,7 +296,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (gece, doğrulama sonrası) · elle: key user ve üstü
+  - Kim: Sistem (gece, doğrulama sonrası) · elle: Key user ve üstü
   - Nereden: Gece akışı · Veri yükleme ekranı 'Tam yükle'
 - **01:** Yeni veri versiyonu açılır (DataVersion: tam, kim, ne zaman). Yükleme tek işlem olarak çalışır; ekranlar bitene kadar önceki versiyonu gösterir.
 - **02:** Her varlık için ham veri geçerli tablolara yazılır: yeni kayıt eklenir, değişen kayıt yeni satır olarak versiyonlanır, partide olmayan kayıt pasif (silindi) işaretlenir; fiziksel silme yok.
@@ -470,7 +470,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (yükleme içinde otomatik) · görüntüleme ve fark: key user ve üstü · sabitleme: admin ve üstü
+  - Kim: Sistem (yükleme içinde otomatik) · görüntüleme ve fark: Key user ve üstü · sabitleme: Admin ve üstü
   - Nereden: Tam ve kısmi yükleme (05 / 06) içinde · Veri yükleme ekranı 'Versiyonlar' çekmecesi
 - **01:** Yüklemede DataVersion satırı açılır: tür (tam / kısmi), kim, zaman; kısmi ise DataVersionEntity ile varlıklar.
 - **02:** Geçerli tablolarda kayıtlar satır bazında versiyonlanır (VersionFrom / VersionTo): değişen kayıt yeni satır olur, eskisinin VersionTo kapanır; silinen kayıt kapanır, fiziksel silinmez.
@@ -495,7 +495,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Onaylı plana bağlı versiyon silinmez ve sıkıştırılmaz.
   - Kısmi versiyonda yüklenmeyen varlıklar önceki versiyonun satırlarını işaret eder; kopyalanmaz.
   - Çalışma açıldığı versiyonda kalır; versiyon değiştirmek için çalışma yeniden açılır (öneri: 'çalışmayı yeni veriyle yenile' sonraki faz).
-  - Elle sabitleme admin ve üstü; sabit versiyon elle çözülebilir (onaylıya bağlı değilse).
+  - Elle sabitleme Admin ve üstü; sabit versiyon elle çözülebilir (onaylıya bağlı değilse).
 - **HATA VE ISTISNA**
   - Yükleme çökerse açık kalan versiyon 'tamamlanmadı' işaretlenir, geçerli sayılmaz; bir sonraki yükleme temizler.
   - Fark raporu büyükse (> 50.000 satır) özet gösterilir, detay Excel'e alınır.
@@ -526,7 +526,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Varlık bazında fark:** Yeni, değişen, silinen sayıları ve örnek farklar; satıra inilir.
 - **Taşınan varlıklar:** Kısmi versiyonda değişmeyen varlıklar 'taşındı' olarak görünür.
 - **Plan etkisi:** Farkın plana olası etkisi tahmini olarak; hesap için çalışma gerekir.
-- **Excel'e aktar:** Fark raporu indirilebilir; end user da görebilir.
+- **Excel'e aktar:** Fark raporu indirilebilir; End user da görebilir.
 
 ### 08 · Yükleme geçmişi
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Çalışma prensibi 1/2</sub>
@@ -536,7 +536,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Görüntüleme: key user ve üstü (end user görmez) · dışa aktarma: aynı
+  - Kim: Görüntüleme: Key user ve üstü (End user görmez) · dışa aktarma: aynı
   - Nereden: Veri yükleme ekranı 'Yükleme geçmişi' kartı → tam liste · Sistem sağlığı bağlantısı
 - **01:** Liste zaman sırasına göre açılır; her satırda tür (çekim, Excel, tam, kısmi), kullanıcı, varlıklar, satır ve hata sayısı, süre, oluşan versiyon ve sonuç.
 - **02:** Filtreler satırları daraltır; varsayılan son 7 gün.
@@ -595,7 +595,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (zamanlanmış, Pazar 03:00) · ayar: sistem sahibi · 'Şimdi çalıştır': admin ve üstü
+  - Kim: Sistem (zamanlanmış, Pazar 03:00) · ayar: System owner · 'Şimdi çalıştır': Admin ve üstü
   - Nereden: Entegrasyon ve zamanlanmış işler ekranı · 'Ham veri temizliği' satırı
 - **01:** İş kuyruğuna temizlik işi düşer (gece kanalı, düşük öncelik); gece akışıyla çakışırsa akış bitene kadar bekler.
 - **02:** Yaşı saklama süresini geçen partiler bulunur; her varlığın son başarılı partisi listeden çıkarılır.
@@ -616,7 +616,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Geçmiş kayıtları, veri versiyonları ve geçerli tablolar hiç etkilenmez.
   - Her varlık için son başarılı parti silinmez (yeniden yükleme imkânı).
-  - Saklama süresi sistem sahibi ayarıdır; 1–30 gün.
+  - Saklama süresi System owner ayarıdır; 1–30 gün.
 - **HATA VE ISTISNA**
   - Silme sırasında kilit çakışması: iş bekler ve tekrar dener; 3 denemede olmazsa Sistem sağlığına hata.
   - Disk doluysa temizlik yine de çalışır; yükleme ve çekim için eşik uyarısı ayrı (94).
@@ -659,7 +659,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Tüm roller görüntüler (end user salt okunur) · düzenleme butonları key user ve üstünde
+  - Kim: Tüm roller görüntüler (End user salt okunur) · düzenleme butonları Key user ve üstünde
   - Nereden: Ana veri ekranı (menü · Veri) · uyarı ve plan ekranlarından 'kaynağa git' bağlantıları
 - **01:** Sekme seçilir (varsayılan Kaynak); liste geçerli veri versiyonundan sayfa sayfa okunur (50 satır, kaydırdıkça devam).
 - **02:** Arama kod ve ad üzerinde anında çalışır; filtreler grup, tip, kritik ve değer kaynağına göre daraltır (ör. 'yalnız elle değer olanlar').
@@ -674,7 +674,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Liste görünümü (arama, filtre, sıralama) ve detay kartı
   - Excel dışa aktarımı (filtrelenmiş liste, kaynak etiketi sütunuyla)
   - Kullanıcı tercihleri (sütun, sıralama)
-- **06:** Filtrelenmiş liste Excel'e aktarılır (end user dahil); dışa aktarma denetim izine yazılır.
+- **06:** Filtrelenmiş liste Excel'e aktarılır (End user dahil); dışa aktarma denetim izine yazılır.
 
 ### 10 · Ana veri görüntüleme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F10 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
@@ -711,7 +711,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Tüm alanlar tek kartta:** Listede görünmeyen alanlar (takvim, kapasite kaynağı) detayda.
 - **Kaynak sütunu:** Her alanın yanında ERP, kural (numarasıyla), elle ya da varsayılan.
-- **Rol farkı:** Düzenle butonu key user ve üstünde; end user yalnız görüntüler ve Excel alır.
+- **Rol farkı:** Düzenle butonu Key user ve üstünde; End user düzenleyemez, görünüm ve Excel serbest (K-99).
 - **Geçmişe geçiş:** Geçmiş butonu değişiklik geçmişini (14) açar.
 
 ### 11 · Değerin kaynağını gösterme
@@ -935,7 +935,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Görüntüleme: key user ve üstü · geçmişe dönme: key user ve üstü · tam denetim izi: admin ve üstü
+  - Kim: Görüntüleme: Key user ve üstü · geçmişe dönme: Key user ve üstü · tam denetim izi: Admin ve üstü
   - Nereden: Detay kartı 'Geçmiş' · hücre ipucundan · Yönetim → denetim izi (98, tüm kayıtlar)
 - **01:** Kayıt seçilip 'Geçmiş' açılır; sistem üç kaynağı (denetim izi, elle/kural kayıtları, versiyon farkları) tek zaman çizgisinde birleştirir.
 - **02:** Her satırda zaman, alan, eski → yeni değer, kim (kullanıcı, kural numarası ya da sistem + versiyon) ve kaynak türü; not varsa görünür.
@@ -946,7 +946,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Filtreler: alan, kaynak, kişi, tarih aralığı
 - **03:** Filtreler alan, kaynak, kişi ve tarihe göre daraltır; değişmeyen yükleme satırları varsayılan gizlidir.
 - **04:** 'Bu değere dön' eski değeri yeni bir elle değer olarak kaydeder (12 ile aynı yol, onaylı); eski kayıt değiştirilmez.
-- **05:** Liste Excel'e aktarılır; admin tüm kayıtlar için denetim izi ekranına (98) geçer.
+- **05:** Liste Excel'e aktarılır; Admin tüm kayıtlar için denetim izi ekranına (98) geçer.
 - **ÇIKTI**
   - Zaman çizgisi görünümü (filtreli)
   - Geçmişe dönüş: yeni ManualValue + denetim izi
@@ -977,7 +977,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Üç kaynak tek çizgide:** Elle, kural ve ERP yüklemesi aynı listede; 'Kim' sütunu kural numarasını ya da versiyonu yazar.
 - **Filtreler:** Alan, kaynak, kişi ve tarih; değişmeyen yükleme satırları gizli.
 - **Bu değere dön:** Geçmişteki değer tek tıkla geri alınır; elle değer olarak kaydedilir.
-- **Dışa aktarma:** Excel'e aktar ve tam denetim izine geçiş (admin).
+- **Dışa aktarma:** Excel'e aktar ve tam denetim izine geçiş (Admin).
 
 ### 14 · Değişiklik geçmişi · Geçmişe dönüş onayı
 <sub>24. Ekranlar ve fonksiyonlar · F14 · B Ana veri ve kurallar · Mockup 2/2</sub>
@@ -1264,7 +1264,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (yükleme sonunda otomatik) · elle: key user ve üstü ('Kaydet ve uygula', 'Tümünü yeniden uygula')
+  - Kim: Sistem (yükleme sonunda otomatik) · elle: Key user ve üstü ('Kaydet ve uygula', 'Tümünü yeniden uygula')
   - Nereden: Tam ve kısmi yükleme (05 / 06) sonunda · Veri kuralları ekranı · kural kaydetme, sıralama ve kapatma işlemleri
 - **01:** Tetik gelir (yükleme sonu, kural kaydı, sıra değişikliği, 'Tümünü yeniden uygula'); iş kuyruğuna 'kural uygulama' yazılır; aynı anda ikinci uygulama ve yükleme bekletilir.
 - **02:** Kurallar Seq sırasıyla çalışır; her kural için koşullara uyan kayıtlar bulunur, hedef alan için öncelik kontrol edilir: 'ERP ezer' ve ERP değeri varsa atla; elle değer varsa ve 'elle kalır' ise atla.
@@ -1336,7 +1336,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (yükleme ve kural uygulaması sonunda, gece) · elle 'Şimdi kontrol et': key user ve üstü
+  - Kim: Sistem (yükleme ve kural uygulaması sonunda, gece) · elle 'Şimdi kontrol et': Key user ve üstü
   - Nereden: Tam ve kısmi yükleme (05 / 06), kural uygulama (19), elle değer (12, kayıt bazında) sonunda · Veri kalitesi ekranı
 - **01:** Tetik gelir; kapsam belirlenir: tam kontrol (yükleme, gece) ya da etkilenen kayıtlar (kural, elle değer).
 - **02:** Ana veri kontrolleri çalışır: kaynak (takvimsiz, sıfır kapasite, birim uyumsuzluğu), malzeme (temin süresi, min parti, birim dönüşümü), ürün ağacı (döngü, pasif bileşen), rota (kaynak yok, süre 0, kapasite birimi ≠ tüketim birimi).
@@ -1405,7 +1405,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (end user listeyi görür, aksiyon alamaz)
+  - Kim: Key user ve üstü (End user listeyi görür, aksiyon alamaz)
   - Nereden: Veri kalitesi ekranı satır aksiyonları · uyarı iş listesi (83) ana veri kategorisi · toplu seçim araç çubuğu
 - **01:** Satırdaki aksiyon seçilir. 'Düzelt': ilgili ana veri kaydı detay kartıyla açılır, alan odaklı; kaydedince (12) uyarı için kontrol yeniden çalışır.
 - **02:** 'Uygula': önerilen kural (ya da kural ayarı) önizlemeyle gösterilir; onayda kural uygulanır (19) ve etkilenen uyarılar kapanır.
@@ -1496,7 +1496,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (silme: admin ve üstü)
+  - Kim: Key user ve üstü (silme: Admin ve üstü)
   - Nereden: Parametre setleri ekranı · set listesi ve sekmeler · Gece senaryo tanımından 'seti aç'
 - **01:** '+ Yeni set' boş ya da 'Kopyala' mevcut setten: ad, açıklama, kopyalanacak sekmeler seçilir; set hemen açılır.
 - **02:** Sekmelerde değerler düzenlenir (23–26); değişen alanlar kaydedilmeden işaretli kalır, sekme başlığında sayı görünür.
@@ -1892,7 +1892,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Parametre setleri (aktif olanlar)
   - Model tipi: LP (sürekli) ya da MILP (üretim tarafı tamsayı); satın alma hep sürekli, son hesapta yuvarlanır
   - Eksen ayarları, talep çarpanı, varsayımsal kaynak / dönem, süre bütçesi
-  - Gece penceresi ve paralellik (sistem sahibi ayarı)
+  - Gece penceresi ve paralellik (System owner ayarı)
 - **03:** Süre bütçesi girilir; sistem gece penceresi ve paralellikle toplam zamanlamayı hesaplar, sığmıyorsa uyarır.
 - **04:** Açıklama yazılır; 'Şimdi dene' (öneri) senaryoyu sıcak kanalda tek seferlik çalıştırıp sonucu Senaryolar ekranına 'deneme' etiketiyle koyar.
 - **05:** 'Kaydet': ScenarioDefinition yazılır (set, eksenler, model, bütçe, sıra sona eklenir, aktif); denetim izi.
@@ -1961,7 +1961,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Aktif anahtarı kapatılınca onay: bu gece ne olur, tanımın korunduğu, gece akışının ne kadar kısalacağı; süre seçimi (yeniden açana kadar / yalnız bu gece) ve gerekçe.
 - **GIRDI**
   - ScenarioDefinition listesi (NightlyPriority, IsActive, süre bütçesi, model)
-  - Gece penceresi ve paralellik (sistem sahibi ayarı)
+  - Gece penceresi ve paralellik (System owner ayarı)
 - **03:** 'Sırayı kaydet': NightlyPriority ve IsActive yazılır; denetim izine eski ve yeni sıra, kapatılan senaryo ve gerekçe.
 - **04:** Bir sonraki gece akışı yeni sıra ve aktiflikle çalışır; Senaryolar ekranında kapalı senaryonun sütunu 'bu gece çalışmadı' olarak görünür.
 - **ÇIKTI**
@@ -1978,7 +1978,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - En az bir senaryo aktif kalır.
   - Sıra yalnız bitiş zamanını belirler; senaryolar birbirinin sonucunu kullanmaz, hepsi aynı veri versiyonuyla bağımsız çalışır.
   - Kapalı senaryo tanımı, sırası ve ayarları korunur; silme ayrı işlemdir (27 içinde, kullanılmıyorsa).
-  - Paralellik sistem sahibi ayarıdır (varsayılan 2); burada değiştirilmez, zamanlamada dikkate alınır.
+  - Paralellik System owner ayarıdır (varsayılan 2); burada değiştirilmez, zamanlamada dikkate alınır.
 - **HATA VE ISTISNA**
   - Baz'ı taşıma ya da kapatma denemesi: engel ve açıklama.
   - Sıra kaydedilirken başka kullanıcı değiştirdiyse çakışma; liste yenilenir.
@@ -2036,7 +2036,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her plan hesabının ilk aşaması) · sonucu görür: key user ve üstü
+  - Kim: Sistem (her plan hesabının ilk aşaması) · sonucu görür: Key user ve üstü
   - Nereden: Gece senaryosu (40) ve çalışma yeniden hesabı (46) başında otomatik · izi: Pegging ekranı ve Sistem sağlığı hesap kaydı
 - **01:** Zaman yapısı kurulur: günlük, haftalık, aylık bucket dizisi ve dondurulmuş dönem. Her kaynak için dönem kapasitesi: (çalışma günü × adet − duruş günü × etkilenen adet) × günlük kapasite × verim → CapacityLoad brüt, duruş kaybı, net.
 - **02:** Talep hazırlanır: sipariş satırları, tahmin netleme (sipariş tahmini tüketir), teklifler parametreye göre; öncelik kuralıyla (müşteri sınıfı, tarih, proje, tip) sıralanır.
@@ -2188,7 +2188,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her plan hesabında) · model tipi ve ağırlıklar: admin ve üstü (senaryo tanımı, parametre seti)
+  - Kim: Sistem (her plan hesabında) · model tipi ve ağırlıklar: Admin ve üstü (senaryo tanımı, parametre seti)
   - Nereden: Plan hesabı aşaması · ayarları: Gece senaryo tanımı 'Model ayarları' · izi: Sistem sağlığı hesap kaydı
 - **01:** Model tipi senaryo tanımından okunur: LP ya da MILP. Her zaman MILP çalışmaz; tip parametriktir.
 - **02:** Karar değişkenleri: üretim P[malzeme, kaynak, bucket], satın alma Q (her zaman sürekli), stok I, geç karşılama B, fazla mesai O, fason S. MILP'de yalnız üretim tarafı tamsayı (parti / iş emri sayısı).
@@ -2217,7 +2217,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Amaç ağırlıkları parametre setindedir; senaryolar farklı ağırlıkla çalışabilir.
 - **HATA VE ISTISNA**
   - Çelişen kilitler (aynı kaynakta kapasiteyi aşan iki kilit): gevşetme devreye girer, uyarı 'kısıt gevşetildi: …'.
-  - Boyut sınırı aşımı: hesap durur, 'bucket yapısını kabalaştır' önerisi; sistem sahibi sınırı değiştirebilir.
+  - Boyut sınırı aşımı: hesap durur, 'bucket yapısını kabalaştır' önerisi; System owner sınırı değiştirebilir.
   - Eksik katsayı (rota tüketimi boş): operasyon kapasite tüketmez, ana veri uyarısı.
   - Model kurulamazsa kurallı yerleştirme (33) devreye girer, plan 'kurallı' etiketi taşır.
 - **ETKISI VE TETIKLENENLER**
@@ -2261,8 +2261,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem · çözücü ve parametreleri: sistem sahibi
-  - Nereden: Plan hesabı aşaması · ayarları: Sistem sahibi ayarları → Motor · izi: Sistem sağlığı çözüm kaydı
+  - Kim: Sistem · çözücü ve parametreleri: System owner
+  - Nereden: Plan hesabı aşaması · ayarları: System owner ayarları → Motor · izi: Sistem sağlığı çözüm kaydı
 - **01:** Adaptör arayüzü sabittir: kur (değişken sınırları, kısıt matrisi, amaç), çöz (zaman limiti, gap, iş parçacığı), oku (değerler, durum, gölge fiyatlar).
 - **02:** Model nesnesi seçilen çözücünün biçimine çevrilir; ölçekleme (katsayı aralığı) kontrol edilir, gerekirse otomatik ölçeklenir.
 - **GIRDI**
@@ -2283,7 +2283,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Adaptör arayüzü dışında çözücüye özel kod yoktur; yeni çözücü yeni adaptör demektir.
-  - Çözücü ve parametreleri yalnız sistem sahibi değiştirir; değişiklik denetim izine yazılır.
+  - Çözücü ve parametreleri yalnız System owner değiştirir; değişiklik denetim izine yazılır.
   - Adaptör testi: aynı küçük model iki çözücüde çözülüp amaç değeri karşılaştırılır (kurulum ve sürüm sonrası).
   - Çözücü kapalı ağda kurulum paketiyle gelir; lisanslı çözücü lisans dosyasıyla.
 - **HATA VE ISTISNA**
@@ -2308,7 +2308,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![32 · Çözücü adaptörü · Çözücü ayarı](mockups/m24f-0478-32-cozucu-adaptoru-cozucu-ayari.png)
 
-- **Sistem sahibi ekranı:** Çözücü listesi, gap eşiği, iş parçacığı ve süre bütçeleri Motor sekmesinde.
+- **System owner ekranı:** Çözücü listesi, gap eşiği, iş parçacığı ve süre bütçeleri Motor sekmesinde.
 - **Seçenekler:** Açık kaynak çözücüler seçilebilir; ticari çözücü lisans olmadan pasif.
 - **Adaptör testi:** Aynı model iki çözücüde; amaç değeri farkı sağdaki kartta.
 - **Kapalı ağ notu:** Çözücünün kurulum paketiyle geldiği bilgi kutusunda.
@@ -2331,7 +2331,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (otomatik yedek) · senaryo tanımında 'kurallı' seçilebilir: admin ve üstü
+  - Kim: Sistem (otomatik yedek) · senaryo tanımında 'kurallı' seçilebilir: Admin ve üstü
   - Nereden: Model olursuz / hata / süre bütçesi dolup uygun çözüm yoksa otomatik · Senaryo tanımı 'yöntem' ayarı
 - **01:** Tetik: model olursuz ya da hata verdi, süre bütçesi doldu ve uygun çözüm yok, ya da senaryo tanımında yöntem 'kurallı' seçildi.
 - **02:** Talepler öncelik kuralıyla sıralanır (müşteri sınıfı, tarih, proje, tip); kilitli ve dondurulmuş yükler önce kapasiteye yazılır.
@@ -2392,8 +2392,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem · bütçeler: senaryo tanımı (admin ve üstü), sistem ayarı (sistem sahibi)
-  - Nereden: Her plan hesabında · ayarlar: Gece senaryo tanımı, Sistem sahibi → Motor · görünüm: çalışma şeridi, Senaryolar
+  - Kim: Sistem · bütçeler: senaryo tanımı (Admin ve üstü), sistem ayarı (System owner)
+  - Nereden: Her plan hesabında · ayarlar: Gece senaryo tanımı, System owner → Motor · görünüm: çalışma şeridi, Senaryolar
 - **01:** Bütçe belirlenir: gece senaryosunda tanımdan, sıcak çalışmada ve termin sorgusunda sistem ayarından.
 - **02:** Aşamalara pay verilir: ön hesap + MRP için küçük pay (ör. %15), kalan model ve son hesaba; aşama payını aşan hesap uyarı yazar.
 - **GIRDI**
@@ -2420,7 +2420,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **HATA VE ISTISNA**
   - Bütçe dolmadan çözücü hata verirse 32 kuralları (tekrar, kurallı).
   - Gece bitiş sınırında birden fazla senaryo durursa ana sayfa hepsini listeler; 41 ile gündüz yeniden çalıştırılır.
-  - Çok kısa bütçe (model kurulumu bile sığmıyor): hesap 'bütçe yetersiz' ile durur, sistem sahibine uyarı.
+  - Çok kısa bütçe (model kurulumu bile sığmıyor): hesap 'bütçe yetersiz' ile durur, System owner'a uyarı.
 - **ETKISI VE TETIKLENENLER**
   - Senaryolar ve çalışma özeti durum etiketi.
   - Uyarı listesi: plan kalitesi.
@@ -2446,7 +2446,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Uyarı tonunda bildirim:** Hesap bitti ama optimal değil; sarı bildirim, gap yazılı.
 - **Plan yine kullanılabilir:** En iyi uygun çözüm plana yazıldı; kullanıcı devam edebilir.
 - **Uyarı kaydı:** Plan kalitesi uyarısı iş listesine düştü; yayın kontrolünde görünür.
-- **Tekrar seçeneği:** Yeniden hesap aynı bütçeyle; daha uzun bütçe sistem sahibinde.
+- **Tekrar seçeneği:** Yeniden hesap aynı bütçeyle; daha uzun bütçe System owner'da.
 
 ### 35 · Son hesap
 <sub>24. Ekranlar ve fonksiyonlar · F35 · D Planlama motoru · Çalışma prensibi 1/2</sub>
@@ -2528,7 +2528,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (son hesaptan sonra) · karar: key user ve üstü (68)
+  - Kim: Sistem (son hesaptan sonra) · karar: Key user ve üstü (68)
   - Nereden: Plan hesabı aşaması · görünüm: Öneriler ekranı 'Mevcut arz için öneriler'
 - **01:** Her kesin arz için pegging'den ihtiyaç tarihi ve miktarı alınır.
 - **02:** Tarih farkı hesaplanır: ihtiyaç arzdan önceyse 'öne çek', sonraysa 'ertele'; bağı olmayan arz 'iptal' (ya da kısmi bağ: 'azalt').
@@ -2588,7 +2588,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her plan hesabının sonunda) · eşikler: admin ve üstü (parametre seti)
+  - Kim: Sistem (her plan hesabının sonunda) · eşikler: Admin ve üstü (parametre seti)
   - Nereden: Plan hesabı aşaması · görünüm: Uyarı iş listesi (20), Ana sayfa, çalışma özeti
 - **01:** Uyarı tanımları okunur; kapalı tanımlar atlanır.
 - **02:** Teslim: gecikme > eşik; kapasite: doluluk > %100, ardışık bucket > %95, %30 altı; malzeme: temin süresi içinde eksik, güvenlik stoğu altı, fazla stok; raf ömrü yalnız uyarı.
@@ -2646,7 +2646,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her plan hesabının sonunda) · metrik seti ve ağırlıklar: admin ve üstü
+  - Kim: Sistem (her plan hesabının sonunda) · metrik seti ve ağırlıklar: Admin ve üstü
   - Nereden: Plan hesabı aşaması · görünüm: Senaryolar (karşılaştırma), Çalışma özeti, Ana sayfa
 - **01:** Metrik tanımları okunur (sabit küme + parametreler); her metrik için kaynak tablo ve formül bellidir.
 - **02:** Teslim metrikleri DemandFulfillment'tan: zamanında oran, geciken satır, toplam gecikme (gün, isteğe bağlı miktar ağırlıklı).
@@ -2714,7 +2714,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her plan hesabının sonunda) · şablonlar: sistem sahibi
+  - Kim: Sistem (her plan hesabının sonunda) · şablonlar: System owner
   - Nereden: Plan hesabı aşaması · görünüm: Pegging 'Neden geç?', Sipariş bazlı 'neden' sütunu, uyarı mesajları, öneri nedenleri
 - **01:** Her geciken ya da eksik talep için pegging zinciri talepten aşağı taranır; ilk darboğazlar bulunur: doluluk > %100 kaynak, temin süresi içinde eksik malzeme, kayan arz.
 - **02:** Nedenler etkiye göre sıralanır (en fazla 3): malzeme eksiği, arz kayması, kapasite; LP gölge fiyatı sıralamaya yardım eder.
@@ -2737,7 +2737,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Faz 1'de LLM kapalı; yalnız şablon.
   - Her metin veriye dayanır: her cümlenin kaynağı (tablo, alan) saklanır ve ekranda gösterilebilir.
-  - Şablonlar Türkçe ve sade; değişken adları veri sözlüğünden; sistem sahibi düzenler, sürümlenir.
+  - Şablonlar Türkçe ve sade; değişken adları veri sözlüğünden; System owner düzenler, sürümlenir.
   - En fazla 3 neden; kalanlar ağaçta görünür.
 - **HATA VE ISTISNA**
   - Şablon değişkeni boş (ör. arz tarihi yok): cümle kısa biçimiyle yazılır ('açık sipariş yok').
@@ -2763,7 +2763,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **LLM kapalı:** Faz 1'de dil modeli kapalı; şablon yolu açıkça yazılı.
 - **Şablon tablosu:** Her neden türü için cümle kalıbı ve kaynak tablolar.
 - **Değişken adları:** Veri sözlüğünden; yanlış ad yazılamaz.
-- **Sistem sahibi:** Şablonlar yalnız sistem sahibi ekranından düzenlenir.
+- **System owner:** Şablonlar yalnız System owner ekranından düzenlenir.
 
 ### 39 · Açıklama üretme · Neden metni ekranda
 <sub>24. Ekranlar ve fonksiyonlar · F39 · D Planlama motoru · Mockup 2/2</sub>
@@ -2798,7 +2798,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (zamanlanmış) · zamanlama ve senaryo tanımları: admin ve üstü
+  - Kim: Sistem (zamanlanmış) · zamanlama ve senaryo tanımları: Admin ve üstü
   - Nereden: Zamanlanmış iş (21:30 silme, 22:00 çekim) · görünüm: Ana sayfa, Gece senaryoları, Sistem sağlığı
 - **01:** 21:30 temizlik: önceki gecenin senaryoları ve yayınlanmamış çalışmalar silinir; onaylı planlar ve bağlı veri versiyonları kalır (49).
 - **02:** 22:00 veri çekme (01) → doğrulama (04) → tam yükleme (05): yeni veri versiyonu. Hata eşiği aşan varlık dışarıda kalır (kısmiye döner).
@@ -2823,7 +2823,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yükleme başarısızsa senaryolar son veri versiyonuyla çalışır ve 'eski veri' etiketi taşır (parametre, öneri).
   - Gece akışı sırasında elle çekim ve yükleme kapalıdır.
   - Senaryolar yalnız bir gün yaşar; onaylı plan bir çalışmadan yayınlanır (77).
-  - Akış saatleri ve paralellik admin ayarıdır; bitiş sınırı sistem sahibi ayarıdır.
+  - Akış saatleri ve paralellik Admin ayarıdır; bitiş sınırı System owner ayarıdır.
 - **HATA VE ISTISNA**
   - Veri çekme başarısız: 01 kuralları; senaryolar son versiyonla ya da atlanır (parametre).
   - Bir senaryo hata verirse diğerleri devam eder; hata ana sayfada kırmızı.
@@ -2919,7 +2919,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Kart menüsü:** Senaryo kartında menü: yeniden çalıştır, çalışma aç, Excel, tanıma git.
 - **Hatalı senaryo:** Süre aşan senaryo kartı farklı renkte; menü aynı yerde.
-- **Yetki:** End user menüyü görmez; key user ve üstü.
+- **Yetki:** End user menüyü görmez; Key user ve üstü.
 - **Ana sayfa kısayolu:** Hata satırından da aynı pencere açılır.
 
 ### 41 · Senaryoyu yeniden çalıştırma (öneri) · Seçenekler ve onay
@@ -2950,7 +2950,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · end user onaylı plan raporunda görür, senaryoları görmez
+  - Kim: Key user ve üstü · End user onaylı plan raporunda görür, senaryoları görmez
   - Nereden: Senaryolar ekranı (8) · Çalışma özeti 'kaynak senaryoya göre' sütunu
 - **01:** Gece senaryoları kartlar halinde listelenir: durum, ana metrik, yöntem etiketi (LP / MILP / kurallı), veri versiyonu.
 - **02:** Karşılaştırma tablosu metrik × senaryo; her metrik için en iyi değer yönüne göre yeşil işaretlenir; baz senaryoya göre fark sütunu isteğe bağlı.
@@ -3014,7 +3014,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · end user açamaz
+  - Kim: Key user ve üstü · End user açamaz
   - Nereden: Senaryolar ekranı 'Çalışma aç' · senaryo kartı menüsü · Ana sayfa 'Baz senaryoda çalışma aç'
 - **01:** Kullanıcı senaryo seçer, 'Çalışma aç' der; pencere senaryo bilgisini, açık çalışmaları ve slot durumunu gösterir.
 - **02:** Sınır kontrolü: 3 aktif sıcak çalışma varsa açılmaz; kullanıcı sıraya girer ya da kendi çalışmasını kapatır (47, 49).
@@ -3078,9 +3078,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![43 · Çalışma açma · Sınır dolu](mockups/m24f-0523-43-calisma-acma-sinir-dolu.png)
 
 - **Açık neden:** 3 / 3 slot kimde, ne zamandır; boşta kalan işaretli.
-- **Üç seçenek:** Kendi çalışmanı kapat, sıraya gir, adminden kapatmasını iste.
+- **Üç seçenek:** Kendi çalışmanı kapat, sıraya gir, Admin'den kapatmasını iste.
 - **Sıraya gir:** Slot boşalınca bildirim; kullanıcı beklemek zorunda değil.
-- **Admin yetkisi:** Boşta kalan çalışmayı admin kapatabilir (49).
+- **Admin yetkisi:** Boşta kalan çalışmayı Admin kapatabilir (49).
 
 ### 44 · Değişiklik izi
 <sub>24. Ekranlar ve fonksiyonlar · F44 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
@@ -3090,7 +3090,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her manuel değişiklikte) · görüntüleme: çalışma sahibi, admin ve üstü
+  - Kim: Sistem (her manuel değişiklikte) · görüntüleme: çalışma sahibi, Admin ve üstü
   - Nereden: Çalışma özeti 'Değişiklikler' kartı → tam liste · her değişikliğin çekmecesi
 - **01:** Her manuel değişiklik WorkspaceOverride'a yazılır: tablo, kayıt, alan, eski değer, yeni değer, kilit, kullanıcı, zaman; aynı anda AuditLog.
 - **02:** Tek işlemle birden fazla hücre değişiyorsa (sürükle-bırak, bölme) tek değişiklik grubu olarak numaralanır.
@@ -3154,7 +3154,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Çalışma sahibi · admin (başkasının çalışmasında yalnız tümünü geri alma, slot kurtarma için)
+  - Kim: Çalışma sahibi · Admin (başkasının çalışmasında yalnız tümünü geri alma, slot kurtarma için)
   - Nereden: Çalışma özeti değişiklik listesi 'Geri al' · değişiklik çekmecesi · 'Tümünü geri al'
 - **01:** Kullanıcı listeden ya da çekmeceden 'Geri al' seçer; tümü için 'Tümünü geri al'.
 - **02:** Bağımlılık kontrolü: aynı kaydı sonradan değiştiren ya da bu hesaba dayanan kararlar (öneri onayları) listelenir; uyarı.
@@ -3224,7 +3224,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Çalışma sahibi (key user ve üstü)
+  - Kim: Çalışma sahibi (Key user ve üstü)
   - Nereden: Manuel planlama ekranlarında 'Kaydet ve yeniden planla' · Çalışma özeti 'Yeniden hesapla'
 - **01:** Kullanıcı 'Kaydet ve yeniden planla' der; pencere son hesaptan beri değişiklikleri ve kapsamı gösterir.
 - **02:** Etki alanı belirlenir: değişen hücrelerin kaynak, malzeme (ağaç yukarı ve aşağı) ve bucket komşuluğu; kapsam dışı değişkenler önceki değerlerinde sabitlenir. 'Tüm plan' seçilebilir.
@@ -3308,7 +3308,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem · sınır: sistem sahibi · takılan işi iptal: admin ve üstü
+  - Kim: Sistem · sınır: System owner · takılan işi iptal: Admin ve üstü
   - Nereden: Her sıcak hesapta (46, termin sorgusu) · görünüm: hesap penceresi, üst şerit, Sistem sağlığı
 - **01:** Sıcak hesap isteği Job tablosuna 'etkileşim' kanalıyla yazılır; aktif sayısı sorgulanır (satır kilidiyle, yarış önlenir).
 - **02:** Sınır doluysa iş 'sırada' olur; kullanıcıya sıra numarası ve tahmini bekleme (sürüyor işlerin kalan süresinden) gösterilir; iptal edebilir.
@@ -3317,7 +3317,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Job tablosu: kanal, durum, kalp atışı, süre
   - İstek: kullanıcı, iş türü, tahmini süre
 - **03:** Kısa işler (termin sorgusu ≤ 30 sn) ayrı küçük kotadan çalışır; uzun hesapları beklemez (öneri).
-- **04:** Çalışan iş kalp atışı yazar; 2 × süre bütçesi boyunca kalp atışı yoksa 'takıldı' sayılır, admin iptal eder ya da sistem otomatik kapatır (parametre); slot boşalır.
+- **04:** Çalışan iş kalp atışı yazar; 2 × süre bütçesi boyunca kalp atışı yoksa 'takıldı' sayılır, Admin iptal eder ya da sistem otomatik kapatır (parametre); slot boşalır.
 - **05:** Slot boşalınca sıradaki iş otomatik başlar; kullanıcıya bildirim (48).
 - **ÇIKTI**
   - Job durumu (çalışıyor, sırada, takıldı, bitti, iptal)
@@ -3329,13 +3329,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F47 · E Senaryo ve çalışma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Sınır sistem sahibi ayarıdır (sunucu boyutuna göre); gece kanalı sınıra dahil değildir ama işçi sayısını paylaşır.
+  - Sınır System owner ayarıdır (sunucu boyutuna göre); gece kanalı sınıra dahil değildir ama işçi sayısını paylaşır.
   - Aynı çalışmada aynı anda tek hesap.
-  - Sıradaki iş kullanıcı tarafından iptal edilebilir; başkasının işi yalnız admin tarafından (takıldıysa).
+  - Sıradaki iş kullanıcı tarafından iptal edilebilir; başkasının işi yalnız Admin tarafından (takıldıysa).
   - Sunucu yeniden başlarsa 'çalışıyor' işler 'yeniden başlatıldı' olarak kuyruğa döner.
 - **HATA VE ISTISNA**
-  - Takılan iş: kalp atışı yok → admin iptal / otomatik kapatma; kullanıcıya 'hesap iptal edildi, yeniden deneyin'.
-  - Kuyruk çok uzun (> 5): uyarı; sistem sahibine sınır önerisi.
+  - Takılan iş: kalp atışı yok → Admin iptal / otomatik kapatma; kullanıcıya 'hesap iptal edildi, yeniden deneyin'.
+  - Kuyruk çok uzun (> 5): uyarı; System owner'a sınır önerisi.
   - Job tablosu erişilemez: hesap başlatılamaz, anlaşılır hata, Sistem sağlığı.
 - **ETKISI VE TETIKLENENLER**
   - Yeniden hesap (46) ve termin sorgusu başlama zamanı.
@@ -3363,7 +3363,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Canlı kuyruk:** Kanal, kullanıcı, durum, süre, kalp atışı; takılan iş kırmızı.
 - **Takılan işi iptal:** Admin kırmızı butonla slot kurtarır.
 - **Sayaçlar:** Sıcak hesap, sırada, kısa iş kotası, gece kanalı ayrı.
-- **Sınır ayarı:** Sistem sahibi sınırı buradan değiştirir.
+- **Sınır ayarı:** System owner sınırı buradan değiştirir.
 
 ### 48 · İş bitti bildirimi
 <sub>24. Ekranlar ve fonksiyonlar · F48 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
@@ -3373,9 +3373,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem · her kullanıcı kendi işlerinin bildirimini alır; admin sistem olaylarını
+  - Kim: Sistem · her kullanıcı kendi işlerinin bildirimini alır; Admin sistem olaylarını
   - Nereden: WebSocket kanalı · bildirim merkezi (çan) · ekran içi bildirim
-- **01:** Job durumu değişince sunucu ilgili kullanıcılara WebSocket mesajı yayınlar (iş sahibi; sistem olaylarında admin).
+- **01:** Job durumu değişince sunucu ilgili kullanıcılara WebSocket mesajı yayınlar (iş sahibi; sistem olaylarında Admin).
 - **02:** İstemci bildirimi sağ altta gösterir (ton: yeşil tamam, sarı süre bütçesi, kırmızı hata) ve bildirim merkezine yazar (son 20).
 - **GIRDI**
   - Job durum değişiklikleri (bitti, hata, süre bütçesi, sırada → çalışıyor)
@@ -3437,7 +3437,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Çalışma sahibi · admin (işlem yapılmayan çalışmayı kapatma) · sistem (gece 21:30)
+  - Kim: Çalışma sahibi · Admin (işlem yapılmayan çalışmayı kapatma) · sistem (gece 21:30)
   - Nereden: Bağlam çubuğu 'Çalışmayı kapat' · Sistem sağlığı açık çalışmalar · gece akışı temizliği
 - **01:** Kullanıcı 'Çalışmayı kapat' der; pencere kaydedilmemiş değişiklik, yayın durumu ve sonuçları gösterir; 'önce yayınla' seçeneği sunulur.
 - **02:** Onayla: Workspace durumu = kapalı, slot boşalır (47), sıradaki iş başlar; kaydedilmemiş değişiklik atılır, kayıtlı değişiklikler iz olarak kalır.
@@ -3450,7 +3450,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05:** Gece 21:30: yayınlanmayan çalışmalar silinir (WorkspaceOverride gider, AuditLog kalır); yayınlanmış çalışmanın hesabı ve izi onaylı planla saklanır.
 - **ÇIKTI**
   - Workspace durumu (kapalı / silindi), boşalan slot
-  - Sahibine bildirim (admin kapatmasında)
+  - Sahibine bildirim (Admin kapatmasında)
   - Denetim izi
 - **06:** Kapatma ve silme denetim izine yazılır.
 
@@ -3489,7 +3489,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![49 · Çalışma kapatma · Admin kapatması](mockups/m24f-0548-49-calisma-kapatma-admin-kapatmasi.png)
 
-- **Boşta kalan çalışma:** İşlem yapılmayan çalışma sarı; admin kapatma butonu.
+- **Boşta kalan çalışma:** İşlem yapılmayan çalışma sarı; Admin kapatma butonu.
 - **Sahibine bildirim:** Kapatılan kullanıcıya bildirim, değişiklikler iz olarak kalır.
 - **Gece temizliği kuralı:** Ne silinir, ne kalır; sağdaki kartta.
 - **Slot kurtarma:** Kapatınca sıradaki hesap başlar.
@@ -4407,7 +4407,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **HATA VE ISTISNA**
   - Çözümsüzlük: model kilitleri sırayla gevşetir, 'karşılanamayan kilit' uyarısı ve liste.
   - Öğe ERP'de kaybolduysa (iş emri kapandı) kilit 'geçersiz', listede işaretli.
-  - Yetkisiz kullanıcı (end user) kilit ikonlarını görür ama değiştiremez.
+  - Yetkisiz kullanıcı (End user) kilit ikonlarını görür ama değiştiremez.
 - **ETKISI VE TETIKLENENLER**
   - Yeniden hesap (46): kilitli öğeler kısıt.
   - Çalışma özeti kilit sayacı; değişiklik izi.
@@ -4518,7 +4518,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her görünümde otomatik) · dönem uzunluğu: admin ve üstü (parametre seti) · çalışmada geçici değişiklik: admin ve üstü (öneri)
+  - Kim: Sistem (her görünümde otomatik) · dönem uzunluğu: Admin ve üstü (parametre seti) · çalışmada geçici değişiklik: Admin ve üstü (öneri)
   - Nereden: Zaman yapısı parametresi (23) · tüm planlama görünümlerinde gri / kilitli hücre ve çubuklar · ipucu ve parametreye bağlantı
 - **01:** Zaman yapısından dondurulmuş dönem alınır; bucket'lar işaretlenir (ör. H44).
 - **02:** Tüm görünümlerde dondurulmuş hücre ve çubuklar gri ve kilitli; tıklama ya da bırakma denemesinde ipucu: dönem, değerin kaynağı (ERP iş emri) ve parametre bağlantısı.
@@ -4529,7 +4529,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çalışmada geçici değişiklik isteği (öneri)
 - **04:** Sürükle-bırak hedefi olarak reddedilir (kırmızı hayalet); talebe eşitle ve toplu işlemler dönemi atlar; yük taşıma hedef listesinde pasif.
 - **05:** Kapasite ve doluluk dondurulmuş dönem için ERP iş emirlerinden hesaplanır ve raporlanır; geçici duruş girilirse yalnız doluluk raporu değişir, plan değişmez.
-- **06:** Dönem uzunluğu parametre setinden değiştirilir (admin); çalışmada geçici olarak 0 ya da 2 hafta yapmak WorkspaceOverride ile mümkündür, yalnız admin ve üstü, tüm plan yeniden hesaplanır (öneri).
+- **06:** Dönem uzunluğu parametre setinden değiştirilir (Admin); çalışmada geçici olarak 0 ya da 2 hafta yapmak WorkspaceOverride ile mümkündür, yalnız Admin ve üstü, tüm plan yeniden hesaplanır (öneri).
 - **ÇIKTI**
   - Görünümlerde kilitli / gri dönem; ipucu metinleri
   - Model kısıtı: dondurulmuş dönem sabit; PlanWarning 'dondurulmuş dönemde karşılanamayan talep'
@@ -4539,10 +4539,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F63 · F Manuel planlama · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Dondurulmuş dönem key user tarafından hiçbir görünümde değiştirilemez; sistem kilididir.
+  - Dondurulmuş dönem Key user tarafından hiçbir görünümde değiştirilemez; sistem kilididir.
   - Model bu döneme planlı sipariş üretmez, iş emri taşımaz.
   - Dönem uzunluğu parametre setine aittir; senaryolar farklı setlerle farklı dondurulmuş dönemle çalışabilir.
-  - Çalışmada geçici kaldırma admin ve üstü; denetim izine 'dondurulmuş dönem kaldırıldı' yazılır (öneri).
+  - Çalışmada geçici kaldırma Admin ve üstü; denetim izine 'dondurulmuş dönem kaldırıldı' yazılır (öneri).
   - Gerçekleşmeler (ProductionConfirmation) dondurulmuş dönemdeki iş emrinin kalanını belirler.
 - **HATA VE ISTISNA**
   - Dondurulmuş dönemde talep karşılanamıyor: uyarı, model sonraki döneme kaydırır; kullanıcı ERP'de iş emri açmalıdır (ERP'ye yazma Faz 1'de yok).
@@ -4559,7 +4559,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Dönem uzunluğu değişirse:** Tüm plan (PlanRun) Parametre ya da geçici değişiklikte tamamı yeniden hesaplanır
 - **Görünüm durumu:** Ekran (anlık) Hangi bucket'ların kilitli olduğu
 - **ÖRNEK:** H44 dondurulmuş: WO-5530'u H44'e sürüklemek kırmızı hayaletle reddedilir. SO-1190/1'in 40 adet K-22 talebi H44'te karşılanamıyor → uyarı, plan H45'e kaydırır; sahada iş emri açılması gerekir.
-- **AÇIK KONU:** Çalışmada dondurulmuş dönemi geçici kaldırma (0 hafta) olsun mu? Öneri: admin ve üstü, yayın öncesi uyarıyla.
+- **AÇIK KONU:** Çalışmada dondurulmuş dönemi geçici kaldırma (0 hafta) olsun mu? Öneri: Admin ve üstü, yayın öncesi uyarıyla.
 
 ### 63 · Dondurulmuş dönem koruması · Bırakma engeli
 <sub>24. Ekranlar ve fonksiyonlar · F63 · F Manuel planlama · Mockup 1/3</sub>
@@ -4578,7 +4578,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Tıklama engeli:** Gri hücreye tıklayınca düzenleme açılmaz; ipucu çıkar.
 - **Değerin kaynağı:** Değerin hangi ERP iş emirlerinden geldiği yazılı.
-- **Kim değiştirir:** Parametre admin yetkisinde; key user yönlendirilir.
+- **Kim değiştirir:** Parametre Admin yetkisinde; Key user yönlendirilir.
 - **Tutarlı görünüm:** Gri + kilit tüm görünümlerde aynı anlam.
 
 ### 63 · Dondurulmuş dönem koruması · Geçici kaldırma (öneri)
@@ -4589,7 +4589,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Seçenekler:** Parametre değeri, 0 hafta (kaldır), 2 hafta; yalnız bu çalışmada.
 - **Risk uyarısı:** Sahayla uyumsuzluk riski kırmızı kutuda; denetim izine yazılır.
 - **Etkisi:** Hücreler açılır, model üretebilir, tüm plan yeniden hesaplanır.
-- **Yetki:** Key user için buton pasif; admin ve üstü uygular.
+- **Yetki:** Key user için buton pasif; Admin ve üstü uygular.
 
 ### G · Malzeme ve öneriler
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
@@ -4610,7 +4610,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (çalışma içinde) · end user onaylı planın aynı görünümünü raporda salt okunur görür
+  - Kim: Key user ve üstü (çalışma içinde) · End user onaylı planın aynı görünümünü raporda salt okunur görür
   - Nereden: Menü · Çalışma › 'Malzeme planı' · Pegging ve uyarı ekranlarından malzeme bağlantısı · Raporlar (onaylı plan)
 - **01:** Malzeme listesi yüklenir; eksiği olanlar üstte, eksik miktarı yanında. Filtreler: sadece eksikler (65), tedarik tipi, proje, tedarikçi.
 - **02:** Seçilen malzeme için dönem satırları gösterilir: brüt ihtiyaç, açık arz (kesin), planlı sipariş (öneri), stok projeksiyonu, eksik. Değerler plan hesabından okunur; ekranda hesap yapılmaz.
@@ -4676,7 +4676,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · end user raporda aynı filtreyi kullanır
+  - Kim: Key user ve üstü · End user raporda aynı filtreyi kullanır
   - Nereden: Malzeme planı ekranı · 'Sadece eksikler' anahtarı ve sıralama menüsü · Ana sayfa 'malzeme' uyarısından
 - **01:** 'Sadece eksikler' açılınca liste, herhangi bir dönemde stok projeksiyonu sıfırın altına inen malzemelerle sınırlanır; isteğe bağlı 'güvenlik stoğu altı' da sayılır.
 - **02:** Her malzeme için ilk eksik dönemi ve miktarı hesaplanır; liste varsayılan olarak ilk eksik tarihine göre sıralanır (miktar ve ada göre de sıralanabilir).
@@ -4740,7 +4740,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · end user yalnız onaylı plandaki sonucu görür
+  - Kim: Key user ve üstü · End user yalnız onaylı plandaki sonucu görür
   - Nereden: Öneriler ekranı (16) satır kararı ve çekmece · Malzeme planı eksik hücresinden · Pegging düğümünden
 - **01:** Satır seçilince çekmece açılır: hesaplanan ve yuvarlanmış miktar, tarih, tedarikçi/kaynak ve bu siparişin karşıladığı talepler.
 - **02:** Kullanıcı isterse yuvarlanmış miktarı ya da tarihi düzeltir; sistem minimum, kat ve temin süresi kontrolünü anında yapar, sonucu (fazla stok, geç teslim) yazar. Elle değer kilitlenir.
@@ -4987,7 +4987,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · end user onaylı planın öneri raporunu Raporlar'dan indirir
+  - Kim: Key user ve üstü · End user onaylı planın öneri raporunu Raporlar'dan indirir
   - Nereden: Öneriler ekranı 'Excel'e aktar' · Yayın sonrası 'ERP işlem listesini indir' · Raporlar (onaylı plan)
 - **01:** Kullanıcı kapsamı seçer; varsayılan 'onaylanan öneriler'. Bekleyen ve reddedilenler yalnız 'tümü' kapsamında, durum sütunuyla çıkar.
 - **02:** Biçim seçilir; birden fazla biçim aynı dosyada ayrı sayfalar olur. Satın alma talebi tedarikçi bazlı sayfalara bölünür.
@@ -5011,7 +5011,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Faz 1'de ERP'ye geri yazma yok; dosya ERP'de elle işlenir (öneri: Faz 2'de API ile geri yazma).
   - Yuvarlanmış miktar dosyada esas; hesaplanan miktar ayrı sütunda bilgi.
   - Öneri numarası çalışma boyunca ve yayında sabittir; dosya yeniden üretilince aynı numaralar gelir.
-  - End user yalnız onaylı planın dosyasını indirebilir; çalışma dosyası key user ve üstüne açıktır.
+  - End user yalnız onaylı planın dosyasını indirebilir; çalışma dosyası Key user ve üstüne açıktır.
 - **HATA VE ISTISNA**
   - Kapsamda satır yoksa buton pasif, açıklama yazar.
   - Dosya üretim hatası: bildirim ve Sistem sağlığı kaydı; iz kaydı 'başarısız' olarak düşer.
@@ -5063,7 +5063,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (çalışma) · end user onaylı plan pegging'ini raporda salt okunur görür
+  - Kim: Key user ve üstü (çalışma) · End user onaylı plan pegging'ini raporda salt okunur görür
   - Nereden: Menü · Çalışma › 'Pegging' · Sipariş bazlı, Malzeme planı ve Uyarılar ekranlarından 'pegging' bağlantısı
 - **01:** Başlangıç seçilir: arama kutusuna sipariş, malzeme, proje ya da arz belgesi yazılır; ya da başka ekrandan bağlantıyla gelinir. Yön: talepten aşağı ya da arzdan yukarı.
 - **02:** Ağaç Pegging tablosundan kurulur: talep → arz (stok, iş emri, satın alma, planlı sipariş) → alt seviye ihtiyaç → …; her düğümde miktar, dönem, proje etiketi.
@@ -5141,7 +5141,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (son hesapta otomatik) · görüntüleme: key user ve üstü; end user onaylı planın gecikme raporunda görür
+  - Kim: Sistem (son hesapta otomatik) · görüntüleme: Key user ve üstü; End user onaylı planın gecikme raporunda görür
   - Nereden: Sipariş bazlı planlama 'Neden' sütunu ve sağ panel · Pegging 'Neden geç?' · Uyarı iş listesi (teslim uyarısı) · Gecikme raporu
 - **01:** Son hesapta her gecikmeli talep için pegging zinciri taranır; zincirdeki her düğümde tarih farkı (istenen − planlanan) hesaplanır.
 - **02:** Darboğaz adayları sınıflanır: kapasite (yük > net kapasite olan kaynak-dönem), malzeme (eksik ya da temin süresi), öncelik (daha öncelikli talep aynı kapasiteyi aldı), kilit / manuel değer, dondurulmuş dönem.
@@ -5211,7 +5211,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · end user sorgu çalıştıramaz
+  - Kim: Key user ve üstü · End user sorgu çalıştıramaz
   - Nereden: Menü · Çalışma › 'Termin ve olaylar' · Sipariş bazlı ekranda 'yeni talep dene' · Ana sayfa kısayolu
 - **01:** Form doldurulur; ürün mevcut ürünlerden seçilir (taslak ürün için 74). Kısıt seçenekleri işaretlenir; varsayılan 'mevcut plan korunur'.
 - **02:** Geçici hesap etkileşim kanalında kuyruğa girer (yüksek öncelik, kısa süre bütçesi): talep çalışmanın plan kopyasına eklenir, diğer talepler sabit tutulur, kalan kapasite ve stokla ileriye doğru çizelgelenir.
@@ -5235,7 +5235,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Sorgu planı değiştirmez; mevcut siparişler kaymaz ('mevcut plan korunur' varsayılan). Seçenek kapatılırsa sorgu, önceliğe göre diğer talepleri kaydırabilir ve sonuçta etkilenenler listelenir.
   - Dondurulmuş döneme teslim mümkün değildir; en erken tarih dondurulmuş dönemden sonradır.
-  - Geçici hesap süre bütçesi kısadır (sistem sahibi ayarı, öneri 60 sn); aşılırsa en iyi bulunan sonuç 'yaklaşık' etiketiyle verilir.
+  - Geçici hesap süre bütçesi kısadır (System owner ayarı, öneri 60 sn); aşılırsa en iyi bulunan sonuç 'yaklaşık' etiketiyle verilir.
   - Aynı anda en fazla 3 sıcak iş; sorgu kuyruğa girerse bekleme süresi gösterilir.
   - Sorgu sonucu çalışmanın veri versiyonuna ve son hesabına bağlıdır; hesap eskiyse uyarı.
 - **HATA VE ISTISNA**
@@ -5517,7 +5517,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
 - **76 · Yayın öncesi kontrol:** Çalışmayı onaylı plan yapmadan önce veri yaşı, daha yeni veri, çakışan yayın, bekleyen karar, kritik uyarı ve hesap güncelliğini otomatik kontrol etmek; engelleri kapatmak, uyarıları görünür kılmak ve kontrol sonucunu yayın kaydına yazmak.
 - **77 · Onaylı plan yayınlama:** Bir çalışmanın son plan hesabını, kararlarıyla birlikte dondurup onaylı plan versiyonu yapmak; veri versiyonunu sabitlemek, çalışmayı salt okunur hale getirmek ve istenirse yeni planı varsayılan ilan etmek. Onaylı plan yalnız çalışmadan yayınlanır.
-- **78 · Varsayılan yap:** Birden fazla onaylı plan arasında raporların, uyarı listesinin ve end user görünümünün kaynağı olan 'varsayılan' planı belirlemek; yayın sırasında ya da sonradan, geri alınabilir şekilde.
+- **78 · Varsayılan yap:** Birden fazla onaylı plan arasında raporların, uyarı listesinin ve End user görünümünün kaynağı olan 'varsayılan' planı belirlemek; yayın sırasında ya da sonradan, geri alınabilir şekilde.
 - **79 · Yayın notu:** Her onaylı plana, neden ve hangi varsayımlarla yayınlandığını anlatan kısa bir not eklemek; notun planla birlikte saklanmasını ve listede, rapor kapağında ve ana sayfada görünmesini sağlamak.
 - **80 · Plan karşılaştırma:** İki planı (onaylı plan, gece senaryosu ya da çalışma) metrik, sipariş, kaynak ve öneri düzeyinde yan yana karşılaştırmak; yayın kararı, çakışma değerlendirmesi ve 'ne değişti' sorusu için tek görünüm.
 - **81 · Onaylı plan saklama:** Yayınlanmış her planı, bağlı plan çıktılarını, kararları, değişiklik izini ve veri versiyonunu kalıcı olarak saklamak; gece temizliğinin yalnız senaryoları ve yayınlanmamış çalışmaları silmesini garanti etmek.
@@ -5530,7 +5530,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (Yayın ekranı açılınca ve her değişiklikte otomatik) · görüntüleme: key user ve üstü
+  - Kim: Sistem (Yayın ekranı açılınca ve her değişiklikte otomatik) · görüntüleme: Key user ve üstü
   - Nereden: Menü · Çalışma › 'Yayın' · Çalışma özeti 'Yayına hazırla' · yayın onay penceresinden önce
 - **01:** Yayın ekranı açılınca kontroller çalışır; her çalışma değişikliğinde ve yeniden hesap bitince yenilenir (anlık).
 - **02:** Veri yaşı: çalışmanın veri versiyonunun yaşı; eşik (öneri 36 saat) aşılırsa uyarı. Daha yeni veri: çalışmanın versiyonundan sonra yükleme varsa uyarı, hangi varlıklar olduğu yazılır.
@@ -5538,7 +5538,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Workspace: açılış zamanı, veri versiyonu, son değişiklik ve son hesap zamanı
   - DataVersion listesi (daha yeni versiyon var mı), PlanVersion listesi (çalışma açıldıktan sonra yayın var mı)
   - Öneri kararları (bekleyen sayısı), PlanWarning (kritik), geçici kayıtlar
-  - Kontrol tanımları: hangisi engel, hangisi uyarı (sistem sahibi ayarı)
+  - Kontrol tanımları: hangisi engel, hangisi uyarı (System owner ayarı)
 - **03:** Çakışan yayın: çalışma açıldıktan sonra başka onaylı plan yayınlandıysa 'çakışma' uyarısı; karşılaştırma bağlantısı verilir (çakışma kuralları açık konu).
 - **04:** Bekleyen karar: kararsız planlı sipariş ve arz önerisi sayısı. Kritik uyarı: plan hesabındaki kritik PlanWarning sayısı.
 - **05:** Hesap güncelliği: son değişiklikten sonra yeniden hesap yoksa 'engel'; yayın butonu kapanır, 'Yeniden hesapla' önerilir.
@@ -5553,10 +5553,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F76 · I Yayın · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Hesap güncelliği her zaman engeldir; diğer kontrollerin engel mi uyarı mı olduğu sistem sahibi ayarıdır (öneri: daha yeni veri ve çakışma uyarı, kritik uyarı eşiği > 3 ise engel).
+  - Hesap güncelliği her zaman engeldir; diğer kontrollerin engel mi uyarı mı olduğu System owner ayarıdır (öneri: daha yeni veri ve çakışma uyarı, kritik uyarı eşiği > 3 ise engel).
   - Kontroller yalnız okur; çalışmayı değiştirmez.
   - Çakışan yayın kuralı taslaktır: Faz 1'de 'son yayınlanan geçerli' + karşılaştırma uyarısı; kilit / birleştirme yok (açık konu).
-  - End user yayın ekranını görmez; key user ve üstü yayınlar.
+  - End user yayın ekranını görmez; Key user ve üstü yayınlar.
   - Kontrol sonucu yayın kaydının parçasıdır; sonradan 'hangi uyarıyla yayınlandı' sorusuna cevap verir.
 - **HATA VE ISTISNA**
   - Kontrol çalışmazsa (hata): yayın güvenli tarafta kapalı kalır, 'kontroller alınamadı, tekrar dene'.
@@ -5599,7 +5599,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (çalışmanın sahibi) · end user yayınlayamaz
+  - Kim: Key user ve üstü (çalışmanın sahibi) · End user yayınlayamaz
   - Nereden: Yayın ekranı 'Yayınla' · Çalışma özeti 'Yayına hazırla' → Yayın
 - **01:** Onay penceresi: çalışma, veri versiyonu, yeni plan numarası, hesap zamanı, yayın notu, varsayılan seçimi ve yayın kaydına girecek uyarılar gösterilir.
 - **02:** 'Yayınla' ile yayın atomik işlem olarak başlar: önce kontroller yeniden çalıştırılır (bu arada başka yayın olduysa durdurulur ve yeni çakışma gösterilir).
@@ -5610,7 +5610,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çakışma kuralı (taslak) ve mevcut PlanVersion listesi
 - **03:** PlanRun kopyalanıp dondurulur: tüm plan çıktıları ve kararlar PlanVersion'a bağlanır; çalışma kopyasındaki kilitli değerler ve geçici kayıtlar planın varsayımı olarak kaydedilir.
 - **04:** DataVersion sabitlenir (IsPinned); 'varsayılan yap' seçildiyse yeni PlanVersion IsCurrent olur, önceki varsayılan 'önceki' durumuna düşer.
-- **05:** Çalışma 'yayınlandı' durumuna geçer ve salt okunur kalır; raporlar, uyarı listesi ve end user görünümü varsayılan plana bağlanır.
+- **05:** Çalışma 'yayınlandı' durumuna geçer ve salt okunur kalır; raporlar, uyarı listesi ve End user görünümü varsayılan plana bağlanır.
 - **06:** Yayın kaydı yazılır: kim, ne zaman, hangi uyarılarla, hangi veri versiyonuyla, kontrol özeti; denetim izi.
 - **ÇIKTI**
   - PlanVersion (v15) ve dondurulmuş plan çıktıları; DataVersion sabit
@@ -5638,7 +5638,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - ERP işlem listesi dışa aktarılabilir (69).
   - Çalışma salt okunur; gece temizliğinde silinmez (yayınlandı).
 - **ÖRNEK:** Cavide 16:04'te v15'i yayınladı: hesap 15:58, v231 sabit, varsayılan; uyarılar: daha yeni veri (v232), çakışan yayın (v14 Mert 10:05), 3 bekleyen karar. Çalışma salt okunur; ERP listesi indirildi.
-- **AÇIK KONU:** Çakışma kuralları: iki key user aynı gün yayınlarsa 'son yayın geçerli' yeterli mi, yoksa yayın kilidi ya da onay akışı mı gerekir?
+- **AÇIK KONU:** Çakışma kuralları: iki Key user aynı gün yayınlarsa 'son yayın geçerli' yeterli mi, yoksa yayın kilidi ya da onay akışı mı gerekir?
 
 ### 77 · Onaylı plan yayınlama · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F77 · I Yayın · Çalışma prensibi 3/3</sub>
@@ -5681,26 +5681,26 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yayın kaydı:** Adım adım ne yapıldı: dondurma, sabitleme, varsayılan, salt okunur.
 - **Onaylı plan listesi:** v15 varsayılan, v14 önceki; hepsi saklanır.
 - **Sonraki adımlar:** ERP listesi, not düzenleme, karşılaştırma, yeni çalışma.
-- **Bildirim:** Raporlar, uyarılar ve end user görünümünün v15'e geçtiği yazar.
+- **Bildirim:** Raporlar, uyarılar ve End user görünümünün v15'e geçtiği yazar.
 
 ### 78 · Varsayılan yap
 <sub>24. Ekranlar ve fonksiyonlar · F78 · I Yayın · Çalışma prensibi 1/2</sub>
 
-- Birden fazla onaylı plan arasında raporların, uyarı listesinin ve end user görünümünün kaynağı olan 'varsayılan' planı belirlemek; yayın sırasında ya da sonradan, geri alınabilir şekilde.
+- Birden fazla onaylı plan arasında raporların, uyarı listesinin ve End user görünümünün kaynağı olan 'varsayılan' planı belirlemek; yayın sırasında ya da sonradan, geri alınabilir şekilde.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Yayın sırasında: key user ve üstü · sonradan değiştirme: admin ve üstü (öneri)
+  - Kim: Yayın sırasında: Key user ve üstü · sonradan değiştirme: Admin ve üstü (öneri)
   - Nereden: Yayın onay penceresi 'Varsayılan yap' · Onaylı planlar listesi satır menüsü · Raporlar ekranı plan seçicisi
 - **01:** Yayında: 'Varsayılan yap' işaretliyse yeni PlanVersion IsCurrent olur, önceki varsayılan 'önceki'ye düşer (77 içinde atomik).
 - **02:** Sonradan: onaylı planlar listesinde satır menüsünden 'Varsayılan yap'; onay penceresi şu anki ve yeni varsayılanı, etkileri ve neden alanını gösterir.
 - **GIRDI**
   - PlanVersion listesi (IsCurrent, yayınlayan, zaman, veri versiyonu, not)
   - Hedef plan ve neden (sonradan değiştirmede zorunlu, öneri)
-  - Varsayılana bağlı tüketiciler: raporlar, uyarı iş listesi, ana sayfa, end user görünümü, ERP işlem listesi
+  - Varsayılana bağlı tüketiciler: raporlar, uyarı iş listesi, ana sayfa, End user görünümü, ERP işlem listesi
 - **03:** Onayla: IsCurrent tek bir planda olacak şekilde değiştirilir (aynı anda tek geçerli); denetim izine neden ve kullanıcı yazılır.
-- **04:** Tüketiciler yeni varsayılana bağlanır: raporlar, uyarı iş listesi (notlar ve atamalar korunur, uyarılar yeni plana göre yeniden listelenir), ana sayfa, end user görünümü, ERP işlem listesi.
+- **04:** Tüketiciler yeni varsayılana bağlanır: raporlar, uyarı iş listesi (notlar ve atamalar korunur, uyarılar yeni plana göre yeniden listelenir), ana sayfa, End user görünümü, ERP işlem listesi.
 - **05:** Çalışması açık kullanıcılara bildirim: 'varsayılan plan v14 oldu' (çalışmalar etkilenmez; onlar senaryoya bağlı).
 - **ÇIKTI**
   - PlanVersion.IsCurrent değişimi; denetim izi (neden, kim, zaman)
@@ -5716,16 +5716,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Varsayılan değiştirmek planları değiştirmez ve silmez; yalnız 'hangi plan görünür' sorusunu cevaplar.
   - Yayınsız (çalışma) plan varsayılan yapılamaz; önce yayınlanmalıdır.
   - Uyarı iş listesindeki notlar ve atamalar plan değişiminde korunur; kapanmış uyarı yeni planda tekrar görünürse yeniden açılır (uyarıyla).
-  - Sonradan değiştirme yetkisi admin ve üstü (öneri); yayın sırasında key user seçebilir.
+  - Sonradan değiştirme yetkisi Admin ve üstü (öneri); yayın sırasında Key user seçebilir.
 - **HATA VE ISTISNA**
   - Hedef plan zaten varsayılan: menü seçeneği pasif.
   - Değişim sırasında rapor üretimi sürüyorsa: rapor eski plandan tamamlanır, sonraki rapor yeni plandan; bildirimde yazar.
   - Veritabanı hatası: değişim geri alınır, eski varsayılan kalır.
   - Hedef planın veri versiyonu sıkıştırılmışsa (81): raporlar özet verir, detay kısıtlı; uyarı.
 - **ETKISI VE TETIKLENENLER**
-  - Raporlar (21), uyarı iş listesi (20), ana sayfa (82) ve end user görünümü yeni plana geçer.
+  - Raporlar (21), uyarı iş listesi (20), ana sayfa (82) ve End user görünümü yeni plana geçer.
   - ERP işlem listesi (69) yeni planın kararlarından.
-  - Bildirim: açık çalışması olan ve admin kullanıcılara.
+  - Bildirim: açık çalışması olan ve Admin kullanıcılara.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Varsayılan plan işareti:** PlanVersion.IsCurrent Onayda anında; tek plan
 - **Raporların kaynağı:** Raporlar (21) Anında; sonraki rapor yeni plandan
@@ -5733,7 +5733,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **End user görünümü:** Onaylı plan salt okunur ekranlar Anında
 - **Ana sayfa karşılaştırması:** Ana sayfa (82) Ertesi sabah, yeni varsayılana göre
 - **ERP işlem listesi:** Dışa aktarma (69) Sonraki dışa aktarımda
-- **ÖRNEK:** Fazla mesai onayı alınamayınca admin v15 yerine v14'ü (fason planı) varsayılan yaptı; neden yazıldı. Raporlar ve end user v14'e döndü; v15 'önceki' olarak kaldı, iki gün sonra tekrar varsayılan yapıldı.
+- **ÖRNEK:** Fazla mesai onayı alınamayınca Admin v15 yerine v14'ü (fason planı) varsayılan yaptı; neden yazıldı. Raporlar ve End user v14'e döndü; v15 'önceki' olarak kaldı, iki gün sonra tekrar varsayılan yapıldı.
 
 ### 78 · Varsayılan yap · Satır menüsü
 <sub>24. Ekranlar ve fonksiyonlar · F78 · I Yayın · Mockup 1/2</sub>
@@ -5763,7 +5763,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Yayında: key user ve üstü (çalışma sahibi) · sonradan düzenleme: admin ve üstü · görüntüleme: herkes (end user dahil)
+  - Kim: Yayında: Key user ve üstü (çalışma sahibi) · sonradan düzenleme: Admin ve üstü · görüntüleme: herkes (End user dahil)
   - Nereden: Yayın onay penceresi (77) · Onaylı planlar listesi satır menüsü 'Yayın notunu düzenle' · Rapor kapağı
 - **01:** Yayın penceresinde başlık ve not alanı açılır; sistem değişiklik izinden, geçici kayıtlardan ve kontrol uyarılarından otomatik özet önerir, tek tıkla nota eklenir.
 - **02:** Kullanıcı neden ve varsayımları yazar (ör. bekleyen onay, tedarikçi teyidi); etiket ekler.
@@ -5772,8 +5772,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Başlık ve serbest metin; etiketler (isteğe bağlı)
   - Otomatik özet: kaynak senaryo, değişiklik listesi, varsayımlar (geçici kayıtlar), yayın uyarıları
   - Düzenleme geçmişi (önceki sürümler)
-- **04:** Not onaylı planlar listesinde, rapor kapağında, ana sayfa 'onaylı plan' kartında ve end user görünümünde gösterilir.
-- **05:** Sonradan düzenleme: admin ve üstü; her düzenleme geçmişe eklenir (kim, ne zaman, önceki metin); yayın anındaki not değişmez olarak kalır.
+- **04:** Not onaylı planlar listesinde, rapor kapağında, ana sayfa 'onaylı plan' kartında ve End user görünümünde gösterilir.
+- **05:** Sonradan düzenleme: Admin ve üstü; her düzenleme geçmişe eklenir (kim, ne zaman, önceki metin); yayın anındaki not değişmez olarak kalır.
 - **06:** Notlar arama ile bulunur (başlık, etiket, metin).
 - **ÇIKTI**
   - Yayın notu (başlık, metin, etiketler) PlanVersion'a bağlı
@@ -5791,9 +5791,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **HATA VE ISTISNA**
   - Not kaydedilemezse yayın yine tamamlanır; not 'kaydedilemedi' uyarısıyla sonradan eklenir (yayın nota bağlı değildir).
   - Çok uzun not (> 4.000 karakter): kısaltma uyarısı.
-  - Düzenleme çakışması (iki admin aynı anda): ikinci kaydeden uyarı alır, önceki metin gösterilir.
+  - Düzenleme çakışması (iki Admin aynı anda): ikinci kaydeden uyarı alır, önceki metin gösterilir.
 - **ETKISI VE TETIKLENENLER**
-  - Onaylı planlar listesi, rapor kapağı, ana sayfa ve end user görünümü metni güncellenir.
+  - Onaylı planlar listesi, rapor kapağı, ana sayfa ve End user görünümü metni güncellenir.
   - Denetim izi: düzenleme kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; not metin alanıdır, plan hesabını etkilemez.
 - **ÖRNEK:** v15 notu: 'Fazla mesai ile SO-1182 öne alındı. 40 sa fazla mesai onayı bekleniyor; alınamazsa v14 planına dönülür. PO-7781 teyidi Mekan Rulman'dan.' Otomatik özet eklendi; etiketler: fazla mesai, SO-1182.
@@ -5806,7 +5806,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Başlık ve metin:** Kısa başlık listede, metin rapor kapağında; imleç metinde.
 - **Otomatik özet:** Değişiklikler, varsayımlar ve uyarılar sistemden; tek tıkla eklenir.
 - **Etiketler:** Arama ve filtre için; serbest etiket.
-- **Düzenleme kuralı:** Yayın sonrası admin düzenler; geçmiş tutulur; bilgi kutusunda yazar.
+- **Düzenleme kuralı:** Yayın sonrası Admin düzenler; geçmiş tutulur; bilgi kutusunda yazar.
 
 ### 80 · Plan karşılaştırma
 <sub>24. Ekranlar ve fonksiyonlar · F80 · I Yayın · Çalışma prensibi 1/2</sub>
@@ -5816,7 +5816,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · end user yalnız onaylı planlar arası karşılaştırmayı raporda görür
+  - Kim: Key user ve üstü · End user yalnız onaylı planlar arası karşılaştırmayı raporda görür
   - Nereden: Yayın ekranı 'Karşılaştır' · Senaryolar ekranı 'yan yana' · Onaylı planlar listesi · Termin / olay sonucu 'senaryo olarak karşılaştır'
 - **01:** A ve B seçilir (varsayılan: mevcut varsayılan plan ↔ açık çalışma). Farklı veri versiyonlarıysa uyarı: fark hem plan hem veri kaynaklı olabilir.
 - **02:** Metrik farkı tablosu: zamanında teslim, gecikme, fazla mesai, fason, doluluk, stok, öneri sayısı; B'nin daha iyi olduğu değerler yeşil, kötü kırmızı (yön metriğe göre).
@@ -5882,7 +5882,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (yayında ve gece temizliğinde otomatik) · saklama ayarı: sistem sahibi · görüntüleme: herkes (end user dahil)
+  - Kim: Sistem (yayında ve gece temizliğinde otomatik) · saklama ayarı: System owner · görüntüleme: herkes (End user dahil)
   - Nereden: Yayın (77) içinde otomatik · Gece akışı senaryo silme işi · Onaylı planlar listesi · Sistem sağlığı disk metriği
 - **01:** Yayında PlanRun kopyası PlanVersion'a bağlanır; plan çıktıları (planlı sipariş, öneri, karşılanma, kapasite yükü, pegging, uyarı, metrik) 'onaylı' olarak işaretlenir ve silme kapsamından çıkar.
 - **02:** DataVersion sabitlenir (IsPinned); versiyon sıkıştırma işi (07) sabit versiyonları atlar.
@@ -5903,11 +5903,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F81 · I Yayın · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Onaylı plan hiçbir kullanıcı tarafından silinemez (sistem sahibi dahil; arşivleme özet bırakır).
+  - Onaylı plan hiçbir kullanıcı tarafından silinemez (System owner dahil; arşivleme özet bırakır).
   - Yayınlanmamış çalışma, kaynak senaryo silinince gider; kullanıcı yayınlamadıysa kaybolur (uyarı akşam bildirimiyle, öneri).
   - Senaryo silinse de o senaryodan yayınlanmış plan bağımsız saklanır (kopya).
   - Veri versiyonu onaylı plana bağlıysa sıkıştırılmaz; bağ kalkmaz.
-  - Saklama süreleri sistem sahibi ayarıdır; kısaltmak mevcut planları silmez.
+  - Saklama süreleri System owner ayarıdır; kısaltmak mevcut planları silmez.
 - **HATA VE ISTISNA**
   - Gece temizliği onaylıya bağlı kaydı silmeye kalkarsa (hata): kısıt engeller, iş hata verir, Sistem sağlığına düşer; plan korunur.
   - Disk eşiği aşıldı: temizlik planları silmez; uyarı ve arşivleme önerisi.
@@ -5918,7 +5918,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Gece akışı logu.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; saklama kaydı ve kısıttır. Arşivleme yalnız satır düzeyi çıktıları özetler; metrikler yeniden hesaplanmaz.
 - **ÖRNEK:** 15 onaylı plan, 18 GB; hepsi sabit veri versiyonuyla. Gece temizliği 5 senaryoyu ve 2 yayınlanmamış çalışmayı sildi; v2 (7 Ağustos) 2 yıl sonra özet bilgiye iner (öneri).
-- **AÇIK KONU:** Arşivleme süresi ve kapsamı (2 yıl, satır düzeyi) sistem sahibi ayarı olarak yeterli mi; müşteri sözleşmesine göre değişebilir mi?
+- **AÇIK KONU:** Arşivleme süresi ve kapsamı (2 yıl, satır düzeyi) System owner ayarı olarak yeterli mi; müşteri sözleşmesine göre değişebilir mi?
 
 ### 81 · Onaylı plan saklama · Saklama görünümü
 <sub>24. Ekranlar ve fonksiyonlar · F81 · I Yayın · Mockup 1/1</sub>
@@ -5928,7 +5928,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Plan listesi:** Her plan veri versiyonu, durum ve saklama türüyle; silme seçeneği yok.
 - **Kurallar:** Ne silinir, ne kalır; gece temizliğinin kapsamı açık.
 - **Disk metrikleri:** Planların disk kullanımı ve sabit versiyon sayısı; sistem sağlığıyla aynı.
-- **Arşiv (öneri):** 2 yıldan eski plan özet bilgiye iner; sistem sahibi ayarı.
+- **Arşiv (öneri):** 2 yıldan eski plan özet bilgiye iner; System owner ayarı.
 
 ### J · Takip ve rapor
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
@@ -5949,7 +5949,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (tam görünüm) · end user: onaylı plan ve uyarılar, salt okunur
+  - Kim: Key user ve üstü (tam görünüm) · End user: onaylı plan ve uyarılar, salt okunur
   - Nereden: Giriş sonrası açılış ekranı · menü 'Ana sayfa' · gece akışı bitince otomatik tazelenir
 - **01:** Ekran açılınca son gece akışının iş kayıtları okunur: her adımın başlangıcı, süresi, durumu; süre aşımı ve hata kırmızı işaretlenir.
 - **02:** Özet kartlar dolar: biten senaryo sayısı, kritik uyarı sayısı (dünle fark), ana senaryonun zamanında teslim oranı, veri durumu (son yükleme ve uyarı sayısı).
@@ -6030,7 +6030,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Not, atama, kapatma: key user ve üstü · end user: onaylı plan uyarılarını görür ve Excel'e alır
+  - Kim: Not, atama, kapatma: Key user ve üstü · End user: onaylı plan uyarılarını görür ve Excel'e alır
   - Nereden: Menü 'Uyarılar' · ana sayfa 'Uyarılara git' · ekranlardaki uyarı çipleri
 - **01:** Liste açılır: varsayılan kaynak onaylı plan ve geçerli veri versiyonu; açık uyarılar önem sırasıyla, kategori çipleri sayılarıyla.
 - **02:** Filtreler daraltır (kategori çipi, önem, durum, sorumlu, metin); filtre kullanıcı bazında hatırlanır ve kaydedilebilir.
@@ -6056,7 +6056,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Uyarı kimliği nesne + kod bazlıdır; plan hesapları arasında taşınır, notlar kaybolmaz.
   - Kapatılan uyarı aynı koşulla yeniden üretilirse 'yeniden açıldı' etiketiyle listeye döner.
   - 'Yanlış uyarı' nedeniyle kapatılanlar eşik gözden geçirme listesine düşer (parametre setinde, öneri).
-  - End user yalnız onaylı plan uyarılarını görür; senaryo ve çalışma uyarıları key user ve üstü.
+  - End user yalnız onaylı plan uyarılarını görür; senaryo ve çalışma uyarıları Key user ve üstü.
   - Kritik uyarı eşikleri parametre setindedir (26); liste yalnız gösterir.
 - **HATA VE ISTISNA**
   - Hesap sürerken liste son tamamlanan hesabı gösterir; başlıkta 'hesap sürüyor' etiketi.
@@ -6113,7 +6113,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (hedefte değişiklik yapabilir) · end user: salt okunur hedefler
+  - Kim: Key user ve üstü (hedefte değişiklik yapabilir) · End user: salt okunur hedefler
   - Nereden: Uyarı iş listesi 'Kaynağa git' · ana sayfa uyarı satırı · ekranlardaki uyarı çipleri
 - **01:** Uyarı koduna ve nesne tipine göre hedefler listelenir: teslim → sipariş bazlı; kapasite → kaynak doluluk ya da kaynak bazlı; malzeme → malzeme planı; ana veri → kayıt; işlem verisi → veri kalitesi; proje → pegging.
 - **02:** Bağlam belirlenir: uyarı bir çalışmaya aitse o çalışma içinde açılır; onaylı plana aitse ve kullanıcının açık çalışması yoksa hedef salt okunur açılır, 'çalışma aç' önerilir.
@@ -6135,10 +6135,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Geçiş aynı sekmede olur; bağlam (çalışma, senaryo) URL'de taşınır, paylaşılabilir.
   - End user yalnız salt okunur hedeflere gider (rapor, onaylı plan görünümleri).
-  - Hedef eşlemesi uyarı tanımındadır; sistem sahibi düzenler.
+  - Hedef eşlemesi uyarı tanımındadır; System owner düzenler.
   - Silinmiş nesne (ERP'de iptal edilen sipariş) için hedef yok; 'kayıt artık yok' mesajı, uyarı kapatmaya aday.
 - **HATA VE ISTISNA**
-  - Yetkisiz hedef (end user → kaynak bazlı planlama): uyarı detayı gösterilir, yönlendirme yapılmaz; mesaj kimin yapabileceğini söyler.
+  - Yetkisiz hedef (End user → kaynak bazlı planlama): uyarı detayı gösterilir, yönlendirme yapılmaz; mesaj kimin yapabileceğini söyler.
   - Nesne bulunamadı: açıklama ve 'uyarıyı kapat' kısayolu.
   - Çalışma açılması gerekiyor ama sıcak çalışma sınırı dolu: 'kuyrukta 1. sırada' bilgisiyle bekletme.
 - **ETKISI VE TETIKLENENLER**
@@ -6174,9 +6174,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Tüm roller · senaryo ve çalışma kaynağı: key user ve üstü · end user yalnız onaylı plan (varsayılan)
+  - Kim: Tüm roller · senaryo ve çalışma kaynağı: Key user ve üstü · End user yalnız onaylı plan (varsayılan)
   - Nereden: Menü 'Raporlar' · rapor kartı 'Görüntüle' · çalışma ekranı 'Raporlar' (çalışma kaynaklı)
-- **01:** Rapor listesi açılır; kaynak seçici varsayılan onaylı planı gösterir, key user senaryo ya da çalışma seçebilir.
+- **01:** Rapor listesi açılır; kaynak seçici varsayılan onaylı planı gösterir, Key user senaryo ya da çalışma seçebilir.
 - **02:** Rapor seçilince sorgu seçilen plan hesabı üzerinde çalışır (CapacityLoad, DemandFulfillment, PlannedOrder, Pegging…); büyük sonuç sayfalanır, toplamlar tam hesaplanır.
 - **GIRDI**
   - Rapor tanımı (25. adım): alanlar, varsayılan filtre ve gruplama, rol bazlı sütun kısıtı (öneri)
@@ -6200,12 +6200,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - End user yalnız varsayılan onaylı planı seçebilir; kaynak seçici kilitlidir.
   - Senaryo gece silinince ona bağlı rapor açılmaz; PlanMetric özeti kalır.
   - Rapor sorgusu iş kuyruğuna girmez; 30 sn üstü sorguda filtre daraltma istenir.
-  - Rol bazlı sütun kısıtı rapor tanımında (öneri: maliyet sütunları yalnız admin ve üstü).
+  - Rol bazlı sütun kısıtı rapor tanımında (öneri: maliyet sütunları yalnız Admin ve üstü).
 - **HATA VE ISTISNA**
   - Sorgu zaman aşımı: kısmi sonuç gösterilmez; 'dönem ya da filtreyi daraltın' mesajı.
   - Kaynak artık yok (senaryo silinmiş): 'kaynak silindi' ve onaylı plana geçiş önerisi.
   - Boş sonuç: boş durum ekranı ('bu filtrede geciken sipariş yok').
-  - Rapor tanımı hatalı (olmayan alan): rapor listede 'tanım hatası' ile pasif, sistem sahibine uyarı.
+  - Rapor tanımı hatalı (olmayan alan): rapor listede 'tanım hatası' ile pasif, System owner'a uyarı.
 - **ETKISI VE TETIKLENENLER**
   - Excel'e aktarma (86) ve dışa aktarım izi (87).
   - Hücreden detaya geçiş: pegging (70), sipariş bazlı (13), kaynak doluluk (10).
@@ -6214,7 +6214,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Toplamlar ve gruplar:** Rapor sorgusu Filtre, gruplama ya da sütun değişince
 - **Varsayılan kaynak:** PlanVersion.IsCurrent Yeni onaylı plan 'varsayılan yap' ile yayınlanınca (78)
 - **Senaryo kaynaklı raporlar:** Scenario Gece senaryo silinince kaynak listesinden düşer
-- **ÖRNEK:** Ayşe (end user) gecikme raporunu açar: kaynak onaylı plan v14 kilitli; müşteriye göre gruplar, 6 geciken satır, toplam 41 gün; Excel'e alır. Cavide aynı raporu Fazla mesai senaryosundan açıp karşılaştırır.
+- **ÖRNEK:** Ayşe (End user) gecikme raporunu açar: kaynak onaylı plan v14 kilitli; müşteriye göre gruplar, 6 geciken satır, toplam 41 gün; Excel'e alır. Cavide aynı raporu Fazla mesai senaryosundan açıp karşılaştırır.
 
 ### 85 · Rapor görüntüleme · Kaynak seçimi
 <sub>24. Ekranlar ve fonksiyonlar · F85 · J Takip ve rapor · Mockup 1/3</sub>
@@ -6242,7 +6242,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![85 · Rapor görüntüleme · End user görünümü](mockups/m24f-0721-85-rapor-goruntuleme-end-user-gorunumu.png)
 
 - **Kilitli kaynak:** Onaylı plan v14; kilit simgesi ve açıklama.
-- **Serbest filtre:** Filtreleme, gruplama ve Excel end user'da da var.
+- **Serbest filtre:** Filtreleme, gruplama ve Excel End user'da da var.
 - **Gizli aksiyonlar:** Yazdır ve bağlantı yerine tek buton: Excel'e aktar.
 - **Üst şerit:** Rolün kapsamı tek cümleyle.
 
@@ -6254,7 +6254,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Tüm roller · end user yalnız onaylı plan kaynaklı tablo ve raporlar
+  - Kim: Tüm roller · End user yalnız onaylı plan kaynaklı tablo ve raporlar
   - Nereden: Rapor ekranı, tablo kartları, uyarı listesi, ana veri, öneriler, senaryo karşılaştırma: 'Excel'e aktar'
 - **01:** Kullanıcı 'Excel'e aktar' der; kapsam penceresi: satırlar (filtrelenmiş / tümü), sütunlar (görünen / tümü), gruplama ve ara toplamlar, 'Bilgi' sayfası.
 - **02:** Satır sayısı 50.000'e kadar anlık üretilir; üstü iş kuyruğunda arka planda hazırlanır, hazır olunca bildirimle 'İndir' gelir (en fazla 500.000 satır).
@@ -6318,7 +6318,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Kendi kayıtları: tüm roller · tüm kullanıcılar: admin ve üstü
+  - Kim: Kendi kayıtları: tüm roller · tüm kullanıcılar: Admin ve üstü
   - Nereden: Raporlar ekranı 'Son dışa aktarımlar' → tam liste · Denetim izi (98) 'dışa aktarım' filtresi
 - **01:** Her dışa aktarım (86) aynı işlem içinde AuditLog'a yazılır; iz yazılamazsa dışa aktarım yapılmaz (öneri).
 - **02:** Raporlar ekranında son 20 kayıt görünür; 'tümü' filtreli tam listeyi açar (tarih, kullanıcı, rapor, kaynak).
@@ -6327,7 +6327,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Filtreler: tarih, kullanıcı, rapor, kaynak
 - **03:** Satır seçilince detay çekmecesi: filtreler, sütunlar, satır sayısı, dosya adı, süre; 'aynı filtrelerle raporu aç' ve 'yeniden indir' (24 saat içinde).
 - **04:** Liste Excel'e aktarılabilir; bu da iz bırakır.
-- **05:** Kayıtlar silinmez; saklama süresiz (sistem sahibi ayarıyla sınırlanabilir, öneri).
+- **05:** Kayıtlar silinmez; saklama süresiz (System owner ayarıyla sınırlanabilir, öneri).
 - **ÇIKTI**
   - İz listesi ve detay görünümü
   - 'Aynı filtrelerle aç' bağlantısı (85)
@@ -6338,7 +6338,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - İz kaydı silinemez ve düzenlenemez; dosyanın kendisi saklanmaz, yalnız üstbilgi.
-  - End user ve key user kendi kayıtlarını görür; tüm liste admin ve üstü.
+  - End user ve Key user kendi kayıtlarını görür; tüm liste Admin ve üstü.
   - Kaynak senaryo silinmiş olsa da kayıt kalır; 'yeniden aç' o durumda pasif.
   - Denetim izinin (98) bir görünümüdür; aynı tablodan okur.
 - **HATA VE ISTISNA**
@@ -6358,7 +6358,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Tam üstbilgi:** Kullanıcı, rapor, kaynak, filtre özeti, satır ve boyut tek satırda.
 - **End user kaydı:** Rol etiketiyle görünür; kimin ne indirdiği belli.
-- **Filtreler:** Tarih, kullanıcı, rapor, kaynak; admin tüm kullanıcıları görür.
+- **Filtreler:** Tarih, kullanıcı, rapor, kaynak; Admin tüm kullanıcıları görür.
 - **Silinmez:** Alt notta kuralın özeti: üstbilgi kalır, dosya saklanmaz.
 
 ### 87 · Dışa aktarım izi · Kayıt detayı
@@ -6382,7 +6382,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **93 · İş kuyruğu yönetimi (öneri):** Çalışan ve bekleyen işleri (gece senaryoları, sıcak çalışma hesapları, yüklemeler, büyük dışa aktarımlar) görmek; bekleyeni iptal etmek, çalışanı en iyi çözümle durdurmak, öncelik vermek. Daha önce konuşulmadı (öneri).
 - **94 · Sistem sağlığı:** Uygulama, veritabanı ve motorun durumunu tek ekranda görmek: servisler, kuyruk, son çalışmalar ve süre trendleri, hatalar, disk.
 - **95 · Destek paketi:** Kapalı ağda uzaktan erişim olmadığından sorun incelemesi için log, ayar, sürüm ve iş kayıtlarını (isteğe bağlı anonim model girdisini) tek şifreli pakette dışa almak; biz paketi inceleyip çözüm üretiriz.
-- **96 · Sistem sahibi ayarları:** Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, elle ezme, çalışmada değiştirilebilirlik), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
+- **96 · System owner ayarları:** Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, elle ezme, çalışmada değiştirilebilirlik), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
 - **97 · Sürüm güncelleme (öneri):** Kapalı ağda yeni Smartchain sürümünü imzalı kurulum paketiyle güvenle uygulamak: ön kontrol, bakım modu, yedek, şema geçişi, servisler, sağlık kontrolü ve gerekirse otomatik geri alma. Daha önce konuşulmadı (öneri).
 - **98 · Denetim izi (öneri):** Veri, parametre, plan, kullanıcı ve sistem değişikliklerinin merkezi, yalnızca eklenen ve silinemeyen kaydı: kim, ne zaman, neyi, eski ve yeni değer.
 
@@ -6394,7 +6394,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Admin ve üstü · sistem sahibi rolünü yalnız sistem sahibi verir
+  - Kim: Admin ve üstü · System owner rolünü yalnız System owner verir
   - Nereden: Menü 'Kullanıcılar' (Yönetim) · kullanıcı satırı aksiyonları
 - **01:** 'Kullanıcı ekle': ad soyad, benzersiz kullanıcı adı, rol; sistem politikaya uygun geçici şifre üretir ve bir kez ekranda gösterir (kapalı ağ, e-posta yok).
 - **02:** İlk girişte şifre değiştirme zorunludur (89); hesap o ana kadar 'ilk giriş bekliyor' durumundadır.
@@ -6404,7 +6404,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Lisans kullanıcı sınırı (License)
 - **03:** Rol değiştirme anında etkilidir: açık oturum bir sonraki istekte yeni yetkilerle çalışır, kullanıcıya bildirim düşer.
 - **04:** Kapatma: onay penceresi etkileri listeler (oturum, atanmış uyarılar, açık çalışmalar); uyarılar devredilebilir; kullanıcı pasif olur, silinmez.
-- **05:** Şifre sıfırlama yeni geçici şifre üretir; kilitli hesabı (5 hatalı giriş) admin açar.
+- **05:** Şifre sıfırlama yeni geçici şifre üretir; kilitli hesabı (5 hatalı giriş) Admin açar.
 - **ÇIKTI**
   - AppUser kaydı (yeni, güncel ya da pasif)
   - Geçici şifre (bir kez gösterilir, saklanmaz)
@@ -6416,14 +6416,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Kullanıcı silinmez; geçmiş kayıtların (yayın, not, dışa aktarım) bütünlüğü için pasif edilir.
-  - Son aktif admin kapatılamaz; sistem sahibi hesabı kapatılamaz ve rolü değiştirilemez.
+  - Son aktif Admin kapatılamaz; System owner hesabı kapatılamaz ve rolü değiştirilemez.
   - Kullanıcı kendi rolünü düşüremez, kendini kapatamaz.
   - Kullanıcı adı oluşturulduktan sonra değiştirilemez (öneri).
   - Aktif kullanıcı sayısı lisans sınırını aşamaz; sınırda ekleme engellenir.
 - **HATA VE ISTISNA**
   - Kullanıcı adı çakışması: alan altında hata, öneri (burak2).
-  - Lisans sınırı dolu: 'Oluştur' pasif, mesajda sınır ve kimin artırabileceği (sistem sahibi).
-  - Kapatılan kullanıcının açık çalışması varsa uyarı: çalışma gece silinir ya da admin devralır (öneri).
+  - Lisans sınırı dolu: 'Oluştur' pasif, mesajda sınır ve kimin artırabileceği (System owner).
+  - Kapatılan kullanıcının açık çalışması varsa uyarı: çalışma gece silinir ya da Admin devralır (öneri).
   - Geçici şifre penceresi kapandıysa yalnız yeni sıfırlama; eski şifre geri getirilemez.
 - **ETKISI VE TETIKLENENLER**
   - Rol bazlı yetki (90) anında.
@@ -6435,7 +6435,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Atanmış uyarılar:** Uyarı iş kaydı Kapatılan kullanıcının uyarıları devredilir ya da sorumsuz kalır
 - **Açık çalışmalar:** Workspace Kapatılan kullanıcının yayınlanmamış çalışmaları gece silinir
 - **Menü ve buton görünürlüğü:** Arayüz Rolün bir sonraki sayfa yüklemesinde
-- **ÖRNEK:** Burak D. end user olarak açılır (lisans 12 / 12 dolar). Geçici şifre bir kez gösterilir; Burak ilk girişte şifresini değiştirir. Okan Y. kapatılır, 3 uyarısı Mert'e devredilir.
+- **ÖRNEK:** Burak D. End user olarak açılır (lisans 12 / 12 dolar). Geçici şifre bir kez gösterilir; Burak ilk girişte şifresini değiştirir. Okan Y. kapatılır, 3 uyarısı Mert'e devredilir.
 
 ### 88 · Kullanıcı yönetimi · Kullanıcı ekleme
 <sub>24. Ekranlar ve fonksiyonlar · F88 · K Yönetim ve sistem · Mockup 1/3</sub>
@@ -6475,7 +6475,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Tüm kullanıcılar · politika ayarları: sistem sahibi · kilit açma: admin ve üstü
+  - Kim: Tüm kullanıcılar · politika ayarları: System owner · kilit açma: Admin ve üstü
   - Nereden: Giriş sayfası · sağ üst kullanıcı menüsü 'Şifre değiştir' · oturum zaman aşımı penceresi
 - **01:** Giriş sayfası kullanıcı adı ve şifre alır; hata mesajı geneldir ('kullanıcı adı ya da şifre hatalı'), kullanıcının varlığı sızdırılmaz; kalan deneme sayısı gösterilir.
 - **02:** Başarılı girişte sunucu oturumu açılır (HttpOnly çerez, kurum sertifikasıyla HTTPS); giriş denetim izine yazılır; ana sayfa açılır.
@@ -6484,7 +6484,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - SystemSetting: şifre politikası (en az 10 karakter, harf + rakam, son 5 şifreden farklı, 90 gün; öneri), hareketsizlik sınırı 30 dk (öneri), 5 hatalı girişte 15 dk kilit
 - **03:** İlk giriş ya da sıfırlama sonrası şifre değiştirme zorunludur; politika kontrolleri yazarken anlık görünür.
 - **04:** Hareketsizlikte 25. dakikada uyarı penceresi (kalan süre); 30. dakikada oturum kapanır. Kaydedilmemiş manuel planlama değişiklikleri tarayıcıda taslak kalır ve sonraki girişte sorulur (öneri).
-- **05:** 5 hatalı giriş hesabı 15 dk kilitler; süre dolunca otomatik açılır, admin elle açabilir. Kilit ve denemeler denetim izine yazılır.
+- **05:** 5 hatalı giriş hesabı 15 dk kilitler; süre dolunca otomatik açılır, Admin elle açabilir. Kilit ve denemeler denetim izine yazılır.
 - **ÇIKTI**
   - Sunucu oturumu ve çerez
   - Denetim izi: giriş, çıkış, başarısız deneme, kilit, şifre değişikliği
@@ -6499,7 +6499,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 'Beni hatırla' yok (paylaşımlı bilgisayar riski, öneri); oturum tarayıcı kapanınca biter.
   - Servis hesapları (entegrasyon) arayüzden giriş yapamaz.
   - End user da aynı giriş akışını kullanır; rol oturuma bağlanır (90).
-  - Politika değerleri sistem sahibi ayarıdır; değişiklik bir sonraki şifre değişiminde geçerli.
+  - Politika değerleri System owner ayarıdır; değişiklik bir sonraki şifre değişiminde geçerli.
 - **HATA VE ISTISNA**
   - Kilitli hesap: kalan süre ve 'yöneticinize başvurun'.
   - Pasif hesap: 'hesap kapalı' mesajı, deneme sayılmaz.
@@ -6530,7 +6530,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **İlk giriş:** Geçici şifre sonrası yeni şifre penceresi; atlanamaz.
 - **Canlı politika kontrolü:** Her kural yazarken yeşil/kırmızı; buton tümü sağlanınca açılır.
 - **Eşleşme hatası:** Tekrar alanı uyuşmuyorsa alan altında kısa mesaj.
-- **Politika kaynağı:** Kuralların sistem sahibi ayarı olduğu alt başlıkta.
+- **Politika kaynağı:** Kuralların System owner ayarı olduğu alt başlıkta.
 
 ### 89 · Giriş ve oturum · Oturum zaman aşımı
 <sub>24. Ekranlar ve fonksiyonlar · F89 · K Yönetim ve sistem · Mockup 3/3</sub>
@@ -6550,36 +6550,57 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her istekte) · matris görüntüleme: admin ve üstü · değişiklik: Faz 1'de sabit, sistem sahibi görür
-  - Nereden: Sistem sahibi ayarları 'Yetki matrisi' sekmesi · tüm API uç noktaları
+  - Kim: Sistem (her istekte) · matris görüntüleme: Admin ve üstü · değişiklik: Faz 1'de sabit, System owner görür
+  - Nereden: System owner ayarları 'Yetki matrisi' sekmesi · tüm API uç noktaları
 - **01:** Sunucu her isteği rol + fonksiyon + bağlam üçlüsüyle doğrular; arayüzdeki kontroller yalnız görünürlük içindir, güvenlik sunucudadır.
-- **02:** Dört rol: sistem sahibi (her şey + motor, lisans, veri sözlüğü, sürüm), admin (kullanıcı, entegrasyon, işler, sağlık + key user yetkileri), key user (planlama, çalışma, yayın, parametre, veri düzeltme), end user (görüntüleme ve Excel).
+- **02:** Dört rol (adlar her yerde böyle, K-99): System owner (her şey + motor, lisans, veri sözlüğü, sürüm), Admin (kullanıcı, entegrasyon, işler, sağlık + Key user yetkileri), Key user (planlama, çalışma, yayın, parametre, veri düzeltme), End user (görüntüleme ve raporlama: görünüm, alan, koşullu biçim, Excel; fonksiyon çalıştırmaz, veriyi elle değiştirmez).
 - **GIRDI**
   - Oturumdaki rol (AppUser.Role)
   - Fonksiyon kimliği (bu listedeki 98 fonksiyon) ve nesne bağlamı (çalışma sahibi mi, onaylı plan mı)
   - Yetki matrisi (Faz 1: kodda sabit)
-- **03:** Nesne bağlamı: çalışmayı yalnız sahibi değiştirir; diğer key user'lar salt okunur görür (devralma admin ile, öneri). End user yalnız onaylı planı görür.
+- **03:** Nesne bağlamı: çalışmayı yalnız sahibi değiştirir; diğer Key user'lar salt okunur görür (devralma Admin ile, öneri). End user yalnız onaylı planı görür.
 - **04:** Arayüz: yetkisiz menü öğesi gizlenir; bağlam dışı buton pasifleşir ve nedenini söyler (araç ipucu).
 - **05:** Yetkisiz istek 403 ile reddedilir ve denetim izine yazılır (olağan dışı deneme sayılır).
 - **ÇIKTI**
   - Her istekte izin ya da ret
   - Matris görünümü ve Excel çıktısı
   - Denetim izi: ret kayıtları
-- **06:** Matris sistem sahibi ekranında görüntülenir ve Excel'e aktarılır; Faz 2'de düzenlenebilir (öneri).
+- **06:** Matris System owner ekranında görüntülenir ve Excel'e aktarılır; Faz 2'de düzenlenebilir (öneri).
+
+- **Yetki matrisi (K-100; Faz 1'de kodda sabit, `app/api/permissions.py`):** grup düzeyinde; hücreler: tam, sahibi (hepsini okur, yalnız kendi nesnesini değiştirir), kendi (yalnız kendi kayıtları), salt okunur, yok. Tablo kodla birebir (test).
+
+| Grup | Fonksiyonlar | System owner | Admin | Key user | End user |
+|---|---|---|---|---|---|
+| A · Veri alma | 01–09 | tam | tam | tam | yok |
+| B · Ana veri ve kurallar | 10–21 | tam | tam | tam | salt okunur |
+| C · Parametre | 22–28 | tam | tam | tam | yok |
+| D · Planlama motoru | 29–39 | tam | tam | tam | yok |
+| E · Senaryo ve çalışma | 40–49 | tam | tam | tam | yok |
+| F · Manuel planlama | 50–63 | tam | tam | sahibi | yok |
+| G · Malzeme ve öneriler | 64–69 | tam | tam | tam | salt okunur |
+| H · Analiz | 70–75 | tam | tam | tam | salt okunur |
+| I · Yayın | 76–81 | tam | tam | tam | yok |
+| J · Takip ve rapor | 82–87 | tam | tam | tam | salt okunur |
+| K · Kullanıcı, entegrasyon, işler, sağlık | 88–95 | tam | tam | yok | yok |
+| K · System owner ayarları, sürüm | 96–97 | tam | yok | yok | yok |
+| K · Denetim izi | 98 | tam | tam | kendi | yok |
+
+- **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur.
+- **Raporlama serbestliği (K-99):** görünüm kaydetme, alan ekleme ve çıkarma, sıralama, filtre, gruplama ve koşullu biçim fonksiyon sayılmaz; okuma yetkisi olan her listede herkese açıktır.
 
 ### 90 · Rol bazlı yetki · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F90 · K Yönetim ve sistem · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - End user hiçbir fonksiyonu çalıştıramaz; yalnız görüntüler ve Excel'e indirir.
+  - End user fonksiyon çalıştıramaz ve veriyi elle değiştiremez; raporlama tarafında serbesttir: görünüm kaydeder, alan ekler ve çıkarır, koşullu biçim verir, Excel'e aktarır (K-99).
   - Yetki sunucuda; arayüz güvenilmez.
   - Rol değişikliği bir sonraki istekte geçerlidir; oturum kapatılmaz.
   - Servis hesapları yalnız entegrasyon uç noktalarını kullanır; arayüz yetkisi yoktur.
-  - Sistem sahibi ayarlarını admin dahi görmez.
+  - System owner ayarlarını Admin dahi görmez.
 - **HATA VE ISTISNA**
   - 403: kullanıcıya 'bu işlem için … yetkisi gerekir' ve kimden isteyeceği; teknik detay yok.
   - Çalışma sahibi değilken değişiklik denemesi: 'salt okunur' şeridi ve 'kopyasını aç' önerisi (öneri).
-  - Rolü bilinmeyen oturum (bozuk kayıt): oturum kapatılır, admin'e uyarı.
+  - Rolü bilinmeyen oturum (bozuk kayıt): oturum kapatılır, Admin'e uyarı.
 - **ETKISI VE TETIKLENENLER**
   - Menü ve buton görünürlüğü.
   - Kullanıcı yönetimi (88) ile rol atamaları.
@@ -6588,7 +6609,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Menü ve aksiyon görünürlüğü:** Arayüz Oturum açılışında ve rol değişince
 - **Çalışma sahipliği:** Workspace.OwnerUserId Devralma (öneri) ya da sahibin kapatılmasıyla
 - **Yetki önbelleği:** Sunucu oturumu Rol değişince bir sonraki istekte
-- **ÖRNEK:** Ayşe (end user) uyarı listesini görür; 'Kapat' pasif, ipucu key user yetkisi istediğini söyler; Excel'e aktarabilir. Mert (key user) Cavide'nin çalışmasını salt okunur görür.
+- **ÖRNEK:** Ayşe (End user) uyarı listesini görür; 'Kapat' pasif, ipucu Key user yetkisi istediğini söyler; Excel'e aktarabilir. Mert (Key user) Cavide'nin çalışmasını salt okunur görür.
 
 ### 90 · Rol bazlı yetki · Yetki matrisi
 <sub>24. Ekranlar ve fonksiyonlar · F90 · K Yönetim ve sistem · Mockup 1/2</sub>
@@ -6608,7 +6629,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Pasif butonlar:** Kaynağa git, Ata, Kapat gri; gizlenmez, nedeni ipucunda.
 - **Üst şerit:** Rol ve kapsam her ekranda görünür.
 - **Not alanı kilitli:** Yazılamayacağı alanın içinde yazar; boş değil.
-- **Excel serbest:** Görüntüleme ve indirme end user'ın hakkı.
+- **Excel serbest:** Görüntüleme ve indirme End user'ın hakkı.
 
 ### 91 · Entegrasyon tanımı
 <sub>24. Ekranlar ve fonksiyonlar · F91 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
@@ -6618,7 +6639,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Admin ve üstü · veri sözleşmesi (alan listesi) sistem sahibinin veri sözlüğünden gelir
+  - Kim: Admin ve üstü · veri sözleşmesi (alan listesi) System owner'ın veri sözlüğünden gelir
   - Nereden: Menü 'Entegrasyon' · varlık satırı 'Eşleme' · 'Bağlantıyı test et'
 - **01:** Bağlantı tanımlanır: yöntem, adres, servis hesabı; 'Bağlantıyı test et' kimlik, erişim, şema ve örnek okuma (5 satır) adımlarını çalıştırır; test yalnız okur.
 - **02:** Varlık eşlemesi: her varlık için kaynak (uç nokta, tablo ya da Excel) ve alan listesi; zorunlu alan eşlenmeden varlık 'eksik' kalır ve çekimde atlanır.
@@ -6700,7 +6721,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Admin ve üstü · 'şimdi çalıştır': admin ve üstü
+  - Kim: Admin ve üstü · 'şimdi çalıştır': Admin ve üstü
   - Nereden: Entegrasyon ve zamanlanmış işler ekranı · Gece senaryoları ekranı (senaryo sırası)
 - **01:** Liste: iş, zaman, sonraki çalışma, son sonuç ve süre, aktif anahtarı.
 - **02:** Düzenleme çekmecesi: saat ve günler, bağımlılık ('yüklemeden sonra'), kanal, öncelik; çakışma kontrolü aynı anda iki ağır işi engeller.
@@ -6769,7 +6790,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Görüntüleme: key user ve üstü (kendi işleri), admin ve üstü (tümü) · iptal: kendi işi key user, başkasının işi admin ve üstü
+  - Kim: Görüntüleme: Key user ve üstü (kendi işleri), Admin ve üstü (tümü) · iptal: kendi işi Key user, başkasının işi Admin ve üstü
   - Nereden: Sistem sağlığı 'İş kuyruğu' · çalışma ekranı kuyruk durumu · üstteki iş şeridi
 - **01:** Liste canlıdır (WebSocket): çalışan, kuyrukta, son 24 saatte tamamlanan; sıcak çalışma sayacı (2 / 3) ve tahmini bekleme.
 - **02:** Bekleyen iş iptali: kuyruktan çıkar, sahibine nedeniyle bildirim; çalışma 'hesaplanmadı' kalır, önceki sonuç korunur.
@@ -6778,7 +6799,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Job tablosu: tür, kanal, öncelik, durum, kim, ilerleme, kalp atışı, deneme sayısı
   - SystemSetting: eş zamanlı sıcak çalışma (3), işçi sayısı
   - Kullanıcı rolü
-- **04:** Öncelik: admin bekleyen işi öne alır; gece kanalı işleri gündüz kanalını bloke etmez (ayrı işçi havuzu, öneri).
+- **04:** Öncelik: Admin bekleyen işi öne alır; gece kanalı işleri gündüz kanalını bloke etmez (ayrı işçi havuzu, öneri).
 - **05:** Takılı iş: kalp atışı 2 dk gelmezse 'yanıt vermiyor'; bir kez otomatik yeniden kuyruk (Attempt + 1), sonra hata ve Sistem sağlığı kaydı.
 - **ÇIKTI**
   - Job durumu değişiklikleri
@@ -6792,7 +6813,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Yükleme işleri iptal edilemez.
   - İptal edilen sıcak hesapta çalışmanın önceki sonucu korunur; kullanıcı yeniden hesaplar.
-  - Kendi işini herkes, başkasının işini yalnız admin iptal eder; neden zorunlu.
+  - Kendi işini herkes, başkasının işini yalnız Admin iptal eder; neden zorunlu.
   - Gece kanalında öne alma yok; sıra Gece senaryoları ekranından yönetilir.
   - Durdurulan motor işi 'en iyi çözüm' ile biter ve çalışmada 'erken durduruldu' etiketi taşır.
 - **HATA VE ISTISNA**
@@ -6819,7 +6840,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Satır menüsü:** Durdur ve en iyi çözümü sakla, iptal, log; öne alma yalnız bekleyende.
 - **En iyi çözüm:** Durdurma sonuç verir; iptal vermez; fark menüde yazar.
 - **Canlı liste:** Süre ve ilerleme WebSocket ile; sayfa yenileme yok.
-- **Yetki:** Başkasının işi için seçenekler admin olmayanlarda pasif.
+- **Yetki:** Başkasının işi için seçenekler Admin olmayanlarda pasif.
 
 ### 93 · İş kuyruğu yönetimi (öneri) · İptal onayı
 <sub>24. Ekranlar ve fonksiyonlar · F93 · K Yönetim ve sistem · Mockup 2/2</sub>
@@ -6828,7 +6849,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Sonuç listesi:** Bildirim, çalışma durumu ve sayaç etkisi tek tek.
 - **Neden zorunlu:** İş sahibinin bildiriminde görünür; keyfi iptal azalır.
-- **Admin kuralı:** Başkasının işini yalnız admin; denetim izi notu.
+- **Admin kuralı:** Başkasının işini yalnız Admin; denetim izi notu.
 - **Önceki sonuç korunur:** Kullanıcı veri kaybetmez; yeniden hesaplar.
 
 ### 94 · Sistem sağlığı
@@ -6839,7 +6860,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Admin ve üstü · sistem sahibi tüm detayı görür
+  - Kim: Admin ve üstü · System owner tüm detayı görür
   - Nereden: Menü 'Sistem sağlığı' · ana sayfa hata satırı bağlantısı · hata bildirimleri
 - **01:** Üst kartlar: kuyruk, sıcak çalışma sayacı, son 7 gün hata, disk kullanımı; eşik aşımı kırmızı.
 - **02:** Servis durumu: uygulama servisi, işçi servisi (meşgul işçi), SQL Server bağlantısı ve havuzu, zamanlayıcı, WebSocket bağlantı sayısı; son kalp atışıyla.
@@ -6861,8 +6882,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Ekranda özet log; ham log yalnız destek paketinde.
-  - Eşikler sistem sahibi ayarıdır.
-  - Key user ve end user bu ekranı görmez; onlara kuyruk durumu çalışma ekranında yeter.
+  - Eşikler System owner ayarıdır.
+  - Key user ve End user bu ekranı görmez; onlara kuyruk durumu çalışma ekranında yeter.
   - Hata kayıtları 90 gün ekranda, sonra yalnız logda (öneri).
 - **HATA VE ISTISNA**
   - Veritabanı bağlantısı yok: uygulama 'bakım' sayfası; ekran açılamaz, servis loglarına bakılır.
@@ -6906,7 +6927,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Admin ve üstü · model girdisi içeren paket: sistem sahibi onayı (öneri)
+  - Kim: Admin ve üstü · model girdisi içeren paket: System owner onayı (öneri)
   - Nereden: Sistem sağlığı 'Destek paketi dışa al' · hata detayı 'Destek paketine ekle'
 - **01:** Kapsam seçilir; hassas içerik uyarısı gösterilir. Şifre, anahtar ve lisans anahtarı hiçbir koşulda pakete girmez.
 - **02:** Paket arka planda düşük öncelikle üretilir: loglar, SolverLog ve Job kayıtları, ayarlar (şifresiz), manifest (sürüm, şema, lisans özeti, SHA-256 özetleri); isteğe bağlı anonim model girdisi.
@@ -6973,7 +6994,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Ulaştırma adımları:** Kapalı ağ için 3 adım; parola ayrı kanaldan.
 - **Saklama:** 7 gün sunucuda; kayıt denetim izinde.
 
-### 96 · Sistem sahibi ayarları
+### 96 · System owner ayarları
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
 
 - Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, elle ezme, çalışmada değiştirilebilirlik), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
@@ -6981,8 +7002,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem sahibi (adminin ötesinde; admin bu ekranı görmez)
-  - Nereden: Menü 'Sistem sahibi'
+  - Kim: System owner (Admin'in ötesinde; Admin bu ekranı görmez)
+  - Nereden: Menü 'System owner'
 - **01:** Veri sözlüğü: alan listesi; sınıf (ana veri / parametre / işlem verisi), değer önceliği sırası (elle, kural, ERP, varsayılan), elle ezme, çalışmada değiştirilebilir, zorunlu, varsayılan. Etki sayısı ve ne zaman geçerli olacağı gösterilir.
 - **02:** Motor: çözücü seçimi (adaptör listesi; geliştirmede karar), süre bütçeleri (sıcak, gece senaryo bazında), işçi sayısı, eş zamanlı sıcak çalışma, gece paralel senaryo, LLM açıklama (Faz 1 kapalı).
 - **GIRDI**
@@ -6998,7 +7019,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05:** Lisans: çevrimdışı imzalı dosya yüklenir, imza yerelde doğrulanır; kullanıcı sayısı ve bitiş; 30 gün kala uyarı.
 - **06:** Sürüm: mevcut sürüm, değişiklik notu, güncelleme (97). Her değişiklik denetim izine silinemez kayıt olarak yazılır.
 
-### 96 · Sistem sahibi ayarları · kurallar ve etkiler
+### 96 · System owner ayarları · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
@@ -7025,30 +7046,30 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Saklama işleri:** Zamanlanmış işler Süre değişince sonraki çalışmada
 - **ÖRNEK:** Kaynak.Verim için öncelik elle > kural > ERP, çalışmada değiştirilebilir. İşçi sayısı 8 → 12: kuyruktaki 1 iş bitince servis yeniden başlar. Lisans 12 → 20 kullanıcı, 2027 sonuna kadar.
 
-### 96 · Sistem sahibi ayarları · Veri sözlüğü alanı
+### 96 · System owner ayarları · Veri sözlüğü alanı
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Mockup 1/3</sub>
 
-![96 · Sistem sahibi ayarları · Veri sözlüğü alanı](mockups/m24f-0769-96-sistem-sahibi-ayarlari-veri-sozlugu-alani.png)
+![96 · System owner ayarları · Veri sözlüğü alanı](mockups/m24f-0769-96-sistem-sahibi-ayarlari-veri-sozlugu-alani.png)
 
 - **Sıralanabilir öncelik:** Elle, kural, ERP, varsayılan sürükleyerek sıralanır; üstteki kazanır.
 - **Anahtarlar:** Elle ezme ve çalışmada değiştirilebilirlik tek bakışta.
 - **Etki sayısı:** Kaç kayıt etkilenir, ne zaman geçerli; 'şimdi uygula' seçeneği.
 - **Açık çalışmalar:** Kendi versiyonunda kaldığı notta yazar.
 
-### 96 · Sistem sahibi ayarları · Motor ayarı onayı
+### 96 · System owner ayarları · Motor ayarı onayı
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Mockup 2/3</sub>
 
-![96 · Sistem sahibi ayarları · Motor ayarı onayı](mockups/m24f-0770-96-sistem-sahibi-ayarlari-motor-ayari-onayi.png)
+![96 · System owner ayarları · Motor ayarı onayı](mockups/m24f-0770-96-sistem-sahibi-ayarlari-motor-ayari-onayi.png)
 
 - **Şu an → yeni:** Her ayar için eski, yeni ve ne zaman geçerli.
 - **Servis etkisi:** Yeniden başlatma, çalışan iş ve bekleme süresi kırmızı kutuda.
 - **Yazarak onay:** Ayar adını yazmadan Uygula çalışmaz.
-- **Silinemez iz:** Sistem sahibi işlemi denetim izinde kalıcı.
+- **Silinemez iz:** System owner işlemi denetim izinde kalıcı.
 
-### 96 · Sistem sahibi ayarları · Lisans yükleme
+### 96 · System owner ayarları · Lisans yükleme
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Mockup 3/3</sub>
 
-![96 · Sistem sahibi ayarları · Lisans yükleme](mockups/m24f-0771-96-sistem-sahibi-ayarlari-lisans-yukleme.png)
+![96 · System owner ayarları · Lisans yükleme](mockups/m24f-0771-96-sistem-sahibi-ayarlari-lisans-yukleme.png)
 
 - **Çevrimdışı doğrulama:** İmza yerelde kontrol edilir; internet gerekmez.
 - **Mevcut → yeni:** Kullanıcı, bitiş, modüller karşılaştırmalı.
@@ -7063,8 +7084,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem sahibi (yerinde biz ya da bizim gözetimimizde müşteri BT'si)
-  - Nereden: Sistem sahibi ayarları 'Sürüm' sekmesi · (sunucudaki kurulum aracı aynı adımları çalıştırır)
+  - Kim: System owner (yerinde biz ya da bizim gözetimimizde müşteri BT'si)
+  - Nereden: System owner ayarları 'Sürüm' sekmesi · (sunucudaki kurulum aracı aynı adımları çalıştırır)
 - **01:** Paket yüklenir; imza ve sürüm zinciri doğrulanır (atlanan ara sürüm varsa paket zinciri ister).
 - **02:** Ön kontrol: disk, yedek alınabilirliği, şema geçişi kuru çalıştırma, çalışan iş ve açık çalışma sayısı, gece akışı penceresi dışında olma.
 - **03:** Bakım modu: yeni giriş kapanır, kullanıcılara 10 dk uyarı, kuyruk boşalır, kaydedilmemiş değişiklikler taslak olarak saklanır.
@@ -7092,7 +7113,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **HATA VE ISTISNA**
   - Şema geçişi hata: işlem geri alınır, eski sürüm ve yedek geçerli; log pakete eklenir.
   - Servis başlamadı: 2 deneme, sonra otomatik geri alma.
-  - Sağlık kontrolü başarısız: otomatik geri alma, sistem sahibine özet.
+  - Sağlık kontrolü başarısız: otomatik geri alma, System owner'a özet.
   - Yedek alınamadı: güncelleme başlamaz, disk ve neden yazılır.
 - **ETKISI VE TETIKLENENLER**
   - Bakım modu ve oturumlar (89).
@@ -7143,8 +7164,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Görüntüleme: admin ve üstü (tümü) · key user: kendi kayıtları (öneri) · yazma: sistem (her değişiklikte)
-  - Nereden: Yönetim menüsü 'Denetim izi' (admin ve üstü) · kayıt ekranlarındaki 'Değişiklik geçmişi' · Raporlar 'Dışa aktarım izi'
+  - Kim: Görüntüleme: Admin ve üstü (tümü) · Key user: kendi kayıtları (öneri) · yazma: sistem (her değişiklikte)
+  - Nereden: Yönetim menüsü 'Denetim izi' (Admin ve üstü) · kayıt ekranlarındaki 'Değişiklik geçmişi' · Raporlar 'Dışa aktarım izi'
 - **01:** Her yazma işlemi (elle değer, kural, parametre, yayın, uyarı kapatma, kullanıcı, ayar, dışa aktarım, giriş, iş iptali) aynı veritabanı işlemi içinde AuditLog'a yazılır; yazılamazsa işlem geri alınır.
 - **02:** Toplu otomatik işlemler (yükleme, kural uygulama) tek özet kayıt (varlık, sayılar) bırakır; satır bazlı eski ve yeni değer veri versiyonlarında (07) tutulur.
 - **GIRDI**
@@ -7152,7 +7173,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Filtreler: tarih, kullanıcı, nesne tipi, işlem, nesne anahtarı
 - **03:** Liste: filtre (tarih, kullanıcı, nesne, işlem) ve nesne anahtarı araması; satır seçilince detay: eski ve yeni değer, bağlı kayıtlar (çalışma, iş, yayın), ilgili kayda bağlantı.
 - **04:** 'Bu nesnenin tüm geçmişi': aynı nesne anahtarına ait kayıtlar zaman sırasında.
-- **05:** Kayıtlar yalnızca eklenir; uygulama kullanıcısının veritabanında güncelleme ve silme yetkisi yoktur. Sistem sahibi işlemleri ve yayınlar 'silinemez' etiketi taşır.
+- **05:** Kayıtlar yalnızca eklenir; uygulama kullanıcısının veritabanında güncelleme ve silme yetkisi yoktur. System owner işlemleri ve yayınlar 'silinemez' etiketi taşır.
 - **ÇIKTI**
   - AuditLog kayıtları; filtreli liste ve detay
   - Nesne geçmişi görünümü
@@ -7164,7 +7185,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Görüntüleme iz bırakmaz; yazma bırakır.
-  - Kullanıcı kendi izini göremez-silemez; key user yalnız kendi kayıtlarını görür (öneri), admin tümünü.
+  - Kullanıcı kendi izini göremez-silemez; Key user yalnız kendi kayıtlarını görür (öneri), Admin tümünü.
   - End user kayıtları yalnız giriş ve dışa aktarımdır.
   - Denetim kaydı yazılamazsa asıl işlem başarısız olur (denetim bütünlüğü).
   - Yükleme ve kural uygulaması özet kayıt; satır detayı veri versiyonunda.
@@ -7185,7 +7206,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Tek kaynak:** Veri, plan, kullanıcı, sistem ve giriş kayıtları aynı listede; işlem türü sütunda.
 - **Eski → yeni:** Değer değişimi satırda okunur; detay çekmecede.
-- **Silinemez etiketi:** Yayın ve sistem sahibi işlemleri koyu etiketle.
+- **Silinemez etiketi:** Yayın ve System owner işlemleri koyu etiketle.
 - **Özet kayıt:** Yükleme gibi toplu işlemler tek satır; detay veri versiyonunda.
 
 ### 98 · Denetim izi (öneri) · Kayıt detayı

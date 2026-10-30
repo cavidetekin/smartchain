@@ -6,6 +6,7 @@ MATERIALS = ListDefinition(
     table="core.Material",
     title="Malzeme listesi",
     file_slug="malzeme",
+    function=10,  # Ana veri görüntüleme (K-100)
     fields=(
         "Code", "Name", "MaterialLevel", "MaterialGroup", "BaseUom", "DefaultProcurement", "Ownership",
         "IsPurchasable", "IsProducible", "IsSellable", "IsProjectTracked", "IsPhantom",

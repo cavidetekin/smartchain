@@ -7,7 +7,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 - **Tek kaynak `docs/`.** Değişiklik önce docs'ta (karar, sözleşme, prensip), sonra kodda (K-54). Docs ile kod çelişirse dur ve sor.
 - **Sıra `GELISTIRME_ADIMLARI.md`.** Adımlar sırayla, ekran ekran ve fonksiyon fonksiyon ilerler. Sıradaki adım dışında iş yapma; kapsam büyütme.
 - **Motor en son.** Optimizasyon, çözüm motoru ve simülasyonlar Aşama 10'da. O zamana kadar ekranlar plan fikstürüyle ve sahte motorla çalışır; motor arayüzü baştan sabittir.
-- **Commit kuralı:** testler (pytest, `npm test`, `tsc`, `npm run build`) geçmeden commit ve push yapılmaz. Komut zincirinde biri başarısız olursa zincir durur (`&&`, `set -e`); başarısızlık incelenmeden devam edilmez.
+- **Commit kuralı:** testler geçmeden commit ve push yapılmaz. Sıra: `npm run build` → pytest → `npm test` → `tsc` (build önce: internetsizlik testi taze derlemeyi tarar). Komut zincirinde biri başarısız olursa zincir durur (`&&`, `set -e`); başarısızlık incelenmeden devam edilmez.
 - **Bitti tanımı:** prensip slaytı ve mockup okundu → API, ekran ve test yazıldı → sentetik veriyle çalışıyor → docs'ta "uygulandı" işlendi → demo yapıldı. Biri eksikse adım kapanmaz (K-55).
 - **Kararlar numaralı.** Karar K-n, açık konu A-n (`docs/00-kararlar.md`). Kodda ve commit mesajında bu numaralara atıf yap.
 
@@ -17,7 +17,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 - Yalnız Windows Server. Python; API FastAPI, IIS arkasında Windows servisi. Motor ayrı Windows servisi, her iş kendi sürecinde.
 - Ürüne ayrılmış ayrı MS SQL Server instance'ı. İş kuyruğu SQL Server'daki Job tablosu; ek bileşen yok.
 - Modelleme katmanı çözücüden bağımsız (aday HiGHS). LLM Faz 1'de kapalı.
-- Roller: sistem sahibi, admin, key user, end user (end user yalnız görüntüler ve Excel'e indirir).
+- Roller (K-99): System owner, Admin, Key user, End user; adlar her yerde böyle (arayüz, docs, kod, veri). End user fonksiyon çalıştıramaz ve veriyi elle değiştiremez; raporlama tarafında serbesttir (görünüm, alan, koşullu biçim, Excel). Yetki matrisi kodda (`app/api/permissions.py`, K-100).
 
 ## Veri
 

@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
-from .. import security
+from .. import permissions, security
 from ..errors import AppError
 from ..repositories import audit, auth as repo
 
@@ -28,6 +28,7 @@ LOCKED = "Hesap kilitlendi"
 LOGOUT = "Çıkış"
 PASSWORD_CHANGED = "Şifre değişikliği"
 PASSWORD_CHANGE_FAILED = "Başarısız şifre değişikliği"
+INVALID_ROLE = "Geçersiz rol"  # K-100: tanınmayan rol oturumu kapatır
 OBJECT = "Kullanıcı"
 
 # Oturum kapanış sebepleri (UserSession.EndReason)
@@ -135,6 +136,10 @@ def _login_real(session, policy, now, user, password, address, agent):
         repo.update_user(session, user["Id"], FailedAttempts=0 if locked_until else attempts, LockedUntil=locked_until)
         return _after_failure(session, policy, now, user["Id"], name, attempts, locked_until, address, agent)
 
+    if user["Role"] not in permissions.ROLES:  # bozuk rol (K-100): oturum açılmaz, iz; kullanıcıya hesap kapalı
+        audit.write_audit(session, INVALID_ROLE, user["Id"], OBJECT, name, {"role": user["Role"], **_client(address, agent)})
+        session.commit()
+        raise AppError("account_inactive", "Hesap kapalı. Yöneticinize başvurun.", 403)
     values = {"FailedAttempts": 0, "LockedUntil": None, "LastLoginAt": now}
     if security.needs_rehash(user["PasswordHash"]):
         values["PasswordHash"] = security.hash_password(password)
@@ -182,6 +187,12 @@ def authenticate(session: Session | None, token: str | None) -> CurrentUser:
             repo.end_session(session, row["SessionId"], END_CLOSED)
             session.commit()
             raise AppError("not_authenticated", "Oturum açmanız gerekiyor.", 401)
+        if row["Role"] not in permissions.ROLES:  # bozuk kayıt: oturum kapanır, iz (Admin'e uyarı 9.2'de)
+            if repo.end_session(session, row["SessionId"], END_CLOSED):
+                audit.write_audit(session, INVALID_ROLE, row["UserId"], OBJECT, row["UserName"],
+                                  {"role": row["Role"], "session_id": row["SessionId"]})
+            session.commit()
+            raise AppError("not_authenticated", "Oturum açmanız gerekiyor.", 401)
         policy = repo.read_policy(session)
         left = policy.idle_minutes * 60 - int((row["Now"] - row["LastActivityAt"]).total_seconds())
         if left <= 0:
@@ -226,6 +237,7 @@ def public(user: CurrentUser, policy: security.Policy) -> dict:
         "id": user.id, "user_name": user.user_name, "full_name": user.full_name, "role": user.role,
         "must_change_password": user.must_change_password, "password_change_reason": user.password_change_reason,
         "idle_seconds_left": user.idle_seconds_left,
+        "permissions": permissions.role_permissions(user.role),  # K-100: arayüz görünürlüğü
         "session": {"idle_minutes": policy.idle_minutes, "warning_minutes": policy.warning_minutes},
         "policy": policy.public(),
     }

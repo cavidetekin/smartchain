@@ -86,7 +86,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Kural ya da elle | ERP'de genelde yok; veri kuralıyla ya da ana veri ekranında elle. | Resource.IsConstrained, Routing.CrewSize |
 | Smartchain (parametre) | Smartchain'de tanımlanan planlama parametresi; parametre setine bağlı. | ResourceEfficiency.EfficiencyPct, AllocationRule.SharePct |
 | Kullanıcı | Kullanıcının ekrandan girdiği tanım. | DataRule, ScenarioDefinition |
-| Sistem | Sistemin ürettiği ya da sistem sahibinin yönettiği değer. | Id alanları, PlanRun, Job |
+| Sistem | Sistemin ürettiği ya da System owner'ın yönettiği değer. | Id alanları, PlanRun, Job |
 | Ön hesap | Ön hesapta türetilen değer. | WorkOrderComponent.RemainingQty, ResourceDowntime.DurationDays |
 | Motor | Planlama motorunun çıktısı. | PlannedOrder, CapacityLoad, Pegging |
 
@@ -163,7 +163,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Job:** İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler
 - **SolverLog:** Çözüm logu
 - **AuditLog:** Kim, ne zaman, neyi değiştirdi
-- **SystemSetting:** Sistem sahibinin ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri
+- **SystemSetting:** System owner'ın ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri
 - **License:** Çevrimdışı imzalı lisans
 
 #### BOM
@@ -1043,7 +1043,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını sistem sahibi yönetir.
+- Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını System owner yönetir.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -1418,7 +1418,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Id | int | PK | Kullanıcı kimliği | Sistem | H | E |  |
 | UserName | nvarchar(60) | UK | Kullanıcı adı | Kullanıcı | H | E |  |
 | FullName | nvarchar(150) |  | Ad soyad | Kullanıcı | H | H |  |
-| Role | nvarchar(15) |  | Sistem sahibi \| Admin \| Key user \| End user | Kullanıcı | H | E |  |
+| Role | nvarchar(15) |  | System owner \| Admin \| Key user \| End user | Kullanıcı | H | E |  |
 | PasswordHash | nvarchar(200) |  | Özetlenmiş şifre; Argon2id PHC metni, tuz içinde (K-98); boşsa hesap arayüzden giremez | Sistem | H | H |  |
 | MustChangePassword | bit |  | Şifre değiştirilmeli; ilk giriş ya da sıfırlama sonrası | Sistem | H | H | 1 |
 | PasswordChangeReason | nvarchar(15) |  | İlk giriş \| Sıfırlama \| Süre doldu | Sistem | H | H |  |
@@ -1430,7 +1430,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | IsActive | bit |  | Aktif | Kullanıcı | H | H | 1 |
 
 - Giriş ve şifre kuralları fonksiyon 89'da ve K-98'de. Şifre ekranda, logda ve denetim izinde düz metin olarak hiç yer almaz.
-- Kilit süre dolunca kendiliğinden açılır; admin elle açınca (2.3) `LockedUntil` boşalır ve sayaç sıfırlanır.
+- Kilit süre dolunca kendiliğinden açılır; Admin elle açınca (2.3) `LockedUntil` boşalır ve sayaç sıfırlanır.
 
 ### UserSession
 <sub>21. Veri modeli · Sistem</sub>
@@ -1450,7 +1450,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ClientAddress | nvarchar(45) |  | İstemci adresi | Sistem | H | H |  |
 | UserAgent | nvarchar(200) |  | Tarayıcı | Sistem | H | H |  |
 
-- Aynı kullanıcı birden çok tarayıcıda oturum açabilir. "Kapatıldı": kullanıcı pasif edilince ya da admin kapatınca (2.3).
+- Aynı kullanıcı birden çok tarayıcıda oturum açabilir. "Kapatıldı": kullanıcı pasif edilince ya da Admin kapatınca (2.3).
 
 ### PasswordHistory
 <sub>21. Veri modeli · Sistem</sub>
@@ -1525,7 +1525,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Sistem</sub>
 
 - Sistem · versiyonsuz · Faz 1
-- Kim, ne zaman, neyi değiştirdi; giriş kayıtları; sistem sahibi işlemleri silinemez.
+- Kim, ne zaman, neyi değiştirdi; giriş kayıtları; System owner işlemleri silinemez.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -1542,7 +1542,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Sistem</sub>
 
 - Sistem · versiyonsuz · Faz 1
-- Sistem sahibinin ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri.
+- System owner'ın ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|

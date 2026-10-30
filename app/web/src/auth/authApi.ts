@@ -14,6 +14,8 @@ export interface Me {
   user_name: string;
   full_name: string | null;
   role: string;
+  /** Rolün her fonksiyondaki yetki düzeyi (K-100): "10" → "read" … */
+  permissions: Record<string, string>;
   must_change_password: boolean;
   /** "İlk giriş" | "Sıfırlama" | "Süre doldu" */
   password_change_reason: string | null;

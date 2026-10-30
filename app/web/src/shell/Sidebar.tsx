@@ -6,6 +6,8 @@ import { NavLink, useNavigate } from "react-router";
 import { fold } from "../format";
 import { tr } from "../i18n/tr";
 import type { userPrefs } from "../prefs";
+import { useAuth } from "../auth/AuthContext";
+import { can } from "../auth/permissions";
 import { childrenOf, GROUPS, type GroupId, HOME, SCREENS, type Screen, screensInGroup } from "../screens/catalog";
 
 interface Props {
@@ -30,7 +32,11 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
   }, [searchTick]);
 
   const disabled = (s: Screen) => Boolean(s.requiresWorkspace && !workspaceOpen);
-  const results = query.trim() ? SCREENS.filter((s) => fold(s.name).includes(fold(query.trim()))) : [];
+  // Rol bazlı görünürlük (K-100): okuma yetkisi olmayan ekran ve içi boş kalan grup menüde yok; arama da yalnız görünenlerde.
+  const me = useAuth().me!;
+  const visible = (s: Screen) => can(me, s.fn);
+  const groups = GROUPS.filter((g) => screensInGroup(g.id).some(visible));
+  const results = query.trim() ? SCREENS.filter((s) => visible(s) && fold(s.name).includes(fold(query.trim()))) : [];
 
   const toggleGroup = (id: GroupId) => {
     const next = open.includes(id) ? open.filter((g) => g !== id) : [...open, id];
@@ -82,12 +88,12 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
 
   const groupList = (id: GroupId) => (
     <ul>
-      {screensInGroup(id).map((s) => (
+      {screensInGroup(id).filter(visible).map((s) => (
         <li key={s.no}>
           {item(s)}
-          {childrenOf(s.no).length > 0 && (
+          {childrenOf(s.no).some(visible) && (
             <ul className="sc-sub">
-              {childrenOf(s.no).map((c) => (
+              {childrenOf(s.no).filter(visible).map((c) => (
                 <li key={c.no}>{item(c, true)}</li>
               ))}
             </ul>
@@ -141,7 +147,7 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
         ) : collapsed ? (
           <ul>
             <li>{item(HOME)}</li>
-            {GROUPS.map((g) => {
+            {groups.map((g) => {
               const Icon = g.icon;
               const name = tr.menu.groups[g.id];
               return (
@@ -154,7 +160,7 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
                   {flyout === g.id && (
                     <div className="sc-flyout" role="menu" aria-label={name}>
                       <div className="sc-flyout-title">{name}</div>
-                      <FlyoutList group={g.id} disabled={disabled} />
+                      <FlyoutList group={g.id} disabled={disabled} visible={visible} />
                     </div>
                   )}
                 </li>
@@ -164,7 +170,7 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
         ) : (
           <ul>
             <li>{item(HOME)}</li>
-            {GROUPS.map((g) => {
+            {groups.map((g) => {
               const isOpen = open.includes(g.id);
               return (
                 <li key={g.id} className="sc-group">
@@ -183,7 +189,9 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
   );
 }
 
-function FlyoutList({ group, disabled }: { group: GroupId; disabled: (s: Screen) => boolean }) {
+function FlyoutList({ group, disabled, visible }: {
+  group: GroupId; disabled: (s: Screen) => boolean; visible: (s: Screen) => boolean;
+}) {
   const row = (s: Screen, sub = false) =>
     disabled(s) ? (
       <span className={`sc-flyout-item is-disabled${sub ? " is-sub" : ""}`} aria-disabled="true"
@@ -196,10 +204,10 @@ function FlyoutList({ group, disabled }: { group: GroupId; disabled: (s: Screen)
     );
   return (
     <ul>
-      {screensInGroup(group).map((s) => (
+      {screensInGroup(group).filter(visible).map((s) => (
         <li key={s.no}>
           {row(s)}
-          {childrenOf(s.no).map((c) => (
+          {childrenOf(s.no).filter(visible).map((c) => (
             <div key={c.no}>{row(c, true)}</div>
           ))}
         </li>

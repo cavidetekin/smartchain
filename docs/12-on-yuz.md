@@ -23,7 +23,7 @@ Ekranlar menüde gruplar hâlinde durur; ekranlar arası geçiş için üstte se
 | Takip | Uyarılar (20) · Raporlar (21) ve altında raporlar |
 | Veri | Veri yükleme (02) · Ana veri (03) · Veri kuralları (04) · Veri kalitesi (05) |
 | Parametre | Parametre setleri (06) · Gece senaryoları (07) |
-| Yönetim | Kullanıcılar (22) · Entegrasyon (23) · Sistem sağlığı (24) · Sistem sahibi (25) |
+| Yönetim | Kullanıcılar (22) · Entegrasyon (23) · Sistem sağlığı (24) · System owner (25) |
 
 - **Çalışmanın ekranları** (doluluk, ürün / kaynak / sipariş bazlı planlama, Gantt, malzeme, öneriler, pegging, termin ve olaylar, yayın) menüde Çalışma'nın altında listelenir (K-43). Çalışma açık değilken gri ve kapalıdır; üzerine gelince "Önce bir çalışma açın" yazar.
 - **Raporlar** menüde Raporlar'ın altında listelenir; çoğaldıkça alt gruplara ayrılır (ör. Raporlar › Kapasite › Kaynak doluluk).
@@ -31,7 +31,7 @@ Ekranlar menüde gruplar hâlinde durur; ekranlar arası geçiş için üstte se
 - **Gruplar açılır kapanır;** hangi grupların açık bırakıldığı kullanıcı için hatırlanır.
 - **Menüde arama:** Menünün üstünde arama kutusu; ekran adıyla bulur. Klavyeden Ctrl+K ile açılır.
 - **Daraltılmış menü (U-22):** Yalnız ikonlar kalır; üzerine gelince ekranın adı görünür. Bir grubun üzerine gelince alt ekranları yanda küçük bir panelde açılır. Menünün açık ya da daraltılmış hâli hatırlanır.
-- **Rol bazlı görünürlük** 2.2'de eklenir (ör. end user yönetim grubunu görmez).
+- **Rol bazlı görünürlük (2.2, K-100):** okuma yetkisi olmayan ekran menüde görünmez, içi boş kalan grup da görünmez; menü araması da yalnız görünen ekranlarda arar. Ayrıntı "Yetki (2.2)" bölümünde.
 
 ### Bağlam çubuğu (U-17)
 
@@ -188,7 +188,7 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 
 - **Açılır menülerin yerleşimi:** bütün açılır menüler (filtre, kolon menüsü ve alt menüleri, görünüm menüsü, Grupla, Alanlar, takvim) tek ortak yardımcıyla (`ui/popover.ts`) ekranda sabit konumda açılır ve görünür alana sığar: altta yer yoksa yukarı, sağ kenara yakınsa sola. Alt menü (ör. "Ara toplam") ana menünün sağında, yer yoksa solunda açılır. Pencere boyu değişince ya da kaydırılınca yeniden yerleşir.
 - **Göreli tarih filtresi** görünümde göreli saklanır; görünüm başka gün açılınca o günün haftasına göre çalışır.
-- **2.2'de:** paylaşılan görünümü kimin göreceğine rol kuralı; admin'in bir paylaşılan görünümü herkes ya da bir rol için varsayılan yapması. Şimdi yapılmaz.
+- **Yetki (2.2):** görünüm kaydetmek listeyi okuma yetkisiyle olur, End user dahil (K-99). Görünümü yalnız sahibi değiştirir ve siler; başkasının görünümünde "Kaydet" ve "Sil" pasif, ipucu "Bu görünümü yalnız sahibi değiştirebilir; sizin için salt okunur." Paylaşılan görünümü herkes görür. Admin'in bir görünümü herkes ya da bir rol için varsayılan yapması sonraya bırakıldı (GELISTIRME).
 - **Performans hedefi:** 50.000 satırda iki alanla gruplama + filtre + ara toplamlar ortanca 300 ms altında; 1.000 grup ve 100.000 satırda DOM'da yalnız görünen satırlar ve tampon.
 
 ## Dışa aktarım (1.5, K-91, K-92)
@@ -214,11 +214,31 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 
 - **Yer:** `app/web/src/auth/`. Giriş sayfası `/giris` kabuğun dışındadır; diğer bütün adresler oturum kapısından (`AuthGate`) geçer. Açılışta `GET /api/auth/me`: oturum yoksa giriş sayfasına (dönülecek adres `?next=` ile, yalnız uygulama içi adres), şifre değişikliği bekliyorsa zorunlu şifre penceresine, değilse kabuğa.
 - **Giriş sayfası (mockup m24f-0738):** logo, "Kullanıcı adı", "Şifre", tek "Giriş" düğmesi. Hata şifre alanının altında: "Kullanıcı adı ya da şifre hatalı. 2 deneme kaldı; 5 hatalı girişte hesap 15 dk kilitlenir." (hesabın varlığı belli olmaz); kilitli ve kapalı hesapta sunucunun mesajı. Hatadan sonra şifre alanı boşalır. Not satırı "Şifrenizi unuttuysanız yöneticinize başvurun · beni hatırla yok"; altta "şirket içi kurulum · v0.15.0" (sürüm `/api/health`'ten; kurum adı lisansla, 2.4). Çıkış ya da zaman aşımından sonra üstte bilgi kutusu.
-- **Zorunlu şifre değişikliği (mockup m24f-0739):** bulanık arka plan üstünde "Şifrenizi belirleyin"; alt başlık sebep ve "politika sistem sahibi tarafından belirlenir". Alanlar: Geçici şifre (süre dolduysa "Mevcut şifre"), Yeni şifre, Yeni şifre (tekrar). Politika listesi yazarken ✓ / ✗: en az N karakter, harf ve rakam (politikada açıksa), kullanıcı adını içermez (Türkçe harf duyarsız), son N şifreden farklı (sunucuda özetle denetlenir: kaydedene kadar nötr "kaydederken denetlenir", sunucu reddederse ✗), tekrar alanı eşleşiyor. Eşleşmezse alan altında "Şifreler henüz eşleşmiyor.". "Kaydet ve devam et" kurallar sağlanınca açılır. Vazgeç yok, Esc kapatmaz.
+- **Zorunlu şifre değişikliği (mockup m24f-0739):** bulanık arka plan üstünde "Şifrenizi belirleyin"; alt başlık sebep ve "politika System owner tarafından belirlenir". Alanlar: Geçici şifre (süre dolduysa "Mevcut şifre"), Yeni şifre, Yeni şifre (tekrar). Politika listesi yazarken ✓ / ✗: en az N karakter, harf ve rakam (politikada açıksa), kullanıcı adını içermez (Türkçe harf duyarsız), son N şifreden farklı (sunucuda özetle denetlenir: kaydedene kadar nötr "kaydederken denetlenir", sunucu reddederse ✗), tekrar alanı eşleşiyor. Eşleşmezse alan altında "Şifreler henüz eşleşmiyor.". "Kaydet ve devam et" kurallar sağlanınca açılır. Vazgeç yok, Esc kapatmaz.
 - **Kullanıcı menüsü:** ad soyad, kullanıcı adı ve rol; yazı boyutu; "Şifre değiştir" (aynı pencere, Vazgeç'li; başarıda "Şifreniz değiştirildi."); "Çıkış".
 - **Hareketsizlik (mockup m24f-0740):** yalnız kullanıcı girdisi etkinliktir (tuş, tıklama, tekerlek, dokunma; fare gezdirmek değil). Girdi olunca sunucuya en çok dakikada bir etkinlik bildirilir (`POST /api/auth/activity`); süre bu bildirimden ölçülür, böylece arayüz ve sunucu aynı anda doldurur. Arka plan istekleri (iş göstergesi, veri versiyonu) oturumu uzatmaz. Sekmeler etkinliği, girişi ve çıkışı paylaşır (BroadcastChannel). Sınırdan `SessionWarningMinutes` önce (25. dakika) pencere: "Oturumunuz kapanmak üzere", "25 dakikadır işlem yapılmadı", büyük geri sayım (Inter), "hareketsizlik · 30 dk sınırı"; "Şimdi çıkış yap" · "Devam et" (birincil, odakta). Pencere açılmadan sunucuya sorulur: başka sekmede çalışılıyorsa açılmaz. Pencere açıkken yalnız "Devam et" süreyi uzatır; Esc kapatmaz. Süre dolunca giriş sayfası ve "Oturumunuz 30 dakika hareketsizlik nedeniyle kapandı.". Kaydedilmemiş planlama taslağı kutusu taslak tutan ilk ekranla gelir.
 - **Oturum biterse:** herhangi bir istek 401 (`not_authenticated`, `session_expired`) dönerse ya da WebSocket 4401 ile kapanırsa (çıkış, şifre değişikliği, zaman aşımı) giriş sayfasına dönülür; WebSocket yeniden bağlanmaz.
 - **Testlerde** uygulama başlangıç kullanıcısıyla açılır (`App initialMe`); gerçek açılışta kullanıcı her zaman sunucudan gelir.
+
+## Yetki (2.2, K-99, K-100; fonksiyon 90)
+
+- **Kaynak:** rolün yetkileri `GET /api/auth/me`'nin `permissions` alanında (`{fonksiyon: full | owner | self | read | none}`); arayüz yalnız görünürlüğü ayarlar, güvenlik sunucudadır. Yardımcılar `app/web/src/auth/permissions.ts`: `can(me, fn, "read" | "write")`, gereken rol ve ipucu metni.
+- **Menü:** her ekranın bir fonksiyonu vardır (`catalog.ts`): Ana sayfa 82 · Senaryolar 42 · Çalışma 43 (çalışmanın ekranları onunla) · Uyarılar 83 · Raporlar 85 · Veri yükleme 03 · Ana veri 10 · Veri kuralları 16 · Veri kalitesi 20 · Parametre setleri 22 · Gece senaryoları 27 · Kullanıcılar 88 · Entegrasyon 91 · Sistem sağlığı 94 · System owner ayarları 96. Okuma yetkisi olmayan ekran gizlenir.
+
+  | Rol | Menü |
+  |---|---|
+  | System owner | hepsi |
+  | Admin | System owner ayarları dışında hepsi |
+  | Key user | Yönetim grubu dışında hepsi |
+  | End user | Ana sayfa · Takip · Veri (Veri yükleme dışında) |
+
+- **Yetkisiz ekran:** adres çubuğundan açılırsa "Bu ekranı açma yetkiniz yok" sayfası: gereken rol, kimden isteneceği, Ana sayfa bağlantısı.
+- **Rol:** kullanıcı menüsünde ad ve rolle görünür; bağlam çubuğunda ayrı rol etiketi ya da mockup m24f-0744'teki gibi şerit yoktur (demo kararı, 2.2).
+
+- **Pasif düğme:** bağlam dışı düğme gizlenmez, pasifleşir ve nedenini araç ipucunda söyler (`Button disabledReason`), ör. "Bu işlem için Admin yetkisi gerekir. Yetki için yöneticinize başvurun."
+- **403 tek yerde:** sunucu `forbidden` ya da sahiplik 403'ü dönerse (`*_not_owner`) sağ altta bildirim sunucunun mesajını gösterir. Giriş akışının 403'leri (kilit, kapalı hesap, şifre değişikliği, köken) buraya girmez.
+- **Rol değişikliği:** sunucu her cevapta `X-Smartchain-Role` gönderir; oturumdakinden farklıysa `me` yeniden alınır, menü ve kullanıcı menüsündeki rol değişir; oturum kapanmaz.
+- **İş paneli (fonksiyon 48, 93):** sıradaki işte "İptal" (kendi işi herkese açık). "Herkesin işleri" seçeneği Admin ve System owner'da açıktır, başkasının sıradaki işini de iptal eder; diğer rollerde pasif ve ipuçlu. Herkesin işlerinde işin sahibi yazar.
 
 ## Durum
 
@@ -232,3 +252,4 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 | Dışa aktarım: Excel'e aktarım, kapsam penceresi, arka plan ve bildirim | uygulandı (1.5) |
 | Koşullu biçimlendirme: kurallar, palet, okunurluk, ikon, Excel'e taşınma | uygulandı (1.6) |
 | Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |
+| Yetki: role göre menü, yetkisiz ekran, pasif düğme ipucu, 403 bildirimi, iş panelinde iptal | uygulandı (2.2) |

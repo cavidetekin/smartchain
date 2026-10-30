@@ -3,6 +3,7 @@ import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
 
+import matrix from "../../../shared/permissions.json";
 import { App } from "../App";
 import type { Me } from "../auth/authApi";
 
@@ -15,12 +16,21 @@ export const DATA_VERSION = {
   id: 35, location_code: "ORM-01", created_at: "2026-10-27T09:20:00+00:00", load_type: "Tam", is_synthetic: true,
 };
 
-/** Oturumdaki deneme kullanıcısı (K-97). */
+/** Rolün yetkileri (K-100): sunucunun me.permissions'ı gibi, matrisin üretilmiş kopyasından. */
+export function permissionsFor(role: string): Record<string, string> {
+  return Object.fromEntries(matrix.functions.map((f) => [String(f.no), (f.levels as Record<string, string>)[role]]));
+}
+
+/** Oturumdaki deneme kullanıcısı (K-97); kabuk testleri bütün menüyü görsün diye System owner. */
 export const ME: Me = {
-  id: 3, user_name: "planlama", full_name: "Mert Planlama", role: "Key user", must_change_password: false,
+  id: 3, user_name: "planlama", full_name: "Mert Planlama", role: "System owner",
+  permissions: permissionsFor("System owner"), must_change_password: false,
   password_change_reason: null, idle_seconds_left: 1800, session: { idle_minutes: 30, warning_minutes: 5 },
   policy: { min_length: 10, require_letter_and_digit: true, history_count: 5, lock_after: 5, lock_minutes: 15 },
 };
+
+/** Aynı kullanıcı başka bir rolde. */
+export const meAs = (role: string, extra: Partial<Me> = {}): Me => ({ ...ME, role, permissions: permissionsFor(role), ...extra });
 
 export function mockApi(routes: Routes = {}) {
   const all: Routes = {
@@ -34,7 +44,8 @@ export function mockApi(routes: Routes = {}) {
   };
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
-    const key = Object.keys(all).find((k) => url.startsWith(k));
+    // En uzun eşleşen önek: "/api/jobs/5/cancel" "/api/jobs"a düşmesin.
+    const key = Object.keys(all).filter((k) => url.startsWith(k)).sort((a, b) => b.length - a.length)[0];
     const route = key ? all[key] : undefined;
     if (!route || route === "offline") throw new TypeError("Failed to fetch");
     const reply = typeof route === "function" ? await route(url, init) : route;

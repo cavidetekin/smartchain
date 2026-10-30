@@ -28,6 +28,9 @@ class TraceMiddleware(BaseHTTPMiddleware):
             elapsed = (time.perf_counter() - start) * 1000
             log.info("%s %s → %s (%.0f ms)", request.method, request.url.path, response.status_code, elapsed)
             response.headers["X-Trace-Id"] = trace_id
+            role = getattr(request.state, "role", None)  # deps.require koyar (K-100: rol değişikliği arayüze)
+            if role:
+                response.headers["X-Smartchain-Role"] = role
             return response
         finally:
             trace_id_var.reset(token)

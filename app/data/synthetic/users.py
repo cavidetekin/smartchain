@@ -15,7 +15,7 @@ from app.api.repositories import auth as repo
 from app.api.services import auth
 
 USERS = [
-    ("sahip", "Sistem Sahibi", "Sistem sahibi"),
+    ("sahip", "System owner", "System owner"),  # K-99
     ("yonetici", "Ayşe Yönetici", "Admin"),
     ("planlama", "Mert Planlama", "Key user"),
     ("izleme", "Deniz İzleme", "End user"),

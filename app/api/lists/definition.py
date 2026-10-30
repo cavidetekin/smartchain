@@ -23,6 +23,9 @@ class ListDefinition:
     server_values: frozenset[str] = field(default_factory=frozenset)  # liste filtresi, değerler sunucudan
     title: str = ""                            # Excel Bilgi sayfası ve bildirimdeki ad (ör. "Malzeme listesi")
     file_slug: str = ""                        # dosya adındaki kısa ad: smartchain_<file_slug>_… (K-91)
+    # Listeyi okuma yetkisinin bağlı olduğu fonksiyon (K-100; ör. malzeme 10 Ana veri görüntüleme). Görünüm, koşullu
+    # biçim ve Excel'e aktarım da bu fonksiyonun okuma yetkisiyle olur (K-99).
+    function: int = 10
     # Gösterilecek ondalık (K-88, docs/12): veritabanı ölçeğinden değil, alanın anlamından. Her number alanı ya burada
     # ya da unit_decimals'ta ("ondalık birimden": satırın birimi unit_field'dan, ondalığı UnitOfMeasure.Decimals'tan).
     decimals: Mapping[str, int] = field(default_factory=dict)

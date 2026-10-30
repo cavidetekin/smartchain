@@ -117,7 +117,7 @@
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `adm.FieldDefinition` | Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını sistem sahibi yönetir. | Veri yönetimi |  | 9 |
+| `adm.FieldDefinition` | Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını System owner yönetir. | Veri yönetimi |  | 9 |
 | `adm.DataRule` | Veri kuralı: 'X = … ise Alan = …'. | Veri yönetimi |  | 11 |
 | `adm.DataRuleCondition` | Kural koşulları (VE / VEYA). | Veri yönetimi |  | 6 |
 | `adm.ManualValue` | Kayıt bazında elle girilen değer. | Veri yönetimi |  | 8 |
@@ -131,8 +131,8 @@
 | `adm.LoginThrottle` | Bilinmeyen, şifresiz ya da pasif hesap adına yapılan hatalı girişlerin sayacı (K-98). Gerçek hesaptaki sayaçla aynı davranır; giriş cevabından hesabın var olup olmadığı anlaşılmaz. | Sistem |  | 4 |
 | `adm.Job` | İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler. | Sistem |  | 15 |
 | `adm.SolverLog` | Çözüm logu; ilk günden tutulur. | Sistem |  | 6 |
-| `adm.AuditLog` | Kim, ne zaman, neyi değiştirdi; giriş kayıtları; sistem sahibi işlemleri silinemez. | Sistem |  | 8 |
-| `adm.SystemSetting` | Sistem sahibinin ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri. | Sistem |  | 2 |
+| `adm.AuditLog` | Kim, ne zaman, neyi değiştirdi; giriş kayıtları; System owner işlemleri silinemez. | Sistem |  | 8 |
+| `adm.SystemSetting` | System owner'ın ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri. | Sistem |  | 2 |
 | `adm.TableView` | Kayıtlı tablo görünümü (K-89): kolon seti ve sırası, genişlikler, sabitleme, sıralama, filtreler, gruplama. | Sistem |  | 8 |
 | `adm.TableViewDefault` | Kullanıcının bir liste için varsayılan görünümü (K-89). Satır yoksa liste tanımındaki "Standart" görünüm açılır. | Sistem |  | 3 |
 | `adm.License` | Çevrimdışı imzalı lisans. | Sistem |  | 4 |

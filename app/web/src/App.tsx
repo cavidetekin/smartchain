@@ -6,6 +6,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import { AuthGate } from "./auth/AuthGate";
 import { LoginPage } from "./auth/LoginPage";
 import { HOME, SCREENS } from "./screens/catalog";
+import { ScreenGate } from "./screens/Forbidden";
 import { NotFound, Placeholder } from "./screens/Placeholder";
 import { StyleGuide } from "./screens/StyleGuide";
 import { TableDemo } from "./screens/TableDemo";
@@ -21,12 +22,12 @@ export function App({ initialMe }: { initialMe?: Me | null }) {
           <Route element={<Shell />}>
             <Route index element={<Navigate to={HOME.path} replace />} />
             {SCREENS.map((s) => (
-              <Route key={s.no} path={s.path} element={<Placeholder screen={s} />} />
+              <Route key={s.no} path={s.path} element={<ScreenGate fn={s.fn}><Placeholder screen={s} /></ScreenGate>} />
             ))}
             {/* Stil örnekleri (K-85): ekran değildir, menüde yoktur */}
             <Route path="/stil" element={<StyleGuide />} />
             {/* Tablo bileşeni denemesi (K-87): ekran değildir, menüde yoktur */}
-            <Route path="/tablo" element={<TableDemo />} />
+            <Route path="/tablo" element={<ScreenGate fn={10}><TableDemo /></ScreenGate>} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

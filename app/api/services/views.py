@@ -18,6 +18,8 @@ from ..lists.request import (
     AggSpec, DefaultViewRequest, FilterItem, FormatRule, ViewCreate, ViewDefinition, ViewUpdate,
 )
 from ..repositories import lists as list_repo, views as repo
+from . import authz
+from .auth import CurrentUser
 
 DB_DOWN = "Veritabanına bağlanılamıyor; görünümler okunamadı."
 
@@ -156,12 +158,13 @@ def _validated(b: Builder, d: ViewDefinition) -> ViewDefinition:
     return d
 
 
-def _owned(session: Session, defn: ListDefinition, view_id: int, user_id: int) -> dict:
+def _owned(session: Session, defn: ListDefinition, view_id: int, user: CurrentUser) -> dict:
+    """Nesne bağlamı (K-100): görünümü yalnız sahibi değiştirir ve siler; diğerleri salt okunur görür."""
     row = repo.get_view(session, defn.name, view_id)
     if row is None:
         raise AppError("view_not_found", "Görünüm bulunamadı.", 404)
-    if row["OwnerUserId"] != user_id:
-        raise AppError("view_not_owner", "Bu görünümü yalnız sahibi değiştirebilir.", 403)
+    authz.ensure_owner(user, row["OwnerUserId"], defn.function, "view_not_owner", "Bu görünümü",
+                       {"list": defn.name, "view_id": view_id})
     return row
 
 
@@ -187,10 +190,12 @@ def create(session: Session | None, defn: ListDefinition, user_id: int, body: Vi
     return _run(session, user_id, work)
 
 
-def update(session: Session | None, defn: ListDefinition, user_id: int, view_id: int, body: ViewUpdate) -> dict:
+def update(session: Session | None, defn: ListDefinition, user: CurrentUser, view_id: int, body: ViewUpdate) -> dict:
+    user_id = user.id
+
     def work():
         b = _builder(session, defn)
-        _owned(session, defn, view_id, user_id)
+        _owned(session, defn, view_id, user)
         values = {"UpdatedAt": repo.now(session)}
         if body.name is not None:
             values["Name"] = body.name.strip()
@@ -204,9 +209,11 @@ def update(session: Session | None, defn: ListDefinition, user_id: int, view_id:
     return _run(session, user_id, work)
 
 
-def delete(session: Session | None, defn: ListDefinition, user_id: int, view_id: int) -> None:
+def delete(session: Session | None, defn: ListDefinition, user: CurrentUser, view_id: int) -> None:
+    user_id = user.id
+
     def work():
-        _owned(session, defn, view_id, user_id)
+        _owned(session, defn, view_id, user)
         repo.delete_view(session, view_id)
         session.commit()
     _run(session, user_id, work)

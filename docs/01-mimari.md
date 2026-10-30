@@ -30,7 +30,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - K-33  Windows Server, Python; ürüne ayrılmış, en güncel sürümde MS SQL Server.
   - K-34  Entegrasyon ERP'den bağımsız: API, Excel, SQL arayüz tabloları; tek veri sözleşmesi.
   - K-35  Modelleme katmanı çözücüden bağımsız. LLM Faz 1'de kapalı.
-  - K-36  Kullanıcı seviyeleri: sistem sahibi, admin, key user, end user.
+  - K-36  Kullanıcı seviyeleri: System owner, Admin, Key user, End user.
   - K-37  Onaylı plan sadece çalışmadan yayınlanır. Faz 1'de tek lokasyon.
 - **Açık konular**
   - A-15  Çakışma kuralları taslak; sonra değerlendirilecek.
@@ -148,18 +148,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | SEVIYE | KIM | YETKI |
 |---|---|---|
-| Sistem sahibi | Biz (kurulum hesabı) | Her şey + lisans ve sürüm · motor ve teknik ayarlar (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı) · veri sözlüğü yapısı · teşhis ve destek paketi · admin hesaplarını kurtarma. Admin bu hesabı göremez ve değiştiremez; her işlemi silinemez kayıtla tutulur. |
-| Admin | Müşterinin yöneticisi | Kullanıcı ve rol yönetimi · entegrasyon bağlantıları ve servis hesapları · zamanlanmış işler + key user'ın her şeyi. |
+| System owner | Biz (kurulum hesabı) | Her şey + lisans ve sürüm · motor ve teknik ayarlar (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı) · veri sözlüğü yapısı · teşhis ve destek paketi · Admin hesaplarını kurtarma. Admin bu hesabı göremez ve değiştiremez; her işlemi silinemez kayıtla tutulur. |
+| Admin | Müşterinin yöneticisi | Kullanıcı ve rol yönetimi · entegrasyon bağlantıları ve servis hesapları · zamanlanmış işler + Key user'ın her şeyi. |
 | Key user | Planlamacı | Veri kuralları ve elle değerler · veri yükleme · parametreler ve gece senaryo tanımları · senaryo ve çalışma · onaylı plan yayını · görüntüleme ve Excel. |
-| End user | Diğer herkes | Sadece görüntüleme ve Excel'e indirme; onaylı plan ve raporlar. Hiçbir fonksiyon çalıştıramaz, termin sorgusu dahil. |
-| İnsan olmayan hesaplar | Entegrasyon servis hesabı (API ve SQL arayüz tabloları) ve sistem kullanıcısı (gece işleri). Kullanıcı tipi değil; admin yönetir. |  |
+| End user | Diğer herkes | Görüntüleme ve raporlama: onaylı plan ve raporlar; okuyabildiği listelerde görünüm kaydeder, alan ekler ve çıkarır, koşullu biçim verir, Excel'e aktarır (K-99). Fonksiyon çalıştıramaz (termin sorgusu dahil), veriyi elle değiştiremez. |
+| İnsan olmayan hesaplar | Entegrasyon servis hesabı (API ve SQL arayüz tabloları) ve sistem kullanıcısı (gece işleri). Kullanıcı tipi değil; Admin yönetir. |  |
 
 ### Senaryo, çalışma ve yayın
 <sub>19. Mimari kararlar · Senaryo, çalışma ve yayın</sub>
 
 - **Senaryo:** Gece tanımlı listeden üretilen plan. Tanımı: veri versiyonu + parametre seti + eksen ayarları.
 - **Çalışma:** Kullanıcının bir gece senaryosu üzerinde açtığı çalışma alanı. Senaryo üzerindeki değişiklikler yeni senaryo değil, çalışmadır.
-- **Yayın:** Onaylı plan sadece bir çalışmadan yayınlanır; değişiklik yapmadan da olur. Aynı anda tek geçerli onaylı plan; ERP'ye dönüş ondan. Yetki: key user ve admin.
+- **Yayın:** Onaylı plan sadece bir çalışmadan yayınlanır; değişiklik yapmadan da olur. Aynı anda tek geçerli onaylı plan; ERP'ye dönüş ondan. Yetki: Key user ve Admin.
 - **Saklama:** Yayınlanmayan senaryo ve çalışmalar bir sonraki gece akışında silinir. Onaylı plan versiyonları ve dayandıkları veri versiyonları hep kalır; silinen senaryoların özet metrikleri kısa süre tutulur.
 - **Varsayılan yap:** Çalışmada değiştirilen parametreler yayında istenirse yeni varsayılan olur; otomatik olmaz.
 - **Eski veri uyarısı:** Çalışma, sonradan yeni veri yüklenmiş bir versiyona dayanıyorsa yayında uyarı çıkar.

@@ -5,13 +5,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..db import get_session
-from ..deps import COOKIE, check_origin, session_user
+from ..deps import COOKIE, check_origin, require
+from ..permissions import Access
 from ..security import MAX_PASSWORD
 from ..services import auth as service
 from ..services.auth import CurrentUser
 from ..settings import get_settings
 
 router = APIRouter(prefix="/auth", tags=["Oturum"], dependencies=[Depends(check_origin)])
+# 89 Giriş ve oturum herkese açık (K-100); şifre değişikliği bekleyen kullanıcı da bu uçları kullanır.
+session_user = require(89, Access.WRITE, allow_password_change=True)
 
 
 class LoginRequest(BaseModel):

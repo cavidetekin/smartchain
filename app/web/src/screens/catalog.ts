@@ -21,6 +21,8 @@ export interface Screen {
   icon: LucideIcon;
   /** Çalışma açık değilken gri ve kapalı (K-43, K-82). */
   requiresWorkspace?: boolean;
+  /** Ekranı görme yetkisinin bağlı olduğu fonksiyon (K-100): okuma yetkisi yoksa menüde görünmez. */
+  fn: number;
 }
 
 export interface Group {
@@ -37,15 +39,16 @@ export const GROUPS: Group[] = [
   { id: "yonetim", icon: Settings },
 ];
 
-const W = { group: "planlama" as const, parent: "09", requiresWorkspace: true };
+// Çalışmanın ekranları Çalışma'yla (43) birlikte görünür.
+const W = { group: "planlama" as const, parent: "09", requiresWorkspace: true, fn: 43 };
 
 export const SCREENS: Screen[] = [
-  { no: "01", name: "Ana sayfa", path: "/ana-sayfa", group: null, step: "9.1", icon: House,
+  { no: "01", fn: 82, name: "Ana sayfa", path: "/ana-sayfa", group: null, step: "9.1", icon: House,
     description: "Gece akışının özeti, kritik uyarılar, dünden bugüne veride ve planda ne değişti." },
 
-  { no: "08", name: "Senaryolar", path: "/planlama/senaryolar", group: "planlama", step: "8.1", icon: Layers,
+  { no: "08", fn: 42, name: "Senaryolar", path: "/planlama/senaryolar", group: "planlama", step: "8.1", icon: Layers,
     description: "Gece senaryolarının listesi, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma." },
-  { no: "09", name: "Çalışma", path: "/planlama/calisma", group: "planlama", step: "8.2", icon: FlaskConical,
+  { no: "09", fn: 43, name: "Çalışma", path: "/planlama/calisma", group: "planlama", step: "8.2", icon: FlaskConical,
     description: "Bir senaryo üzerindeki çalışma alanı: özet metrikler, yapılan değişiklikler, yeniden hesap." },
   { ...W, no: "10", name: "Kaynak doluluk", path: "/planlama/calisma/kaynak-doluluk", step: "8.3", icon: Gauge,
     description: "Kaynak × dönem doluluğu; dünden farkı; detaya iniş." },
@@ -68,32 +71,32 @@ export const SCREENS: Screen[] = [
   { ...W, no: "19", name: "Yayın", path: "/planlama/calisma/yayin", step: "8.12", icon: Send,
     description: "Onaylı plan yayını; eski veri ve çakışma uyarıları." },
 
-  { no: "20", name: "Uyarılar", path: "/takip/uyarilar", group: "takip", step: "9.2", icon: TriangleAlert,
+  { no: "20", fn: 83, name: "Uyarılar", path: "/takip/uyarilar", group: "takip", step: "9.2", icon: TriangleAlert,
     description: "Kategoriye ve öneme göre uyarılar; filtre, not, kapatma." },
-  { no: "21", name: "Raporlar", path: "/takip/raporlar", group: "takip", step: "9.3", icon: FileChartColumn,
+  { no: "21", fn: 85, name: "Raporlar", path: "/takip/raporlar", group: "takip", step: "9.3", icon: FileChartColumn,
     description: "Onaylı plan ve senaryo raporları; Excel'e aktarım. Raporlar 9.4'te bu başlığın altına gelir." },
 
-  { no: "02", name: "Veri yükleme", path: "/veri/veri-yukleme", group: "veri", step: "5.5", icon: Upload,
+  { no: "02", fn: 3, name: "Veri yükleme", path: "/veri/veri-yukleme", group: "veri", step: "5.5", icon: Upload,
     description: "Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi yükleme, yükleme geçmişi." },
-  { no: "03", name: "Ana veri", path: "/veri/ana-veri", group: "veri", step: "6.1", icon: Table2,
+  { no: "03", fn: 10, name: "Ana veri", path: "/veri/ana-veri", group: "veri", step: "6.1", icon: Table2,
     description: "Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya." },
-  { no: "04", name: "Veri kuralları", path: "/veri/veri-kurallari", group: "veri", step: "4.2", icon: WandSparkles,
+  { no: "04", fn: 16, name: "Veri kuralları", path: "/veri/veri-kurallari", group: "veri", step: "4.2", icon: WandSparkles,
     description: "Kural listesi, kural editörü, önizleme (kaç kayıt değişir)." },
-  { no: "05", name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
+  { no: "05", fn: 20, name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
     description: "Ana veri ve işlem verisi uyarıları; düzeltme listesi." },
 
-  { no: "06", name: "Parametre setleri", path: "/parametre/parametre-setleri", group: "parametre", step: "7.1",
+  { no: "06", fn: 22, name: "Parametre setleri", path: "/parametre/parametre-setleri", group: "parametre", step: "7.1",
     icon: SlidersVertical, description: "Verim, dönem üst limitleri, fazla mesai limitleri, alokasyon, öncelik kuralı." },
-  { no: "07", name: "Gece senaryoları", path: "/parametre/gece-senaryolari", group: "parametre", step: "7.6",
+  { no: "07", fn: 27, name: "Gece senaryoları", path: "/parametre/gece-senaryolari", group: "parametre", step: "7.6",
     icon: Moon, description: "Hangi senaryolar gece çalışır; parametre seti, eksen ayarları, öncelik." },
 
-  { no: "22", name: "Kullanıcılar", path: "/yonetim/kullanicilar", group: "yonetim", step: "2.3", icon: Users,
+  { no: "22", fn: 88, name: "Kullanıcılar", path: "/yonetim/kullanicilar", group: "yonetim", step: "2.3", icon: Users,
     description: "Kullanıcı açma, kapatma, rol atama, şifre sıfırlama." },
-  { no: "23", name: "Entegrasyon", path: "/yonetim/entegrasyon", group: "yonetim", step: "5.6", icon: Plug,
+  { no: "23", fn: 91, name: "Entegrasyon", path: "/yonetim/entegrasyon", group: "yonetim", step: "5.6", icon: Plug,
     description: "API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması." },
-  { no: "24", name: "Sistem sağlığı", path: "/yonetim/sistem-sagligi", group: "yonetim", step: "2.5", icon: HeartPulse,
+  { no: "24", fn: 94, name: "Sistem sağlığı", path: "/yonetim/sistem-sagligi", group: "yonetim", step: "2.5", icon: HeartPulse,
     description: "Son çalışmalar, iş kuyruğu, hatalar, çözüm süreleri; destek paketi." },
-  { no: "25", name: "Sistem sahibi", path: "/yonetim/sistem-sahibi", group: "yonetim", step: "2.4", icon: KeyRound,
+  { no: "25", fn: 96, name: "System owner", path: "/yonetim/system-owner", group: "yonetim", step: "2.4", icon: KeyRound,
     description: "Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı), lisans." },
 ];
 

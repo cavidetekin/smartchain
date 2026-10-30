@@ -205,7 +205,8 @@ export function useTableTestSetup() {
 export async function openTable(opts?: BackendOptions) {
   backend(opts);
   renderApp("/tablo");
-  await screen.findAllByRole("columnheader");
+  // Dosyanın ilk testinde tablo soğuk çizilir; tam takımın paralel yükünde varsayılan 1 sn yetmeyebiliyor.
+  await screen.findAllByRole("columnheader", {}, { timeout: 5000 });
   await waitFor(() => expect(calls.queries.length + calls.groups.length).toBeGreaterThan(0));
 }
 

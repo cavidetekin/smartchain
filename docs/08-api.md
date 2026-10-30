@@ -24,7 +24,7 @@ Uygulama iskeletinin (adım 0.3) ve iş kuyruğunun (adım 0.4) kuralları. Yeni
 ## Adresler
 
 - Bütün uç noktalar `/api` ile başlar. Adlar İngilizce ve küçük harf (`/api/health`, ileride `/api/materials`).
-- API belgesi `/api/docs` yalnız geliştirmede açılır (`SMARTCHAIN_ENABLE_DOCS=true`); dışarıdan JavaScript yüklediği için kurulum paketinde kapalıdır (kapalı ağ kuralı).
+- API belgesi `/api/docs` ve şeması `/api/openapi.json` yalnız geliştirmede açılır (`SMARTCHAIN_ENABLE_DOCS=true`); belge dışarıdan JavaScript yüklediği için (kapalı ağ kuralı), şema da oturumsuz okunabildiği için (2.2) kurulum paketinde kapalıdır.
 
 ## Hata cevabı
 
@@ -67,7 +67,7 @@ Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz.
 |---|---|
 | `POST /api/auth/login` | `{"user_name", "password"}` → 200 `{"user": …}` ve çerez (cevap `GET /api/auth/me` ile aynı) |
 | `POST /api/auth/logout` | 204; oturum kapanır, çerez silinir, bu oturumun WebSocket'leri 4401 ile kapanır |
-| `GET /api/auth/me` | `{"id", "user_name", "full_name", "role", "must_change_password", "password_change_reason", "idle_seconds_left", "session": {"idle_minutes", "warning_minutes"}, "policy": {"min_length", "require_letter_and_digit", "history_count", "lock_after", "lock_minutes"}}`. Etkinlik sayılmaz |
+| `GET /api/auth/me` | `{"id", "user_name", "full_name", "role", "permissions": {"10": "read", …}, "must_change_password", "password_change_reason", "idle_seconds_left", "session": {"idle_minutes", "warning_minutes"}, "policy": {"min_length", "require_letter_and_digit", "history_count", "lock_after", "lock_minutes"}}`. Etkinlik sayılmaz |
 | `POST /api/auth/activity` | Hareketsizlik sayacını sıfırlar → `{"idle_seconds_left"}`. Arayüz yalnız kullanıcı girdisi olduysa, en çok dakikada bir çağırır |
 | `POST /api/auth/password` | `{"current_password", "new_password"}` → 204 |
 
@@ -93,6 +93,36 @@ Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz.
 **Etkinlik:** `UserSession.LastActivityAt` yalnız giriş, `activity` ve `password`'da güncellenir; liste sorguları, iş listesi, veri versiyonu ve WebSocket ping'i oturumu uzatmaz. Karşılaştırmalar veritabanı saatiyle (`SYSUTCDATETIME()`).
 
 **Şifre** hiçbir cevapta, logda ve denetim izinde yer almaz; 422 cevabı girilen değeri geri döndürmez.
+
+## Yetki (K-99, K-100, fonksiyon 90)
+
+Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu docs/06 fonksiyon 90'da. Hücre düzeyleri `full` (tam), `owner` (hepsini okur, yalnız kendi nesnesini değiştirir), `self` (yalnız kendi kayıtları), `read` (salt okunur), `none`. `GET /api/auth/me` rolün düzeylerini `permissions`'ta verir; arayüz menüyü ve düğmeleri buna göre gösterir, güvenlik sunucudadır.
+
+- **Her uç nokta bir fonksiyon ve erişime bağlıdır** (`deps.require(fn, access)`, `access`: `read` | `write`). Bağsız uç nokta testte yakalanır; açık olanlar yalnız `GET /api/health` ve `POST /api/auth/login`.
+- **Yetkisiz istek 403 `forbidden`**; denetim izine "Yetkisiz istek" (ObjectType "Fonksiyon", ObjectKey fonksiyon numarası; NewValue rol, yöntem, adres, gereken rol):
+
+  ```json
+  {"error": {"code": "forbidden", "message": "Bu işlem için Admin yetkisi gerekir. Yetki için yöneticinize başvurun.",
+             "trace_id": "…", "details": [{"function": 93, "function_name": "İş kuyruğu yönetimi", "access": "write",
+                                          "required_role": "Admin"}]}}
+  ```
+
+  Gereken rol System owner ise mesajın sonu "Smartchain desteğine başvurun." olur.
+- **Nesne bağlamı:** yalnız sahibi değiştirir, diğerleri salt okunur görür. Sahibi değilken değiştirme 403 (ör. `view_not_owner`: "Bu görünümü yalnız sahibi değiştirebilir; sizin için salt okunur."), denetim izine "Yetkisiz istek" (sebep "sahibi değil").
+- **Rol değişikliği** bir sonraki istekte geçerlidir; oturum kapanmaz. Her yetkili cevapta `X-Smartchain-Role` başlığı oturumdaki rolü taşır; arayüz farklı görürse `me`'yi yeniler.
+- **Tanınmayan rol** (bozuk kayıt): oturum "Kapatıldı" ile kapanır, denetim izine "Geçersiz rol", 401 `not_authenticated`.
+
+| Uç nokta | Fonksiyon · erişim |
+|---|---|
+| `/api/auth/me` · `activity` · `password` · `logout` | 89 · yazma (herkes) |
+| `GET /api/data-versions/current` | 82 · okuma (bağlam çubuğu; herkes) |
+| `/api/<liste>/columns` · `query` · `groups` · `values` | listenin fonksiyonu · okuma (malzeme: 10) |
+| `/api/<liste>/views…` | listenin fonksiyonu · okuma (K-99: görünüm kaydetmek okuma yetkisiyle); değiştirme ve silmede sahiplik |
+| `POST /api/<liste>/export` · `GET /api/exports/{id}/file` | 86 · yazma ve listenin fonksiyonu · okuma; indirmede yalnız işi başlatan |
+| `GET /api/jobs` | 48 · okuma (kendi işleri); `?scope=all` 93 · okuma (herkesin işleri) |
+| `GET /api/jobs/{id}` | kendi işi 48 · okuma; başkasının işi 93 · okuma |
+| `POST /api/jobs/{id}/cancel` | kendi işi 48 · yazma; başkasının işi 93 · yazma |
+| `WS /api/ws` | 48 · okuma (el sıkışmada) |
 
 ## Liste sorgusu (K-87)
 
@@ -266,9 +296,10 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 
 ## Testler
 
+- **Sıra (commit zinciri):** `npm run build` → `python -m pytest` → `npm test` → `npx tsc --noEmit`. Build önce: internetsizlik testi (`tests/test_offline.py`) taze derlemeyi tarar.
 - `python -m pytest`: bütün testler, **performans testleri hariç** (`pyproject.toml`: `-m 'not perf'`). Veritabanı testleri (`db` işareti) yerel SQL Server'a bağlanamazsa atlanır.
 - `python -m pytest -m perf`: performans testleri ayrıca çalıştırılır. Büyük veriyi bir işlem içinde üretir, ölçer ve geri alır; her ölçüm birkaç denemenin ortancasıdır (makine yükündeki tek seferlik sıçramalar sonucu bozmasın).
-- Ön yüz: `cd app/web; npm test; npx tsc --noEmit; npm run build`. Test süresi sınırı 15 sn (`vite.config.ts`): dosyalar paralel çalıştığı için yük altında jsdom testleri varsayılan 5 sn'yi aşabilir; tek başına bir test 2 sn'nin altındadır.
+- Ön yüz: `cd app/web; npm run build; npm test; npx tsc --noEmit`. Test süresi sınırı 15 sn (`vite.config.ts`): dosyalar paralel çalıştığı için yük altında jsdom testleri varsayılan 5 sn'yi aşabilir; tek başına bir test 2 sn'nin altındadır.
 - Bunların hepsi geçmeden commit ve push yapılmaz (CLAUDE.md).
 
 ## Uç noktalar
@@ -276,9 +307,9 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | Adres | Ne | Durum |
 |---|---|---|
 | `GET /api/health` | Uygulama sürümü, veritabanı bağlantısı, şema sürümü (beklenen ile karşılaştırma). Sorun varsa 503 ve Türkçe açıklama. Sistem sağlığı ekranının (24) çekirdeği. | uygulandı (0.3) |
-| `GET /api/jobs` | Oturumdaki kullanıcının çalışan, sıradaki ve son 24 saatte biten işleri (önce çalışan, sonra sıra); kanal sayaçları (çalışan, sırada, sınır). Bağlantı kopunca istemcinin son durumu sorguladığı yer (fonksiyon 48). | uygulandı (0.4) |
-| `GET /api/jobs/{id}` | İşin durumu, ilerlemesi, sıra numarası, süresi, `is_stale` (kalp atışı eşiği aşıldı). Yoksa 404 `job_not_found`. | uygulandı (0.4) |
-| `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder. Çalışan iş 409 `job_not_cancellable` (durdurma motorda, fonksiyon 93). Yetki kuralı 2.2'de. | uygulandı (0.4) |
+| `GET /api/jobs` | Oturumdaki kullanıcının çalışan, sıradaki ve son 24 saatte biten işleri (önce çalışan, sonra sıra); kanal sayaçları (çalışan, sırada, sınır). `?scope=all` herkesin işleri (Admin ve System owner, 93). Her işte `requested_by` ve `requested_by_name`. Bağlantı kopunca istemcinin son durumu sorguladığı yer (fonksiyon 48). | uygulandı (0.4; yetki 2.2) |
+| `GET /api/jobs/{id}` | İşin durumu, ilerlemesi, sıra numarası, süresi, `is_stale` (kalp atışı eşiği aşıldı). Yoksa 404 `job_not_found`. Başkasının işi 93 ister. | uygulandı (0.4; yetki 2.2) |
+| `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder. Çalışan iş 409 `job_not_cancellable` (durdurma motorda, fonksiyon 93). Kendi işi herkes, başkasının işi Admin ve System owner (93). | uygulandı (0.4; yetki 2.2) |
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |

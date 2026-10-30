@@ -657,10 +657,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>26. Entegrasyon tasarımı · Senkron sıklığı</sub>
 
 - **Gece tam çekim · 22:00:** Tüm ERP varlıkları tam çekim, doğrulama, tam yükleme (v+1), ardından senaryolar. Bitiş sınırı 06:00. Excel varlıkları son yüklenen haliyle kalır.
-- **Gün içi kısmi · elle:** Stok ve siparişler (satış, satın alma, iş emri) key user tarafından çekilip kısmi yüklenir; 'yeni veri var' bildirimi. Hedef 5 dk altı.
+- **Gün içi kısmi · elle:** Stok ve siparişler (satış, satın alma, iş emri) Key user tarafından çekilip kısmi yüklenir; 'yeni veri var' bildirimi. Hedef 5 dk altı.
 - **Haftalık ve elle:** Takvim, vardiya, tahmin, kaynak: haftalık ya da değişince Excel ile. Ham veri temizliği Pazar 03:00.
 - **Artımlı çekim:** API'de LastModified, SQL'de SC_LAST_MODIFIED varsa yalnız değişenler; silinenler için tam liste ya da SC_ACTION = D gerekir. Artımlı destek yoksa tam çekim (varsayılan).
-- **Zamanlama ayarı:** Saatler ve paralellik Entegrasyon ekranında (admin); bitiş sınırı ve işçi sayısı sistem sahibi ayarı. Müşterinin ERP gece işleriyle çakışmaması için saat devreye almada belirlenir.
+- **Zamanlama ayarı:** Saatler ve paralellik Entegrasyon ekranında (Admin); bitiş sınırı ve işçi sayısı System owner ayarı. Müşterinin ERP gece işleriyle çakışmaması için saat devreye almada belirlenir.
 - **Çakışma yönetimi:** Gece akışı sırasında elle çekim kapalı; gün içi kısmi yükleme sırasında ikinci yükleme kuyrukta bekler. Yükleme açık çalışmaları etkilemez.
 
 ### Hata yönetimi
@@ -693,7 +693,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri:** Ham veri ve geçerli veri Smartchain SQL Server'ında; yedekleme kurulum tasarımında (27). Kişisel veri: işçi adı yalnız vardiya planı için, parametreyle anonim kod kullanılabilir (öneri).
 - **Log ve iz:** Her çağrı ve parti loglanır (gövde değil); elle tetiklemeler denetim izinde. Loglar destek paketiyle dışa alınır.
 - **Değişiklik yönetimi:** Eşleme ve bağlantı değişikliği 'test et' zorunlu; değişiklik denetim izinde; bir önceki tanıma geri dönülebilir (öneri).
-- **Yetki:** Entegrasyon tanımı: admin ve üstü. Çekim ve yükleme: key user ve üstü. End user hiçbirini görmez.
+- **Yetki:** Entegrasyon tanımı: Admin ve üstü. Çekim ve yükleme: Key user ve üstü. End user hiçbirini görmez.
 
 ### Entegrasyon devreye alma adımları
 <sub>26. Entegrasyon tasarımı · Devreye alma</sub>
@@ -715,7 +715,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Yöntem seçimi | Keşif, öneri, karar kaydı | ERP erişim bilgisi, servis / veritabanı imkânı |
 | API adaptörü | Geliştirme, test, paket | Servis hesabı, uç nokta dokümanı, güvenlik duvarı |
 | SQL arayüz tabloları | Şema, örnek veri, doğrulama raporu | ETL yazma, zamanlama, tabloları doldurma |
-| Excel | Şablonlar, yükleme eğitimi | Doldurma ve yükleme (key user) |
+| Excel | Şablonlar, yükleme eğitimi | Doldurma ve yükleme (Key user) |
 | Eşleme ve kurallar | Taslak, kalite kontrolü | Onay, kod listelerinin anlamı |
 | Zamanlama | Varsayılan 22:00, bitiş 06:00 | ERP gece işleriyle çakışma kontrolü |
 | İzleme ve destek | Destek paketi, sürüm güncelleme | Ana sayfa, hata bildirimi, paket iletimi |

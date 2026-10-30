@@ -63,7 +63,7 @@ describe("menüde arama", () => {
     expect(names).toEqual(["Kaynak doluluk", "Kaynak bazlı planlama"]);
     await user.clear(box);
     await user.type(box, "SİSTEM");
-    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sistem sağlığı", "Sistem sahibi"]);
+    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sistem sağlığı"]);
     await user.keyboard("{Enter}");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem sağlığı");
   });
@@ -192,7 +192,7 @@ describe("kullanıcı menüsü", () => {
     const user = userEvent.setup();
     const { unmount } = renderApp();
     await user.click(screen.getByRole("button", { name: "Kullanıcı menüsü: Mert Planlama" }));
-    expect(screen.getByRole("dialog", { name: "Kullanıcı menüsü" })).toHaveTextContent("Mert Planlamaplanlama · Key user");
+    expect(screen.getByRole("dialog", { name: "Kullanıcı menüsü" })).toHaveTextContent("Mert Planlamaplanlama · System owner");
     expect(document.documentElement.style.fontSize).toBe("13px");
     await user.click(screen.getByRole("radio", { name: /Büyük/ }));
     expect(document.documentElement.style.fontSize).toBe("16px");

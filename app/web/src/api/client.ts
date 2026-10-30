@@ -25,8 +25,24 @@ export function emitAuth(detail: AuthEventDetail): void {
   window.dispatchEvent(new CustomEvent<AuthEventDetail>(AUTH_EVENT, { detail }));
 }
 
+/** Yetki reddi (K-100): sunucu 403 forbidden ya da sahiplik reddi (…_not_owner) dönerse kabuk tek yerde bildirir.
+ *  Giriş akışının 403'leri (kilit, kapalı hesap, şifre değişikliği, köken) bu olayı yaymaz. */
+export const FORBIDDEN_EVENT = "smartchain:forbidden";
+const isForbidden = (code: string) => code === "forbidden" || code.endsWith("_not_owner");
+
+/** Oturumdaki rol (AuthContext koyar). Sunucunun X-Smartchain-Role başlığı farklıysa rol değişmiştir: me yenilenir. */
+let knownRole: string | null = null;
+export function setKnownRole(role: string | null): void {
+  knownRole = role;
+}
+
 /** Hata cevabını (docs/08) ApiError'a çevirir; başarılıysa cevabı olduğu gibi döndürür. */
 export async function ensureOk(r: Response): Promise<Response> {
+  const role = r.headers?.get("X-Smartchain-Role");
+  if (role && knownRole && role !== knownRole) {
+    knownRole = role;
+    emitAuth({ kind: "check" });
+  }
   if (!r.ok) {
     let code = `http_${r.status}`;
     let message = r.statusText;
@@ -40,6 +56,9 @@ export async function ensureOk(r: Response): Promise<Response> {
       // gövde JSON değil
     }
     if (r.status === 401 && SESSION_CODES.has(code)) emitAuth({ kind: "expired", code, message });
+    if (r.status === 403 && isForbidden(code)) {
+      window.dispatchEvent(new CustomEvent<string>(FORBIDDEN_EVENT, { detail: message }));
+    }
     throw new ApiError(r.status, code, message, details);
   }
   return r;
@@ -108,6 +127,8 @@ export interface Job {
   job_type: string;
   channel: string;
   status: string;
+  requested_by?: number | null;
+  requested_by_name?: string | null;
   progress: string | null;
   error_text?: string | null;
   queue_position: number | null;
@@ -121,8 +142,10 @@ export interface JobList {
 
 export const api = {
   currentDataVersion: () => getJson<DataVersion>("/api/data-versions/current"),
-  /** Oturumdaki kullanıcının işleri (K-97). */
-  jobs: () => getJson<JobList>("/api/jobs"),
+  /** Oturumdaki kullanıcının işleri (K-97); "all": herkesin işleri (93, Admin ve System owner; K-100). */
+  jobs: (scope: "own" | "all" = "own") => getJson<JobList>(scope === "all" ? "/api/jobs?scope=all" : "/api/jobs"),
+  /** Sıradaki işi iptal eder (kendi işi 48; başkasının işi 93). */
+  cancelJob: (jobId: number) => postJson<Job>(`/api/jobs/${jobId}/cancel`, {}),
   /** Arka planda hazırlanan Excel dosyası (K-91). */
   downloadExport: (jobId: number, fallback: string) => downloadFile(`/api/exports/${jobId}/file`, fallback),
 };

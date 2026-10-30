@@ -1,7 +1,8 @@
-"""İstek başına oturum ve köken denetimi (K-97).
+"""İstek başına oturum, yetki ve köken denetimi (K-97, K-100).
 
-- `current_user`: oturum ister; şifre değişikliği bekleyen kullanıcıyı (ilk giriş, sıfırlama, süre doldu) geçirmez.
-- `session_user`: oturum ister, şifre değişikliği bekleyeni de geçirir (yalnız /api/auth uç noktaları).
+- `require(fn, access)`: oturum ve yetki matrisi; şifre değişikliği bekleyen kullanıcıyı (ilk giriş, sıfırlama, süre
+  doldu) geçirmez. Her uç nokta buna bağlıdır (kapsam testi); açık olanlar yalnız /api/health ve giriş.
+- `session_user`: oturum ister, şifre değişikliği bekleyeni de geçirir (require'ın içinde; /api/auth).
 - `check_origin`: durum değiştiren isteklerde Origin izinli adreslerden biri olmalı (CSRF; SameSite=Strict'e ek).
 
 Oturum denetimi kendi kısa veritabanı oturumunu açar ve hemen kapatır; uç noktanın oturumundan (ör. dosya akışında
@@ -14,7 +15,8 @@ from sqlalchemy.orm import sessionmaker
 
 from .db import get_engine
 from .errors import AppError
-from .services import auth
+from .permissions import Access
+from .services import auth, authz
 from .services.auth import CurrentUser
 from .settings import get_settings
 
@@ -51,7 +53,15 @@ def session_user(request: Request, _origin: None = Depends(check_origin)) -> Cur
     return authenticate(request.cookies.get(COOKIE))
 
 
-def current_user(user: CurrentUser = Depends(session_user)) -> CurrentUser:
-    if user.must_change_password:
-        raise AppError("password_change_required", "Devam etmek için şifrenizi değiştirin.", 403)
-    return user
+def require(fn: int, access: Access = Access.READ, *, allow_password_change: bool = False):
+    """Uç noktanın fonksiyonu ve erişimi (K-100). Matris izin vermezse 403 forbidden ve denetim izi. Kullanıcının kendi
+    nesnesi üzerinde denetler; başkasının nesnesi için servis authz.ensure(..., own=False) çağırır.
+    Rol, cevapta X-Smartchain-Role başlığıyla döner (TraceMiddleware); arayüz değişeni görüp menüyü yeniler."""
+    def dependency(request: Request, user: CurrentUser = Depends(session_user)) -> CurrentUser:
+        request.state.role = user.role
+        if user.must_change_password and not allow_password_change:
+            raise AppError("password_change_required", "Devam etmek için şifrenizi değiştirin.", 403)
+        authz.ensure(user, fn, access, details={"method": request.method, "path": request.url.path})
+        return user
+    dependency.permission = (fn, Access(access))  # kapsam testi (tests/test_permissions.py) buradan okur
+    return dependency

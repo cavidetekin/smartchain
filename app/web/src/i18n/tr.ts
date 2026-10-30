@@ -42,6 +42,10 @@ export const tr = {
     download: "İndir",
     downloadOf: (name: string) => `${name} dosyasını indir`,
     notifications: "Bildirimler",
+    cancel: "İptal",
+    cancelOf: (id: number) => `#${id} işini iptal et`,
+    allJobs: "Herkesin işleri",
+    ownerOf: (name: string) => `sahibi ${name}`,
     connection: {
       connected: "Bildirimler bağlı",
       reconnecting: "Bağlantı yeniden kuruluyor",
@@ -55,6 +59,16 @@ export const tr = {
     changePassword: "Şifre değiştir",
     passwordChanged: "Şifreniz değiştirildi.",
     logout: "Çıkış",
+  },
+  // Yetki (fonksiyon 90; K-99, K-100)
+  authz: {
+    required: (role: string, systemOwner: boolean) =>
+      `Bu işlem için ${role} yetkisi gerekir. ${systemOwner ? "Smartchain desteğine başvurun." : "Yetki için yöneticinize başvurun."}`,
+    screenTitle: "Bu ekranı açma yetkiniz yok",
+    screenText: (role: string, systemOwner: boolean) =>
+      `Bu ekran için ${role} yetkisi gerekir. ${systemOwner ? "Smartchain desteğine başvurun." : "Yetki için yöneticinize başvurun."}`,
+    viewOwnerOnly: "Bu görünümü yalnız sahibi değiştirebilir; sizin için salt okunur.",
+    notice: "Yetki",
   },
   // Giriş ve oturum (fonksiyon 89; K-97, K-98)
   auth: {
@@ -71,7 +85,7 @@ export const tr = {
     ended: "Oturumunuz sona erdi; yeniden giriş yapın.",
     setPassword: "Şifrenizi belirleyin",
     changePassword: "Şifre değiştir",
-    policySource: "politika sistem sahibi tarafından belirlenir",
+    policySource: "politika System owner tarafından belirlenir",
     reasons: { "İlk giriş": "İlk giriş", "Sıfırlama": "Şifreniz sıfırlandı", "Süre doldu": "Şifrenizin süresi doldu" } as Record<string, string>,
     temporaryPassword: "Geçici şifre",
     currentPassword: "Mevcut şifre",
