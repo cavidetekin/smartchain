@@ -157,7 +157,6 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 - **2.2 Roller:** admin'in bir paylaşılan görünümü ya da kural setini herkes veya bir rol için varsayılan yapması (K-89 notu).
 - **Sentetik veri:** kilogram ve metre birimli malzemelere kesirli miktar (güvenlik stoğu, lot) verilmesi (docs/11 açık iş).
 - **Performans:** gruplama sorgusundaki paralel plan ipucunun bir ayara bağlanması; çok kullanıcılı sunucuda işlemci kapışması (K-90).
-- **Tablo görünümü:** ilk kolonun farklı renkte gösterilmesi fikri (denenmedi).
 
 ## Açık konular
 
