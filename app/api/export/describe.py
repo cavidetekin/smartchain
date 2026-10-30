@@ -48,6 +48,33 @@ def describe_filter(f: dict, label: str, decimals: int | None = None) -> str:
     return f"{label}: {text}"
 
 
+CMP = {"gt": ">", "lt": "<", "eq": "="}
+RULE_TEXT_OPS = {"equals": "eşittir", "contains": "içerir", "starts_with": "ile başlar"}
+ICON_NAMES = {"arrow_up": "yukarı ok", "arrow_down": "aşağı ok", "dot": "nokta", "warning": "uyarı", "check": "onay",
+              "cross": "çarpı", "flag": "bayrak", "star": "yıldız"}
+
+
+def describe_rule(rule: dict, label: str, labels: dict[str, str], decimals: int | None = None) -> str:
+    """Koşullu biçim kuralı (K-95): "Güvenlik stoğu: < Maksimum stok → zemin #f4cfc4, kalın"."""
+    c = rule["condition"]
+    op = c["op"]
+    if op == "always":
+        cond = "kolon biçimi"
+    elif c.get("field_ref"):
+        cond = f"{CMP[op]} {labels.get(c['field_ref'], c['field_ref'])}"
+    elif op in CMP:
+        v = c.get("value")
+        cond = f"{CMP[op]} " + (tr_number(v, decimals) if isinstance(v, (int, float)) and not isinstance(v, bool)
+                                else tr_date(v))
+    elif op in RULE_TEXT_OPS:
+        cond = f"{RULE_TEXT_OPS[op]} '{c.get('value')}'"
+    else:
+        cond = describe_filter({**c, "field": rule["field"]}, label, decimals).split(": ", 1)[1]
+    f = rule["format"]
+    parts = ([f"zemin {f['fill']}"] if f.get("fill") else []) + ([f"yazı {f['color']}"] if f.get("color") else [])         + (["kalın"] if f.get("bold") else []) + ([f"ikon {ICON_NAMES[f['icon']]}"] if f.get("icon") else [])
+    return f"{label}: {cond} → {', '.join(parts)}"
+
+
 def describe_sort(sort: list[dict], labels: dict[str, str]) -> str:
     return ", ".join(f"{labels.get(s['field'], s['field'])} ({'azalan' if s.get('dir') == 'desc' else 'artan'})" for s in sort)
 

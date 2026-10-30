@@ -1,5 +1,5 @@
-// Kolon menüsü (U-10, K-90; docs/12 "Görünüm"): taşı, sabitle, grupla, ara toplam (sayı alanlarında), gizle,
-// genişliği sıfırla. Klavyeyle de erişilir (↑ / ↓ öğeler arasında).
+// Kolon menüsü (U-10, K-90, K-95; docs/12 "Görünüm"): taşı, sabitle, grupla, ara toplam (sayı alanlarında),
+// koşullu biçim ekle ve biçimi yönet (bütün kurallar; kuralların tek girişi), gizle, genişliği sıfırla. Klavyeyle de erişilir (↑ / ↓ öğeler arasında).
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -11,16 +11,18 @@ import { aggregateOf, MAX_GROUP_FIELDS, type TableState } from "./viewState";
 
 const T = tr.table;
 
-export type ColumnAction = "left" | "right" | "pin" | "unpin" | "group" | "hide" | "resetWidth";
+export type ColumnAction = "left" | "right" | "pin" | "unpin" | "group" | "hide" | "resetWidth" | "ruleAdd" | "ruleManage";
 
 export const isGroupable = (c: ListColumn) => c.filter !== "number";
 const isNumber = (c: ListColumn) => c.type === "number" || c.type === "integer";
 const FNS: AggFn[] = ["sum", "avg", "avg_nonzero", "wavg", "min", "max", "count", "none"];
 
-export function ColumnMenu({ column, columns, state, onAction, onAggregate }: {
+export function ColumnMenu({ column, columns, state, ruleLimit, onAction, onAggregate }: {
   column: ListColumn;
   columns: ListColumn[];
   state: TableState;
+  /** Kural sınırına ulaşıldı (K-95): "Koşullu biçim ekle" kapalı. */
+  ruleLimit: boolean;
   onAction(action: ColumnAction): void;
   onAggregate(spec: AggSpec): void;
 }) {
@@ -36,6 +38,8 @@ export function ColumnMenu({ column, columns, state, onAction, onAggregate }: {
     pinned ? { action: "unpin", label: T.unpin } : { action: "pin", label: T.pinHere },
     { action: "group", label: T.groupByThis,
       disabled: !isGroupable(column) || state.groupBy.includes(column.field) || state.groupBy.length >= MAX_GROUP_FIELDS },
+    { action: "ruleAdd", label: T.ruleMenuAdd, disabled: ruleLimit },
+    { action: "ruleManage", label: T.ruleMenuManage },
     { action: "hide", label: T.hide, disabled: state.order.length <= 1 },
     { action: "resetWidth", label: T.resetWidth, disabled: state.widths[column.field] === undefined },
   ];

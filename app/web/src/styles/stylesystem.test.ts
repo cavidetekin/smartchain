@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { ROW_REM } from "../table/DataTable";
+import { contrast as contrastOf, luminance } from "../ui/contrast";
 
 const read = (name: string) => readFileSync(new URL(name, import.meta.url), "utf-8");
 const tokens = read("./tokens.css");
@@ -16,15 +17,9 @@ function token(name: string): string {
   return ref ? token(ref[1]) : v.toLowerCase();
 }
 
-function luminance(hex: string): number {
-  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-}
-
+/** Belirteç adlarıyla kontrast (ui/contrast ile aynı hesap). */
 function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(token(a)), luminance(token(b))].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
+  return contrastOf(token(a), token(b));
 }
 
 /** CSS kurallarını (seçici, gövde) olarak ayırır; yorumlar atılır. */

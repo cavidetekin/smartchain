@@ -21,6 +21,8 @@ from app.jobs.constants import CHANNEL_EXPORT, STATUS_DONE, TYPE_EXPORT
 from app.jobs.settings import JobSettings
 from ..errors import AppError
 from ..export import describe
+from ..export import formats
+from ..export.formats import CellFormat
 from ..export.writer import XlsxWriter
 from ..lists import LISTS, ListDefinition
 from ..lists.groups import build_tree
@@ -45,6 +47,7 @@ class Plan:
     filters: list
     group_by: list[str]
     specs: dict
+    rules: list
     rows: int
     file_name: str
     version: dict
@@ -71,7 +74,9 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
     filters = req.filters if req.scope.rows == "filtered" else []
     group_by = req.group_by
     specs = b.aggregate_specs(fields, req.aggregates) if group_by else {}
+    rules = [r for r in req.rules if r.enabled and r.field in fields]  # pasifler ve aktarılmayan kolonlar yok (K-95)
     b.where(filters)  # doğrulama (422)
+    b.rule_columns(rules)
     rows = list_repo.fetch_count(session, b.filtered_query(filters) if filters else b.total_query())
     stamp = _now_local().strftime("%Y-%m-%d_%H%M")
     file_name = f"smartchain_{defn.file_slug or defn.name}_veri-v{version['Id']}_{stamp}.xlsx"
@@ -91,12 +96,34 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
         ("Sıralama", describe.describe_sort([s.model_dump() for s in req.sort], labels) or "liste varsayılanı"),
         ("Gruplama", " › ".join(labels.get(g, g) for g in group_by) or "yok"),
         ("Ara toplamlar", describe.describe_aggregates({f: s.model_dump(exclude_none=True) for f, s in specs.items()}, labels) or "yok"),
+        ("Koşullu biçim", "; ".join(describe.describe_rule(r.model_dump(mode="json", by_alias=True, exclude_none=True),
+                                                           labels.get(r.field, r.field), labels,
+                                                           b.columns.get(r.field, {}).get("decimals"))
+                                    for r in rules) or "yok"),
         ("Dışa aktaran", repo.user_name(session, user_id) or f"#{user_id}"),
         ("Zaman", f"{_now_local():%d.%m.%Y %H:%M}"),
         ("Smartchain", __version__),
         ("Not", "Dosya sisteme geri yüklenemez; yükleme şablonu ayrıdır."),
     ]
-    return Plan(defn, b, columns, fields, filters, group_by, specs, rows, file_name, version, info)
+    return Plan(defn, b, columns, fields, filters, group_by, specs, rules, rows, file_name, version, info)
+
+
+def rule_formatter(rules: list) -> Callable | None:
+    """Excel hücresine kural biçimi (K-95): satırın _r{i} değerlerinden o kolonun tutan kuralları; aynı özellikte
+    üstteki kural kazanır (alttan üste birleştirilir, üstteki en son yazılır)."""
+    by_field: dict[str, list[tuple[int, CellFormat]]] = {}
+    for i, r in enumerate(rules):
+        by_field.setdefault(r.field, []).append((i, formats.rule_format(r.format)))
+    if not by_field:
+        return None
+
+    def cell_format(col: dict, row, _value) -> CellFormat | None:
+        out = None
+        for i, fmt in reversed(by_field.get(col["field"], [])):
+            if row.get(f"_r{i}"):
+                out = fmt if out is None else out.merged(fmt)
+        return out
+    return cell_format
 
 
 def _norm(v):
@@ -109,7 +136,7 @@ def _norm(v):
 def write(session: Session, plan: Plan, req: ExportRequest, target, progress: Callable[[int], None] | None = None) -> int:
     """Dosyayı yazar; yazılan veri satırı sayısını döndürür."""
     b = plan.builder
-    writer = XlsxWriter(target, plan.columns, req.widths)
+    writer = XlsxWriter(target, plan.columns, req.widths, rule_formatter(plan.rules))
     writer.header()
     units = list_repo.read_unit_decimals(session) if plan.defn.unit_field else {}
 
@@ -127,7 +154,7 @@ def write(session: Session, plan: Plan, req: ExportRequest, target, progress: Ca
     fns = {f: s.fn for f, s in plan.specs.items()}
     group_cols = {g: b.columns[g] for g in plan.group_by}
 
-    query = b.export_query(plan.fields, req.sort, plan.filters, plan.group_by)
+    query = b.export_query(plan.fields, req.sort, plan.filters, plan.group_by, plan.rules)
     result = session.execute(query.execution_options(stream_results=True, yield_per=PROGRESS_EVERY))
     try:
         written = _write_rows(result, plan, writer, nodes, fns, group_cols, units, progress)

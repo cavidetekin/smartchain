@@ -58,6 +58,7 @@ class _Formats:
                     props["font_color"] = fmt.color
                 if fmt.bold:
                     props["bold"] = True
+            number_format = formats.with_icon(number_format, fmt.icon if fmt is not None else None)
             if number_format:
                 props["num_format"] = number_format
             if indent:

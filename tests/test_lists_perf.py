@@ -10,7 +10,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.lists import MATERIALS
-from app.api.lists.request import FilterItem, GroupsRequest, QueryRequest, SortItem, ValuesRequest
+from app.api.lists.request import (
+    FilterItem, GroupsRequest, QueryRequest, RuleSpec, SortItem, ValuesRequest,
+)
 from app.api.services import lists as service
 
 pytestmark = [pytest.mark.db, pytest.mark.perf]
@@ -92,4 +94,35 @@ def test_groups_under_target(big_session):
     assert sum(g["count"] for g in tree["groups"]) > ROWS / 2
     ms = median_ms(lambda: service.groups(big_session, MATERIALS, req))
     print(f"\ngruplama (2 alan, filtre, ara toplamlar): ortanca {ms:.0f} ms")
+    assert ms < TARGET_MS
+
+
+# --- koşullu biçim (K-95): 10 kural, satır başına _rules ve etki sayıları ---
+
+RULES_10 = [
+    RuleSpec(field="Name", condition={"op": "contains", "value": "çelik"}),
+    RuleSpec(field="Name", condition={"op": "starts_with", "value": "rul"}),
+    RuleSpec(field="MaterialGroup", condition={"op": "in", "values": ["Çubuk", "Levha"]}),
+    RuleSpec(field="MaterialLevel", condition={"op": "equals", "value": "hammadde"}),
+    RuleSpec(field="SafetyStock", condition={"op": "between", "min": 100, "max": 300}),
+    RuleSpec(field="SafetyStock", condition={"op": "gt", "value": 400}),
+    RuleSpec(field="SafetyStock", condition={"op": "lt", "field_ref": "MaxStock"}),
+    RuleSpec(field="UpdatedAt", condition={"op": "relative", "value": "this_week"}),
+    RuleSpec(field="AdditionalText1", condition={"op": "empty"}),
+    RuleSpec(field="Code", condition={"op": "contains", "value": "99"}),
+]
+
+
+def test_rules_first_chunk_under_target(big_session):
+    """İlk sorgu testindeki istek + 10 kural; kuralların getirdiği ek süre de yazılır."""
+    base = QueryRequest(
+        filters=[FilterItem(field="Name", op="contains", value="çelik"),
+                 FilterItem(field="MaterialLevel", op="in", values=["Hammadde", "Yarı mamul"])],
+        sort=[SortItem(field="MaterialGroup"), SortItem(field="SafetyStock", dir="desc")], limit=100)
+    req = base.model_copy(update={"rules": RULES_10})
+    body = service.query(big_session, MATERIALS, req)
+    assert len(body["rows"]) == 100 and any(r["_rules"] for r in body["rows"])
+    plain = median_ms(lambda: service.query(big_session, MATERIALS, base))
+    ms = median_ms(lambda: service.query(big_session, MATERIALS, req))
+    print(f"\nkurallı sorgu (50.000 satır, 10 kural, ilk parça + sayılar): ortanca {ms:.0f} ms (kuralsız {plain:.0f} ms)")
     assert ms < TARGET_MS

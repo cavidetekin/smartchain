@@ -2,11 +2,16 @@
 
 const LOCALE = "tr-TR";
 
+const numberFormats = new Map<number, Intl.NumberFormat>();
+
+/** Biçimlendirici ondalık sayısına göre bir kez kurulur (her hücrede yeniden kurmak tabloyu yavaşlatıyordu). */
 export function formatNumber(value: number, fractionDigits = 0): string {
-  return new Intl.NumberFormat(LOCALE, {
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(value);
+  let f = numberFormats.get(fractionDigits);
+  if (!f) {
+    f = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
+    numberFormats.set(fractionDigits, f);
+  }
+  return f.format(value);
 }
 
 function pad(n: number): string {

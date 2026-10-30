@@ -1,11 +1,12 @@
-// Kayıtlı görünüm (U-9, K-89): seçici, kaydedilmemiş işareti, Kaydet / Farklı kaydet, varsayılan yap, sil.
+// Kayıtlı görünüm (U-9, K-89): seçici (görünür etiketsiz, ekran okuyucu adı "Görünüm"), "⋯" menüsü (Kaydet, Farklı
+// kaydet, Varsayılan yap, Sil) ve hemen yanında "Sıralamayı temizle" ikonu (1.6 demosu). Kaydedilmemiş değişiklik "⋯" düğmesinin köşesinde indigo noktayla gösterilir.
 // Görünümler veritabanında; kullanıcı A-36 gereği şimdilik user_id ile. Açılışta kullanıcının varsayılanı uygulanır.
-import { Ellipsis } from "lucide-react";
+import { ArrowUpDown, Ellipsis } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
-import { Button, Checkbox, ConfirmDialog, Dialog, TextField } from "../ui";
+import { Checkbox, ConfirmDialog, Dialog, TextField } from "../ui";
 import { useFloating } from "../ui/popover";
 import { listApi, type ListColumn, type SavedView, type ViewDefinition } from "./types";
 import { fromDefinition, isDirty, standardState, type TableState, toDefinition } from "./viewState";
@@ -103,7 +104,7 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
   };
 }
 
-export function ViewBar({ views, state }: { views: Views; state: TableState }) {
+export function ViewBar({ views, state, onClearSort }: { views: Views; state: TableState; onClearSort(): void }) {
   const [confirm, setConfirm] = useState<{ kind: "switch"; id: number | null } | { kind: "delete" } | null>(null);
   const [saveAs, setSaveAs] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -134,6 +135,15 @@ export function ViewBar({ views, state }: { views: Views; state: TableState }) {
   };
   const label = (v: SavedView) => `${v.name}${v.is_owner ? "" : ` · ${T.sharedBy(v.owner_name)}`}${v.id === views.defaultId ? ` (${T.defaultMark})` : ""}`;
 
+  const owner = Boolean(current?.is_owner);
+  const isDefault = views.defaultId === views.currentId;
+  const items: { label: string; disabled: boolean; strong?: boolean; run(): void }[] = [
+    { label: T.save, disabled: !(dirty && owner), strong: dirty && owner, run: () => views.save(state) },
+    { label: T.saveAs, disabled: false, run: () => setSaveAs(true) },
+    { label: isDefault && current ? T.removeDefault : T.makeDefault, disabled: isDefault && !current, run: () => views.toggleDefault() },
+    { label: T.deleteView, disabled: !owner, run: () => setConfirm({ kind: "delete" }) },
+  ];
+
   return (
     <div className="sc-viewbar">
       <select className="sc-input sc-select sc-viewbar-select" aria-label={T.view} value={views.currentId ?? ""}
@@ -141,32 +151,24 @@ export function ViewBar({ views, state }: { views: Views; state: TableState }) {
         <option value="">{T.standard}{views.defaultId === null ? ` (${T.defaultMark})` : ""}</option>
         {views.views.map((v) => <option key={v.id} value={v.id}>{label(v)}</option>)}
       </select>
-      {dirty && (
-        <span className="sc-viewbar-unsaved" title={T.unsaved}>
-          <span className="sc-viewbar-dirty" role="img" aria-label={T.unsaved}>•</span>
-          <span className="sc-muted">{T.unsavedShort}</span>
-        </span>
-      )}
-      {dirty && current?.is_owner && <Button size="sm" variant="primary" onClick={() => views.save(state)}>{T.save}</Button>}
-      <Button size="sm" variant="ghost" onClick={() => setSaveAs(true)}>{T.saveAs}</Button>
-      {current && (
-        <div className="sc-table-anchor" ref={menuRef}>
-          <button type="button" className="sc-tool-btn" ref={menuButtonRef} aria-label={T.viewMenu} aria-haspopup="menu" aria-expanded={menuOpen}
-                  onClick={() => setMenuOpen((o) => !o)}><Ellipsis aria-hidden="true" /></button>
-          {menuOpen && (
-            <div ref={menuPopRef} className="sc-table-pop sc-popmenu sc-viewbar-menu sc-floating" role="menu" aria-label={T.viewMenu}>
-              <button type="button" role="menuitem" className="sc-popmenu-item"
-                      onClick={() => { setMenuOpen(false); views.toggleDefault(); }}>
-                {views.defaultId === current.id ? T.removeDefault : T.makeDefault}
-              </button>
-              {current.is_owner && (
-                <button type="button" role="menuitem" className="sc-popmenu-item"
-                        onClick={() => { setMenuOpen(false); setConfirm({ kind: "delete" }); }}>{T.deleteView}</button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="sc-table-anchor sc-viewbar-anchor" ref={menuRef}>
+        <button type="button" className="sc-tool-btn" ref={menuButtonRef} aria-label={T.viewMenu} aria-haspopup="menu"
+                aria-expanded={menuOpen} title={dirty ? T.unsaved : T.viewMenu} onClick={() => setMenuOpen((o) => !o)}>
+          <Ellipsis aria-hidden="true" />
+        </button>
+        {dirty && <span className="sc-viewbar-dot" role="img" aria-label={T.unsaved} title={T.unsaved} />}
+        {menuOpen && (
+          <div ref={menuPopRef} className="sc-table-pop sc-popmenu sc-viewbar-menu sc-floating" role="menu" aria-label={T.viewMenu}>
+            {items.map((it) => (
+              <button key={it.label} type="button" role="menuitem" disabled={it.disabled}
+                      className={`sc-popmenu-item${it.strong ? " is-strong" : ""}`}
+                      onClick={() => { setMenuOpen(false); it.run(); }}>{it.label}</button>
+            ))}
+          </div>
+        )}
+      </div>
+      <button type="button" className="sc-tool-btn" aria-label={T.clearSort} title={T.clearSort}
+              disabled={state.sort.length === 0} onClick={onClearSort}><ArrowUpDown aria-hidden="true" /></button>
       {saveAs && <SaveAsDialog onClose={() => setSaveAs(false)} onSave={(name, shared) => views.saveAs(state, name, shared)} />}
       {confirm?.kind === "switch" && (
         <ConfirmDialog title={T.switchTitle} message={T.switchMessage} confirmLabel={T.switchConfirm}

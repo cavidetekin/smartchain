@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta, timezone
 import sqlalchemy as sa
 
 from .definition import ListDefinition, column_type, columns, filter_type
-from .request import AggSpec, FilterItem, GroupKeyItem, QueryRequest, SortItem
+from .request import AggSpec, FilterItem, GroupKeyItem, QueryRequest, RuleSpec, SortItem
 
 TURKISH = "Turkish_100_CI_AS"
 BINARY = "Latin1_General_100_BIN2"
@@ -24,6 +24,20 @@ OPS = {  # her tipte "empty": değeri boş olanlar (U-13)
     "number": ("between", "eq", "gt", "lt", "empty"),
     "date": ("between", "relative", "empty"),
 }
+# Koşullu biçim kuralı operatörleri (U-24, K-95): kolonun tipine göre; liste filtreli metin alanı da metindir.
+# "always" (Her zaman): koşulsuz kolon biçimi, bütün hücrelerde (boşlar dahil) tutar.
+RULE_OPS = {
+    "number": ("gt", "lt", "between", "eq", "empty", "always"),
+    "date": ("gt", "lt", "between", "eq", "relative", "empty", "always"),
+    "text": ("equals", "contains", "starts_with", "in", "empty", "always"),
+    "bool": ("in", "empty", "always"),
+}
+FIELD_REF_OPS = ("gt", "lt", "eq")  # sayı ve tarihte sabit değer yerine başka alan
+
+
+def rule_kind(col: sa.Column) -> str:
+    kind = column_type(col)
+    return {"integer": "number", "number": "number", "date": "date", "datetime": "date"}.get(kind, kind)
 
 
 class ListQueryError(ValueError):
@@ -212,6 +226,100 @@ class Builder:
             raise ListQueryError(problems)
         return out
 
+    # --- koşullu biçim (U-24, K-95) -------------------------------------------------------------------------
+    def _local_day(self, col: sa.Column) -> sa.ColumnElement:
+        """Tarih alanı olduğu gibi; zamanlı alan (UTC) API sunucusunun yerel gününe çevrilir (filtredeki gün sınırı)."""
+        if column_type(col) != "datetime":
+            return col
+        offset = int(datetime.now().astimezone().utcoffset().total_seconds() // 60)
+        return sa.cast(sa.func.dateadd(sa.literal_column("minute"), offset, col), sa.Date)
+
+    def condition(self, field: str, cond, where: str, problems: list[dict]) -> sa.ColumnElement | None:
+        """Kuralın koşulu SQL olarak. Filtreyle aynı kurucu: Türkçe harf duyarsızlığı, boş, göreli tarih aynı (K-95)."""
+        col = self._col(field, f"{where}.field", problems)
+        if col is None:
+            return None
+        kind = rule_kind(col)
+        at = f"{where}.condition"
+        if cond.op not in RULE_OPS[kind]:
+            problems.append({"field": f"{at}.op", "problem": f"{field} alanında '{cond.op}' kullanılamaz "
+                                                              f"({', '.join(RULE_OPS[kind])})"})
+            return None
+
+        def bad(problem: str, part: str = "value"):
+            problems.append({"field": f"{at}.{part}", "problem": problem})
+
+        if cond.empty_as_zero is not None and (cond.field_ref is None or kind != "number"):
+            return bad("Boşları 0 say yalnız sayı alanı karşılaştırmasında", "empty_as_zero")
+        if cond.op == "always":  # koşulsuz kolon biçimi
+            return sa.literal_column("1") == sa.literal_column("1")
+        if cond.field_ref is not None:
+            if cond.op not in FIELD_REF_OPS or kind not in ("number", "date"):
+                return bad("Alanla karşılaştırma yalnız sayı ve tarihte büyük, küçük, eşit için", "field_ref")
+            if cond.value is not None:
+                return bad("Değer ve alan birlikte verilemez", "field_ref")
+            if cond.field_ref == field:
+                return bad("Alan kendisiyle karşılaştırılamaz", "field_ref")
+            ref = self._col(cond.field_ref, f"{at}.field_ref", problems)
+            if ref is None:
+                return None
+            if rule_kind(ref) != kind:
+                return bad(f"{cond.field_ref} alanının tipi uymuyor ({'sayı' if kind == 'number' else 'tarih'} olmalı)",
+                           "field_ref")
+            if kind == "number" and cond.empty_as_zero is not False:  # "Boşları 0 say" (varsayılan açık)
+                a, b = sa.func.coalesce(col, 0), sa.func.coalesce(ref, 0)
+                return {"gt": a > b, "lt": a < b, "eq": a == b}[cond.op]
+            a, b = (self._local_day(col), self._local_day(ref)) if kind == "date" else (col, ref)
+            cmp = {"gt": a > b, "lt": a < b, "eq": a == b}[cond.op]
+            return sa.and_(col.isnot(None), ref.isnot(None), cmp)  # biri boşsa tutmaz (tarih; sayıda seçenek kapalıysa)
+
+        if cond.op == "empty":
+            return self.is_empty(col)
+        if kind == "bool":
+            values = cond.values or []
+            if not values or any(not isinstance(v, bool) for v in values):
+                return bad("Evet/Hayır değeri true ya da false olmalı", "values")
+            return col.in_(values)
+        if kind == "text":
+            if cond.op == "in":
+                values = [v.strip() for v in cond.values or [] if isinstance(v, str) and v.strip()]
+                if not values or len(values) != len(cond.values or []):
+                    return bad("En az bir metin değer girilmeli", "values")
+                return sa.or_(*[turkish(col) == v for v in values])
+            if not isinstance(cond.value, str) or not cond.value.strip():
+                return bad("Metin girilmeli")
+            v = cond.value.strip()
+            if cond.op == "equals":
+                return turkish(col) == v
+            if cond.op == "starts_with":
+                return turkish_like(col, like_escape(v) + "%")
+            return turkish_like(col, "%" + like_escape(v) + "%")
+        item = {"field": field, "op": cond.op, "value": cond.value, "values": cond.values, "min": cond.min,
+                "max": cond.max, "from": cond.from_, "to": cond.to}
+        if kind == "date" and cond.op in ("gt", "lt", "eq"):  # gün olarak: aralığa çevrilir, filtredeki gibi
+            try:
+                day = date.fromisoformat(str(cond.value))
+            except ValueError:
+                return bad("Tarih girilmeli (yyyy-aa-gg)")
+            span = {"gt": (day + timedelta(days=1), None), "lt": (None, day - timedelta(days=1)), "eq": (day, day)}
+            item.update(op="between", value=None, **dict(zip(("from", "to"), span[cond.op])))
+        sub: list[dict] = []
+        clause = self._filter(col, FilterItem.model_validate(item), at, sub)
+        problems += sub
+        return clause
+
+    def rule_columns(self, rules: list[RuleSpec], where: str = "rules") -> list[sa.ColumnElement]:
+        """Her kural için _r{i}: koşul tutuyorsa 1 (K-95)."""
+        problems: list[dict] = []
+        out = []
+        for i, r in enumerate(rules):
+            clause = self.condition(r.field, r.condition, f"{where}.{i}", problems)
+            if clause is not None:
+                out.append(sa.case((clause, 1), else_=0).label(f"_r{i}"))
+        if problems:
+            raise ListQueryError(problems)
+        return out
+
     # --- sorgular ------------------------------------------------------------------------------------------
     def rows_query(self, req: QueryRequest, chunk_size: int) -> sa.Select:
         """Parça satırları; limit boşsa parça büyüklüğü, büyükse hata (ListChunkSize, docs/08)."""
@@ -228,11 +336,18 @@ class Builder:
             q = q.add_columns(self.table.c[self.defn.unit_field].label(UNIT))
         return q.where(self.version_clause(), *where).order_by(*order).offset(req.offset).limit(limit)
 
+    def rules_by_id_query(self, ids: list[int], rules: list[RuleSpec]) -> sa.Select:
+        """Parçanın satırlarında kurallar (K-95): satır sorgusu kurallı da kuralsız da aynı kalır (aynı plan);
+        kurallar dönen Id'lerde ayrı küçük sorguyla hesaplanır. Tek sorguda SQL Server CASE'leri sıralamadan önce
+        bütün satırlarda hesaplıyordu (50.000 satırda ~2–3 kat)."""
+        return sa.select(self.table.c.Id, *self.rule_columns(rules)).where(self.version_clause(),
+                                                                            self.table.c.Id.in_(ids))
+
     def export_query(self, fields: list[str], sort: list[SortItem], filters: list[FilterItem],
-                     group_by: list[str]) -> sa.Select:
+                     group_by: list[str], rules: list[RuleSpec] = ()) -> sa.Select:
         """Dışa aktarım (K-91): bütün satırlar tek sorguda, parçasız (akıtılarak okunur). Gruplu ise önce grup sırası
         (groups_query ile aynı: grup alanı sıralamadaysa onun yönü, Türkçe, boş grup sonda), sonra ekran sıralaması.
-        Grup değerleri _g0…, birim _unit kolonlarında."""
+        Grup değerleri _g0…, birim _unit, kural sonuçları _r0… kolonlarında (K-95)."""
         problems: list[dict] = []
         cols = [self._col(f, "fields", problems) for f in fields]
         gcols = [self._col(f, f"group_by.{i}", problems) for i, f in enumerate(group_by)]
@@ -250,6 +365,7 @@ class Builder:
             order.append(expr.desc() if dirs.get(group_by[i]) == "desc" else expr.asc())
         if self.defn.unit_field:
             sel.append(self.table.c[self.defn.unit_field].label(UNIT))
+        sel += self.rule_columns(list(rules))
         order += self.order_by(sort)
         return (sa.select(*sel).where(self.version_clause(), *where).order_by(*order)
                 .with_statement_hint(PARALLEL_HINT, "mssql"))

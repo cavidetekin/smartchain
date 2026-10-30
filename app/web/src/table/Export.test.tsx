@@ -52,7 +52,7 @@ describe("kapsam penceresi ve anlık indirme", () => {
     expect(calls.exports[0].url).toBe("/api/materials/export?user_id=3");
     expect(calls.exports[0].body).toEqual({
       fields: STANDARD_FIELDS, widths: {}, sort: [], filters: [], group_by: [], aggregates: { SafetyStock: { fn: "sum" } },
-      scope: { rows: "filtered", columns: "visible" },
+      rules: [], scope: { rows: "filtered", columns: "visible" },
     });
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -66,7 +66,7 @@ describe("kapsam penceresi ve anlık indirme", () => {
     const dialog = await openDialog();
     await userEvent.click(within(dialog).getByRole("radio", { name: "Tümü (50.000 satır)" }));
     expect(within(dialog).getByRole("radio", { name: "Filtrelenmiş (120)" })).not.toBeChecked();
-    await userEvent.click(within(dialog).getByRole("radio", { name: "Tümü (9)" }));
+    await userEvent.click(within(dialog).getByRole("radio", { name: "Tümü (10)" }));
     expect(within(dialog).queryAllByRole("checkbox")).toEqual([]);
     // 50.000 satır anlık sınırı (10.000) aşar: arka planda hazırlanır
     expect(dialog).toHaveTextContent("dosya arka planda hazırlanır");

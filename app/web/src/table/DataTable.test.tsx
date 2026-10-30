@@ -51,22 +51,26 @@ describe("parça büyüklüğü (ListChunkSize)", () => {
 });
 
 describe("araç çubuğu", () => {
-  it("'Filtreleri temizle' ve 'Sıralamayı temizle' yalnız etkinken görünür", async () => {
+  it("'Filtreleri temizle' filtre varken etiketlerin yanında; 'Sıralamayı temizle' ikonu sıralama varken açık", async () => {
     const user = userEvent.setup();
     await open();
+    const sortClear = () => screen.getByRole("button", { name: "Sıralamayı temizle" });
     expect(screen.queryByRole("button", { name: "Filtreleri temizle" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Sıralamayı temizle" })).toBeNull();
+    expect(sortClear()).toBeDisabled();
     await user.click(sortButton("Malzeme kodu"));
     await user.click(screen.getByRole("button", { name: "Malzeme adı filtresi" }));
     await user.type(within(screen.getByRole("dialog", { name: "Malzeme adı filtresi" })).getByLabelText("Değer"), "mil{Enter}");
     await waitFor(() => expect(last().filters).toHaveLength(1));
-    await user.click(screen.getByRole("button", { name: "Filtreleri temizle" }));
+    const clear = screen.getByRole("button", { name: "Filtreleri temizle" });
+    expect(clear.closest(".sc-table-status")).not.toBeNull();  // filtre etiketlerinin yanında
+    await user.click(clear);
     await waitFor(() => expect(last().filters).toEqual([]));
     expect(screen.queryByRole("button", { name: "Filtreleri temizle" })).toBeNull();
     expect(last().sort).toEqual([{ field: "Code", dir: "asc" }]);
-    await user.click(screen.getByRole("button", { name: "Sıralamayı temizle" }));
+    expect(sortClear()).toBeEnabled();
+    await user.click(sortClear());
     await waitFor(() => expect(last().sort).toEqual([]));
-    expect(screen.queryByRole("button", { name: "Sıralamayı temizle" })).toBeNull();
+    expect(sortClear()).toBeDisabled();
   });
 });
 
@@ -205,8 +209,8 @@ describe("alan paneli (U-6)", () => {
   it("aramalı liste; açılan alan istenir ve başlıkta görünür, kapatılan çıkar", async () => {
     const user = userEvent.setup();
     await open();
-    await user.click(screen.getByRole("button", { name: "Alanlar (7/9)" }));
-    const panel = screen.getByRole("dialog", { name: "Alanlar (7/9)" });
+    await user.click(screen.getByRole("button", { name: "Alanlar (7/10)" }));
+    const panel = screen.getByRole("dialog", { name: "Alanlar (7/10)" });
     await user.type(within(panel).getByRole("searchbox"), "SINIF");
     expect(within(panel).getAllByRole("checkbox")).toHaveLength(1);
     expect(within(panel).getByRole("checkbox").closest("[title]")).toHaveAttribute("title", "Malzeme sınıfı");

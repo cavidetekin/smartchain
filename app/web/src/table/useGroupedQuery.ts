@@ -1,10 +1,12 @@
 // Gruplu okuma (K-90): grup ağacı sunucudan; satırlar yaprak grup başına grup anahtarıyla, parça parça (ListChunkSize)
 // ve önbellekli okunur. Açık/kapalı gruplardan düz bir gösterim listesi kurulur (sanal kaydırma için).
+// Yalnız koşullu biçim kuralları değişince (K-95) ağaç yeniden istenmez; istenmiş satır parçaları yeni kurallarla
+// yeniden istenir, eski satırlar gelene kadar ekranda kalır.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { type AggSpec, listApi, type GroupKey, type GroupNode, type GroupsResponse, type Row } from "./types";
-import type { ListRequest } from "./useListQuery";
+import { dataKeyOf, type ListRequest, queryBody, withRuleIds } from "./useListQuery";
 
 export type DisplayItem =
   | { kind: "group"; node: GroupNode; depth: number; id: string }
@@ -46,10 +48,15 @@ export function useGroupedQuery(list: string, request: ListRequest | null, group
                                 chunkSize: number, aggregates: Record<string, AggSpec>): GroupedState {
   const api = useMemo(() => listApi(list), [list]);
   const active = Boolean(request && groupBy.length && chunkSize);
-  const key = active ? JSON.stringify([request, groupBy, aggregates]) : "";
+  const key = active ? JSON.stringify([dataKeyOf(request), groupBy, aggregates]) : "";
+  const rulesKey = JSON.stringify(request?.rules ?? []);
   const chunks = useRef(new Map<string, Row[]>());
   const inflight = useRef(new Set<string>());
+  /** İstenmiş parçalar ve grup anahtarları: kurallar değişince yeniden istenir. */
+  const wanted = useRef(new Map<string, { keys: GroupKey[]; chunk: number }>());
   const generation = useRef(0);
+  const rowsGeneration = useRef(0);
+  const lastRulesKey = useRef(rulesKey);
   const [, setTick] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{ status: GroupedState["status"]; error: ApiError | null; tree: GroupsResponse | null }>(
@@ -58,8 +65,11 @@ export function useGroupedQuery(list: string, request: ListRequest | null, group
 
   useEffect(() => {
     generation.current += 1;
+    rowsGeneration.current += 1;
     chunks.current.clear();
     inflight.current.clear();
+    wanted.current.clear();
+    lastRulesKey.current = rulesKey;
     if (!active || !request) {
       setState({ status: "idle", error: null, tree: null });
       return;
@@ -78,26 +88,39 @@ export function useGroupedQuery(list: string, request: ListRequest | null, group
     // key request ve groupBy'ı içerir
   }, [api, key, attempt]);
 
-  const ensure = useCallback((leaf: string, keys: GroupKey[], first: number, last: number) => {
+  const fetchChunk = useCallback((id: string, keys: GroupKey[], c: number) => {
     if (!request) return;
-    const gen = generation.current;
+    const [gen, rowsGen] = [generation.current, rowsGeneration.current];
+    wanted.current.set(id, { keys, chunk: c });
+    inflight.current.add(id);
+    api.query({ ...queryBody(request), group_key: keys, offset: c * chunkSize, limit: chunkSize })
+      .then((r) => {
+        if (gen !== generation.current || rowsGen !== rowsGeneration.current) return;
+        chunks.current.set(id, withRuleIds(r.rows, request.rules));
+        setTick((t) => t + 1);
+      })
+      .catch((e: unknown) => {
+        if (gen !== generation.current || rowsGen !== rowsGeneration.current) return;
+        setState((s) => ({ ...s, status: "error", error: e instanceof ApiError ? e : new ApiError(0, "network", String(e)) }));
+      })
+      .finally(() => inflight.current.delete(id));
+  }, [api, request, chunkSize]);
+
+  const ensure = useCallback((leaf: string, keys: GroupKey[], first: number, last: number) => {
     for (let c = Math.floor(first / chunkSize); c <= Math.floor(last / chunkSize); c++) {
       const id = `${leaf}|${c}`;
-      if (chunks.current.has(id) || inflight.current.has(id)) continue;
-      inflight.current.add(id);
-      api.query({ ...request, group_key: keys, offset: c * chunkSize, limit: chunkSize })
-        .then((r) => {
-          if (gen !== generation.current) return;
-          chunks.current.set(id, r.rows);
-          setTick((t) => t + 1);
-        })
-        .catch((e: unknown) => {
-          if (gen !== generation.current) return;
-          setState((s) => ({ ...s, status: "error", error: e instanceof ApiError ? e : new ApiError(0, "network", String(e)) }));
-        })
-        .finally(() => inflight.current.delete(id));
+      if (!chunks.current.has(id) && !inflight.current.has(id)) fetchChunk(id, keys, c);
     }
-  }, [api, request, chunkSize]);
+  }, [fetchChunk, chunkSize]);
+
+  // Yalnız kurallar değişti (ağaç aynı): istenmiş parçalar yeniden istenir, eskiler gelene kadar kalır.
+  useEffect(() => {
+    if (lastRulesKey.current === rulesKey) return;
+    lastRulesKey.current = rulesKey;
+    rowsGeneration.current += 1;
+    inflight.current.clear();
+    wanted.current.forEach(({ keys, chunk }, id) => fetchChunk(id, keys, chunk));
+  }, [rulesKey, fetchChunk]);
 
   const row = useCallback((leaf: string, index: number) =>
     chunks.current.get(`${leaf}|${Math.floor(index / chunkSize)}`)?.[index % chunkSize], [chunkSize]);

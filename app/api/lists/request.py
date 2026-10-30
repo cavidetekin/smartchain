@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MAX_LIMIT = 500             # ListChunkSize'ın üst sınırı (docs/02)
 DEFAULT_CHUNK_SIZE = 100
@@ -28,6 +28,60 @@ class FilterItem(BaseModel):
     empty: bool = False      # liste filtresinde: değerler ya da boş (U-13)
 
 
+# --- Koşullu biçim kuralları (U-24, K-95, K-96; docs/08 "Koşullu biçim kuralları") -------------------------------
+
+MAX_RULES = 20
+ICONS = ("arrow_up", "arrow_down", "dot", "warning", "check", "cross", "flag", "star")
+HEX_COLOR = r"^#[0-9a-fA-F]{6}$"
+
+
+class RuleCondition(BaseModel):
+    """Kuralın koşulu: filtreyle aynı değer alanları; sayı ve tarihte gt/lt/eq için sabit değer yerine field_ref."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    op: str
+    value: Any = None
+    values: list[Any] | None = None
+    min: float | None = None
+    max: float | None = None
+    from_: date | None = Field(default=None, alias="from")
+    to: date | None = None
+    field_ref: str | None = None
+    empty_as_zero: bool | None = None  # sayı alanı karşılaştırmasında boşları 0 say (boşsa varsayılan: evet)
+
+
+class RuleFormat(BaseModel):
+    fill: str | None = Field(default=None, pattern=HEX_COLOR)
+    color: str | None = Field(default=None, pattern=HEX_COLOR)
+    bold: bool = False
+    icon: Literal["arrow_up", "arrow_down", "dot", "warning", "check", "cross", "flag", "star"] | None = None
+    icon_color: str | None = Field(default=None, pattern=HEX_COLOR)  # ekranda ikonun rengi; Excel'de yazı rengi
+
+    @field_validator("fill", "color", "icon_color")
+    @classmethod
+    def _lower(cls, v: str | None) -> str | None:
+        return v.lower() if v else v
+
+    @model_validator(mode="after")
+    def _some(self):
+        if not (self.fill or self.color or self.bold or self.icon):
+            raise ValueError("En az bir biçim seçilmeli (zemin, yazı rengi, kalın ya da ikon)")
+        return self
+
+
+class RuleSpec(BaseModel):
+    """Sorguda kural: yalnız alan ve koşul (biçim istemcide)."""
+    field: str
+    condition: RuleCondition
+
+
+class FormatRule(RuleSpec):
+    """Görünümde ve Excel'e aktarımda kural: sıra listedeki sıradır (üstteki kazanır)."""
+    id: str = Field(min_length=1, max_length=40)
+    enabled: bool = True
+    format: RuleFormat
+
+
 class GroupKeyItem(BaseModel):
     """Grubun satırları (K-90): alan = değer; değer null ise boş grup."""
     field: str
@@ -41,6 +95,7 @@ class QueryRequest(BaseModel):
     offset: int = Field(default=0, ge=0)
     limit: int | None = Field(default=None, ge=1, le=MAX_LIMIT)  # boşsa ListChunkSize
     group_key: list[GroupKeyItem] = []
+    rules: list[RuleSpec] = Field(default=[], max_length=MAX_RULES)  # satır başına _rules (K-95)
 
 
 # Ara toplam türleri (K-90, docs/08): toplam, ortalama (boşlar / sıfırlar hariç), ağırlıklı ortalama, en küçük,
@@ -87,6 +142,7 @@ class ViewDefinition(BaseModel):
     filters: list[FilterItem] = []
     group_by: list[str] = Field(default=[], max_length=4)
     aggregates: dict[str, AggSpec] = {}  # varsayılandan farklı seçilen ara toplam türleri (K-90)
+    rules: list[FormatRule] = Field(default=[], max_length=MAX_RULES)  # koşullu biçim, sıralı (K-95)
 
 
 class ViewCreate(BaseModel):
@@ -121,4 +177,5 @@ class ExportRequest(BaseModel):
     filters: list[FilterItem] = []
     group_by: list[str] = Field(default=[], max_length=4)
     aggregates: dict[str, AggSpec] | None = None
+    rules: list[FormatRule] = Field(default=[], max_length=MAX_RULES)  # aktif ve görünen kolonların kuralları
     scope: ExportScope = ExportScope()

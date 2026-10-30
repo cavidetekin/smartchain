@@ -139,6 +139,30 @@
   --toast-error: var(--status-over);
   --progress-track: var(--lead-100);        /* iş göstergesindeki ilerleme çubuğu */
   --progress-fill: var(--indigo-500);
+  --table-row-selected-ring: var(--indigo-500); /* seçili satır: koşullu biçim zemini üstünde iç çerçeve (K-95) */
+
+  /* Koşullu biçim paleti (U-24, K-96): Excel benzeri. Tema renkleri (tonları ui/palette.ts Excel'in açma-koyulaştırma
+     oranlarıyla üretir) ve standart renkler. Ürün renkleri öneri olarak paletin başında; mevcut değişkenlerden. */
+  --cf-theme-1: #ffffff;
+  --cf-theme-2: #000000;
+  --cf-theme-3: #e7e6e6;
+  --cf-theme-4: #44546a;
+  --cf-theme-5: #4472c4;
+  --cf-theme-6: #ed7d31;
+  --cf-theme-7: #a5a5a5;
+  --cf-theme-8: #ffc000;
+  --cf-theme-9: #5b9bd5;
+  --cf-theme-10: #70ad47;
+  --cf-std-1: #c00000;
+  --cf-std-2: #ff0000;
+  --cf-std-3: #ffc000;
+  --cf-std-4: #ffff00;
+  --cf-std-5: #92d050;
+  --cf-std-6: #00b050;
+  --cf-std-7: #00b0f0;
+  --cf-std-8: #0070c0;
+  --cf-std-9: #002060;
+  --cf-std-10: #7030a0;
 
   --font-sans: "Instrument Sans", system-ui, sans-serif;
   --font-num: "Inter", system-ui, sans-serif; /* sayı, tarih, kod; hep tabular-nums ile (K-86) */

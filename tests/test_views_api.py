@@ -46,7 +46,7 @@ def test_create_update_delete(api, users):
     me, _ = users
     v = create(api, me, "pytest A")
     assert v["definition"] == {"v": 1, **{**DEFINITION, "columns": [{"field": "Code", "width": 8.0}, {"field": "Name"}]},
-                               "aggregates": {}}
+                               "aggregates": {}, "rules": []}
     assert v["is_owner"] and v["warnings"] == []
     r = api.put(f"/api/materials/views/{v['id']}?user_id={me}", json={"name": "pytest B", "is_shared": True})
     assert r.status_code == 200 and (r.json()["name"], r.json()["is_shared"]) == ("pytest B", True)

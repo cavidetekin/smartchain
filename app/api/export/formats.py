@@ -14,11 +14,15 @@ TOKENS = Path(__file__).resolve().parents[3] / "app" / "shared" / "design-tokens
 DATE_FORMAT = "dd.mm.yyyy"
 DATETIME_FORMAT = "dd.mm.yyyy hh:mm"
 DEFAULT_UNIT_DECIMALS = 2  # birim bilinmiyorsa (docs/02 UnitOfMeasure.Decimals)
+# Koşullu biçim ikonları (K-96): ekranda lucide ikonu, Excel'de biçim kodunun önündeki karakter (değer sayı/tarih kalır).
+# Karakterler birbirinden ayırt edilir (1.6 demosu): ok ↑ / ↓, uyarı ▲ (dolu üçgen).
+ICON_CHARS = {"arrow_up": "↑", "arrow_down": "↓", "dot": "●", "warning": "▲", "check": "✓", "cross": "✗",
+              "flag": "⚑", "star": "★"}
 
 
 @dataclass(frozen=True)
 class CellFormat:
-    """Hücre biçimi: zemin, yazı rengi (#rrggbb), kalın, ikon. İkonun Excel karşılığı 1.6'da (U-24); şimdi yazılmaz."""
+    """Hücre biçimi: zemin, yazı rengi (#rrggbb), kalın, ikon (ICON_CHARS adı; Excel'de biçim kodu öneki)."""
     fill: str | None = None
     color: str | None = None
     bold: bool = False
@@ -61,6 +65,70 @@ def column_number_format(col: dict, unit_decimals: int | None = None) -> str | N
     if kind == "datetime":
         return DATETIME_FORMAT
     return None
+
+
+def with_icon(number_format: str | None, icon: str | None) -> str | None:
+    """İkonlu biçim kodu (K-96): ikon değerin ters tarafında, doldurma boşluğuyla (* ) hücre kenarına itilir.
+    Sayıda başta: "▲"* #,##0; metin ve tarihte sonda: @* "▲", dd.mm.yyyy* "▲". Değer sayı ya da tarih kalır."""
+    if not icon:
+        return number_format
+    char = f'"{ICON_CHARS[icon]}"'
+    if number_format is None or number_format in (DATE_FORMAT, DATETIME_FORMAT):
+        return f"{number_format or '@'}* {char}"
+    return f"{char}* {number_format}"
+
+
+# --- Okunurluk (K-96): ui/contrast.ts ile aynı hesap; yazı rengi seçilmemişse zemine göre okunur yazı rengi ---
+
+READABLE = 4.5
+
+
+def _channels(hex_color: str) -> list[int]:
+    return [int(hex_color[i:i + 2], 16) for i in (1, 3, 5)]
+
+
+def luminance(hex_color: str) -> float:
+    c = [x / 255 for x in _channels(hex_color)]
+    c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
+def contrast(a: str, b: str) -> float:
+    hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def mix(hex_color: str, amount: float) -> str:
+    """Beyaza (amount > 0) ya da siyaha (amount < 0) doğru karıştırır (ui/contrast.ts mix ile aynı, aynı yuvarlama)."""
+    def one(x: int) -> int:
+        v = x + (255 - x) * amount if amount >= 0 else x * (1 + amount)
+        return max(0, min(255, int(v + 0.5)))  # JS Math.round (pozitif sayılarda yarım yukarı)
+    return "#" + "".join(f"{one(x):02x}" for x in _channels(hex_color))
+
+
+def suggest_text(fill: str, default_text: str) -> str:
+    """Zemine okunur yazı rengi: varsayılan yazı rengi ya da beyazdan okunuru (en yüksek kontrast), ikisi de değilse
+    zeminin tonundan koyulaştırılmış ya da açılmış ilk okunur renk."""
+    ok = [c for c in (default_text, "#ffffff") if contrast(c, fill) >= READABLE]
+    if ok:
+        return max(ok, key=lambda c: contrast(c, fill))
+    dark = luminance(fill) > 0.18
+    for i in range(10, 20):  # %50 … %95, %5 adım (ui/contrast.ts ile aynı)
+        c = mix(fill, -i / 20 if dark else i / 20)
+        if contrast(c, fill) >= READABLE:
+            return c
+    return "#000000" if dark else "#ffffff"
+
+
+def rule_format(fmt) -> CellFormat:
+    """Kural biçimi (request.RuleFormat) → CellFormat. Yazı rengi seçilmemişse zemine göre okunur yazı rengi (K-96);
+    ikonun kendi rengi Excel'e taşınmaz (hücrede tek yazı rengi)."""
+    color = fmt.color or (suggest_text(fmt.fill, color_of("text")) if fmt.fill else None)
+    return CellFormat(fill=fmt.fill, color=color, bold=fmt.bold, icon=fmt.icon)
+
+
+def color_of(name: str) -> str:
+    return tokens()[name]
 
 
 def aggregate_number_format(col: dict, fn: str, unit_decimals: int | None) -> str:

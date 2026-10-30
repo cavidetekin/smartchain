@@ -1,6 +1,6 @@
 // Ortak tablo bileşeni (K-81, K-87, docs/12 "Tablo bileşeni" ve "Görünüm"): alan ekle/çıkar (U-6), çoklu sıralama
 // (U-7), tipe göre filtre (U-8), kayıtlı görünüm (U-9), kolon düzeni (U-10), gruplama ve ara toplam (U-11), aktif
-// filtre etiketleri ve sayaç (U-12), boş değer (U-13), Excel'e aktarım (U-14). Sıralama, filtre ve gruplama sunucuda (U-21); gövde sanal.
+// filtre etiketleri ve sayaç (U-12), boş değer (U-13), Excel'e aktarım (U-14), koşullu biçim (U-24, K-95). Sıralama, filtre ve gruplama sunucuda (U-21); gövde sanal.
 // Durum tek yerde (TableState, görünüm içeriğiyle birebir); TanStack Table başlık, sıra, sabitleme ve genişliği ondan
 // alır. Satırlar parça önbelleğinden (düz) ya da grup başına (gruplu) gelir.
 import {
@@ -9,12 +9,12 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Columns3, Ellipsis, FileSpreadsheet, FoldVertical, Funnel,
+  ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns3, Ellipsis, FileSpreadsheet, FoldVertical, Funnel,
   FunnelX,
   ListCollapse, Rows3, UnfoldVertical,
 } from "lucide-react";
 import {
-  type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject,
+  type CSSProperties, type DragEvent, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type RefObject,
   useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 
@@ -30,8 +30,15 @@ import { FieldPanel } from "./FieldPanel";
 import { FilterChips } from "./FilterChips";
 import { FilterMenu, valueLabel } from "./filters";
 import { GroupPanel } from "./GroupPanel";
+import { RuleDialog } from "./RuleDialog";
+import { RuledValue } from "./RuleIcon";
 import {
-  type AggSpec, type ExportInfo, type ExportScope, listApi, type GroupNode, type ListColumn, type ListFilter, type Row,
+  activeRules, cellFormat, describeRule, formatStyle, newRuleId, RULE_OPS, ruleKind, toRequestRule,
+} from "./rules";
+import { RulesPanel } from "./RulesPanel";
+import {
+  type AggSpec, type ExportInfo, type ExportScope, type FormatRule, listApi, type GroupNode, type ListColumn, type ListFilter,
+  MAX_RULES, type Row,
 } from "./types";
 import { type DisplayItem, flatten, useGroupedQuery } from "./useGroupedQuery";
 import { type ListRequest, useListQuery } from "./useListQuery";
@@ -148,6 +155,45 @@ function ResizeHandle({ label, width, remPx, onWidth }: {
 
 type Pop = { kind: "filter" | "column"; field: string; anchor: HTMLElement } | null;
 
+/** Hücrenin kolon düzeninden gelen sabit kısmı (sınıf, sabitleme konumu, girinti): düzen değişmedikçe aynı nesne. */
+interface CellSpec {
+  col: ListColumn;
+  className?: string;
+  style?: CSSProperties;
+  numeric: boolean;
+}
+
+/**
+ * Veri satırı. Belleğe alınır (memo): kaydırmada yalnız yeni giren ya da değişen satırlar çizilir; koşullu biçim
+ * (K-95) yalnız onlarda hesaplanır. Her kaydırmada görünen bütün satırları yeniden çizmek, özellikle kurallar
+ * varken ve geliştirme modunda tabloyu yavaşlatıyordu (1.6 ölçümü, docs/12).
+ */
+const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText }: {
+  index: number;
+  row: Row | undefined;
+  cells: CellSpec[];
+  selected: boolean;
+  onSelect(id: number): void;
+  active: FormatRule[];
+  ruleText: Map<string, string>;
+}) {
+  return (
+    <tr aria-rowindex={index + 2} aria-current={selected || undefined}
+        className={row ? `sc-table-row${selected ? " is-selected" : ""}` : "is-placeholder"}
+        onClick={row ? () => onSelect(row.Id) : undefined}>
+      {cells.map(({ col, className, style, numeric }) => {
+        const cf = row ? cellFormat(active, row, col.field) : null;
+        return (
+          <td key={col.field} className={className} style={cf ? { ...style, ...formatStyle(cf.format) } : style}
+              title={cf ? T.ruleCellHint(cf.rules.map((r) => ruleText.get(r.id)).join("; ")) : undefined}>
+            {row ? <RuledValue format={cf?.format} numeric={numeric}>{formatCell(col, row[col.field], row)}</RuledValue> : ""}
+          </td>
+        );
+      })}
+    </tr>
+  );
+});
+
 export function DataTable({ list }: { list: string }) {
   const { fontSize, userId, trackExport } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
@@ -157,7 +203,11 @@ export function DataTable({ list }: { list: string }) {
   const [columnsError, setColumnsError] = useState<ApiError | null>(null);
   const [columnsAttempt, setColumnsAttempt] = useState(0);
   const [state, setState] = useState<TableState | null>(null);
-  const [panel, setPanel] = useState<"fields" | "group" | null>(null);
+  const [panel, setPanel] = useState<"fields" | "group" | "rules" | null>(null);
+  /** Kural penceresi; from: liste panelinden açıldıysa kapanınca panel geri açılır. */
+  const [editing, setEditing] = useState<{ rule: FormatRule; isNew: boolean; from: "panel" | "menu" } | null>(null);
+  /** Kural listesi kolon menüsünden açılır: o kolonun "⋯" düğmesinin yanında; "Kural ekle" o kolonla başlar. */
+  const [rulesFrom, setRulesFrom] = useState<{ anchor: HTMLElement; field: string } | null>(null);
   const [pop, setPop] = useState<Pop>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [drag, setDrag] = useState<{ field: string; over?: string; side?: "before" | "after" } | null>(null);
@@ -211,14 +261,38 @@ export function DataTable({ list }: { list: string }) {
     manualSorting: true, enableMultiSort: true, enableSortingRemoval: true, sortDescFirst: false,
     isMultiSortEvent: (e: unknown) => Boolean((e as { shiftKey?: boolean } | undefined)?.shiftKey),
   });
-  const visible = s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c));
+  const visible = useMemo(() => s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c)),
+    [s.order, byField]);
   const width = (f: string) => s.widths[f] ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
   const pinStart = (i: number) => visible.slice(0, i).reduce((sum, c) => sum + width(c.field), 0);
 
   const ready = Boolean(columns && state && views.ready && chunkSize);
-  const requestKey = JSON.stringify([s.order, s.sort, s.filters]);
-  const request: ListRequest | null = useMemo(() => (ready ? { fields: s.order, sort: s.sort, filters: s.filters } : null),
-    [ready, requestKey]); // requestKey alanları, sıralamayı ve filtreleri taşır
+  // Koşullu biçim (K-95): ekrana uygulanan kurallar aktif, alanı görünen ve karşılaştırılan alanı listede olanlar.
+  const known = useMemo(() => new Set((columns ?? []).map((c) => c.field)), [columns]);
+  const active = useMemo(() => activeRules(s.rules, s.order, known), [s.rules, s.order, known]);
+  /** Kural özetleri kural başına bir kez (hücre ipucunda her çizimde yeniden kurulmasın). */
+  const ruleText = useMemo(() => new Map(active.map((r) => [r.id, describeRule(r, byField)])), [active, byField]);
+  // Satır hücrelerinin sabit kısmı; kolon düzeni (sıra, genişlik, sabitleme, gruplu girinti) değişmedikçe aynı.
+  // Gruplu görünümde veri satırının ilk hücresi, en alt grubun adıyla aynı hizada başlar (girinti + ok + boşluk).
+  const groupDepth = s.groupBy.length;
+  const cellSpecs: CellSpec[] = useMemo(() => {
+    const widthOf = (f: string) => s.widths[f] ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
+    const cols = s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c));
+    const indent = groupDepth ? `calc(var(--space-2) + ${(groupDepth - 1) * GROUP_INDENT_REM + GROUP_ARROW_REM}rem)` : undefined;
+    let left = 0;
+    return cols.map((col, i) => {
+      const pinned = i < s.pinned;
+      const style: CSSProperties | undefined = pinned ? { left: `${left}rem` } : undefined;
+      left += widthOf(col.field);
+      const className = [isNumeric(col) ? "is-num sc-num" : "",
+                         pinned ? `is-pinned${i === s.pinned - 1 ? " is-pinned-last" : ""}` : ""].filter(Boolean).join(" ") || undefined;
+      return { col, numeric: isNumeric(col), className, style: i === 0 && indent ? { ...style, paddingLeft: indent } : style };
+    });
+  }, [s.order, s.widths, s.pinned, groupDepth, byField]);
+  const requestKey = JSON.stringify([s.order, s.sort, s.filters, active.map(toRequestRule)]);
+  const request: ListRequest | null = useMemo(() => (ready ? {
+    fields: s.order, sort: s.sort, filters: s.filters, ...(active.length ? { rules: active.map(toRequestRule) } : {}),
+  } : null), [ready, requestKey]); // requestKey alanları, sıralamayı, filtreleri ve kuralları taşır
   const grouped = s.groupBy.length > 0;
   const flat = useListQuery(list, grouped ? null : request, chunkSize);
   const aggKey = JSON.stringify(requestAggregates(columns ?? [], s));
@@ -272,7 +346,19 @@ export function DataTable({ list }: { list: string }) {
     setPop((p) => (p?.kind === kind && p.field === field ? null : { kind, field, anchor }));
   // Bütün açılır öğeler ortak yerleşimle görünür alana sığar (docs/12, ui/popover).
   useFloating(popRef, pop?.anchor ?? null, pop !== null);
-  useFloating(panelPopRef, panel === "group" ? groupBtnRef : fieldsBtnRef, panel !== null);
+  useFloating(panelPopRef, panel === "group" ? groupBtnRef : panel === "rules" ? rulesFrom?.anchor ?? null : fieldsBtnRef, panel !== null);
+
+  const openRule = (field: string, from: "panel" | "menu") => {
+    const col = byField.get(field) ?? columns?.[0];
+    if (!col) return;
+    setEditing({ rule: { id: newRuleId(s.rules), field: col.field, enabled: true, condition: { op: RULE_OPS[ruleKind(col)][0] },
+                         format: {} }, isNew: true, from });
+    setPanel(null);
+  };
+  const closeRule = (from: "panel" | "menu") => {
+    setEditing(null);
+    if (from === "panel") setPanel("rules");
+  };
 
   const setFilter = (field: string, f: ListFilter | null) => {
     update((st) => ({ ...st, filters: withFilter(st.filters, field, f) }));
@@ -282,6 +368,13 @@ export function DataTable({ list }: { list: string }) {
   const filterOf = (field: string) => s.filters.find((f) => f.field === field);
 
   const columnAction = (field: string, action: ColumnAction) => {
+    if (action === "ruleAdd" || action === "ruleManage") {
+      if (pop) setRulesFrom({ anchor: pop.anchor, field });
+      setPop(null);
+      if (action === "ruleAdd") openRule(field, "menu");
+      else setPanel("rules");
+      return;
+    }
     update((st) => {
       const i = st.order.indexOf(field);
       switch (action) {
@@ -296,6 +389,8 @@ export function DataTable({ list }: { list: string }) {
           delete widths[field];
           return { ...st, widths };
         }
+        default:
+          return st;
       }
     });
     setPop(null);
@@ -348,6 +443,7 @@ export function DataTable({ list }: { list: string }) {
   const runExport = async (scope: ExportScope) => {
     const result = await listApi(list).export(userId, {
       fields: s.order, widths: s.widths, sort: s.sort, filters: s.filters, group_by: s.groupBy, aggregates, scope,
+      rules: active,
     });
     if (result.kind === "file") saveBlob(result.blob, result.fileName);
     else trackExport({ jobId: result.job_id, title: exportInfo?.title ?? list, fileName: result.file_name, rows: result.rows });
@@ -373,19 +469,9 @@ export function DataTable({ list }: { list: string }) {
   const cellClass = (c: ListColumn, i: number) =>
     [isNumeric(c) ? "is-num sc-num" : "", pinnedCell(i).className].filter(Boolean).join(" ") || undefined;
 
-  // Gruplu görünümde veri satırının ilk hücresi, en alt grubun adıyla aynı hizada başlar (girinti + ok + boşluk).
-  const rowIndent = grouped ? `calc(var(--space-2) + ${(s.groupBy.length - 1) * GROUP_INDENT_REM + GROUP_ARROW_REM}rem)` : undefined;
   const renderRow = (key: string | number | bigint, index: number, row: Row | undefined) => (
-    <tr key={String(key)} aria-rowindex={index + 2} aria-current={row && row.Id === selectedId ? true : undefined}
-        className={row ? `sc-table-row${row.Id === selectedId ? " is-selected" : ""}` : "is-placeholder"}
-        onClick={row ? () => setSelectedId(row.Id) : undefined}>
-      {visible.map((c, i) => (
-        <td key={c.field} className={cellClass(c, i)}
-            style={i === 0 && rowIndent ? { ...pinnedCell(i).style, paddingLeft: rowIndent } : pinnedCell(i).style}>
-          {row ? formatCell(c, row[c.field], row) : ""}
-        </td>
-      ))}
-    </tr>
+    <DataRow key={String(key)} index={index} row={row} cells={cellSpecs} selected={Boolean(row) && row!.Id === selectedId}
+             onSelect={setSelectedId} active={active} ruleText={ruleText} />
   );
   // Grup adı, ara toplamı olmayan baştaki kolonları kaplar (kesilmesin); sabit kolon varsa sabit bölgeyi aşmaz.
   const firstAgg = visible.findIndex((c) => aggregateOf(c, s).fn !== "none");
@@ -447,14 +533,10 @@ export function DataTable({ list }: { list: string }) {
       {/* Araç çubuğu ve filtre / gruplama satırı sayfa zemininde; tablo çerçevesi başlık satırından başlar (U-22, docs/12) */}
       <div className="sc-table-toolbar">
         <div className="sc-table-toolbar-main">
-          <ViewBar views={views} state={s} />
+          <ViewBar views={views} state={s} onClearSort={() => update((st) => ({ ...st, sort: [] }))} />
           <output className="sc-table-count sc-num" aria-label={T.countLabel}>
             {T.count(formatNumber(filtered), formatNumber(total))}
           </output>
-          {s.sort.length > 0 && (
-            <button type="button" className="sc-tool-btn" aria-label={T.clearSort} title={T.clearSort}
-                    onClick={() => update((st) => ({ ...st, sort: [] }))}><ArrowUpDown aria-hidden="true" /></button>
-          )}
         </div>
         <div className="sc-table-tools" ref={panelRef}>
           <Button size="sm" icon={Rows3} ref={groupBtnRef} aria-expanded={panel === "group"}
@@ -483,6 +565,12 @@ export function DataTable({ list }: { list: string }) {
           {panel === "group" && (
             <GroupPanel ref={panelPopRef} columns={columns} groupBy={s.groupBy}
                         onChange={(groupBy) => update((st) => ({ ...st, groupBy }))} />
+          )}
+          {panel === "rules" && (
+            <RulesPanel ref={panelPopRef} rules={s.rules} columns={columns} visible={s.order}
+                        onChange={(rules) => update((st) => ({ ...st, rules }))}
+                        onEdit={(rule) => { setEditing({ rule, isNew: false, from: "panel" }); setPanel(null); }}
+                        onAdd={() => openRule(rulesFrom?.field ?? s.order[0], "panel")} />
           )}
           {panel === "fields" && (
             <FieldPanel ref={panelPopRef} columns={columns}
@@ -587,6 +675,16 @@ export function DataTable({ list }: { list: string }) {
         </table>
       </div>
 
+      {editing && (
+        <RuleDialog rule={editing.rule} isNew={editing.isNew} columns={columns}
+                    onClose={() => closeRule(editing.from)}
+                    onSave={(rule) => {
+                      update((st) => ({ ...st, rules: editing.isNew ? [...st.rules, rule]
+                        : st.rules.map((x) => (x.id === rule.id ? rule : x)) }));
+                      closeRule(editing.from);
+                    }} />
+      )}
+
       {exporting && exportInfo && (
         <ExportDialog info={exportInfo} filtered={filtered} total={total} visibleColumns={visible.length}
                       allColumns={columns.length} hasFilters={s.filters.length > 0}
@@ -601,7 +699,8 @@ export function DataTable({ list }: { list: string }) {
             <FilterMenu list={list} column={popColumn} filter={filterOf(popColumn.field)} others={others}
                         onApply={(f) => setFilter(popColumn.field, f)} />
           ) : (
-            <ColumnMenu column={popColumn} columns={columns} state={s} onAction={(a) => columnAction(popColumn.field, a)}
+            <ColumnMenu column={popColumn} columns={columns} state={s} ruleLimit={s.rules.length >= MAX_RULES}
+                        onAction={(a) => columnAction(popColumn.field, a)}
                         onAggregate={(spec) => { update((st) => withAggregate(st, popColumn, spec)); setPop(null); }} />
           )}
         </div>

@@ -137,7 +137,14 @@ export function DateField({ label, help, error, required, value, onChange, ...re
         <input id={id} className="sc-input sc-input--date" placeholder={tr.ui.datePlaceholder} value={text}
                required={required} aria-invalid={Boolean(shownError)}
                aria-describedby={describedBy(id, { label, help, error: shownError })}
-               onChange={(e) => setText(e.target.value)} onBlur={commit}
+               onChange={(e) => {
+                 setText(e.target.value);
+                 const d = parseTrDate(e.target.value);  // tam tarih (gg.aa.yyyy) yazılınca hemen işlenir
+                 if (d) {
+                   setInvalid(false);
+                   onChange(d);
+                 } else if (!e.target.value.trim()) onChange(null);
+               }} onBlur={commit}
                onKeyDown={(e) => e.key === "Enter" && commit()} {...rest} />
         <button type="button" className="sc-date-btn" ref={buttonRef} aria-label={`${label}: ${tr.ui.calendar.open}`}
                 aria-haspopup="dialog" aria-expanded={open} disabled={rest.disabled} onClick={() => setOpen((o) => !o)}>

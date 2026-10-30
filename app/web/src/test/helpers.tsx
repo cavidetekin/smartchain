@@ -7,7 +7,8 @@ import { App } from "../App";
 
 export type Reply = { status?: number; body: unknown; headers?: Record<string, string> };
 /** Sabit cevap, "offline" ya da isteğe göre cevap üreten işlev (yöntem ve gövde ile). */
-export type Routes = Record<string, Reply | "offline" | ((url: string, init?: RequestInit) => Reply)>;
+/** Cevap işlevi Promise de döndürebilir (gecikmeli cevap; ör. kural değişince eski satırlar ekranda kalıyor mu). */
+export type Routes = Record<string, Reply | "offline" | ((url: string, init?: RequestInit) => Reply | Promise<Reply>)>;
 
 export const DATA_VERSION = {
   id: 35, location_code: "ORM-01", created_at: "2026-10-27T09:20:00+00:00", load_type: "Tam", is_synthetic: true,
@@ -24,7 +25,7 @@ export function mockApi(routes: Routes = {}) {
     const key = Object.keys(all).find((k) => url.startsWith(k));
     const route = key ? all[key] : undefined;
     if (!route || route === "offline") throw new TypeError("Failed to fetch");
-    const reply = typeof route === "function" ? route(url, init) : route;
+    const reply = typeof route === "function" ? await route(url, init) : route;
     return new Response(reply.status === 204 ? null : JSON.stringify(reply.body), {
       status: reply.status ?? 200, headers: { "Content-Type": "application/json", ...reply.headers },
     });

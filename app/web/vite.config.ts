@@ -8,6 +8,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: { "/api": { target: "http://127.0.0.1:8000", ws: true } },
+    // Renk değerleri app/shared/design-tokens.json'dan okunur (K-92, K-96; tokens.css'ten üretilir).
+    fs: { allow: [".", "../shared"] },
   },
   build: { outDir: "dist", assetsDir: "assets", sourcemap: false },
   test: {

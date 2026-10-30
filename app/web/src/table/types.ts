@@ -58,6 +58,8 @@ export interface ExportRequest {
   filters: ListFilter[];
   group_by: string[];
   aggregates: Record<string, AggSpec>;
+  /** Aktif ve görünen kolonların kuralları; Excel hücresine uygulanır (K-95). */
+  rules: FormatRule[];
   scope: ExportScope;
 }
 
@@ -88,6 +90,47 @@ export interface SortItem {
   dir: "asc" | "desc";
 }
 
+/** Koşullu biçim kuralı (U-24, K-95, docs/08 "Koşullu biçim kuralları"). */
+export type RuleOp = "gt" | "lt" | "between" | "eq" | "empty" | "relative" | "equals" | "contains" | "starts_with" | "in"
+  | "always";  // "Her zaman": koşulsuz kolon biçimi
+export type RuleIcon = "arrow_up" | "arrow_down" | "dot" | "warning" | "check" | "cross" | "flag" | "star";
+export const RULE_ICONS: RuleIcon[] = ["arrow_up", "arrow_down", "dot", "warning", "check", "cross", "flag", "star"];
+export const MAX_RULES = 20;
+
+export interface RuleCondition {
+  op: RuleOp;
+  value?: string | number;
+  values?: ListValue[];
+  min?: number;
+  max?: number;
+  from?: string;
+  to?: string;
+  /** Sayı ve tarihte gt/lt/eq için sabit değer yerine başka alan (aynı tipte). */
+  field_ref?: string;
+  /** Sayı alanı karşılaştırmasında boşları 0 say (yoksa: evet). */
+  empty_as_zero?: boolean;
+}
+
+export interface RuleFormat {
+  fill?: string;
+  color?: string;
+  bold?: boolean;
+  icon?: RuleIcon;
+  /** İkonun rengi (yoksa ikonun varsayılan rengi; Excel'de ikon hücrenin yazı rengiyle). */
+  icon_color?: string;
+}
+
+export interface RuleSpec {
+  field: string;
+  condition: RuleCondition;
+}
+
+export interface FormatRule extends RuleSpec {
+  id: string;
+  enabled: boolean;
+  format: RuleFormat;
+}
+
 export interface GroupKey {
   field: string;
   value: ListValue | null;
@@ -100,6 +143,8 @@ export interface QueryRequest {
   offset: number;
   limit: number;
   group_key?: GroupKey[];
+  /** Koşullu biçim (K-95): satırlar _rules ile döner (tutan kuralların bu listedeki sırası). */
+  rules?: RuleSpec[];
 }
 
 /** Grup ağacı düğümü (K-90): key kökten bu gruba kadar değerler; null boş grup. */
@@ -130,6 +175,8 @@ export interface ViewDefinition {
   group_by: string[];
   /** Varsayılandan farklı seçilen ara toplam türleri (K-90). */
   aggregates?: Record<string, AggSpec>;
+  /** Koşullu biçim kuralları, sıralı: üstteki kazanır (K-95). */
+  rules?: FormatRule[];
 }
 
 export interface SavedView {

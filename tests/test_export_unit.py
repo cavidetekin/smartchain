@@ -150,6 +150,26 @@ def test_describe_texts_are_turkish():
         "Miktar: ağırlıklı ortalama (ağırlık: Ağırlık)"
 
 
+# Ekranla aynı okunur yazı rengi (app/web/src/table/rules.test.ts ile aynı örnekler, K-96)
+SUGGEST = [("#002060", "#ffffff"), ("#ffc000", "#1f2430"), ("#4472c4", "#ffffff"), ("#f7dcd5", "#1f2430"),
+           ("#a5a5a5", "#1f2430"), ("#808080", "#131313"), ("#ffffff", "#1f2430"), ("#7f7f7f", "#131313"), ("#ff0000", "#330000")]
+
+
+def test_readable_text_matches_screen():
+    for fill, expected in SUGGEST:
+        assert formats.suggest_text(fill, formats.color_of("text")) == expected, fill
+        assert formats.contrast(expected, fill) >= formats.READABLE, fill
+
+
+def test_icon_formats_put_icon_opposite_value():
+    assert formats.with_icon("#,##0.00", "arrow_up") == '"↑"* #,##0.00'      # sayı: başta
+    assert formats.with_icon("#,##0", "warning") == '"▲"* #,##0'             # uyarı ▲, yukarı oktan ayrı
+    assert len(set(formats.ICON_CHARS.values())) == len(formats.ICON_CHARS)  # her ikon ayrı karakter
+    assert formats.with_icon(None, "flag") == '@* "⚑"'                        # metin: sonda
+    assert formats.with_icon("dd.mm.yyyy", "star") == 'dd.mm.yyyy* "★"'       # tarih: sonda
+    assert formats.with_icon("#,##0", None) == "#,##0"
+
+
 def test_local_datetime_from_utc():
     utc = datetime(2026, 1, 1, 10, 0)
     assert local_datetime(utc) == utc.replace(tzinfo=timezone.utc).astimezone().replace(tzinfo=None)

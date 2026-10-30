@@ -5,7 +5,8 @@ import { afterEach, beforeEach, expect } from "vitest";
 
 import { mockApi, mockSocket, renderApp, type Reply } from "../test/helpers";
 import type {
-  ExportInfo, ExportRequest, GroupNode, GroupsResponse, ListColumn, QueryRequest, SavedView, ViewDefinition, ViewsResponse,
+  ExportInfo, ExportRequest, GroupNode, GroupsResponse, ListColumn, QueryRequest, RuleSpec, SavedView, ViewDefinition,
+  ViewsResponse,
 } from "./types";
 
 export const col = (field: string, label: string, type: ListColumn["type"], filter: ListColumn["filter"],
@@ -24,6 +25,7 @@ export const COLUMNS: ListColumn[] = [
   col("UpdatedAt", "Son değişiklik zamanı", "datetime", "date"),
   col("AdditionalText1", "Malzeme sınıfı", "text", "text", { default_visible: false }),
   col("ProductionLeadTimeDays", "Üretim süresi (gün)", "number", "number", { decimals: 0, aggregate: "avg", default_visible: false }),
+  col("LastReceiptDate", "Son giriş tarihi", "date", "date", { default_visible: false }),
 ];
 export const STANDARD_FIELDS = ["Code", "Name", "MaterialLevel", "MaterialGroup", "IsSellable", "SafetyStock", "UpdatedAt"];
 
@@ -38,6 +40,36 @@ export interface Calls {
   downloads: string[];
 }
 export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [] };
+
+/** Kural sorgularını bekleten kapı: açık değilse kurallı sorgu cevabı kapı açılana kadar gelmez. */
+export const ruleGate = { hold: false, release: () => {} };
+
+/** Sahte sunucunun kural değerlendirmesi (testlerde yeterli alt küme): sayı ve alan karşılaştırması, metin. */
+export function evalRule(row: Record<string, unknown>, r: RuleSpec): boolean {
+  const v = row[r.field];
+  const c = r.condition;
+  if (c.op === "always") return true;
+  if (c.op === "empty") return v === null || v === undefined || v === "";
+  const num = (x: unknown) => x === null || x === undefined || typeof x === "number";
+  if (c.field_ref !== undefined && c.empty_as_zero !== false && num(v) && num(row[c.field_ref])) {  // boşları 0 say
+    const [a, b] = [(v as number | null) ?? 0, (row[c.field_ref] as number | null) ?? 0];
+    return c.op === "gt" ? a > b : c.op === "lt" ? a < b : a === b;
+  }
+  if (v === null || v === undefined) return false;
+  const other = c.field_ref !== undefined ? row[c.field_ref] : c.value;
+  if (other === null || other === undefined) return false;
+  const [a, b] = [v as number, other as number];
+  switch (c.op) {
+    case "gt": return a > b;
+    case "lt": return a < b;
+    case "eq": return a === b;
+    case "between": return (c.min === undefined || a >= c.min) && (c.max === undefined || a <= c.max);
+    case "contains": return String(v).toLocaleLowerCase("tr").includes(String(c.value).toLocaleLowerCase("tr"));
+    case "equals": return String(v).toLocaleLowerCase("tr") === String(c.value).toLocaleLowerCase("tr");
+    case "in": return (c.values ?? []).includes(v as never);
+    default: return false;
+  }
+}
 
 export const EXPORT_INFO: ExportInfo = { title: "Malzeme listesi", file_slug: "malzeme", sync_max_rows: 10_000,
                                          max_rows: 500_000, file_hours: 24 };
@@ -71,6 +103,7 @@ export interface BackendOptions {
 export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100, views, groups = [], exportReply }:
                         BackendOptions = {}) {
   for (const list of Object.values(calls)) list.length = 0;  // yerinde: testler diziyi önceden tutabilir
+  ruleGate.hold = false;
   let saved = views ?? { views: [], default_view_id: null };
   let nextId = 100;
   const leafCount = (keys: { value: unknown }[]) => {
@@ -92,7 +125,7 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
       calls.downloads.push(url);
       return { body: "xlsx", headers: { "Content-Disposition": `attachment; filename="${EXPORT_FILE}"` } };
     },
-    "/api/materials/query": (_url, init): Reply => {
+    "/api/materials/query": async (_url, init): Promise<Reply> => {
       const body = JSON.parse(String(init?.body)) as QueryRequest;
       calls.queries.push(body);
       if (status !== 200) return { status, body: { error: { code: "database_unavailable", message: "Veritabanına bağlanılamıyor.", trace_id: "x" } } };
@@ -104,8 +137,12 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
         return { Id: i + 1, Code: prefix ? `${prefix}-${i}` : `M-${i}`, Name: `Malzeme ${i}`, MaterialLevel: "Hammadde",
                  MaterialGroup: "Çubuk", IsSellable: i % 2 === 0, SafetyStock: i % 2 === 0 ? 1234 : 12.25,
                  _unit_decimals: i % 2 === 0 ? 0 : 3, UpdatedAt: "2026-10-27T09:20:00+00:00", AdditionalText1: "A",
-                 ProductionLeadTimeDays: 3 };
+                 ProductionLeadTimeDays: i % 4 === 3 ? null : 3, LastReceiptDate: i % 3 === 0 ? null : "2026-10-20" };
       });
+      if (body.rules?.length) {
+        if (ruleGate.hold) await new Promise<void>((resolve) => { ruleGate.release = resolve; });
+        rows.forEach((row) => Object.assign(row, { _rules: body.rules!.map((r, i) => (evalRule(row, r) ? i : -1)).filter((i) => i >= 0) }));
+      }
       return { body: { rows, offset: body.offset, filtered: inGroup ?? filtered, total } };
     },
     "/api/materials/values": (_url, init): Reply => {

@@ -14,7 +14,9 @@ from sqlalchemy.orm import Session
 from ..errors import AppError
 from ..lists.definition import ListDefinition
 from ..lists.query import Builder, ListQueryError
-from ..lists.request import AggSpec, DefaultViewRequest, FilterItem, ViewCreate, ViewDefinition, ViewUpdate
+from ..lists.request import (
+    AggSpec, DefaultViewRequest, FilterItem, FormatRule, ViewCreate, ViewDefinition, ViewUpdate,
+)
 from ..repositories import lists as list_repo, views as repo
 
 DB_DOWN = "Veritabanına bağlanılamıyor; görünümler okunamadı."
@@ -49,6 +51,12 @@ def _problems(b: Builder, d: ViewDefinition) -> list[dict]:
         b.aggregate_specs(None, d.aggregates, "definition.aggregates")
     except ListQueryError as exc:
         problems += exc.details
+    try:
+        b.rule_columns(d.rules, "definition.rules")  # koşullu biçim (K-95)
+    except ListQueryError as exc:
+        problems += exc.details
+    if len({r.id for r in d.rules}) != len(d.rules):
+        problems.append({"field": "definition.rules", "problem": "Kural kimlikleri tekil olmalı"})
     return problems
 
 
@@ -96,8 +104,19 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
                 warnings.append(f"'{f}' ara toplamı artık geçerli değil; görünümden çıkarıldı.")
             else:
                 gone(f)
+    rules = []
+    for r in data.get("rules") or []:
+        try:
+            b.rule_columns([FormatRule.model_validate(r)])
+            rules.append(r)
+        except (ListQueryError, ValidationError):
+            missing = [f for f in (r.get("field"), (r.get("condition") or {}).get("field_ref")) if f and f not in b.columns]
+            for f in missing:
+                gone(f)
+            if not missing:
+                warnings.append(f"'{r.get('field')}' biçim kuralı artık geçerli değil; görünümden çıkarıldı.")
     definition = {"v": 1, "columns": columns, "pinned": min(int(data.get("pinned", 0)), len(columns)),
-                  "sort": sort, "filters": filters, "group_by": group_by, "aggregates": aggregates}
+                  "sort": sort, "filters": filters, "group_by": group_by, "aggregates": aggregates, "rules": rules}
     return definition, warnings
 
 

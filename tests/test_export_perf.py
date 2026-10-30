@@ -35,14 +35,30 @@ def big_session(db_engine, test_users):
         conn.close()
 
 
-@pytest.mark.parametrize("group_by", [[], ["MaterialLevel", "MaterialGroup"]], ids=["düz", "gruplu"])
-def test_sync_export_under_target(big_session, group_by):
+RULES = [  # 10 kural (K-95): Excel hücresine zemin, yazı rengi, kalın, ikon
+    {"id": f"k{i}", "field": f, "condition": c, "format": fmt} for i, (f, c, fmt) in enumerate([
+        ("Name", {"op": "contains", "value": "çelik"}, {"fill": "#f4cfc4"}),
+        ("Name", {"op": "starts_with", "value": "rul"}, {"color": "#1e2257", "bold": True}),
+        ("MaterialGroup", {"op": "in", "values": ["Çubuk", "Levha"]}, {"fill": "#dce0f7"}),
+        ("MaterialLevel", {"op": "equals", "value": "hammadde"}, {"icon": "dot"}),
+        ("SafetyStock", {"op": "between", "min": 100, "max": 300}, {"fill": "#fbe7b5", "icon": "arrow_up"}),
+        ("SafetyStock", {"op": "gt", "value": 400}, {"bold": True}),
+        ("SafetyStock", {"op": "lt", "field_ref": "MaxStock"}, {"icon": "warning"}),
+        ("UpdatedAt", {"op": "relative", "value": "this_week"}, {"color": "#333a94"}),
+        ("Code", {"op": "contains", "value": "99"}, {"icon": "star"}),
+        ("BaseUom", {"op": "equals", "value": "adet"}, {"fill": "#eef0fb"}),
+    ])]
+
+
+@pytest.mark.parametrize("group_by, rules", [([], []), (["MaterialLevel", "MaterialGroup"], []), ([], RULES)],
+                         ids=["düz", "gruplu", "10 kural"])
+def test_sync_export_under_target(big_session, group_by, rules):
     session, user = big_session
-    req = ExportRequest(fields=list(MATERIALS.default_visible), group_by=group_by,
+    req = ExportRequest(fields=list(MATERIALS.default_visible), group_by=group_by, rules=rules,
                         filters=[FilterItem(field="Code", op="starts_with", value="PERF-")],
                         sort=[SortItem(field="MaterialGroup"), SortItem(field="SafetyStock", dir="desc")])
     out = service.start(session, MATERIALS, user, req)
     assert "file" in out and len(out["file"]) > 100_000  # eşikte hâlâ anlık
     ms = median_ms(lambda: service.start(session, MATERIALS, user, req))
-    print(f"\nExcel'e anlık aktarım ({ROWS} satır, {'gruplu' if group_by else 'düz'}): ortanca {ms:.0f} ms")
+    print(f"\nExcel'e anlık aktarım ({ROWS} satır, {'gruplu' if group_by else ('10 kural' if rules else 'düz')}): ortanca {ms:.0f} ms")
     assert ms < TARGET_MS

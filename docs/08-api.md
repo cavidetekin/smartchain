@@ -172,9 +172,36 @@ Kullanıcı şimdilik `user_id` sorgu parametresiyle gelir (A-36).
 
 - `columns` görünen alanlar, görünen sırada; `width` rem (boşsa tipin varsayılanı). `pinned` soldan sabit kolon sayısı. `aggregates` kullanıcının varsayılandan farklı seçtiği ara toplam türleri (K-90).
 - Göreli tarih filtresi göreli saklanır; görünüm açıldığı günün haftasına göre çalışır.
+- `rules`: koşullu biçim kuralları, sıralı (aşağıda "Koşullu biçim kuralları"). Açılırken artık olmayan alana ya da karşılaştırılan alana bakan kural atılır, `warnings`'te yazar.
 - Kaydederken alanlar ve filtreler liste tanımına göre doğrulanır (422). Açılırken artık olmayan alanlar atılır, `warnings`'te yazar.
 - Hatalar: sahibi değilse 403 `view_not_owner`; aynı adda görünüm varsa 409 `view_name_taken`; görünüm yoksa 404 `view_not_found`; kullanıcı yoksa 404 `user_not_found`.
 - "Standart" görünüm veritabanında değildir: liste tanımındaki varsayılan alanlar ve sıralamadır, silinemez.
+
+### Koşullu biçim kuralları (U-24, K-95, K-96)
+
+Kural görünüm içeriğindedir (`definition.rules`, en çok 20; alan yoksa boş liste):
+
+```json
+{"id": "k1", "field": "SafetyStock", "enabled": true,
+ "condition": {"op": "gt", "value": 100},
+ "format": {"fill": "#f4cfc4", "color": "#7a2a14", "bold": true, "icon": "arrow_up", "icon_color": "#4f5bd5"}}
+```
+
+| Kolon tipi | Koşul operatörleri |
+|---|---|
+| Sayı (tam sayı dahil) | `gt`, `lt`, `between` (`min`, `max`), `eq`, `empty`, `always` |
+| Tarih, tarih-zaman | `gt`, `lt`, `between` (`from`, `to`), `eq`, `relative` (`this_week`, `next_4_weeks`), `empty`, `always` |
+| Metin (liste filtreli metin alanları dahil) | `equals`, `contains`, `starts_with`, `in` (`values`), `empty`, `always` |
+| Evet/hayır | `in` (`values`: `true`, `false`), `empty`, `always` |
+
+`always` ("Her zaman"): koşulsuz kolon biçimi; değer almaz, kolonun bütün hücrelerinde (boşlar dahil) tutar.
+
+- Sayı ve tarihte `gt`, `lt`, `eq` için sabit değer (`value`) yerine aynı tipte başka bir alan verilebilir: `{"op": "lt", "field_ref": "SafetyStock"}`. Tarih ve tarih-zaman gün olarak karşılaştırılır. Boş değer: sayıda `empty_as_zero` (varsayılan `true`, "Boşları 0 say") kolon ya da karşılaştırılan alan boşsa 0 sayar; `false`'ta ve tarihte boşsa kural tutmaz. `empty_as_zero` yalnız sayı alanı karşılaştırmasında verilir.
+- `format`: `fill`, `color` ve `icon_color` `#rrggbb`; `bold`; `icon` şunlardan biri: `arrow_up`, `arrow_down`, `dot`, `warning`, `check`, `cross`, `flag`, `star`. En az biri (`icon_color` hariç) dolu olmalı. `color` yoksa okunur yazı rengi zemine göre hesaplanır (K-96); `icon_color` yoksa ikonun varsayılan rengi; Excel'de ikon hücrenin yazı rengiyle yazılır.
+- Metin karşılaştırması filtredeki gibi büyük/küçük harf duyarsız (Türkçe); metinde boş metin boş sayılır.
+- **Sorguda:** `POST /query` gövdesine `"rules": [{"field": "SafetyStock", "condition": {...}}]` (istemci yalnız aktif ve görünen kolonların kurallarını gönderir); her satır `"_rules": [0, 2]` taşır: tutan kuralların bu listedeki sırası. Gruplu okuma (`group_key`) için de aynı.
+- **Excel'e aktarım:** `POST /export` gövdesine `rules` (biçimleriyle, sıralı; pasifler ve gizli kolonlarınkiler gönderilmez). Hücreye zemin, yazı rengi, kalın ve ikon (biçim kodu öneki) yazılır; aynı özellikte üstteki kural kazanır. Bilgi sayfasında "Koşullu biçim" satırı.
+- **Hatalar (422 `validation`):** bilinmeyen alan; tipe uymayan operatör ya da değer; geçersiz renk ya da ikon; biçimsiz kural; `field_ref` bilinmiyor, tipi uymuyor, kendisi ya da `value` ile birlikte verilmiş; 20'den fazla kural.
 
 ### Değerler · `POST /api/<liste>/values`
 
@@ -219,6 +246,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
 | `POST /api/materials/export` · `GET /api/exports/{job_id}/file` | Excel'e aktarım: anlık ya da arka planda (K-91, K-93) | uygulandı (1.5) |
+| `query`'de `rules` | Koşullu biçim kuralları: satır başına tutan kurallar (K-95) | uygulandı (1.6) |
 | `WS /api/ws?user_id=` | Anlık bildirim kanalı (fonksiyon 48). Kullanıcı şimdilik parametreyle (A-36). | uygulandı (0.4) |
 
 İş eklemek için uç nokta yoktur: işi ilgili fonksiyon (yeniden hesap 46, yükleme…) kendi servisinden `app.jobs.queue.enqueue` ile ekler.

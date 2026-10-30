@@ -14,6 +14,8 @@ from ..repositories import data_versions, export as export_repo, lists as repo
 
 DB_DOWN = "Veritabanına bağlanılamıyor; liste okunamadı."
 
+RULES = "_rules"  # satırda tutan kurallar (K-95, docs/08)
+
 
 def today() -> date:
     """Göreli tarih filtresinin "bugün"ü: API sunucusunun yerel tarihi (docs/08). Testte değiştirilir."""
@@ -63,7 +65,15 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest) -> d
     def work():
         b = _builder(session, defn)
         rows_q = b.rows_query(req, repo.read_chunk_size(session))
+        rules_valid = b.rule_columns(req.rules)  # doğrulama (422) satırlar okunmadan
         rows = [{k: _json(v) for k, v in r.items()} for r in repo.fetch_rows(session, rows_q)]
+        if req.rules:  # tutan kuralların istekteki sırası (K-95); dönen satırlarda ayrı sorguyla
+            hit = {}
+            if rows and rules_valid:
+                for r in repo.fetch_rows(session, b.rules_by_id_query([r["Id"] for r in rows], req.rules)):
+                    hit[r["Id"]] = [i for i in range(len(req.rules)) if r[f"_r{i}"]]
+            for r in rows:
+                r[RULES] = hit.get(r["Id"], [])
         if defn.unit_field:  # her satırda temel birimin ondalığı (K-88); birim bilinmiyorsa 2
             units = repo.read_unit_decimals(session)
             for r in rows:
