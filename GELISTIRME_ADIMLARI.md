@@ -156,7 +156,7 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 - **1.6 Koşullu biçimlendirme:** çoklu koşul (VE/VEYA), renk skalası ve veri çubuğu, grup başlığı ve ara toplam satırlarına kural.
 - **2.2 Roller:** admin'in bir paylaşılan görünümü ya da kural setini herkes veya bir rol için varsayılan yapması (K-89 notu).
 - **Sentetik veri:** kilogram ve metre birimli malzemelere kesirli miktar (güvenlik stoğu, lot) verilmesi (docs/11 açık iş).
-- **Performans:** gruplama sorgusundaki paralel plan ipucunun bir ayara bağlanması; çok kullanıcılı sunucuda işlemci kapışması (K-90).
+- **Performans:** gruplama (K-90) ve koşullu biçim etki sayıları (K-95) sorgularındaki paralel plan ipucunun bir ayara bağlanması; çok kullanıcılı sunucuda işlemci kapışması.
 
 ## Açık konular
 
