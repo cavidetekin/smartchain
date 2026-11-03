@@ -91,12 +91,13 @@ def test_guard_only_applies_in_tests(connections, monkeypatch):
 
 # --- Atlanan veritabanı testleri ---
 
-UNREACHABLE = ("mssql+pyodbc://@localhost/Smartchain_olmayan_test?driver=ODBC+Driver+18+for+SQL+Server"
+# Ulaşılamayan sunucu: ulaşılabilir olsaydı db_engine veritabanını açardı (K-103).
+UNREACHABLE = ("mssql+pyodbc://@127.0.0.1,1/Smartchain_olmayan_test?driver=ODBC+Driver+18+for+SQL+Server"
                "&trusted_connection=yes&TrustServerCertificate=yes")
 
 
 def run_pytest(*args: str) -> subprocess.CompletedProcess:
-    env = {**os.environ, "SMARTCHAIN_DB_URL": UNREACHABLE, "PYTHONIOENCODING": "utf-8"}
+    env = {**os.environ, "SMARTCHAIN_TEST_DB_URL": UNREACHABLE, "SMARTCHAIN_DB_CONNECT_TIMEOUT": "1", "PYTHONIOENCODING": "utf-8"}
     env.pop("PYTEST_CURRENT_TEST", None)
     return subprocess.run([sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", *args],
                           cwd=Path(ROOT), env=env, capture_output=True, timeout=300)

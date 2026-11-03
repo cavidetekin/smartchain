@@ -93,6 +93,8 @@ python -m app.data.synthetic check                                     # sayıla
 | H3 | Negatif miktar | `PurchaseOrderLine`: `PO-2060/1` OpenQty −50 · `BOM`: `ALT-012` → `SAT-010` Quantity −2 | 04-03 mantıksal (3.4) · hata · satır yüklenmez | "OpenQty negatif olamaz (-50)." | `PO-2060/1` ve `ALT-012 → SAT-010` eksik |
 | H4 | Tekrar eden anahtar | `Material`: `SAT-040` iki satır, adları farklı | 04-01 yapısal (3.4) · hata · iki satır da yüklenmez | "Tekrar eden anahtar: Material.Code = SAT-040 (satır n ve n+1)." | `SAT-040` eksik (başka dosyada geçmez) |
 
+**Tazeleme (K-103):** testler artık geliştirme veritabanına dokunmaz; geliştirme verisi son `load`'daki hâliyle kalır, tarihler zamanla eskir. Gerektiğinde `python -m app.data.synthetic load` (ya da `veri_demo.bat`). Test veritabanının verisini testler kendisi kurar.
+
 ### Kullanıcılar (geliştirme 2.1, K-98)
 
 Örnek Makina A.Ş.'nin dört hesabı, her rol için bir tane:

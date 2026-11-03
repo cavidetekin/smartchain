@@ -7,6 +7,17 @@ os.environ.setdefault("SMARTCHAIN_EXPORT_DIR", tempfile.mkdtemp(prefix="smartcha
 os.environ["SMARTCHAIN_SESSION_COOKIE_SECURE"] = "false"  # test istemcisi http; Secure çerez gönderilmezdi (K-97)
 os.environ["SMARTCHAIN_ALLOWED_ORIGINS"] = ""
 
+# Testler ayrı veritabanında (K-103). Uygulama import edilmeden önce: ayarlar önbelleğe alınır, motorun iş süreçleri ve
+# alembic de ortamı miras alır. Bu değişiklik yalnız test süreç ağacında geçerlidir.
+import testdb
+from app.api.settings import Settings, config_files
+
+try:
+    TEST_DB_URL, TEST_DB_ERROR = testdb.resolve(Settings(_env_file=config_files()).db_url), None
+except testdb.WrongTestDatabase as exc:
+    TEST_DB_URL, TEST_DB_ERROR = testdb.NOWHERE, str(exc)
+os.environ["SMARTCHAIN_DB_URL"] = TEST_DB_URL
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -42,6 +53,12 @@ def client(app):
 _skipped_db_tests: list[str] = []
 
 
+def pytest_configure(config):
+    """Test veritabanının adı _test ile bitmiyorsa hiçbir test çalışmaz (K-103)."""
+    if TEST_DB_ERROR:
+        pytest.exit(TEST_DB_ERROR, returncode=2)
+
+
 def pytest_runtest_logreport(report):
     if report.skipped and "db" in report.keywords:
         _skipped_db_tests.append(report.nodeid)
@@ -59,19 +76,25 @@ def pytest_terminal_summary(terminalreporter):
             'bilerek veritabanısız çalıştırmak için -m "not db".', red=True)
 
 
-# --- Yerel SQL Server (Smartchain) gerektiren testler (işaret: db) ---
-# Bu testler adm.Job tablosunu her testten önce ve sonra boşaltır; yalnız geliştirme veritabanında çalıştırın.
+# --- Veritabanı testleri (işaret: db): yerel SQL Server'da Smartchain_test (K-103; docs/08 "Testler") ---
+# Geliştirme veritabanına dokunulmaz; zincir arayüz, API ve motor açıkken de çalışır.
 
 @pytest.fixture(scope="session")
 def db_engine():
-    from sqlalchemy import text
+    """Oturumda bir kez: veritabanı yoksa açılır, ad doğrulanır, şema güncellenir, artıklar silinir, sentetik veri kurulur."""
     from app.api.db import get_engine
+    from app.api.settings import get_settings
     try:
+        testdb.ensure_database(TEST_DB_URL, get_settings().db_connect_timeout)
         engine = get_engine()
-        with engine.connect() as conn:
-            conn.execute(text("SELECT TOP 0 CreatedAt, UpdatedAt FROM adm.Job"))  # şema 0002 kurulu mu
+        testdb.verify_connected(engine)
+        testdb.upgrade_schema()
+        testdb.clear_leftovers(engine)
+        testdb.ensure_synthetic(engine)
+    except testdb.WrongTestDatabase as exc:
+        pytest.exit(str(exc), returncode=2)
     except Exception as exc:
-        pytest.skip(f"SQL Server'a bağlanılamadı ya da şema eski: {exc}")
+        pytest.skip(f"Test veritabanı hazırlanamadı (SQL Server'a bağlanılamadı ya da yetki yok): {exc}")
     return engine
 
 

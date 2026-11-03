@@ -1,6 +1,6 @@
 """Temiz hâlin ana tablolara yüklenmesi, yeniden yükleme ve güvenlik kilidi (K-78, K-79), yerel SQL Server ile.
 
-Test sonunda sentetik veri yüklü kalır: geliştirmede ekranların zemini; yeniden yükleme aynı sonucu verir.
+Test sonunda sentetik veri test veritabanında yüklü kalır (K-103), sonraki testlerin zemini; yeniden yükleme aynı sonucu verir.
 """
 import pytest
 from fastapi.testclient import TestClient

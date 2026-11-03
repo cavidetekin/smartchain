@@ -51,6 +51,7 @@ Ortam değişkenleri (`SMARTCHAIN_` önekiyle) ya da kök klasördeki `.env` dos
 | Ayar | Varsayılan |
 |---|---|
 | `SMARTCHAIN_DB_URL` | localhost, `Smartchain` veritabanı, Windows oturumu |
+| `SMARTCHAIN_TEST_DB_URL` | boş · yalnız testler, yalnız ortam değişkeni; boşsa geliştirme bağlantısından türetilir (`Smartchain_test`, K-103) |
 | `SMARTCHAIN_LOG_DIR` | `logs` |
 | `SMARTCHAIN_LOG_LEVEL` | `INFO` |
 | `SMARTCHAIN_ENABLE_DOCS` | `false` |
@@ -323,10 +324,12 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 ## Testler
 
 - **Sıra (commit zinciri):** `npm run build` → `python -m pytest` → `npm test` → `npx tsc --noEmit`. Build önce: internetsizlik testi (`tests/test_offline.py`) taze derlemeyi tarar.
-- `python -m pytest`: bütün testler, **performans testleri hariç** (`pyproject.toml`: `-m 'not perf'`). Veritabanı testleri (`db` işareti) atlanırsa (SQL Server'a bağlanılamadı, şema eski, sentetik veri yok) koşu başarısız olur; zincir yanlışlıkla geçmiş görünmez. SQL Server olmadan bilerek çalıştırmak için `python -m pytest -m "not db"`.
+- `python -m pytest`: bütün testler, **performans testleri hariç** (`pyproject.toml`: `-m 'not perf'`). Veritabanı testleri (`db` işareti) atlanırsa (SQL Server'a bağlanılamadı, yetki yok, sentetik veri yok) koşu başarısız olur; zincir yanlışlıkla geçmiş görünmez. SQL Server olmadan bilerek çalıştırmak için `python -m pytest -m "not db"`.
 - `python -m pytest -m perf`: performans testleri ayrıca çalıştırılır. Büyük veriyi bir işlem içinde üretir, ölçer ve geri alır; her ölçüm birkaç denemenin ortancasıdır (makine yükündeki tek seferlik sıçramalar sonucu bozmasın).
 - Ön yüz: `cd app/web; npm run build; npm test; npx tsc --noEmit`. Test süresi sınırı 15 sn (`vite.config.ts`): dosyalar paralel çalıştığı için yük altında jsdom testleri varsayılan 5 sn'yi aşabilir; tek başına bir test 2 sn'nin altındadır.
-- **Testler geliştirme veritabanına yıkıcı işlem yapamaz** (CLAUDE.md): `installer/setup_db.py`'de silen, açan ya da geçiş çalıştıran işlevler test sırasında (`PYTEST_CURRENT_TEST`) adı `_test` ile bitmeyen veritabanını bağlanmadan reddeder. Kurulum ve kaldırma etkilenmez.
+- **Testler ayrı veritabanında (K-103):** bütün veritabanı testleri `Smartchain_test`'te koşar. Bağlantı `SMARTCHAIN_TEST_DB_URL` ortam değişkeninden gelir; yoksa geliştirme bağlantısından türetilir (`tests/testdb.py`). Ad `_test` ile bitmiyorsa hiçbir test çalışmadan durur (çıkış kodu 2). Oturum başında veritabanı yoksa açılır, şema güncellenir, önceki koşunun artıkları silinir, sentetik veri yoksa yüklenir. Bozulursa `Smartchain_test` elle silinir, sonraki koşu yeniden kurar.
+- **Zincir arayüz, API ve motor açıkken de çalışır;** pencereleri kapatmak gerekmez. Aynı anda iki test koşusu desteklenmez. Performans testleri süre ölçtüğü için pencereler kapalıyken daha sağlıklıdır; zorunlu değil, aşım makine durumuyla birlikte değerlendirilir.
+- **Testler geliştirme veritabanına yıkıcı işlem yapamaz** (CLAUDE.md): ayrıca `installer/setup_db.py`'de silen, açan ya da geçiş çalıştıran işlevler test sırasında (`PYTEST_CURRENT_TEST`) adı `_test` ile bitmeyen veritabanını bağlanmadan reddeder. Kurulum ve kaldırma etkilenmez.
 - Bunların hepsi geçmeden commit ve push yapılmaz (CLAUDE.md).
 
 ## Uç noktalar
