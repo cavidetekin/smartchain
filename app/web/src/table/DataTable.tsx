@@ -11,7 +11,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns3, Ellipsis, FileSpreadsheet, FoldVertical, Funnel,
   FunnelX,
-  ListCollapse, Rows3, UnfoldVertical,
+  ListCollapse, type LucideIcon, Rows3, UnfoldVertical,
 } from "lucide-react";
 import {
   type CSSProperties, type DragEvent, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject,
@@ -64,6 +64,8 @@ export type CellRender = Record<string, (value: unknown, row: Row) => ReactNode>
 export interface RowMenuSpec {
   label(row: Row): string;
   onOpen(row: Row, anchor: HTMLElement): void;
+  /** Tek işlem varsa ikonu (ör. düzenle); yoksa "⋯" ve menü. */
+  icon?: LucideIcon;
 }
 
 /** "⋯" kolonunun genişliği (rem). */
@@ -212,12 +214,13 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
 
 /** Sağda sabit "⋯" hücresi (2.3): alan paneline, görünüme ve Excel'e girmez. */
 function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec }) {
+  const Icon = menu.icon ?? Ellipsis;
   return (
     <td className="sc-table-rowmenu">
       {row && (
-        <button type="button" className="sc-table-filter-btn" aria-haspopup="menu" aria-label={menu.label(row)}
-                onClick={(e) => { e.stopPropagation(); menu.onOpen(row, e.currentTarget); }}>
-          <Ellipsis aria-hidden="true" />
+        <button type="button" className="sc-table-filter-btn" aria-haspopup={menu.icon ? "dialog" : "menu"} aria-label={menu.label(row)}
+                title={menu.icon ? menu.label(row) : undefined} onClick={(e) => { e.stopPropagation(); menu.onOpen(row, e.currentTarget); }}>
+          <Icon aria-hidden="true" />
         </button>
       )}
     </td>

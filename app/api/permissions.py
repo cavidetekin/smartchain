@@ -59,7 +59,7 @@ GROUP_ROWS: tuple[GroupRow, ...] = (
     GroupRow("I", "I", "Yayın", 76, 81, (F, F, F, N)),
     GroupRow("J", "J", "Takip ve rapor", 82, 87, (F, F, F, R)),
     GroupRow("K1", "K", "Kullanıcı, entegrasyon, işler, sağlık", 88, 95, (F, F, N, N)),
-    GroupRow("K2", "K", "System owner ayarları, sürüm", 96, 97, (F, N, N, N)),
+    GroupRow("K2", "K", "Sistem ayarları, sürüm", 96, 97, (F, N, N, N)),
     GroupRow("K3", "K", "Denetim izi", 98, 98, (F, F, S, N)),
 )
 
@@ -169,7 +169,7 @@ _NAMES = """
 93 İş kuyruğu yönetimi (öneri)
 94 Sistem sağlığı
 95 Destek paketi
-96 System owner ayarları
+96 Sistem ayarları
 97 Sürüm güncelleme (öneri)
 98 Denetim izi (öneri)
 """

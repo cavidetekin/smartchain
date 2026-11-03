@@ -58,18 +58,17 @@ svg { width: var(--icon); height: var(--icon); flex: none; }
 .sc-empty { padding: 0.5rem var(--sidebar-item-pad-x); color: var(--sidebar-muted); }
 
 /* Daraltılmış menü: grubun yandan açılan alt paneli; menüyle aynı renkler */
-.sc-group-icon { position: relative; }
-.sc-flyout { position: absolute; left: calc(100% + 0.25rem); top: 0; z-index: 20; min-width: 14rem;
+.sc-flyout { min-width: 14rem; max-height: calc(100vh - 1rem); overflow-y: auto; margin-left: 0.25rem;
   padding: 0.5rem var(--sidebar-pad-x);
   border: 1px solid var(--sidebar-border); border-radius: var(--radius); background: var(--sidebar-bg);
   box-shadow: var(--sidebar-shadow); }
-.sc-flyout::before { content: ""; position: absolute; left: -0.5rem; top: 0; width: 0.5rem; height: 100%; }
 .sc-flyout-title { padding: 0.25rem var(--sidebar-item-pad-x) 0.4rem; color: var(--sidebar-group); font-size: var(--sidebar-group-size);
   font-weight: var(--sidebar-group-weight); letter-spacing: var(--sidebar-group-tracking); text-transform: uppercase; }
 .sc-flyout-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem var(--sidebar-item-pad-x);
   border-radius: var(--radius);
   color: var(--sidebar-text); text-decoration: none; }
 .sc-flyout-item:hover { background: var(--sidebar-hover); }
+.sc-flyout-item:focus-visible { outline: 2px solid var(--sidebar-active-bg); outline-offset: -2px; }
 .sc-flyout-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-active-text);
   font-weight: var(--sidebar-active-weight); }
 .sc-flyout-item.is-sub { padding-left: calc(var(--sidebar-item-pad-x) + var(--sidebar-sub-indent)); color: var(--sidebar-sub-text); }

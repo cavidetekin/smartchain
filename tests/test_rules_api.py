@@ -258,8 +258,8 @@ def test_rule_on_removed_field_is_dropped(api, users, db_engine):
         conn.execute(text("UPDATE adm.TableView SET Definition = :d WHERE Id = :i"), {"d": raw, "i": v["id"]})
     got = next(x for x in listed(api, users[0])["views"] if x["id"] == v["id"])
     assert [r["id"] for r in got["definition"]["rules"]] == ["c"]
-    assert got["warnings"] == ["'OldField' alanı artık listede yok; görünümden çıkarıldı.",
-                               "'OldRef' alanı artık listede yok; görünümden çıkarıldı."]
+    assert got["warnings"] == ["'OldField' artık listede yok; görünümden çıkarıldı.",
+                               "'OldRef' artık listede yok; görünümden çıkarıldı."]
 
 
 # --- Excel (K-92, K-96) ------------------------------------------------------------------------------------

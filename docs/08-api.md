@@ -127,6 +127,9 @@ Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu doc
 | `WS /api/ws` | 48 · okuma (el sıkışmada) |
 | `GET /api/users/{id}` | 88 · okuma |
 | `POST /api/users` · `/api/users/{id}/…` | 88 · yazma; ek kurallar "Kullanıcılar" bölümünde |
+| `GET /api/field-definitions/{tablo}/{alan}` · `GET /api/settings/login-policy` | 96 · okuma |
+| `PUT /api/field-definitions/{tablo}/{alan}/label` · `PUT /api/settings/login-policy` | 96 · yazma |
+| `GET /api/permissions/matrix` · `GET /api/permissions/matrix/export` | 90 · okuma (Admin ve System owner) |
 
 ## Kullanıcılar (K-101, fonksiyon 88)
 
@@ -148,6 +151,19 @@ Liste `users` adıyla ortak liste sözleşmesini kullanır (`/api/users/columns`
 - **Hatalar:** bilinmeyen hesap 404 `user_not_found`; biçim 422 `validation`; kullanıcı adı doluysa 409 `user_name_taken`, `details`: `[{"field": "user_name", "problem": "…", "suggestion": "burak2"}]`; koruma kuralı 409 `user_protected`, `details`: `[{"rule": "last_admin"}]` (`self`, `system_owner`, `last_admin`, `inactive`, `not_locked`, `already_active`, `already_inactive`); System owner yetkisi gereken işlem 403 `forbidden` (gereken rol System owner). Reddedilenler denetim izine "Yetkisiz istek".
 - `GET /api/users/{id}`'nin `actions` alanı ile yazma uçları aynı kuraldan beslenir (`services/users.py`).
 - **Denetim izi:** `UserId` işlemi yapan, `ObjectType` "Kullanıcı", `ObjectKey` hedefin kullanıcı adı; `OldValue` ve `NewValue` JSON, anahtar alan adı. Eylemler: Kullanıcı oluşturuldu, Rol değişikliği, Ad soyad değişikliği, Şifre sıfırlama, Kilit açıldı, Kullanıcı kapatıldı, Kullanıcı geri açıldı.
+
+## Sistem ayarları ve yetki matrisi (K-100, K-104, K-105)
+
+Veri sözlüğü listesi `field-definitions` adıyla ortak liste sözleşmesini kullanır (okuma 96). Alanlar `TableName`, `FieldName`, `DisplayLabel`, `Description` (varsayılan gizli), `FieldClass`, `ValuePriority`, `ManualOverrides`, `EditableInWorkspace`, `IsRequired`, `DefaultValue`, `IsAdditional`. Liste tanımındaki `key_fields` satırda her zaman döner.
+
+| Adres | Ne |
+|---|---|
+| `GET /api/field-definitions/{tablo}/{alan}` | Alan, `label`, `standard_label`, `description`, `is_additional`, öteki alanlar, `options` (`field_class`, `value_priority` listelerinin seçenekleri), `used_in_views`, `used_in_rules`. Yoksa 404 `field_not_found` |
+| `PUT /api/field-definitions/{tablo}/{alan}/label` | `{"label"}`, en çok 40 karakter; boşsa standart etiket. Aynı tabloda aynı etiket 409 `label_taken`. İz "Alan etiketi değişikliği" |
+| `GET /api/settings/login-policy` | `{"values", "defaults", "limits"}` |
+| `PUT /api/settings/login-policy` | Değişen anahtarlar; sınır dışı ya da uyarı süresi oturum süresinden kısa değilse 422, hiçbiri yazılmaz. İz "Ayar değişikliği", anahtar başına |
+| `GET /api/permissions/matrix` | Roller, 13 grup satırı, 98 fonksiyon, istisnalar |
+| `GET /api/permissions/matrix/export` | Excel: fonksiyon düzeyinde 98 satır. İz "Dışa aktarım" |
 
 ## Liste sorgusu (K-87)
 

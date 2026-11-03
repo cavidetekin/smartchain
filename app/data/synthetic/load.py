@@ -124,13 +124,16 @@ def load(engine: Engine, ds: Dataset) -> dict:
             conn.execute(text("IF NOT EXISTS (SELECT 1 FROM core.UnitOfMeasure WHERE Code = :c) "
                               "INSERT INTO core.UnitOfMeasure (Code, Name, Decimals) VALUES (:c, :n, :d)"),
                          {"c": u["Code"], "n": u["Name"], "d": u["Decimals"]})
-        # Ek alan etiketi (K-88): yoksa eklenir; System owner'ın tanımı varsa dokunulmaz.
+        # Ek alan etiketi (K-88, K-104): satır yoksa eklenir, etiket boşsa yazılır; System owner'ın etiketi korunur.
         fd = _table("FieldDefinition", "adm")
         for d in FIELD_DEFINITIONS:
-            exists = conn.execute(sa.select(fd.c.TableName).where(fd.c.TableName == d["TableName"],
-                                                                  fd.c.FieldName == d["FieldName"])).first()
+            exists = conn.execute(sa.select(fd.c.Label).where(fd.c.TableName == d["TableName"],
+                                                              fd.c.FieldName == d["FieldName"])).first()
             if not exists:
                 conn.execute(sa.insert(fd).values(**d))
+            elif not exists[0]:
+                conn.execute(sa.update(fd).where(fd.c.TableName == d["TableName"], fd.c.FieldName == d["FieldName"])
+                             .values(Label=d["Label"]))
         dv = _table("DataVersion", "adm")
         version = conn.execute(sa.insert(dv).values(LocationId=location_id, CreatedAt=now, LoadType="Tam",
                                                     IsPinned=False, IsSynthetic=True).returning(dv.c.Id)).scalar_one()

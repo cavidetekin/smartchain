@@ -12,7 +12,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from ..errors import DB_UNAVAILABLE, AppError
-from ..lists.definition import ListDefinition
+from ..lists.definition import ListDefinition, field_title
 from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
     AggSpec, DefaultViewRequest, FilterItem, FormatRule, ViewCreate, ViewDefinition, ViewUpdate,
@@ -66,8 +66,11 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
     data = json.loads(raw)
     warnings: list[str] = []
 
+    def title(field: str) -> str:
+        return b.columns[field]["label"] if field in b.columns else field_title(b.defn, field)
+
     def gone(field: str):
-        msg = f"'{field}' alanı artık listede yok; görünümden çıkarıldı."
+        msg = f"'{title(field)}' artık listede yok; görünümden çıkarıldı."
         if msg not in warnings:
             warnings.append(msg)
 
@@ -91,7 +94,7 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
             filters.append(f)
         except (ListQueryError, ValidationError):
             if f.get("field") in b.columns:
-                warnings.append(f"'{f.get('field')}' filtresi artık geçerli değil; görünümden çıkarıldı.")
+                warnings.append(f"'{title(f.get('field'))}' filtresi artık geçerli değil; görünümden çıkarıldı.")
             else:
                 gone(f.get("field"))
     group_by = known(data.get("group_by", []), lambda g: g)
@@ -102,7 +105,7 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
             aggregates[f] = spec
         except (ListQueryError, ValidationError):
             if f in b.columns:
-                warnings.append(f"'{f}' ara toplamı artık geçerli değil; görünümden çıkarıldı.")
+                warnings.append(f"'{title(f)}' ara toplamı artık geçerli değil; görünümden çıkarıldı.")
             else:
                 gone(f)
     rules = []
@@ -115,7 +118,7 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
             for f in missing:
                 gone(f)
             if not missing:
-                warnings.append(f"'{r.get('field')}' biçim kuralı artık geçerli değil; görünümden çıkarıldı.")
+                warnings.append(f"'{title(r.get('field'))}' biçim kuralı artık geçerli değil; görünümden çıkarıldı.")
     definition = {"v": 1, "columns": columns, "pinned": min(int(data.get("pinned", 0)), len(columns)),
                   "sort": sort, "filters": filters, "group_by": group_by, "aggregates": aggregates, "rules": rules}
     return definition, warnings

@@ -124,9 +124,9 @@ def expand(rows, keymap):
         out.append(r)
     return [
         dict(
-            name=r["ALAN"], type=r["TIP"], key=r.get("ANAHTAR", ""), desc=r.get("AÇIKLAMA", ""),
+            name=r["ALAN"], type=r["TIP"], key=r.get("ANAHTAR", ""), desc=r.get("AÇIKLAMA", ""), label=r.get("ETİKET", ""),
             required=r.get(keymap["req"], "") == "E", default=r.get("VARSAYILAN", ""),
-            source=r.get(keymap["src"], ""),
+            source=r.get(keymap["src"], ""), workspace=r.get("ÇALIŞ.", "") == "E",
         )
         for r in out
     ]
@@ -276,8 +276,11 @@ def render_models(spec) -> str:
             if f["desc"]:
                 kw.append(f"comment={q(f['desc'])}")
             label, values = field_label(f), value_list(f["desc"])
-            if schema != "stg" and (label or values):
+            if schema != "stg" and (label or values or schema in ("core", "param")):
                 info = ([f"'label': {q(label)}"] if label else []) + ([f"'values': {json.dumps(values, ensure_ascii=False)}"] if values else [])
+                if schema in ("core", "param"):  # veri sözlüğü (K-104, db/dictionary.py); DDL'e girmez
+                    info += [f"'source': {q(f.get('source', ''))}", f"'workspace': {bool(f.get('workspace'))}"]
+                    info += [f"'default': {q(f['default'])}"] if f.get("default") else []
                 kw.append(f"info={{{', '.join(info)}}}")
             cols.append(f"    sa.Column({', '.join(args + kw)}),")
         if uk:
@@ -287,6 +290,8 @@ def render_models(spec) -> str:
         out.append(f"    {q(name)}, metadata,")
         out += cols + extra
         out.append(f"    schema={q(schema)},")
+        if schema in ("core", "param"):
+            out.append(f"    info={{'field_class': {q(t['cls'])}}},")
         if t["desc"]:
             out.append(f"    comment={q(t['desc'])},")
         out.append(")")
@@ -372,11 +377,13 @@ ADDITIONAL_FIELD = re.compile(r"Additional(Text|Number)\d+$")
 
 
 def field_label(f) -> str:
-    """K-88: kolon etiketi AÇIKLAMA'dan. Değer listesinde ':' öncesi, diğerlerinde ilk ';' öncesi.
+    """K-88: kolon etiketi ETİKET kolonundan, boşsa AÇIKLAMA'dan. Değer listesinde ':' öncesi, diğerlerinde ilk ';' öncesi.
     Ek alanların (K-59) etiketi FieldDefinition.Label'dadır; burada boş kalır."""
     desc = f["desc"].strip()
     if ADDITIONAL_FIELD.match(f["name"]):
         return ""
+    if f.get("label"):
+        return f["label"]
     if "|" in desc:
         head = desc.split("|", 1)[0]
         return head.split(":", 1)[0].strip() if ":" in head else ""

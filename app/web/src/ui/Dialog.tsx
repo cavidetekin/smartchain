@@ -8,7 +8,7 @@ import { tr } from "../i18n/tr";
 import { Button } from "./Button";
 
 export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, wide,
-                         dismissible = true, cancelLabel, blurred }: {
+                         dismissible = true, cancelLabel, blurred, noCancel, xwide }: {
   title: string;
   /** Başlığın altında sessiz satır (ör. kaynak ve satır sayısı). */
   subtitle?: ReactNode;
@@ -21,12 +21,16 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   danger?: boolean;
   submitDisabled?: boolean;
   wide?: boolean;
+  /** En geniş pencere; ekrana sığmayan içerik kayar (ör. satır kaymayan tablo). */
+  xwide?: boolean;
   /** false: Esc kapatmaz, Vazgeç yok (cancelLabel verilirse o düğme onClose'u çağırır). */
   dismissible?: boolean;
   /** İkincil düğmenin metni (ör. "Şimdi çıkış yap"); verilirse ikincil düğme biçiminde. */
   cancelLabel?: string;
   /** Arka plan bulanık (sayfa etkileşimi kilitli; 2.1). */
   blurred?: boolean;
+  /** Yalnız birincil düğme (salt okunur pencere); Esc yine kapatır. */
+  noCancel?: boolean;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLFormElement>(null);
@@ -63,7 +67,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
 
   return (
     <div className={`sc-dialog-backdrop${blurred ? " is-blurred" : ""}`}>
-      <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
+      <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}${xwide ? " sc-dialog--xwide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
             onKeyDown={onKey} onSubmit={submit}>
         <div>
           <h2 id={titleId} className="sc-dialog-title">{title}</h2>
@@ -71,7 +75,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
         </div>
         <div className="sc-dialog-body">{children}</div>
         <div className="sc-dialog-actions">
-          {(dismissible || cancelLabel) && (
+          {(dismissible || cancelLabel) && !noCancel && (
             <Button variant={cancelLabel ? "secondary" : "ghost"} onClick={onClose}>{cancelLabel ?? tr.ui.cancel}</Button>
           )}
           <Button type="submit" variant={danger ? "danger" : "primary"} busy={busy} disabled={submitDisabled}>{submitLabel}</Button>

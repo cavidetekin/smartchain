@@ -84,7 +84,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **22 · Kullanıcılar:** Kullanıcı açma, kapatma, rol atama, şifre sıfırlama.
 - **23 · Entegrasyon ve zamanlanmış işler:** API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması.
 - **24 · Sistem sağlığı:** Son çalışmalar, iş kuyruğu, hatalar, çözüm süreleri; destek paketi dışa alma.
-- **25 · System owner ayarları:** Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı), lisans, sürüm.
+- **25 · Sistem ayarları:** Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı), lisans, sürüm.
 
 ### Fonksiyon listesi
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon listesi · 1/8</sub>
@@ -246,7 +246,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **93 · İş kuyruğu yönetimi:** Çalışan ve bekleyen işler; iş iptal edilebilir. (öneri)
 - **94 · Sistem sağlığı:** Son çalışmalar, hatalar, süreler, disk.
 - **95 · Destek paketi:** Log ve ayarlar paket olarak dışa alınır; uzaktan erişim olmadığı için.
-- **96 · System owner ayarları:** Veri sözlüğü (alan sınıfı, öncelik, elle ezme), motor ayarları, lisans.
+- **96 · Sistem ayarları:** Veri sözlüğü (alan sınıfı, öncelik, Manuel), motor ayarları, lisans.
 - **97 · Sürüm güncelleme:** Kapalı ağda kurulum paketiyle. (öneri)
 - **98 · Denetim izi:** Tüm veri, parametre, plan ve kullanıcı değişikliklerinin merkezi kaydı. (öneri)
 
@@ -491,12 +491,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Hatalar ve çözüm:** Hata, bileşen ve sistemin nasıl toparladığı listelenir.
 - **Destek paketi:** Kapalı ağda uzaktan erişim yok; log ve ayarlar paket olarak dışa alınır.
 
-### System owner ayarları
+### Sistem ayarları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 25/25</sub>
 
-![System owner ayarları](mockups/m24e-0334-sistem-sahibi-ayarlari.png)
+![Sistem ayarları](mockups/m24e-0334-sistem-sahibi-ayarlari.png)
 
 - **Admin'in ötesinde:** Bu ekranı yalnız System owner (bizim hesabımız) görür.
 - **Motor ayarları:** Çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı.
-- **Veri sözlüğü:** Alan sınıfı, kaynak önceliği, elle ezme ve çalışmada değiştirilebilirlik.
+- **Veri sözlüğü:** Alan sınıfı, kaynak önceliği, Manuel ve Senaryo.
 - **Lisans ve sürüm:** Kurulum tipi, sürüm ve lisans bilgisi.
+- **Uygulama (2.4, K-104, K-105):** Ekranda salt okunur sürüm satırı, veri sözlüğü ve şifre ve oturum ayarları vardır. Motor ayarları 10.13'te, lisans 11.3'te, sürüm güncelleme 11.2'de gelir. Yetki matrisi Kullanıcılar ekranından açılır (docs/12).

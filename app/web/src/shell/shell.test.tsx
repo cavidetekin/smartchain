@@ -3,7 +3,8 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ME, mockApi, mockSocket, renderApp } from "../test/helpers";
+import type { Me } from "../auth/authApi";
+import { ME, meAs, mockApi, mockSocket, renderApp } from "../test/helpers";
 
 const menu = () => screen.getByRole("navigation", { name: "Ana menü" });
 
@@ -63,7 +64,7 @@ describe("menüde arama", () => {
     expect(names).toEqual(["Kaynak doluluk", "Kaynak bazlı planlama"]);
     await user.clear(box);
     await user.type(box, "SİSTEM");
-    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sistem sağlığı"]);
+    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sistem sağlığı", "Sistem ayarları"]);
     await user.keyboard("{Enter}");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem sağlığı");
   });
@@ -79,13 +80,15 @@ describe("menüde arama", () => {
 });
 
 describe("daraltılmış menü", () => {
-  it("yalnız ikonlar, ad üzerine gelince; hâl hatırlanır; grupta alt panel", async () => {
+  it("yalnız ikonlar, ad üzerine gelince; hâl hatırlanır; grup ikonuna basınca liste", async () => {
     const user = userEvent.setup();
     const { unmount } = renderApp();
     await user.click(screen.getByRole("button", { name: "Menüyü daralt" }));
     expect(within(menu()).queryByText("Senaryolar")).toBeNull();
     expect(within(menu()).getByRole("link", { name: "Ana sayfa" })).toHaveAttribute("title", "Ana sayfa");
     await user.hover(within(menu()).getByRole("button", { name: "Planlama" }));
+    expect(within(menu()).queryByRole("menu")).toBeNull();  // yalnız basınca açılır
+    await user.click(within(menu()).getByRole("button", { name: "Planlama" }));
     const panel = within(menu()).getByRole("menu", { name: "Planlama" });
     expect(within(panel).getByRole("menuitem", { name: "Senaryolar" })).toBeInTheDocument();
     const yayin = within(panel).getByText("Yayın").closest("[aria-disabled]")!;
@@ -94,6 +97,102 @@ describe("daraltılmış menü", () => {
     unmount();
     renderApp();
     expect(screen.getByRole("button", { name: "Menüyü aç" })).toBeInTheDocument();
+  });
+
+  async function collapsedMenu(path?: string, me?: Me) {
+    const user = userEvent.setup();
+    renderApp(path, me);
+    await user.click(screen.getByRole("button", { name: "Menüyü daralt" }));
+    return user;
+  }
+
+  it("ekran seçilince ekran açılır, liste kapanır, menü kapalı kalır", async () => {
+    const user = await collapsedMenu();
+    await user.click(within(menu()).getByRole("button", { name: "Veri" }));
+    await user.click(within(menu()).getByRole("menuitem", { name: "Ana veri" }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana veri");
+    expect(within(menu()).queryByRole("menu")).toBeNull();
+    expect(screen.getByRole("button", { name: "Menüyü aç" })).toBeInTheDocument();
+  });
+
+  it("Ana sayfa doğrudan ekrana gider", async () => {
+    const user = await collapsedMenu("/veri/ana-veri");
+    await user.click(within(menu()).getByRole("link", { name: "Ana sayfa" }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana sayfa");
+    expect(within(menu()).queryByRole("menu")).toBeNull();
+  });
+
+  it("grupta görünen tek ekran kaldıysa ikon doğrudan ona gider", async () => {
+    const me = meAs("Admin");
+    const user = await collapsedMenu(undefined, { ...me, permissions: { ...me.permissions, 88: "none", 91: "none" } });
+    expect(within(menu()).queryByRole("button", { name: "Yönetim" })).toBeNull();
+    await user.click(within(menu()).getByRole("link", { name: "Sistem sağlığı" }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem sağlığı");
+  });
+
+  it("dışarı tıklama ve Esc kapatır; ikona yeniden basmak da", async () => {
+    const user = await collapsedMenu();
+    const veri = within(menu()).getByRole("button", { name: "Veri" });
+    await user.click(veri);
+    await user.click(screen.getByRole("heading", { level: 1 }));
+    expect(within(menu()).queryByRole("menu")).toBeNull();
+    await user.click(veri);
+    await user.keyboard("{Escape}");
+    expect(within(menu()).queryByRole("menu")).toBeNull();
+    expect(veri).toHaveFocus();
+    await user.click(veri);
+    await user.click(veri);
+    expect(within(menu()).queryByRole("menu")).toBeNull();
+    expect(veri).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("başka gruba basınca liste değişir", async () => {
+    const user = await collapsedMenu();
+    await user.click(within(menu()).getByRole("button", { name: "Veri" }));
+    await user.click(within(menu()).getByRole("button", { name: "Takip" }));
+    expect(within(menu()).getAllByRole("menu")).toHaveLength(1);
+    expect(within(menu()).getByRole("menu", { name: "Takip" })).toBeInTheDocument();
+  });
+
+  it("klavyeyle gezilir: ok, Home, End, Enter; kilitli ekran atlanır", async () => {
+    const user = await collapsedMenu();
+    within(menu()).getByRole("button", { name: "Veri" }).focus();
+    await user.keyboard("{ArrowDown}");
+    const panel = within(menu()).getByRole("menu", { name: "Veri" });
+    const item = (name: string) => within(panel).getByRole("menuitem", { name });
+    expect(item("Veri yükleme")).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(item("Ana veri")).toHaveFocus();
+    await user.keyboard("{End}");
+    expect(item("Veri kalitesi")).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(item("Veri yükleme")).toHaveFocus();
+    await user.keyboard("{ArrowUp}");
+    expect(item("Veri kalitesi")).toHaveFocus();
+    await user.keyboard("{Home}{ArrowDown}{Enter}");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana veri");
+    expect(within(menu()).queryByRole("menu")).toBeNull();
+    expect(within(menu()).getByRole("button", { name: "Veri" })).toHaveFocus();
+  });
+
+  it("Enter ile açılır, ilk ekrana odaklanır; kilitli ekran seçilemez", async () => {
+    const user = await collapsedMenu();
+    within(menu()).getByRole("button", { name: "Planlama" }).focus();
+    await user.keyboard("{Enter}");
+    const panel = within(menu()).getByRole("menu", { name: "Planlama" });
+    expect(within(panel).getByRole("menuitem", { name: "Senaryolar" })).toHaveFocus();
+    expect(panel.querySelectorAll("a[role=menuitem]")).toHaveLength(2);  // Senaryolar, Çalışma; çalışmanın ekranları kilitli
+    await user.click(within(panel).getByText("Yayın"));
+    expect(within(menu()).getByRole("menu", { name: "Planlama" })).toBeInTheDocument();
+  });
+
+  it("yetkisiz ekran listede de görünmez", async () => {
+    const user = await collapsedMenu(undefined, meAs("End user"));
+    await user.click(within(menu()).getByRole("button", { name: "Veri" }));
+    const panel = within(menu()).getByRole("menu", { name: "Veri" });
+    expect(within(panel).queryByText("Veri yükleme")).toBeNull();
+    expect(within(panel).getByRole("menuitem", { name: "Ana veri" })).toBeInTheDocument();
+    expect(within(menu()).queryByRole("button", { name: "Yönetim" })).toBeNull();
   });
 });
 

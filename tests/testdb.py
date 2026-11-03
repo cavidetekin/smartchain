@@ -114,6 +114,7 @@ def clear_leftovers(engine: Engine) -> None:
         c.execute(sa.text("DELETE FROM core.Location WHERE Code = N'TEST-ENG'"))
         c.execute(sa.text("DELETE FROM adm.Job"))
         c.execute(sa.text("DELETE FROM adm.SystemSetting"))
+        c.execute(sa.text("UPDATE adm.FieldDefinition SET Label = NULL WHERE Label LIKE N'pytest%'"))
         delete_users(c, [r[0] for r in c.execute(sa.text(
             "SELECT Id FROM adm.AppUser WHERE UserName LIKE N'pytest.%' OR UserName LIKE N'test.job.%'"))])
 

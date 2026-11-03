@@ -303,7 +303,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - Doğrulanmış ham veri partisi
   - Hata eşiği ve yükleme davranışı (atla / dışarıda bırak)
-  - Veri sözlüğü: alan önceliği (ERP, kural, elle, varsayılan), elle ezme ayarı
+  - Veri sözlüğü: alan önceliği (ERP, kural, elle, varsayılan), Manuel ayarı
   - Aktif veri kuralları (sıralı)
 - **03:** Alan önceliği uygulanır: ERP değeri FieldValueSource.ErpValue'ya yazılır; elle değer varsa sözlükteki ayara göre korunur ya da ezilir; kaynağı (ERP / kural / elle / varsayılan) kaydedilir.
 - **04:** Veri kuralları sırayla çalışır (19); etkilenen kayıtlar ve kaynak etiketi güncellenir.
@@ -789,7 +789,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Değer tipine göre giriş alanı açılır (sayı, açılır liste, tarih); aralık, zorunluluk ve birim anında kontrol edilir, hata satır altında kırmızı.
 - **GIRDI**
   - Kayıt ve alan; yeni değer (tip: sayı, liste, tarih, evet/hayır)
-  - FieldDefinition: ManualOverrides (elle ezer mi), aralık ve zorunluluk, çalışmada değiştirilebilir mi
+  - FieldDefinition: ManualOverrides (Manuel), aralık ve zorunluluk, EditableInWorkspace (Senaryo)
   - İsteğe bağlı: geçerlilik tarihi (ValidUntil) ve not
 - **03:** Yanında davranış kutusu: 'ERP ve kuralı ezer' ya da 'ERP gelince ezilir' (alan ayarından); Enter kaydet, Esc vazgeç.
 - **04:** Onay penceresinde etki önizlemesi: eski ve yeni değer, türetilmiş alanlar (ör. haftalık net kapasite), onaylı plandaki tahmini doluluk, kapanabilecek uyarı.
@@ -2262,7 +2262,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem · çözücü ve parametreleri: System owner
-  - Nereden: Plan hesabı aşaması · ayarları: System owner ayarları → Motor · izi: Sistem sağlığı çözüm kaydı
+  - Nereden: Plan hesabı aşaması · ayarları: Sistem ayarları → Motor · izi: Sistem sağlığı çözüm kaydı
 - **01:** Adaptör arayüzü sabittir: kur (değişken sınırları, kısıt matrisi, amaç), çöz (zaman limiti, gap, iş parçacığı), oku (değerler, durum, gölge fiyatlar).
 - **02:** Model nesnesi seçilen çözücünün biçimine çevrilir; ölçekleme (katsayı aralığı) kontrol edilir, gerekirse otomatik ölçeklenir.
 - **GIRDI**
@@ -3919,7 +3919,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Kaynak bazlı planlama ekranı · 'Kaynak parametreleri' kartı (yalnız veri sözlüğünde 'çalışmada değiştirilebilir' işaretli alanlar)
+  - Nereden: Kaynak bazlı planlama ekranı · 'Kaynak parametreleri' kartı (yalnız veri sözlüğünde 'Senaryo' işaretli alanlar)
 - **01:** Kartta alan seçilir; mevcut değer ve kaynağı (ERP / kural / elle) görünür. Yeni değer girilir; duruş için tarih aralığı, etkilenen adet ve tür.
 - **02:** Dönem kapasitesi anında formülle yeniden hesaplanır: (çalışma günü × adet − duruş günü × etkilenen adet) × günlük kapasite × verim, artı fazla mesai; sonuç kartta ve şeritte 'önce / sonra' olarak gösterilir.
 - **GIRDI**
@@ -3939,7 +3939,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F55 · F Manuel planlama · Çalışma prensibi 2/3</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Yalnız veri sözlüğünde 'çalışmada değiştirilebilir' alanlar; diğerleri salt okunur, ipucu ile ana veriye yönlendirir.
+  - Yalnız veri sözlüğünde 'Senaryo' işaretli alanlar; diğerleri salt okunur, ipucu ile ana veriye yönlendirir.
   - Geçici değer ana veriyi ve diğer kullanıcıların çalışmalarını etkilemez; çalışma silinince kaybolur.
   - Fazla mesai üst limiti aşılamaz (engel); verim %30–%120 aralığı (parametre).
   - Duruş kapasiteden düşülür: tam gün ve etkilenen adet bazında; saat düzeyi Faz 1'de yok.
@@ -6382,7 +6382,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **93 · İş kuyruğu yönetimi (öneri):** Çalışan ve bekleyen işleri (gece senaryoları, sıcak çalışma hesapları, yüklemeler, büyük dışa aktarımlar) görmek; bekleyeni iptal etmek, çalışanı en iyi çözümle durdurmak, öncelik vermek. Daha önce konuşulmadı (öneri).
 - **94 · Sistem sağlığı:** Uygulama, veritabanı ve motorun durumunu tek ekranda görmek: servisler, kuyruk, son çalışmalar ve süre trendleri, hatalar, disk.
 - **95 · Destek paketi:** Kapalı ağda uzaktan erişim olmadığından sorun incelemesi için log, ayar, sürüm ve iş kayıtlarını (isteğe bağlı anonim model girdisini) tek şifreli pakette dışa almak; biz paketi inceleyip çözüm üretiriz.
-- **96 · System owner ayarları:** Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, elle ezme, çalışmada değiştirilebilirlik), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
+- **96 · Sistem ayarları:** Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, Manuel, Senaryo), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
 - **97 · Sürüm güncelleme (öneri):** Kapalı ağda yeni Smartchain sürümünü imzalı kurulum paketiyle güvenle uygulamak: ön kontrol, bakım modu, yedek, şema geçişi, servisler, sağlık kontrolü ve gerekirse otomatik geri alma. Daha önce konuşulmadı (öneri).
 - **98 · Denetim izi (öneri):** Veri, parametre, plan, kullanıcı ve sistem değişikliklerinin merkezi, yalnızca eklenen ve silinemeyen kaydı: kim, ne zaman, neyi, eski ve yeni değer.
 
@@ -6554,7 +6554,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (her istekte) · matris görüntüleme: Admin ve üstü · değişiklik: Faz 1'de sabit, System owner görür
-  - Nereden: System owner ayarları 'Yetki matrisi' sekmesi · tüm API uç noktaları
+  - Nereden: Sistem ayarları 'Yetki matrisi' sekmesi · tüm API uç noktaları
 - **01:** Sunucu her isteği rol + fonksiyon + bağlam üçlüsüyle doğrular; arayüzdeki kontroller yalnız görünürlük içindir, güvenlik sunucudadır.
 - **02:** Dört rol (adlar her yerde böyle, K-99): System owner (her şey + motor, lisans, veri sözlüğü, sürüm), Admin (kullanıcı, entegrasyon, işler, sağlık + Key user yetkileri), Key user (planlama, çalışma, yayın, parametre, veri düzeltme), End user (görüntüleme ve raporlama: görünüm, alan, koşullu biçim, Excel; fonksiyon çalıştırmaz, veriyi elle değiştirmez).
 - **GIRDI**
@@ -6568,7 +6568,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Her istekte izin ya da ret
   - Matris görünümü ve Excel çıktısı
   - Denetim izi: ret kayıtları
-- **06:** Matris System owner ekranında görüntülenir ve Excel'e aktarılır; Faz 2'de düzenlenebilir (öneri).
+- **06:** Matris Kullanıcılar ekranından (22) açılır; Admin ve System owner görür ve Excel'e aktarır (2.4); Faz 2'de düzenlenebilir (öneri). Pencerede grup yalnız adıyladır, istisnalar pencerede yoktur; fonksiyon numaraları ve istisnalar Excel'de, fonksiyon düzeyinde görünür.
 
 - **Yetki matrisi (K-100; Faz 1'de kodda sabit, `app/api/permissions.py`):** grup düzeyinde; hücreler: tam, sahibi (hepsini okur, yalnız kendi nesnesini değiştirir), kendi (yalnız kendi kayıtları), salt okunur, yok. Tablo kodla birebir (test).
 
@@ -6585,7 +6585,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | I · Yayın | 76–81 | tam | tam | tam | yok |
 | J · Takip ve rapor | 82–87 | tam | tam | tam | salt okunur |
 | K · Kullanıcı, entegrasyon, işler, sağlık | 88–95 | tam | tam | yok | yok |
-| K · System owner ayarları, sürüm | 96–97 | tam | yok | yok | yok |
+| K · Sistem ayarları, sürüm | 96–97 | tam | yok | yok | yok |
 | K · Denetim izi | 98 | tam | tam | kendi | yok |
 
 - **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur.
@@ -6599,7 +6599,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yetki sunucuda; arayüz güvenilmez.
   - Rol değişikliği bir sonraki istekte geçerlidir; oturum kapatılmaz.
   - Servis hesapları yalnız entegrasyon uç noktalarını kullanır; arayüz yetkisi yoktur.
-  - System owner ayarlarını Admin dahi görmez.
+  - Sistem ayarlarını Admin dahi görmez.
 - **HATA VE ISTISNA**
   - 403: kullanıcıya 'bu işlem için … yetkisi gerekir' ve kimden isteyeceği; teknik detay yok.
   - Çalışma sahibi değilken değişiklik denemesi: 'salt okunur' şeridi ve 'kopyasını aç' önerisi (öneri).
@@ -6997,17 +6997,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Ulaştırma adımları:** Kapalı ağ için 3 adım; parola ayrı kanaldan.
 - **Saklama:** 7 gün sunucuda; kayıt denetim izinde.
 
-### 96 · System owner ayarları
+### 96 · Sistem ayarları
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
 
-- Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, elle ezme, çalışmada değiştirilebilirlik), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
+- Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, Manuel, Senaryo), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: System owner (Admin'in ötesinde; Admin bu ekranı görmez)
-  - Nereden: Menü 'System owner'
-- **01:** Veri sözlüğü: alan listesi; sınıf (ana veri / parametre / işlem verisi), değer önceliği sırası (elle, kural, ERP, varsayılan), elle ezme, çalışmada değiştirilebilir, zorunlu, varsayılan. Etki sayısı ve ne zaman geçerli olacağı gösterilir.
+  - Nereden: Menü 'Sistem ayarları'
+- **01:** Veri sözlüğü: alan listesi; sınıf (ana veri / parametre / işlem verisi), değer önceliği sırası (elle, kural, ERP, varsayılan), Manuel (elle girilen değer öteki kaynakları ezer mi), Senaryo (alan çalışmada değiştirilebilir mi), Zorunlu, Varsayılan değer. Etki sayısı ve ne zaman geçerli olacağı gösterilir.
 - **02:** Motor: çözücü seçimi (adaptör listesi; geliştirmede karar), süre bütçeleri (sıcak, gece senaryo bazında), işçi sayısı, eş zamanlı sıcak çalışma, gece paralel senaryo, LLM açıklama (Faz 1 kapalı).
 - **GIRDI**
   - FieldDefinition (veri sözlüğü), SystemSetting (motor, saklama, eşikler, politikalar), License, sürüm bilgisi
@@ -7022,7 +7022,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05:** Lisans: çevrimdışı imzalı dosya yüklenir, imza yerelde doğrulanır; kullanıcı sayısı ve bitiş; 30 gün kala uyarı.
 - **06:** Sürüm: mevcut sürüm, değişiklik notu, güncelleme (97). Her değişiklik denetim izine silinemez kayıt olarak yazılır.
 
-### 96 · System owner ayarları · kurallar ve etkiler
+### 96 · Sistem ayarları · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
@@ -7037,42 +7037,43 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - İşçi servisi yeniden başlatılamadı: eski ayara dönülür, Sistem sağlığı kaydı.
   - Veri sözlüğünde zorunlu alan kaldırma: ekranlar ve kurallar bu alanı kullanıyorsa engellenir, liste gösterilir.
 - **ETKISI VE TETIKLENENLER**
-  - Yükleme (05) değer öncelikleri; çalışmada değiştirilebilir alanlar (55).
+  - Yükleme (05) değer öncelikleri; Senaryo işaretli alanlar (55).
   - Motor (29–39) ve kuyruk (93).
   - Kullanıcı sınırı (88); zamanlanmış saklama işleri (09, 07).
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Alan öncelikleri ve değer kaynağı:** FieldValueSource Veri sözlüğü değişince; bir sonraki yüklemede ya da 'şimdi uygula' ile
-- **Çalışmada değiştirilebilir alan listesi:** WorkspaceOverride izinleri Anında
+- **Senaryo işaretli alan listesi:** WorkspaceOverride izinleri Anında
 - **İşçi havuzu ve eş zamanlı sınır:** Job işleyici Kuyruk boşalınca servis yeniden başlar
 - **Süre bütçeleri:** PlanRun Bir sonraki hesaptan itibaren
 - **Lisans sayaçları:** License · Kullanıcılar ekranı Lisans yüklenince
 - **Saklama işleri:** Zamanlanmış işler Süre değişince sonraki çalışmada
-- **ÖRNEK:** Kaynak.Verim için öncelik elle > kural > ERP, çalışmada değiştirilebilir. İşçi sayısı 8 → 12: kuyruktaki 1 iş bitince servis yeniden başlar. Lisans 12 → 20 kullanıcı, 2027 sonuna kadar.
+- **Uygulama (2.4, K-104, K-105):** Şimdilik veri sözlüğünde yalnız etiket düzenlenir; öteki alanlar pencerede pasif form öğesidir (liste, onay kutusu, metin kutusu), alan açıklaması salt okunurdur (`Description`, docs/02 AÇIKLAMA'dan); düzenleme, kilitler, etki sayısı ve "Şimdi uygula" 5.1'de. Değer önceliği sürüklenmez (docs/02 modeli). Şifre ve oturum ayarları bu ekrandadır. Motor ayarları 10.13'te, lisans 11.3'te, sürüm güncelleme 11.2'de.
+- **ÖRNEK:** Kaynak.Verim için öncelik elle > kural > ERP, Senaryo işaretli. İşçi sayısı 8 → 12: kuyruktaki 1 iş bitince servis yeniden başlar. Lisans 12 → 20 kullanıcı, 2027 sonuna kadar.
 
-### 96 · System owner ayarları · Veri sözlüğü alanı
+### 96 · Sistem ayarları · Veri sözlüğü alanı
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Mockup 1/3</sub>
 
-![96 · System owner ayarları · Veri sözlüğü alanı](mockups/m24f-0769-96-sistem-sahibi-ayarlari-veri-sozlugu-alani.png)
+![96 · Sistem ayarları · Veri sözlüğü alanı](mockups/m24f-0769-96-sistem-sahibi-ayarlari-veri-sozlugu-alani.png)
 
 - **Sıralanabilir öncelik:** Elle, kural, ERP, varsayılan sürükleyerek sıralanır; üstteki kazanır.
-- **Anahtarlar:** Elle ezme ve çalışmada değiştirilebilirlik tek bakışta.
+- **Anahtarlar:** Manuel ve Senaryo tek bakışta.
 - **Etki sayısı:** Kaç kayıt etkilenir, ne zaman geçerli; 'şimdi uygula' seçeneği.
 - **Açık çalışmalar:** Kendi versiyonunda kaldığı notta yazar.
 
-### 96 · System owner ayarları · Motor ayarı onayı
+### 96 · Sistem ayarları · Motor ayarı onayı
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Mockup 2/3</sub>
 
-![96 · System owner ayarları · Motor ayarı onayı](mockups/m24f-0770-96-sistem-sahibi-ayarlari-motor-ayari-onayi.png)
+![96 · Sistem ayarları · Motor ayarı onayı](mockups/m24f-0770-96-sistem-sahibi-ayarlari-motor-ayari-onayi.png)
 
 - **Şu an → yeni:** Her ayar için eski, yeni ve ne zaman geçerli.
 - **Servis etkisi:** Yeniden başlatma, çalışan iş ve bekleme süresi kırmızı kutuda.
 - **Yazarak onay:** Ayar adını yazmadan Uygula çalışmaz.
 - **Silinemez iz:** System owner işlemi denetim izinde kalıcı.
 
-### 96 · System owner ayarları · Lisans yükleme
+### 96 · Sistem ayarları · Lisans yükleme
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Mockup 3/3</sub>
 
-![96 · System owner ayarları · Lisans yükleme](mockups/m24f-0771-96-sistem-sahibi-ayarlari-lisans-yukleme.png)
+![96 · Sistem ayarları · Lisans yükleme](mockups/m24f-0771-96-sistem-sahibi-ayarlari-lisans-yukleme.png)
 
 - **Çevrimdışı doğrulama:** İmza yerelde kontrol edilir; internet gerekmez.
 - **Mevcut → yeni:** Kullanıcı, bitiş, modüller karşılaştırmalı.
@@ -7088,7 +7089,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: System owner (yerinde biz ya da bizim gözetimimizde müşteri BT'si)
-  - Nereden: System owner ayarları 'Sürüm' sekmesi · (sunucudaki kurulum aracı aynı adımları çalıştırır)
+  - Nereden: Sistem ayarları 'Sürüm' sekmesi · (sunucudaki kurulum aracı aynı adımları çalıştırır)
 - **01:** Paket yüklenir; imza ve sürüm zinciri doğrulanır (atlanan ara sürüm varsa paket zinciri ister).
 - **02:** Ön kontrol: disk, yedek alınabilirliği, şema geçişi kuru çalıştırma, çalışan iş ve açık çalışma sayısı, gece akışı penceresi dışında olma.
 - **03:** Bakım modu: yeni giriş kapanır, kullanıcılara 10 dk uyarı, kuyruk boşalır, kaydedilmemiş değişiklikler taslak olarak saklanır.

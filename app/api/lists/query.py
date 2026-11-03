@@ -113,7 +113,8 @@ class Builder:
         cols = [self._col(n, "fields", problems) for n in names]
         if problems:
             raise ListQueryError(problems)
-        return [self.table.c.Id] + [c for c in cols if c is not None and c.name != "Id"]
+        keys = [self.table.c[k] for k in self.defn.key_fields if k not in names]
+        return [self.table.c.Id] + keys + [c for c in cols if c is not None and c.name != "Id"]
 
     def order_by(self, sort: list[SortItem]) -> list[sa.ColumnElement]:
         problems: list[dict] = []

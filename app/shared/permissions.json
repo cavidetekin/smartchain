@@ -153,7 +153,7 @@
     {
       "key": "K2",
       "letter": "K",
-      "name": "System owner ayarları, sürüm",
+      "name": "Sistem ayarları, sürüm",
       "first": 96,
       "last": 97,
       "levels": {
@@ -1225,7 +1225,7 @@
     },
     {
       "no": 96,
-      "name": "System owner ayarları",
+      "name": "Sistem ayarları",
       "group": "K",
       "levels": {
         "System owner": "full",

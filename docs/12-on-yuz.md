@@ -23,14 +23,14 @@ Ekranlar menüde gruplar hâlinde durur; ekranlar arası geçiş için üstte se
 | Takip | Uyarılar (20) · Raporlar (21) ve altında raporlar |
 | Veri | Veri yükleme (02) · Ana veri (03) · Veri kuralları (04) · Veri kalitesi (05) |
 | Parametre | Parametre setleri (06) · Gece senaryoları (07) |
-| Yönetim | Kullanıcılar (22) · Entegrasyon (23) · Sistem sağlığı (24) · System owner (25) |
+| Yönetim | Kullanıcılar (22) · Entegrasyon (23) · Sistem sağlığı (24) · Sistem ayarları (25) |
 
 - **Çalışmanın ekranları** (doluluk, ürün / kaynak / sipariş bazlı planlama, Gantt, malzeme, öneriler, pegging, termin ve olaylar, yayın) menüde Çalışma'nın altında listelenir (K-43). Çalışma açık değilken gri ve kapalıdır; üzerine gelince "Önce bir çalışma açın" yazar.
 - **Raporlar** menüde Raporlar'ın altında listelenir; çoğaldıkça alt gruplara ayrılır (ör. Raporlar › Kapasite › Kaynak doluluk).
 - **En çok iki seviye:** grup › ekran ya da grup › alt grup › ekran. Daha derin seviye açılmaz.
 - **Gruplar açılır kapanır;** hangi grupların açık bırakıldığı kullanıcı için hatırlanır.
 - **Menüde arama:** Menünün üstünde arama kutusu; ekran adıyla bulur. Klavyeden Ctrl+K ile açılır.
-- **Daraltılmış menü (U-22):** Yalnız ikonlar kalır; üzerine gelince ekranın adı görünür. Bir grubun üzerine gelince alt ekranları yanda küçük bir panelde açılır. Menünün açık ya da daraltılmış hâli hatırlanır.
+- **Daraltılmış menü (U-22):** Yalnız ikonlar kalır; üzerine gelince ekranın adı görünür. Grup ikonuna basınca menü açılmaz; ikonun yanında küçük bir liste açılır ve grubun ekranlarını gösterir. Bir ekran seçilince o ekran açılır, liste kapanır, menü kapalı kalır. Ana sayfa gibi tek ekranlı ikonlar (grupta görünen tek ekran kaldıysa o grup da) doğrudan ekrana gider. Liste dışına tıklama ve Esc listeyi kapatır. Klavye: ok tuşları, Home ve End listede gezer, Enter seçer, Esc odağı ikona döndürür. Yetkisiz ekranlar listede de görünmez; çalışma kapalıyken çalışmanın ekranları kilitli görünür, seçilemez. Menünün açık ya da daraltılmış hâli hatırlanır.
 - **Rol bazlı görünürlük (2.2, K-100):** okuma yetkisi olmayan ekran menüde görünmez, içi boş kalan grup da görünmez; menü araması da yalnız görünen ekranlarda arar. Ayrıntı "Yetki (2.2)" bölümünde.
 
 ### Bağlam çubuğu (U-17)
@@ -223,12 +223,12 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 ## Yetki (2.2, K-99, K-100; fonksiyon 90)
 
 - **Kaynak:** rolün yetkileri `GET /api/auth/me`'nin `permissions` alanında (`{fonksiyon: full | owner | self | read | none}`); arayüz yalnız görünürlüğü ayarlar, güvenlik sunucudadır. Yardımcılar `app/web/src/auth/permissions.ts`: `can(me, fn, "read" | "write")`, gereken rol ve ipucu metni.
-- **Menü:** her ekranın bir fonksiyonu vardır (`catalog.ts`): Ana sayfa 82 · Senaryolar 42 · Çalışma 43 (çalışmanın ekranları onunla) · Uyarılar 83 · Raporlar 85 · Veri yükleme 03 · Ana veri 10 · Veri kuralları 16 · Veri kalitesi 20 · Parametre setleri 22 · Gece senaryoları 27 · Kullanıcılar 88 · Entegrasyon 91 · Sistem sağlığı 94 · System owner ayarları 96. Okuma yetkisi olmayan ekran gizlenir.
+- **Menü:** her ekranın bir fonksiyonu vardır (`catalog.ts`): Ana sayfa 82 · Senaryolar 42 · Çalışma 43 (çalışmanın ekranları onunla) · Uyarılar 83 · Raporlar 85 · Veri yükleme 03 · Ana veri 10 · Veri kuralları 16 · Veri kalitesi 20 · Parametre setleri 22 · Gece senaryoları 27 · Kullanıcılar 88 · Entegrasyon 91 · Sistem sağlığı 94 · Sistem ayarları 96. Okuma yetkisi olmayan ekran gizlenir.
 
   | Rol | Menü |
   |---|---|
   | System owner | hepsi |
-  | Admin | System owner ayarları dışında hepsi |
+  | Admin | Sistem ayarları dışında hepsi |
   | Key user | Yönetim grubu dışında hepsi |
   | End user | Ana sayfa · Takip · Veri (Veri yükleme dışında) |
 
@@ -282,6 +282,15 @@ Başlık "Kullanıcılar", sağda "+ Kullanıcı ekle"; altında ekranı doldura
 
 **Rol değişince:** `me` yenilendiğinde rol farklıysa kabukta geçici bildirim: "Rolünüz Key user olarak değiştirildi."
 
+## Sistem ayarları (2.4, K-104, K-105; ekran 25, fonksiyon 96)
+
+Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski `/yonetim/system-owner` yeni adrese yönlenir); altında "Sürüm 0.18.0". Rol adı System owner olarak kalır; yetki mesajları değişmez. İki bölüm (`Segment`; K-82 ekranlar arası sekmeyi yasaklar, bu aynı ekranın bölümleri):
+
+- **Veri sözlüğü:** ekranı dolduran ortak tablo: Tablo, Alan, Etiket, Sınıf, Değer önceliği, Manuel, Senaryo, Zorunlu, Varsayılan değer, Ek alan; "Açıklama" varsayılan gizlidir, Alanlar panelinden açılır, Excel'e kolon açıksa ya da Sütunlar "Tümü" seçilirse çıkar. Satır sonundaki "Düzenle" pencereyi açar: alt satır `Material · AdditionalText1`, onun altında tek satır salt okunur açıklama; pencere tablo düzenindedir (solda alan adı, sağda değer, satırlar ince çizgiyle ayrılır). Etiket düzenlenir, yardımında standart etiket, ek alanda "Boşsa alan listelerde görünmez."; öteki alanlar pasif form öğesidir: Sınıf ve Değer önceliği liste; Manuel, Senaryo ve Zorunlu onay kutusu; Varsayılan değer metin kutusu. 5.1'de bunlar yalnız aktifleşir. Kullanılan ek alanın etiketi silinirken: "Bu alan 3 görünümde ve 1 kuralda kullanılıyor. Etiket silinirse bu görünümlerde görünmez; etiket yeniden yazılınca geri gelir." ve kiremit "Etiketi sil".
+- **Giriş ve oturum:** iki küme (Şifre; Giriş ve oturum), tablo düzeninde: solda alan adı, sağda içeriğe göre kısa sayı kutusu; form ekranı doldurmaz, sağdan taşmaz. Kayıtlı olmayan ayar varsayılan değeriyle görünür. Kaydet değişiklik yoksa pasif.
+
+**Yetki matrisi (K-100; ekran 22):** Kullanıcılar başlığının yanında "Yetki matrisi"; en geniş pencere, hücrelerde satır kayması olmaz: 13 grup satırı × 4 rol (Tam, Sahibi, Kendi, Salt okunur, Yok), grup yalnız adıyla; altında "Excel'e aktar", Kapat. İstisnalar pencerede yoktur; Excel fonksiyon düzeyindedir ve onları gösterir (98 satır; No, Fonksiyon, Grup, dört rol).
+
 ## Durum
 
 | Parça | Durum |
@@ -295,5 +304,6 @@ Başlık "Kullanıcılar", sağda "+ Kullanıcı ekle"; altında ekranı doldura
 | Koşullu biçimlendirme: kurallar, palet, okunurluk, ikon, Excel'e taşınma | uygulandı (1.6) |
 | Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |
 | Arayüz metinleri kurala göre sadeleşti | uygulandı (2.3c) |
+| Sistem ayarları: veri sözlüğü etiketi, şifre ve oturum ayarları; yetki matrisi | uygulandı (2.4) |
 | Kullanıcılar ekranı: liste, satır menüsü, pencereler, geçici şifre; yazı boyutu kullanıcı kaydında | uygulandı (2.3) |
 | Yetki: role göre menü, yetkisiz ekran, pasif düğme ipucu, 403 bildirimi, iş panelinde iptal | uygulandı (2.2) |

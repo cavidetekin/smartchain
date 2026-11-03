@@ -118,7 +118,7 @@ def test_removed_field_is_dropped_with_warning(api, users, db_engine):
     got = next(x for x in listed(api, users[0])["views"] if x["id"] == v["id"])
     assert got["definition"]["columns"] == [{"field": "Code"}] and got["definition"]["pinned"] == 1
     assert got["definition"]["sort"] == [] and got["definition"]["filters"] == []
-    assert got["warnings"] == ["'OldField' alanı artık listede yok; görünümden çıkarıldı."]
+    assert got["warnings"] == ["'OldField' artık listede yok; görünümden çıkarıldı."]
 
 
 def test_relative_date_filter_is_stored_relative(api, users, db_engine, monkeypatch):

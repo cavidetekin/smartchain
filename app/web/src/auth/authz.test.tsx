@@ -19,8 +19,8 @@ beforeEach(() => {
 
 describe("menü role göre (K-100)", () => {
   it.each([
-    ["System owner", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Veri yükleme", "Kullanıcılar", "System owner"], []],
-    ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı"], ["System owner"]],
+    ["System owner", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Veri yükleme", "Kullanıcılar", "Sistem ayarları"], []],
+    ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı"], ["Sistem ayarları"]],
     ["Key user", ["Planlama", "Takip", "Veri", "Parametre"], ["Senaryolar", "Veri yükleme", "Gece senaryoları"], ["Kullanıcılar"]],
     ["End user", ["Takip", "Veri"], ["Uyarılar", "Ana veri", "Veri kuralları"],
      ["Senaryolar", "Çalışma", "Veri yükleme", "Parametre setleri", "Gece senaryoları", "Kullanıcılar"]],
@@ -50,9 +50,9 @@ describe("yetkisiz ekran", () => {
     expect(screen.getByRole("link", { name: "Ana sayfaya dön" })).toHaveAttribute("href", "/ana-sayfa");
   });
 
-  it("System owner ekranı Admin'e kapalı; destek yazar", () => {
+  it("Sistem ayarları Admin'e kapalı; destek yazar", () => {
     mockApi();
-    renderApp("/yonetim/system-owner", meAs("Admin"));
+    renderApp("/yonetim/sistem-ayarlari", meAs("Admin"));
     expect(screen.getByText("Bu ekran için System owner yetkisi gerekir. Smartchain desteğine başvurun.")).toBeInTheDocument();
   });
 

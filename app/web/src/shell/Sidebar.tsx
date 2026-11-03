@@ -1,4 +1,4 @@
-// Kenar menü (docs/12, K-82): gruplar, en çok iki seviye, arama (Ctrl+K), daraltma ve yandan açılan alt panel.
+// Kenar menü (docs/12, K-82): gruplar, en çok iki seviye, arama (Ctrl+K), daraltma ve ikonun yanında açılan liste.
 import { ChartLine, ChevronDown, ChevronRight, Lock, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { NavLink, useNavigate } from "react-router";
@@ -8,7 +8,8 @@ import { tr } from "../i18n/tr";
 import type { userPrefs } from "../prefs";
 import { useAuth } from "../auth/AuthContext";
 import { can } from "../auth/permissions";
-import { childrenOf, GROUPS, type GroupId, HOME, SCREENS, type Screen, screensInGroup } from "../screens/catalog";
+import { childrenOf, GROUPS, type Group, type GroupId, HOME, SCREENS, type Screen, screensInGroup } from "../screens/catalog";
+import { useFloating } from "../ui/popover";
 
 interface Props {
   collapsed: boolean;
@@ -31,12 +32,19 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
     if (searchTick) inputRef.current?.focus();
   }, [searchTick]);
 
+  useEffect(() => setFlyout(null), [collapsed]);
+
   const disabled = (s: Screen) => Boolean(s.requiresWorkspace && !workspaceOpen);
   // Rol bazlı görünürlük (K-100): okuma yetkisi olmayan ekran ve içi boş kalan grup menüde yok; arama da yalnız görünenlerde.
   const me = useAuth().me!;
   const visible = (s: Screen) => can(me, s.fn);
   const groups = GROUPS.filter((g) => screensInGroup(g.id).some(visible));
   const results = query.trim() ? SCREENS.filter((s) => visible(s) && fold(s.name).includes(fold(query.trim()))) : [];
+  /** Grupta görünen tek ekran kaldıysa ikon doğrudan ona gider. */
+  const onlyScreen = (id: GroupId) => {
+    const all = screensInGroup(id).filter(visible).flatMap((s) => [s, ...childrenOf(s.no).filter(visible)]);
+    return all.length === 1 ? all[0] : null;
+  };
 
   const toggleGroup = (id: GroupId) => {
     const next = open.includes(id) ? open.filter((g) => g !== id) : [...open, id];
@@ -148,22 +156,10 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
           <ul>
             <li>{item(HOME)}</li>
             {groups.map((g) => {
-              const Icon = g.icon;
-              const name = tr.menu.groups[g.id];
-              return (
-                <li key={g.id} className="sc-group-icon" onMouseEnter={() => setFlyout(g.id)}
-                    onMouseLeave={() => setFlyout(null)} onFocus={() => setFlyout(g.id)}>
-                  <button type="button" className="sc-item" aria-label={name} title={name} aria-haspopup="menu"
-                          aria-expanded={flyout === g.id}>
-                    <Icon aria-hidden="true" />
-                  </button>
-                  {flyout === g.id && (
-                    <div className="sc-flyout" role="menu" aria-label={name}>
-                      <div className="sc-flyout-title">{name}</div>
-                      <FlyoutList group={g.id} disabled={disabled} visible={visible} />
-                    </div>
-                  )}
-                </li>
+              const only = onlyScreen(g.id);
+              return only ? <li key={g.id}>{item(only)}</li> : (
+                <CollapsedGroup key={g.id} group={g} open={flyout === g.id} disabled={disabled} visible={visible}
+                                onOpen={() => setFlyout(g.id)} onClose={() => setFlyout(null)} />
               );
             })}
           </ul>
@@ -189,18 +185,92 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
   );
 }
 
-function FlyoutList({ group, disabled, visible }: {
-  group: GroupId; disabled: (s: Screen) => boolean; visible: (s: Screen) => boolean;
+/** Daraltılmış menüde grup ikonu (docs/12): basınca yanında liste açılır; seçim, dışarı tıklama ve Esc kapatır, menü kapalı kalır. */
+function CollapsedGroup({ group, open, onOpen, onClose, disabled, visible }: {
+  group: Group; open: boolean; onOpen(): void; onClose(): void; disabled: (s: Screen) => boolean; visible: (s: Screen) => boolean;
+}) {
+  const Icon = group.icon;
+  const name = tr.menu.groups[group.id];
+  const rootRef = useRef<HTMLLIElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useFloating(panelRef, buttonRef, open, "side");  // .sc-menu kaydırıldığı için liste sabit konumda açılır
+
+  const dismiss = () => {
+    onClose();
+    buttonRef.current?.focus();
+  };
+
+  useEffect(() => {
+    if (open) panelRef.current?.querySelector<HTMLElement>("a")?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) onClose();
+    };
+    const onEscape = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      onClose();
+      buttonRef.current?.focus();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [open, onClose]);
+
+  const onPanelKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Tab") {
+      dismiss();
+      return;
+    }
+    const items = [...e.currentTarget.querySelectorAll<HTMLElement>("a")];
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    const to = { ArrowDown: at + 1, ArrowUp: at - 1 + items.length, Home: 0, End: items.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    items[to % items.length]?.focus();
+  };
+
+  return (
+    <li ref={rootRef}>
+      <button ref={buttonRef} type="button" className="sc-item" aria-label={name} title={name} aria-haspopup="menu" aria-expanded={open}
+              onClick={() => (open ? onClose() : onOpen())}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" && !open) {
+                  e.preventDefault();
+                  onOpen();
+                }
+              }}>
+        <Icon aria-hidden="true" />
+      </button>
+      {open && (
+        <div ref={panelRef} className="sc-flyout sc-floating" role="menu" aria-label={name} onKeyDown={onPanelKey}>
+          <div className="sc-flyout-title">{name}</div>
+          <FlyoutList group={group.id} disabled={disabled} visible={visible} onPick={dismiss} />
+        </div>
+      )}
+    </li>
+  );
+}
+
+function FlyoutList({ group, disabled, visible, onPick }: {
+  group: GroupId; disabled: (s: Screen) => boolean; visible: (s: Screen) => boolean; onPick(): void;
 }) {
   const row = (s: Screen, sub = false) =>
     disabled(s) ? (
-      <span className={`sc-flyout-item is-disabled${sub ? " is-sub" : ""}`} aria-disabled="true"
+      <span role="menuitem" className={`sc-flyout-item is-disabled${sub ? " is-sub" : ""}`} aria-disabled="true"
             title={tr.menu.needsWorkspace}>
         <span>{s.name}</span>
         <Lock aria-hidden="true" className="sc-lock" data-testid="lock" />
       </span>
     ) : (
-      <NavLink to={s.path} role="menuitem" className={`sc-flyout-item${sub ? " is-sub" : ""}`}>{s.name}</NavLink>
+      <NavLink to={s.path} role="menuitem" className={`sc-flyout-item${sub ? " is-sub" : ""}`} onClick={onPick} end>{s.name}</NavLink>
     );
   return (
     <ul>

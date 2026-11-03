@@ -10,6 +10,7 @@ import { DataTable } from "../table/DataTable";
 import type { Row } from "../table/types";
 import { Alert, Badge, type BadgeTone, Button } from "../ui";
 import { useFloating } from "../ui/popover";
+import { PermissionMatrixDialog } from "./PermissionMatrixDialog";
 import { ActionDialog, AddUserDialog, nameOf, NameDialog, RoleDialog, TemporaryPasswordDialog } from "./UserDialogs";
 import { type ActionState, type TemporaryPassword, type UserAction, type UserDetail, usersApi } from "./usersApi";
 
@@ -101,6 +102,7 @@ function RowMenu({ row, anchor, onClose, onPick }: {
 
 type Shown =
   | { kind: "add" }
+  | { kind: "matrix" }
   | { kind: "password"; result: TemporaryPassword; mode: "created" | "reset" }
   | { kind: UserAction; detail: UserDetail };
 
@@ -123,6 +125,7 @@ export function Users() {
 
   const dialog = () => {
     if (!shown) return null;
+    if (shown.kind === "matrix") return <PermissionMatrixDialog onClose={close} />;
     if (shown.kind === "add") {
       return <AddUserDialog onClose={close} onCreated={(result) => {
         setReloadKey((n) => n + 1);
@@ -176,10 +179,13 @@ export function Users() {
     <section className="sc-page--fill">
       <header className="sc-page-head sc-page-head--row">
         <h1>{T.title}</h1>
-        <Button variant="primary" disabledReason={can(me, 88, "write") ? null : forbiddenReason(88, "write")}
-                onClick={() => setShown({ kind: "add" })}>
-          {T.add}
-        </Button>
+        <div className="sc-page-head-actions">
+          {can(me, 90) && <Button onClick={() => setShown({ kind: "matrix" })}>{tr.matrix.title}</Button>}
+          <Button variant="primary" disabledReason={can(me, 88, "write") ? null : forbiddenReason(88, "write")}
+                  onClick={() => setShown({ kind: "add" })}>
+            {T.add}
+          </Button>
+        </div>
       </header>
       <DataTable list="users" cellRender={CELLS} rowMenu={rowMenu} reloadKey={reloadKey} />
       {menu && (

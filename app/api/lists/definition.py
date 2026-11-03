@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 import sqlalchemy as sa
 
+from db.dictionary import standard_label
 from db.models import metadata
 
 ADDITIONAL = re.compile(r"Additional(Text|Number)\d+$")
@@ -42,6 +43,8 @@ class ListDefinition:
     values: Mapping[str, list[str]] = field(default_factory=dict)
     # Rolün görebildiği satırlar (K-101; ör. System owner hesapları): koşul ya da None (hepsi). Rol bilinmiyorsa None gelir.
     row_scope: Callable[[str | None], sa.ColumnElement | None] | None = None
+    # Satır işlemi için her satırda dönen alanlar (ör. bileşik anahtar; K-104), görünmeseler de.
+    key_fields: tuple[str, ...] = ()
 
     @property
     def sa_table(self) -> sa.FromClause:
@@ -50,6 +53,17 @@ class ListDefinition:
     @property
     def table_name(self) -> str:
         return self.table.split(".", 1)[1]
+
+
+def _info(col: sa.ColumnElement) -> dict:
+    """Alt sorgudaki hesaplı kolonda info yoktur (etiket ve değerler liste tanımından gelir)."""
+    return getattr(col, "info", None) or {}
+
+
+def field_title(defn: ListDefinition, field: str) -> str:
+    """Listede artık olmayan alanın okunur adı: ek alanda "Ek metin alanı 1", tablo kolonuysa etiketi, yoksa adı."""
+    col = defn.sa_table.c.get(field)
+    return standard_label(field, _info(col).get("label") if col is not None else None)
 
 
 def column_type(col: sa.Column) -> str:
@@ -68,7 +82,7 @@ def column_type(col: sa.Column) -> str:
 
 
 def col_values(defn: ListDefinition, col: sa.Column) -> list[str] | None:
-    return defn.values.get(col.name) or col.info.get("values")
+    return defn.values.get(col.name) or _info(col).get("values")
 
 
 def filter_type(defn: ListDefinition, col: sa.Column) -> str:
@@ -84,7 +98,7 @@ def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
     out = []
     for name in defn.fields:
         col = table.c[name]
-        label = labels.get(name) or defn.labels.get(name) or col.info.get("label")
+        label = labels.get(name) or defn.labels.get(name) or _info(col).get("label")
         if not label or (ADDITIONAL.match(name) and name not in labels):
             continue
         kind = column_type(col)

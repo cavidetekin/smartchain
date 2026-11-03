@@ -39,7 +39,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 2.3 Kullanıcılar ekranı (22) · kullanıcı yönetimi (88) · kullanıcının yazı boyutu tercihinin saklanması (U-23) · kurulumda ilk hesap: install.ps1 sonunda tek System owner hesabı geçici şifreyle açılır · K-101, K-102
 - [x] 2.3b Testler ayrı veritabanında (2.3 demosundan sonra, 2.4'ten önce): bütün veritabanı testleri `Smartchain_test`'te koşar; geliştirme veritabanına hiçbir test yazmaz ya da silmez; sentetik veri test veritabanına kurulur; CLAUDE.md'deki "Testler geliştirme veritabanına yıkıcı işlem yapamaz" kuralı bu adım bitince tam karşılanır · K-103
 - [x] 2.3c Arayüz metinlerinin sadeleştirilmesi (2.3b'den sonra, 2.4'ten önce): mevcut ekranlardaki "Arayüz metni" kuralına (docs/12) aykırı metinler düzeltilir; her metin için öneri tablo olarak sorulur, seçimi kullanıcı yapar. Geçici yerler ("Bu ekran … adımında gelecek", "… 8.1'de gelir") ve geliştirme sayfaları (`/stil`, `/tablo`) kapsam dışı · docs/12 "Arayüz metni"
-- [ ] 2.4 System owner ayarları (25) · veri sözlüğü ve ek alan etiketleri (96)
+- [x] 2.4 Sistem ayarları (25) · veri sözlüğü ve ek alan etiketleri (96) · K-104, K-105
 - [ ] 2.5 Sistem sağlığı (24) · sağlık (94), iş kuyruğu (93)
 - [ ] 2.6 Denetim izi altyapısı (98)
 
@@ -59,7 +59,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 5 · Yükleme (Load)
 
-- [ ] 5.1 Değer önceliği (ERP, kural, elle, varsayılan) ve ERP değerinin saklanması (FieldValueSource)
+- [ ] 5.1 Değer önceliği (ERP, kural, elle, varsayılan) ve ERP değerinin saklanması (FieldValueSource) · veri sözlüğünde Sınıf, Değer önceliği, Manuel, Senaryo, Zorunlu ve Varsayılan değer düzenlemesi açılır (pencerede pasif öğeler aktifleşir); zorunlu ve `DataRule` kilidi, varsayılan tip denetimi, etki sayısı ve "Şimdi uygula" (K-104)
 - [ ] 5.2 Tam yükleme ve veri versiyonu (05, 07)
 - [ ] 5.3 Kısmi yükleme (06)
 - [ ] 5.4 Aktarım raporu, yükleme geçmişi, ham veri temizliği (08, 09)
@@ -131,6 +131,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 10.10 Anlık etki önizlemesi (62) ve yeniden hesap (46), gerçek motorla
 - [ ] 10.11 Gece akışı ve yeniden çalıştırma (40, 41)
 - [ ] 10.12 Termin sorgusu ve olay senaryoları ekranı (18) · 72–75
+- [ ] 10.13 Motor ayarları (96): çözücü, süre bütçesi, işçi sayısı, eş zamanlı sınır
 
 ## Aşama 11 · Ürünleşme
 

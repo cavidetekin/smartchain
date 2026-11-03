@@ -96,8 +96,8 @@ export const SCREENS: Screen[] = [
     description: "API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması." },
   { no: "24", fn: 94, name: "Sistem sağlığı", path: "/yonetim/sistem-sagligi", group: "yonetim", step: "2.5", icon: HeartPulse,
     description: "Son çalışmalar, iş kuyruğu, hatalar, çözüm süreleri; destek paketi." },
-  { no: "25", fn: 96, name: "System owner", path: "/yonetim/system-owner", group: "yonetim", step: "2.4", icon: KeyRound,
-    description: "Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı), lisans." },
+  { no: "25", fn: 96, name: "Sistem ayarları", path: "/yonetim/sistem-ayarlari", group: "yonetim", step: "2.4", icon: KeyRound,
+    description: "Veri sözlüğü, şifre ve oturum ayarları, sürüm." },
 ];
 
 export const HOME = SCREENS[0];

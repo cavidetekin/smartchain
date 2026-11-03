@@ -145,7 +145,7 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
   });
 
   it("artık olmayan alan için uyarı gösterilir", async () => {
-    const warned = savedView(9, "Eski", {}, { warnings: ["'OldField' alanı artık listede yok; görünümden çıkarıldı."] });
+    const warned = savedView(9, "Eski", {}, { warnings: ["'OldField' artık listede yok; görünümden çıkarıldı."] });
     await openTable({ views: { views: [warned], default_view_id: 9 } });
     expect(screen.getByText(/OldField/)).toBeInTheDocument();
   });

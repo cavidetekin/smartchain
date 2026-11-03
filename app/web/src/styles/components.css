@@ -298,7 +298,10 @@
 .sc-dialog-message { margin: 0; }
 .sc-dialog-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-2); }
 .sc-dialog--wide { width: min(46rem, calc(100vw - 2rem)); }
+.sc-dialog--xwide { width: min(60rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); }
+.sc-dialog--xwide .sc-dialog-body { min-height: 0; overflow: auto; }
 .sc-dialog-subtitle { margin: var(--space-1) 0 0; color: var(--text-muted); }
+.sc-dialog-subtitle-line { display: block; margin-top: var(--space-1); }
 
 /* Açılır öğelerin ortak yerleşimi (ui/popover useFloating): ekranda sabit konum, görünür alana sığar */
 .sc-floating { position: fixed; z-index: 50; }
@@ -442,3 +445,18 @@
 .sc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 .sc-temp-password { display: flex; gap: var(--space-2); }
 .sc-temp-password .sc-input { flex: 1; min-width: 0; letter-spacing: 0.05em; }
+/* Sistem ayarları ve yetki matrisi (2.4; K-100, K-104, K-105) */
+.sc-page-head-actions { display: flex; gap: var(--space-2); }
+.sc-section-switch { margin-bottom: var(--space-3); }
+.sc-settings-form { display: flex; flex-direction: column; gap: var(--space-4); width: min(36rem, 100%); min-height: 0; overflow: auto; }
+.sc-settings-form .sc-field-rows { --field-row-label: 17rem; }
+.sc-settings-form .sc-input--number { width: 6rem; }
+/* Tablo düzeninde form: solda alan adı, sağda değer, satırlar ince çizgiyle ayrılır (alan penceresi; K-104). */
+.sc-field-rows { --field-row-label: 11rem; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.sc-field-rows > .sc-field, .sc-field-rows > .sc-check { display: grid; grid-template-columns: var(--field-row-label) minmax(0, 1fr); align-items: center;
+  gap: var(--space-1) var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
+.sc-field-rows > .sc-field > :not(label) { grid-column: 2; }
+.sc-field-rows .sc-field-label, .sc-field-rows > .sc-check > span { order: -1; color: var(--text-muted); font-size: var(--fs-base); }
+.sc-matrix { width: 100%; border-collapse: collapse; }
+.sc-matrix th, .sc-matrix td { padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--line); text-align: left; font-weight: var(--fw-regular); white-space: nowrap; }
+.sc-matrix thead th { color: var(--text-muted); font-size: var(--fs-sm); }
