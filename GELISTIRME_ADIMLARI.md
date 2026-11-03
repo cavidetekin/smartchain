@@ -97,7 +97,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [ ] 8.0 Plan fikstürü: sentetik veri için elle hazırlanmış plan (planlı sipariş, doluluk, karşılama, pegging, uyarı, metrik)
 - [ ] 8.1 Senaryolar (08) · karşılaştırma (42)
-- [ ] 8.2 Çalışma (09) · açma, iz, geri alma, yeniden hesap düğmesi (sahte motorla), eş zamanlı sınır, bildirim, kapatma (43–49)
+- [ ] 8.2 Çalışma (09) · açma, iz, geri alma, yeniden hesap düğmesi (sahte motorla), eş zamanlı sınır, bildirim, kapatma (43–49) · önce A-37 (değişiklik etkisi ve yeniden hesap) karara bağlanır
 - [ ] 8.3 Kaynak doluluk raporu (10)
 - [ ] 8.4 Ürün bazlı planlama (11) · 50, 51
 - [ ] 8.5 Kaynak bazlı planlama (12) · 52–55
@@ -167,4 +167,5 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 
 ## Açık konular
 
+- **A-37 · Değişiklik etkisi ve yeniden hesap yönetimi.** Bir girdi değişince hangi sonuçların yenileneceği: türetilmiş hesap ve göstergeler anında, plan motorla; bağımlılık haritası ve girdi damgası. 8.2'den önce karara bağlanır (docs/00).
 - **A-34 · Aktarım filtresinin yöntemi.** Kapsam filtresi (pasif malzeme, kapalı sipariş, başka lokasyon gibi) nasıl tanımlanacak? Değişen kayıtlar K-40 ve A-23'e, hatalı satırların ayıklanması 26. adımdaki hata yönetimine bağlı.
