@@ -8,6 +8,7 @@ SQL şifresi komut satırında değil, SMARTCHAIN_INSTALL_SQL_PASSWORD ortam de�
 """
 import argparse
 import os
+import re
 import struct
 import sys
 from pathlib import Path
@@ -56,8 +57,21 @@ def _connect(odbc: str):
     return pyodbc.connect(odbc, autocommit=True, timeout=15)
 
 
+def refuse_in_tests(database: str) -> None:
+    """Testler geliştirme veritabanına yıkıcı işlem yapamaz (CLAUDE.md): test sırasında adı _test ile bitmeyen veritabanı
+    bağlanmadan reddedilir. Kurulum ve kaldırma etkilenmez; PYTEST_CURRENT_TEST'i yalnız pytest koyar."""
+    if "PYTEST_CURRENT_TEST" in os.environ and not database.lower().endswith("_test"):
+        raise RuntimeError(f"Test sırasında veritabanının adı _test ile bitmeli; '{database}' reddedildi.")
+
+
+def _database_of(odbc: str) -> str:
+    found = re.search(r"(?:^|;)DATABASE=([^;]*)", odbc)
+    return found.group(1) if found else ""
+
+
 def ensure_database(master_odbc: str, database: str) -> bool:
     """Veritabanı yoksa bizim collation'la açar. Açtıysa True."""
+    refuse_in_tests(database)
     with _connect(master_odbc) as conn:
         if conn.execute("SELECT DB_ID(?)", database).fetchone()[0] is not None:
             return False
@@ -67,6 +81,7 @@ def ensure_database(master_odbc: str, database: str) -> bool:
 
 def ensure_service_logins(master_odbc: str, db_odbc: str, sids: list[str]) -> list[str]:
     """Servis hesaplarına login ve veritabanı kullanıcısı (şimdilik db_owner). Ad, SID'den sunucunun dilinde çözülür."""
+    refuse_in_tests(_database_of(db_odbc))
     names = []
     with _connect(master_odbc) as master:
         for sid in sids:
@@ -90,6 +105,7 @@ def ensure_service_logins(master_odbc: str, db_odbc: str, sids: list[str]) -> li
 
 def migrate(root: Path, db_odbc: str) -> None:
     """alembic upgrade head (db/migrations); env.py bağlantıyı SMARTCHAIN_DB_URL'den alır."""
+    refuse_in_tests(_database_of(db_odbc))
     from alembic import command
     from alembic.config import Config
     os.environ["SMARTCHAIN_DB_URL"] = sqlalchemy_url(db_odbc)
@@ -98,15 +114,34 @@ def migrate(root: Path, db_odbc: str) -> None:
 
 
 def drop_database(master_odbc: str, database: str) -> None:
+    refuse_in_tests(database)
     with _connect(master_odbc) as conn:
         if conn.execute("SELECT DB_ID(?)", database).fetchone()[0] is not None:
             conn.execute(f"ALTER DATABASE {quote_name(database)} SET SINGLE_USER WITH ROLLBACK IMMEDIATE")
             conn.execute(f"DROP DATABASE {quote_name(database)}")
 
 
+def first_account(root: Path, db_odbc: str, reset: bool) -> tuple[str, str] | None:
+    """İlk hesap (K-102): System owner yoksa açar; varsa dokunmaz (reset: yeni geçici şifre). Commit'ten sonra döner."""
+    refuse_in_tests(_database_of(db_odbc))
+    sys.path.insert(0, str(root))
+    import sqlalchemy as sa
+    from sqlalchemy.orm import Session
+
+    from app.api.services.users import first_account as create
+
+    engine = sa.create_engine(sqlalchemy_url(db_odbc))
+    try:
+        with Session(engine) as session:
+            return create(session, reset=reset)
+    finally:
+        engine.dispose()
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Smartchain kurulum: veritabanı adımı")
-    p.add_argument("command", choices=["url", "setup", "drop"])
+    p.add_argument("command", choices=["url", "setup", "drop", "first-account"])
+    p.add_argument("--reset", action="store_true", help="first-account: System owner hesabına yeni geçici şifre (K-102)")
     p.add_argument("--instance", required=True)
     p.add_argument("--database", default="Smartchain")
     p.add_argument("--encrypt", default="yes", choices=ENCRYPT_VALUES)
@@ -132,6 +167,10 @@ def main(argv: list[str] | None = None) -> int:
         sys.path.insert(0, a.root)
         migrate(Path(a.root), db_odbc)
         print("Geçişler tamam (alembic upgrade head)")
+    elif a.command == "first-account":
+        created = first_account(Path(a.root), db_odbc, a.reset)
+        # Şifre yalnız bu satırda, commit'ten sonra; install.ps1 loga yazmadan gösterir.
+        print(f"FIRST_ACCOUNT {created[0]} {created[1]}" if created else "FIRST_ACCOUNT_EXISTS")
     elif a.command == "drop":
         drop_database(master_odbc, a.database)
         print(f"Veritabanı {a.database} silindi")

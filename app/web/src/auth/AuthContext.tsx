@@ -3,7 +3,7 @@
 // paylaşır: bir sekmede çıkılınca hepsi çıkar.
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { AUTH_EVENT, type AuthEventDetail, setKnownRole } from "../api/client";
+import { AUTH_EVENT, type AuthEventDetail, emitNotice, setKnownRole } from "../api/client";
 import { tr } from "../i18n/tr";
 import { authApi, type Me } from "./authApi";
 
@@ -48,9 +48,11 @@ export function AuthProvider({ children, initialMe }: { children: ReactNode; ini
   const [notice, setNotice] = useState<string | null>(null);
   const [channel] = useState(openChannel);
   const statusRef = useRef(status);
+  const roleRef = useRef(me?.role ?? null);
   useEffect(() => setKnownRole(me?.role ?? null), [me]);  // rol değişikliği X-Smartchain-Role ile fark edilir
   useEffect(() => {
     statusRef.current = status;
+    roleRef.current = me?.role ?? null;
   });
 
   const drop = useCallback((text: string | null) => {
@@ -62,6 +64,7 @@ export function AuthProvider({ children, initialMe }: { children: ReactNode; ini
   const refresh = useCallback(async () => {
     try {
       const next = await authApi.me();
+      if (roleRef.current && roleRef.current !== next.role) emitNotice(tr.authz.roleChanged(next.role));  // fonksiyon 88
       setMe(next);
       setStatus("ready");
     } catch {

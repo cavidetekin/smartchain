@@ -83,12 +83,14 @@ def relative_range(value: str, today: date) -> tuple[date, date]:
 class Builder:
     """Bir liste tanımı ve görünür kolonlarıyla sorgu parçaları kurar."""
 
-    def __init__(self, defn: ListDefinition, labels: dict[str, str], version: int, today: date):
+    def __init__(self, defn: ListDefinition, labels: dict[str, str], version: int | None, today: date,
+                 role: str | None = None):
         self.defn = defn
         self.table = defn.sa_table
         self.columns = {c["field"]: c for c in columns(defn, labels)}
         self.version = version
         self.today = today
+        self.scope = defn.row_scope(role) if defn.row_scope else None
 
     # --- doğrulama -----------------------------------------------------------------------------------------
     def _col(self, name: str, where: str, problems: list[dict]) -> sa.Column | None:
@@ -97,9 +99,13 @@ class Builder:
             return None
         return self.table.c[name]
 
-    def version_clause(self) -> sa.ColumnElement:
-        t, v = self.table, self.version
-        return sa.and_(t.c.VersionFrom <= v, sa.or_(t.c.VersionTo.is_(None), t.c.VersionTo >= v))
+    def base_clause(self) -> sa.ColumnElement:
+        """Her sorgunun koşulu: sürüm (sürümlü listede) ve rolün görebildiği satırlar (row_scope)."""
+        parts = [] if self.scope is None else [self.scope]
+        if self.defn.versioned:
+            t, v = self.table, self.version
+            parts.append(sa.and_(t.c.VersionFrom <= v, sa.or_(t.c.VersionTo.is_(None), t.c.VersionTo >= v)))
+        return sa.and_(*parts) if parts else sa.true()
 
     def select_columns(self, fields: list[str] | None) -> list[sa.Column]:
         problems: list[dict] = []
@@ -334,13 +340,13 @@ class Builder:
         q = sa.select(*cols)
         if self.defn.unit_field:  # satırın birimi (K-88): ondalığı serviste UnitOfMeasure'dan eklenir
             q = q.add_columns(self.table.c[self.defn.unit_field].label(UNIT))
-        return q.where(self.version_clause(), *where).order_by(*order).offset(req.offset).limit(limit)
+        return q.where(self.base_clause(), *where).order_by(*order).offset(req.offset).limit(limit)
 
     def rules_by_id_query(self, ids: list[int], rules: list[RuleSpec]) -> sa.Select:
         """Parçanın satırlarında kurallar (K-95): satır sorgusu kurallı da kuralsız da aynı kalır (aynı plan);
         kurallar dönen Id'lerde ayrı küçük sorguyla hesaplanır. Tek sorguda SQL Server CASE'leri sıralamadan önce
         bütün satırlarda hesaplıyordu (50.000 satırda ~2–3 kat)."""
-        return sa.select(self.table.c.Id, *self.rule_columns(rules)).where(self.version_clause(),
+        return sa.select(self.table.c.Id, *self.rule_columns(rules)).where(self.base_clause(),
                                                                             self.table.c.Id.in_(ids))
 
     def export_query(self, fields: list[str], sort: list[SortItem], filters: list[FilterItem],
@@ -367,17 +373,17 @@ class Builder:
             sel.append(self.table.c[self.defn.unit_field].label(UNIT))
         sel += self.rule_columns(list(rules))
         order += self.order_by(sort)
-        return (sa.select(*sel).where(self.version_clause(), *where).order_by(*order)
+        return (sa.select(*sel).where(self.base_clause(), *where).order_by(*order)
                 .with_statement_hint(PARALLEL_HINT, "mssql"))
 
     def total_query(self) -> sa.Select:
         """Filtresiz sayı (güncel versiyondaki bütün kayıtlar)."""
-        return sa.select(sa.func.count()).select_from(self.table).where(self.version_clause())
+        return sa.select(sa.func.count()).select_from(self.table).where(self.base_clause())
 
     def filtered_query(self, filters: list[FilterItem], group_key: list[GroupKeyItem] = ()) -> sa.Select:
         """Filtreli sayı (grubun satırlarında grup içi); filtre yoksa sorulmaz (toplamla aynı)."""
         where = self.where(filters) + self.group_key_clauses(list(group_key))
-        return sa.select(sa.func.count()).select_from(self.table).where(self.version_clause(), *where)
+        return sa.select(sa.func.count()).select_from(self.table).where(self.base_clause(), *where)
 
     def values_query(self, field_name: str, search: str, filters: list[FilterItem], limit: int = 100) -> sa.Select:
         problems: list[dict] = []
@@ -391,7 +397,7 @@ class Builder:
             where.append(turkish_like(col, "%" + like_escape(search.strip()) + "%"))
         g = self.group_expr(col)
         inner = (sa.select(g.label("value"), sa.func.count().label("count"))
-                 .where(self.version_clause(), *where).group_by(g).subquery())
+                 .where(self.base_clause(), *where).group_by(g).subquery())
         v = inner.c.value
         order = [sa.case((v.is_(None), 0), else_=1), turkish(v) if column_type(col) == "text" else v]
         return sa.select(inner).order_by(*order).limit(limit + 1)  # boş (U-13) başta, sonra ilk 100 değer
@@ -418,7 +424,7 @@ class Builder:
             unit = self.table.c[self.defn.unit_field]
             keys.append(unit.label("u"))
             grouping.append(unit)
-        inner = (sa.select(*keys, *measures).where(self.version_clause(), *where).group_by(*grouping).subquery())
+        inner = (sa.select(*keys, *measures).where(self.base_clause(), *where).group_by(*grouping).subquery())
         dirs = {s.field: s.dir for s in sort}
         order = []
         for i, c in enumerate(cols):

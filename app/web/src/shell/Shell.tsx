@@ -2,10 +2,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router";
 
-import type { Job } from "../api/client";
+import { emitNotice, type Job } from "../api/client";
+import { authApi } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
 import { IdleWatch } from "../auth/IdleWatch";
-import { applyFontSize, type FontSize, userPrefs } from "../prefs";
+import { tr } from "../i18n/tr";
+import { applyFontSize, DEFAULT_FONT_SIZE, type FontSize, userPrefs, validFontSize } from "../prefs";
 import { ContextBar } from "./ContextBar";
 import { type ExportItem, ExportToasts } from "./ExportToasts";
 import { ForbiddenNotice } from "./ForbiddenNotice";
@@ -18,13 +20,25 @@ export function Shell() {
   const userId = me.id;
   const prefs = useMemo(() => userPrefs(userId), [userId]);
   const [collapsed, setCollapsed] = useState(prefs.collapsed());
-  const [fontSize, setFontSize] = useState<FontSize>(prefs.fontSize());
+  // U-23: kullanıcı kaydından; henüz seçilmediyse tarayıcıdaki eski değer (aşağıda bir kez sunucuya taşınır).
+  const [fontSize, setFontSize] = useState<FontSize>(validFontSize(me.font_size) ?? prefs.legacyFontSize() ?? DEFAULT_FONT_SIZE);
   const [searchTick, setSearchTick] = useState(0);
   const [exports, setExports] = useState<ExportItem[]>([]);
   // Çalışma açma 8.2'de gelir; o zamana kadar çalışmanın ekranları kapalıdır (K-43).
   const workspaceOpen = false;
 
   useEffect(() => applyFontSize(fontSize), [fontSize]);
+  useEffect(() => () => applyFontSize(DEFAULT_FONT_SIZE), []);  // çıkışta giriş sayfası önceki kullanıcının boyutuyla açılmaz
+  useEffect(() => {
+    const saved = validFontSize(me.font_size);
+    if (saved) setFontSize(saved);  // ör. başka bilgisayarda değişti, me yenilendi
+  }, [me.font_size]);
+  useEffect(() => {
+    const legacy = prefs.legacyFontSize();
+    if (legacy === null) return;
+    if (validFontSize(me.font_size)) prefs.clearLegacyFontSize();
+    else authApi.setFontSize(legacy).then(() => prefs.clearLegacyFontSize()).catch(() => undefined);  // sonraki açılışta yeniden denenir
+  }, [me.font_size, prefs]);
 
   // Arka plandaki Excel aktarımları (K-91): iş göstergesinin aldığı iş mesajlarıyla izlenir.
   const trackExport = useCallback((e: TrackedExport) => setExports((x) => [...x, e]), []);
@@ -54,7 +68,7 @@ export function Shell() {
 
   const changeFontSize = (size: FontSize) => {
     setFontSize(size);
-    prefs.setFontSize(size);
+    authApi.setFontSize(size).catch(() => emitNotice(tr.user.fontSizeNotSaved));
   };
 
   return (

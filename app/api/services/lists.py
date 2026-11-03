@@ -43,11 +43,14 @@ def _run(session: Session | None, work):
         raise AppError("database_unavailable", DB_DOWN, 503) from exc
 
 
-def _builder(session: Session, defn: ListDefinition) -> Builder:
+def _builder(session: Session, defn: ListDefinition, role: str | None = None) -> Builder:
+    """role: oturumdaki rol (row_scope); verilmezse en dar kapsam."""
+    if not defn.versioned:
+        return Builder(defn, repo.read_labels(session, defn.table_name), None, today(), role)
     current = data_versions.read_current(session)
     if current is None:
         raise AppError("no_data_version", "Henüz veri yüklenmedi.", 404)
-    return Builder(defn, repo.read_labels(session, defn.table_name), current["Id"], today())
+    return Builder(defn, repo.read_labels(session, defn.table_name), current["Id"], today(), role)
 
 
 def columns(session: Session | None, defn: ListDefinition) -> dict:
@@ -61,9 +64,9 @@ def columns(session: Session | None, defn: ListDefinition) -> dict:
     return _run(session, work)
 
 
-def query(session: Session | None, defn: ListDefinition, req: QueryRequest) -> dict:
+def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role: str | None = None) -> dict:
     def work():
-        b = _builder(session, defn)
+        b = _builder(session, defn, role)
         rows_q = b.rows_query(req, repo.read_chunk_size(session))
         rules_valid = b.rule_columns(req.rules)  # doğrulama (422) satırlar okunmadan
         rows = [{k: _json(v) for k, v in r.items()} for r in repo.fetch_rows(session, rows_q)]
@@ -86,18 +89,18 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest) -> d
     return _run(session, work)
 
 
-def values(session: Session | None, defn: ListDefinition, req: ValuesRequest) -> list[dict]:
+def values(session: Session | None, defn: ListDefinition, req: ValuesRequest, role: str | None = None) -> list[dict]:
     def work():
-        b = _builder(session, defn)
+        b = _builder(session, defn, role)
         rows = repo.fetch_rows(session, b.values_query(req.field, req.search, req.filters))
         return [{"value": _json(r["value"]), "count": int(r["count"])} for r in rows]
     return _run(session, work)
 
 
-def groups(session: Session | None, defn: ListDefinition, req: GroupsRequest) -> dict:
+def groups(session: Session | None, defn: ListDefinition, req: GroupsRequest, role: str | None = None) -> dict:
     """Grup ağacı, satır sayıları ve ara toplamlar (K-90)."""
     def work():
-        b = _builder(session, defn)
+        b = _builder(session, defn, role)
         max_groups = repo.read_max_groups(session)
         specs = b.aggregate_specs(req.fields, req.aggregates)
         # birim gizli düzey olabilir: satır sayısı yaprak grup sayısından fazla olabilir; üst sınır geniş tutulur

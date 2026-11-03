@@ -6436,6 +6436,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Açık çalışmalar:** Workspace Kapatılan kullanıcının yayınlanmamış çalışmaları gece silinir
 - **Menü ve buton görünürlüğü:** Arayüz Rolün bir sonraki sayfa yüklemesinde
 - **ÖRNEK:** Burak D. End user olarak açılır (lisans 12 / 12 dolar). Geçici şifre bir kez gösterilir; Burak ilk girişte şifresini değiştirir. Okan Y. kapatılır, 3 uyarısı Mert'e devredilir.
+- **Uygulama (2.3, K-101):** Kurallar K-101'de ayrıntılıdır. Lisans sınırı ve sayacı, uyarı devri ve açık çalışma satırları bağlı oldukları adımlarda gelir; o zamana kadar pencerelerde görünmez (GELISTIRME "Sonraya bırakılanlar"). Rol değişikliği menüye bir sonraki istekte yansır (K-100); bildirim, kullanıcının açık ekranında geçici bildirimdir. Mockup'taki "Birim (bilgi)" alanı AppUser'da yoktur, uygulanmaz.
+- **System owner gizli (2.3, K-101):** System owner hesapları Kullanıcılar listesinde, Excel'inde ve `GET /api/users/{id}`'de yalnız System owner'a görünür; Admin için yokmuş gibidir (listede yok, adresle istenirse 404). Admin'in rol listesinde System owner yoktur. "Son aktif Admin" sayımı değişmez. Pencere metinleri "Arayüz metni" kuralına göre sadeleşti (docs/12); mockup'lardaki ilk giriş adımları, teslim önerisi, denetim satırı, etki listesi ve kapalı ağ notu uygulanmaz.
 
 ### 88 · Kullanıcı yönetimi · Kullanıcı ekleme
 <sub>24. Ekranlar ve fonksiyonlar · F88 · K Yönetim ve sistem · Mockup 1/3</sub>

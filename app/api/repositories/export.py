@@ -22,6 +22,10 @@ def user_name(session: Session, user_id: int) -> str | None:
     return row[0] if row else None
 
 
+def user_role(session: Session, user_id: int) -> str | None:
+    return session.execute(sa.select(USER.c.Role).where(USER.c.Id == user_id)).scalar_one_or_none()
+
+
 def write_audit(session: Session, user_id: int, list_name: str, file_name: str, details: dict) -> None:
     """İz (fonksiyon 87): commit çağırana bırakılır; dosya ancak iz yazılınca verilir."""
     audit.write_audit(session, ACTION, user_id, list_name, file_name, details)

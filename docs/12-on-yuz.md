@@ -75,7 +75,7 @@ Daraltılmış menü ve yandan açılan alt panel aynı renkleri kullanır.
 - **Metinler:** `src/i18n/tr.ts`; sayı ve tarih biçimi `src/format.ts` (U-19).
 - **İkonlar ve fontlar:** Lucide (ISC); Instrument Sans ve Inter (OFL-1.1) `@fontsource` paketlerinden derlemeye gömülür. Dış adres yoktur; `tests/test_offline.py` kaynakları ve derlenmiş `dist`'i tarar.
 - **Kullanıcı (K-97):** oturumdan gelir (2.1). Adreslerde kullanıcı Id'si yoktur; iş göstergesi oturumdaki kullanıcının işlerini gösterir. Kişisel tercihlerin tarayıcıdaki anahtarı kullanıcı Id'sine göredir.
-- **Hatırlanan tercihler:** Açık gruplar, menünün daraltılmış hâli ve yazı boyutu (U-23) tarayıcıda tutulur; 2.3'te kullanıcı ayarına taşınır.
+- **Hatırlanan tercihler:** Açık gruplar ve menünün daraltılmış hâli tarayıcıda tutulur. Yazı boyutu (U-23) kullanıcı kaydındadır (`AppUser.FontSize`; 2.3): her bilgisayarda aynı gelir, tarayıcıda eski bir değer varsa bir kez sunucuya taşınır, çıkışta giriş sayfası standart boyuta döner.
 - **Bağlam çubuğu:**
   - **Veri versiyonu:** `GET /api/data-versions/current` → "Veri v35 · 27.10.2026 12:20". Veri yoksa "Veri yüklenmedi"; API cevap vermiyorsa "API'ye ulaşılamıyor"; API veritabanına bağlanamıyorsa (503) "Veritabanına ulaşılamıyor".
   - **İş göstergesi:** `GET /api/jobs` + `WS /api/ws`. Bağlantı koparsa 10 sn'de yeniden bağlanır, arada 30 sn'de bir sorgular (fonksiyon 48).
@@ -240,6 +240,46 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 - **Rol değişikliği:** sunucu her cevapta `X-Smartchain-Role` gönderir; oturumdakinden farklıysa `me` yeniden alınır, menü ve kullanıcı menüsündeki rol değişir; oturum kapanmaz.
 - **İş paneli (fonksiyon 48, 93):** sıradaki işte "İptal" (kendi işi herkese açık). "Herkesin işleri" seçeneği Admin ve System owner'da açıktır, başkasının sıradaki işini de iptal eder; diğer rollerde pasif ve ipuçlu. Herkesin işlerinde işin sahibi yazar.
 
+## Arayüz metni
+
+Bütün ekranlarda geçerlidir (2.3 demosu):
+
+- Tek cümle yetiyorsa tek cümle.
+- Teknik ifade yok ("istek", "oturum sonlanır" gibi).
+- Kendini anlatan etiket yok ("yıkıcı işlem", "onay gerekli" gibi).
+- Öneri ve tavsiye yok.
+- Kullanıcının bilmesi gereken sonucu söyle, mekanizmayı değil.
+
+## Kullanıcılar (2.3, K-101; ekran 22, fonksiyon 88)
+
+Başlık "Kullanıcılar", sağda "+ Kullanıcı ekle"; altında ekranı dolduran ortak tablo (U-22): ad soyad, kullanıcı adı, rol, durum (rozetle), son giriş. Sıralama, filtre, gruplama, görünüm, koşullu biçim ve Excel öteki tablolardaki gibidir. Tablo bileşeninin üç seçeneği bu ekranla geldi: `cellRender` (hücreyi rozet gibi çizer; Excel düz metin kalır), `rowMenu` (sağda sabit "⋯" kolonu; alan paneline, görünüme ve Excel'e girmez), `reloadKey` (işlemden sonra yeniler).
+
+**Satır menüsü:** açılınca kayıt sunucudan okunur (`GET /api/users/{id}`). Rol değiştir · Ad soyad düzelt · Şifre sıfırla · Kilidi aç · Kapat ya da Geri aç. İzin yoksa öğe pasiftir, nedeni ipucunda ve ekran okuyucuda; neden sunucudan gelir.
+
+| Pencere | İçerik |
+|---|---|
+| Kullanıcı ekle | Ad soyad; kullanıcı adı ("Sonradan değiştirilemez.", yazarken küçülür; çakışmada alan altında hata ve tıklanabilir öneri); rol ve altında seçilen rolün kapsamı. System owner seçeneği yalnız System owner'da |
+| Geçici şifre | Başlık "Kullanıcı oluşturuldu" ya da "Şifre sıfırlandı"; alt satır ad soyad · kullanıcı adı · rol. Şifre ve Kopyala (basınca düğmede "Kopyalandı"; HTTPS dışında da çalışır). "Bu şifre bir daha gösterilmez." Tek düğme Kapat; Esc kapatmaz, şifre pencere kapanınca bellekten silinir |
+| Rol değiştir | Alt satır ad soyad · kullanıcı adı; yeni rol ve altında kapsamı; System owner seçilirse "Bu hesap bir daha kapatılamaz, rolü değiştirilemez." |
+| Ad soyad düzelt | Alt satır kullanıcı adı; tek alan |
+| Şifre sıfırla | "<Ad soyad> için yeni geçici şifre üretilecek. Mevcut şifre geçersiz olur." Vazgeç · Sıfırla |
+| Kilidi aç | "<Ad soyad> yeniden giriş yapabilir." Vazgeç · Kilidi aç |
+| Geri aç | "<Ad soyad> yeniden giriş yapabilir. Şifresi değişmez." Vazgeç · Geri aç |
+| Kullanıcıyı kapat | "<Ad soyad> artık giriş yapamaz. Geçmiş kayıtları korunur; hesabı sonra geri açabilirsiniz." Açık oturumu varsa "Açık oturumu kapanır." Kiremit düğme: Vazgeç · Kapat |
+
+**Rol kapsamı metinleri:**
+
+| Rol | Kapsam |
+|---|---|
+| System owner | Bütün yetkiler. |
+| Admin | Key user yetkileri ile kullanıcı ve sistem yönetimi. |
+| Key user | Veri, parametre ve planlama. |
+| End user | Verileri ve raporları görür, Excel'e aktarır; veri değiştiremez. |
+
+**System owner gizli:** Admin bu hesapları listede görmez (K-101); Rol filtresinin değerleri de sunucudan geldiği için System owner çıkmaz.
+
+**Rol değişince:** `me` yenilendiğinde rol farklıysa kabukta geçici bildirim: "Rolünüz Key user olarak değiştirildi."
+
 ## Durum
 
 | Parça | Durum |
@@ -252,4 +292,5 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 | Dışa aktarım: Excel'e aktarım, kapsam penceresi, arka plan ve bildirim | uygulandı (1.5) |
 | Koşullu biçimlendirme: kurallar, palet, okunurluk, ikon, Excel'e taşınma | uygulandı (1.6) |
 | Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |
+| Kullanıcılar ekranı: liste, satır menüsü, pencereler, geçici şifre; yazı boyutu kullanıcı kaydında | uygulandı (2.3) |
 | Yetki: role göre menü, yetkisiz ekran, pasif düğme ipucu, 403 bildirimi, iş panelinde iptal | uygulandı (2.2) |

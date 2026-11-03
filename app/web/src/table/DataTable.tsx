@@ -14,7 +14,7 @@ import {
   ListCollapse, Rows3, UnfoldVertical,
 } from "lucide-react";
 import {
-  type CSSProperties, type DragEvent, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type RefObject,
+  type CSSProperties, type DragEvent, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject,
   useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 
@@ -59,6 +59,15 @@ export const GROUP_INDENT_REM = 1.2308;
 export const GROUP_ARROW_REM = 1.3077;
 /** Klavyeyle genişlik adımı (rem). */
 export const WIDTH_STEP_REM = 0.5;
+
+export type CellRender = Record<string, (value: unknown, row: Row) => ReactNode>;
+export interface RowMenuSpec {
+  label(row: Row): string;
+  onOpen(row: Row, anchor: HTMLElement): void;
+}
+
+/** "⋯" kolonunun genişliği (rem). */
+const ROW_MENU_REM = 2.5;
 
 const features = tableFeatures({
   rowSortingFeature, columnVisibilityFeature, columnOrderingFeature, columnPinningFeature, columnSizingFeature,
@@ -168,7 +177,7 @@ interface CellSpec {
  * (K-95) yalnız onlarda hesaplanır. Her kaydırmada görünen bütün satırları yeniden çizmek, özellikle kurallar
  * varken ve geliştirme modunda tabloyu yavaşlatıyordu (1.6 ölçümü, docs/12).
  */
-const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText }: {
+const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText, cellRender, rowMenu }: {
   index: number;
   row: Row | undefined;
   cells: CellSpec[];
@@ -176,6 +185,8 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
   onSelect(id: number): void;
   active: FormatRule[];
   ruleText: Map<string, string>;
+  cellRender?: CellRender;
+  rowMenu?: RowMenuSpec;
 }) {
   return (
     <tr aria-rowindex={index + 2} aria-current={selected || undefined}
@@ -186,15 +197,42 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
         return (
           <td key={col.field} className={className} style={cf ? { ...style, ...formatStyle(cf.format) } : style}
               title={cf ? T.ruleCellHint(cf.rules.map((r) => ruleText.get(r.id)).join("; ")) : undefined}>
-            {row ? <RuledValue format={cf?.format} numeric={numeric}>{formatCell(col, row[col.field], row)}</RuledValue> : ""}
+            {row ? (
+              <RuledValue format={cf?.format} numeric={numeric}>
+                {cellRender?.[col.field] ? cellRender[col.field](row[col.field], row) : formatCell(col, row[col.field], row)}
+              </RuledValue>
+            ) : ""}
           </td>
         );
       })}
+      {rowMenu && <RowMenuCell row={row} menu={rowMenu} />}
     </tr>
   );
 });
 
-export function DataTable({ list }: { list: string }) {
+/** Sağda sabit "⋯" hücresi (2.3): alan paneline, görünüme ve Excel'e girmez. */
+function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec }) {
+  return (
+    <td className="sc-table-rowmenu">
+      {row && (
+        <button type="button" className="sc-table-filter-btn" aria-haspopup="menu" aria-label={menu.label(row)}
+                onClick={(e) => { e.stopPropagation(); menu.onOpen(row, e.currentTarget); }}>
+          <Ellipsis aria-hidden="true" />
+        </button>
+      )}
+    </td>
+  );
+}
+
+export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
+  list: string;
+  /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
+  cellRender?: CellRender;
+  /** Satır işlemleri: sağda sabit "⋯" kolonu. */
+  rowMenu?: RowMenuSpec;
+  /** Artınca (işlemden sonra) satırlar yeniden okunur. */
+  reloadKey?: number;
+}) {
   const { fontSize, userId, trackExport } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
   const [chunkSize, setChunkSize] = useState(0);
@@ -298,6 +336,13 @@ export function DataTable({ list }: { list: string }) {
   const aggKey = JSON.stringify(requestAggregates(columns ?? [], s));
   const aggregates = useMemo(() => JSON.parse(aggKey) as Record<string, AggSpec>, [aggKey]);
   const g = useGroupedQuery(list, grouped ? request : null, s.groupBy, chunkSize, aggregates);
+  const shownReload = useRef(reloadKey);
+  const reload = grouped ? g.retry : flat.retry;
+  useEffect(() => {
+    if (shownReload.current === reloadKey) return;
+    shownReload.current = reloadKey;
+    reload();
+  }, [reloadKey, reload]);
   const groupKey = JSON.stringify([s.groupBy, s.filters]);
   useEffect(() => setCollapsed(new Set()), [groupKey]);
   const display: DisplayItem[] | null = useMemo(
@@ -471,7 +516,7 @@ export function DataTable({ list }: { list: string }) {
 
   const renderRow = (key: string | number | bigint, index: number, row: Row | undefined) => (
     <DataRow key={String(key)} index={index} row={row} cells={cellSpecs} selected={Boolean(row) && row!.Id === selectedId}
-             onSelect={setSelectedId} active={active} ruleText={ruleText} />
+             onSelect={setSelectedId} active={active} ruleText={ruleText} cellRender={cellRender} rowMenu={rowMenu} />
   );
   // Grup adı, ara toplamı olmayan baştaki kolonları kaplar (kesilmesin); sabit kolon varsa sabit bölgeyi aşmaz.
   const firstAgg = visible.findIndex((c) => aggregateOf(c, s).fn !== "none");
@@ -514,6 +559,7 @@ export function DataTable({ list }: { list: string }) {
             {aggCell(c, it.node)}
           </td>
         ))}
+        {rowMenu && <td className="sc-table-rowmenu" />}
       </tr>
     );
   };
@@ -595,10 +641,11 @@ export function DataTable({ list }: { list: string }) {
       )}
 
       <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll">
-        <table className="sc-table-grid" aria-rowcount={count + 1} aria-colcount={visible.length}
-               style={{ width: `${visible.reduce((sum, c) => sum + width(c.field), 0)}rem` }}>
+        <table className="sc-table-grid" aria-rowcount={count + 1} aria-colcount={visible.length + (rowMenu ? 1 : 0)}
+               style={{ width: `${visible.reduce((sum, c) => sum + width(c.field), rowMenu ? ROW_MENU_REM : 0)}rem` }}>
           <colgroup>
             {visible.map((c) => <col key={c.field} style={{ width: `${width(c.field)}rem` }} />)}
+            {rowMenu && <col style={{ width: `${ROW_MENU_REM}rem` }} />}
           </colgroup>
           <thead>
             {table.getHeaderGroups().map((group) => (
@@ -646,16 +693,17 @@ export function DataTable({ list }: { list: string }) {
                     </th>
                   );
                 })}
+                {rowMenu && <th scope="col" className="sc-table-rowmenu" aria-label={T.rowActions} />}
               </tr>
             ))}
           </thead>
           <tbody>
             {status === "loading" && (
-              <tr className="sc-table-state"><td colSpan={visible.length}>{T.loading}</td></tr>
+              <tr className="sc-table-state"><td colSpan={visible.length + (rowMenu ? 1 : 0)}>{T.loading}</td></tr>
             )}
             {status === "ready" && filtered === 0 && (
               <tr className="sc-table-state">
-                <td colSpan={visible.length}>
+                <td colSpan={visible.length + (rowMenu ? 1 : 0)}>
                   {T.empty}
                   {s.filters.length > 0 && (
                     <> · <Button size="sm" variant="ghost" onClick={() => update((st) => ({ ...st, filters: [] }))}>{T.clearFilters}</Button></>

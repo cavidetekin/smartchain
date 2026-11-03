@@ -36,7 +36,9 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [x] 2.1 Giriş ve oturum (89) · K-97, K-98
 - [x] 2.2 Rol bazlı yetki altyapısı (90) · K-99, K-100
-- [ ] 2.3 Kullanıcılar ekranı (22) · kullanıcı yönetimi (88) · kullanıcının yazı boyutu tercihinin saklanması (U-23) · kurulumda ilk hesap: install.ps1 sonunda tek System owner hesabı geçici şifreyle açılır
+- [x] 2.3 Kullanıcılar ekranı (22) · kullanıcı yönetimi (88) · kullanıcının yazı boyutu tercihinin saklanması (U-23) · kurulumda ilk hesap: install.ps1 sonunda tek System owner hesabı geçici şifreyle açılır · K-101, K-102
+- [ ] 2.3b Testler ayrı veritabanında (2.3 demosundan sonra, 2.4'ten önce): bütün veritabanı testleri `Smartchain_test`'te koşar; geliştirme veritabanına hiçbir test yazmaz ya da silmez; sentetik veri test veritabanına kurulur; CLAUDE.md'deki "Testler geliştirme veritabanına yıkıcı işlem yapamaz" kuralı bu adım bitince tam karşılanır
+- [ ] 2.3c Arayüz metinlerinin sadeleştirilmesi (2.3b'den sonra, 2.4'ten önce): mevcut ekranlardaki "Arayüz metni" kuralına (docs/12) aykırı metinler düzeltilir; her metin için öneri tablo olarak sorulur, seçimi kullanıcı yapar. Geçici yerler ("Bu ekran … adımında gelecek", "… 8.1'de gelir") ve geliştirme sayfaları (`/stil`, `/tablo`) kapsam dışı
 - [ ] 2.4 System owner ayarları (25) · veri sözlüğü ve ek alan etiketleri (96)
 - [ ] 2.5 Sistem sağlığı (24) · sağlık (94), iş kuyruğu (93)
 - [ ] 2.6 Denetim izi altyapısı (98)
@@ -147,7 +149,7 @@ Adımı kapanmış ama elle denenmesi sonraya bırakılmış işler.
 
 - [ ] 1.5 · Arka plan aktarımı: eşiği geçici düşür (`INSERT INTO adm.SystemSetting (SettingKey, Value) VALUES ('ExportSyncMaxRows', '50')`), /tablo'da "Hazırla", iş göstergesi ve "İndir" bildirimi, iş listesinden indirme; sonra ayarı sil (`DELETE FROM adm.SystemSetting WHERE SettingKey = 'ExportSyncMaxRows'`).
 - [ ] 1.5 · Dışa aktarım izi: `SELECT TOP 5 * FROM adm.AuditLog ORDER BY 1 DESC` ile aktarımların "Dışa aktarım" kaydı olarak yazıldığını gör.
-- [ ] 0.6 · Temiz makine (sanal makine) kurulum testi. Not (2.3): install.ps1 sonunda tek System owner hesabı geçici şifreyle açılır; sanal makine turunda bu da denenir. Temiz makinede Excel süresi iki kez ölçülür: antivirüs gerçek zamanlı tarama açıkken ve ürün klasörleri hariç tutulmuşken (`docs/10-kurulum.md`).
+- [ ] 0.6 · Temiz makine (sanal makine) kurulum testi. Not (2.3): install.ps1 sonunda tek System owner hesabı geçici şifreyle açılır; sanal makine turunda bu da denenir. İlk hesabın geçici şifresi install logunda yer almamalı (K-102). Temiz makinede Excel süresi iki kez ölçülür: antivirüs gerçek zamanlı tarama açıkken ve ürün klasörleri hariç tutulmuşken (`docs/10-kurulum.md`).
 - [ ] 1.6 · Excel süresi bu laptopta 0,8–3,2 sn arası dalgalanıyor; sorgular hedefte. Güçlü aday: dosya yazımını tarayan antivirüs (ESET ekrn ~%31). Kapanış 0.6'da.
   - Ölçümler (10.000 satır, ortanca ms; düz / gruplu / 10 kural; hedef 3000): 30.10 10.14: 753 / 869 / 935 · 30.10 11.25: 2588 / 2859 / 3112 · 2.2 kapanışı: 2410 / 2600 / 2910 · 03.11 1. koşu: 2333 / 950 / 953 · 03.11 2. koşu: 786 / 940 / 983 · 03.11 yeniden başlatma sonrası: 1394 / 3163 / 2806.
 
@@ -156,6 +158,8 @@ Adımı kapanmış ama elle denenmesi sonraya bırakılmış işler.
 Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alınır.
 
 - **1.6 Koşullu biçimlendirme:** çoklu koşul (VE/VEYA), renk skalası ve veri çubuğu, grup başlığı ve ara toplam satırlarına kural.
+- **Kullanıcılar (2.3):** lisans kullanıcı sınırı ve sayacı (fonksiyon 88; lisans dosyası 11.3'te gelir, sınır ona bağlı; System owner hesapları lisans kullanıcı sayısına girmez); kapatılan kullanıcının uyarılarının devri (9. aşama); kapatılan kullanıcının açık çalışmalarının devri (çalışma adımları); kapatılan kullanıcının paylaşılan görünümleri kalır, kimse değiştiremez (devir yok); kullanılmayan geçici şifrenin süresi yok.
+- **Kullanıcı e-postası:** kullanıcıya e-posta adresi alanı; geçici şifre kurum içi e-posta sunucusuyla (SMTP, internet gerekmez) gönderilir. "Kapalı ağ, e-posta yok" ifadesi (fonksiyon 88) bu ihtimale göre düzeltilir.
 - **Roller:** Admin'in bir paylaşılan görünümü ya da kural setini herkes veya bir rol için varsayılan yapması (K-89 notu); çalışma devralma.
 - **9.2 Uyarılar:** rolü bozuk oturum kapatılınca Admin'e uyarı düşmesi (fonksiyon 90; 2.2'de yalnız denetim izine "Geçersiz rol" yazılıyor).
 - **Sentetik veri:** kilogram ve metre birimli malzemelere kesirli miktar (güvenlik stoğu, lot) verilmesi (docs/11 açık iş).

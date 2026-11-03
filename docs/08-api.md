@@ -67,9 +67,10 @@ Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz.
 |---|---|
 | `POST /api/auth/login` | `{"user_name", "password"}` → 200 `{"user": …}` ve çerez (cevap `GET /api/auth/me` ile aynı) |
 | `POST /api/auth/logout` | 204; oturum kapanır, çerez silinir, bu oturumun WebSocket'leri 4401 ile kapanır |
-| `GET /api/auth/me` | `{"id", "user_name", "full_name", "role", "permissions": {"10": "read", …}, "must_change_password", "password_change_reason", "idle_seconds_left", "session": {"idle_minutes", "warning_minutes"}, "policy": {"min_length", "require_letter_and_digit", "history_count", "lock_after", "lock_minutes"}}`. Etkinlik sayılmaz |
+| `GET /api/auth/me` | `{"id", "user_name", "full_name", "role", "font_size", "permissions": {"10": "read", …}, "must_change_password", "password_change_reason", "idle_seconds_left", "session": {"idle_minutes", "warning_minutes"}, "policy": {"min_length", "require_letter_and_digit", "history_count", "lock_after", "lock_minutes"}}`. Etkinlik sayılmaz |
 | `POST /api/auth/activity` | Hareketsizlik sayacını sıfırlar → `{"idle_seconds_left"}`. Arayüz yalnız kullanıcı girdisi olduysa, en çok dakikada bir çağırır |
 | `POST /api/auth/password` | `{"current_password", "new_password"}` → 204 |
+| `PUT /api/auth/preferences` | `{"font_size": 12, 13, 14 ya da 16}` → 204; kullanıcının yazı boyutu (U-23), denetim izine yazılmaz |
 
 **Giriş hataları** (gövde hesabın varlığını sızdırmaz; bilinmeyen kullanıcı adı da aynı sayaçla işler, K-98):
 
@@ -114,7 +115,7 @@ Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu doc
 
 | Uç nokta | Fonksiyon · erişim |
 |---|---|
-| `/api/auth/me` · `activity` · `password` · `logout` | 89 · yazma (herkes) |
+| `/api/auth/me` · `activity` · `password` · `preferences` · `logout` | 89 · yazma (herkes) |
 | `GET /api/data-versions/current` | 82 · okuma (bağlam çubuğu; herkes) |
 | `/api/<liste>/columns` · `query` · `groups` · `values` | listenin fonksiyonu · okuma (malzeme: 10) |
 | `/api/<liste>/views…` | listenin fonksiyonu · okuma (K-99: görünüm kaydetmek okuma yetkisiyle); değiştirme ve silmede sahiplik |
@@ -123,10 +124,35 @@ Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu doc
 | `GET /api/jobs/{id}` | kendi işi 48 · okuma; başkasının işi 93 · okuma |
 | `POST /api/jobs/{id}/cancel` | kendi işi 48 · yazma; başkasının işi 93 · yazma |
 | `WS /api/ws` | 48 · okuma (el sıkışmada) |
+| `GET /api/users/{id}` | 88 · okuma |
+| `POST /api/users` · `/api/users/{id}/…` | 88 · yazma; ek kurallar "Kullanıcılar" bölümünde |
+
+## Kullanıcılar (K-101, fonksiyon 88)
+
+Liste `users` adıyla ortak liste sözleşmesini kullanır (`/api/users/columns`, `query`, `groups`, `values`, `views…`, `export`; okuma 88). Alanlar `FullName`, `UserName`, `Role`, `Status` (hesaplı: Aktif, Pasif, Kilitli, İlk giriş bekliyor), `LastLoginAt`.
+
+| Adres | Ne |
+|---|---|
+| `GET /api/users/{id}` | `{"user": {…, "status", "open_sessions"}, "actions": {"role", "name", "reset", "unlock", "close", "reopen": {"allowed", "reason", "required_role"}}, "assignable_roles": […]}`; satır menüsü bununla açılır. System owner hesabı Admin'e 404 |
+| `POST /api/users` | `{"full_name", "user_name", "role"}` → 201 `{"user", "temporary_password"}` |
+| `PUT /api/users/{id}/role` | `{"role"}` → `{"user"}` |
+| `PUT /api/users/{id}/name` | `{"full_name"}` → `{"user"}` |
+| `POST /api/users/{id}/reset-password` | → `{"user", "temporary_password"}`; oturumlar "Şifre değişti" ile kapanır, WebSocket'leri 4401 |
+| `POST /api/users/{id}/unlock` | → `{"user"}` |
+| `POST /api/users/{id}/close` | → `{"user"}`; oturumlar "Kapatıldı" ile kapanır, WebSocket'leri 4401 |
+| `POST /api/users/{id}/reopen` | → `{"user"}`; kilit ve sayaçlar temizlenir, şifre değişmez |
+
+- **System owner gizli:** System owner hesapları yalnız System owner'a görünür. Admin'de liste, sayılar, gruplar, değer listeleri ve Excel (arka plan işi dahil) bu satırları içermez; `/api/users/{id}` ve altındaki uçlar bilinmeyen hesapla aynı 404 `user_not_found` cevabını verir, deneme denetim izine "Yetkisiz istek" yazılır. Kullanıcı adı benzersiz olduğundan yalnız ekleme çakışması (409) adın dolu olduğunu gösterir. Liste tanımında `row_scope` (role göre satır koşulu); rol bilinmiyorsa en dar kapsam.
+- Geçici şifre içeren cevaplarda `Cache-Control: no-store`; şifre yalnız commit başarılıysa döner, hiçbir yere yazılmaz.
+- **Hatalar:** bilinmeyen hesap 404 `user_not_found`; biçim 422 `validation`; kullanıcı adı doluysa 409 `user_name_taken`, `details`: `[{"field": "user_name", "problem": "…", "suggestion": "burak2"}]`; koruma kuralı 409 `user_protected`, `details`: `[{"rule": "last_admin"}]` (`self`, `system_owner`, `last_admin`, `inactive`, `not_locked`, `already_active`, `already_inactive`); System owner yetkisi gereken işlem 403 `forbidden` (gereken rol System owner). Reddedilenler denetim izine "Yetkisiz istek".
+- `GET /api/users/{id}`'nin `actions` alanı ile yazma uçları aynı kuraldan beslenir (`services/users.py`).
+- **Denetim izi:** `UserId` işlemi yapan, `ObjectType` "Kullanıcı", `ObjectKey` hedefin kullanıcı adı; `OldValue` ve `NewValue` JSON, anahtar alan adı. Eylemler: Kullanıcı oluşturuldu, Rol değişikliği, Ad soyad değişikliği, Şifre sıfırlama, Kilit açıldı, Kullanıcı kapatıldı, Kullanıcı geri açıldı.
 
 ## Liste sorgusu (K-87)
 
 Bütün tablolar (ana veri, plan, rapor) aynı sözleşmeyle okunur. Filtre, sıralama ve parça parça yükleme sunucuda yapılır (U-21); ön yüzdeki ortak tablo bileşeni (docs/12) bu sözleşmeyi kullanır. Her liste sunucuda bir liste tanımıdır (`app/api/lists/`): tablo, alanlar ve sırası, varsayılan görünür alanlar, varsayılan sıralama.
+
+**Sürümsüz ve hesaplı liste (2.3):** liste tanımı `versioned=False` ise sürüm koşulu ve veri versiyonu aranmaz (kullanıcı listesi temiz kurulumda da açılır); Excel dosya adında versiyon yoktur, Bilgi sayfasında Kaynak "Güncel kayıtlar" yazar. `source` tablo yerine alt sorgu verir, hesaplı alanlar sıralama, filtre, gruplama ve Excel'de kolon gibi çalışır.
 
 ### Kolonlar · `GET /api/<liste>/columns`
 
@@ -297,9 +323,10 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 ## Testler
 
 - **Sıra (commit zinciri):** `npm run build` → `python -m pytest` → `npm test` → `npx tsc --noEmit`. Build önce: internetsizlik testi (`tests/test_offline.py`) taze derlemeyi tarar.
-- `python -m pytest`: bütün testler, **performans testleri hariç** (`pyproject.toml`: `-m 'not perf'`). Veritabanı testleri (`db` işareti) yerel SQL Server'a bağlanamazsa atlanır.
+- `python -m pytest`: bütün testler, **performans testleri hariç** (`pyproject.toml`: `-m 'not perf'`). Veritabanı testleri (`db` işareti) atlanırsa (SQL Server'a bağlanılamadı, şema eski, sentetik veri yok) koşu başarısız olur; zincir yanlışlıkla geçmiş görünmez. SQL Server olmadan bilerek çalıştırmak için `python -m pytest -m "not db"`.
 - `python -m pytest -m perf`: performans testleri ayrıca çalıştırılır. Büyük veriyi bir işlem içinde üretir, ölçer ve geri alır; her ölçüm birkaç denemenin ortancasıdır (makine yükündeki tek seferlik sıçramalar sonucu bozmasın).
 - Ön yüz: `cd app/web; npm run build; npm test; npx tsc --noEmit`. Test süresi sınırı 15 sn (`vite.config.ts`): dosyalar paralel çalıştığı için yük altında jsdom testleri varsayılan 5 sn'yi aşabilir; tek başına bir test 2 sn'nin altındadır.
+- **Testler geliştirme veritabanına yıkıcı işlem yapamaz** (CLAUDE.md): `installer/setup_db.py`'de silen, açan ya da geçiş çalıştıran işlevler test sırasında (`PYTEST_CURRENT_TEST`) adı `_test` ile bitmeyen veritabanını bağlanmadan reddeder. Kurulum ve kaldırma etkilenmez.
 - Bunların hepsi geçmeden commit ve push yapılmaz (CLAUDE.md).
 
 ## Uç noktalar
@@ -317,6 +344,8 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `query`'de `rules` | Koşullu biçim kuralları: satır başına tutan kurallar (K-95) | uygulandı (1.6) |
 | `WS /api/ws` | Anlık bildirim kanalı (fonksiyon 48). Oturumla açılır; oturum yoksa el sıkışma reddedilir (403). | uygulandı (0.4; oturum 2.1) |
 | `/api/auth/login` · `logout` · `me` · `activity` · `password` | Giriş, çıkış, oturumdaki kullanıcı, etkinlik, şifre değiştirme (K-97, K-98; fonksiyon 89) | uygulandı (2.1) |
+| `PUT /api/auth/preferences` | Yazı boyutu (U-23) | uygulandı (2.3) |
+| `/api/users…` | Kullanıcı listesi ve yönetimi (K-101; fonksiyon 88) | uygulandı (2.3) |
 
 İş eklemek için uç nokta yoktur: işi ilgili fonksiyon (yeniden hesap 46, yükleme…) kendi servisinden `app.jobs.queue.enqueue` ile ekler.
 

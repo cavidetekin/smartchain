@@ -243,8 +243,9 @@ def test_settings_read_config_file(tmp_path, monkeypatch):
 
 @pytest.mark.skipif(os.environ.get("SMARTCHAIN_TEST_INSTALL_DB") != "1",
                     reason="SMARTCHAIN_TEST_INSTALL_DB=1 ile çalışır (geçici veritabanı açar, geçişleri çalıştırır)")
-def test_setup_db_on_local_server():
-    name = "Smartchain_install_test"
+def test_setup_db_on_local_server(monkeypatch):
+    name = "Smartchain_install_test"  # silinir; koruma: setup_db.refuse_in_tests, tests/test_db_guard.py
+    monkeypatch.setenv("SMARTCHAIN_DB_URL", os.environ.get("SMARTCHAIN_DB_URL", ""))  # migrate değiştirir, test sonunda geri gelir
     conn = dict(encrypt="yes", trust_server_certificate=True)
     master = setup_db.odbc_string("localhost", "master", **conn)
     db = setup_db.odbc_string("localhost", name, **conn)
@@ -257,10 +258,40 @@ def test_setup_db_on_local_server():
         assert names and names[0].upper().endswith("\\MSSQLSERVER")
         setup_db.migrate(ROOT, db)
         with setup_db._connect(db) as c:
-            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0005"
+            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0012"
             assert c.execute("SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')").fetchone()[0] == setup_db.COLLATION
+        # İlk hesap (K-102): temiz veritabanında açılır, ikinci çalıştırmada dokunulmaz, --reset yeni şifre verir.
+        user_name, password = setup_db.first_account(ROOT, db, reset=False)
+        assert user_name == "smartchain" and len(password) >= 12
+        assert setup_db.first_account(ROOT, db, reset=False) is None
+        assert setup_db.first_account(ROOT, db, reset=True)[1] != password
+        with setup_db._connect(db) as c:
+            assert c.execute("SELECT COUNT(*) FROM adm.AppUser WHERE Role = N'System owner'").fetchone()[0] == 1
     finally:
         setup_db.drop_database(master, name)
+
+
+def test_first_account_command_prints_password_only_on_its_line(monkeypatch, capsys):
+    args = ["first-account", "--instance", "localhost", "--trust-server-certificate"]
+    monkeypatch.setattr(setup_db, "first_account", lambda root, db, reset: ("smartchain", "Gecici12345a"))
+    assert setup_db.main(args) == 0
+    assert capsys.readouterr().out.strip() == "FIRST_ACCOUNT smartchain Gecici12345a"
+    monkeypatch.setattr(setup_db, "first_account", lambda root, db, reset: None)
+    assert setup_db.main(args) == 0
+    assert capsys.readouterr().out.strip() == "FIRST_ACCOUNT_EXISTS"
+
+
+def test_install_shows_first_password_without_logging_it():
+    """K-102: geçici şifre log dosyasına gitmez; son adımda açılır, kurulum özetinden sonra Write-Host ile gösterilir."""
+    install = (INSTALLER / "install.ps1").read_text(encoding="utf-8-sig")
+    lines = install.splitlines()
+    assert not [l for l in lines if "FirstAccount[2]" in l and "Write-Host" not in l]
+    assert not [l for l in lines if "Write-Log" in l and "FirstAccount[2]" in l]
+    assert "Invoke-Native $Python $a" in install  # çıktı akıtılmaz, değişkene alınır
+    assert install.index("'Sağlık kontrolü'") < install.index("'install-state.json'") < install.index("'İlk hesap'")
+    assert install.index("'İlk hesap'") < install.index("FirstAccount[2]")
+    verify = (INSTALLER / "smoke.py").read_text(encoding="utf-8")
+    assert "check_owner" in verify
 
 
 def test_web_config_serves_single_page_app_and_fonts():
@@ -315,6 +346,7 @@ def test_sql_memory_check_warns_but_never_throws_when_unreachable():
 
 
 @needs_ps
+@pytest.mark.db
 def test_sql_memory_check_reads_local_server():
     """Yerel SQL Server'dan okunan değerler pyodbc ile okunanla aynı; karar aynı eşikle verilir."""
     try:

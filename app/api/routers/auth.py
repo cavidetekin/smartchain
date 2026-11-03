@@ -1,4 +1,6 @@
 """Giriş ve oturum uç noktaları (fonksiyon 89; K-97, K-98)."""
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -25,6 +27,10 @@ class LoginRequest(BaseModel):
 class PasswordRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=MAX_PASSWORD)
     new_password: str = Field(min_length=1, max_length=MAX_PASSWORD)
+
+
+class PreferencesRequest(BaseModel):
+    font_size: Literal[12, 13, 14, 16]  # U-23
 
 
 def _client(request: Request) -> tuple[str | None, str | None]:
@@ -63,6 +69,13 @@ def me(user: CurrentUser = Depends(session_user), session: Session = Depends(get
 @router.post("/activity", summary="Kullanıcı etkinliği: hareketsizlik sayacı sıfırlanır")
 def activity(user: CurrentUser = Depends(session_user), session: Session = Depends(get_session)) -> dict:
     return service.activity(session, user)
+
+
+@router.put("/preferences", status_code=204, summary="Kullanıcının yazı boyutu (U-23)")
+def preferences(body: PreferencesRequest, user: CurrentUser = Depends(session_user),
+                session: Session = Depends(get_session)) -> Response:
+    service.set_font_size(session, user, body.font_size)
+    return Response(status_code=204)
 
 
 @router.post("/password", status_code=204, summary="Şifre değiştir; kullanıcının diğer oturumları kapanır")

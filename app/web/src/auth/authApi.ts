@@ -1,5 +1,5 @@
 // Giriş ve oturum uç noktaları (docs/08 "Oturum ve kimlik"; K-97, K-98).
-import { getJson, postJson } from "../api/client";
+import { getJson, postJson, sendJson } from "../api/client";
 
 export interface PasswordPolicy {
   min_length: number;
@@ -14,6 +14,8 @@ export interface Me {
   user_name: string;
   full_name: string | null;
   role: string;
+  /** Yazı boyutu (U-23), kullanıcı kaydında; boşsa henüz seçilmedi. */
+  font_size: number | null;
   /** Rolün her fonksiyondaki yetki düzeyi (K-100): "10" → "read" … */
   permissions: Record<string, string>;
   must_change_password: boolean;
@@ -32,6 +34,7 @@ export const authApi = {
   activity: () => postJson<{ idle_seconds_left: number }>("/api/auth/activity", {}),
   changePassword: (current_password: string, new_password: string) =>
     postJson<void>("/api/auth/password", { current_password, new_password }),
+  setFontSize: (font_size: number) => sendJson<void>("PUT", "/api/auth/preferences", { font_size }),
 };
 
 /** Sürüm (giriş sayfasının alt satırı); /api/health oturumsuz açıktır. Ulaşılamazsa null. */

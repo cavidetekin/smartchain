@@ -96,7 +96,7 @@ def session_with_user(session: Session, token_hash: bytes) -> dict | None:
     """Oturum, kullanıcısı ve veritabanı saati tek sorguda."""
     q = (sa.select(SESSION.c.Id.label("SessionId"), SESSION.c.UserId, SESSION.c.LastActivityAt, SESSION.c.EndedAt,
                    USER.c.UserName, USER.c.FullName, USER.c.Role, USER.c.IsActive, USER.c.MustChangePassword,
-                   USER.c.PasswordChangeReason, USER.c.PasswordExpiresAt,
+                   USER.c.PasswordChangeReason, USER.c.PasswordExpiresAt, USER.c.FontSize,
                    sa.func.sysutcdatetime().label("Now"))
          .select_from(SESSION.join(USER, USER.c.Id == SESSION.c.UserId))
          .where(SESSION.c.TokenHash == token_hash))

@@ -134,6 +134,20 @@ def check_solver() -> str:
             f"MILP optimal, amaç {r['milp']['objective']:g}")
 
 
+def check_owner() -> str:
+    """En az bir aktif System owner (K-102); hesap açmaz, şifreye dokunmaz."""
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session
+
+    from app.api.db import get_engine
+
+    with Session(get_engine()) as s:
+        count = s.execute(text("SELECT COUNT(*) FROM adm.AppUser WHERE Role = N'System owner' AND IsActive = 1")).scalar_one()
+    if count < 1:
+        raise AssertionError("aktif System owner yok")
+    return f"{count} aktif hesap"
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--base-url", default="http://localhost")
@@ -145,7 +159,8 @@ def main() -> int:
     checks = [("Çözücü (HiGHS)", check_solver)]
     if not a.solver_only:
         checks += [("Sağlık (IIS)", lambda: check_health(a.base_url)),
-                   ("WebSocket (IIS)", lambda: check_websocket(a.base_url))]
+                   ("WebSocket (IIS)", lambda: check_websocket(a.base_url)),
+                   ("İlk hesap (System owner)", check_owner)]
         if not a.skip_engine:
             checks.append(("Motor: deneme plan hesabı", lambda: check_engine(a.engine_timeout)))
     failed = 0

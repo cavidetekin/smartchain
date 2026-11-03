@@ -37,6 +37,28 @@ def client(app):
     return TestClient(app, raise_server_exceptions=False)
 
 
+# --- Atlanan veritabanı testi koşuyu düşürür (docs/08 "Testler"); SQL Server olmadan bilerek: -m "not db" ---
+
+_skipped_db_tests: list[str] = []
+
+
+def pytest_runtest_logreport(report):
+    if report.skipped and "db" in report.keywords:
+        _skipped_db_tests.append(report.nodeid)
+
+
+def pytest_sessionfinish(session):
+    if _skipped_db_tests and session.exitstatus == pytest.ExitCode.OK:
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
+def pytest_terminal_summary(terminalreporter):
+    if _skipped_db_tests:
+        terminalreporter.write_line(
+            f"Veritabanı testleri atlandı ({len(_skipped_db_tests)}): koşu başarısız. SQL Server ve sentetik veriyi denetleyin; "
+            'bilerek veritabanısız çalıştırmak için -m "not db".', red=True)
+
+
 # --- Yerel SQL Server (Smartchain) gerektiren testler (işaret: db) ---
 # Bu testler adm.Job tablosunu her testten önce ve sonra boşaltır; yalnız geliştirme veritabanında çalıştırın.
 

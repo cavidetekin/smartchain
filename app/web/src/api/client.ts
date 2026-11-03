@@ -3,6 +3,8 @@
 export interface ApiErrorDetail {
   field: string;
   problem: string;
+  /** Kullanıcı adı çakışmasında öneri (K-101). */
+  suggestion?: string;
 }
 
 export interface ApiErrorBody {
@@ -28,6 +30,12 @@ export function emitAuth(detail: AuthEventDetail): void {
 /** Yetki reddi (K-100): sunucu 403 forbidden ya da sahiplik reddi (…_not_owner) dönerse kabuk tek yerde bildirir.
  *  Giriş akışının 403'leri (kilit, kapalı hesap, şifre değişikliği, köken) bu olayı yaymaz. */
 export const FORBIDDEN_EVENT = "smartchain:forbidden";
+/** Kabuğun geçici bilgi bildirimi (ör. rol değişti, kullanıcı oluşturuldu). */
+export const NOTICE_EVENT = "smartchain:notice";
+export function emitNotice(message: string): void {
+  window.dispatchEvent(new CustomEvent<string>(NOTICE_EVENT, { detail: message }));
+}
+
 const isForbidden = (code: string) => code === "forbidden" || code.endsWith("_not_owner");
 
 /** Oturumdaki rol (AuthContext koyar). Sunucunun X-Smartchain-Role başlığı farklıysa rol değişmiştir: me yenilenir. */

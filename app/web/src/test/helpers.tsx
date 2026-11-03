@@ -23,7 +23,7 @@ export function permissionsFor(role: string): Record<string, string> {
 
 /** Oturumdaki deneme kullanıcısı (K-97); kabuk testleri bütün menüyü görsün diye System owner. */
 export const ME: Me = {
-  id: 3, user_name: "planlama", full_name: "Mert Planlama", role: "System owner",
+  id: 3, user_name: "planlama", full_name: "Mert Planlama", role: "System owner", font_size: null,
   permissions: permissionsFor("System owner"), must_change_password: false,
   password_change_reason: null, idle_seconds_left: 1800, session: { idle_minutes: 30, warning_minutes: 5 },
   policy: { min_length: 10, require_letter_and_digit: true, history_count: 5, lock_after: 5, lock_minutes: 15 },
@@ -38,6 +38,7 @@ export function mockApi(routes: Routes = {}) {
     "/api/jobs": { body: { jobs: [], counters: {} } },
     "/api/auth/me": { body: ME },
     "/api/auth/activity": { body: { idle_seconds_left: 1800 } },
+    "/api/auth/preferences": { status: 204, body: null },
     "/api/auth/logout": { status: 204, body: null },
     "/api/health": { body: { status: "ok", app_version: "0.15.0" } },
     ...routes,

@@ -52,6 +52,7 @@ class CurrentUser:
     must_change_password: bool
     password_change_reason: str | None
     idle_seconds_left: int
+    font_size: int | None = None  # U-23; boşsa seçilmedi
 
 
 def _require(session: Session | None) -> Session:
@@ -154,7 +155,7 @@ def _login_real(session, policy, now, user, password, address, agent):
     must = bool(values.get("MustChangePassword", user["MustChangePassword"]))
     reason = values.get("PasswordChangeReason", user["PasswordChangeReason"]) if must else None
     return token, CurrentUser(user["Id"], name, user["FullName"], user["Role"], session_id, must,
-                              reason or (REASON_FIRST if must else None), policy.idle_minutes * 60)
+                              reason or (REASON_FIRST if must else None), policy.idle_minutes * 60, user["FontSize"])
 
 
 def _after_failure(session, policy, now, user_id, name, attempts, locked_until, address, agent):
@@ -204,7 +205,7 @@ def authenticate(session: Session | None, token: str | None) -> CurrentUser:
         must = bool(row["MustChangePassword"]) or expired
         reason = (row["PasswordChangeReason"] or REASON_FIRST) if row["MustChangePassword"] else (REASON_EXPIRED if expired else None)
         return CurrentUser(row["UserId"], row["UserName"], row["FullName"], row["Role"], row["SessionId"], must,
-                           reason, left)
+                           reason, left, row["FontSize"])
 
     return _db(work)
 
@@ -236,7 +237,7 @@ def public(user: CurrentUser, policy: security.Policy) -> dict:
     return {
         "id": user.id, "user_name": user.user_name, "full_name": user.full_name, "role": user.role,
         "must_change_password": user.must_change_password, "password_change_reason": user.password_change_reason,
-        "idle_seconds_left": user.idle_seconds_left,
+        "idle_seconds_left": user.idle_seconds_left, "font_size": user.font_size,
         "permissions": permissions.role_permissions(user.role),  # K-100: arayüz görünürlüğü
         "session": {"idle_minutes": policy.idle_minutes, "warning_minutes": policy.warning_minutes},
         "policy": policy.public(),
@@ -303,6 +304,17 @@ def change_password(session: Session | None, user: CurrentUser, current: str, ne
     return _db(work)
 
 
+def set_font_size(session: Session | None, user: CurrentUser, size: int) -> None:
+    """Yazı boyutu (U-23): kişisel tercih, denetim izine yazılmaz."""
+    session = _require(session)
+
+    def work():
+        repo.update_user(session, user.id, FontSize=size)
+        session.commit()
+
+    _db(work)
+
+
 def open_session(session: Session, user_id: int, address: str | None = None, agent: str | None = None) -> str:
     """Şifre sormadan oturum açar: yalnız testler ve geliştirme script'leri için (anahtar döner)."""
     token = security.new_token()
@@ -311,9 +323,12 @@ def open_session(session: Session, user_id: int, address: str | None = None, age
     return token
 
 
-def set_temporary_password(session: Session, user_id: int, password: str, reason: str = REASON_FIRST) -> None:
-    """Geçici şifre: bir sonraki girişte değiştirilmeli; geçmiş ve kilit temizlenir (sentetik veri; 2.3'te sıfırlama)."""
+def set_temporary_password(session: Session, user_id: int, password: str, reason: str = REASON_FIRST,
+                           keep_history: bool = False) -> None:
+    """Geçici şifre: bir sonraki girişte değiştirilmeli; kilit temizlenir. Geçmiş yalnız sentetik veride silinir;
+    sıfırlamada korunur (keep_history), kullanıcı eski şifresine dönemez (K-98, K-101)."""
     repo.update_user(session, user_id, PasswordHash=security.hash_password(password), MustChangePassword=True,
                      PasswordChangeReason=reason, PasswordChangedAt=None, PasswordExpiresAt=None, FailedAttempts=0,
                      LockedUntil=None)
-    repo.clear_history(session, user_id)
+    if not keep_history:
+        repo.clear_history(session, user_id)

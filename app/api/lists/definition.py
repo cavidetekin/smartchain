@@ -3,7 +3,7 @@
 Kolonun etiketi ve değer listesi docs'tan üretilen modelde (`info`), tipi veritabanı tipinden gelir.
 """
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 import sqlalchemy as sa
@@ -33,10 +33,19 @@ class ListDefinition:
     unit_decimals: frozenset[str] = field(default_factory=frozenset)
     # Gruplamada varsayılan ara toplam (K-90): request.AGG_FNS'ten biri; yazılmayan kolonun varsayılanı yok.
     aggregates: Mapping[str, str] = field(default_factory=dict)
+    # Sürümsüz liste (2.3; ör. kullanıcılar): sürüm koşulu yok, veri versiyonu aranmaz, Excel adında versiyon yok.
+    versioned: bool = True
+    # Tablo yerine alt sorgu (hesaplı kolon için). Alt sorgu kolonlarında docs'tan gelen info olmadığı için etiket ve
+    # değer listesi labels ve values'tan okunur.
+    source: sa.FromClause | None = None
+    labels: Mapping[str, str] = field(default_factory=dict)
+    values: Mapping[str, list[str]] = field(default_factory=dict)
+    # Rolün görebildiği satırlar (K-101; ör. System owner hesapları): koşul ya da None (hepsi). Rol bilinmiyorsa None gelir.
+    row_scope: Callable[[str | None], sa.ColumnElement | None] | None = None
 
     @property
-    def sa_table(self) -> sa.Table:
-        return metadata.tables[self.table]
+    def sa_table(self) -> sa.FromClause:
+        return self.source if self.source is not None else metadata.tables[self.table]
 
     @property
     def table_name(self) -> str:
@@ -58,9 +67,13 @@ def column_type(col: sa.Column) -> str:
     return "text"
 
 
+def col_values(defn: ListDefinition, col: sa.Column) -> list[str] | None:
+    return defn.values.get(col.name) or col.info.get("values")
+
+
 def filter_type(defn: ListDefinition, col: sa.Column) -> str:
     kind = column_type(col)
-    if kind == "bool" or col.info.get("values") or col.name in defn.server_values:
+    if kind == "bool" or col_values(defn, col) or col.name in defn.server_values:
         return "list"
     return {"integer": "number", "number": "number", "date": "date", "datetime": "date"}.get(kind, "text")
 
@@ -71,11 +84,11 @@ def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
     out = []
     for name in defn.fields:
         col = table.c[name]
-        label = labels.get(name) or col.info.get("label")
+        label = labels.get(name) or defn.labels.get(name) or col.info.get("label")
         if not label or (ADDITIONAL.match(name) and name not in labels):
             continue
         kind = column_type(col)
-        values = [True, False] if kind == "bool" else col.info.get("values")
+        values = [True, False] if kind == "bool" else col_values(defn, col)
         out.append({
             "field": name, "label": label, "type": kind, "filter": filter_type(defn, col),
             "values": values, "values_from_server": name in defn.server_values,

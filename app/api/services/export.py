@@ -50,7 +50,7 @@ class Plan:
     rules: list
     rows: int
     file_name: str
-    version: dict
+    version: dict | None
     info: list[tuple[str, str]] = field(default_factory=list)
 
 
@@ -63,8 +63,9 @@ def _now_local() -> datetime:
 
 
 def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportRequest) -> Plan:
-    b = list_service._builder(session, defn)
-    version = data_versions.read_current(session)
+    # Rol kayıttan: arka plan işinde de işi başlatanın görebildiği satırlar (row_scope, K-101).
+    b = list_service._builder(session, defn, repo.user_role(session, user_id))
+    version = data_versions.read_current(session) if defn.versioned else None
     unknown = [f for f in req.fields if f not in b.columns]
     if unknown:
         raise ListQueryError([{"field": "fields", "problem": f"Bilinmeyen alan: {', '.join(unknown)}"}])
@@ -79,14 +80,16 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
     b.rule_columns(rules)
     rows = list_repo.fetch_count(session, b.filtered_query(filters) if filters else b.total_query())
     stamp = _now_local().strftime("%Y-%m-%d_%H%M")
-    file_name = f"smartchain_{defn.file_slug or defn.name}_veri-v{version['Id']}_{stamp}.xlsx"
+    version_part = f"veri-v{version['Id']}_" if version else ""
+    file_name = f"smartchain_{defn.file_slug or defn.name}_{version_part}{stamp}.xlsx"
     labels = {f: c["label"] for f, c in b.columns.items()}
     columns = [b.columns[f] for f in fields]
 
     info = [
         ("Liste", defn.title or defn.name),
         ("Kaynak", f"Veri versiyonu v{version['Id']} · {version['LocationCode']} · "
-                   f"{version['CreatedAt'].replace(tzinfo=timezone.utc).astimezone():%d.%m.%Y %H:%M}"),
+                   f"{version['CreatedAt'].replace(tzinfo=timezone.utc).astimezone():%d.%m.%Y %H:%M}"
+                   if version else "Güncel kayıtlar"),
         ("Satırlar", f"{'Filtrelenmiş' if req.scope.rows == 'filtered' else 'Tümü (filtresiz)'} · {describe.tr_number(rows, 0)}"),
         ("Kolonlar", f"{'Görünen' if req.scope.columns == 'visible' else 'Tümü'} · {len(columns)}: "
                      + ", ".join(c["label"] for c in columns)),
@@ -195,7 +198,7 @@ def _write_rows(result, plan: Plan, writer: XlsxWriter, nodes: dict, fns: dict, 
 
 
 def _details(plan: Plan, req: ExportRequest, rows: int, size: int, seconds: float, job_id: int | None) -> dict:
-    return {"list": plan.defn.name, "title": plan.defn.title, "data_version": plan.version["Id"],
+    return {"list": plan.defn.name, "title": plan.defn.title, "data_version": plan.version["Id"] if plan.version else None,
             "scope": req.scope.model_dump(), "columns": plan.fields, "filters": dict(plan.info).get("Filtreler"),
             "sort": [s.model_dump() for s in req.sort], "group_by": plan.group_by, "rows": rows, "size": size,
             "seconds": round(seconds, 2), "background": job_id is not None, "job_id": job_id}

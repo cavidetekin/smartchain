@@ -3,7 +3,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { mockApi, mockSocket, renderApp } from "../test/helpers";
+import { ME, mockApi, mockSocket, renderApp } from "../test/helpers";
 
 const menu = () => screen.getByRole("navigation", { name: "Ana menü" });
 
@@ -47,9 +47,9 @@ describe("kenar menü", () => {
   it("ekrana tıklayınca boş sayfası ve adımı açılır", async () => {
     const user = userEvent.setup();
     renderApp();
-    await user.click(within(menu()).getByRole("link", { name: /Kullanıcılar/ }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Kullanıcılar");
-    expect(screen.getByText("Bu ekran 2.3 adımında gelecek.")).toBeInTheDocument();
+    await user.click(within(menu()).getByRole("link", { name: /Sistem sağlığı/ }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem sağlığı");
+    expect(screen.getByText("Bu ekran 2.5 adımında gelecek.")).toBeInTheDocument();
   });
 });
 
@@ -188,7 +188,7 @@ describe("iş göstergesi", () => {
 });
 
 describe("kullanıcı menüsü", () => {
-  it("oturumdaki kullanıcıyı ve yazı boyutunu gösterir; boyut ölçekler ve hatırlanır", async () => {
+  it("oturumdaki kullanıcıyı ve yazı boyutunu gösterir; boyut ölçekler, çıkışta standarda döner (kayıtta saklanır)", async () => {
     const user = userEvent.setup();
     const { unmount } = renderApp();
     await user.click(screen.getByRole("button", { name: "Kullanıcı menüsü: Mert Planlama" }));
@@ -199,7 +199,8 @@ describe("kullanıcı menüsü", () => {
     expect(screen.getByRole("button", { name: "Çıkış" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Şifre değiştir" })).toBeEnabled();
     unmount();
-    renderApp();
+    expect(document.documentElement.style.fontSize).toBe("13px");
+    renderApp("/ana-sayfa", { ...ME, font_size: 16 });
     expect(document.documentElement.style.fontSize).toBe("16px");
   });
 });

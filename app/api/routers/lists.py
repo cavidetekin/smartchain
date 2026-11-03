@@ -27,16 +27,16 @@ def list_router(defn: ListDefinition) -> APIRouter:
         return service.columns(session, defn)
 
     @router.post("/query", summary=f"{defn.table}: alanlar, sıralama, filtre, parça ve sayılar")
-    def query(body: QueryRequest, session: Session = Depends(get_session)) -> dict:
-        return service.query(session, defn, body)
+    def query(body: QueryRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
+        return service.query(session, defn, body, user.role)
 
     @router.post("/groups", summary=f"{defn.table}: gruplar, satır sayıları ve ara toplamlar (K-90)")
-    def groups(body: GroupsRequest, session: Session = Depends(get_session)) -> dict:
-        return service.groups(session, defn, body)
+    def groups(body: GroupsRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
+        return service.groups(session, defn, body, user.role)
 
     @router.post("/values", summary=f"{defn.table}: liste filtresinin değerleri ve sayıları")
-    def values(body: ValuesRequest, session: Session = Depends(get_session)) -> list[dict]:
-        return service.values(session, defn, body)
+    def values(body: ValuesRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> list[dict]:
+        return service.values(session, defn, body, user.role)
 
     @router.post("/export", response_model=None,
                  summary=f"{defn.name}: Excel'e aktarım; anlık dosya (200) ya da arka plan işi (202) (K-91)")

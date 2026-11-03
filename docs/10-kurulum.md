@@ -107,6 +107,18 @@ Hariç tutma müşteri BT'sinin kararıdır; ürün bunları kendiliğinden tan�
 
 IIS portunu "Default Web Site" kullanıyorsa o site durdurulur ve kaldırmada yeniden başlatılır. Başka bir site kullanıyorsa kurulum durur.
 
+## İlk hesap (K-102)
+
+Kurulumun son adımı `smartchain` kullanıcı adıyla ("Destek ekibi") tek System owner hesabı açar. Geçici şifre kurulum özetinden sonra konsolda **bir kez** gösterilir, log dosyasına yazılmaz; ilk girişte değiştirilir. Herhangi bir System owner varsa (yeniden kurulum, onarım) adım hesaba dokunmaz, şifre gösterilmez.
+
+Şifre unutulursa, sunucuda yönetici PowerShell'de (paket klasöründe; kurulumdaki bağlantı parametreleriyle):
+
+```powershell
+& "C:\Program Files\Smartchain\python\python.exe" setup_db.py first-account --reset --root "C:\Program Files\Smartchain" --instance ".\SMARTCHAIN" --database Smartchain --trust-server-certificate
+```
+
+Yeni geçici şifre bir kez gösterilir, açık oturumlar kapanır, işlem denetim izine yazılır. Sonraki hesapları System owner ya da Admin Kullanıcılar ekranından açar.
+
 ## Üçüncü taraf bileşenler ve lisansları
 
 Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin pakete toplanması 11.4'te.
@@ -139,7 +151,8 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 ## Kontrol (`verify.ps1`)
 
 - Servisler çalışıyor ve açılışta otomatik başlıyor.
-- IIS üzerinden `/api/health` ok; WebSocket isteği IIS'ten API'ye ulaşıyor: oturumsuz el sıkışma API tarafından reddediliyor (403; oturum K-97). Kurulumda kullanıcı hesabı olmadığı için `hello` beklenmez; ilk hesap 2.3'te kurulumla açılır.
+- IIS üzerinden `/api/health` ok; WebSocket isteği IIS'ten API'ye ulaşıyor: oturumsuz el sıkışma API tarafından reddediliyor (403; oturum K-97). `hello` beklenmez: duman testi oturumsuz bağlanır.
+- En az bir aktif System owner hesabı var (K-102).
 - Motor bir deneme plan hesabını bitiriyor (deneme verisi açılır ve silinir).
 - Çözücü (HiGHS) pakette çalışıyor: sabit LP ve MILP modelleri bilinen sonuçla çözülüyor (K-76).
 - API süreci öldürülünce servis kendini yeniden başlatıyor.
@@ -157,4 +170,5 @@ Hyper-V'de Windows Server 2025 Evaluation sanal makinesi; SQL Server ayrı `SMAR
 | SQL Server bellek ön kontrolü (K-94; sınırsızsa ya da %80'in üstündeyse uyarı, kurulum durmaz) | uygulandı (1.5; `common.ps1` `Test-SqlServerMemory`, install.ps1 adım 1), sanal makine testi bekliyor (0.6) |
 | Oturum: çerezin `Secure` ayarı (`-CertThumbprint`'e göre), WebSocket duman testi oturumsuz reddi bekler, argon2-cffi wheel'leri (K-97, K-98) | uygulandı (2.1), sanal makine testi bekliyor (0.6) |
 | Antivirüs hariç tutmaları önerisi; etkisinin ölçümü | yazıldı, ölçüm sanal makine testinde (0.6) |
+| İlk hesap (K-102): `install.ps1` son adım, `setup_db.py first-account`, `verify.ps1` denetimi | uygulandı (2.3), sanal makine testi bekliyor (0.6) |
 | MSI, imza, kod koruması, sürüm güncelleme, yedek, lisans | 11. aşama |

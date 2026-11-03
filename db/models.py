@@ -1212,6 +1212,7 @@ AppUser = sa.Table(
     sa.Column("LockedUntil", mssql.DATETIME2(), nullable=True, comment="Kilit bitişi (UTC); geçmişse ya da boşsa kilit yok", info={'label': "Kilit bitişi (UTC)"}),
     sa.Column("LastLoginAt", mssql.DATETIME2(), nullable=True, comment="Son başarılı giriş (UTC)", info={'label': "Son başarılı giriş (UTC)"}),
     sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Aktif", info={'label': "Aktif"}),
+    sa.Column("FontSize", sa.Integer(), nullable=True, comment="Yazı boyutu tercihi, px: 12, 13, 14 ya da 16 (U-23); boşsa seçilmedi, standart 13 geçerli", info={'label': "Yazı boyutu tercihi, px: 12, 13, 14 ya da 16 (U-23)"}),
     sa.Index("UX_AppUser_UserName", "UserName", unique=True),
     schema="adm",
     comment="Uygulama kullanıcısı (Faz 1'de yerel).",

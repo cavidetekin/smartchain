@@ -47,7 +47,8 @@ def test_docs_labels_are_complete():
 
 
 def test_list_tables_match_list_definitions():
-    assert {tuple(d.table.split(".")) for d in LISTS} <= generate.LIST_TABLES
+    # Alt sorgulu listeler (kullanıcılar) etiketi ve değerleri kendi tanımından alır; docs'tan gelen info'ya bağlı değil.
+    assert {tuple(d.table.split(".")) for d in LISTS if d.source is None} <= generate.LIST_TABLES
 
 
 # --- kolonlar ---------------------------------------------------------------------------------------------------

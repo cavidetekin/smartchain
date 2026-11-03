@@ -93,9 +93,11 @@ def policy_problems(policy: Policy, user_name: str, password: str) -> list[str]:
 _ALPHABET = "".join(c for c in string.ascii_letters + string.digits if c not in "0OoIl1")
 
 
-def temporary_password(length: int = 12) -> str:
-    """Politikaya uygun rastgele geçici şifre (harf ve rakam; karışan karakterler yok)."""
+def temporary_password(policy: Policy | None = None, user_name: str = "") -> str:
+    """Politikaya uygun rastgele geçici şifre (harf ve rakam; karışan karakterler yok); kullanıcı adını içermez."""
+    policy = policy or Policy()
+    length = max(12, policy.min_length)
     while True:
         p = "".join(secrets.choice(_ALPHABET) for _ in range(length))
-        if any(c.isalpha() for c in p) and any(c.isdigit() for c in p):
+        if any(c.isalpha() for c in p) and any(c.isdigit() for c in p) and not policy_problems(policy, user_name, p):
             return p

@@ -215,10 +215,13 @@ def required_role(fn: int, access: Access) -> str:
     return SYSTEM_OWNER
 
 
-def forbidden_message(fn: int, access: Access) -> str:
-    role = required_role(fn, access)
+def role_message(role: str) -> str:
     whom = "Smartchain desteğine başvurun." if role == SYSTEM_OWNER else "Yetki için yöneticinize başvurun."
     return f"Bu işlem için {role} yetkisi gerekir. {whom}"
+
+
+def forbidden_message(fn: int, access: Access) -> str:
+    return role_message(required_role(fn, access))
 
 
 def role_permissions(role: str) -> dict[str, str]:

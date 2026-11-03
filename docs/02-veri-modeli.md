@@ -1428,9 +1428,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LockedUntil | datetime2 |  | Kilit bitişi (UTC); geçmişse ya da boşsa kilit yok | Sistem | H | H |  |
 | LastLoginAt | datetime2 |  | Son başarılı giriş (UTC) | Sistem | H | H |  |
 | IsActive | bit |  | Aktif | Kullanıcı | H | H | 1 |
+| FontSize | int |  | Yazı boyutu tercihi, px: 12, 13, 14 ya da 16 (U-23); boşsa seçilmedi, standart 13 geçerli | Kullanıcı | H | H |  |
 
 - Giriş ve şifre kuralları fonksiyon 89'da ve K-98'de. Şifre ekranda, logda ve denetim izinde düz metin olarak hiç yer almaz.
-- Kilit süre dolunca kendiliğinden açılır; Admin elle açınca (2.3) `LockedUntil` boşalır ve sayaç sıfırlanır.
+- Kilit süre dolunca kendiliğinden açılır; Admin elle açınca (K-101) `LockedUntil` boşalır ve sayaç sıfırlanır.
 
 ### UserSession
 <sub>21. Veri modeli · Sistem</sub>
@@ -1450,7 +1451,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ClientAddress | nvarchar(45) |  | İstemci adresi | Sistem | H | H |  |
 | UserAgent | nvarchar(200) |  | Tarayıcı | Sistem | H | H |  |
 
-- Aynı kullanıcı birden çok tarayıcıda oturum açabilir. "Kapatıldı": kullanıcı pasif edilince ya da Admin kapatınca (2.3).
+- Aynı kullanıcı birden çok tarayıcıda oturum açabilir. "Kapatıldı": kullanıcı pasif edilince ya da rolü bozuk bulununca (K-100, K-101); Admin şifre sıfırlayınca "Şifre değişti".
 
 ### PasswordHistory
 <sub>21. Veri modeli · Sistem</sub>

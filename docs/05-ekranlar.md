@@ -467,8 +467,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Yerel kullanıcı:** Kullanıcılar uygulamada açılır; kapalı ağda dış dizine bağlanmaz.
 - **Dört rol:** System owner, Admin, Key user ve End user; yetkiler role bağlı.
-- **End user:** Yalnız görüntüler ve Excel’e indirir; hiçbir fonksiyonu çalıştırmaz.
+- **End user:** Fonksiyon çalıştıramaz, veriyi değiştiremez; raporlama tarafında serbesttir (K-99).
 - **Yaşam döngüsü:** Kullanıcı açma, kapatma, rol değiştirme, şifre sıfırlama.
+- **Uygulama (2.3, K-101):** Mockup'taki yan panel ve Roller tablosu yerine ana tablo ekranı doldurur (U-22); işlemler satırın "⋯" menüsünde ve pencerelerde, rol kapsamı pencerede yazar (docs/12).
 
 ### Entegrasyon ve zamanlanmış işler
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 23/25</sub>

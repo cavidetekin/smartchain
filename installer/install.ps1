@@ -311,8 +311,30 @@ try {
 
     $state.InstalledAt = (Get-Date).ToString('s')
     Write-Utf8NoBom -Path (Join-Path $ConfigDir 'install-state.json') -Text ($state | ConvertTo-Json)
+    # --- 10 · İlk hesap (K-102). Geçici şifre Write-Log'a gitmez: yalnız aşağıda Write-Host ile, bir kez gösterilir. ---
+    $script:FirstAccount = $null
+    Invoke-Step 'İlk hesap' {
+        $a = @((Join-Path $Package 'setup_db.py'), 'first-account') + (Get-DbArguments) + @('--root', $InstallDir)
+        $line = @((Invoke-Native $Python $a).Output | Where-Object { $_ -like 'FIRST_ACCOUNT*' })[-1]
+        if ($line -like 'FIRST_ACCOUNT_EXISTS*') {
+            Write-Log 'System owner hesabı zaten var; dokunulmadı.' 'OK'
+        } elseif ($line -like 'FIRST_ACCOUNT *') {
+            $script:FirstAccount = $line.Split(' ')
+            Write-Log "System owner hesabı açıldı: $($script:FirstAccount[1])" 'OK'
+        } else {
+            throw 'İlk hesap adımı beklenen sonucu vermedi.'
+        }
+    }
+
     Write-Log "Smartchain $($script:Version) kuruldu. Adres: http://localhost:$HttpPort  ·  Kontrol: $SetupDir\verify.ps1" 'OK'
     Write-Log "Log: $log"
+    if ($script:FirstAccount) {
+        Write-Host ''
+        Write-Host 'İlk giriş (System owner). Geçici şifre bir kez gösterilir, log dosyasına yazılmaz; ilk girişte değiştirilir.' -ForegroundColor Yellow
+        Write-Host ("  Kullanıcı adı : {0}" -f $script:FirstAccount[1]) -ForegroundColor Yellow
+        Write-Host ("  Geçici şifre  : {0}" -f $script:FirstAccount[2]) -ForegroundColor Yellow
+        Write-Host ''
+    }
     exit 0
 } catch {
     Write-Log "HATA: $($_.Exception.Message)" 'ERROR'

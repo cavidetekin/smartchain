@@ -10,6 +10,7 @@ import { ScreenGate } from "./screens/Forbidden";
 import { NotFound, Placeholder } from "./screens/Placeholder";
 import { StyleGuide } from "./screens/StyleGuide";
 import { TableDemo } from "./screens/TableDemo";
+import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
 
 /** initialMe yalnız testlerde verilir; verilmezse oturum açılışta sunucuya sorulur. */
@@ -22,7 +23,7 @@ export function App({ initialMe }: { initialMe?: Me | null }) {
           <Route element={<Shell />}>
             <Route index element={<Navigate to={HOME.path} replace />} />
             {SCREENS.map((s) => (
-              <Route key={s.no} path={s.path} element={<ScreenGate fn={s.fn}><Placeholder screen={s} /></ScreenGate>} />
+              <Route key={s.no} path={s.path} element={<ScreenGate fn={s.fn}>{s.no === "22" ? <Users /> : <Placeholder screen={s} />}</ScreenGate>} />
             ))}
             {/* Stil örnekleri (K-85): ekran değildir, menüde yoktur */}
             <Route path="/stil" element={<StyleGuide />} />

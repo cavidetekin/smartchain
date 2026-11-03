@@ -76,7 +76,7 @@ describe("403 ve rol değişikliği", () => {
   it("sunucunun yetki reddi sağ altta bildirilir", async () => {
     mockApi({ "/api/data-versions/current": forbidden("Bu işlem için Key user yetkisi gerekir. Yetki için yöneticinize başvurun.") });
     renderApp();
-    const notice = await screen.findByRole("region", { name: "Yetki" });
+    const notice = await screen.findByRole("region", { name: "Bildirim" });
     expect(within(notice).getByRole("alert")).toHaveTextContent("Bu işlem için Key user yetkisi gerekir.");
   });
 
