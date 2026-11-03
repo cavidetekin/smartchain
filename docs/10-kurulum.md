@@ -61,6 +61,17 @@ Servisler ayarları `SMARTCHAIN_CONFIG` ortam değişkeniyle verilen dosyadan ok
   Instance yeni kuruluyorsa aynı değerler kurulum yanıt dosyasında da verilebilir (`SQLMINMEMORY`, `SQLMAXMEMORY`).
 - Güvenlik duvarı: kullanıcılara yalnız IIS portu (80 ya da 443). 8000 dışarıya açılmaz. SQL Server başka sunucudaysa Smartchain → SQL 1433.
 
+## Antivirüs hariç tutmaları (önerilen)
+
+Hariç tutma müşteri BT'sinin kararıdır; ürün bunları kendiliğinden tanımlamaz, hariç tutma yoksa kurulum yine çalışır. Önerilmesinin nedeni: bu yerlere sürekli ve yoğun yazılır, gerçek zamanlı tarama her yazmayı yavaşlatabilir. Geliştirme laptopunda Excel'e anlık aktarım (10.000 satır) aynı kodla 0,8–3,2 sn arası dalgalandı; antivirüs güçlü aday, etkisi temiz makine testinde ölçülür.
+
+| Yer | Yol | Neden |
+|---|---|---|
+| Aktarım klasörü | `C:\ProgramData\Smartchain\exports\` (`SMARTCHAIN_EXPORT_DIR`, K-93) | Arka planda hazırlanan Excel dosyaları buraya yazılır |
+| Motor model ve çözüm dosyaları klasörü | `C:\ProgramData\Smartchain\solver\` (K-77; geliştirme 10.5'te gelir) | Her plan hesabı model, çözüm ve log dosyası yazar |
+| SQL Server veri ve log dosyaları | `SELECT physical_name FROM sys.master_files;` ile görülür (`tempdb` dahil) | Her sorgu ve yazma bu dosyalardan geçer |
+| Geçici klasör | `NT SERVICE\SmartchainApi` ve `NT SERVICE\SmartchainEngine` hesaplarının `TEMP` klasörü | Excel yazıcısı sabit bellek kipinde satırları önce buraya yazar (K-91); anlık aktarım da |
+
 ## Kurulum
 
 ```powershell
@@ -136,7 +147,7 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 
 ## Temiz makine testi
 
-Hyper-V'de Windows Server 2025 Evaluation sanal makinesi; SQL Server ayrı `SMARTCHAIN` instance'ı olarak (`sql\ConfigurationFile.ini`) kurulur, ağ kartı kapatılır, "Temiz" checkpoint alınır. Her denemede: checkpoint'e dön → paketi Gelişmiş Oturum ile kopyala → `install.ps1` → `verify.ps1` → yeniden başlat → `verify.ps1` → `uninstall.ps1`. Windows Sandbox kullanılmaz: Windows Server değildir ve her açılışta SQL Server'ın yeniden kurulması gerekir.
+Hyper-V'de Windows Server 2025 Evaluation sanal makinesi; SQL Server ayrı `SMARTCHAIN` instance'ı olarak (`sql\ConfigurationFile.ini`) kurulur, ağ kartı kapatılır, "Temiz" checkpoint alınır. Her denemede: checkpoint'e dön → paketi Gelişmiş Oturum ile kopyala → `install.ps1` → `verify.ps1` → yeniden başlat → `verify.ps1` → `uninstall.ps1`. Windows Sandbox kullanılmaz: Windows Server değildir ve her açılışta SQL Server'ın yeniden kurulması gerekir. Excel süresi iki kez ölçülür: antivirüs gerçek zamanlı tarama açıkken ve yukarıdaki yerler hariç tutulmuşken.
 
 ## Durum
 
@@ -145,4 +156,5 @@ Hyper-V'de Windows Server 2025 Evaluation sanal makinesi; SQL Server ayrı `SMAR
 | Paket hazırlama, kurulum, kaldırma, kontrol betikleri | uygulandı (0.6), sanal makine testi bekliyor |
 | SQL Server bellek ön kontrolü (K-94; sınırsızsa ya da %80'in üstündeyse uyarı, kurulum durmaz) | uygulandı (1.5; `common.ps1` `Test-SqlServerMemory`, install.ps1 adım 1), sanal makine testi bekliyor (0.6) |
 | Oturum: çerezin `Secure` ayarı (`-CertThumbprint`'e göre), WebSocket duman testi oturumsuz reddi bekler, argon2-cffi wheel'leri (K-97, K-98) | uygulandı (2.1), sanal makine testi bekliyor (0.6) |
+| Antivirüs hariç tutmaları önerisi; etkisinin ölçümü | yazıldı, ölçüm sanal makine testinde (0.6) |
 | MSI, imza, kod koruması, sürüm güncelleme, yedek, lisans | 11. aşama |

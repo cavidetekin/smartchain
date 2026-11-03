@@ -9,6 +9,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 - **Motor en son.** Optimizasyon, çözüm motoru ve simülasyonlar Aşama 10'da. O zamana kadar ekranlar plan fikstürüyle ve sahte motorla çalışır; motor arayüzü baştan sabittir.
 - **Commit kuralı:** testler geçmeden commit ve push yapılmaz. Sıra: `npm run build` → pytest → `npm test` → `tsc` (build önce: internetsizlik testi taze derlemeyi tarar). Komut zincirinde biri başarısız olursa zincir durur (`&&`, `set -e`); başarısızlık incelenmeden devam edilmez.
 - **Bitti tanımı:** prensip slaytı ve mockup okundu → API, ekran ve test yazıldı → sentetik veriyle çalışıyor → docs'ta "uygulandı" işlendi → demo yapıldı. Biri eksikse adım kapanmaz (K-55).
+- **Açık süreç bırakma:** kendi başlattığın sunucu ve süreçleri (vite, uvicorn, test örnekleri) iş bitince kapat; kapatamadıysan raporda yaz.
 - **Kararlar numaralı.** Karar K-n, açık konu A-n (`docs/00-kararlar.md`). Kodda ve commit mesajında bu numaralara atıf yap.
 
 ## Mimari (özet)
