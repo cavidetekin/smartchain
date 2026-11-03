@@ -22,30 +22,31 @@ beforeEach(() => {
 
 describe("giriş sayfası (mockup m24f-0738)", () => {
   it("oturum yoksa istenen adresle giriş sayfasına; sade form, not satırı, sürüm", async () => {
-    mockApi({ "/api/auth/me": error(401, "not_authenticated", "Oturum açmanız gerekiyor.") });
+    mockApi({ "/api/auth/me": error(401, "not_authenticated", "Giriş yapmanız gerekiyor.") });
     renderApp("/veri/ana-veri", "ask");
     const form = await screen.findByRole("form", { name: "Giriş" });
     expect(within(form).getByLabelText("Kullanıcı adı")).toHaveAttribute("autocomplete", "username");
     expect(within(form).getByLabelText("Şifre")).toHaveAttribute("type", "password");
     expect(within(form).getByRole("button", { name: "Giriş" })).toBeDisabled();
-    expect(form).toHaveTextContent("Şifrenizi unuttuysanız yöneticinize başvurun · beni hatırla yok");
+    expect(form).toHaveTextContent("Şifrenizi unuttuysanız yöneticinize başvurun.");
+    expect(form.textContent).not.toMatch(/beni hatırla/);
     expect(within(form).queryByRole("checkbox")).toBeNull();  // "Beni hatırla" yok
-    expect(await screen.findByText("şirket içi kurulum · v0.15.0")).toBeInTheDocument();
+    expect(await screen.findByText("v0.15.0")).toBeInTheDocument();
   });
 
   it("hatalı girişte genel mesaj ve kalan deneme; kilit ve kapalı hesapta sunucunun mesajı", async () => {
     const user = userEvent.setup();
     const replies = [
       error(401, "login_failed", "Kullanıcı adı ya da şifre hatalı.", [{ remaining_attempts: 2, lock_after: 5, lock_minutes: 15 }]),
-      error(403, "account_locked", "Hesap kilitli. 12 dk sonra yeniden deneyin ya da yöneticinize başvurun.", [{ minutes_left: 12 }]),
-      error(403, "account_inactive", "Hesap kapalı. Yöneticinize başvurun."),
+      error(403, "account_locked", "Hesap kilitli. 12 dk sonra açılır; yöneticiniz de açabilir.", [{ minutes_left: 12 }]),
+      error(403, "account_inactive", "Hesap kapalı. Yöneticiniz açabilir."),
     ];
     const fetchMock = mockApi({ "/api/auth/login": () => replies.shift()! });
     renderApp("/ana-sayfa", null);
     const password = await screen.findByLabelText("Şifre");
-    for (const text of ["Kullanıcı adı ya da şifre hatalı. 2 deneme kaldı; 5 hatalı girişte hesap 15 dk kilitlenir.",
-                        "Hesap kilitli. 12 dk sonra yeniden deneyin ya da yöneticinize başvurun.",
-                        "Hesap kapalı. Yöneticinize başvurun."]) {
+    for (const text of ["Kullanıcı adı ya da şifre hatalı. 2 deneme hakkınız kaldı.",
+                        "Hesap kilitli. 12 dk sonra açılır; yöneticiniz de açabilir.",
+                        "Hesap kapalı. Yöneticiniz açabilir."]) {
       await user.clear(screen.getByLabelText("Kullanıcı adı"));
       await user.type(screen.getByLabelText("Kullanıcı adı"), " planlama ");
       await user.type(password, "yanlis-sifre");
@@ -75,10 +76,10 @@ describe("giriş sayfası (mockup m24f-0738)", () => {
 
 describe("oturum biterse giriş sayfasına dönülür", () => {
   it("bir istek 401 session_expired dönerse bilgi kutusuyla giriş sayfası", async () => {
-    mockApi({ "/api/data-versions/current": error(401, "session_expired", "Oturumunuz 30 dakika hareketsizlik nedeniyle kapandı.") });
+    mockApi({ "/api/data-versions/current": error(401, "session_expired", "30 dakika işlem yapılmadığı için oturumunuz kapandı.") });
     renderApp();
     expect(await screen.findByRole("form", { name: "Giriş" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Oturumunuz 30 dakika hareketsizlik nedeniyle kapandı.");
+    expect(screen.getByRole("status")).toHaveTextContent("30 dakika işlem yapılmadığı için oturumunuz kapandı.");
   });
 
   it("WebSocket 4401 ile kapanırsa yeniden bağlanmaz, oturum denetlenir", async () => {
@@ -114,7 +115,9 @@ describe("zorunlu şifre değişikliği (mockup m24f-0739)", () => {
     });
     renderApp("/ana-sayfa", MUST);
     const dialog = screen.getByRole("dialog", { name: "Şifrenizi belirleyin" });
-    expect(dialog).toHaveTextContent("İlk giriş · politika System owner tarafından belirlenir");
+    expect(dialog).toHaveTextContent("İlk giriş");
+    expect(dialog.textContent).not.toMatch(/olitika/);
+    expect(dialog).toHaveTextContent("Şifre kuralları");
     expect(within(dialog).queryByRole("button", { name: "Vazgeç" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Ana menü" })).toBeNull();  // kabuk açılmaz
     fireEvent.keyDown(dialog, { key: "Escape" });
@@ -125,7 +128,7 @@ describe("zorunlu şifre değişikliği (mockup m24f-0739)", () => {
     await user.type(within(dialog).getByLabelText("Geçici şifre"), "Gecici12345");
     await user.type(within(dialog).getByLabelText("Yeni şifre"), "kisa");
     expect([state("min_length"), state("letter_and_digit"), state("contains_user_name"), state("history"), state("match")])
-      .toEqual(["sağlanmıyor", "sağlanmıyor", "sağlanıyor", "kaydederken denetlenir", "sağlanmıyor"]);
+      .toEqual(["sağlanmıyor", "sağlanmıyor", "sağlanıyor", "henüz denetlenmedi", "sağlanmıyor"]);
     await user.clear(within(dialog).getByLabelText("Yeni şifre"));
     await user.type(within(dialog).getByLabelText("Yeni şifre"), "PLANLAMA-2026x");  // kullanıcı adını içeriyor
     expect(state("contains_user_name")).toBe("sağlanmıyor");
@@ -146,7 +149,8 @@ describe("zorunlu şifre değişikliği (mockup m24f-0739)", () => {
     await user.type(within(dialog).getByLabelText("Yeni şifre"), "Yeni-Sifre-2027");
     await user.clear(within(dialog).getByLabelText("Yeni şifre (tekrar)"));
     await user.type(within(dialog).getByLabelText("Yeni şifre (tekrar)"), "Yeni-Sifre-2027");
-    expect(state("history")).toBe("kaydederken denetlenir");
+    expect(state("history")).toBe("henüz denetlenmedi");
+    expect(dialog.textContent).not.toMatch(/kaydederken/);
     await user.click(within(dialog).getByRole("button", { name: "Kaydet ve devam et" }));
     expect(await screen.findByRole("navigation", { name: "Ana menü" })).toBeInTheDocument();
     expect(sent(fetchMock, "/api/auth/password").at(-1)).toEqual({ current_password: "Gecici12345", new_password: "Yeni-Sifre-2027" });
@@ -156,7 +160,7 @@ describe("zorunlu şifre değişikliği (mockup m24f-0739)", () => {
     mockApi();
     renderApp("/ana-sayfa", { ...MUST, password_change_reason: "Süre doldu" });
     const dialog = screen.getByRole("dialog", { name: "Şifrenizi belirleyin" });
-    expect(dialog).toHaveTextContent("Şifrenizin süresi doldu · politika");
+    expect(dialog).toHaveTextContent("Şifrenizin süresi doldu");
     expect(within(dialog).getByLabelText("Mevcut şifre")).toBeInTheDocument();
   });
 
@@ -220,7 +224,7 @@ describe("hareketsizlik (mockup m24f-0740)", () => {
     await act(async () => vi.advanceTimersByTime(25 * MIN + 1000));
     const dialog = await screen.findByRole("dialog", { name: "Oturumunuz kapanmak üzere" });
     expect(dialog).toHaveTextContent("25 dakikadır işlem yapılmadı");
-    expect(dialog).toHaveTextContent("hareketsizlik · 30 dk sınırı");
+    expect(dialog.textContent).not.toMatch(/hareketsizlik/);
     expect(within(dialog).getByRole("timer")).toHaveTextContent(/^4:5\d$/);
     expect(within(dialog).getByRole("button", { name: "Devam et" })).toHaveFocus();
     fireEvent.keyDown(dialog, { key: "Escape" });  // atlanamaz: Esc kapatmaz
@@ -234,7 +238,7 @@ describe("hareketsizlik (mockup m24f-0740)", () => {
 
     await act(async () => vi.advanceTimersByTime(30 * MIN + 1000));
     expect(await screen.findByRole("form", { name: "Giriş" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Oturumunuz 30 dakika hareketsizlik nedeniyle kapandı.");
+    expect(screen.getByRole("status")).toHaveTextContent("30 dakika işlem yapılmadığı için oturumunuz kapandı.");
   });
 
   it("tuş etkinliktir, fare gezdirmek değil; etkinlik en çok dakikada bir bildirilir", async () => {

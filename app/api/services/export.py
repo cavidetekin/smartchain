@@ -19,7 +19,7 @@ from app import __version__
 from app.jobs import queue
 from app.jobs.constants import CHANNEL_EXPORT, STATUS_DONE, TYPE_EXPORT
 from app.jobs.settings import JobSettings
-from ..errors import AppError
+from ..errors import DB_UNAVAILABLE, AppError
 from ..export import describe
 from ..export import formats
 from ..export.formats import CellFormat
@@ -33,7 +33,6 @@ from ..settings import get_settings
 from . import lists as list_service
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-DB_DOWN = "Veritabanına bağlanılamıyor; dışa aktarım yapılamadı."
 PROGRESS_EVERY = 5000
 
 
@@ -207,16 +206,15 @@ def _details(plan: Plan, req: ExportRequest, rows: int, size: int, seconds: floa
 def start(session: Session | None, defn: ListDefinition, user_id: int, req: ExportRequest) -> dict:
     """Anlık: {"file": bytes, "file_name"}; arka plan: {"job_id", "file_name", "rows"}."""
     if session is None:
-        raise AppError("database_unavailable", DB_DOWN, 503)
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
     try:
         if not view_repo.user_exists(session, user_id):
             raise AppError("user_not_found", "Kullanıcı bulunamadı.", 404)
         settings = repo.read_settings(session)
         plan = _plan(session, defn, user_id, req)
         if plan.rows > settings["ExportMaxRows"]:
-            raise AppError("export_too_large", f"{describe.tr_number(plan.rows, 0)} satır, bir aktarımın sınırı olan "
-                                               f"{describe.tr_number(settings['ExportMaxRows'], 0)} satırı aşıyor; "
-                                               "filtreyi daraltın.", 422)
+            raise AppError("export_too_large", f"En çok {describe.tr_number(settings['ExportMaxRows'], 0)} satır aktarılabilir; "
+                                               f"bu seçimde {describe.tr_number(plan.rows, 0)} satır var.", 422)
         if plan.rows > settings["ExportSyncMaxRows"]:
             payload = {"list": defn.name, "user_id": user_id, "file_name": plan.file_name, "rows": plan.rows,
                        "request": req.model_dump(mode="json", by_alias=True)}
@@ -232,13 +230,13 @@ def start(session: Session | None, defn: ListDefinition, user_id: int, req: Expo
             session.commit()
         except DBAPIError as exc:
             session.rollback()
-            raise AppError("export_trace_failed", "Dışa aktarım ize yazılamadı; dosya verilmedi.", 503) from exc
+            raise AppError("export_trace_failed", "Dosya hazırlanamadı.", 503) from exc
         return {"file": data, "file_name": plan.file_name}
     except ListQueryError as exc:
-        raise AppError("validation", "Gönderilen veri geçersiz.", 422, exc.details) from exc
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, exc.details) from exc
     except DBAPIError as exc:
         session.rollback()
-        raise AppError("database_unavailable", DB_DOWN, 503) from exc
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
 
 
 def run_job(session: Session, job_id: int, attempt: int, payload: dict, progress: Callable[[str], None]) -> dict:
@@ -282,7 +280,7 @@ def _size_text(size: int) -> str:
 def download(session: Session | None, job_id: int, user_id: int) -> tuple[Path, str]:
     """Arka planda hazırlanan dosya: yalnız sahibine, iş bittiyse ve süresi geçmediyse."""
     if session is None:
-        raise AppError("database_unavailable", DB_DOWN, 503)
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
     job = queue.get_job(session, job_id, JobSettings())
     if job is None or job["JobType"] != TYPE_EXPORT:
         raise AppError("export_not_found", "Dışa aktarım bulunamadı.", 404)
@@ -294,5 +292,5 @@ def download(session: Session | None, job_id: int, user_id: int) -> tuple[Path, 
     path = export_path(job_id)
     ended = job["EndedAt"]
     if ended is None or ended + timedelta(hours=hours) < queue.db_now(session) or not path.exists():
-        raise AppError("export_expired", f"Dosyanın indirme süresi ({hours} saat) geçti; aktarımı yeniden başlatın.", 410)
+        raise AppError("export_expired", f"Dosyanın indirme süresi ({hours} saat) doldu.", 410)
     return path, json.loads(job["Payload"] or "{}").get("file_name", path.name)

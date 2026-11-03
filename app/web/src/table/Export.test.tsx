@@ -69,7 +69,7 @@ describe("kapsam penceresi ve anlık indirme", () => {
     await userEvent.click(within(dialog).getByRole("radio", { name: "Tümü (10)" }));
     expect(within(dialog).queryAllByRole("checkbox")).toEqual([]);
     // 50.000 satır anlık sınırı (10.000) aşar: arka planda hazırlanır
-    expect(dialog).toHaveTextContent("dosya arka planda hazırlanır");
+    expect(dialog).toHaveTextContent("Dosya hazırlanıyor; hazır olunca bildirim gelir. 24 saat indirilebilir.");
     await userEvent.click(within(dialog).getByRole("button", { name: "Hazırla" }));
     await waitFor(() => expect(calls.exports).toHaveLength(1));
     expect(calls.exports[0].body).toMatchObject({
@@ -81,7 +81,7 @@ describe("kapsam penceresi ve anlık indirme", () => {
   it("üst sınırı aşan aktarım kapalı", async () => {
     await openTable({ filtered: 600_000, total: 600_000 });
     const dialog = await openDialog();
-    expect(dialog).toHaveTextContent("600.000 satır, bir aktarımın sınırı olan 500.000 satırı aşıyor; filtreyi daraltın.");
+    expect(dialog).toHaveTextContent("En çok 500.000 satır aktarılabilir; bu seçimde 600.000 satır var.");
     expect(within(dialog).getByRole("button", { name: "İndir" })).toBeDisabled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Vazgeç" }));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -91,11 +91,11 @@ describe("kapsam penceresi ve anlık indirme", () => {
   it("sunucu hatası pencerede görünür; dosya inmez", async () => {
     await openTable({
       filtered: 800, total: 800,
-      exportReply: { status: 503, body: { error: { code: "export_trace_failed", message: "Dışa aktarım ize yazılamadı; dosya verilmedi.", trace_id: "x" } } },
+      exportReply: { status: 503, body: { error: { code: "export_trace_failed", message: "Dosya hazırlanamadı.", trace_id: "x" } } },
     });
     const dialog = await openDialog();
     await userEvent.click(within(dialog).getByRole("button", { name: "İndir" }));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Dışa aktarım ize yazılamadı; dosya verilmedi.");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Dosya hazırlanamadı.");
     expect(saved).toEqual([]);
   });
 

@@ -90,7 +90,7 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     expect(within(menu).getByRole("menuitem", { name: "Sil" })).toBeDisabled();
     for (const name of ["Kaydet", "Sil"]) {
       expect(within(menu).getByRole("menuitem", { name })).toHaveAttribute(
-        "title", "Bu görünümü yalnız sahibi değiştirebilir; sizin için salt okunur.");
+        "title", "Bu görünümü yalnız sahibi değiştirebilir.");
     }
     expect(within(menu).getByRole("menuitem", { name: "Farklı kaydet" })).toBeEnabled();
   });

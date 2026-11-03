@@ -133,7 +133,7 @@ def test_wrong_password_counts_down_then_locks(engine, user):
                            [{"remaining_attempts": remaining, "lock_after": 5, "lock_minutes": 15}])
     r = login(c, NAME, "Yanlis-sifre-1")
     assert body(r)[:2] == (403, "account_locked") and r.json()["error"]["details"] == [{"minutes_left": 15}]
-    assert "15 dk" in r.json()["error"]["message"] and "yöneticinize" in r.json()["error"]["message"]
+    assert "15 dk" in r.json()["error"]["message"] and "yöneticiniz" in r.json()["error"]["message"]
     assert scalar(engine, "SELECT CASE WHEN LockedUntil > SYSUTCDATETIME() THEN 1 ELSE 0 END FROM adm.AppUser "
                           "WHERE Id = :u", u=user) == 1
     assert body(login(c, NAME, PASSWORD))[:2] == (403, "account_locked")  # doğru şifre de kilitte reddedilir
@@ -160,7 +160,7 @@ def test_unknown_user_gets_identical_responses(engine, user):
 def test_inactive_account(engine):
     user = make_user(engine, active=False)
     r = login(client(), NAME, PASSWORD)
-    assert body(r) == (403, "account_inactive", "Hesap kapalı. Yöneticinize başvurun.", [])
+    assert body(r) == (403, "account_inactive", "Hesap kapalı. Yöneticiniz açabilir.", [])
     assert scalar(engine, "SELECT FailedAttempts FROM adm.AppUser WHERE Id = :u", u=user) == 0
     assert scalar(engine, "SELECT COUNT(*) FROM adm.LoginThrottle WHERE UserName = :n", n=NAME) == 0
     r = login(client(), NAME, "Yanlis-sifre-1")  # şifre yanlışsa bilinmeyen kullanıcı gibi
@@ -207,7 +207,7 @@ def test_idle_session_expires(engine, user):
     run(engine, "UPDATE adm.UserSession SET LastActivityAt = DATEADD(minute, -31, SYSUTCDATETIME()) WHERE UserId = :u",
         u=user)
     r = c.get("/api/materials/columns")
-    assert body(r) == (401, "session_expired", "Oturumunuz 30 dakika hareketsizlik nedeniyle kapandı.", [])
+    assert body(r) == (401, "session_expired", "30 dakika işlem yapılmadığı için oturumunuz kapandı.", [])
     assert scalar(engine, "SELECT EndReason FROM adm.UserSession WHERE UserId = :u", u=user) == "Zaman aşımı"
     logout = [a for a in audits(engine, NAME) if a[0] == "Çıkış"]
     assert len(logout) == 1 and "Zaman aşımı" in logout[0][2]

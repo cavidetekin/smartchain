@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
-from ..errors import AppError
+from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition
 from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
@@ -21,7 +21,6 @@ from ..repositories import lists as list_repo, views as repo
 from . import authz
 from .auth import CurrentUser
 
-DB_DOWN = "Veritabanına bağlanılamıyor; görünümler okunamadı."
 
 
 def _builder(session: Session, defn: ListDefinition) -> Builder:
@@ -138,7 +137,7 @@ def _out(b: Builder, row: dict, user_id: int) -> dict:
 
 def _run(session: Session | None, user_id: int, work):
     if session is None:
-        raise AppError("database_unavailable", DB_DOWN, 503)
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
     try:
         if not repo.user_exists(session, user_id):
             raise AppError("user_not_found", "Kullanıcı bulunamadı.", 404)
@@ -148,13 +147,13 @@ def _run(session: Session | None, user_id: int, work):
         raise AppError("view_name_taken", "Bu adda bir görünümünüz zaten var.", 409) from exc
     except DBAPIError as exc:
         session.rollback()
-        raise AppError("database_unavailable", DB_DOWN, 503) from exc
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
 
 
 def _validated(b: Builder, d: ViewDefinition) -> ViewDefinition:
     problems = _problems(b, d)
     if problems:
-        raise AppError("validation", "Gönderilen veri geçersiz.", 422, problems)
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, problems)
     return d
 
 

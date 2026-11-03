@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.jobs import queue
 from app.jobs.settings import read_settings
-from ..errors import AppError
+from ..errors import DB_UNAVAILABLE, AppError
 from ..permissions import Access
 from . import authz
 from .auth import CurrentUser
@@ -41,7 +41,7 @@ def to_public(job: dict) -> dict:
 
 def _require(session: Session | None) -> Session:
     if session is None:
-        raise AppError("database_unavailable", "Veritabanına bağlanılamıyor; iş kuyruğu okunamadı.", 503)
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
     return session
 
 
@@ -79,6 +79,5 @@ def cancel(session: Session | None, job_id: int, user: CurrentUser) -> dict:
     except queue.JobNotFound:
         raise AppError("job_not_found", "İş bulunamadı.", 404)
     except queue.JobNotCancellable as exc:
-        raise AppError("job_not_cancellable",
-                       f"Yalnız sıradaki iş iptal edilebilir; bu işin durumu: {exc.status}.", 409)
+        raise AppError("job_not_cancellable", "Yalnız sıradaki iş iptal edilebilir.", 409) from exc
     return get_job(session, job_id, user)

@@ -86,7 +86,7 @@ export function PasswordDialog({ me, forced, onDone, onCancel }: {
 
   return (
     <Dialog title={forced ? tr.auth.setPassword : tr.auth.changePassword}
-            subtitle={reason ? `${reason} · ${tr.auth.policySource}` : tr.auth.policySource}
+            subtitle={reason}
             onClose={() => onCancel?.()} onSubmit={submit} busy={busy} submitDisabled={!ready}
             submitLabel={forced ? tr.auth.saveAndContinue : tr.auth.save} dismissible={!forced} blurred={forced}>
       <TextField label={temporary ? tr.auth.temporaryPassword : tr.auth.currentPassword} type="password"

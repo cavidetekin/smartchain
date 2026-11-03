@@ -119,7 +119,6 @@ export function IdleWatch({ me }: { me: Me }) {
             dismissible={false} blurred>
       <div className="sc-idle">
         <p className="sc-idle-count" role="timer" aria-label={tr.auth.idleCountdown}>{countdown(secondsLeft)}</p>
-        <p className="sc-idle-limit">{tr.auth.idleLimit(idle)}</p>
       </div>
     </Dialog>
   );

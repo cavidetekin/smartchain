@@ -1,7 +1,7 @@
 // Excel'e aktar · kapsam penceresi (U-14, fonksiyon 86, K-91; mockup m24f-0724, 1.5 demosunda sadeleşti): yalnız
 // satırlar (filtrelenmiş ya da tümü), sütunlar (görünen ya da tümü) ve dosya adı. Gruplama, ara toplamlar ve Bilgi
 // sayfası her zaman gelir. Satır sayısı anlık sınırı aşarsa dosya arka planda hazırlanır, üst sınırı aşarsa aktarım
-// kapalıdır ("filtreyi daraltın"); yalnız bu durumlarda ve sunucu hatasında mesaj çıkar.
+// kapalıdır; yalnız bu durumlarda ve sunucu hatasında mesaj çıkar.
 import { useEffect, useState } from "react";
 
 import { api } from "../api/client";
@@ -80,7 +80,7 @@ export function ExportDialog({ info, filtered, total, visibleColumns, allColumns
         </output>
       </div>
       {background && (
-        <Alert tone="info">{T.exportBackground(formatNumber(rows), formatNumber(info.sync_max_rows), info.file_hours)}</Alert>
+        <Alert tone="info">{T.exportBackground(info.file_hours)}</Alert>
       )}
       {tooLarge && <Alert tone="risk">{T.exportTooLarge(formatNumber(rows), formatNumber(info.max_rows))}</Alert>}
       {error && <Alert tone="error" title={T.exportError}>{error}</Alert>}

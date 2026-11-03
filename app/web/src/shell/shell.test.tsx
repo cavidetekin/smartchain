@@ -131,11 +131,11 @@ describe("bağlam çubuğu", () => {
     unmount();
     mockApi({ "/api/data-versions/current": "offline" });
     const second = renderApp();
-    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("API'ye ulaşılamıyor"));
+    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Sunucuya ulaşılamıyor"));
     second.unmount();
     mockApi({ "/api/data-versions/current": { status: 503, body: { error: { code: "database_unavailable", message: "", trace_id: "" } } } });
     renderApp();
-    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veritabanına ulaşılamıyor"));
+    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veriye ulaşılamıyor"));
   });
 
   it("senaryo, plan versiyonu ve dönem yerleri pasif", () => {
@@ -167,7 +167,7 @@ describe("iş göstergesi", () => {
     expect(indicator).toHaveTextContent("0 çalışıyor · 1 sırada");
     fireEvent.click(indicator);
     const panel = screen.getByRole("dialog", { name: "Arka plandaki işler" });
-    expect(panel).toHaveTextContent("Bildirimler bağlı");
+    expect(panel.textContent).not.toMatch(/Bildirimler/);  // sorun yokken metin yok
     expect(panel).toHaveTextContent("#6 Çalışma · Sırada · sıra 1");
   });
 
@@ -178,7 +178,7 @@ describe("iş göstergesi", () => {
     renderApp();
     act(() => Socket.instances[0].open());
     act(() => Socket.instances[0].drop());
-    expect(screen.getByTestId("job-indicator")).toHaveAttribute("title", expect.stringContaining("Yedek mod"));
+    expect(screen.getByTestId("job-indicator")).toHaveAttribute("title", "Bildirimler gecikebilir.");
     const before = fetchMock.mock.calls.filter(([u]) => String(u).startsWith("/api/jobs")).length;
     await act(async () => vi.advanceTimersByTime(30_000));
     expect(Socket.instances.length).toBeGreaterThanOrEqual(2);

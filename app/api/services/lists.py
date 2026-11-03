@@ -5,14 +5,13 @@ from decimal import Decimal
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
-from ..errors import AppError
+from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, columns as column_list
 from ..lists.query import DEFAULT_UNIT_DECIMALS, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists.groups import build_tree
 from ..lists.request import GroupsRequest, QueryRequest, ValuesRequest
 from ..repositories import data_versions, export as export_repo, lists as repo
 
-DB_DOWN = "Veritabanına bağlanılamıyor; liste okunamadı."
 
 RULES = "_rules"  # satırda tutan kurallar (K-95, docs/08)
 
@@ -34,13 +33,13 @@ def _json(value):
 
 def _run(session: Session | None, work):
     if session is None:
-        raise AppError("database_unavailable", DB_DOWN, 503)
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
     try:
         return work()
     except ListQueryError as exc:
-        raise AppError("validation", "Gönderilen veri geçersiz.", 422, exc.details) from exc
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, exc.details) from exc
     except DBAPIError as exc:
-        raise AppError("database_unavailable", DB_DOWN, 503) from exc
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
 
 
 def _builder(session: Session, defn: ListDefinition, role: str | None = None) -> Builder:
@@ -111,8 +110,7 @@ def groups(session: Session | None, defn: ListDefinition, req: GroupsRequest, ro
         tree = build_tree(leaves, len(fields), {f: s.fn for f, s in specs.items()}, unit_relevant, _json, units)
         tree["aggregate_specs"] = {f: s.model_dump(exclude_none=True) for f, s in specs.items()}
         if tree["leaf_groups"] > max_groups:
-            raise AppError("too_many_groups", f"Gruplama {max_groups} grubu aşıyor; daha az alanla gruplayın ya da "
-                                              "filtreleyin.", 422)
+            raise AppError("too_many_groups", f"En çok {max_groups} grup gösterilebilir.", 422)
         tree["total"] = repo.fetch_count(session, b.total_query())  # "120 / 840" sayacı (U-12)
         tree["filtered"] = sum(g["count"] for g in tree["groups"])
         return tree

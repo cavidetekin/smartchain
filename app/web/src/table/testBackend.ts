@@ -128,7 +128,7 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
     "/api/materials/query": async (_url, init): Promise<Reply> => {
       const body = JSON.parse(String(init?.body)) as QueryRequest;
       calls.queries.push(body);
-      if (status !== 200) return { status, body: { error: { code: "database_unavailable", message: "Veritabanına bağlanılamıyor.", trace_id: "x" } } };
+      if (status !== 200) return { status, body: { error: { code: "database_unavailable", message: "Veriye ulaşılamıyor.", trace_id: "x" } } };
       const inGroup = body.group_key?.length ? leafCount(body.group_key) : null;
       const n = Math.max(0, Math.min(body.limit, (inGroup ?? filtered) - body.offset));
       const prefix = body.group_key?.map((k) => String(k.value)).join("/");

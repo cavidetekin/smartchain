@@ -22,7 +22,7 @@ def test_not_found_is_turkish(client):
     assert r.status_code == 404
     err = r.json()["error"]
     assert err["code"] == "http_404"
-    assert err["message"] == "İstenen kayıt ya da adres bulunamadı."
+    assert err["message"] == "Kayıt bulunamadı."
     assert err["trace_id"] == r.headers["X-Trace-Id"]
 
 
@@ -73,4 +73,4 @@ def test_pool_timeout_and_connection_error_are_503(app, client):
         r = client.get(path)
         assert r.status_code == 503
         assert r.json()["error"]["code"] == "database_unavailable"
-        assert r.json()["error"]["message"] == "Veritabanına bağlanılamıyor; biraz sonra yeniden deneyin."
+        assert r.json()["error"]["message"] == "Veriye ulaşılamıyor."

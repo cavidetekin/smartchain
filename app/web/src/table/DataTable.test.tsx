@@ -281,7 +281,7 @@ describe("hata", () => {
   it("liste okunamazsa mesaj ve yeniden dene", async () => {
     const user = userEvent.setup();
     await open({ status: 503 });
-    expect(await screen.findByText(/Veritabanına bağlanılamıyor/)).toBeInTheDocument();
+    expect(await screen.findByText(/Veriye ulaşılamıyor/)).toBeInTheDocument();
     const before = queries.length;
     await user.click(screen.getByRole("button", { name: "Yeniden dene" }));
     await waitFor(() => expect(queries.length).toBe(before + 1));

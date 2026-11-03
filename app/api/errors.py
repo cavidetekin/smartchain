@@ -14,7 +14,7 @@ from .logging_setup import trace_id_var
 
 log = logging.getLogger("smartchain.errors")
 
-DB_UNAVAILABLE = "Veritabanına bağlanılamıyor; biraz sonra yeniden deneyin."
+DB_UNAVAILABLE = "Veriye ulaşılamıyor."
 
 
 class AppError(Exception):
@@ -29,12 +29,12 @@ class AppError(Exception):
 
 
 HTTP_MESSAGES = {
-    400: "İstek geçersiz.",
-    401: "Oturum açmanız gerekiyor.",
+    400: "İşlem yapılamadı.",
+    401: "Giriş yapmanız gerekiyor.",
     403: "Bu işlem için yetkiniz yok.",
-    404: "İstenen kayıt ya da adres bulunamadı.",
-    405: "Bu adres bu işlemi desteklemiyor.",
-    409: "İşlem başka bir değişiklikle çakıştı; sayfayı yenileyip tekrar deneyin.",
+    404: "Kayıt bulunamadı.",
+    405: "Bu işlem yapılamaz.",
+    409: "Kayıt bu arada değişti; sayfayı yenileyin.",
 }
 
 
@@ -50,14 +50,14 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException):
-        message = HTTP_MESSAGES.get(exc.status_code, "İstek tamamlanamadı.")
+        message = HTTP_MESSAGES.get(exc.status_code, "İşlem tamamlanamadı.")
         return JSONResponse(error_body(f"http_{exc.status_code}", message), status_code=exc.status_code)
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
         details = [{"field": ".".join(str(p) for p in e.get("loc", [])), "problem": e.get("msg", "")}
                    for e in exc.errors()]
-        return JSONResponse(error_body("validation", "Gönderilen veri geçersiz.", details), status_code=422)
+        return JSONResponse(error_body("validation", "Girilen bilgiler geçersiz.", details), status_code=422)
 
     # Veritabanına ulaşılamıyor (docs/08): bağlantı kurulamadı ya da havuzda boş bağlantı yok. Servis kendi 503'ünü
     # vermediyse burada yakalanır; kullanıcı "beklenmeyen hata" değil, anlamlı mesaj görür.

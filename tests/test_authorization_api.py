@@ -134,6 +134,6 @@ def test_view_owner_context(api, roles, db_engine):  # noqa: F811
         r = call()
         assert r.status_code == 403 and r.json()["error"] == {
             **r.json()["error"], "code": "view_not_owner",
-            "message": "Bu görünümü yalnız sahibi değiştirebilir; sizin için salt okunur."}
+            "message": "Bu görünümü yalnız sahibi değiştirebilir."}
     [d1, d2] = audits(db_engine, other, "Yetkisiz istek")
     assert d1["reason"] == "sahibi değil" and d1["view_id"] == v["id"] and d2["function"] == 10

@@ -13,12 +13,11 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from .. import permissions, security
-from ..errors import AppError
+from ..errors import DB_UNAVAILABLE, AppError
 from ..repositories import audit, auth as repo
 
 log = logging.getLogger("smartchain.auth")
 
-DB_DOWN = "Veritabanına bağlanılamıyor; oturum denetlenemedi."
 USER_NAME_MAX = 60
 
 # Denetim izi eylemleri (K-98)
@@ -57,7 +56,7 @@ class CurrentUser:
 
 def _require(session: Session | None) -> Session:
     if session is None:
-        raise AppError("database_unavailable", DB_DOWN, 503)
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
     return session
 
 
@@ -65,7 +64,7 @@ def _db(work):
     try:
         return work()
     except DBAPIError as exc:
-        raise AppError("database_unavailable", DB_DOWN, 503) from exc
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
 
 
 def _minutes_left(until: datetime, now: datetime) -> int:
@@ -74,7 +73,7 @@ def _minutes_left(until: datetime, now: datetime) -> int:
 
 def _locked_error(minutes: int) -> AppError:
     return AppError("account_locked",
-                    f"Hesap kilitli. {minutes} dk sonra yeniden deneyin ya da yöneticinize başvurun.",
+                    f"Hesap kilitli. {minutes} dk sonra açılır; yöneticiniz de açabilir.",
                     403, [{"minutes_left": minutes}])
 
 
@@ -112,7 +111,7 @@ def login(session: Session | None, user_name: str, password: str, address: str |
             # Pasif hesap, şifre doğru: "hesap kapalı"; sayaç artmaz.
             _audit_failed(session, user_id, name, "inactive", None, address, agent)
             session.commit()
-            raise AppError("account_inactive", "Hesap kapalı. Yöneticinize başvurun.", 403)
+            raise AppError("account_inactive", "Hesap kapalı. Yöneticiniz açabilir.", 403)
         if user is None or not user["PasswordHash"]:
             security.verify_password(None, password)
         attempts = (0 if throttle["LockedUntil"] else throttle["FailedAttempts"]) + 1
@@ -140,7 +139,7 @@ def _login_real(session, policy, now, user, password, address, agent):
     if user["Role"] not in permissions.ROLES:  # bozuk rol (K-100): oturum açılmaz, iz; kullanıcıya hesap kapalı
         audit.write_audit(session, INVALID_ROLE, user["Id"], OBJECT, name, {"role": user["Role"], **_client(address, agent)})
         session.commit()
-        raise AppError("account_inactive", "Hesap kapalı. Yöneticinize başvurun.", 403)
+        raise AppError("account_inactive", "Hesap kapalı. Yöneticiniz açabilir.", 403)
     values = {"FailedAttempts": 0, "LockedUntil": None, "LastLoginAt": now}
     if security.needs_rehash(user["PasswordHash"]):
         values["PasswordHash"] = security.hash_password(password)
@@ -177,30 +176,30 @@ def authenticate(session: Session | None, token: str | None) -> CurrentUser:
     """Çerezdeki anahtarla oturumu ve kullanıcıyı doğrular (her istek). Hareketsizlik sınırı geçtiyse oturumu kapatır."""
     digest = security.token_hash(token) if token else None
     if digest is None:
-        raise AppError("not_authenticated", "Oturum açmanız gerekiyor.", 401)
+        raise AppError("not_authenticated", "Giriş yapmanız gerekiyor.", 401)
     session = _require(session)
 
     def work():
         row = repo.session_with_user(session, digest)
         if row is None or row["EndedAt"] is not None:
-            raise AppError("not_authenticated", "Oturum açmanız gerekiyor.", 401)
+            raise AppError("not_authenticated", "Giriş yapmanız gerekiyor.", 401)
         if not row["IsActive"]:
             repo.end_session(session, row["SessionId"], END_CLOSED)
             session.commit()
-            raise AppError("not_authenticated", "Oturum açmanız gerekiyor.", 401)
+            raise AppError("not_authenticated", "Giriş yapmanız gerekiyor.", 401)
         if row["Role"] not in permissions.ROLES:  # bozuk kayıt: oturum kapanır, iz (Admin'e uyarı 9.2'de)
             if repo.end_session(session, row["SessionId"], END_CLOSED):
                 audit.write_audit(session, INVALID_ROLE, row["UserId"], OBJECT, row["UserName"],
                                   {"role": row["Role"], "session_id": row["SessionId"]})
             session.commit()
-            raise AppError("not_authenticated", "Oturum açmanız gerekiyor.", 401)
+            raise AppError("not_authenticated", "Giriş yapmanız gerekiyor.", 401)
         policy = repo.read_policy(session)
         left = policy.idle_minutes * 60 - int((row["Now"] - row["LastActivityAt"]).total_seconds())
         if left <= 0:
             _end_idle(session, row["SessionId"], row["UserId"], row["UserName"], policy)
             session.commit()
             raise AppError("session_expired",
-                           f"Oturumunuz {policy.idle_minutes} dakika hareketsizlik nedeniyle kapandı.", 401)
+                           f"{policy.idle_minutes} dakika işlem yapılmadığı için oturumunuz kapandı.", 401)
         expired = bool(row["PasswordExpiresAt"] and row["PasswordExpiresAt"] <= row["Now"])
         must = bool(row["MustChangePassword"]) or expired
         reason = (row["PasswordChangeReason"] or REASON_FIRST) if row["MustChangePassword"] else (REASON_EXPIRED if expired else None)
@@ -286,7 +285,7 @@ def change_password(session: Session | None, user: CurrentUser, current: str, ne
         elif any(security.verify_password(h, new) for h in repo.recent_hashes(session, user.id, policy.history_count)):
             problems.append("history")
         if problems:
-            raise AppError("password_policy", "Yeni şifre politikaya uymuyor.", 422,
+            raise AppError("password_policy", "Yeni şifre kurallara uymuyor.", 422,
                            [{"field": "new_password", "problem": p} for p in problems])
         now = repo.now(session)
         new_hash = security.hash_password(new)

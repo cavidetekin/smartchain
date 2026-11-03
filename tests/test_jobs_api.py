@@ -42,7 +42,7 @@ def test_cancel(db_client, db_session, job_settings, test_users):
     r = db_client.post(f"/api/jobs/{job_id}/cancel")
     assert r.status_code == 409
     err = r.json()["error"]
-    assert err["code"] == "job_not_cancellable" and "İptal" in err["message"]
+    assert err["code"] == "job_not_cancellable" and err["message"] == "Yalnız sıradaki iş iptal edilebilir."
 
 
 def test_database_unavailable(app, client):

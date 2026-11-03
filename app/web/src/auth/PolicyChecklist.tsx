@@ -28,7 +28,6 @@ export function PolicyChecklist({ rules }: { rules: PolicyRule[] }) {
             <li key={r.key} className={`sc-policy-item is-${r.state}`} data-rule={r.key}>
               <Icon role="img" aria-label={tr.auth.ruleState[r.state]} className="sc-policy-icon" />
               <span>{r.label}</span>
-              {r.state === "pending" && <span className="sc-muted"> · {tr.auth.ruleState.pending}</span>}
             </li>
           );
         })}

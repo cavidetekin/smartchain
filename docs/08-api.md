@@ -36,7 +36,7 @@ Her hata aynı biçimde döner; mesaj Türkçe ve kullanıcıya gösterilebilir:
 
 - **İş kuralı hatası:** servis `AppError(code, message, status_code)` fırlatır.
 - **Girdi hatası (422):** `code = "validation"`; `details` her hatalı alanı (`field`, `problem`) listeler.
-- **Veritabanına ulaşılamıyor (503):** bağlantı kurulamaz ya da havuzda boş bağlantı kalmazsa (havuz zaman aşımı) her uç nokta `code = "database_unavailable"` döner; 500 değildir. Ön yüz bunu "Veritabanına ulaşılamıyor" diye gösterir.
+- **Veritabanına ulaşılamıyor (503):** bağlantı kurulamaz ya da havuzda boş bağlantı kalmazsa (havuz zaman aşımı) her uç nokta `code = "database_unavailable"` döner; 500 değildir. Ön yüz bunu "Veriye ulaşılamıyor" diye gösterir.
 - **Beklenmeyen hata (500):** kullanıcıya yalnız takip numarası gösterilir; ayrıntı ve yığın izi loga yazılır. Kapalı ağda destek bu numarayla verilir.
 
 ## Takip numarası ve log
@@ -78,8 +78,8 @@ Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz.
 | Durum | Kod | Mesaj ve `details` |
 |---|---|---|
 | Kullanıcı adı ya da şifre hatalı | 401 `login_failed` | "Kullanıcı adı ya da şifre hatalı." · `[{"remaining_attempts": 2, "lock_after": 5, "lock_minutes": 15}]` |
-| Hesap kilitli | 403 `account_locked` | "Hesap kilitli. 12 dk sonra yeniden deneyin ya da yöneticinize başvurun." · `[{"minutes_left": 12}]` |
-| Hesap kapalı (yalnız şifre doğruysa) | 403 `account_inactive` | "Hesap kapalı. Yöneticinize başvurun." |
+| Hesap kilitli | 403 `account_locked` | "Hesap kilitli. 12 dk sonra açılır; yöneticiniz de açabilir." · `[{"minutes_left": 12}]` |
+| Hesap kapalı (yalnız şifre doğruysa) | 403 `account_inactive` | "Hesap kapalı. Yöneticiniz açabilir." |
 
 **Oturum hataları:**
 
@@ -110,7 +110,7 @@ Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu doc
   ```
 
   Gereken rol System owner ise mesajın sonu "Smartchain desteğine başvurun." olur.
-- **Nesne bağlamı:** yalnız sahibi değiştirir, diğerleri salt okunur görür. Sahibi değilken değiştirme 403 (ör. `view_not_owner`: "Bu görünümü yalnız sahibi değiştirebilir; sizin için salt okunur."), denetim izine "Yetkisiz istek" (sebep "sahibi değil").
+- **Nesne bağlamı:** yalnız sahibi değiştirir, diğerleri salt okunur görür. Sahibi değilken değiştirme 403 (ör. `view_not_owner`: "Bu görünümü yalnız sahibi değiştirebilir."), denetim izine "Yetkisiz istek" (sebep "sahibi değil").
 - **Rol değişikliği** bir sonraki istekte geçerlidir; oturum kapanmaz. Her yetkili cevapta `X-Smartchain-Role` başlığı oturumdaki rolü taşır; arayüz farklı görürse `me`'yi yeniler.
 - **Tanınmayan rol** (bozuk kayıt): oturum "Kapatıldı" ile kapanır, denetim izine "Geçersiz rol", 401 `not_authenticated`.
 

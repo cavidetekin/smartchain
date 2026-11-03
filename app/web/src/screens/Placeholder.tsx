@@ -34,7 +34,6 @@ export function NotFound() {
       </header>
       <Card className="sc-placeholder">
         <FileQuestion aria-hidden="true" className="sc-placeholder-icon" />
-        <p className="sc-muted">{tr.screen.notFoundHint}</p>
         <Link to={HOME.path} className="sc-link">{tr.screen.backHome}</Link>
       </Card>
     </section>

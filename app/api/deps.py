@@ -14,7 +14,7 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import sessionmaker
 
 from .db import get_engine
-from .errors import AppError
+from .errors import DB_UNAVAILABLE, AppError
 from .permissions import Access
 from .services import auth, authz
 from .services.auth import CurrentUser
@@ -37,14 +37,14 @@ def origin_allowed(origin: str | None, host: str | None) -> bool:
 
 def check_origin(request: Request) -> None:
     if request.method not in SAFE_METHODS and not origin_allowed(request.headers.get("origin"), request.headers.get("host")):
-        raise AppError("bad_origin", "İstek izin verilmeyen bir adresten geldi.", 403)
+        raise AppError("bad_origin", "Bu adresten işlem yapılamaz.", 403)
 
 
 def authenticate(token: str | None) -> CurrentUser:
     try:
         engine = get_engine()
     except Exception as exc:
-        raise AppError("database_unavailable", auth.DB_DOWN, 503) from exc
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
     with sessionmaker(bind=engine)() as session:
         return auth.authenticate(session, token)
 

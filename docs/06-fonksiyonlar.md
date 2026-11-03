@@ -6512,6 +6512,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Ana sayfa (82) açılır.
   - Denetim izi (98).
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; oturum ve yetki bilgisi her istekte doğrulanır.
+- **Metinler (2.3c):** Arayüz metinleri docs/12 "Arayüz metni" kuralına göre sadeleşti; yukarıdaki ve mockup'lardaki metinlerden farklı olanlarda docs/12 geçerlidir.
 - **ÖRNEK:** Burak geçici şifreyle girer, politikaya uygun yeni şifre belirler. Cavide 25 dk hareketsiz kalınca uyarı alır, 'Devam et' der; oturum uzar, kaydedilmemiş değişiklikleri kaybolmaz.
 
 ### 89 · Giriş ve oturum · Giriş sayfası

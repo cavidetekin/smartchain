@@ -52,4 +52,4 @@ def ensure_owner(user: CurrentUser, owner_id: int | None, fn: int, code: str, wh
     if owner_id == user.id:
         return
     record_denial(user, fn, Access.WRITE, {"reason": "sahibi değil", **(details or {})})
-    raise AppError(code, f"{what} yalnız sahibi değiştirebilir; sizin için salt okunur.", 403)
+    raise AppError(code, f"{what} yalnız sahibi değiştirebilir.", 403)

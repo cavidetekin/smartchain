@@ -103,9 +103,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
   const all = [...jobs.values()];
   const running = all.filter((j) => j.status === RUNNING).length;
   const queued = all.filter((j) => j.status === QUEUED).length;
-  const connText =
-    conn === "connected" ? tr.jobs.connection.connected
-    : `${tr.jobs.connection.reconnecting}. ${tr.jobs.connection.polling}`;
+  const delayed = conn === "connected" ? undefined : tr.jobs.delayed;  // sorun yokken metin yok
   const recent = (everyone ?? all).sort((a, b) => b.id - a.id).slice(0, showAll ? 30 : 10);
   const exporting = all.find((j) => j.job_type === JOB_EXPORT && j.status === RUNNING)
     ?? all.find((j) => j.job_type === JOB_EXPORT && j.status === QUEUED);
@@ -123,7 +121,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
   return (
     <div className="sc-jobs">
       <button type="button" className="sc-chip sc-chip-btn" aria-haspopup="dialog" aria-expanded={open}
-              onClick={() => setOpen(!open)} title={connText} data-testid="job-indicator">
+              onClick={() => setOpen(!open)} title={delayed} data-testid="job-indicator">
         {running ? <LoaderCircle aria-hidden="true" className="sc-spin" /> : <Activity aria-hidden="true" />}
         <span>
           {exporting
@@ -136,12 +134,12 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
             <span className="sc-progress-fill" style={{ width: `${ratio * 100}%` }} />
           </span>
         )}
-        <span className={`sc-dot is-${conn}`} aria-label={connText} role="img" />
+        <span className={`sc-dot is-${conn}`} {...(delayed ? { "aria-label": delayed, role: "img" } : { "aria-hidden": true })} />
       </button>
       {open && (
         <div className="sc-popover" role="dialog" aria-label={tr.jobs.title}>
           <div className="sc-popover-title">{tr.jobs.title}</div>
-          <p className="sc-muted">{connText}</p>
+          {delayed && <p className="sc-muted">{delayed}</p>}
           <span title={canSeeAll ? undefined : forbiddenReason(93, "read")}>
             <Checkbox label={tr.jobs.allJobs} checked={showAll} disabled={!canSeeAll}
                       onChange={(on) => (on ? void loadAll() : setEveryone(null))} />

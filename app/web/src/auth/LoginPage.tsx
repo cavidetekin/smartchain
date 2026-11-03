@@ -18,9 +18,9 @@ export function safeNext(next: string | null): string {
 
 function failure(e: unknown): string {
   if (!(e instanceof ApiError)) return tr.auth.unreachable;
-  const d = e.details[0] as unknown as { remaining_attempts?: number; lock_after?: number; lock_minutes?: number } | undefined;
+  const d = e.details[0] as unknown as { remaining_attempts?: number } | undefined;
   if (e.code === "login_failed" && d?.remaining_attempts !== undefined) {
-    return tr.auth.failed(d.remaining_attempts, d.lock_after ?? 0, d.lock_minutes ?? 0);
+    return tr.auth.failed(d.remaining_attempts);
   }
   return e.message;
 }

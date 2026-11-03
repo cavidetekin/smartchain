@@ -423,8 +423,6 @@
 .sc-idle { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
 .sc-idle-count { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-kpi);
   font-weight: var(--fw-medium); }
-.sc-idle-limit { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm);
-  color: var(--text-muted); }
 
 .sc-user-who { display: flex; flex-direction: column; gap: 0.1538rem; padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--line); }
