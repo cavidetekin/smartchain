@@ -47,14 +47,14 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [ ] 3.1 Excel şablonu üretimi (02)
 - [ ] 3.2 Excel yükleme → Staging (03)
-- [ ] 3.3 SQL arayüz okuyucu → Staging (01), entegrasyon tanımı (91)
+- [ ] 3.3 SQL arayüz okuyucu → Staging (01), entegrasyon tanımı (91) · A-38: ham tablo + view akışı, varlık başına yöntem seçimi (view, Excel, API)
 - [ ] 3.4 Yapısal doğrulama ve hata raporu (04): tip, zorunlu alan, tekrar eden anahtar
 
 ## Aşama 4 · Dönüştürme (Transform)
 
 - [ ] 4.1 Veri kuralı uygulama, Staging üzerinde (19)
 - [ ] 4.2 Veri kuralları ekranı (04): tanımlama, önizleme, sıralama, aç/kapa (16–18)
-- [ ] 4.3 Aktarım filtresi (yeni, 99): tanım ve önizleme · yöntem açık (A-34)
+- [ ] 4.3 Aktarım filtresi (yeni, 99): tanım ve önizleme · yöntem açık (A-34; teknik kapsam view'da, iş kapsamı burada: A-38)
 - [ ] 4.4 Referans kontrolü ve kod→Id eşleme
 
 ## Aşama 5 · Yükleme (Load)
@@ -139,7 +139,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 11.2 Sürüm güncelleme (97)
 - [ ] 11.3 Yedekleme, geri yükleme, lisans
 - [ ] 11.4 Kurulum paketinin tamamı (27. adım)
-- [ ] 11.5 API adaptörü (Faz 2)
+- [ ] 11.5 API adaptörü (Faz 2) · varlık başına yöntem seçimine (A-38) üçüncü seçenek olarak bağlanır
 - [ ] 11.6 Doğruluk raporları (A-22)
 
 ---
@@ -169,5 +169,6 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 
 ## Açık konular
 
+- **A-38 · SQL entegrasyonunda ham tablo + view akışı.** Müşteri ERP verisini olduğu gibi ham tablolara yazar, kurulumda yazılan view'lar sözleşmeye çevirir, Smartchain view'dan staging'e alır. "Bitti" sinyali, view ile kural sınırı, view bakımı ve uyum denetimi; yöntem varlık başına seçilir (view, Excel, API). 3.3'te karara bağlanır (docs/00).
 - **A-37 · Değişiklik etkisi ve yeniden hesap yönetimi.** Bir girdi değişince hangi sonuçların yenileneceği: türetilmiş hesap ve göstergeler anında, plan motorla; bağımlılık haritası ve girdi damgası. 8.2'den önce karara bağlanır (docs/00).
 - **A-34 · Aktarım filtresinin yöntemi.** Kapsam filtresi (pasif malzeme, kapalı sipariş, başka lokasyon gibi) nasıl tanımlanacak? Değişen kayıtlar K-40 ve A-23'e, hatalı satırların ayıklanması 26. adımdaki hata yönetimine bağlı.
