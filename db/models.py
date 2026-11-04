@@ -1304,7 +1304,7 @@ Job = sa.Table(
     "Job", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
     sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Yükleme | Termin sorgusu | Dışa aktarım …", info={'values': ["Gece senaryosu", "Çalışma", "Yükleme", "Termin sorgusu", "Dışa aktarım"]}),
-    sa.Column("Channel", sa.Unicode(15), nullable=False, comment="Gece | Etkileşim | Dışa aktarım", info={'values': ["Gece", "Etkileşim", "Dışa aktarım"]}),
+    sa.Column("Channel", sa.Unicode(15), nullable=False, comment="Gece | Hesaplama | Dışa aktarım", info={'values': ["Gece", "Hesaplama", "Dışa aktarım"]}),
     sa.Column("Priority", sa.Integer(), nullable=True, comment="Öncelik", info={'label': "Öncelik"}),
     sa.Column("Status", sa.Unicode(15), nullable=False, comment="Sırada | Çalışıyor | Bitti | Hata | İptal", info={'values': ["Sırada", "Çalışıyor", "Bitti", "Hata", "İptal"]}),
     sa.Column("RequestedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Başlatan", info={'label': "Başlatan"}),
@@ -1317,6 +1317,9 @@ Job = sa.Table(
     sa.Column("StartedAt", mssql.DATETIME2(), nullable=True, comment="Çalışmaya başlama (UTC)", info={'label': "Çalışmaya başlama (UTC)"}),
     sa.Column("EndedAt", mssql.DATETIME2(), nullable=True, comment="Bitiş, hata ya da iptal (UTC)", info={'label': "Bitiş, hata ya da iptal (UTC)"}),
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik (UTC); API bildirim için izler (K-69)", info={'label': "Son değişiklik (UTC)"}),
+    sa.Column("CancelReason", sa.Unicode(200), nullable=True, comment="İptal nedeni; başkasının işinde zorunlu (K-107)", info={'label': "İptal nedeni"}),
+    sa.Column("CancelledBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="İptal eden", info={'label': "İptal eden"}),
+    sa.Column("Summary", sa.Unicode(200), nullable=True, comment="İş özeti; kuyruğa girerken iş türü yazar (K-107)", info={'label': "İş özeti"}),
     schema="adm",
     comment="İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler.",
 )
@@ -1331,6 +1334,32 @@ SolverLog = sa.Table(
     sa.Column("Iterations", sa.Integer(), nullable=True, comment="LNS turu", info={'label': "LNS turu"}),
     schema="adm",
     comment="Çözüm logu; ilk günden tutulur.",
+)
+
+SystemEvent = sa.Table(
+    "SystemEvent", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
+    sa.Column("OccurredAt", mssql.DATETIME2(), nullable=False, comment="Zaman (UTC)", info={'label': "Zaman (UTC)"}),
+    sa.Column("Component", sa.Unicode(20), nullable=False, comment="Motor | Uygulama | İş kuyruğu | Dışa aktarım", info={'values': ["Motor", "Uygulama", "İş kuyruğu", "Dışa aktarım"]}),
+    sa.Column("Message", sa.Unicode(500), nullable=False, comment="Hata", info={'label': "Hata"}),
+    sa.Column("Resolution", sa.Unicode(200), nullable=True, comment="Sistem aksiyonu", info={'label': "Sistem aksiyonu"}),
+    sa.Column("IsResolved", sa.Boolean(), nullable=False, server_default=sa.text("0"), comment="Sistem kendisi çözdü mü", info={'label': "Sistem kendisi çözdü mü"}),
+    sa.Column("JobId", sa.BigInteger(), nullable=True, comment="İlgili iş; olay işten uzun yaşayabilir, bağ tutulmaz", info={'label': "İlgili iş"}),
+    sa.Column("TraceId", sa.Unicode(12), nullable=True, comment="Takip numarası", info={'label': "Takip numarası"}),
+    sa.Column("Detail", sa.Unicode(1000), nullable=True, comment="Teknik özet; yalnız System owner görür, yığın izi yazılmaz", info={'label': "Teknik özet"}),
+    schema="adm",
+    comment="Sistem hataları ve sistem aksiyonu (K-106). Saklama `SystemEventRetentionDays`; motor servisi eskileri siler.",
+)
+
+ServiceStatus = sa.Table(
+    "ServiceStatus", metadata,
+    sa.Column("ServiceName", sa.Unicode(20), primary_key=True, autoincrement=False, comment="Servis", info={'label': "Servis"}),
+    sa.Column("HeartbeatAt", mssql.DATETIME2(), nullable=False, comment="Son kalp atışı (UTC)", info={'label': "Son kalp atışı (UTC)"}),
+    sa.Column("StartedAt", mssql.DATETIME2(), nullable=False, comment="Açılış (UTC)", info={'label': "Açılış (UTC)"}),
+    sa.Column("StoppedAt", mssql.DATETIME2(), nullable=True, comment="Düzgün kapanış (UTC); çalışırken boş", info={'label': "Düzgün kapanış (UTC)"}),
+    sa.Column("AppVersion", sa.Unicode(20), nullable=True, comment="Sürüm", info={'label': "Sürüm"}),
+    schema="adm",
+    comment="Motor servisinin kalp atışı (K-106). Durum saklanmaz, okurken hesaplanır.",
 )
 
 AuditLog = sa.Table(

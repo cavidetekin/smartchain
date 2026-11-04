@@ -9,7 +9,7 @@ import { tr } from "../i18n/tr";
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import type { Row } from "../table/types";
 import { Alert, Button, Card, Checkbox, Dialog, NumberField, Segment, SelectField, TextField } from "../ui";
-import { type FieldDetail, type LoginPolicy, type PolicyKey, type PolicyValues, systemOwnerApi } from "./systemOwnerApi";
+import { type FieldDetail, type PolicyValues, systemOwnerApi } from "./systemOwnerApi";
 
 const T = tr.systemOwner;
 const LABEL_MAX = 40;  // K-88
@@ -100,46 +100,59 @@ function Dictionary() {
   );
 }
 
-const NUMBERS: { title: string; keys: PolicyKey[] }[] = [
-  { title: T.passwordGroup, keys: ["PasswordMinLength", "PasswordHistoryCount", "PasswordMaxAgeDays"] },
-  { title: T.sessionGroup, keys: ["LoginMaxFailedAttempts", "LoginLockMinutes", "SessionIdleMinutes", "SessionWarningMinutes"] },
-];
+interface FormGroup {
+  title: string;
+  keys: string[];
+  checkbox?: string;
+}
 
-function PolicyForm() {
-  const [policy, setPolicy] = useState<LoginPolicy | null>(null);
-  const [values, setValues] = useState<Partial<Record<PolicyKey, number | boolean | null>>>({});
+type FormValues = Record<string, number | boolean | null>;
+
+interface FormData {
+  values: Record<string, number | boolean>;
+  limits: Partial<Record<string, { min: number; max: number }>>;
+}
+
+/** Ayar formu (K-105, K-106): kayıtlı olmayan ayar varsayılanıyla gelir; yalnız değişenler gönderilir. */
+function SettingsForm({ groups, labels, read, write, crossCheck }: {
+  groups: FormGroup[];
+  labels: Record<string, string>;
+  read(signal: AbortSignal): Promise<FormData>;
+  write(changes: Record<string, number | boolean | null>): Promise<FormData>;
+  crossCheck?(key: string, values: FormValues): string | undefined;
+}) {
+  const [data, setData] = useState<FormData | null>(null);
+  const [values, setValues] = useState<FormValues>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = (p: LoginPolicy) => {
-    setPolicy(p);
-    setValues(p.values);
+  const load = (d: FormData) => {
+    setData(d);
+    setValues(d.values);
   };
   useEffect(() => {
     const ctrl = new AbortController();
-    systemOwnerApi.policy(ctrl.signal).then(load).catch((e: unknown) => {
+    read(ctrl.signal).then(load).catch((e: unknown) => {
       if (!ctrl.signal.aborted) setError(errorText(e));
     });
     return () => ctrl.abort();
-  }, []);
+  }, [read]);
 
-  const problem = (key: PolicyKey): string | undefined => {
+  const problem = (key: string): string | undefined => {
     const v = values[key];
-    const limit = policy?.limits[key];
+    const limit = data?.limits[key];
     if (limit && (typeof v !== "number" || v < limit.min || v > limit.max)) return T.limit(limit.min, limit.max);
-    const idle = values.SessionIdleMinutes;
-    if (key === "SessionWarningMinutes" && typeof v === "number" && typeof idle === "number" && v >= idle) return T.warningTooLong;
-    return undefined;
+    return crossCheck?.(key, values);
   };
-  const keys = Object.keys(policy?.values ?? {}) as PolicyKey[];
-  const changed = keys.filter((k) => policy && values[k] !== policy.values[k]);
+  const keys = Object.keys(data?.values ?? {});
+  const changed = keys.filter((k) => data && values[k] !== data.values[k]);
   const invalid = keys.some((k) => problem(k));
 
   const save = async () => {
     setBusy(true);
     setError(null);
     try {
-      load(await systemOwnerApi.setPolicy(Object.fromEntries(changed.map((k) => [k, values[k]])) as Partial<PolicyValues>));
+      load(await write(Object.fromEntries(changed.map((k) => [k, values[k]]))));
       emitNotice(T.policySaved);
     } catch (e) {
       setError(errorText(e));
@@ -148,19 +161,19 @@ function PolicyForm() {
     }
   };
 
-  if (!policy) return error ? <Alert tone="error">{error}</Alert> : null;
+  if (!data) return error ? <Alert tone="error">{error}</Alert> : null;
   return (
     <div className="sc-settings-form">
-      {NUMBERS.map((group) => (
+      {groups.map((group) => (
         <Card key={group.title} title={group.title}>
           <div className="sc-field-rows">
             {group.keys.map((key) => (
-              <NumberField key={key} label={T.policy[key]} value={values[key] as number | null} error={problem(key)}
+              <NumberField key={key} label={labels[key]} value={values[key] as number | null} error={problem(key)}
                            onChange={(v) => setValues((s) => ({ ...s, [key]: v }))} />
             ))}
-            {group.title === T.passwordGroup && (
-              <Checkbox label={T.policy.PasswordRequireLetterAndDigit} checked={Boolean(values.PasswordRequireLetterAndDigit)}
-                        onChange={(v) => setValues((s) => ({ ...s, PasswordRequireLetterAndDigit: v }))} />
+            {group.checkbox && (
+              <Checkbox label={labels[group.checkbox]} checked={Boolean(values[group.checkbox])}
+                        onChange={(v) => setValues((s) => ({ ...s, [group.checkbox as string]: v }))} />
             )}
           </div>
         </Card>
@@ -173,7 +186,19 @@ function PolicyForm() {
   );
 }
 
-type Section = "dictionary" | "policy";
+const POLICY_GROUPS: FormGroup[] = [
+  { title: T.passwordGroup, keys: ["PasswordMinLength", "PasswordHistoryCount", "PasswordMaxAgeDays"], checkbox: "PasswordRequireLetterAndDigit" },
+  { title: T.sessionGroup, keys: ["LoginMaxFailedAttempts", "LoginLockMinutes", "SessionIdleMinutes", "SessionWarningMinutes"] },
+];
+const HEALTH_GROUPS: FormGroup[] = [{ title: T.healthGroup, keys: ["DiskWarnPercent", "QueueWaitWarnMinutes", "SystemEventRetentionDays"] }];
+
+const warningShorter = (key: string, values: FormValues) => {
+  const [warning, idle] = [values.SessionWarningMinutes, values.SessionIdleMinutes];
+  return key === "SessionWarningMinutes" && typeof warning === "number" && typeof idle === "number" && warning >= idle ? T.warningTooLong : undefined;
+};
+const writePolicy = (changes: FormValues) => systemOwnerApi.setPolicy(changes as Partial<PolicyValues>);
+
+type Section = "dictionary" | "policy" | "health";
 
 export function SystemOwner() {
   const [section, setSection] = useState<Section>("dictionary");
@@ -189,9 +214,11 @@ export function SystemOwner() {
       </header>
       <div className="sc-section-switch">
         <Segment<Section> label={T.sections} hideLabel value={section} onChange={setSection}
-                 options={[{ value: "dictionary", label: T.dictionary }, { value: "policy", label: T.policyTitle }]} />
+                 options={[{ value: "dictionary", label: T.dictionary }, { value: "policy", label: T.policyTitle }, { value: "health", label: T.healthTitle }]} />
       </div>
-      {section === "dictionary" ? <Dictionary /> : <PolicyForm />}
+      {section === "dictionary" && <Dictionary />}
+      {section === "policy" && <SettingsForm groups={POLICY_GROUPS} labels={T.policy} read={systemOwnerApi.policy} write={writePolicy} crossCheck={warningShorter} />}
+      {section === "health" && <SettingsForm groups={HEALTH_GROUPS} labels={T.health} read={systemOwnerApi.healthSettings} write={systemOwnerApi.setHealthSettings} />}
     </section>
   );
 }

@@ -11,8 +11,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 BANNED = re.compile(r"\bAPI\b|Veritaban[ıi]|[İi]stek\b|[Pp]olitika|[Hh]areketsizlik|[Yy]ıkıcı işlem|[Oo]nay gerekli")
-# tr.ts'de geliştirme sayfalarının bölümleri
-DEV_SECTIONS = (("  style: {", "  table: {"), ("  demo: {", "  screen: {"))
+# tr.ts'de geliştirme sayfalarının bölümleri ve sistem yöneticisine yazılan sağlık metinleri (ör. "Veritabanı")
+DEV_SECTIONS = (("  style: {", "  table: {"), ("  demo: {", "  screen: {"), ("  systemHealth: {", "  // Sistem ayarları (ekran 25"))
 
 
 def banned(texts: list[str]) -> list[str]:

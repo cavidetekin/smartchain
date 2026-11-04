@@ -218,7 +218,8 @@ def start(session: Session | None, defn: ListDefinition, user_id: int, req: Expo
         if plan.rows > settings["ExportSyncMaxRows"]:
             payload = {"list": defn.name, "user_id": user_id, "file_name": plan.file_name, "rows": plan.rows,
                        "request": req.model_dump(mode="json", by_alias=True)}
-            job_id = queue.enqueue(session, TYPE_EXPORT, CHANNEL_EXPORT, user_id, payload)
+            job_id = queue.enqueue(session, TYPE_EXPORT, CHANNEL_EXPORT, user_id, payload,
+                                   summary=f"{plan.defn.title} · {describe.tr_number(plan.rows, 0)} satır")
             return {"job_id": job_id, "file_name": plan.file_name, "rows": plan.rows}
         t0 = time.perf_counter()
         buf = io.BytesIO()

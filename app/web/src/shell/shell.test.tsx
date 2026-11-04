@@ -48,9 +48,9 @@ describe("kenar menü", () => {
   it("ekrana tıklayınca boş sayfası ve adımı açılır", async () => {
     const user = userEvent.setup();
     renderApp();
-    await user.click(within(menu()).getByRole("link", { name: /Sistem sağlığı/ }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem sağlığı");
-    expect(screen.getByText("Bu ekran 2.5 adımında gelecek.")).toBeInTheDocument();
+    await user.click(within(menu()).getByRole("link", { name: /Entegrasyon/ }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Entegrasyon");
+    expect(screen.getByText("Bu ekran 5.6 adımında gelecek.")).toBeInTheDocument();
   });
 });
 
@@ -246,7 +246,7 @@ describe("bağlam çubuğu", () => {
 
 describe("iş göstergesi", () => {
   const job = (id: number, status: string, extra = {}) => ({
-    id, job_type: "Çalışma", channel: "Etkileşim", status, progress: null, queue_position: null,
+    id, job_type: "Çalışma", channel: "Hesaplama", status, progress: null, queue_position: null,
     updated_at: "2026-10-27T09:20:00+00:00", ...extra,
   });
 

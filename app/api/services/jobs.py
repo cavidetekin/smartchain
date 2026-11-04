@@ -4,11 +4,19 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.jobs import queue
+from app.jobs.constants import CHANNEL_NIGHT, TYPE_LOAD
 from app.jobs.settings import read_settings
 from ..errors import DB_UNAVAILABLE, AppError
-from ..permissions import Access
+from ..permissions import SYSTEM_OWNER, Access, role_message
+from ..repositories import audit
 from . import authz
 from .auth import CurrentUser
+
+
+REASON_REQUIRED = "İptal nedenini yazın."
+CANCEL_ACTION = "İş iptali"
+PRIORITIZE_ACTION = "İş öne alma"
+OBJECT = "Job"
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -20,11 +28,15 @@ def to_public(job: dict) -> dict:
     return {
         "id": job["Id"],
         "job_type": job["JobType"],
+        "summary": job["Summary"],
         "channel": job["Channel"],
         "priority": job["Priority"],
         "status": job["Status"],
         "requested_by": job["RequestedBy"],
         "requested_by_name": job["RequestedByName"],
+        "is_protected": job["RequestedByRole"] == SYSTEM_OWNER,  # K-107
+        "cancel_reason": job["CancelReason"],
+        "cancelled_by_name": job["CancelledByName"],
         "progress": job["Progress"],
         "attempt": job["Attempt"],
         "error_text": job["ErrorText"],
@@ -71,13 +83,45 @@ def get_job(session: Session | None, job_id: int, user: CurrentUser) -> dict:
     return to_public(_job(_require(session), job_id, user, Access.READ))
 
 
-def cancel(session: Session | None, job_id: int, user: CurrentUser) -> dict:
+def _not_protected(job: dict, user: CurrentUser, access: Access = Access.WRITE) -> None:
+    """System owner'ın işine Admin dokunamaz (K-101, K-107); ret denetim izine yazılır."""
+    if job["RequestedByRole"] == SYSTEM_OWNER and user.role != SYSTEM_OWNER:
+        authz.record_denial(user, 93, access, {"job_id": job["Id"], "reason": "System owner işi"})
+        raise AppError("forbidden", role_message(SYSTEM_OWNER), 403)
+
+
+def cancel(session: Session | None, job_id: int, user: CurrentUser, reason: str | None = None) -> dict:
+    """Başkasının işinde neden zorunlu, sahibine bildirimle gider (K-107). İptal denetim izine yazılır."""
     session = _require(session)
-    _job(session, job_id, user, Access.WRITE)
+    job = _job(session, job_id, user, Access.WRITE)
+    _not_protected(job, user)
+    reason = (reason or "").strip() or None
+    if job["RequestedBy"] != user.id and reason is None:
+        raise AppError("reason_required", REASON_REQUIRED, 422, [{"field": "reason", "problem": REASON_REQUIRED}])
     try:
-        queue.cancel(session, job_id)
+        queue.cancel(session, job_id, reason, user.id, commit=False)
+        audit.write_audit(session, CANCEL_ACTION, user.id, OBJECT, str(job_id), {"status": "İptal", "reason": reason},
+                          {"status": job["Status"], "job_type": job["JobType"], "requested_by": job["RequestedBy"]})
+        session.commit()
     except queue.JobNotFound:
         raise AppError("job_not_found", "İş bulunamadı.", 404)
     except queue.JobNotCancellable as exc:
-        raise AppError("job_not_cancellable", "Yalnız sıradaki iş iptal edilebilir.", 409) from exc
+        message = "Yükleme işi iptal edilemez." if job["JobType"] == TYPE_LOAD else "Yalnız sıradaki iş iptal edilebilir."
+        raise AppError("job_not_cancellable", message, 409) from exc
+    return get_job(session, job_id, user)
+
+
+def prioritize(session: Session | None, job_id: int, user: CurrentUser) -> dict:
+    session = _require(session)
+    job = _job(session, job_id, user, Access.WRITE)
+    _not_protected(job, user)
+    try:
+        queue.prioritize(session, job_id, commit=False)
+        audit.write_audit(session, PRIORITIZE_ACTION, user.id, OBJECT, str(job_id), {"channel": job["Channel"]})
+        session.commit()
+    except queue.JobNotFound:
+        raise AppError("job_not_found", "İş bulunamadı.", 404)
+    except queue.JobNotPrioritizable as exc:
+        message = "Gece işleri öne alınamaz." if job["Channel"] == CHANNEL_NIGHT else "Yalnız sıradaki iş öne alınabilir."
+        raise AppError("job_not_prioritizable", message, 409) from exc
     return get_job(session, job_id, user)

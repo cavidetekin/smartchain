@@ -31,6 +31,12 @@ export interface LoginPolicy {
   limits: Partial<Record<PolicyKey, { min: number; max: number }>>;
 }
 
+export interface HealthSettings {
+  values: Record<string, number>;
+  defaults: Record<string, number>;
+  limits: Partial<Record<string, { min: number; max: number }>>;
+}
+
 export type Level = "full" | "owner" | "self" | "read" | "none";
 
 export interface PermissionMatrix {
@@ -45,6 +51,8 @@ export const systemOwnerApi = {
   setLabel: (table: string, field: string, label: string) => sendJson<FieldDetail>("PUT", `${path(table, field)}/label`, { label }),
   policy: (signal?: AbortSignal) => getJson<LoginPolicy>("/api/settings/login-policy", signal),
   setPolicy: (changes: Partial<PolicyValues>) => sendJson<LoginPolicy>("PUT", "/api/settings/login-policy", changes),
+  healthSettings: (signal?: AbortSignal) => getJson<HealthSettings>("/api/settings/health", signal),
+  setHealthSettings: (changes: Record<string, number | boolean | null>) => sendJson<HealthSettings>("PUT", "/api/settings/health", changes),
   matrix: (signal?: AbortSignal) => getJson<PermissionMatrix>("/api/permissions/matrix", signal),
   exportMatrix: () => downloadFile("/api/permissions/matrix/export", "smartchain_yetki-matrisi.xlsx"),
 };

@@ -83,7 +83,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **22 · Kullanıcılar:** Kullanıcı açma, kapatma, rol atama, şifre sıfırlama.
 - **23 · Entegrasyon ve zamanlanmış işler:** API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması.
-- **24 · Sistem sağlığı:** Son çalışmalar, iş kuyruğu, hatalar, çözüm süreleri; destek paketi dışa alma.
+- **24 · Sistem sağlığı:** İş kuyruğu, son çalışmalar, hatalar, servis durumu, disk; destek paketi 11.1'de.
 - **25 · Sistem ayarları:** Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı), lisans, sürüm.
 
 ### Fonksiyon listesi
@@ -167,7 +167,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **44 · Değişiklik izi:** Her değişiklik ekran, kişi, zaman ve etkisiyle kaydedilir.
 - **45 · Değişikliği geri alma:** Tek tek ya da hepsi birden.
 - **46 · Yeniden hesap:** Etkilenen kısım yeniden çözülür; iş kuyruğa girer.
-- **47 · Eş zamanlı çalışma sınırı:** En fazla 3 sıcak çalışma; fazlası kuyrukta bekler.
+- **47 · Eş zamanlı çalışma sınırı:** En fazla 3 aktif hesaplama; fazlası kuyrukta bekler.
 - **48 · İş bitti bildirimi:** Hesap bitince ekrana anlık bildirim (WebSocket).
 - **49 · Çalışma kapatma:** Yayınlanmayan çalışma, kaynak senaryo gece silinince gider.
 
@@ -486,10 +486,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Sistem sağlığı](mockups/m24e-0333-sistem-sagligi.png)
 
-- **Anlık durum:** Kuyruk, sıcak çalışma sayısı, hata ve disk durumu tek bakışta.
+- **Anlık durum:** Kuyruk, aktif hesaplama sayısı, hata ve disk durumu tek bakışta.
 - **İş kuyruğu:** Hangi kullanıcının hangi işi çalışıyor ya da bekliyor.
 - **Hatalar ve çözüm:** Hata, bileşen ve sistemin nasıl toparladığı listelenir.
 - **Destek paketi:** Kapalı ağda uzaktan erişim yok; log ve ayarlar paket olarak dışa alınır.
+- **Uygulama (2.5, K-106, K-107):** Kartlar, servis şeridi ve ortak tablolu üç bölüm: İş kuyruğu, Son çalışmalar, Hatalar. Süre trendi 10.13'te, zamanlayıcı 5.6'da, destek paketi 11.1'de (docs/12).
 
 ### Sistem ayarları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 25/25</sub>

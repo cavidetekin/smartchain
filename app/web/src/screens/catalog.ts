@@ -95,7 +95,7 @@ export const SCREENS: Screen[] = [
   { no: "23", fn: 91, name: "Entegrasyon", path: "/yonetim/entegrasyon", group: "yonetim", step: "5.6", icon: Plug,
     description: "API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması." },
   { no: "24", fn: 94, name: "Sistem sağlığı", path: "/yonetim/sistem-sagligi", group: "yonetim", step: "2.5", icon: HeartPulse,
-    description: "Son çalışmalar, iş kuyruğu, hatalar, çözüm süreleri; destek paketi." },
+    description: "Servis durumu, iş kuyruğu, son çalışmalar, hatalar." },
   { no: "25", fn: 96, name: "Sistem ayarları", path: "/yonetim/sistem-ayarlari", group: "yonetim", step: "2.4", icon: KeyRound,
     description: "Veri sözlüğü, şifre ve oturum ayarları, sürüm." },
 ];

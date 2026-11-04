@@ -28,6 +28,11 @@ export function formatDateTime(d: Date): string {
   return `${formatDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** ss:dd:sn (yerel saat). */
+export function formatTime(d: Date): string {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 /** ISO hafta numarası: H44. */
 export function weekLabel(d: Date): string {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));

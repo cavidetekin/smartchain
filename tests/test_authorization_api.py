@@ -81,7 +81,7 @@ def test_jobs_own_and_others(db_session, roles, db_engine):
     r = c.post(f"/api/jobs/{key_job}/cancel", headers=auth(end))
     assert r.status_code == 403 and "Admin yetkisi" in r.json()["error"]["message"]
     assert c.post(f"/api/jobs/{end_job}/cancel", headers=auth(end)).json()["status"] == "İptal"
-    assert c.post(f"/api/jobs/{key_job}/cancel", headers=auth(admin)).json()["status"] == "İptal"
+    assert c.post(f"/api/jobs/{key_job}/cancel", headers=auth(admin), json={"reason": "Neden"}).json()["status"] == "İptal"
     # retler denetim izinde
     denied = audits(db_engine, end, "Yetkisiz istek")
     assert {(d["function"], d["access"]) for d in denied} == {(93, "read"), (93, "write")}

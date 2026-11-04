@@ -134,16 +134,22 @@ describe("iş paneli: iptal ve herkesin işleri", () => {
     const user = userEvent.setup();
     const fetchMock = mockApi({
       "/api/jobs?scope=all": { body: { jobs: [job(5, 3), job(7, 9)], counters: {} } },
-      "/api/jobs/7/cancel": { body: job(7, 9, { status: "İptal" }) },
+      "/api/jobs/7/cancel": { body: job(7, 9, { status: "İptal", cancel_reason: "Kuyruk boşalıyor" }) },
     });
     renderApp("/ana-sayfa", meAs("Admin"));
     await user.click(await screen.findByTestId("job-indicator"));
     const panel = screen.getByRole("dialog", { name: "Arka plandaki işler" });
     await user.click(within(panel).getByRole("checkbox", { name: "Herkesin işleri" }));
     expect(await within(panel).findByText(/sahibi Ayşe Yönetici/)).toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: "#7 işini iptal et" }));
+    const dialog = await screen.findByRole("dialog", { name: "İşi iptal et" });  // neden zorunlu (K-107)
+    expect(within(dialog).getByRole("button", { name: "İptal et" })).toBeDisabled();
+    await user.type(within(dialog).getByLabelText(/Neden/), "Kuyruk boşalıyor");
     await act(async () => {
-      await user.click(within(panel).getByRole("button", { name: "#7 işini iptal et" }));
+      await user.click(within(dialog).getByRole("button", { name: "İptal et" }));
     });
-    expect(fetchMock.mock.calls.some(([u, init]) => String(u) === "/api/jobs/7/cancel" && init?.method === "POST")).toBe(true);
+    const call = fetchMock.mock.calls.find(([u, init]) => String(u) === "/api/jobs/7/cancel" && init?.method === "POST");
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ reason: "Kuyruk boşalıyor" });
+    expect(screen.queryByRole("dialog", { name: "İşi iptal et" })).toBeNull();
   });
 });

@@ -238,7 +238,7 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 - **Pasif düğme:** bağlam dışı düğme gizlenmez, pasifleşir ve nedenini araç ipucunda söyler (`Button disabledReason`), ör. "Bu işlem için Admin yetkisi gerekir. Yetki için yöneticinize başvurun."
 - **403 tek yerde:** sunucu `forbidden` ya da sahiplik 403'ü dönerse (`*_not_owner`) sağ altta bildirim sunucunun mesajını gösterir. Giriş akışının 403'leri (kilit, kapalı hesap, şifre değişikliği, köken) buraya girmez.
 - **Rol değişikliği:** sunucu her cevapta `X-Smartchain-Role` gönderir; oturumdakinden farklıysa `me` yeniden alınır, menü ve kullanıcı menüsündeki rol değişir; oturum kapanmaz.
-- **İş paneli (fonksiyon 48, 93):** sıradaki işte "İptal" (kendi işi herkese açık). "Herkesin işleri" seçeneği Admin ve System owner'da açıktır, başkasının sıradaki işini de iptal eder; diğer rollerde pasif ve ipuçlu. Herkesin işlerinde işin sahibi yazar.
+- **İş paneli (fonksiyon 48, 93):** sıradaki işte "İptal" (kendi işi herkese açık, tek tık). "Herkesin işleri" seçeneği Admin ve System owner'da açıktır; başkasının sıradaki işinde "İptal" neden penceresini açar. Diğer rollerde seçenek pasif ve ipuçludur. Herkesin işlerinde işin sahibi yazar. Panelde ve bildirimde işin özeti yazar. İşi başkası iptal edince sahibine sağ altta bildirim gider, panelde neden yazar.
 
 ## Arayüz metni
 
@@ -291,6 +291,22 @@ Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski
 
 **Yetki matrisi (K-100; ekran 22):** Kullanıcılar başlığının yanında "Yetki matrisi"; en geniş pencere, hücrelerde satır kayması olmaz: 13 grup satırı × 4 rol (Tam, Sahibi, Kendi, Salt okunur, Yok), grup yalnız adıyla; altında "Excel'e aktar", Kapat. İstisnalar pencerede yoktur; Excel fonksiyon düzeyindedir ve onları gösterir (98 satır; No, Fonksiyon, Grup, dört rol).
 
+## Sistem sağlığı (2.5, K-106, K-107; ekran 24, fonksiyon 94, 93)
+
+Başlık "Sistem sağlığı", sağda sunucu saati. Sırayla:
+
+- **Kartlar:** Kuyruk (bekleyen, en uzun bekleme), Aktif hesaplama (2 / 3), Son 7 gün hata (kaçı çözüldü; hata yoksa alt satır yok), Disk (doluluk, boş). Eşik aşımı kırmızı; motor çalışmıyorsa Kuyruk da kırmızı.
+- **Servis şeridi:** tek satır dört kolon: Uygulama (sürüm), Motor (son kalp atışı, çalışan iş), Veritabanı (ms, "2 / 5 bağlantı", boyut), Anlık bildirim (bağlantı). Rozet: Çalışıyor, Yavaş, Yanıt vermiyor, Kapalı.
+- **Bölümler** (`Segment`) ve ekranı dolduran ortak tablo:
+  - **İş kuyruğu:** No, Tür, İş, Kanal, Kullanıcı, Durum, Sıra, İlerleme, Süre (sn), Deneme, İstek zamanı. Satır menüsü: Öne al, İptal et; izin yoksa pasif, neden ipucunda.
+  - **Son çalışmalar:** No, Tür, İş, Kanal, Kullanıcı, Sonuç, Başlangıç, Bitiş, Süre (sn), Deneme, Hata, İptal nedeni.
+  - **Hatalar:** Zaman, Bileşen, Hata, Sistem aksiyonu, Çözüldü, İş no, Takip no. Satırdan detay penceresi (`sc-field-rows`); System owner'da Teknik özet.
+- **Canlılık:** `health` mesajıyla en sık 2 sn'de bir, 30 sn yedek yenileme. Sunucuya ya da veritabanına ulaşılamazsa uyarı ve "son bilgi" zamanı, son değerler kalır.
+
+**İptal penceresi** (ekran 24 ve iş paneli, yalnız başkasının işinde): "İşi iptal et", alt satır "Malzeme listesi · 142.000 satır · Mert · sıra 2" (özeti olmayan işte tür), "İş sahibine bildirim gider.", Neden (zorunlu, en çok 200), kiremit "İptal et". Öne al pencere açmaz: "İş öne alındı · Malzeme listesi · 142.000 satır" (özeti olmayan işte numara).
+
+**Sistem ayarları, üçüncü bölüm "Sistem sağlığı":** Disk uyarı eşiği (%), Kuyruk bekleme eşiği (dk), Hataların saklanma süresi (gün); Giriş ve oturum formuyla aynı düzen.
+
 ## Durum
 
 | Parça | Durum |
@@ -305,5 +321,6 @@ Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski
 | Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |
 | Arayüz metinleri kurala göre sadeleşti | uygulandı (2.3c) |
 | Sistem ayarları: veri sözlüğü etiketi, şifre ve oturum ayarları; yetki matrisi | uygulandı (2.4) |
+| Sistem sağlığı: kartlar, servis şeridi, iş kuyruğu, son çalışmalar, hatalar; iptal nedeni, öne alma | uygulandı (2.5) |
 | Kullanıcılar ekranı: liste, satır menüsü, pencereler, geçici şifre; yazı boyutu kullanıcı kaydında | uygulandı (2.3) |
 | Yetki: role göre menü, yetkisiz ekran, pasif düğme ipucu, 403 bildirimi, iş panelinde iptal | uygulandı (2.2) |

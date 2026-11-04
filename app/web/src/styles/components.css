@@ -445,6 +445,19 @@
 .sc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 .sc-temp-password { display: flex; gap: var(--space-2); }
 .sc-temp-password .sc-input { flex: 1; min-width: 0; letter-spacing: 0.05em; }
+/* Sistem sağlığı (2.5; K-106): ana tablo ekrana sığsın diye kartlar ve şerit sıkıdır (U-22) */
+.sc-health-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-3); margin-bottom: var(--space-3); }
+.sc-health-cards .sc-kpi { padding: var(--space-3) var(--space-4); }
+.sc-health-cards .sc-kpi-value { margin: var(--space-1) 0; font-size: var(--fs-xl); }
+.sc-service-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
+.sc-service-strip > div { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-width: 0; }
+.sc-service-name { font-weight: var(--fw-semibold); }
+.sc-service-note { flex-basis: 100%; font-size: var(--fs-sm); }
+.sc-detail-rows { display: grid; grid-template-columns: 11rem minmax(0, 1fr); margin: 0; border-top: 1px solid var(--line); }
+.sc-detail-rows dt, .sc-detail-rows dd { margin: 0; padding: var(--space-2) 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.sc-detail-rows dt { color: var(--text-muted); }
+
 /* Sistem ayarları ve yetki matrisi (2.4; K-100, K-104, K-105) */
 .sc-page-head-actions { display: flex; gap: var(--space-2); }
 .sc-section-switch { margin-bottom: var(--space-3); }

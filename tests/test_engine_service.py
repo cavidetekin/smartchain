@@ -47,6 +47,76 @@ def run_until_done(svc, session, job_id, timeout=60, each=None):
         svc.shutdown()
 
 
+def status_row(session):
+    session.rollback()
+    return session.execute(text("SELECT HeartbeatAt, StoppedAt, AppVersion FROM adm.ServiceStatus WHERE ServiceName = N'Motor'")).first()
+
+
+def event_messages(session):
+    session.rollback()
+    return [r[0] for r in session.execute(text("SELECT Message FROM adm.SystemEvent ORDER BY Id"))]
+
+
+def test_service_heartbeat_is_independent_of_jobs(db_engine, db_session):
+    """K-106: iş yokken de kalp atışı yazılır; düzgün kapanış StoppedAt'i doldurur, olay yazılmaz."""
+    from app import __version__
+    svc = service(db_engine)
+    svc.start()
+    first = status_row(db_session)
+    assert first.StoppedAt is None and first.AppVersion == __version__
+    assert event_messages(db_session) == []
+    time.sleep(0.6)
+    svc.poll_once()
+    assert status_row(db_session).HeartbeatAt > first.HeartbeatAt
+    svc.shutdown()
+    assert status_row(db_session).StoppedAt is not None
+
+    again = service(db_engine)
+    again.start()  # önceki kapanış temiz
+    assert status_row(db_session).StoppedAt is None
+    assert event_messages(db_session) == []
+    again.shutdown()
+
+
+def test_unclean_stop_is_reported_on_start(db_engine, db_session):
+    service(db_engine).start()  # kapanış yazılmadı: pencere kapatıldı ya da süreç öldü
+    svc = service(db_engine)
+    svc.start()
+    assert event_messages(db_session) == ["Motor servisi beklenmedik kapanmıştı"]
+    resolved = db_session.execute(text("SELECT IsResolved, Resolution FROM adm.SystemEvent")).one()
+    assert tuple(resolved) == (True, "Yeniden başladı")
+    svc.shutdown()
+
+
+def test_start_purges_old_events_by_setting(db_engine, db_session):
+    db_session.execute(text("INSERT INTO adm.SystemEvent (OccurredAt, Component, Message, IsResolved) VALUES "
+                            "(DATEADD(day, -100, SYSUTCDATETIME()), N'Motor', N'Eski', 0), "
+                            "(DATEADD(day, -10, SYSUTCDATETIME()), N'Motor', N'Yakın', 0)"))
+    db_session.commit()
+    svc = service(db_engine)
+    svc.start()
+    assert event_messages(db_session) == ["Yakın"]
+    svc.shutdown()
+    db_session.execute(text("INSERT INTO adm.SystemSetting (SettingKey, Value) VALUES (N'SystemEventRetentionDays', N'7')"))
+    db_session.commit()
+    try:
+        svc = service(db_engine)
+        svc.start()
+        assert event_messages(db_session) == []
+        svc.shutdown()
+    finally:
+        db_session.execute(text("DELETE FROM adm.SystemSetting WHERE SettingKey = N'SystemEventRetentionDays'"))
+        db_session.commit()
+
+
+def test_loop_error_is_recorded_once(db_engine, db_session):
+    svc = service(db_engine)
+    svc._record_loop_error(RuntimeError("gizli"))
+    svc._record_loop_error(RuntimeError("gizli"))
+    assert event_messages(db_session) == ["Motor servisi döngüsünde hata"]
+    assert db_session.execute(text("SELECT Detail FROM adm.SystemEvent")).scalar_one() == "RuntimeError"
+
+
 def plan_run(session, plan_run_id):
     return session.execute(text("SELECT Status FROM planning.PlanRun WHERE Id = :id"), {"id": plan_run_id}).scalar()
 

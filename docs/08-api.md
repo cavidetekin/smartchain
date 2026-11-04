@@ -124,6 +124,10 @@ Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu doc
 | `GET /api/jobs` | 48 · okuma (kendi işleri); `?scope=all` 93 · okuma (herkesin işleri) |
 | `GET /api/jobs/{id}` | kendi işi 48 · okuma; başkasının işi 93 · okuma |
 | `POST /api/jobs/{id}/cancel` | kendi işi 48 · yazma; başkasının işi 93 · yazma |
+| `POST /api/jobs/{id}/prioritize` | 93 · yazma |
+| `GET /api/system-health` · `GET /api/system-events/{id}` · ortak liste `system-events` | 94 · okuma (`detail` yalnız 96 · okuma) |
+| Ortak listeler `job-queue`, `job-runs` | 93 · okuma |
+| `GET /api/settings/health` · `PUT /api/settings/health` | 96 · okuma · yazma |
 | `WS /api/ws` | 48 · okuma (el sıkışmada) |
 | `GET /api/users/{id}` | 88 · okuma |
 | `POST /api/users` · `/api/users/{id}/…` | 88 · yazma; ek kurallar "Kullanıcılar" bölümünde |
@@ -355,7 +359,8 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `GET /api/health` | Uygulama sürümü, veritabanı bağlantısı, şema sürümü (beklenen ile karşılaştırma). Sorun varsa 503 ve Türkçe açıklama. Sistem sağlığı ekranının (24) çekirdeği. | uygulandı (0.3) |
 | `GET /api/jobs` | Oturumdaki kullanıcının çalışan, sıradaki ve son 24 saatte biten işleri (önce çalışan, sonra sıra); kanal sayaçları (çalışan, sırada, sınır). `?scope=all` herkesin işleri (Admin ve System owner, 93). Her işte `requested_by` ve `requested_by_name`. Bağlantı kopunca istemcinin son durumu sorguladığı yer (fonksiyon 48). | uygulandı (0.4; yetki 2.2) |
 | `GET /api/jobs/{id}` | İşin durumu, ilerlemesi, sıra numarası, süresi, `is_stale` (kalp atışı eşiği aşıldı). Yoksa 404 `job_not_found`. Başkasının işi 93 ister. | uygulandı (0.4; yetki 2.2) |
-| `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder. Çalışan iş 409 `job_not_cancellable` (durdurma motorda, fonksiyon 93). Kendi işi herkes, başkasının işi Admin ve System owner (93). | uygulandı (0.4; yetki 2.2) |
+| `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder; gövde `{"reason"}`, başkasının işinde zorunlu (422 `reason_required`). Çalışan iş ve Yükleme işi 409 `job_not_cancellable`. Kendi işi herkes, başkasının işi Admin ve System owner (93); System owner'ın işine Admin dokunamaz (403). İz "İş iptali". | uygulandı (0.4; yetki 2.2; neden 2.5) |
+| `POST /api/jobs/{id}/prioritize` | Sıradaki işi kanalında öne alır. Çalışan iş ve Gece kanalı 409 `job_not_prioritizable`. İz "İş öne alma". | uygulandı (2.5) |
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
@@ -371,8 +376,23 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 ## İş kuyruğu (fonksiyon 47, 93)
 
 - Durumlar: Sırada → Çalışıyor → Bitti | Hata; Sırada → İptal (K-67).
-- Kanal sınırı: etkileşim 3, gece 2 (`adm.SystemSetting`: `JobLimitInteractive`, `JobLimitNight`). İş alma uygulama kilidiyle sıraya konur; sıra önce öncelik, sonra istek sırası (K-68).
+- Kanal sınırı: hesaplama 3, gece 2 (`adm.SystemSetting`: `JobLimitInteractive`, `JobLimitNight`). İş alma uygulama kilidiyle sıraya konur; sıra önce öncelik, sonra istek sırası (K-68).
 - Çalışan iş kalp atışı yazar. `JobHeartbeatTimeoutSeconds` (120) boyunca gelmezse takılmış sayılır; `JobMaxAttempts` (2) dolana kadar yeniden sıraya döner, sonra Hata. Eski deneme işi artık yazamaz (her yazma deneme numarasıyla).
+
+## Sistem sağlığı (ekran 24, K-106)
+
+| Uç nokta | Cevap |
+|---|---|
+| `GET /api/system-health` | `server_time`; `cards`: `queue` (`queued`, `oldest_wait_minutes`, `threshold`, `warn`), `interactive` (`running`, `limit`), `errors` (`last_7_days`, `resolved`), `disk` (`percent`, `free_bytes`, `threshold`, `warn`, `database_bytes`, `data_versions`); `services`: `app`, `engine`, `database`, `notifications` (`status`, `heartbeat_at` ve servise göre `version`, `busy`, `ms`, `pool_in_use`, `pool_size`, `connections`) |
+| Ortak liste `job-queue` | Çalışan, sırada, son 24 saatte biten; satırda her zaman `Status`, `JobType`, `Channel`, `RequestedBy`, `IsProtected`, `Summary`, `RequesterName`, `QueuePosition` |
+| Ortak liste `job-runs` | Son 7 günde biten işler |
+| Ortak liste `system-events` | Hatalar; `Detail` listede yok |
+| `GET /api/system-events/{id}` | Olay; `detail` yalnız System owner'a dolu. Yoksa 404 `event_not_found` |
+| `GET` · `PUT /api/settings/health` | `DiskWarnPercent` 1–99, `QueueWaitWarnMinutes` 1–1440, `SystemEventRetentionDays` 7–3650; cevap login-policy gibi `values`, `defaults`, `limits`. Yalnız değişen yazılır, iz "Ayar değişikliği" |
+
+`GET /api/jobs`'ta `requested_by_name` System owner'ın işinde "Smartchain"tir; `summary`, `is_protected`, `cancel_reason`, `cancelled_by_name` eklendi.
+
+`{"type": "health"}` içerik taşımaz: iş ya da olay değişti, motor açıldı ya da kapandı; yalnız 93 okuma yetkili bağlantılara gider, ekran yeniler.
 
 ## WebSocket mesajları (fonksiyon 48)
 
@@ -380,9 +400,10 @@ API, `adm.Job`'u `UpdatedAt` ile izler ve değişen işi sahibinin bağlantılar
 
 ```json
 {"type": "hello", "user_id": 3}
-{"type": "job", "job": {"id": 61, "job_type": "Çalışma", "channel": "Etkileşim", "status": "Çalışıyor",
+{"type": "job", "job": {"id": 61, "job_type": "Çalışma", "channel": "Hesaplama", "status": "Çalışıyor",
  "progress": "Çözülüyor", "queue_position": null, "attempt": 1, "is_stale": false, "...": "GET /api/jobs/{id} ile aynı alanlar"}}
 {"type": "pong"}
+{"type": "health"}
 ```
 
 İstemci `ping` metni gönderirse `pong` döner (bağlantı denetimi; oturumu uzatmaz).

@@ -6,6 +6,7 @@
 - Takılan işleri (requeue_stale) açılışta ve belli aralıkla kendisi de geri alır; API kapalıyken iş beklemez.
 - İşi tipine göre yönlendirir (K-93): "Dışa aktarım" işleri Excel dosyası üretir, diğerleri plan hesabıdır. Süresi
   geçen dışa aktarım dosyalarını açılışta ve saatte bir siler.
+- Kendi kalp atışını işten bağımsız yazar (adm.ServiceStatus); saklama süresi geçen sistem olaylarını siler (K-106).
 
 Çalıştırma (geliştirme):  python -m app.engine.service      Windows servisi olarak kurulum 0.6'da.
 """
@@ -17,9 +18,10 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from app.jobs import queue
+from app import __version__
+from app.jobs import events, queue
 from app.jobs.constants import CHANNELS, TYPE_EXPORT
-from app.jobs.settings import JobSettings, read_settings
+from app.jobs.settings import HEALTH_DEFAULTS, JobSettings, read_int_settings, read_settings
 from .export_job import export_process_main
 from .job import plan_run_id_of, process_main
 from .settings import EngineSettings, read_engine_settings
@@ -54,6 +56,7 @@ class EngineService:
         self._ctx = mp.get_context("spawn")
         self._last_stale_check = 0.0
         self._last_cleanup = 0.0
+        self._last_beat = 0.0
         self.job_settings = job_settings or JobSettings()
         self.engine_settings = engine_settings or EngineSettings()
 
@@ -68,7 +71,26 @@ class EngineService:
             self._refresh_settings(s)
             self._requeue_stale(s)
             self.cleanup_exports(s)
+            self._mark_started(s)
+            self._purge_events(s)
         log.info("Motor servisi başladı (kanallar: %s)", ", ".join(self.channels))
+
+    def _mark_started(self, session: Session) -> None:
+        if events.service_started(session, __version__):
+            log.warning("Motor servisi önceki çalışmada düzgün kapanmamıştı")
+            events.record(session, events.COMPONENT_ENGINE, "Motor servisi beklenmedik kapanmıştı", "Yeniden başladı", resolved=True)
+        session.commit()
+        self._last_beat = time.monotonic()
+
+    def _beat(self, session: Session) -> None:
+        if time.monotonic() - self._last_beat >= self.engine_settings.heartbeat_seconds:
+            events.service_beat(session)
+            session.commit()
+            self._last_beat = time.monotonic()
+
+    def _purge_events(self, session: Session) -> int:
+        days = read_int_settings(session, HEALTH_DEFAULTS)["SystemEventRetentionDays"]
+        return events.purge(session, days)
 
     def _requeue_stale(self, session: Session) -> None:
         ids = queue.requeue_stale(session, self.job_settings)
@@ -78,11 +100,13 @@ class EngineService:
 
     def poll_once(self) -> None:
         with Session(self.db) as s:
+            self._beat(s)
             if time.monotonic() - self._last_stale_check >= STALE_CHECK_SECONDS:
                 self._refresh_settings(s)
                 self._requeue_stale(s)
             if time.monotonic() - self._last_cleanup >= EXPORT_CLEANUP_SECONDS:
                 self.cleanup_exports(s)
+                self._purge_events(s)
             for run in list(self.running.values()):
                 self._check(s, run)
             for channel in self.channels:
@@ -155,6 +179,20 @@ class EngineService:
         """Çalışan süreçler sonlandırılır; işleri kalp atışı kesilince geri alınır (K-67)."""
         for run in list(self.running.values()):
             self._stop(run)
+        try:
+            with Session(self.db) as s:
+                events.service_stopped(s)
+                s.commit()
+        except Exception:  # kapanış kaydı yazılamazsa motor "Yanıt vermiyor" görünür
+            log.exception("Motor servisinin kapanışı yazılamadı")
+
+    def _record_loop_error(self, exc: Exception) -> None:
+        try:
+            with Session(self.db) as s:
+                events.record(s, events.COMPONENT_ENGINE, "Motor servisi döngüsünde hata", "Devam etti", detail=type(exc).__name__)
+                s.commit()
+        except Exception:
+            log.warning("Motor hatası sistem olayına yazılamadı")
 
     def run_forever(self, interval: float = 1.0) -> None:
         self.start()
@@ -162,8 +200,9 @@ class EngineService:
             while True:
                 try:
                     self.poll_once()
-                except Exception:
+                except Exception as exc:
                     log.exception("Motor servisi döngüsünde hata; devam ediliyor")
+                    self._record_loop_error(exc)
                 time.sleep(interval)
         finally:
             self.shutdown()

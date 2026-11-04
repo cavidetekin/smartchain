@@ -43,6 +43,8 @@ export interface ListState {
   /** Görünen aralığı kapsayan eksik parçaları ister. */
   ensure(first: number, last: number): void;
   retry(): void;
+  /** Satırlar yerinde kalır, istenmiş parçalar yeniden istenir (canlı yenileme, kayıt değişikliği). */
+  refresh(): void;
 }
 
 /** Veri anahtarı: kurallar hariç (kural değişince satırlar sıfırlanmaz). */
@@ -123,8 +125,13 @@ export function useListQuery(list: string, request: ListRequest | null, chunkSiz
     load(0);
   }, [reset, load]);
 
+  const refresh = useCallback(() => {
+    cancel();
+    [...wanted.current].forEach((c) => load(c, true));
+  }, [cancel, load]);
+
   const row = useCallback((index: number) => chunks.current.get(Math.floor(index / chunkSize))?.[index % chunkSize],
     [chunkSize]);
 
-  return { ...state, row, ensure, retry };
+  return { ...state, row, ensure, retry, refresh };
 }

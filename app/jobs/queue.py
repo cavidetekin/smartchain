@@ -12,8 +12,9 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from .constants import (CHANNELS, JOB_TYPES, STATUS_CANCELLED, STATUS_DONE,
-                        STATUS_FAILED, STATUS_QUEUED, STATUS_RUNNING)
+from . import events
+from .constants import (CHANNEL_NIGHT, CHANNELS, JOB_TYPES, STATUS_CANCELLED, STATUS_DONE,
+                        STATUS_FAILED, STATUS_QUEUED, STATUS_RUNNING, TYPE_EXPORT, TYPE_LOAD)
 from .settings import JobSettings
 
 log = logging.getLogger("smartchain.jobs")
@@ -21,6 +22,9 @@ log = logging.getLogger("smartchain.jobs")
 LOCK_TIMEOUT_MS = 10_000
 STALE_PROGRESS = "Yanıt vermedi, yeniden sıraya alındı"
 STALE_ERROR = "İş yanıt vermedi; deneme hakkı bitti."
+STALE_EVENT = "yanıt vermedi"
+CRASH_EVENT = "süreci beklenmedik bitti"
+SUPPORT_NAME = "Smartchain"  # System owner'ın işinde kullanıcı adı yerine (K-101, K-107)
 CRASH_PROGRESS = "İş süreci beklenmedik bitti, yeniden sıraya alındı"
 CRASH_ERROR = "İş süreci beklenmedik bitti; deneme hakkı bitti."
 
@@ -30,14 +34,17 @@ WITH q AS (
     SELECT Id, ROW_NUMBER() OVER (PARTITION BY Channel ORDER BY ISNULL(Priority, 0) DESC, Id) AS QueuePosition
     FROM adm.Job WHERE Status = :queued
 )
-SELECT j.Id, j.JobType, j.Channel, j.Priority, j.Status, j.RequestedBy, j.Payload, j.Progress,
+SELECT j.Id, j.JobType, j.Summary, j.Channel, j.Priority, j.Status, j.RequestedBy, j.Payload, j.Progress,
        j.HeartbeatAt, j.Attempt, j.ErrorText, j.CreatedAt, j.StartedAt, j.EndedAt, j.UpdatedAt,
-       q.QueuePosition, COALESCE(u.FullName, u.UserName) AS RequestedByName,
+       j.CancelReason, q.QueuePosition, u.Role AS RequestedByRole,
+       CASE WHEN u.Role = N'System owner' THEN :support ELSE COALESCE(u.FullName, u.UserName) END AS RequestedByName,
+       CASE WHEN c.Role = N'System owner' THEN :support ELSE COALESCE(c.FullName, c.UserName) END AS CancelledByName,
        DATEDIFF(second, j.StartedAt, ISNULL(j.EndedAt, SYSUTCDATETIME())) AS DurationSeconds,
        CAST(CASE WHEN j.Status = :running
                   AND j.HeartbeatAt < DATEADD(second, -1 * :timeout, SYSUTCDATETIME())
                  THEN 1 ELSE 0 END AS bit) AS IsStale
 FROM adm.Job j LEFT JOIN q ON q.Id = j.Id LEFT JOIN adm.AppUser u ON u.Id = j.RequestedBy
+     LEFT JOIN adm.AppUser c ON c.Id = j.CancelledBy
 """
 
 
@@ -51,9 +58,13 @@ class JobNotCancellable(Exception):
         self.status = status
 
 
+class JobNotPrioritizable(Exception):
+    pass
+
+
 def _select(session: Session, settings: JobSettings, where: str, params: dict, order: str = "j.Id") -> list[dict]:
     sql = f"{JOB_SELECT} WHERE {where} ORDER BY {order}"
-    params = {"queued": STATUS_QUEUED, "running": STATUS_RUNNING,
+    params = {"queued": STATUS_QUEUED, "running": STATUS_RUNNING, "support": SUPPORT_NAME,
               "timeout": settings.heartbeat_timeout_seconds, **params}
     return [dict(r) for r in session.execute(text(sql), params).mappings()]
 
@@ -79,17 +90,17 @@ def db_now(session: Session) -> datetime:
 
 
 def enqueue(session: Session, job_type: str, channel: str, requested_by: int | None = None,
-            payload: dict | None = None, priority: int | None = None) -> int:
-    """İşi 'Sırada' olarak yazar, Id döndürür."""
+            payload: dict | None = None, priority: int | None = None, summary: str | None = None) -> int:
+    """İşi 'Sırada' olarak yazar, Id döndürür. summary: iş türünün yazdığı kısa özet (K-107)."""
     if job_type not in JOB_TYPES:
         raise ValueError(f"Bilinmeyen iş türü: {job_type}")
     if channel not in CHANNELS:
         raise ValueError(f"Bilinmeyen kanal: {channel}")
     job_id = session.execute(text(
-        "INSERT INTO adm.Job (JobType, Channel, Priority, Status, RequestedBy, Payload, Attempt, CreatedAt, UpdatedAt) "
+        "INSERT INTO adm.Job (JobType, Summary, Channel, Priority, Status, RequestedBy, Payload, Attempt, CreatedAt, UpdatedAt) "
         "OUTPUT inserted.Id "
-        "VALUES (:type, :ch, :prio, :queued, :by, :payload, 0, SYSUTCDATETIME(), SYSUTCDATETIME())"),
-        {"type": job_type, "ch": channel, "prio": priority, "queued": STATUS_QUEUED, "by": requested_by,
+        "VALUES (:type, :summary, :ch, :prio, :queued, :by, :payload, 0, SYSUTCDATETIME(), SYSUTCDATETIME())"),
+        {"type": job_type, "summary": summary[:200] if summary else None, "ch": channel, "prio": priority, "queued": STATUS_QUEUED, "by": requested_by,
          "payload": json.dumps(payload, ensure_ascii=False) if payload is not None else None}).scalar_one()
     session.commit()
     log.info("İş %s sıraya girdi: %s / %s", job_id, job_type, channel)
@@ -170,16 +181,26 @@ def finish(session: Session, job_id: int, attempt: int, progress: str | None = N
 
 
 def fail(session: Session, job_id: int, attempt: int, error: str, commit: bool = True) -> bool:
-    return _end(session, job_id, attempt, STATUS_FAILED, error, commit)
+    """İşi Hata yapar ve sistem olayını aynı işlemde yazar (K-106)."""
+    ok = _end(session, job_id, attempt, STATUS_FAILED, error, commit=False)
+    if ok:
+        job_type = session.execute(text("SELECT JobType FROM adm.Job WHERE Id = :id"), {"id": job_id}).scalar()
+        events.record(session, events.COMPONENT_EXPORT if job_type == TYPE_EXPORT else events.COMPONENT_ENGINE,
+                      f"İş #{job_id}: {error}", "İş hata ile bitti", job_id=job_id, detail=f"{job_type} · deneme {attempt}")
+    if commit:
+        session.commit()
+    return ok
 
 
-def cancel(session: Session, job_id: int) -> None:
-    """Sıradaki işi iptal eder. Çalışan iş iptal edilmez (durdurma motorda, fonksiyon 93/34)."""
+def cancel(session: Session, job_id: int, reason: str | None = None, cancelled_by: int | None = None, commit: bool = True) -> None:
+    """Sıradaki işi iptal eder. Çalışan iş ve Yükleme işi iptal edilmez (K-107; durdurma motorda, fonksiyon 93/34)."""
     try:
         row = session.execute(text(
-            "UPDATE adm.Job SET Status = :cancelled, EndedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME() "
-            "OUTPUT inserted.Channel WHERE Id = :id AND Status = :queued"),
-            {"cancelled": STATUS_CANCELLED, "id": job_id, "queued": STATUS_QUEUED}).first()
+            "UPDATE adm.Job SET Status = :cancelled, EndedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME(), "
+            "CancelReason = :reason, CancelledBy = :by "
+            "OUTPUT inserted.Channel WHERE Id = :id AND Status = :queued AND JobType <> :load"),
+            {"cancelled": STATUS_CANCELLED, "id": job_id, "queued": STATUS_QUEUED, "load": TYPE_LOAD,
+             "reason": reason, "by": cancelled_by}).first()
         if row is None:
             status = session.execute(text("SELECT Status FROM adm.Job WHERE Id = :id"), {"id": job_id}).scalar()
             session.rollback()
@@ -187,7 +208,8 @@ def cancel(session: Session, job_id: int) -> None:
                 raise JobNotFound(job_id)
             raise JobNotCancellable(status)
         _touch_queued(session, row.Channel)
-        session.commit()
+        if commit:
+            session.commit()
     except (JobNotFound, JobNotCancellable):
         raise
     except Exception:
@@ -196,9 +218,31 @@ def cancel(session: Session, job_id: int) -> None:
     log.info("İş %s iptal edildi", job_id)
 
 
+def prioritize(session: Session, job_id: int, commit: bool = True) -> None:
+    """Sıradaki işi kanalında öne alır: öncelik kanaldaki en yüksek + 1 (K-107). Gece kanalında öne alma yoktur."""
+    try:
+        _lock(session)
+        row = session.execute(text("SELECT Status, Channel FROM adm.Job WHERE Id = :id"), {"id": job_id}).first()
+        if row is None:
+            raise JobNotFound(job_id)
+        if row.Status != STATUS_QUEUED or row.Channel == CHANNEL_NIGHT:
+            raise JobNotPrioritizable(job_id)
+        session.execute(text(
+            "UPDATE adm.Job SET Priority = (SELECT ISNULL(MAX(ISNULL(Priority, 0)), 0) + 1 FROM adm.Job "
+            "                               WHERE Channel = :ch AND Status = :queued) WHERE Id = :id"),
+            {"ch": row.Channel, "queued": STATUS_QUEUED, "id": job_id})
+        _touch_queued(session, row.Channel)
+        if commit:
+            session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    log.info("İş %s öne alındı", job_id)
+
+
 def _requeue_where(session: Session, settings: JobSettings, where: str, params: dict,
-                   progress: str, error: str) -> list:
-    """Çalışan işi geri alır: deneme hakkı varsa Sırada, yoksa Hata (K-67). Kuyruk kilidiyle, tek işlemde."""
+                   progress: str, error: str, event: str) -> list:
+    """Çalışan işi geri alır: deneme hakkı varsa Sırada, yoksa Hata (K-67). Kuyruk kilidiyle, tek işlemde; olay da aynı işlemde (K-106)."""
     try:
         _lock(session)
         rows = session.execute(text(
@@ -209,11 +253,16 @@ def _requeue_where(session: Session, settings: JobSettings, where: str, params: 
             "  Progress = CASE WHEN ISNULL(Attempt, 0) < :max THEN :progress ELSE Progress END, "
             "  ErrorText = CASE WHEN ISNULL(Attempt, 0) < :max THEN NULL ELSE :error END, "
             "  UpdatedAt = SYSUTCDATETIME() "
-            f"OUTPUT inserted.Id, inserted.Channel, inserted.Status WHERE Status = :running AND {where}"),
+            f"OUTPUT inserted.Id, inserted.Channel, inserted.Status, inserted.Attempt, inserted.JobType WHERE Status = :running AND {where}"),
             {"max": settings.max_attempts, "queued": STATUS_QUEUED, "failed": STATUS_FAILED,
              "progress": progress, "error": error, "running": STATUS_RUNNING, **params}).all()
         for channel in {r.Channel for r in rows}:
             _touch_queued(session, channel)
+        for r in rows:
+            again = r.Status == STATUS_QUEUED
+            events.record(session, events.COMPONENT_QUEUE, f"İş #{r.Id} {event}",
+                          f"Yeniden sıraya alındı (deneme {r.Attempt} / {settings.max_attempts})" if again else "Deneme hakkı bitti",
+                          resolved=again, job_id=r.Id, detail=f"{r.JobType} · deneme {r.Attempt}")
         session.commit()
     except Exception:
         session.rollback()
@@ -225,7 +274,7 @@ def requeue_stale(session: Session, settings: JobSettings) -> list[int]:
     """Kalp atışı eşiği aşılan işleri geri alır (K-67)."""
     rows = _requeue_where(session, settings,
                           "(HeartbeatAt IS NULL OR HeartbeatAt < DATEADD(second, -1 * :timeout, SYSUTCDATETIME()))",
-                          {"timeout": settings.heartbeat_timeout_seconds}, STALE_PROGRESS, STALE_ERROR)
+                          {"timeout": settings.heartbeat_timeout_seconds}, STALE_PROGRESS, STALE_ERROR, STALE_EVENT)
     for r in rows:
         log.warning("İş %s yanıt vermedi → %s", r.Id, r.Status)
     return [r.Id for r in rows]
@@ -234,7 +283,7 @@ def requeue_stale(session: Session, settings: JobSettings) -> list[int]:
 def requeue(session: Session, job_id: int, attempt: int, settings: JobSettings) -> str | None:
     """İş süreci beklenmedik bitti (K-71): işi hemen geri alır. Yeni durumu döndürür; iş artık bu denemenin değilse None."""
     rows = _requeue_where(session, settings, "Id = :id AND Attempt = :attempt", {"id": job_id, "attempt": attempt},
-                          CRASH_PROGRESS, CRASH_ERROR)
+                          CRASH_PROGRESS, CRASH_ERROR, CRASH_EVENT)
     if not rows:
         return None
     log.warning("İş %s (deneme %s) süreci beklenmedik bitti → %s", job_id, attempt, rows[0].Status)

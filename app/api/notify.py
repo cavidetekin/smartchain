@@ -13,6 +13,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from fastapi import WebSocket
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from app.jobs import queue
@@ -35,14 +36,29 @@ class ConnectionManager:
     def __init__(self) -> None:
         self._by_user: dict[int, set[WebSocket]] = defaultdict(set)
         self._session_of: dict[WebSocket, int] = {}
+        self._watching: set[WebSocket] = set()  # Sistem sağlığını izleyebilenler (93 okuma; K-106)
 
-    def add(self, user_id: int, ws: WebSocket, session_id: int | None = None) -> None:
+    def connection_count(self) -> int:
+        return sum(len(conns) for conns in self._by_user.values())
+
+    async def send_health(self) -> None:
+        """İçerik taşımaz, yalnız "yenile" der."""
+        for ws in list(self._watching):
+            try:
+                await ws.send_json({"type": "health"})
+            except Exception:  # kopmuş bağlantı; WebSocket uç noktası kapanınca temizler
+                self._watching.discard(ws)
+
+    def add(self, user_id: int, ws: WebSocket, session_id: int | None = None, watching: bool = False) -> None:
         self._by_user[user_id].add(ws)
+        if watching:
+            self._watching.add(ws)
         if session_id is not None:
             self._session_of[ws] = session_id
 
     def remove(self, user_id: int, ws: WebSocket) -> None:
         self._session_of.pop(ws, None)
+        self._watching.discard(ws)
         conns = self._by_user.get(user_id)
         if conns is not None:
             conns.discard(ws)
@@ -89,6 +105,8 @@ class JobWatcher:
         self._last_session_check: datetime | None = None
         self._ended: list[int] = []
         self._failing = False
+        self._health_mark: tuple | None = None
+        self._health_due = False
 
     async def run(self) -> None:
         log.info("İş kuyruğu izleniyor (her %.1f sn)", self.interval)
@@ -105,6 +123,9 @@ class JobWatcher:
                 messages = []
             for user_id, message in messages:
                 await self.manager.send(user_id, message)
+            if self._health_due:
+                self._health_due = False
+                await self.manager.send_health()
             if self._ended:
                 ended, self._ended = self._ended, []
                 await self.manager.close_sessions(ended)
@@ -122,12 +143,19 @@ class JobWatcher:
                 self._last_session_check = now
             since = (self._since or now) - self.OVERLAP
             jobs = queue.changed_since(session, settings, since)
+            mark = tuple(session.execute(text(
+                "SELECT (SELECT MAX(Id) FROM adm.SystemEvent), (SELECT MAX(StartedAt) FROM adm.ServiceStatus), "
+                "(SELECT MAX(StoppedAt) FROM adm.ServiceStatus)")).one())
         self._since = now
+        if mark != self._health_mark:
+            self._health_mark = mark
+            self._health_due = True
         messages = []
         for job in jobs:
             if self._sent.get(job["Id"]) == job["UpdatedAt"]:
                 continue
             self._sent[job["Id"]] = job["UpdatedAt"]
+            self._health_due = True
             if job["RequestedBy"] is not None:
                 messages.append((job["RequestedBy"], {"type": "job", "job": to_public(job)}))
         self._sent = {k: v for k, v in self._sent.items() if v > since}

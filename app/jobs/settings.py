@@ -18,6 +18,10 @@ DEFAULTS = {
 }
 
 
+# Sistem sağlığı (K-106): eşikler ve hataların saklanma süresi (gün)
+HEALTH_DEFAULTS = {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90}
+
+
 @dataclass(frozen=True)
 class JobSettings:
     limit_interactive: int = DEFAULTS["JobLimitInteractive"]

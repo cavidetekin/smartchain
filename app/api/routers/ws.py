@@ -28,7 +28,7 @@ async def notifications(websocket: WebSocket) -> None:
         await websocket.close(code=SESSION_CLOSED)  # kabul edilmeden kapanır: el sıkışma 403
         return
     await websocket.accept()
-    manager.add(user.id, websocket, user.session_id)
+    manager.add(user.id, websocket, user.session_id, watching=allows(user.role, 93, Access.READ))
     try:
         await websocket.send_json({"type": "hello", "user_id": user.id})
         while True:

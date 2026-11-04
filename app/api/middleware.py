@@ -3,12 +3,14 @@ import logging
 import time
 import uuid
 
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .errors import error_body
 from .logging_setup import trace_id_var
+from .services.system_health import record_unexpected
 
 log = logging.getLogger("smartchain.request")
 
@@ -21,8 +23,9 @@ class TraceMiddleware(BaseHTTPMiddleware):
         try:
             try:
                 response = await call_next(request)
-            except Exception:
+            except Exception as exc:
                 log.exception("Beklenmeyen hata: %s %s", request.method, request.url.path)
+                await run_in_threadpool(record_unexpected, request.method, request.url.path, exc, trace_id)
                 message = f"Beklenmeyen bir hata oluştu. Destek için takip numarası: {trace_id}"
                 response = JSONResponse(error_body("unexpected", message), status_code=500)
             elapsed = (time.perf_counter() - start) * 1000

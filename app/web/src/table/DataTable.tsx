@@ -340,7 +340,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
   const aggregates = useMemo(() => JSON.parse(aggKey) as Record<string, AggSpec>, [aggKey]);
   const g = useGroupedQuery(list, grouped ? request : null, s.groupBy, chunkSize, aggregates);
   const shownReload = useRef(reloadKey);
-  const reload = grouped ? g.retry : flat.retry;
+  const reload = grouped ? g.retry : flat.refresh;
   useEffect(() => {
     if (shownReload.current === reloadKey) return;
     shownReload.current = reloadKey;

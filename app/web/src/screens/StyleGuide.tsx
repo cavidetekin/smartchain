@@ -173,7 +173,7 @@ export function StyleGuide() {
             <Alert tone="ok" title="Hesap bitti">Çalışma yeniden hesaplandı; 3 sipariş öne çekildi.</Alert>
             <Alert tone="risk">Freze merkezi H46–H47 doluluğu %98; risk sınırında.</Alert>
             {showAlert && (
-              <Alert tone="error" title="Sıcak hesap sınırı dolu" onClose={() => setShowAlert(false)}>
+              <Alert tone="error" title="Aktif hesaplama sınırı dolu" onClose={() => setShowAlert(false)}>
                 3 / 3 sürüyor. İsteğiniz sıraya alındı: 1. sırada, tahmini 1 dk 20 sn.
               </Alert>
             )}

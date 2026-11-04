@@ -102,6 +102,8 @@ def _clear_jobs(engine):
     from sqlalchemy import text
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM adm.Job"))
+        conn.execute(text("DELETE FROM adm.SystemEvent"))
+        conn.execute(text("DELETE FROM adm.ServiceStatus"))
 
 
 @pytest.fixture(scope="session")

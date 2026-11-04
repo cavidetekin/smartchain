@@ -1894,7 +1894,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Eksen ayarları, talep çarpanı, varsayımsal kaynak / dönem, süre bütçesi
   - Gece penceresi ve paralellik (System owner ayarı)
 - **03:** Süre bütçesi girilir; sistem gece penceresi ve paralellikle toplam zamanlamayı hesaplar, sığmıyorsa uyarır.
-- **04:** Açıklama yazılır; 'Şimdi dene' (öneri) senaryoyu sıcak kanalda tek seferlik çalıştırıp sonucu Senaryolar ekranına 'deneme' etiketiyle koyar.
+- **04:** Açıklama yazılır; 'Şimdi dene' (öneri) senaryoyu hesaplama kanalında tek seferlik çalıştırıp sonucu Senaryolar ekranına 'deneme' etiketiyle koyar.
 - **05:** 'Kaydet': ScenarioDefinition yazılır (set, eksenler, model, bütçe, sıra sona eklenir, aktif); denetim izi.
 - **ÇIKTI**
   - ScenarioDefinition kaydı (ParameterSetId, ModelType, ResourceConstraint, MaterialConstraint, eksen ayarları, NightlyPriority, IsActive, süre bütçesi)
@@ -1915,7 +1915,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Parametre seti pasifse seçilemez; mevcut senaryo pasif sete bağlıysa listede uyarı.
   - Süre bütçesi 5 dk altı ya da 240 dk üstü: hata.
   - Aynı adla senaryo: uyarı.
-  - 'Şimdi dene' sıcak kanal doluysa (3 çalışma) kuyruğa alınır, kullanıcı bilgilendirilir.
+  - 'Şimdi dene' hesaplama kanalı doluysa (3 çalışma) kuyruğa alınır, kullanıcı bilgilendirilir.
 - **ETKISI VE TETIKLENENLER**
   - Gece akışı planı (sıra ve zamanlama) güncellenir.
   - Senaryolar ekranında yeni sütun.
@@ -1925,7 +1925,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Senaryo sonucu:** Scenario · PlanRun · PlanMetric Bir sonraki gece (ya da 'Şimdi dene' ile hemen)
 - **Karşılaştırma tablosu:** Senaryolar ekranı Yeni senaryo sütunu sonuçla birlikte
 - **ÖRNEK:** 'Yeni hat (H50)': set Yeni hat · Montaj B, LP, kaynak kısıtı açık, varsayımsal Montaj hattı B H50'den itibaren, 45 dk. Zamanlama: 6 senaryo 2 paralel, bitiş ~01:00; 7. taslak 240 dk ile pencereyi zorlar.
-- **AÇIK KONU:** 'Şimdi dene' (gündüz tek seferlik çalıştırma) öneri. Sıcak kanal kapasitesini (3) paylaşır; çalışmaları yavaşlatabilir.
+- **AÇIK KONU:** 'Şimdi dene' (gündüz tek seferlik çalıştırma) öneri. Hesaplama kanalı kapasitesini (3) paylaşır; çalışmaları yavaşlatabilir.
 
 ### 27 · Gece senaryo tanımı · Senaryo formu
 <sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Mockup 1/2</sub>
@@ -2268,7 +2268,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - Model nesnesi (31)
   - Sistem ayarları: çözücü, MIP gap eşiği, iş parçacığı sayısı, süre bütçeleri
-  - Hesap bağlamı: kanal (gece / etkileşim), süre bütçesi (34)
+  - Hesap bağlamı: kanal (gece / hesaplama), süre bütçesi (34)
 - **03:** Çözüm başlatılır; ilerleme (süre, gap, en iyi uygun çözüm) Job.Progress'e yazılır ve ekrana düşer.
 - **04:** Durum okunur: optimal, uygun (süre bütçesi doldu), olursuz, sınırsız, hata.
 - **05:** Değişken değerleri iş modeline geri yazılır; LP'de kapasite kısıtlarının gölge fiyatları darboğaz açıklaması (39) için saklanır.
@@ -2394,10 +2394,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Sistem · bütçeler: senaryo tanımı (Admin ve üstü), sistem ayarı (System owner)
   - Nereden: Her plan hesabında · ayarlar: Gece senaryo tanımı, System owner → Motor · görünüm: çalışma şeridi, Senaryolar
-- **01:** Bütçe belirlenir: gece senaryosunda tanımdan, sıcak çalışmada ve termin sorgusunda sistem ayarından.
+- **01:** Bütçe belirlenir: gece senaryosunda tanımdan, aktif hesaplamada ve termin sorgusunda sistem ayarından.
 - **02:** Aşamalara pay verilir: ön hesap + MRP için küçük pay (ör. %15), kalan model ve son hesaba; aşama payını aşan hesap uyarı yazar.
 - **GIRDI**
-  - Senaryo tanımı süre bütçesi (gece), sistem ayarı (sıcak 3 dk, termin sorgusu 30 sn)
+  - Senaryo tanımı süre bütçesi (gece), sistem ayarı (aktif hesaplama 3 dk, termin sorgusu 30 sn)
   - Gece bitiş sınırı (06:00)
   - Gap eşiği (optimal sayma sınırı)
 - **03:** Çözücüye zaman limiti ve 'en iyi uygun çözümü sakla' parametresi geçilir; ilerleme (süre, gap) ekrana düşer.
@@ -2413,9 +2413,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F34 · D Planlama motoru · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Sıcak çalışmada kullanıcı en fazla bütçe kadar bekler; bütçe ekran süresini de kapsar.
+  - Aktif hesaplamada kullanıcı en fazla bütçe kadar bekler; bütçe ekran süresini de kapsar.
   - Gap eşiği altı optimal sayılır (varsayılan %1).
-  - Kullanıcı sıcak hesabı erken durdurup en iyi çözümü alabilir.
+  - Kullanıcı aktif hesaplamayı erken durdurup en iyi çözümü alabilir.
   - Bütçe hesap türü bazında; aynı çalışmada tekrar hesap aynı bütçeyle.
 - **HATA VE ISTISNA**
   - Bütçe dolmadan çözücü hata verirse 32 kuralları (tekrar, kurallı).
@@ -2426,7 +2426,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Uyarı listesi: plan kalitesi.
   - Sistem sağlığı: süre istatistikleri.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez. Süre bütçesi hesabı sınırlar; sonuç alanlarını son hesap (35) yazar. PlanRun.Status ve SolverLog güncellenir.
-- **ÖRNEK:** Sıcak çalışma: 3 dk bütçe; 2:41'de gap %1,8. Süre dolunca en iyi uygun çözüm kullanılır, 'gap %1,8' etiketi ve plan kalitesi uyarısı yazılır. Gece: Kısıtlı malzeme 30 dk bütçeyi 00:58'de aştı, en iyi çözüm saklandı.
+- **ÖRNEK:** Aktif hesaplama: 3 dk bütçe; 2:41'de gap %1,8. Süre dolunca en iyi uygun çözüm kullanılır, 'gap %1,8' etiketi ve plan kalitesi uyarısı yazılır. Gece: Kısıtlı malzeme 30 dk bütçeyi 00:58'de aştı, en iyi çözüm saklandı.
 
 ### 34 · Süre bütçesi · Hesap sırasında
 <sub>24. Ekranlar ve fonksiyonlar · F34 · D Planlama motoru · Mockup 1/2</sub>
@@ -2786,7 +2786,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **44 · Değişiklik izi:** Çalışmadaki her manuel değişikliği (ekran, kayıt, eski ve yeni değer, kilit, etki) kaydetmek; geri alma, yayın notu ve denetim için tek kaynak.
 - **45 · Değişikliği geri alma:** Çalışmadaki tek bir değişikliği ya da tümünü geri almak; bağımlı değişiklikleri önceden göstermek; iz bütünlüğünü korumak.
 - **46 · Yeniden hesap:** Çalışmadaki değişikliklerden sonra planı yeniden çözmek; varsayılan olarak yalnız etkilenen kısmı (kaynak, malzeme, bucket komşuluğu) çözerek süreyi kısaltmak.
-- **47 · Eş zamanlı çalışma sınırı:** Sunucuyu korumak: aynı anda en fazla 3 sıcak hesap (etkileşim kanalı); fazlası sırada bekler ve sırası görünür.
+- **47 · Eş zamanlı çalışma sınırı:** Sunucuyu korumak: aynı anda en fazla 3 aktif hesaplama (hesaplama kanalı); fazlası sırada bekler ve sırası görünür.
 - **48 · İş bitti bildirimi:** Uzun süren işlerin (yeniden hesap, yükleme, senaryo, sıradaki işin başlaması) bittiğini kullanıcıya anında, ekranı yenilemeden bildirmek ve ilgili ekranı tazelemek.
 - **49 · Çalışma kapatma:** Yayınlanmayan çalışmayı kullanıcının kapatması ya da gece temizliğinde silinmesi; slotun boşalması.
 
@@ -2819,7 +2819,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F40 · E Senaryo ve çalışma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Gece kanalı etkileşim kanalından ayrıdır; gece akışı sıcak çalışmaları engellemez, kaynak paylaşımı sistem ayarıyla (işçi sayısı).
+  - Gece kanalı hesaplama kanalından ayrıdır; gece akışı aktif hesaplamaları engellemez, kaynak paylaşımı sistem ayarıyla (işçi sayısı).
   - Yükleme başarısızsa senaryolar son veri versiyonuyla çalışır ve 'eski veri' etiketi taşır (parametre, öneri).
   - Gece akışı sırasında elle çekim ve yükleme kapalıdır.
   - Senaryolar yalnız bir gün yaşar; onaylı plan bir çalışmadan yayınlanır (77).
@@ -2865,7 +2865,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 41 · Senaryoyu yeniden çalıştırma (öneri)
 <sub>24. Ekranlar ve fonksiyonlar · F41 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
 
-- Hata veren ya da süre bütçesini aşan gece senaryosunu gündüz yeniden başlatmak; ya da tanım değişikliğinden sonra bir senaryoyu yeniden üretmek. Sıcak çalışmaları bekletmez.
+- Hata veren ya da süre bütçesini aşan gece senaryosunu gündüz yeniden başlatmak; ya da tanım değişikliğinden sonra bir senaryoyu yeniden üretmek. Aktif hesaplamaları bekletmez.
 
 #### NASIL ÇALIŞIR
 
@@ -2878,7 +2878,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Senaryo tanımı (parametre seti, model tipi, eksenler)
   - Veri versiyonu seçimi: gece versiyonu ya da güncel
   - Bu çalıştırmaya özel süre bütçesi (isteğe bağlı)
-- **03:** Süre bütçesi bu çalıştırma için değiştirilebilir (ör. 30 → 60 dk); kanal gece, öncelik düşük: sıcak çalışmalar beklemez.
+- **03:** Süre bütçesi bu çalıştırma için değiştirilebilir (ör. 30 → 60 dk); kanal gece, öncelik düşük: aktif hesaplamalar beklemez.
 - **04:** Yeni PlanRun kuyruğa girer; mevcut senaryo sonucu bitene kadar görünür kalır, kartta 'yeniden · süre' etiketi ve üst şeritte ilerleme.
 - **ÇIKTI**
   - Yeni PlanRun ve senaryo sonucu (eskisinin yerine)
@@ -2892,7 +2892,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Aynı anda tek senaryo yeniden çalıştırılır; ikinci istek kuyrukta bekler.
-  - Gece kanalı düşük öncelik: etkileşim kanalındaki sıcak hesaplar önce.
+  - Gece kanalı düşük öncelik: hesaplama kanalındaki aktif hesaplamalar önce.
   - Güncel veri versiyonu seçilirse kartta 'v232' etiketi; karşılaştırma ekranı farklı versiyonu uyarır.
   - Senaryo yine gece silinir; sonuç kalıcı değildir.
   - End user bu işlemi göremez.
@@ -2929,7 +2929,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Veri versiyonu seçimi:** Gece versiyonu (karşılaştırılabilir) ya da güncel; sonucu yazılı.
 - **Süre bütçesi:** Bu çalıştırmaya özel bütçe; tanım değişmez.
-- **Kanal bilgisi:** Gece kanalı, düşük öncelik; sıcak çalışmalar beklemez.
+- **Kanal bilgisi:** Gece kanalı, düşük öncelik; aktif hesaplamalar beklemez.
 - **Eski sonuç kalır:** Bitene kadar eski sonuç görünür; bağlı çalışma uyarısı.
 
 ### 41 · Senaryoyu yeniden çalıştırma (öneri) · Hesap sürüyor
@@ -3017,7 +3017,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü · End user açamaz
   - Nereden: Senaryolar ekranı 'Çalışma aç' · senaryo kartı menüsü · Ana sayfa 'Baz senaryoda çalışma aç'
 - **01:** Kullanıcı senaryo seçer, 'Çalışma aç' der; pencere senaryo bilgisini, açık çalışmaları ve slot durumunu gösterir.
-- **02:** Sınır kontrolü: 3 aktif sıcak çalışma varsa açılmaz; kullanıcı sıraya girer ya da kendi çalışmasını kapatır (47, 49).
+- **02:** Sınır kontrolü: 3 aktif hesaplama varsa açılmaz; kullanıcı sıraya girer ya da kendi çalışmasını kapatır (47, 49).
 - **GIRDI**
   - Kaynak senaryo (PlanRun, veri versiyonu, parametre seti)
   - Çalışma adı (varsayılan senaryo + kullanıcı)
@@ -3045,7 +3045,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Senaryo bu arada silindiyse (gece akışı başladı): açma reddedilir.
   - Kullanıcının zaten açık çalışması varsa: ona dönme ya da kapatıp yeni açma seçeneği.
 - **ETKISI VE TETIKLENENLER**
-  - Sıcak çalışma sayacı (47) artar.
+  - Aktif hesaplama sayacı (47) artar.
   - Çalışma özeti ve planlama ekranları bu bağlamda açılır.
   - Sistem sağlığı: açık çalışmalar.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; çalışma senaryonun hesabına bağlanır. İlk yeniden hesap (46) kullanıcı değişiklik yapınca çalışır.
@@ -3231,8 +3231,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - Son hesaptan beri değişiklikler (WorkspaceOverride) ve kilitler
   - Kapsam seçimi: etkilenen kısım (varsayılan) ya da tüm plan
-  - Süre bütçesi (sıcak, 3 dk) ve kuyruk durumu (47)
-- **03:** Job (etkileşim kanalı, yüksek öncelik) kuyruğa girer; 3 sınırı doluysa sıra ve tahmini süre gösterilir (47).
+  - Süre bütçesi (aktif hesaplama, 3 dk) ve kuyruk durumu (47)
+- **03:** Job (hesaplama kanalı, yüksek öncelik) kuyruğa girer; 3 sınırı doluysa sıra ve tahmini süre gösterilir (47).
 - **04:** Hesap aşamaları çalışır (29–39, kapsam içinde); ilerleme üst şeritte; ekran kullanılabilir, yeni değişiklik 'hesap bitince tekrar gerekecek' uyarısıyla yapılabilir.
 - **ÇIKTI**
   - Yeni PlanRun ve bağlı tablolar (kapsam içinde güncel)
@@ -3303,17 +3303,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 47 · Eş zamanlı çalışma sınırı
 <sub>24. Ekranlar ve fonksiyonlar · F47 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
 
-- Sunucuyu korumak: aynı anda en fazla 3 sıcak hesap (etkileşim kanalı); fazlası sırada bekler ve sırası görünür. Gece kanalı ayrı; kısa işler için küçük kota.
+- Sunucuyu korumak: aynı anda en fazla 3 aktif hesaplama (hesaplama kanalı); fazlası sırada bekler ve sırası görünür. Gece kanalı ayrı; kısa işler için küçük kota.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Sistem · sınır: System owner · takılan işi iptal: Admin ve üstü
-  - Nereden: Her sıcak hesapta (46, termin sorgusu) · görünüm: hesap penceresi, üst şerit, Sistem sağlığı
-- **01:** Sıcak hesap isteği Job tablosuna 'etkileşim' kanalıyla yazılır; aktif sayısı sorgulanır (satır kilidiyle, yarış önlenir).
+  - Nereden: Her aktif hesaplamada (46, termin sorgusu) · görünüm: hesap penceresi, üst şerit, Sistem sağlığı
+- **01:** Aktif hesaplama isteği Job tablosuna 'hesaplama' kanalıyla yazılır; aktif sayısı sorgulanır (satır kilidiyle, yarış önlenir).
 - **02:** Sınır doluysa iş 'sırada' olur; kullanıcıya sıra numarası ve tahmini bekleme (sürüyor işlerin kalan süresinden) gösterilir; iptal edebilir.
 - **GIRDI**
-  - Sistem ayarı: eş zamanlı sıcak hesap (3), kısa iş kotası (1, öneri), kalp atışı eşiği
+  - Sistem ayarı: eş zamanlı aktif hesaplama (3), kısa iş kotası (1, öneri), kalp atışı eşiği
   - Job tablosu: kanal, durum, kalp atışı, süre
   - İstek: kullanıcı, iş türü, tahmini süre
 - **03:** Kısa işler (termin sorgusu ≤ 30 sn) ayrı küçük kotadan çalışır; uzun hesapları beklemez (öneri).
@@ -3362,7 +3362,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Canlı kuyruk:** Kanal, kullanıcı, durum, süre, kalp atışı; takılan iş kırmızı.
 - **Takılan işi iptal:** Admin kırmızı butonla slot kurtarır.
-- **Sayaçlar:** Sıcak hesap, sırada, kısa iş kotası, gece kanalı ayrı.
+- **Sayaçlar:** Aktif hesaplama, sırada, kısa iş kotası, gece kanalı ayrı.
 - **Sınır ayarı:** System owner sınırı buradan değiştirir.
 
 ### 48 · İş bitti bildirimi
@@ -3534,7 +3534,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çalışmaya bağlı elle plan kaydı (ManualPlanEntry, öneri): ürün, dönem, miktar, kilit, kim, zaman
   - Değişiklik izi satırı (ekran, değişiklik, tahmini ve gerçekleşen etki)
   - Yeniden hesap işi (Job) ve yeni plan hesabı (PlanRun) çıktıları
-- **05:** 'Kaydet ve yeniden planla' ile değer çalışmaya yazılır (ManualPlanEntry, öneri), değişiklik izine girer ve yeniden hesap işi etkileşim kanalına alınır.
+- **05:** 'Kaydet ve yeniden planla' ile değer çalışmaya yazılır (ManualPlanEntry, öneri), değişiklik izine girer ve yeniden hesap işi hesaplama kanalına alınır.
 - **06:** Model kilitli değeri sabit alır; aynı ürünün diğer dönemlerini, bağımlı talebi ve etkilenen kaynakları yeniden çözer. Sonuç dört görünüme birden düşer; değişiklik izinde tahmini ve gerçekleşen etki yan yana yazılır.
 - **07:** Kilit kaldırılırsa (61) değer bir sonraki yeniden hesapta tekrar modelin kararına bırakılır.
 
@@ -3554,7 +3554,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Bağlantı koparsa taslak kaybolmaz; yeniden bağlanınca 'kaydedilmemiş değişiklik var' uyarısı.
 - **ETKISI VE TETIKLENENLER**
   - Anlık etki önizlemesi (62) ve değişiklik izi (44).
-  - Yeniden hesap (46) etkileşim kanalında; bitince WebSocket bildirimi (48).
+  - Yeniden hesap (46) hesaplama kanalında; bitince WebSocket bildirimi (48).
   - Kaynak doluluk, sipariş bazlı ve Gantt görünümleri aynı değeri gösterir; uyarılar ve metrikler güncellenir.
 - **ÖRNEK:** G-120 H45 üretimi 40 → 45: stok projeksiyonu H45'ten itibaren +5; CNC torna 1 H45 %92 → %95, Freze merkezi %101 → %104 (aşırı yük uyarısı). Kaydedince model H46 üretimini 50 → 45'e çeker, Freze H46 %108 → %103 olur, SO-1185 gecikmesi 5 → 3 gün.
 - **AÇIK KONU:** A-14: elle girilen değer varsayılan olarak kilitli mi (model dokunmaz) yoksa öneri mi (model değiştirebilir)? Öneri: kilitli; kullanıcı isterse kilidi kaldırır.
@@ -5214,7 +5214,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü · End user sorgu çalıştıramaz
   - Nereden: Menü · Çalışma › 'Termin ve olaylar' · Sipariş bazlı ekranda 'yeni talep dene' · Ana sayfa kısayolu
 - **01:** Form doldurulur; ürün mevcut ürünlerden seçilir (taslak ürün için 74). Kısıt seçenekleri işaretlenir; varsayılan 'mevcut plan korunur'.
-- **02:** Geçici hesap etkileşim kanalında kuyruğa girer (yüksek öncelik, kısa süre bütçesi): talep çalışmanın plan kopyasına eklenir, diğer talepler sabit tutulur, kalan kapasite ve stokla ileriye doğru çizelgelenir.
+- **02:** Geçici hesap hesaplama kanalında kuyruğa girer (yüksek öncelik, kısa süre bütçesi): talep çalışmanın plan kopyasına eklenir, diğer talepler sabit tutulur, kalan kapasite ve stokla ileriye doğru çizelgelenir.
 - **GIRDI**
   - Ürün (mevcut ürün), miktar, istenen tarih; isteğe bağlı müşteri / proje, öncelik, bölünebilirlik
   - Çalışmanın son plan hesabı: kalan kapasite (CapacityLoad), stok projeksiyonu, açık arz
@@ -5236,7 +5236,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Sorgu planı değiştirmez; mevcut siparişler kaymaz ('mevcut plan korunur' varsayılan). Seçenek kapatılırsa sorgu, önceliğe göre diğer talepleri kaydırabilir ve sonuçta etkilenenler listelenir.
   - Dondurulmuş döneme teslim mümkün değildir; en erken tarih dondurulmuş dönemden sonradır.
   - Geçici hesap süre bütçesi kısadır (System owner ayarı, öneri 60 sn); aşılırsa en iyi bulunan sonuç 'yaklaşık' etiketiyle verilir.
-  - Aynı anda en fazla 3 sıcak iş; sorgu kuyruğa girerse bekleme süresi gösterilir.
+  - Aynı anda en fazla 3 aktif hesaplama; sorgu kuyruğa girerse bekleme süresi gösterilir.
   - Sorgu sonucu çalışmanın veri versiyonuna ve son hesabına bağlıdır; hesap eskiyse uyarı.
 - **HATA VE ISTISNA**
   - Ürün ağacı ya da rotası eksik: sorgu çalışmaz, Veri kalitesi bağlantısı verilir.
@@ -5266,7 +5266,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Üç zorunlu alan:** Ürün, miktar, istenen tarih; proje ve öncelik isteğe bağlı.
 - **Kısıt seçenekleri:** Mevcut plan korunur varsayılan; fazla mesai ve fason açılabilir.
-- **Geçici hesap:** Üst şeritte hesaplanıyor; etkileşim kanalı, saniyeler.
+- **Geçici hesap:** Üst şeritte hesaplanıyor; hesaplama kanalı, saniyeler.
 - **Son sorgular:** Çalışmadaki önceki sorgular sonuçlarıyla listede.
 
 ### 72 · Termin sorgusu · Sonuç
@@ -5290,7 +5290,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü
   - Nereden: Menü · Çalışma › 'Termin ve olaylar' · Pegging 'ertelenirse' bağlantısı · Gecikme nedeni 'Dene' · Kaynak doluluk ekranından 'duruş dene'
 - **01:** Olay tipi seçilir, parametreler girilir; kaynak ve sipariş alanları mevcut kayıtlardan seçilir (yazarak arama).
-- **02:** 'Etkiyi hesapla' ile geçici hesap etkileşim kanalına girer: olay çalışmanın plan kopyasına uygulanır (duruş → dönem kapasitesi düşer; gecikme → arz tarihi kayar; iptal → talep çıkar).
+- **02:** 'Etkiyi hesapla' ile geçici hesap hesaplama kanalına girer: olay çalışmanın plan kopyasına uygulanır (duruş → dönem kapasitesi düşer; gecikme → arz tarihi kayar; iptal → talep çıkar).
 - **GIRDI**
   - Olay tipi ve parametreleri: duruş (kaynak, adet, dönem), tedarikçi gecikmesi (arz, +gün), sipariş iptali / talep değişimi (satır, miktar), kaynak ekleme (kapasite, dönem)
   - Çalışmanın son plan hesabı ve veri versiyonu
@@ -5373,7 +5373,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Taslak düzenlemeleri: bileşen ekle / çıkar / adet, operasyon ekle / çıkar / süre / kaynak
   - Miktar, istenen tarih, proje; kısıt seçenekleri (mevcut plan korunur, yeni bileşen için satın alma öner)
   - Çalışmanın son plan hesabı
-- **03:** Miktar ve istenen tarih girilir; 'Simüle et' ile geçici hesap etkileşim kanalında çalışır (72 ile aynı motor, taslak ürünle).
+- **03:** Miktar ve istenen tarih girilir; 'Simüle et' ile geçici hesap hesaplama kanalında çalışır (72 ile aynı motor, taslak ürünle).
 - **04:** Sonuç: termin, kısıtlayan (kaynak ya da yeni bileşen), kaynak doluluk önce / sonra, ek malzeme ihtiyacı ve durumu, mevcut plana göre metrik farkı.
 - **05:** Taslak kaydedilir (çalışmada taslak listesi), karşılaştırmaya gönderilir ya da çalışmaya uygulanır (75): taslak ürün ve sipariş satırı çalışmaya geçici olarak girer.
 - **06:** Sipariş gerçekten alınırsa ürün ERP'de tanımlanır ve veri yüklemesiyle gelir; taslak silinir ya da arşivlenir.
@@ -5450,7 +5450,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Uygulama seçenekleri: diğer siparişler kayabilsin / mevcut plan korunsun; kilitle
   - Çalışmanın mevcut değişiklik izi ve son plan hesabı
 - **03:** Uygula: kayıtlar WorkspaceOverride / çalışma kopyalarına yazılır (SalesOrderLine taslak, ResourceDowntime geçici, taslak BOM / rota); değişiklik izine tek satır düşer (kaynak analiz numarasıyla).
-- **04:** Yeniden hesap (46) otomatik başlar; etkileşim kanalı, ilerleme üst şeritte. Hesap bitince metrikler ve ekranlar güncellenir.
+- **04:** Yeniden hesap (46) otomatik başlar; hesaplama kanalı, ilerleme üst şeritte. Hesap bitince metrikler ve ekranlar güncellenir.
 - **05:** Bildirimde 'Geri al': uygulama tek adımda geri alınır (kayıtlar çıkar, yeniden hesap tekrar başlar).
 - **ÇIKTI**
   - Çalışma kopyasında yeni kayıtlar: taslak sipariş (SalesOrderLine · taslak), geçici duruş (ResourceDowntime · çalışma), taslak ürün (BOM / rota kopyası), WorkspaceOverride
@@ -5507,7 +5507,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![75 · Olayı çalışmaya uygulama · Uygulandı · yeniden hesap](mockups/m24f-0676-75-olayi-calismaya-uygulama-uygulandi-yeniden-hesap.png)
 
 - **Değişiklik izi:** Yeni satır: taslak sipariş, kilit işareti, hesaplanıyor durumu, geri al.
-- **Yeniden hesap şeridi:** Etkileşim kanalında ilerleme; metrikler hesap bitince dolar.
+- **Yeniden hesap şeridi:** Hesaplama kanalında ilerleme; metrikler hesap bitince dolar.
 - **Geçici kayıtlar:** Çalışmadaki taslak ve geçici kayıtlar sağda listelenir.
 - **Bildirimde geri al:** Tek adımda geri alma; kayıtlar çıkar, hesap yenilenir.
 
@@ -5998,7 +5998,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![82 · Sabah özeti · Hatalı senaryo aksiyonu](mockups/m24f-0705-82-sabah-ozeti-hatali-senaryo-aksiyonu.png)
 
 - **Satır menüsü:** Süre aşan senaryo satırında yeniden çalıştırma, log ve senaryolar ekranı seçenekleri.
-- **Gündüz çalıştırma:** Gece kanalı yerine gündüz kuyruğuna girer; etkileşim işlerini bekletmez.
+- **Gündüz çalıştırma:** Gece kanalı yerine gündüz kuyruğuna girer; hesaplama işlerini bekletmez.
 - **Durum çipleri:** Tamam, uyarılı, süre aşımı; renk ve metin birlikte.
 - **Tek ekran:** Akış, kritik uyarılar ve fark aynı anda; kaydırma yok.
 
@@ -6140,7 +6140,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **HATA VE ISTISNA**
   - Yetkisiz hedef (End user → kaynak bazlı planlama): uyarı detayı gösterilir, yönlendirme yapılmaz; mesaj kimin yapabileceğini söyler.
   - Nesne bulunamadı: açıklama ve 'uyarıyı kapat' kısayolu.
-  - Çalışma açılması gerekiyor ama sıcak çalışma sınırı dolu: 'kuyrukta 1. sırada' bilgisiyle bekletme.
+  - Çalışma açılması gerekiyor ama aktif hesaplama sınırı dolu: 'kuyrukta 1. sırada' bilgisiyle bekletme.
 - **ETKISI VE TETIKLENENLER**
   - Hedef ekran açılır; uyarı 'görüldü' işareti alır (öneri).
   - Hedefte yapılan değişiklikler kendi fonksiyonlarını tetikler (52–63).
@@ -6307,7 +6307,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Üst şerit:** Büyük aktarımın ilerlemesi; kullanıcı çalışmaya devam eder.
 - **Hazır bildirimi:** Dosya adı ve boyutla; 'İndir' bildirimin içinde.
-- **Kuyruk:** İş etkileşim kanalında; gece işlerini etkilemez.
+- **Kuyruk:** İş hesaplama kanalında; gece işlerini etkilemez.
 - **24 saat:** Dosya sunucuda bir gün kalır; sonra iz kaydı kalır.
 
 ### 87 · Dışa aktarım izi
@@ -6379,7 +6379,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **90 · Rol bazlı yetki:** Her fonksiyonun ve ekranın hangi rolle kullanılabileceğini tek matriste tanımlamak ve her istekte sunucuda doğrulamak; arayüz yetkisiz aksiyonu gizler ya da pasifler.
 - **91 · Entegrasyon tanımı:** ERP ile veri alışverişini varlık bazında tanımlamak: yöntem (API, SQL arayüz tabloları, Excel), bağlantı, servis hesabı ve alan eşlemesi; hepsi tek veri sözleşmesine bağlıdır.
 - **92 · Zamanlanmış işler:** Gece akışını (çekim → doğrulama ve yükleme → senaryolar) ve bakım işlerini (senaryo silme, ham veri temizliği, versiyon sıkıştırma) zamanlamak, aç / kapa, sıra ve bağımlılıkla yönetmek.
-- **93 · İş kuyruğu yönetimi (öneri):** Çalışan ve bekleyen işleri (gece senaryoları, sıcak çalışma hesapları, yüklemeler, büyük dışa aktarımlar) görmek; bekleyeni iptal etmek, çalışanı en iyi çözümle durdurmak, öncelik vermek. Daha önce konuşulmadı (öneri).
+- **93 · İş kuyruğu yönetimi (öneri):** Çalışan ve bekleyen işleri (gece senaryoları, aktif hesaplamalar, yüklemeler, büyük dışa aktarımlar) görmek; bekleyeni iptal etmek, çalışanı en iyi çözümle durdurmak, öncelik vermek. Daha önce konuşulmadı (öneri).
 - **94 · Sistem sağlığı:** Uygulama, veritabanı ve motorun durumunu tek ekranda görmek: servisler, kuyruk, son çalışmalar ve süre trendleri, hatalar, disk.
 - **95 · Destek paketi:** Kapalı ağda uzaktan erişim olmadığından sorun incelemesi için log, ayar, sürüm ve iş kayıtlarını (isteğe bağlı anonim model girdisini) tek şifreli pakette dışa almak; biz paketi inceleyip çözüm üretiriz.
 - **96 · Sistem ayarları:** Yalnız bizim hesabımızın gördüğü ayarlar: veri sözlüğü (alan sınıfı, değer önceliği, Manuel, Senaryo), motor ayarları (çözücü, süre bütçeleri, işçi sayısı, eş zamanlı sınır), saklama süreleri, lisans ve sürüm.
@@ -6491,7 +6491,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Sunucu oturumu ve çerez
   - Denetim izi: giriş, çıkış, başarısız deneme, kilit, şifre değişikliği
   - Yeni şifre özeti (hash)
-- **06:** Çıkış: oturum sunucuda sonlandırılır, WebSocket kapanır. Aynı kullanıcı birden çok tarayıcıda oturum açabilir; sıcak çalışma sayacı kullanıcı değil çalışma bazlıdır.
+- **06:** Çıkış: oturum sunucuda sonlandırılır, WebSocket kapanır. Aynı kullanıcı birden çok tarayıcıda oturum açabilir; aktif hesaplama sayacı kullanıcı değil çalışma bazlıdır.
 
 ### 89 · Giriş ve oturum · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F89 · K Yönetim ve sistem · Çalışma prensibi 2/2</sub>
@@ -6788,19 +6788,19 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 93 · İş kuyruğu yönetimi (öneri)
 <sub>24. Ekranlar ve fonksiyonlar · F93 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
 
-- Çalışan ve bekleyen işleri (gece senaryoları, sıcak çalışma hesapları, yüklemeler, büyük dışa aktarımlar) görmek; bekleyeni iptal etmek, çalışanı en iyi çözümle durdurmak, öncelik vermek. Daha önce konuşulmadı (öneri).
+- Çalışan ve bekleyen işleri (gece senaryoları, aktif hesaplamalar, yüklemeler, büyük dışa aktarımlar) görmek; bekleyeni iptal etmek, çalışanı en iyi çözümle durdurmak, öncelik vermek. Daha önce konuşulmadı (öneri).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Görüntüleme: Key user ve üstü (kendi işleri), Admin ve üstü (tümü) · iptal: kendi işi Key user, başkasının işi Admin ve üstü
   - Nereden: Sistem sağlığı 'İş kuyruğu' · çalışma ekranı kuyruk durumu · üstteki iş şeridi
-- **01:** Liste canlıdır (WebSocket): çalışan, kuyrukta, son 24 saatte tamamlanan; sıcak çalışma sayacı (2 / 3) ve tahmini bekleme.
+- **01:** Liste canlıdır (WebSocket): çalışan, kuyrukta, son 24 saatte tamamlanan; aktif hesaplama sayacı (2 / 3) ve tahmini bekleme.
 - **02:** Bekleyen iş iptali: kuyruktan çıkar, sahibine nedeniyle bildirim; çalışma 'hesaplanmadı' kalır, önceki sonuç korunur.
 - **03:** Çalışan motor işi: 'durdur ve en iyi çözümü sakla' (34) ya da 'iptal' (sonuç yok). Yükleme işleri durdurulamaz (ya hep ya hiç); yalnız beklenir.
 - **GIRDI**
   - Job tablosu: tür, kanal, öncelik, durum, kim, ilerleme, kalp atışı, deneme sayısı
-  - SystemSetting: eş zamanlı sıcak çalışma (3), işçi sayısı
+  - SystemSetting: eş zamanlı aktif hesaplama (3), işçi sayısı
   - Kullanıcı rolü
 - **04:** Öncelik: Admin bekleyen işi öne alır; gece kanalı işleri gündüz kanalını bloke etmez (ayrı işçi havuzu, öneri).
 - **05:** Takılı iş: kalp atışı 2 dk gelmezse 'yanıt vermiyor'; bir kez otomatik yeniden kuyruk (Attempt + 1), sonra hata ve Sistem sağlığı kaydı.
@@ -6808,14 +6808,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Job durumu değişiklikleri
   - Sahibine bildirim
   - Denetim izi: iptal, durdurma, öne alma
-- **06:** Kuyruk doluysa (3 sıcak çalışma) yeni istek bekler; çalışma ekranında sıra ve tahmini süre görünür.
+- **06:** Kuyruk doluysa (3 aktif hesaplama) yeni istek bekler; çalışma ekranında sıra ve tahmini süre görünür.
 
 ### 93 · İş kuyruğu yönetimi (öneri) · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F93 · K Yönetim ve sistem · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
   - Yükleme işleri iptal edilemez.
-  - İptal edilen sıcak hesapta çalışmanın önceki sonucu korunur; kullanıcı yeniden hesaplar.
+  - İptal edilen hesaplamada çalışmanın önceki sonucu korunur; kullanıcı yeniden hesaplar.
   - Kendi işini herkes, başkasının işini yalnız Admin iptal eder; neden zorunlu.
   - Gece kanalında öne alma yok; sıra Gece senaryoları ekranından yönetilir.
   - Durdurulan motor işi 'en iyi çözüm' ile biter ve çalışmada 'erken durduruldu' etiketi taşır.
@@ -6829,11 +6829,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Denetim izi (98).
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Kuyruk sırası ve bekleme tahmini:** Job İptal, öncelik ya da tamamlanma sonrası
-- **Sıcak çalışma sayacı:** Sistem sağlığı · üst şerit İş başlayınca ve bitince
+- **Aktif hesaplama sayacı:** Sistem sağlığı · üst şerit İş başlayınca ve bitince
 - **Çalışma durumu:** Workspace.CurrentPlanRunId İptal edilen hesapta önceki PlanRun geçerli kalır
 - **İşçi havuzu kullanımı:** SystemSetting · Sistem sağlığı İşçi sayısı değişince (96)
+- **Uygulama (2.5, K-107):** Görme ve başkasının işini iptal 93'te (Admin ve System owner); kendi işini görme ve iptal 48'de, bütün rollerde iş panelinden (K-100). Neden yalnız başkasının işinde zorunlu. Yükleme işi sıradayken de iptal edilemez. Her iş kuyruğa girerken kısa özetini yazar (`Job.Summary`): şimdilik Excel; öteki türler kendi adımlarında. Çalışan işi durdurma ve iptal 10.5'te; tahmini bekleme ve ayrı işçi havuzu kararı 10.13'te; iptalde çalışmanın durumu 8.2'de.
 - **ÖRNEK:** Cavide'nin yeniden hesabı çalışıyor (0:42), Mert'inki kuyrukta. Admin gece akışını gündüz çalıştırmak için Mert'in bekleyen işini nedeniyle iptal eder; Mert bildirim alır, önceki sonucu korunur.
-- **AÇIK KONU:** Gece kanalı ve etkileşim kanalı için ayrı işçi havuzu ayrılsın mı? Öneri: evet, gece işleri gündüzü bloke etmesin.
+- **AÇIK KONU:** Gece kanalı ve hesaplama kanalı için ayrı işçi havuzu ayrılsın mı? Öneri: evet, gece işleri gündüzü bloke etmesin.
 
 ### 93 · İş kuyruğu yönetimi (öneri) · Çalışan iş aksiyonları
 <sub>24. Ekranlar ve fonksiyonlar · F93 · K Yönetim ve sistem · Mockup 1/2</sub>
@@ -6865,14 +6866,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Admin ve üstü · System owner tüm detayı görür
   - Nereden: Menü 'Sistem sağlığı' · ana sayfa hata satırı bağlantısı · hata bildirimleri
-- **01:** Üst kartlar: kuyruk, sıcak çalışma sayacı, son 7 gün hata, disk kullanımı; eşik aşımı kırmızı.
+- **01:** Üst kartlar: kuyruk, aktif hesaplama sayacı, son 7 gün hata, disk kullanımı; eşik aşımı kırmızı.
 - **02:** Servis durumu: uygulama servisi, işçi servisi (meşgul işçi), SQL Server bağlantısı ve havuzu, zamanlayıcı, WebSocket bağlantı sayısı; son kalp atışıyla.
 - **GIRDI**
   - Job (süre, durum, kalp atışı), SolverLog (çözüm süresi, boşluk, durum)
   - Servis kalp atışları: uygulama, işçi, SQL Server bağlantısı, zamanlayıcı, WebSocket
   - Disk ve veritabanı boyutu, versiyon sayısı; eşikler (SystemSetting)
-- **03:** Son çalışmalar ve süre trendi: gece senaryoları ve sıcak hesaplar; süre bütçesine yaklaşma (bütçenin %90'ı) sarı, aşım kırmızı.
-- **04:** Hatalar: zaman, bileşen, mesaj, sistemin yaptığı (otomatik tekrar, en iyi çözüm); satırdan detay çekmecesi ve 'destek paketine ekle' (95).
+- **03:** Son çalışmalar ve süre trendi: gece senaryoları ve hesaplamalar; süre bütçesine yaklaşma (bütçenin %90'ı) sarı, aşım kırmızı.
+- **04:** Hatalar: zaman, bileşen, mesaj, sistem aksiyonu (otomatik tekrar, en iyi çözüm); satırdan detay çekmecesi ve 'destek paketine ekle' (95).
 - **05:** Eşikler: disk %85, kuyruk bekleme > 10 dk, süre bütçesinin %90'ı → ekranda ve ana sayfada uyarı (öneri).
 - **06:** Ekran canlıdır (WebSocket, 30 sn yedek yenileme); servis yanıt vermiyorsa son bilinen durum ve zamanı gösterilir.
 - **ÇIKTI**
@@ -6887,7 +6888,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Ekranda özet log; ham log yalnız destek paketinde.
   - Eşikler System owner ayarıdır.
   - Key user ve End user bu ekranı görmez; onlara kuyruk durumu çalışma ekranında yeter.
-  - Hata kayıtları 90 gün ekranda, sonra yalnız logda (öneri).
+  - Hata kayıtları 90 gün saklanır (`SystemEventRetentionDays`), sonra silinir; log dosyaları 30 gün saklanır.
 - **HATA VE ISTISNA**
   - Veritabanı bağlantısı yok: uygulama 'bakım' sayfası; ekran açılamaz, servis loglarına bakılır.
   - İşçi servisi kapalı: kuyruk büyür, kart kırmızı, ana sayfaya uyarı.
@@ -6900,6 +6901,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Süre trendleri:** SolverLog · Job Her hesap bitince
 - **Disk ve versiyon metrikleri:** Sistem sağlığı Yükleme (05), temizlik (09), sıkıştırma (07) sonrası
 - **Eşik uyarıları:** Ana sayfa Eşik aşılınca (öneri)
+- **Uygulama (2.5, K-106):** Hatalar `SystemEvent`'te; System owner teknik özeti de görür. Servisler: Uygulama, Motor, Veritabanı, Anlık bildirim. Eşikler Sistem ayarları'nda: disk ve kuyruk bekleme. Süre trendi ve bütçe rengi 10.13'te, zamanlayıcı 5.6'da, ana sayfa uyarısı 9.1'de, "Destek paketine ekle" 11.1'de. Hata detayı çekmece yerine ortak pencerede.
 - **ÖRNEK:** Baz senaryosu son 7 gün 38–41 dk; bütçe 45 dk → %91, sarı. Kısıtlı malzeme 30 dk bütçeyi aştı, boşluk %4,7 ile en iyi çözüm saklandı; öneri bütçeyi 45 dk yapmak.
 
 ### 94 · Sistem sağlığı · Genel görünüm
@@ -6918,7 +6920,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![94 · Sistem sağlığı · Hata detayı](mockups/m24f-0761-94-sistem-sagligi-hata-detayi.png)
 
 - **Çözüm logu özeti:** Model boyutu, boşluk seyri, bütçe dolumu zaman damgalı.
-- **Sistemin yaptığı:** En iyi çözüm saklandı, yeniden deneme yok; neden yazılı.
+- **Sistem aksiyonu:** En iyi çözüm saklandı, yeniden deneme yok; neden yazılı.
 - **Öneri:** Bütçe ya da kapsam değişikliği; ilgili ekrana bağlantı.
 - **Destek paketine ekle:** Hata kaydı pakete tek tıkla dahil edilir.
 
@@ -6983,7 +6985,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![95 · Destek paketi · Hazırlanıyor](mockups/m24f-0765-95-destek-paketi-hazirlaniyor.png)
 
 - **Adım adım:** Toplama, kayıtlar, ayarlar, manifest, zip; ilerleme çubuğu.
-- **Düşük öncelik:** Sıcak çalışmaları yavaşlatmadığı bilgi kutusunda.
+- **Düşük öncelik:** Aktif hesaplamaları yavaşlatmadığı bilgi kutusunda.
 - **Arka planda:** Pencere kapatılır, üst şerit ilerlemeyi gösterir.
 - **Paket kimliği:** Alt başlıkta; yazışmalarda referans.
 
@@ -7008,7 +7010,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: System owner (Admin'in ötesinde; Admin bu ekranı görmez)
   - Nereden: Menü 'Sistem ayarları'
 - **01:** Veri sözlüğü: alan listesi; sınıf (ana veri / parametre / işlem verisi), değer önceliği sırası (elle, kural, ERP, varsayılan), Manuel (elle girilen değer öteki kaynakları ezer mi), Senaryo (alan çalışmada değiştirilebilir mi), Zorunlu, Varsayılan değer. Etki sayısı ve ne zaman geçerli olacağı gösterilir.
-- **02:** Motor: çözücü seçimi (adaptör listesi; geliştirmede karar), süre bütçeleri (sıcak, gece senaryo bazında), işçi sayısı, eş zamanlı sıcak çalışma, gece paralel senaryo, LLM açıklama (Faz 1 kapalı).
+- **02:** Motor: çözücü seçimi (adaptör listesi; geliştirmede karar), süre bütçeleri (aktif hesaplama, gece senaryo bazında), işçi sayısı, eş zamanlı aktif hesaplama, gece paralel senaryo, LLM açıklama (Faz 1 kapalı).
 - **GIRDI**
   - FieldDefinition (veri sözlüğü), SystemSetting (motor, saklama, eşikler, politikalar), License, sürüm bilgisi
   - Çözücü adaptörü listesi
@@ -7028,7 +7030,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Admin dahil hiçbir rol bu ekranı görmez.
   - Veri sözlüğü sınıf değişikliği (ör. ana veri → parametre) büyük etkidir: bir sonraki yüklemede uygulanır, açık çalışmalar kendi versiyonunda kalır.
-  - Süre bütçesi en az 1 dk; eş zamanlı sıcak çalışma 1–6; işçi sayısı sunucu çekirdeğini aşamaz.
+  - Süre bütçesi en az 1 dk; eş zamanlı aktif hesaplama 1–6; işçi sayısı sunucu çekirdeğini aşamaz.
   - Lisans bitişinde giriş engellenmez, yeni çalışma açılamaz (öneri).
   - Çözücü değişikliği yalnız kuyruk boşken ve test hesabı geçince.
 - **HATA VE ISTISNA**

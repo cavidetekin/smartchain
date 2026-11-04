@@ -10,13 +10,14 @@ import { HOME, SCREENS } from "./screens/catalog";
 import { ScreenGate } from "./screens/Forbidden";
 import { NotFound, Placeholder } from "./screens/Placeholder";
 import { StyleGuide } from "./screens/StyleGuide";
+import { SystemHealth } from "./screens/SystemHealth";
 import { SystemOwner } from "./screens/SystemOwner";
 import { TableDemo } from "./screens/TableDemo";
 import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
 
 /** Yazılmış ekranlar; öteki ekranlar boş sayfasını gösterir. */
-const PAGES: Record<string, ReactNode> = { "22": <Users />, "25": <SystemOwner /> };
+const PAGES: Record<string, ReactNode> = { "22": <Users />, "24": <SystemHealth />, "25": <SystemOwner /> };
 
 /** initialMe yalnız testlerde verilir; verilmezse oturum açılışta sunucuya sorulur. */
 export function App({ initialMe }: { initialMe?: Me | null }) {

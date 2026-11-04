@@ -40,7 +40,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 2.3b Testler ayrı veritabanında (2.3 demosundan sonra, 2.4'ten önce): bütün veritabanı testleri `Smartchain_test`'te koşar; geliştirme veritabanına hiçbir test yazmaz ya da silmez; sentetik veri test veritabanına kurulur; CLAUDE.md'deki "Testler geliştirme veritabanına yıkıcı işlem yapamaz" kuralı bu adım bitince tam karşılanır · K-103
 - [x] 2.3c Arayüz metinlerinin sadeleştirilmesi (2.3b'den sonra, 2.4'ten önce): mevcut ekranlardaki "Arayüz metni" kuralına (docs/12) aykırı metinler düzeltilir; her metin için öneri tablo olarak sorulur, seçimi kullanıcı yapar. Geçici yerler ("Bu ekran … adımında gelecek", "… 8.1'de gelir") ve geliştirme sayfaları (`/stil`, `/tablo`) kapsam dışı · docs/12 "Arayüz metni"
 - [x] 2.4 Sistem ayarları (25) · veri sözlüğü ve ek alan etiketleri (96) · K-104, K-105
-- [ ] 2.5 Sistem sağlığı (24) · sağlık (94), iş kuyruğu (93)
+- [x] 2.5 Sistem sağlığı (24) · sağlık (94), iş kuyruğu (93) · K-106, K-107
 - [ ] 2.6 Denetim izi altyapısı (98)
 
 ## Aşama 3 · Veri alma (Extract)
@@ -63,8 +63,8 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 5.2 Tam yükleme ve veri versiyonu (05, 07)
 - [ ] 5.3 Kısmi yükleme (06)
 - [ ] 5.4 Aktarım raporu, yükleme geçmişi, ham veri temizliği (08, 09)
-- [ ] 5.5 Veri yükleme ekranı (02): ETL'in tamamı tek ekranda, adım adım durumuyla
-- [ ] 5.6 Gece ETL akışı: zamanlanmış işler (92), Entegrasyon ekranı (23)
+- [ ] 5.5 Veri yükleme ekranı (02): ETL'in tamamı tek ekranda, adım adım durumuyla · yükleme işinin özeti (`Job.Summary`: "Tam yükleme · <tarih>"; K-107)
+- [ ] 5.6 Gece ETL akışı: zamanlanmış işler (92), Entegrasyon ekranı (23) · Sistem sağlığında zamanlayıcı satırı (K-106)
 
 ## Aşama 6 · Ana veri ve kalite
 
@@ -97,7 +97,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [ ] 8.0 Plan fikstürü: sentetik veri için elle hazırlanmış plan (planlı sipariş, doluluk, karşılama, pegging, uyarı, metrik)
 - [ ] 8.1 Senaryolar (08) · karşılaştırma (42)
-- [ ] 8.2 Çalışma (09) · açma, iz, geri alma, yeniden hesap düğmesi (sahte motorla), eş zamanlı sınır, bildirim, kapatma (43–49) · önce A-37 (değişiklik etkisi ve yeniden hesap) karara bağlanır
+- [ ] 8.2 Çalışma (09) · açma, iz, geri alma, yeniden hesap düğmesi (sahte motorla), eş zamanlı sınır, bildirim, kapatma (43–49) · önce A-37 (değişiklik etkisi ve yeniden hesap) karara bağlanır · iptal edilen işte çalışmanın durumu ve önceki sonuç; çalışma ekranında sıra (K-107) · çalışma işinin özeti (`Job.Summary`: "<çalışma adı> · yeniden hesap"; K-107)
 - [ ] 8.3 Kaynak doluluk raporu (10)
 - [ ] 8.4 Ürün bazlı planlama (11) · 50, 51
 - [ ] 8.5 Kaynak bazlı planlama (12) · 52–55
@@ -111,7 +111,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 9 · Takip ve rapor
 
-- [ ] 9.1 Ana sayfa (01) · 82
+- [ ] 9.1 Ana sayfa (01) · 82 · eşik uyarıları ve Sistem sağlığı hata satırı bağlantısı (K-106)
 - [ ] 9.2 Uyarı iş listesi (20) · 83, 84
 - [ ] 9.3 Rapor altyapısı (21) · 85, 87
 - [ ] 9.4 Raporlar tek tek: 25. adımdaki gerçekleşme gerektirmeyen raporlar
@@ -122,20 +122,20 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 10.2 MRP patlatma (30)
 - [ ] 10.3 Kurallı yerleştirme ve sezgisel (33)
 - [ ] 10.4 Model kurma, LP (31)
-- [ ] 10.5 Çözücü adaptörü ve süre bütçesi (32, 34)
+- [ ] 10.5 Çözücü adaptörü ve süre bütçesi (32, 34) · çalışan işi durdur ve en iyi çözümü sakla, iptal; onaylanmayan durdurmayı sonlandırma (K-107)
   - [ ] Çalışan modelin LP dosyası, çözüm (solution) dosyası ve çözücü logu her plan hesabı için ayrı klasöre yazılır (K-77)
 - [ ] 10.6 Son hesap (35)
 - [ ] 10.7 Mevcut arz önerileri, uyarı üretme, metrikler, açıklama (36–39)
 - [ ] 10.8 Sahte motorun yerine gerçek motor; plan fikstürü altın plan kabul testi olur
 - [ ] 10.9 MILP
 - [ ] 10.10 Anlık etki önizlemesi (62) ve yeniden hesap (46), gerçek motorla
-- [ ] 10.11 Gece akışı ve yeniden çalıştırma (40, 41)
-- [ ] 10.12 Termin sorgusu ve olay senaryoları ekranı (18) · 72–75
-- [ ] 10.13 Motor ayarları (96): çözücü, süre bütçesi, işçi sayısı, eş zamanlı sınır
+- [ ] 10.11 Gece akışı ve yeniden çalıştırma (40, 41) · gece işinin özeti (`Job.Summary`; K-107)
+- [ ] 10.12 Termin sorgusu ve olay senaryoları ekranı (18) · 72–75 · termin sorgusu işinin özeti (`Job.Summary`; K-107)
+- [ ] 10.13 Motor ayarları (96): çözücü, süre bütçesi, işçi sayısı, eş zamanlı sınır · Sistem sağlığında süre trendi, bütçe çizgisi ve %90 eşiği; tahmini bekleme; ayrı işçi havuzu kararı (K-106, K-107)
 
 ## Aşama 11 · Ürünleşme
 
-- [ ] 11.1 Destek paketi (95)
+- [ ] 11.1 Destek paketi (95) · Sistem sağlığında düğme ve hatadan "Destek paketine ekle" (K-106)
 - [ ] 11.2 Sürüm güncelleme (97)
 - [ ] 11.3 Yedekleme, geri yükleme, lisans
 - [ ] 11.4 Kurulum paketinin tamamı (27. adım)
@@ -160,6 +160,7 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 
 - **1.6 Koşullu biçimlendirme:** çoklu koşul (VE/VEYA), renk skalası ve veri çubuğu, grup başlığı ve ara toplam satırlarına kural.
 - **Kullanıcılar (2.3):** lisans kullanıcı sınırı ve sayacı (fonksiyon 88; lisans dosyası 11.3'te gelir, sınır ona bağlı; System owner hesapları lisans kullanıcı sayısına girmez); kapatılan kullanıcının uyarılarının devri (9. aşama); kapatılan kullanıcının açık çalışmalarının devri (çalışma adımları); kapatılan kullanıcının paylaşılan görünümleri kalır, kimse değiştiremez (devir yok); kullanılmayan geçici şifrenin süresi yok.
+- **Sistem sağlığı (2.5):** genel bakım sayfası (veritabanı kapalıyken bütün ekranlar; docs/06 fonksiyon 94); Admin'e anlık hata bildirimi; kurulum paketinin `VIEW SERVER STATE` vermesi gerekirse veritabanının ayrı diski (0.6 temiz makine testinde bakılır).
 - **Kullanıcı e-postası:** kullanıcıya e-posta adresi alanı; geçici şifre kurum içi e-posta sunucusuyla (SMTP, internet gerekmez) gönderilir. "Kapalı ağ, e-posta yok" ifadesi (fonksiyon 88) bu ihtimale göre düzeltilir.
 - **Roller:** Admin'in bir paylaşılan görünümü ya da kural setini herkes veya bir rol için varsayılan yapması (K-89 notu); çalışma devralma.
 - **9.2 Uyarılar:** rolü bozuk oturum kapatılınca Admin'e uyarı düşmesi (fonksiyon 90; 2.2'de yalnız denetim izine "Geçersiz rol" yazılıyor).

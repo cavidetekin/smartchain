@@ -5,6 +5,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 
@@ -13,7 +14,7 @@ from .errors import install_error_handlers
 from .logging_setup import setup_logging
 from .middleware import TraceMiddleware
 from .notify import ConnectionManager, JobWatcher
-from .routers import auth, data_versions, exports, health, jobs, lists, system_owner, users, ws
+from .routers import auth, data_versions, exports, health, jobs, lists, system_health, system_owner, users, ws
 from .settings import get_settings
 
 log = logging.getLogger("smartchain")
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
                   docs_url="/api/docs" if settings.enable_docs else None,
                   openapi_url="/api/openapi.json" if settings.enable_docs else None, lifespan=lifespan)
     app.state.notifier = ConnectionManager()
+    app.state.started_at = datetime.now(timezone.utc)
     app.add_middleware(TraceMiddleware)
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
@@ -47,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(exports.router, prefix="/api")
     app.include_router(users.router, prefix="/api")
     app.include_router(system_owner.router, prefix="/api")
+    app.include_router(system_health.router, prefix="/api")
     for r in lists.routers:
         app.include_router(r, prefix="/api")
     app.include_router(ws.router, prefix="/api")

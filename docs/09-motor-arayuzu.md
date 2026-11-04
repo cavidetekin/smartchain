@@ -4,7 +4,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 
 ## Akış
 
-1. **İstek:** Yeniden hesap (46) ya da gece akışı (40) `submit_plan_run` çağırır: PlanRun `Sırada` ve iş kaydı (`adm.Job`, Payload `{"plan_run_id": …}`) tek commit'te. Kanal: etkileşim (iş türü Çalışma) ya da gece (Gece senaryosu).
+1. **İstek:** Yeniden hesap (46) ya da gece akışı (40) `submit_plan_run` çağırır: PlanRun `Sırada` ve iş kaydı (`adm.Job`, Payload `{"plan_run_id": …}`) tek commit'te. Kanal: hesaplama (iş türü Çalışma) ya da gece (Gece senaryosu).
 2. **Motor servisi** (üst süreç, `python -m app.engine.service`; Windows servisi 0.6'da): kanal sınırına göre işi alır (K-68) ve her işi ayrı süreçte başlatır (01-mimari · iş yalıtımı).
 3. **İş süreci:** PlanRun `Çalışıyor` → girdi okunur → motor çalışır (adım geçişlerinde ilerleme yazar) → sonuç, PlanRun durumu ve işin bitişi **tek işlemde** yazılır.
 4. **Bildirim:** API iş tablosunu izler, ilerleme ve sonuç WebSocket'le iş sahibine gider (K-69).
@@ -42,7 +42,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 - **Takılan iş:** Servis `requeue_stale`'i açılışta ve 15 sn'de bir çalıştırır; API'deki izleyici de çalıştırır. Kuyruk kilidi ikisini sıraya koyar.
 - **Geri alınan iş:** Kalp atışı yazılamıyorsa (iş başka denemeye geçti) servis süreci sonlandırır.
 - Log: servis `logs/engine.log`, iş süreçleri servisin konsoluna.
-- **İş tipine göre yönlendirme (K-93):** servis işi tipine göre kendi sürecinde çalıştırır: "Dışa aktarım" işleri Excel dosyasını üretir (`app/api/export`), diğerleri plan hesabıdır. Kanallar ayrı sınırlıdır: Etkileşim (`JobLimitInteractive`), Gece (`JobLimitNight`), Dışa aktarım (`JobLimitExport`, 2); büyük indirmeler yeniden hesabı bekletmez. Dışa aktarımın süre bütçesi etkileşim bütçesinin on katıdır (500.000 satır sığsın).
+- **İş tipine göre yönlendirme (K-93):** servis işi tipine göre kendi sürecinde çalıştırır: "Dışa aktarım" işleri Excel dosyasını üretir (`app/api/export`), diğerleri plan hesabıdır. Kanallar ayrı sınırlıdır: Hesaplama (`JobLimitInteractive`), Gece (`JobLimitNight`), Dışa aktarım (`JobLimitExport`, 2); büyük indirmeler yeniden hesabı bekletmez. Dışa aktarımın süre bütçesi etkileşim bütçesinin on katıdır (500.000 satır sığsın).
 - **Dosya temizliği:** servis `SMARTCHAIN_EXPORT_DIR`'deki süresi geçmiş (`ExportFileHours`) dosyaları açılışta ve saatte bir siler.
 
 ## Çözücü (K-35, K-76)
@@ -80,6 +80,6 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 | Model ve çözüm dosyalarının klasöre yazılması (K-77) | 10.5 |
 | Windows servisi olarak kurulum | 0.6 |
 | İş tipine göre yönlendirme, dışa aktarım kanalı ve dosya temizliği | uygulandı (1.5) |
-| Gerçek motor (29–39), sıcak çalışma belleği | Aşama 10 |
+| Gerçek motor (29–39), aktif hesaplama belleği | Aşama 10 |
 
 Demo: API açıkken `python scripts/engine_demo.py`; plan hesapları gönderir, servisi çalıştırır, WebSocket'ten ilerlemeyi ve sonuç satır sayılarını yazdırır.

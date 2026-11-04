@@ -103,7 +103,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Arz ve stok  7 tablo:** Stock · WorkOrder · PurchaseOrderLine · TransferOrder
 - **Plan  13 tablo:** ScenarioDefinition · Scenario · Workspace · PlanRun · PlanVersion · PlannedOrder · CapacityLoad · Pegging · PlanWarning
 - versiyon
-- **Sistem  6 tablo:** AppUser · Job · SolverLog · AuditLog · SystemSetting · License
+- **Sistem  8 tablo:** AppUser · Job · SolverLog · SystemEvent · ServiceStatus · AuditLog · SystemSetting · License
 - **Ortak  5 tablo:** Location · UnitOfMeasure · Calendar
 - Akış: ERP verisi entegrasyon tablolarına (stg.*) iner, veri kurallarıyla tamamlanır ve yüklemeyle veri versiyonu olur. Senaryolar bir veri versiyonu ve bir parametre setiyle çalışır; çıktılar plan hesabına bağlanır, onaylı plan ERP'ye döner.
 
@@ -163,6 +163,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **AppUser:** Uygulama kullanıcısı (Faz 1'de yerel)
 - **Job:** İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler
 - **SolverLog:** Çözüm logu
+- **SystemEvent:** Sistem hataları ve sistem aksiyonu
+- **ServiceStatus:** Motor servisinin kalp atışı
 - **AuditLog:** Kim, ne zaman, neyi değiştirdi
 - **SystemSetting:** System owner'ın ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri
 - **License:** Çevrimdışı imzalı lisans
@@ -1494,7 +1496,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım … | Sistem | H | E |  |
-| Channel | nvarchar(15) |  | Gece \| Etkileşim \| Dışa aktarım | Sistem | H | E |  |
+| Channel | nvarchar(15) |  | Gece \| Hesaplama \| Dışa aktarım | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |
 | RequestedBy | int | FK | Başlatan | Sistem | H | H |  |
@@ -1507,6 +1509,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | StartedAt | datetime2 |  | Çalışmaya başlama (UTC) | Sistem | H | H |  |
 | EndedAt | datetime2 |  | Bitiş, hata ya da iptal (UTC) | Sistem | H | H |  |
 | UpdatedAt | datetime2 |  | Son değişiklik (UTC); API bildirim için izler (K-69) | Sistem | H | E |  |
+| CancelReason | nvarchar(200) |  | İptal nedeni; başkasının işinde zorunlu (K-107) | Sistem | H | H |  |
+| CancelledBy | int | FK | İptal eden | Sistem | H | H |  |
+| Summary | nvarchar(200) |  | İş özeti; kuyruğa girerken iş türü yazar (K-107) | Sistem | H | H |  |
 
 - Durum değerleri tabloda yazıldığı gibi saklanır; 'takıldı' saklanmaz, kalp atışından hesaplanır (K-67). İş alma sırası: Priority büyükten küçüğe, sonra Id (K-68).
 
@@ -1524,6 +1529,38 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | SolveSeconds | decimal(9,2) |  | Süre | Sistem | H | H |  |
 | Gap | decimal(9,6) |  | Optimallik farkı | Sistem | H | H |  |
 | Iterations | int |  | LNS turu | Sistem | H | H |  |
+
+### SystemEvent
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Sistem hataları ve sistem aksiyonu (K-106). Saklama `SystemEventRetentionDays`; motor servisi eskileri siler.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| OccurredAt | datetime2 |  | Zaman (UTC) | Sistem | H | E |  |
+| Component | nvarchar(20) |  | Motor \| Uygulama \| İş kuyruğu \| Dışa aktarım | Sistem | H | E |  |
+| Message | nvarchar(500) |  | Hata | Sistem | H | E |  |
+| Resolution | nvarchar(200) |  | Sistem aksiyonu | Sistem | H | H |  |
+| IsResolved | bit |  | Sistem kendisi çözdü mü | Sistem | H | E | 0 |
+| JobId | bigint |  | İlgili iş; olay işten uzun yaşayabilir, bağ tutulmaz | Sistem | H | H |  |
+| TraceId | nvarchar(12) |  | Takip numarası | Sistem | H | H |  |
+| Detail | nvarchar(1000) |  | Teknik özet; yalnız System owner görür, yığın izi yazılmaz | Sistem | H | H |  |
+
+### ServiceStatus
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Motor servisinin kalp atışı (K-106). Durum saklanmaz, okurken hesaplanır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| ServiceName | nvarchar(20) | PK | Servis | Sistem | H | E |  |
+| HeartbeatAt | datetime2 |  | Son kalp atışı (UTC) | Sistem | H | E |  |
+| StartedAt | datetime2 |  | Açılış (UTC) | Sistem | H | E |  |
+| StoppedAt | datetime2 |  | Düzgün kapanış (UTC); çalışırken boş | Sistem | H | H |  |
+| AppVersion | nvarchar(20) |  | Sürüm | Sistem | H | H |  |
 
 ### AuditLog
 <sub>21. Veri modeli · Sistem</sub>
@@ -1554,13 +1591,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Value | nvarchar(200) |  | Değer | Sistem | H | E |  |
 
 - İş kuyruğu ayarları (K-68); satır yoksa varsayılan geçerlidir:
-  - `JobLimitInteractive`: etkileşim kanalında aynı anda çalışan iş (3)
+  - `JobLimitInteractive`: hesaplama kanalında aynı anda çalışan iş (3)
   - `JobLimitNight`: gece kanalında aynı anda çalışan iş (2)
   - `JobLimitExport`: dışa aktarım kanalında aynı anda çalışan iş (2; K-93)
   - `JobHeartbeatTimeoutSeconds`: kalp atışı bu kadar saniye gelmezse iş takılmış sayılır (120)
   - `JobMaxAttempts`: takılan iş en fazla bu kadar denenir, sonra Hata (2)
 - Motor ayarları (K-71; fonksiyon 34):
-  - `EngineTimeBudgetInteractiveSeconds`: etkileşim kanalında hesap süre bütçesi (180)
+  - `EngineTimeBudgetInteractiveSeconds`: hesaplama kanalında hesap süre bütçesi (180)
   - `EngineTimeBudgetNightSeconds`: gece kanalında hesap süre bütçesi (1800; senaryo bazlı bütçe parametrelerde gelecek)
   - `EngineKillGraceSeconds`: bütçe aşıldıktan sonra motor servisinin işi sonlandırmadan önce beklediği pay (60)
   - `EngineHeartbeatSeconds`: motor servisinin çalışan iş için kalp atışı yazma aralığı (15)
@@ -1573,6 +1610,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `ExportSyncMaxRows`: bu kadar satıra kadar dosya anlık iner, üstü arka planda hazırlanır (10000)
   - `ExportMaxRows`: bir aktarımda en çok satır (500000)
   - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
+- Sistem sağlığı (K-106; fonksiyon 94): `DiskWarnPercent` (85), `QueueWaitWarnMinutes` (10), `SystemEventRetentionDays` (90).
 - Giriş, şifre ve oturum ayarları (K-97, K-98; fonksiyon 89). Şifre kuralı değişikliği bir sonraki şifre değişiminde geçerli olur:
   - `PasswordMinLength`: şifrede en az karakter (10)
   - `PasswordRequireLetterAndDigit`: şifrede harf ve rakam zorunlu, 1 ya da 0 (1)

@@ -41,24 +41,28 @@ def read(session: Session | None) -> dict:
     return auth._db(work)
 
 
-def update(session: Session | None, actor: CurrentUser, changes: dict[str, int]) -> dict:
+def apply_changes(session: Session, actor: CurrentUser, current: dict[str, int], changes: dict[str, int],
+                  limits: dict[str, tuple[int, int]], problems: list[dict] | None = None) -> None:
     """Yalnız değişen anahtarlar yazılır; her biri için ayrı iz. Sınır dışı değerde hiçbiri yazılmaz."""
+    problems = [{"field": k, "problem": f"En az {limits[k][0]}, en çok {limits[k][1]}."}
+                for k, v in changes.items() if not limits[k][0] <= v <= limits[k][1]] + (problems or [])
+    if problems:
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, problems)
+    for key, value in changes.items():
+        if value != current[key]:
+            repo.set_setting(session, key, str(value))
+            audit.write_audit(session, ACTION, actor.id, OBJECT, key, {"Value": value}, {"Value": current[key]})
+    session.commit()
+
+
+def update(session: Session | None, actor: CurrentUser, changes: dict[str, int]) -> dict:
     session = auth._require(session)
 
     def work():
         current = _current(session)
         merged = {**current, **changes}
-        problems = [{"field": k, "problem": f"En az {LIMITS[k][0]}, en çok {LIMITS[k][1]}."}
-                    for k, v in changes.items() if not LIMITS[k][0] <= v <= LIMITS[k][1]]
-        if merged[WARNING] >= merged[IDLE]:
-            problems.append({"field": WARNING, "problem": "Uyarı süresi oturumun kapandığı süreden kısa olmalı."})
-        if problems:
-            raise AppError("validation", "Girilen bilgiler geçersiz.", 422, problems)
-        for key, value in changes.items():
-            if value != current[key]:
-                repo.set_setting(session, key, str(value))
-                audit.write_audit(session, ACTION, actor.id, OBJECT, key, {"Value": value}, {"Value": current[key]})
-        session.commit()
+        cross = [{"field": WARNING, "problem": "Uyarı süresi oturumun kapandığı süreden kısa olmalı."}] if merged[WARNING] >= merged[IDLE] else []
+        apply_changes(session, actor, current, changes, LIMITS, cross)
 
     auth._db(work)
     return read(session)

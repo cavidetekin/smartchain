@@ -32,6 +32,8 @@ export function emitAuth(detail: AuthEventDetail): void {
 export const FORBIDDEN_EVENT = "smartchain:forbidden";
 /** Kabuğun geçici bilgi bildirimi (ör. rol değişti, kullanıcı oluşturuldu). */
 export const NOTICE_EVENT = "smartchain:notice";
+/** WebSocket "health" mesajı: iş ya da olay değişti (K-106); Sistem sağlığı ekranı yeniler. */
+export const HEALTH_EVENT = "smartchain:health";
 export function emitNotice(message: string): void {
   window.dispatchEvent(new CustomEvent<string>(NOTICE_EVENT, { detail: message }));
 }
@@ -133,10 +135,14 @@ export interface DataVersion {
 export interface Job {
   id: number;
   job_type: string;
+  summary?: string | null;
   channel: string;
   status: string;
   requested_by?: number | null;
   requested_by_name?: string | null;
+  is_protected?: boolean;
+  cancel_reason?: string | null;
+  cancelled_by_name?: string | null;
   progress: string | null;
   error_text?: string | null;
   queue_position: number | null;
@@ -153,12 +159,13 @@ export const api = {
   /** Oturumdaki kullanıcının işleri (K-97); "all": herkesin işleri (93, Admin ve System owner; K-100). */
   jobs: (scope: "own" | "all" = "own") => getJson<JobList>(scope === "all" ? "/api/jobs?scope=all" : "/api/jobs"),
   /** Sıradaki işi iptal eder (kendi işi 48; başkasının işi 93). */
-  cancelJob: (jobId: number) => postJson<Job>(`/api/jobs/${jobId}/cancel`, {}),
+  cancelJob: (jobId: number, reason?: string) => postJson<Job>(`/api/jobs/${jobId}/cancel`, reason ? { reason } : {}),
   /** Arka planda hazırlanan Excel dosyası (K-91). */
   downloadExport: (jobId: number, fallback: string) => downloadFile(`/api/exports/${jobId}/file`, fallback),
 };
 
 /** İş türü ve durumları (app/jobs/constants.py). */
 export const JOB_EXPORT = "Dışa aktarım";
+export const JOB_LOAD = "Yükleme";
 export const JOB_DONE = "Bitti";
 export const JOB_FAILED = "Hata";

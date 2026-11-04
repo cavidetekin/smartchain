@@ -182,6 +182,7 @@ def test_above_threshold_becomes_export_job(api, user, db_engine, db_session):
     out = enqueue_big(api, user, db_engine)
     assert out["rows"] > 10 and out["file_name"].startswith("smartchain_malzeme_")
     job = queue.get_job(db_session, out["job_id"], JobSettings())
+    assert job["Summary"] == f"Malzeme listesi · {out['rows']:,} satır".replace(",", ".")  # K-107
     assert (job["JobType"], job["Channel"], job["Status"], job["RequestedBy"]) == (TYPE_EXPORT, CHANNEL_EXPORT,
                                                                                       STATUS_QUEUED, user)
     assert json.loads(job["Payload"])["request"]["filters"][0]["value"] == "zzz"

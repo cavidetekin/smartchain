@@ -48,6 +48,7 @@ def delete_users(conn, ids: list[int]) -> None:
                 "DELETE FROM adm.TableViewDefault WHERE UserId IN :ids",
                 "DELETE d FROM adm.TableViewDefault d JOIN adm.TableView v ON v.Id = d.ViewId WHERE v.OwnerUserId IN :ids",
                 "DELETE FROM adm.TableView WHERE OwnerUserId IN :ids",
+                "UPDATE adm.Job SET CancelledBy = NULL WHERE CancelledBy IN :ids",
                 "DELETE FROM adm.Job WHERE RequestedBy IN :ids",
                 "DELETE FROM adm.AppUser WHERE Id IN :ids"):
         conn.execute(text(sql).bindparams(bindparam("ids", expanding=True)), p)
