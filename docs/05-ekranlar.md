@@ -85,6 +85,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **23 · Entegrasyon ve zamanlanmış işler:** API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması.
 - **24 · Sistem sağlığı:** İş kuyruğu, son çalışmalar, hatalar, servis durumu, disk; destek paketi 11.1'de.
 - **25 · Sistem ayarları:** Veri sözlüğü, motor ayarları (çözücü, süre bütçesi, işçi sayısı, eş zamanlı çalışma sınırı), lisans, sürüm.
+- **26 · Denetim izi:** Kim, ne zaman, neyi değiştirdi; eski ve yeni değer, nesnenin geçmişi.
 
 ### Fonksiyon listesi
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon listesi · 1/8</sub>
@@ -490,6 +491,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **İş kuyruğu:** Hangi kullanıcının hangi işi çalışıyor ya da bekliyor.
 - **Hatalar ve çözüm:** Hata, bileşen ve sistemin nasıl toparladığı listelenir.
 - **Destek paketi:** Kapalı ağda uzaktan erişim yok; log ve ayarlar paket olarak dışa alınır.
+- **Ekran 26 · Denetim izi (2.6, K-108):** Bu ekran 25 ekranlık ilk listede yoktu; Yönetim'de Sistem sağlığı'ndan sonra. Mockup'ları docs/06 fonksiyon 98'de. Tasarım docs/12'de.
 - **Uygulama (2.5, K-106, K-107):** Kartlar, servis şeridi ve ortak tablolu üç bölüm: İş kuyruğu, Son çalışmalar, Hatalar. Süre trendi 10.13'te, zamanlayıcı 5.6'da, destek paketi 11.1'de (docs/12).
 
 ### Sistem ayarları

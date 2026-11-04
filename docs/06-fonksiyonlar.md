@@ -7179,7 +7179,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Filtreler: tarih, kullanıcı, nesne tipi, işlem, nesne anahtarı
 - **03:** Liste: filtre (tarih, kullanıcı, nesne, işlem) ve nesne anahtarı araması; satır seçilince detay: eski ve yeni değer, bağlı kayıtlar (çalışma, iş, yayın), ilgili kayda bağlantı.
 - **04:** 'Bu nesnenin tüm geçmişi': aynı nesne anahtarına ait kayıtlar zaman sırasında.
-- **05:** Kayıtlar yalnızca eklenir; uygulama kullanıcısının veritabanında güncelleme ve silme yetkisi yoktur. System owner işlemleri ve yayınlar 'silinemez' etiketi taşır.
+- **05:** Kayıtlar yalnızca eklenir; uygulama kullanıcısının veritabanında güncelleme ve silme yetkisi yoktur.
 - **ÇIKTI**
   - AuditLog kayıtları; filtreli liste ve detay
   - Nesne geçmişi görünümü
@@ -7191,8 +7191,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Görüntüleme iz bırakmaz; yazma bırakır.
-  - Kullanıcı kendi izini göremez-silemez; Key user yalnız kendi kayıtlarını görür (öneri), Admin tümünü.
-  - End user kayıtları yalnız giriş ve dışa aktarımdır.
+  - Kimse izi değiştiremez ve silemez; Key user yalnız kendi kayıtlarını görür, Admin ve System owner tümünü, End user görmez.
+  - End user'ın işlemleri giriş, dışa aktarım ve paylaşılan görünüm değişiklikleridir.
   - Denetim kaydı yazılamazsa asıl işlem başarısız olur (denetim bütünlüğü).
   - Yükleme ve kural uygulaması özet kayıt; satır detayı veri versiyonunda.
 - **HATA VE ISTISNA**
@@ -7203,6 +7203,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Değişiklik geçmişi (14), dışa aktarım izi (87), uyarı geçmişi (83) aynı kaynaktan.
   - Sistem sağlığı (94) yazma hatasında uyarır.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; yalnızca eklenen kayıt. Nesne geçmişi ve filtreli listeler istek üzerine sorgulanır.
+- **Uygulama (2.6, K-108, K-109):** Silinemezlik veritabanı yetkisiyle: uygulama hesabında `adm.AuditLog` için güncelleme ve silme yok. System owner kayıtlarında kimlik gizli, işlem görünür. Detay çekmece yerine ortak pencerede. "Bağlı kayıtlar" ve "Kayda git" 6.3 ve 8.x'te, yüklemelerin özet kaydı 5.2'de, yayın kayıtları 8.12'de, özet zinciri Faz 2'de. Mockup'taki "Silinemez" etiketi alınmadı: bütün kayıtlar silinemez, etiket bir şey ayırt etmez. Eski ve Yeni değerde anahtarlar ve bilinen değerler Türkçe ("Neden: Hatalı şifre · Kalan deneme: 1"), ayar kayıtlarında Nesne formdaki ad ("Disk uyarı eşiği (%)"); ham kolonlar saklandığı gibi.
 - **ÖRNEK:** Cavide G-120 H45 üretimini 40 → 45 yaptı (09:20). Kayıt: kim, çalışma, eski/yeni değer; bağlı kayıtlar: değişiklik izi, yeniden hesap işi ve bu değeri içeren yayın v15.
 
 ### 98 · Denetim izi (öneri) · Liste ve filtre
@@ -7212,7 +7213,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Tek kaynak:** Veri, plan, kullanıcı, sistem ve giriş kayıtları aynı listede; işlem türü sütunda.
 - **Eski → yeni:** Değer değişimi satırda okunur; detay çekmecede.
-- **Silinemez etiketi:** Yayın ve System owner işlemleri koyu etiketle.
 - **Özet kayıt:** Yükleme gibi toplu işlemler tek satır; detay veri versiyonunda.
 
 ### 98 · Denetim izi (öneri) · Kayıt detayı

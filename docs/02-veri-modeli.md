@@ -1540,7 +1540,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | OccurredAt | datetime2 |  | Zaman (UTC) | Sistem | H | E |  |
-| Component | nvarchar(20) |  | Motor \| Uygulama \| İş kuyruğu \| Dışa aktarım | Sistem | H | E |  |
+| Component | nvarchar(20) |  | Motor \| Uygulama \| İş kuyruğu \| Dışa aktarım \| Denetim izi | Sistem | H | E |  |
 | Message | nvarchar(500) |  | Hata | Sistem | H | E |  |
 | Resolution | nvarchar(200) |  | Sistem aksiyonu | Sistem | H | H |  |
 | IsResolved | bit |  | Sistem kendisi çözdü mü | Sistem | H | E | 0 |
@@ -1566,16 +1566,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Sistem</sub>
 
 - Sistem · versiyonsuz · Faz 1
-- Kim, ne zaman, neyi değiştirdi; giriş kayıtları; System owner işlemleri silinemez.
+- Kim, ne zaman, neyi değiştirdi; giriş kayıtları; kayıtlar silinemez (K-109).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | UserId | int | FK | Kullanıcı | Sistem | H | H |  |
-| At | datetime2 |  | Zaman | Sistem | H | E |  |
+| At | datetime2 | IX | Zaman | Sistem | H | E |  |
 | Action | nvarchar(40) |  | İşlem | Sistem | H | E |  |
 | ObjectType | nvarchar(40) |  | Nesne | Sistem | H | H |  |
-| ObjectKey | nvarchar(200) |  | Kayıt | Sistem | H | H |  |
+| ObjectKey | nvarchar(200) | IX | Kayıt | Sistem | H | H |  |
 | OldValue | nvarchar(max) |  | Önceki | Sistem | H | H |  |
 | NewValue | nvarchar(max) |  | Yeni | Sistem | H | H |  |
 

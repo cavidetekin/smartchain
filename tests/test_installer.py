@@ -257,8 +257,17 @@ def test_setup_db_on_local_server(monkeypatch):
         names = setup_db.ensure_service_logins(master, db, [service_sid("MSSQLSERVER")])
         assert names and names[0].upper().endswith("\\MSSQLSERVER")
         setup_db.migrate(ROOT, db)
+        # K-109: geçişlerden sonra servis hesabı uygulama rolünde, db_owner değil; yeniden kurulum aynı sonucu verir.
         with setup_db._connect(db) as c:
-            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0018"
+            c.execute(f"ALTER ROLE db_owner ADD MEMBER {setup_db.quote_name(names[0])}")  # eski kurulumdan kalma
+        for _ in range(2):
+            assert setup_db.apply_app_permissions(db, sids=[service_sid("MSSQLSERVER")])
+        with setup_db._connect(db) as c:
+            assert setup_db.audit_permission_problems(c) == []
+            members = [u.upper() for u in setup_db._role_members(c, setup_db.APP_ROLE)]
+            assert names[0].upper() in members and names[0].upper() not in [u.upper() for u in setup_db._role_members(c, "db_owner")]
+        with setup_db._connect(db) as c:
+            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0019"
             assert c.execute("SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')").fetchone()[0] == setup_db.COLLATION
         # İlk hesap (K-102): temiz veritabanında açılır, ikinci çalıştırmada dokunulmaz, --reset yeni şifre verir.
         user_name, password = setup_db.first_account(ROOT, db, reset=False)
@@ -269,6 +278,39 @@ def test_setup_db_on_local_server(monkeypatch):
             assert c.execute("SELECT COUNT(*) FROM adm.AppUser WHERE Role = N'System owner'").fetchone()[0] == 1
     finally:
         setup_db.drop_database(master, name)
+
+
+def test_write_env_db_url_changes_only_that_line(tmp_path):
+    env = tmp_path / "smartchain.env"
+    env.write_bytes(b"# ayarlar\r\nSMARTCHAIN_DB_URL=eski\r\nSMARTCHAIN_LOG_LEVEL=INFO\r\n")
+    setup_db.write_env_db_url(env, r"mssql+pyodbc:///?odbc_connect=a%3Db\c")
+    assert env.read_bytes() == b"# ayarlar\r\nSMARTCHAIN_DB_URL=mssql+pyodbc:///?odbc_connect=a%3Db\\c\r\nSMARTCHAIN_LOG_LEVEL=INFO\r\n"
+    env.write_text("BASKA=1\n", encoding="utf-8")
+    with pytest.raises(RuntimeError):
+        setup_db.write_env_db_url(env, "x")
+
+
+def test_sql_login_password_is_not_printed(monkeypatch, capsys, tmp_path):
+    """K-109: SQL kimliğiyle kurulumda uygulama hesabının şifresi yalnız ayar dosyasına gider."""
+    env = tmp_path / "smartchain.env"
+    env.write_text("SMARTCHAIN_DB_URL=eski\n", encoding="utf-8")
+    monkeypatch.setenv("SMARTCHAIN_INSTALL_SQL_PASSWORD", "kurulum-sifresi")
+    monkeypatch.setattr(setup_db, "ensure_database", lambda *a: False)
+    monkeypatch.setattr(setup_db, "migrate", lambda *a: None)
+    monkeypatch.setattr(setup_db, "ensure_sql_app_login", lambda *a: "Uygulama-Sifresi-1")
+    calls = []
+    monkeypatch.setattr(setup_db, "apply_app_permissions", lambda db, sids=(), users=(): calls.append(users) or list(users))
+    assert setup_db.main(["setup", "--instance", "db01", "--sql-user", "kurulum", "--env-file", str(env), "--trust-server-certificate"]) == 0
+    assert calls == [[setup_db.SQL_APP_LOGIN]]
+    out = capsys.readouterr().out
+    assert "Uygulama-Sifresi-1" not in out and "kurulum-sifresi" not in out
+    text = env.read_text(encoding="utf-8")
+    assert "Uygulama-Sifresi" in text and "UID%3D%7Bsmartchain_app%7D" in text.replace("+", "") and "kurulum-sifresi" not in text
+
+
+def test_new_app_password_meets_policy():
+    password = setup_db.new_app_password()
+    assert len(password) >= 20 and any(c.isupper() for c in password) and any(c.islower() for c in password) and "'" not in password
 
 
 def test_first_account_command_prints_password_only_on_its_line(monkeypatch, capsys):

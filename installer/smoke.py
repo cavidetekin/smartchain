@@ -148,6 +148,24 @@ def check_owner() -> str:
     return f"{count} aktif hesap"
 
 
+def check_audit_permissions() -> str:
+    """K-109: uygulama hesabında denetim izi için güncelleme ve silme yetkisi yok, db_owner değil."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import setup_db
+
+    from app.api.db import get_engine
+
+    raw = get_engine().raw_connection()
+    try:
+        problems = setup_db.audit_permission_problems(raw.driver_connection)
+    finally:
+        raw.rollback()
+        raw.close()
+    if problems:
+        raise AssertionError("; ".join(problems))
+    return "yalnız ekleme ve okuma"
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--base-url", default="http://localhost")
@@ -160,7 +178,8 @@ def main() -> int:
     if not a.solver_only:
         checks += [("Sağlık (IIS)", lambda: check_health(a.base_url)),
                    ("WebSocket (IIS)", lambda: check_websocket(a.base_url)),
-                   ("İlk hesap (System owner)", check_owner)]
+                   ("İlk hesap (System owner)", check_owner),
+                   ("Denetim izi yetkisi", check_audit_permissions)]
         if not a.skip_engine:
             checks.append(("Motor: deneme plan hesabı", lambda: check_engine(a.engine_timeout)))
     failed = 0

@@ -41,7 +41,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 2.3c Arayüz metinlerinin sadeleştirilmesi (2.3b'den sonra, 2.4'ten önce): mevcut ekranlardaki "Arayüz metni" kuralına (docs/12) aykırı metinler düzeltilir; her metin için öneri tablo olarak sorulur, seçimi kullanıcı yapar. Geçici yerler ("Bu ekran … adımında gelecek", "… 8.1'de gelir") ve geliştirme sayfaları (`/stil`, `/tablo`) kapsam dışı · docs/12 "Arayüz metni"
 - [x] 2.4 Sistem ayarları (25) · veri sözlüğü ve ek alan etiketleri (96) · K-104, K-105
 - [x] 2.5 Sistem sağlığı (24) · sağlık (94), iş kuyruğu (93) · K-106, K-107
-- [ ] 2.6 Denetim izi altyapısı (98)
+- [x] 2.6 Denetim izi altyapısı (98) · ekran 26 · K-108, K-109
 
 ## Aşama 3 · Veri alma (Extract)
 
@@ -60,7 +60,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 ## Aşama 5 · Yükleme (Load)
 
 - [ ] 5.1 Değer önceliği (ERP, kural, elle, varsayılan) ve ERP değerinin saklanması (FieldValueSource) · veri sözlüğünde Sınıf, Değer önceliği, Manuel, Senaryo, Zorunlu ve Varsayılan değer düzenlemesi açılır (pencerede pasif öğeler aktifleşir); zorunlu ve `DataRule` kilidi, varsayılan tip denetimi, etki sayısı ve "Şimdi uygula" (K-104)
-- [ ] 5.2 Tam yükleme ve veri versiyonu (05, 07)
+- [ ] 5.2 Tam yükleme ve veri versiyonu (05, 07) · yüklemenin özet denetim kaydı (K-108)
 - [ ] 5.3 Kısmi yükleme (06)
 - [ ] 5.4 Aktarım raporu, yükleme geçmişi, ham veri temizliği (08, 09)
 - [ ] 5.5 Veri yükleme ekranı (02): ETL'in tamamı tek ekranda, adım adım durumuyla · yükleme işinin özeti (`Job.Summary`: "Tam yükleme · <tarih>"; K-107)
@@ -80,7 +80,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
   - [ ] Takvim
   - [ ] Vardiya
 - [ ] 6.2 Değerin kaynağı (11), elle değer girme ve kaldırma (12, 13) · U-15, U-16: yapıştırma, toplu düzenleme, doğrulama, kaydetme
-- [ ] 6.3 Değişiklik geçmişi (14)
+- [ ] 6.3 Değişiklik geçmişi (14) · denetim izinden okur; denetim izinde "Kayda git" ve bağlı kayıtlar (K-108)
 - [ ] 6.4 Excel ile toplu düzeltme (15)
 - [ ] 6.5 Veri kalitesi ekranı (05) · kontrol, düzeltme aksiyonu (20, 21)
 
@@ -97,7 +97,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [ ] 8.0 Plan fikstürü: sentetik veri için elle hazırlanmış plan (planlı sipariş, doluluk, karşılama, pegging, uyarı, metrik)
 - [ ] 8.1 Senaryolar (08) · karşılaştırma (42)
-- [ ] 8.2 Çalışma (09) · açma, iz, geri alma, yeniden hesap düğmesi (sahte motorla), eş zamanlı sınır, bildirim, kapatma (43–49) · önce A-37 (değişiklik etkisi ve yeniden hesap) karara bağlanır · iptal edilen işte çalışmanın durumu ve önceki sonuç; çalışma ekranında sıra (K-107) · çalışma işinin özeti (`Job.Summary`: "<çalışma adı> · yeniden hesap"; K-107)
+- [ ] 8.2 Çalışma (09) · açma, iz, geri alma, yeniden hesap düğmesi (sahte motorla), eş zamanlı sınır, bildirim, kapatma (43–49) · önce A-37 (değişiklik etkisi ve yeniden hesap) karara bağlanır · iptal edilen işte çalışmanın durumu ve önceki sonuç; çalışma ekranında sıra (K-107) · çalışma işinin özeti (`Job.Summary`: "<çalışma adı> · yeniden hesap"; K-107) · kullanıcının başlattığı plan hesabının denetim kaydı (K-108)
 - [ ] 8.3 Kaynak doluluk raporu (10)
 - [ ] 8.4 Ürün bazlı planlama (11) · 50, 51
 - [ ] 8.5 Kaynak bazlı planlama (12) · 52–55
@@ -107,13 +107,13 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 8.9 Malzeme planı (15) · 64, 65
 - [ ] 8.10 Öneriler (16) · 66–69
 - [ ] 8.11 Pegging ve gecikme nedeni (17) · 70, 71
-- [ ] 8.12 Yayın (19) · 76–81
+- [ ] 8.12 Yayın (19) · 76–81 · yayın zinciri; yayın kayıtları denetim izine yazılır (K-108)
 
 ## Aşama 9 · Takip ve rapor
 
 - [ ] 9.1 Ana sayfa (01) · 82 · eşik uyarıları ve Sistem sağlığı hata satırı bağlantısı (K-106)
-- [ ] 9.2 Uyarı iş listesi (20) · 83, 84
-- [ ] 9.3 Rapor altyapısı (21) · 85, 87
+- [ ] 9.2 Uyarı iş listesi (20) · 83, 84 · uyarı geçmişi denetim izinden (K-108)
+- [ ] 9.3 Rapor altyapısı (21) · 85, 87 · dışa aktarım izi raporu denetim izinden (87, K-108)
 - [ ] 9.4 Raporlar tek tek: 25. adımdaki gerçekleşme gerektirmeyen raporlar
 
 ## Aşama 10 · Motor
@@ -148,8 +148,9 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 Adımı kapanmış ama elle denenmesi sonraya bırakılmış işler.
 
-- [ ] 1.5 · Arka plan aktarımı: eşiği geçici düşür (`INSERT INTO adm.SystemSetting (SettingKey, Value) VALUES ('ExportSyncMaxRows', '50')`), /tablo'da "Hazırla", iş göstergesi ve "İndir" bildirimi, iş listesinden indirme; sonra ayarı sil (`DELETE FROM adm.SystemSetting WHERE SettingKey = 'ExportSyncMaxRows'`).
-- [ ] 1.5 · Dışa aktarım izi: `SELECT TOP 5 * FROM adm.AuditLog ORDER BY 1 DESC` ile aktarımların "Dışa aktarım" kaydı olarak yazıldığını gör.
+- [x] 1.5 · Arka plan aktarımı: eşiği geçici düşür (`INSERT INTO adm.SystemSetting (SettingKey, Value) VALUES ('ExportSyncMaxRows', '50')`), /tablo'da "Hazırla", iş göstergesi ve "İndir" bildirimi, iş listesinden indirme; sonra ayarı sil (`DELETE FROM adm.SystemSetting WHERE SettingKey = 'ExportSyncMaxRows'`).
+- [x] 1.5 · Dışa aktarım izi: `SELECT TOP 5 * FROM adm.AuditLog ORDER BY 1 DESC` ile aktarımların "Dışa aktarım" kaydı olarak yazıldığını gör.
+- [ ] 0.6 · Uygulama hesabı yetkisi (K-109): Windows ve SQL kimliğiyle kurulumda `verify.ps1`'in duman testi `adm.AuditLog` için güncelleme ve silme yetkisi olmadığını doğrular; servisler `db_owner` olmadan çalışır.
 - [ ] 0.6 · Temiz makine (sanal makine) kurulum testi. Not (2.3): install.ps1 sonunda tek System owner hesabı geçici şifreyle açılır; sanal makine turunda bu da denenir. İlk hesabın geçici şifresi install logunda yer almamalı (K-102). Temiz makinede Excel süresi iki kez ölçülür: antivirüs gerçek zamanlı tarama açıkken ve ürün klasörleri hariç tutulmuşken (`docs/10-kurulum.md`).
 - [ ] 1.6 · Excel süresi bu laptopta 0,8–3,2 sn arası dalgalanıyor; sorgular hedefte. Güçlü aday: dosya yazımını tarayan antivirüs (ESET ekrn ~%31). Kapanış 0.6'da.
   - Ölçümler (10.000 satır, ortanca ms; düz / gruplu / 10 kural; hedef 3000): 30.10 10.14: 753 / 869 / 935 · 30.10 11.25: 2588 / 2859 / 3112 · 2.2 kapanışı: 2410 / 2600 / 2910 · 03.11 1. koşu: 2333 / 950 / 953 · 03.11 2. koşu: 786 / 940 / 983 · 03.11 yeniden başlatma sonrası: 1394 / 3163 / 2806.
@@ -162,6 +163,7 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 - **1.6 Koşullu biçimlendirme:** çoklu koşul (VE/VEYA), renk skalası ve veri çubuğu, grup başlığı ve ara toplam satırlarına kural.
 - **Kullanıcılar (2.3):** lisans kullanıcı sınırı ve sayacı (fonksiyon 88; lisans dosyası 11.3'te gelir, sınır ona bağlı; System owner hesapları lisans kullanıcı sayısına girmez); kapatılan kullanıcının uyarılarının devri (9. aşama); kapatılan kullanıcının açık çalışmalarının devri (çalışma adımları); kapatılan kullanıcının paylaşılan görünümleri kalır, kimse değiştiremez (devir yok); kullanılmayan geçici şifrenin süresi yok.
 - **Sistem sağlığı (2.5):** genel bakım sayfası (veritabanı kapalıyken bütün ekranlar; docs/06 fonksiyon 94); Admin'e anlık hata bildirimi; kurulum paketinin `VIEW SERVER STATE` vermesi gerekirse veritabanının ayrı diski (0.6 temiz makine testinde bakılır).
+- **Denetim izi (2.6):** özet zinciri ile kurcalama tespiti (hash, Faz 2).
 - **Kullanıcı e-postası:** kullanıcıya e-posta adresi alanı; geçici şifre kurum içi e-posta sunucusuyla (SMTP, internet gerekmez) gönderilir. "Kapalı ağ, e-posta yok" ifadesi (fonksiyon 88) bu ihtimale göre düzeltilir.
 - **Roller:** Admin'in bir paylaşılan görünümü ya da kural setini herkes veya bir rol için varsayılan yapması (K-89 notu); çalışma devralma.
 - **9.2 Uyarılar:** rolü bozuk oturum kapatılınca Admin'e uyarı düşmesi (fonksiyon 90; 2.2'de yalnız denetim izine "Geçersiz rol" yazılıyor).

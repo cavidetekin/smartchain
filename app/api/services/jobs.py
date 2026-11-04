@@ -100,7 +100,7 @@ def cancel(session: Session | None, job_id: int, user: CurrentUser, reason: str 
         raise AppError("reason_required", REASON_REQUIRED, 422, [{"field": "reason", "problem": REASON_REQUIRED}])
     try:
         queue.cancel(session, job_id, reason, user.id, commit=False)
-        audit.write_audit(session, CANCEL_ACTION, user.id, OBJECT, str(job_id), {"status": "İptal", "reason": reason},
+        audit.write_audit(session, CANCEL_ACTION, user.id, OBJECT, str(job_id), {"status": "İptal", "cancel_reason": reason},
                           {"status": job["Status"], "job_type": job["JobType"], "requested_by": job["RequestedBy"]})
         session.commit()
     except queue.JobNotFound:

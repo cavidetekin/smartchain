@@ -99,7 +99,7 @@ Hariç tutma müşteri BT'sinin kararıdır; ürün bunları kendiliğinden tan�
 3. Python ve paketler `C:\Program Files\Smartchain\python`'a kurulur (`pip --no-index`).
 4. Uygulama kopyalanır, `smartchain.env` yazılır.
 5. Servisler kurulur (henüz başlatılmaz).
-6. Veritabanı: yoksa açılır, servis hesaplarına login ve kullanıcı açılır (şimdilik kendi veritabanında `db_owner`), geçişler çalışır.
+6. Veritabanı: yoksa açılır, servis hesaplarına login ve kullanıcı açılır, geçişler kurulumu yapan hesapla çalışır, sonra servisler `smartchain_app` rolüne girer (K-109). SQL kimliğiyle kurulumda (`-SqlUser`) ayrı `smartchain_app` SQL hesabı açılır, rastgele şifresi yalnız `smartchain.env`'e yazılır.
 7. Servisler başlatılır; IIS sitesi ve ters vekil kurulur.
 8. Sağlık kontrolü IIS üzerinden yapılır (`/api/health`). Geçmezse 7 → 3 geri alınır (ön koşullar ve veritabanı yerinde kalır), neden yazılır.
 
@@ -170,5 +170,6 @@ Hyper-V'de Windows Server 2025 Evaluation sanal makinesi; SQL Server ayrı `SMAR
 | SQL Server bellek ön kontrolü (K-94; sınırsızsa ya da %80'in üstündeyse uyarı, kurulum durmaz) | uygulandı (1.5; `common.ps1` `Test-SqlServerMemory`, install.ps1 adım 1), sanal makine testi bekliyor (0.6) |
 | Oturum: çerezin `Secure` ayarı (`-CertThumbprint`'e göre), WebSocket duman testi oturumsuz reddi bekler, argon2-cffi wheel'leri (K-97, K-98) | uygulandı (2.1), sanal makine testi bekliyor (0.6) |
 | Antivirüs hariç tutmaları önerisi; etkisinin ölçümü | yazıldı, ölçüm sanal makine testinde (0.6) |
+| Uygulama hesabı yetkileri (K-109): `setup_db.py`, duman testi denetimi | uygulandı (2.6), sanal makine testi bekliyor (0.6) |
 | İlk hesap (K-102): `install.ps1` son adım, `setup_db.py first-account`, `verify.ps1` denetimi | uygulandı (2.3), sanal makine testi bekliyor (0.6) |
 | MSI, imza, kod koruması, sürüm güncelleme, yedek, lisans | 11. aşama |

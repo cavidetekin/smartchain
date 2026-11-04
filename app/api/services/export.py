@@ -63,7 +63,7 @@ def _now_local() -> datetime:
 
 def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportRequest) -> Plan:
     # Rol kayıttan: arka plan işinde de işi başlatanın görebildiği satırlar (row_scope, K-101).
-    b = list_service._builder(session, defn, repo.user_role(session, user_id))
+    b = list_service._builder(session, defn, repo.user_role(session, user_id), user_id)
     version = data_versions.read_current(session) if defn.versioned else None
     unknown = [f for f in req.fields if f not in b.columns]
     if unknown:
@@ -189,6 +189,8 @@ def _write_rows(result, plan: Plan, writer: XlsxWriter, nodes: dict, fns: dict, 
                                  fns, node.get("unit_decimals", {}), f"{describe.tr_number(node['count'], 0)} satır")
             current = key
         unit = units.get(row[UNIT]) if UNIT in row else None
+        if plan.defn.value_format:  # ekranla aynı okunur biçim (K-108)
+            row = {**row, **{f: fn(row[f]) for f, fn in plan.defn.value_format.items() if f in row}}
         writer.data_row(row, unit, indent=len(plan.group_by))
         written += 1
         if progress and written % PROGRESS_EVERY == 0:
@@ -225,13 +227,10 @@ def start(session: Session | None, defn: ListDefinition, user_id: int, req: Expo
         buf = io.BytesIO()
         rows = write(session, plan, req, buf)
         data = buf.getvalue()
-        try:  # iz yazılamazsa dosya verilmez (fonksiyon 86)
-            repo.write_audit(session, user_id, defn.name, plan.file_name,
-                             _details(plan, req, rows, len(data), time.perf_counter() - t0, None))
-            session.commit()
-        except DBAPIError as exc:
-            session.rollback()
-            raise AppError("export_trace_failed", "Dosya hazırlanamadı.", 503) from exc
+        # iz yazılamazsa dosya verilmez (fonksiyon 86, K-108)
+        repo.write_audit(session, user_id, defn.name, plan.file_name,
+                         _details(plan, req, rows, len(data), time.perf_counter() - t0, None))
+        session.commit()
         return {"file": data, "file_name": plan.file_name}
     except ListQueryError as exc:
         raise AppError("validation", "Girilen bilgiler geçersiz.", 422, exc.details) from exc

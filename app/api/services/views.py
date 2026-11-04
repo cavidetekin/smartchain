@@ -17,9 +17,15 @@ from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
     AggSpec, DefaultViewRequest, FilterItem, FormatRule, ViewCreate, ViewDefinition, ViewUpdate,
 )
-from ..repositories import lists as list_repo, views as repo
+from ..repositories import audit, lists as list_repo, views as repo
 from . import authz
 from .auth import CurrentUser
+
+# Paylaşılan görünüm başkasını etkiler, iz bırakır; kişisel görünüm ve varsayılan seçimi bırakmaz (K-108).
+SHARED_CREATED = "Paylaşılan görünüm oluşturuldu"
+SHARED_CHANGED = "Paylaşılan görünüm değiştirildi"
+SHARED_DELETED = "Paylaşılan görünüm silindi"
+VIEW_OBJECT = "TableView"
 
 
 
@@ -187,6 +193,9 @@ def create(session: Session | None, defn: ListDefinition, user_id: int, body: Vi
         view_id = repo.insert_view(session, {
             "ListName": defn.name, "OwnerUserId": user_id, "Name": body.name.strip(), "IsShared": body.is_shared,
             "Definition": _dump(d), "CreatedAt": now, "UpdatedAt": now})
+        if body.is_shared:
+            audit.write_audit(session, SHARED_CREATED, user_id, VIEW_OBJECT, f"{defn.name} #{view_id}",
+                              {"Name": body.name.strip(), "IsShared": True})
         session.commit()
         return _out(b, repo.get_view(session, defn.name, view_id), user_id)
     return _run(session, user_id, work)
@@ -197,7 +206,7 @@ def update(session: Session | None, defn: ListDefinition, user: CurrentUser, vie
 
     def work():
         b = _builder(session, defn)
-        _owned(session, defn, view_id, user)
+        row = _owned(session, defn, view_id, user)
         values = {"UpdatedAt": repo.now(session)}
         if body.name is not None:
             values["Name"] = body.name.strip()
@@ -206,6 +215,13 @@ def update(session: Session | None, defn: ListDefinition, user: CurrentUser, vie
         if body.definition is not None:
             values["Definition"] = _dump(_validated(b, body.definition))
         repo.update_view(session, view_id, values)
+        if row["IsShared"] or values.get("IsShared"):
+            new = {k: v for k, v in values.items() if k in ("Name", "IsShared") and v != row[k]}
+            if "Definition" in values and values["Definition"] != row["Definition"]:
+                new["Definition"] = "değişti"
+            if new:
+                audit.write_audit(session, SHARED_CHANGED, user_id, VIEW_OBJECT, f"{defn.name} #{view_id}", new,
+                                  {k: row[k] for k in new if k != "Definition"})
         session.commit()
         return _out(b, repo.get_view(session, defn.name, view_id), user_id)
     return _run(session, user_id, work)
@@ -215,8 +231,11 @@ def delete(session: Session | None, defn: ListDefinition, user: CurrentUser, vie
     user_id = user.id
 
     def work():
-        _owned(session, defn, view_id, user)
+        row = _owned(session, defn, view_id, user)
         repo.delete_view(session, view_id)
+        if row["IsShared"]:
+            audit.write_audit(session, SHARED_DELETED, user_id, VIEW_OBJECT, f"{defn.name} #{view_id}", None,
+                              {"Name": row["Name"], "IsShared": True})
         session.commit()
     _run(session, user_id, work)
 

@@ -133,7 +133,7 @@
 | `adm.SolverLog` | Çözüm logu; ilk günden tutulur. | Sistem |  | 6 |
 | `adm.SystemEvent` | Sistem hataları ve sistem aksiyonu (K-106). Saklama `SystemEventRetentionDays`; motor servisi eskileri siler. | Sistem |  | 9 |
 | `adm.ServiceStatus` | Motor servisinin kalp atışı (K-106). Durum saklanmaz, okurken hesaplanır. | Sistem |  | 5 |
-| `adm.AuditLog` | Kim, ne zaman, neyi değiştirdi; giriş kayıtları; System owner işlemleri silinemez. | Sistem |  | 8 |
+| `adm.AuditLog` | Kim, ne zaman, neyi değiştirdi; giriş kayıtları; kayıtlar silinemez (K-109). | Sistem |  | 8 |
 | `adm.SystemSetting` | System owner'ın ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri. | Sistem |  | 2 |
 | `adm.TableView` | Kayıtlı tablo görünümü (K-89): kolon seti ve sırası, genişlikler, sabitleme, sıralama, filtreler, gruplama. | Sistem |  | 8 |
 | `adm.TableViewDefault` | Kullanıcının bir liste için varsayılan görünümü (K-89). Satır yoksa liste tanımındaki "Standart" görünüm açılır. | Sistem |  | 3 |

@@ -134,6 +134,24 @@ export const tr = {
     exportButton: "Excel'e aktar",
     levels: { full: "Tam", owner: "Sahibi", self: "Kendi", read: "Salt okunur", none: "Yok" } as Record<string, string>,
   },
+  // Denetim izi (ekran 26, fonksiyon 98; K-108, docs/12)
+  auditLog: {
+    title: "Denetim izi",
+    detailTitle: "Kayıt detayı",
+    time: "Zaman",
+    user: "Kullanıcı",
+    action: "İşlem",
+    objectType: "Nesne tipi",
+    object: "Nesne",
+    changes: "Değişiklikler",
+    field: "Alan",
+    oldValue: "Eski değer",
+    newValue: "Yeni değer",
+    history: "Bu nesnenin tüm geçmişi",
+    back: "Geri",
+    noObject: "Bu kaydın nesnesi yok.",
+    truncated: (n: number) => `Son ${n} kayıt`,
+  },
   // Sistem sağlığı (ekran 24, fonksiyon 94, 93; K-106, K-107, docs/12)
   systemHealth: {
     title: "Sistem sağlığı",

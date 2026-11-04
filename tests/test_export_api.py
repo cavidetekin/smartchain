@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.api.db import get_session
 from app.api.deps import session_user
 from app.api.main import create_app
-from app.api.repositories import export as export_repo
+from app.api.repositories import audit, export as export_repo
 from app.api.services import export as export_service
 from app.engine.export_job import run_export_job
 from app.engine.service import EngineService
@@ -145,9 +145,9 @@ def test_grouped_export_follows_group_tree(api, user):
 def test_trace_failure_gives_no_file(api, user, monkeypatch):
     def broken(*a, **k):
         raise DBAPIError("INSERT", {}, Exception("AuditLog yazılamadı"))
-    monkeypatch.setattr(export_repo, "write_audit", broken)
+    monkeypatch.setattr(audit, "_insert", broken)
     r = export(api, user)
-    assert r.status_code == 503 and r.json()["error"]["code"] == "export_trace_failed"
+    assert r.status_code == 503 and r.json()["error"]["code"] == "audit_failed"
 
 
 def test_validation_and_limits(api, user, db_engine):

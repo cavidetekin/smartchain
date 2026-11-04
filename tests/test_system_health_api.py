@@ -274,7 +274,7 @@ def test_cancel_other_needs_reason(db_engine, client, people, session):
     body = r.json()
     assert body["status"] == STATUS_CANCELLED and body["cancel_reason"] == "Gece akışı" and body["cancelled_by_name"] == f"Ad {ADMIN}"
     row = audit_rows(db_engine, "İş iptali")[0]
-    assert (row[0], row[1]) == (admin, str(job)) and json.loads(row[2])["reason"] == "Gece akışı"
+    assert (row[0], row[1]) == (admin, str(job)) and json.loads(row[2])["cancel_reason"] == "Gece akışı"
 
 
 def test_summary_in_lists_and_job(db_engine, client, people, session):

@@ -24,7 +24,10 @@ from fastapi.testclient import TestClient
 from app.api.db import get_session
 from app.api.deps import session_user
 from app.api.main import create_app
+from app.api.repositories import audit as audit_repo
 from app.api.services.auth import CurrentUser
+
+from audit_guard import unreadable
 
 # Veritabanısız testlerin oturumu (K-97): oturum denetimi veritabanı ister; bu testlerde sabit kullanıcıyla geçilir.
 FAKE_USER = CurrentUser(id=3, user_name="test", full_name="Test Kullanıcı", role="Key user", session_id=1,
@@ -46,6 +49,21 @@ def app():
 @pytest.fixture
 def client(app):
     return TestClient(app, raise_server_exceptions=False)
+
+
+# --- Yazılan her izin okunur adı olmalı (K-108); çevirisi unutulan anahtar o yazmayı yapan testi düşürür ---
+
+_real_audit_insert = audit_repo._insert
+
+
+def _checked_audit_insert(session, values):
+    problems = unreadable(values.get("OldValue")) + unreadable(values.get("NewValue"))
+    if problems:  # pytest.fail BaseException'dır: ret izindeki except Exception yutmaz
+        pytest.fail(f"Denetim izi okunur değil ({values.get('Action')}): {problems}; app/api/audit_format.py", pytrace=False)
+    _real_audit_insert(session, values)
+
+
+audit_repo._insert = _checked_audit_insert
 
 
 # --- Atlanan veritabanı testi koşuyu düşürür (docs/08 "Testler"); SQL Server olmadan bilerek: -m "not db" ---

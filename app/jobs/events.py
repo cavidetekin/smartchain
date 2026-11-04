@@ -14,6 +14,7 @@ COMPONENT_ENGINE = "Motor"
 COMPONENT_APP = "Uygulama"
 COMPONENT_QUEUE = "İş kuyruğu"
 COMPONENT_EXPORT = "Dışa aktarım"
+COMPONENT_AUDIT = "Denetim izi"
 
 ENGINE_SERVICE = "Motor"
 REPEAT_SECONDS = 60

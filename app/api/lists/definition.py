@@ -41,10 +41,12 @@ class ListDefinition:
     source: sa.FromClause | None = None
     labels: Mapping[str, str] = field(default_factory=dict)
     values: Mapping[str, list[str]] = field(default_factory=dict)
-    # Rolün görebildiği satırlar (K-101; ör. System owner hesapları): koşul ya da None (hepsi). Rol bilinmiyorsa None gelir.
-    row_scope: Callable[[str | None], sa.ColumnElement | None] | None = None
+    # Kullanıcının görebildiği satırlar (K-101, K-108): (rol, kullanıcı) → koşul ya da None (hepsi). Bilinmiyorsa None gelir.
+    row_scope: Callable[[str | None, int | None], sa.ColumnElement | None] | None = None
     # Satır işlemi için her satırda dönen alanlar (ör. bileşik anahtar; K-104), görünmeseler de.
     key_fields: tuple[str, ...] = ()
+    # Hücrenin okunur biçimi (K-108): liste cevabı ve Excel aynı işlevden; süzme ve sıralama saklanan değerde.
+    value_format: Mapping[str, Callable] = field(default_factory=dict)
 
     @property
     def sa_table(self) -> sa.FromClause:

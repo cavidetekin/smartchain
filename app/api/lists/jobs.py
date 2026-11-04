@@ -83,7 +83,7 @@ JOB_RUNS = ListDefinition(
 )
 
 EVENT_FIELDS = ("OccurredAt", "Component", "Message", "Resolution", "IsResolved", "JobId", "TraceId")
-COMPONENTS = [events.COMPONENT_ENGINE, events.COMPONENT_APP, events.COMPONENT_QUEUE, events.COMPONENT_EXPORT]
+COMPONENTS = [events.COMPONENT_ENGINE, events.COMPONENT_APP, events.COMPONENT_QUEUE, events.COMPONENT_EXPORT, events.COMPONENT_AUDIT]
 SYSTEM_EVENTS = ListDefinition(
     name="system-events",
     table="adm.SystemEvent",

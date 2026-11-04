@@ -33,7 +33,7 @@ STATUS = sa.case(
 SOURCE = sa.select(USER.c.Id, USER.c.FullName, USER.c.UserName, USER.c.Role, STATUS, USER.c.LastLoginAt).subquery("u")
 
 
-def _visible_to(role: str | None) -> sa.ColumnElement | None:
+def _visible_to(role: str | None, user_id: int | None = None) -> sa.ColumnElement | None:
     """System owner hesapları yalnız System owner'a görünür (K-101); rol bilinmiyorsa en dar kapsam."""
     return None if role == SYSTEM_OWNER else SOURCE.c.Role != SYSTEM_OWNER
 

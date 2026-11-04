@@ -238,6 +238,7 @@ try {
     Invoke-Step 'Veritabanı' {
         $a = @((Join-Path $Package 'setup_db.py'), 'setup') + (Get-DbArguments) + @('--root', $InstallDir)
         foreach ($sid in $ServiceSids.Values) { $a += @('--service-sid', $sid) }
+        if ($SqlUser) { $a += @('--env-file', $ConfigFile) }  # K-109: servisler ayrı uygulama hesabıyla bağlanır
         Invoke-Python $a
         Write-Log "Veritabanı hazır: $SqlInstance / $Database" 'OK'
     }

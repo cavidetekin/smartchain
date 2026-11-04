@@ -1340,7 +1340,7 @@ SystemEvent = sa.Table(
     "SystemEvent", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
     sa.Column("OccurredAt", mssql.DATETIME2(), nullable=False, comment="Zaman (UTC)", info={'label': "Zaman (UTC)"}),
-    sa.Column("Component", sa.Unicode(20), nullable=False, comment="Motor | Uygulama | İş kuyruğu | Dışa aktarım", info={'values': ["Motor", "Uygulama", "İş kuyruğu", "Dışa aktarım"]}),
+    sa.Column("Component", sa.Unicode(20), nullable=False, comment="Motor | Uygulama | İş kuyruğu | Dışa aktarım | Denetim izi", info={'values': ["Motor", "Uygulama", "İş kuyruğu", "Dışa aktarım", "Denetim izi"]}),
     sa.Column("Message", sa.Unicode(500), nullable=False, comment="Hata", info={'label': "Hata"}),
     sa.Column("Resolution", sa.Unicode(200), nullable=True, comment="Sistem aksiyonu", info={'label': "Sistem aksiyonu"}),
     sa.Column("IsResolved", sa.Boolean(), nullable=False, server_default=sa.text("0"), comment="Sistem kendisi çözdü mü", info={'label': "Sistem kendisi çözdü mü"}),
@@ -1366,14 +1366,14 @@ AuditLog = sa.Table(
     "AuditLog", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
     sa.Column("UserId", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Kullanıcı", info={'label': "Kullanıcı"}),
-    sa.Column("At", mssql.DATETIME2(), nullable=False, comment="Zaman", info={'label': "Zaman"}),
+    sa.Column("At", mssql.DATETIME2(), index=True, nullable=False, comment="Zaman", info={'label': "Zaman"}),
     sa.Column("Action", sa.Unicode(40), nullable=False, comment="İşlem", info={'label': "İşlem"}),
     sa.Column("ObjectType", sa.Unicode(40), nullable=True, comment="Nesne", info={'label': "Nesne"}),
-    sa.Column("ObjectKey", sa.Unicode(200), nullable=True, comment="Kayıt", info={'label': "Kayıt"}),
+    sa.Column("ObjectKey", sa.Unicode(200), index=True, nullable=True, comment="Kayıt", info={'label': "Kayıt"}),
     sa.Column("OldValue", mssql.NVARCHAR(), nullable=True, comment="Önceki", info={'label': "Önceki"}),
     sa.Column("NewValue", mssql.NVARCHAR(), nullable=True, comment="Yeni", info={'label': "Yeni"}),
     schema="adm",
-    comment="Kim, ne zaman, neyi değiştirdi; giriş kayıtları; System owner işlemleri silinemez.",
+    comment="Kim, ne zaman, neyi değiştirdi; giriş kayıtları; kayıtlar silinemez (K-109).",
 )
 
 SystemSetting = sa.Table(

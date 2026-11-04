@@ -21,9 +21,9 @@ describe("menü role göre (K-100)", () => {
   it.each([
     ["System owner", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Veri yükleme", "Kullanıcılar", "Sistem ayarları"], []],
     ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı"], ["Sistem ayarları"]],
-    ["Key user", ["Planlama", "Takip", "Veri", "Parametre"], ["Senaryolar", "Veri yükleme", "Gece senaryoları"], ["Kullanıcılar"]],
+    ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Senaryolar", "Veri yükleme", "Gece senaryoları", "Denetim izi"], ["Kullanıcılar"]],
     ["End user", ["Takip", "Veri"], ["Uyarılar", "Ana veri", "Veri kuralları"],
-     ["Senaryolar", "Çalışma", "Veri yükleme", "Parametre setleri", "Gece senaryoları", "Kullanıcılar"]],
+     ["Senaryolar", "Çalışma", "Veri yükleme", "Parametre setleri", "Gece senaryoları", "Kullanıcılar", "Denetim izi"]],
   ])("%s", (role, expectedGroups, shown, hidden) => {
     mockApi();
     renderApp("/ana-sayfa", meAs(role));

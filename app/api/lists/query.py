@@ -84,13 +84,13 @@ class Builder:
     """Bir liste tanımı ve görünür kolonlarıyla sorgu parçaları kurar."""
 
     def __init__(self, defn: ListDefinition, labels: dict[str, str], version: int | None, today: date,
-                 role: str | None = None):
+                 role: str | None = None, user_id: int | None = None):
         self.defn = defn
         self.table = defn.sa_table
         self.columns = {c["field"]: c for c in columns(defn, labels)}
         self.version = version
         self.today = today
-        self.scope = defn.row_scope(role) if defn.row_scope else None
+        self.scope = defn.row_scope(role, user_id) if defn.row_scope else None
 
     # --- doğrulama -----------------------------------------------------------------------------------------
     def _col(self, name: str, where: str, problems: list[dict]) -> sa.Column | None:

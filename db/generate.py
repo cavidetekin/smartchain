@@ -263,6 +263,8 @@ def render_models(spec) -> str:
                     args.append(f'sa.ForeignKey("{tt["schema"]}.{tname}.{tcol}"{ua})')
                 elif tt:
                     kw.append("index=True")
+            if "IX" in f["key"] and "index=True" not in kw:
+                kw.append("index=True")
             if f["name"] in pk:
                 kw.append("primary_key=True")
                 ident = (len(pk) == 1 and f["type"].lower() in ("int", "bigint") and not t["versioned"]

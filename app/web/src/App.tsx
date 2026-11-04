@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 
 import type { Me } from "./auth/authApi";
+import { AuditLog } from "./screens/AuditLog";
 import { AuthProvider } from "./auth/AuthContext";
 import { AuthGate } from "./auth/AuthGate";
 import { LoginPage } from "./auth/LoginPage";
@@ -17,7 +18,7 @@ import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
 
 /** Yazılmış ekranlar; öteki ekranlar boş sayfasını gösterir. */
-const PAGES: Record<string, ReactNode> = { "22": <Users />, "24": <SystemHealth />, "25": <SystemOwner /> };
+const PAGES: Record<string, ReactNode> = { "22": <Users />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog /> };
 
 /** initialMe yalnız testlerde verilir; verilmezse oturum açılışta sunucuya sorulur. */
 export function App({ initialMe }: { initialMe?: Me | null }) {

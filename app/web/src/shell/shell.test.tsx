@@ -124,7 +124,7 @@ describe("daraltılmış menü", () => {
 
   it("grupta görünen tek ekran kaldıysa ikon doğrudan ona gider", async () => {
     const me = meAs("Admin");
-    const user = await collapsedMenu(undefined, { ...me, permissions: { ...me.permissions, 88: "none", 91: "none" } });
+    const user = await collapsedMenu(undefined, { ...me, permissions: { ...me.permissions, 88: "none", 91: "none", 98: "none" } });
     expect(within(menu()).queryByRole("button", { name: "Yönetim" })).toBeNull();
     await user.click(within(menu()).getByRole("link", { name: "Sistem sağlığı" }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem sağlığı");

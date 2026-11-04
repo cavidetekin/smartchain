@@ -128,6 +128,7 @@ Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu doc
 | `GET /api/system-health` · `GET /api/system-events/{id}` · ortak liste `system-events` | 94 · okuma (`detail` yalnız 96 · okuma) |
 | Ortak listeler `job-queue`, `job-runs` | 93 · okuma |
 | `GET /api/settings/health` · `PUT /api/settings/health` | 96 · okuma · yazma |
+| Ortak liste `audit-log` · `GET /api/audit-log/{id}` · `GET /api/audit-log/{id}/history` | 98 · okuma (Key user yalnız kendi kayıtları) |
 | `WS /api/ws` | 48 · okuma (el sıkışmada) |
 | `GET /api/users/{id}` | 88 · okuma |
 | `POST /api/users` · `/api/users/{id}/…` | 88 · yazma; ek kurallar "Kullanıcılar" bölümünde |
@@ -393,6 +394,18 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 `GET /api/jobs`'ta `requested_by_name` System owner'ın işinde "Smartchain"tir; `summary`, `is_protected`, `cancel_reason`, `cancelled_by_name` eklendi.
 
 `{"type": "health"}` içerik taşımaz: iş ya da olay değişti, motor açıldı ya da kapandı; yalnız 93 okuma yetkili bağlantılara gider, ekran yeniler.
+
+## Denetim izi (ekran 26, K-108)
+
+| Uç nokta | Cevap |
+|---|---|
+| Ortak liste `audit-log` | `At`, `ActorName`, `Action`, `ObjectTypeLabel`, `ObjectShown`, `OldText`, `NewText` (okunur), `OldValue`, `NewValue` (ham, varsayılan gizli). Kapsam `row_scope(role, user_id)` |
+| `GET /api/audit-log/{id}` | `id`, `at`, `actor`, `action`, `object_type`, `object`, `has_object`, `changes`: `[{"field", "old", "new"}]`. Kapsam dışıysa 404 `audit_not_found`. Gerçek ad, nesne ve değerler yalnız System owner'a |
+| `GET /api/audit-log/{id}/history` | Aynı nesne tipi ve anahtarın kayıtları zaman sırasıyla: `rows`, `truncated` (en çok 200; en yeniler). Kapsam ve maske listeyle aynı |
+
+**Okunur biçim:** `app/api/audit_format.py` tek yer: `FIELD_LABELS` her anahtar, `VALUE_LABELS` kodlu değerler, `SETTING_LABELS` ayar anahtarları (Sistem ayarları formuyla aynı adlar, testle denetlenir; `ObjectShown` sorguda üretilir, süzme bu adda); kolon ve sıralama alanları listenin etiketiyle. Yeni iz anahtarı ya da kodlu değer eklenirse çevirisi de eklenir: yazma noktaları taranır (`tests/test_audit_format.py`), test sırasında yazılan her iz denetlenir (`tests/audit_guard.py`). Bilinmeyen anahtar üretimde olduğu gibi görünür, bilgi kaybolmaz.
+
+**İz yazılamazsa:** işlem geri alınır, `SystemEvent` (bileşen "Denetim izi"), 503 `audit_failed`. Excel'de dosya verilmez (`export_trace_failed` kalktı).
 
 ## WebSocket mesajları (fonksiyon 48)
 

@@ -23,7 +23,7 @@ Ekranlar menüde gruplar hâlinde durur; ekranlar arası geçiş için üstte se
 | Takip | Uyarılar (20) · Raporlar (21) ve altında raporlar |
 | Veri | Veri yükleme (02) · Ana veri (03) · Veri kuralları (04) · Veri kalitesi (05) |
 | Parametre | Parametre setleri (06) · Gece senaryoları (07) |
-| Yönetim | Kullanıcılar (22) · Entegrasyon (23) · Sistem sağlığı (24) · Sistem ayarları (25) |
+| Yönetim | Kullanıcılar (22) · Entegrasyon (23) · Sistem sağlığı (24) · Denetim izi (26) · Sistem ayarları (25) |
 
 - **Çalışmanın ekranları** (doluluk, ürün / kaynak / sipariş bazlı planlama, Gantt, malzeme, öneriler, pegging, termin ve olaylar, yayın) menüde Çalışma'nın altında listelenir (K-43). Çalışma açık değilken gri ve kapalıdır; üzerine gelince "Önce bir çalışma açın" yazar.
 - **Raporlar** menüde Raporlar'ın altında listelenir; çoğaldıkça alt gruplara ayrılır (ör. Raporlar › Kapasite › Kaynak doluluk).
@@ -223,13 +223,13 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 ## Yetki (2.2, K-99, K-100; fonksiyon 90)
 
 - **Kaynak:** rolün yetkileri `GET /api/auth/me`'nin `permissions` alanında (`{fonksiyon: full | owner | self | read | none}`); arayüz yalnız görünürlüğü ayarlar, güvenlik sunucudadır. Yardımcılar `app/web/src/auth/permissions.ts`: `can(me, fn, "read" | "write")`, gereken rol ve ipucu metni.
-- **Menü:** her ekranın bir fonksiyonu vardır (`catalog.ts`): Ana sayfa 82 · Senaryolar 42 · Çalışma 43 (çalışmanın ekranları onunla) · Uyarılar 83 · Raporlar 85 · Veri yükleme 03 · Ana veri 10 · Veri kuralları 16 · Veri kalitesi 20 · Parametre setleri 22 · Gece senaryoları 27 · Kullanıcılar 88 · Entegrasyon 91 · Sistem sağlığı 94 · Sistem ayarları 96. Okuma yetkisi olmayan ekran gizlenir.
+- **Menü:** her ekranın bir fonksiyonu vardır (`catalog.ts`): Ana sayfa 82 · Senaryolar 42 · Çalışma 43 (çalışmanın ekranları onunla) · Uyarılar 83 · Raporlar 85 · Veri yükleme 03 · Ana veri 10 · Veri kuralları 16 · Veri kalitesi 20 · Parametre setleri 22 · Gece senaryoları 27 · Kullanıcılar 88 · Entegrasyon 91 · Sistem sağlığı 94 · Denetim izi 98 · Sistem ayarları 96. Okuma yetkisi olmayan ekran gizlenir.
 
   | Rol | Menü |
   |---|---|
   | System owner | hepsi |
   | Admin | Sistem ayarları dışında hepsi |
-  | Key user | Yönetim grubu dışında hepsi |
+  | Key user | Yönetim grubunda yalnız Denetim izi (kendi kayıtları), ötekiler hepsi |
   | End user | Ana sayfa · Takip · Veri (Veri yükleme dışında) |
 
 - **Yetkisiz ekran:** adres çubuğundan açılırsa "Bu ekranı açma yetkiniz yok" sayfası: gereken rol, kimden isteneceği, Ana sayfa bağlantısı.
@@ -307,6 +307,12 @@ Başlık "Sistem sağlığı", sağda sunucu saati. Sırayla:
 
 **Sistem ayarları, üçüncü bölüm "Sistem sağlığı":** Disk uyarı eşiği (%), Kuyruk bekleme eşiği (dk), Hataların saklanma süresi (gün); Giriş ve oturum formuyla aynı düzen.
 
+## Denetim izi (2.6, K-108; ekran 26, fonksiyon 98)
+
+Başlık "Denetim izi", altında ekranı dolduran ortak tablo: Zaman, Kullanıcı, İşlem, Nesne tipi, Nesne, Eski değer, Yeni değer. En yeni üstte. Süzme kolon filtreleriyle: tarih, kullanıcı, işlem, nesne tipi listeleri ve Nesne'de metin araması. Ayar kayıtlarında Nesne, Sistem ayarları formundaki addır. Saatler yerel. "Eski değer (ham)" ve "Yeni değer (ham)" varsayılan gizli, Alanlar panelinden açılır. Excel ortaktır, aktarım ize yazılır; Eski ve Yeni değer ekrandaki gibi okunur.
+
+**Detay penceresi:** satır sonundaki göz. Zaman (saniyeli), Kullanıcı, İşlem, Nesne tipi, Nesne; altında Alan · Eski · Yeni tablosu. "Bu nesnenin tüm geçmişi" aynı pencerede zaman sırasıyla listeler (son 200); satır o kaydı açar, "Geri" döner. Nesnesi olmayan kayıtta düğme pasif, nedeni ipucunda. Key user'da yalnız kendi kayıtları.
+
 ## Durum
 
 | Parça | Durum |
@@ -321,6 +327,7 @@ Başlık "Sistem sağlığı", sağda sunucu saati. Sırayla:
 | Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |
 | Arayüz metinleri kurala göre sadeleşti | uygulandı (2.3c) |
 | Sistem ayarları: veri sözlüğü etiketi, şifre ve oturum ayarları; yetki matrisi | uygulandı (2.4) |
+| Denetim izi: ortak tablo, detay, nesne geçmişi, Excel | uygulandı (2.6) |
 | Sistem sağlığı: kartlar, servis şeridi, iş kuyruğu, son çalışmalar, hatalar; iptal nedeni, öne alma | uygulandı (2.5) |
 | Kullanıcılar ekranı: liste, satır menüsü, pencereler, geçici şifre; yazı boyutu kullanıcı kaydında | uygulandı (2.3) |
 | Yetki: role göre menü, yetkisiz ekran, pasif düğme ipucu, 403 bildirimi, iş panelinde iptal | uygulandı (2.2) |

@@ -3,7 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity, Boxes, CalendarClock, CalendarRange, ChartGantt, ClipboardList, Database, Factory, FileChartColumn,
-  FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, Moon, Network, Package, Plug, Send, Settings,
+  FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, Moon, Network, Package, Plug, ScrollText, Send, Settings,
   ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles,
 } from "lucide-react";
 
@@ -96,6 +96,8 @@ export const SCREENS: Screen[] = [
     description: "API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması." },
   { no: "24", fn: 94, name: "Sistem sağlığı", path: "/yonetim/sistem-sagligi", group: "yonetim", step: "2.5", icon: HeartPulse,
     description: "Servis durumu, iş kuyruğu, son çalışmalar, hatalar." },
+  { no: "26", fn: 98, name: "Denetim izi", path: "/yonetim/denetim-izi", group: "yonetim", step: "2.6", icon: ScrollText,
+    description: "Kim, ne zaman, neyi değiştirdi; eski ve yeni değer." },
   { no: "25", fn: 96, name: "Sistem ayarları", path: "/yonetim/sistem-ayarlari", group: "yonetim", step: "2.4", icon: KeyRound,
     description: "Veri sözlüğü, şifre ve oturum ayarları, sürüm." },
 ];
