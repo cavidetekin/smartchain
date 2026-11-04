@@ -45,10 +45,11 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 3 · Veri alma (Extract)
 
-- [ ] 3.1 Excel şablonu üretimi (02)
-- [ ] 3.2 Excel yükleme → Staging (03)
-- [ ] 3.3 SQL arayüz okuyucu → Staging (01), entegrasyon tanımı (91) · A-38: ham tablo + view akışı, varlık başına yöntem seçimi (view, Excel, API)
-- [ ] 3.4 Yapısal doğrulama ve hata raporu (04): tip, zorunlu alan, tekrar eden anahtar
+- [x] 3.1 Excel şablonu üretimi (02) · ekran 02 iskeleti · K-110
+- [ ] 3.1b Alan gözden geçirmesi (A-17): 26 tablonun alanları yükleme sırasıyla tablo tablo gözden geçirilir; değişiklikler toplu olarak docs/02, docs/03, şema, şablon, sentetik veri ve kirli Excel'e işlenir. 3.2'den önce yapılır.
+- [ ] 3.2 Excel yükleme → Staging (03) · ekran 02: menüde "Excel'den yükle" açılır, "Son yükleme zamanı" kolonu · çözülecekler: `stg` tablolarındaki tekil indeksler (`UX_Material_Code`, `UX_BOM_MaterialCode_ProductionVersionCode`, `UX_Routing_…` gibi) kalkmalı, yoksa tekrar eden satır ham veriye yazılamaz (H4) ve çok bileşenli ağaç reddedilir (docs/03'te ANAHTAR kolonu varlık listesindeki anahtarlarla da uyumsuz; 3.4 ile birlikte); `ImportBatch`'te dosya adı, kullanıcı ve şablon sürümü yok; fonksiyon 03'ün modu (ekle/güncelle, tam) ile `LoadType` (`Tam \| Değişen`) farkı; tekrar eden anahtarda fonksiyon 03 (kullanıcı karar verir) ile docs/11 H4 (iki satır da yüklenmez) farkı; yöntem kısıtı 3.3'e kadar uygulanmaz
+- [ ] 3.3 SQL arayüz okuyucu → Staging (01), entegrasyon tanımı (91) · A-38: ham tablo + view akışı, varlık başına yöntem seçimi (view, Excel, API) · ekran 02: "Yöntem" kolonu (Excel, SQL, API), "Bu tabloyu çekimden çıkar", yönteme göre şablon ve yükleme kısıtı (K-110)
+- [ ] 3.4 Yapısal doğrulama ve hata raporu (04): tip, zorunlu alan, tekrar eden anahtar · yalnız yapısal kontrol (tip, uzunluk, zorunlu alan); değer listesi dışı değerler doğrulamada bilgi olarak gösterilir (K-110)
 
 ## Aşama 4 · Dönüştürme (Transform)
 
@@ -63,7 +64,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 5.2 Tam yükleme ve veri versiyonu (05, 07) · yüklemenin özet denetim kaydı (K-108)
 - [ ] 5.3 Kısmi yükleme (06)
 - [ ] 5.4 Aktarım raporu, yükleme geçmişi, ham veri temizliği (08, 09)
-- [ ] 5.5 Veri yükleme ekranı (02): ETL'in tamamı tek ekranda, adım adım durumuyla · yükleme işinin özeti (`Job.Summary`: "Tam yükleme · <tarih>"; K-107)
+- [ ] 5.5 Veri yükleme ekranı (02): ETL'in tamamı tek ekranda, adım adım durumuyla · yükleme işinin özeti (`Job.Summary`: "Tam yükleme · <tarih>"; K-107) · 3.1'deki iskeletin kalanı: sayılar, üst düğmeler, sağ paneller
 - [ ] 5.6 Gece ETL akışı: zamanlanmış işler (92), Entegrasyon ekranı (23) · Sistem sağlığında zamanlayıcı satırı (K-106)
 
 ## Aşama 6 · Ana veri ve kalite

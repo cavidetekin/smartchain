@@ -1,0 +1,254 @@
+{
+ "Location": {
+  "Code": "ORM-01",
+  "Name": "Örnek Makina A.Ş. · Merkez fabrika",
+  "Type": "Tesis",
+  "Country": "Türkiye",
+  "CountryCode": "TR",
+  "Region": "Marmara",
+  "RegionCode": "MAR",
+  "City": "Kocaeli",
+  "CityCode": "34"
+ },
+ "UnitOfMeasure": {
+  "Code": "ADET",
+  "Name": "Adet"
+ },
+ "UomConversion": {
+  "MaterialCode": "HAM-001",
+  "FromUom": "M",
+  "ToUom": "KG",
+  "Factor": 5.55
+ },
+ "Material": {
+  "LocationCode": "ORM-01",
+  "Code": "MAM-001",
+  "Name": "Pompa gövdesi PG-80",
+  "BaseUom": "ADET",
+  "MaterialGroup": "Mamul",
+  "MaterialLevel": "Nihai ürün",
+  "IsPurchasable": 0,
+  "IsProducible": 1,
+  "IsSellable": 1,
+  "DefaultProcurement": "Üretim",
+  "Ownership": "Kendi",
+  "IsProjectTracked": 0,
+  "IsPhantom": 0,
+  "ProductionLeadTimeDays": 3,
+  "GoodsReceiptDays": 1,
+  "SafetyStock": 20,
+  "MaxStock": 500,
+  "LotSizePolicy": "Lot-for-lot",
+  "MinLot": 50,
+  "MaxLot": 200,
+  "LotMultiple": 10,
+  "AssemblyScrapPct": 2,
+  "ShelfLifeDays": 365
+ },
+ "ProductionVersion": {
+  "MaterialCode": "MAM-001",
+  "Code": "V1",
+  "IsDefault": 1,
+  "BaseQuantity": 1.0,
+  "RouteCode": "R-MAM-001",
+  "ValidFrom": "2025-10-26",
+  "ValidTo": "2026-12-31"
+ },
+ "BOM": {
+  "MaterialCode": "MAM-001",
+  "ProductionVersionCode": "V1",
+  "ComponentMaterialCode": "SAT-008",
+  "Quantity": 4,
+  "ScrapPct": 1.5,
+  "IsFixedQuantity": 0,
+  "OpNo": 10
+ },
+ "Routing": {
+  "RouteCode": "R-MAM-001",
+  "OpNo": 10,
+  "SeqNo": 1,
+  "OperationName": "Son montaj",
+  "ResourceCode": "A-01",
+  "ResourceRole": "Primary",
+  "Consumption": 1.181,
+  "ResourceNumber": 1,
+  "IsSubcontracted": 0,
+  "TransferLotQty": 10,
+  "LaborType": "Yetkinlik grubu",
+  "LaborRefCode": "CG-MON",
+  "LaborBasis": "Ekip",
+  "CrewSize": 2,
+  "LaborTime": 0.5
+ },
+ "ResourceGroup": {
+  "LocationCode": "ORM-01",
+  "Code": "TORNA",
+  "Name": "CNC torna"
+ },
+ "Resource": {
+  "LocationCode": "ORM-01",
+  "Code": "TORNA-01",
+  "Name": "CNC torna 1",
+  "ResourceGroupCode": "TORNA",
+  "ResourceType": "Makine",
+  "ResourceRole": "Primary",
+  "IsConstrained": 1,
+  "CapacityUnit": "Saat",
+  "DailyCapacity": 15.0,
+  "Quantity": 1,
+  "CapacitySource": "Doğrudan",
+  "SubconPlanningType": "Tedarik süresi",
+  "SupplierCode": "TED-07",
+  "SubconFixedLeadTimeDays": 5,
+  "SubconVariableDaysPerUnit": 0.0
+ },
+ "CompetenceGroup": {
+  "LocationCode": "ORM-01",
+  "Code": "CG-CNC",
+  "Name": "CNC operatörü"
+ },
+ "Worker": {
+  "LocationCode": "ORM-01",
+  "Code": "W-001",
+  "Name": "Mustafa Öztürk",
+  "ResourceGroupCode": "TORNA",
+  "IsActive": 1
+ },
+ "WorkerCompetence": {
+  "WorkerCode": "W-001",
+  "CompetenceGroupCode": "CG-CNC"
+ },
+ "WorkerAbsence": {
+  "WorkerCode": "W-007",
+  "StartAt": "2026-11-09T00:00:00",
+  "EndAt": "2026-11-14T00:00:00",
+  "AbsenceType": "İzin"
+ },
+ "Supplier": {
+  "Code": "TED-01",
+  "Name": "Anadolu Çubuk Ticaret",
+  "IsSubcontractor": 0
+ },
+ "MaterialSupplier": {
+  "MaterialCode": "HAM-001",
+  "SupplierCode": "TED-01",
+  "Priority": 1,
+  "QuotaPct": 30.0,
+  "LeadTimeDays": 14,
+  "LeadTimeBasis": "Takvim günü",
+  "MinOrderQty": 50,
+  "OrderMultiple": 10,
+  "MaxOrderQty": 1000,
+  "ValidFrom": "2026-01-01",
+  "ValidTo": "2026-12-31"
+ },
+ "Customer": {
+  "Code": "MUS-A",
+  "Name": "Akdeniz Pompa Sistemleri",
+  "Priority": 1,
+  "AllowPartialDelivery": 0
+ },
+ "ProjectGroup": {
+  "Code": "PG-01",
+  "Name": "Enerji santrali projeleri",
+  "IsolationRule": "Ortaktan beslenir"
+ },
+ "Project": {
+  "Code": "PRJ-01",
+  "Name": "Santral A pompa paketi",
+  "ProjectGroupCode": "PG-01",
+  "IsolationRule": "Ortaktan beslenir",
+  "Priority": 1,
+  "IsClosed": 0
+ },
+ "SalesOrderLine": {
+  "LocationCode": "ORM-01",
+  "OrderNo": "SO-1001",
+  "LineNo": 1,
+  "LineItemNo": 1,
+  "Type": "Kesin",
+  "CustomerCode": "MUS-A",
+  "MaterialCode": "MAM-002",
+  "ProjectCode": "PRJ-01",
+  "OpenQty": 14.0,
+  "RequestedDate": "2026-10-30",
+  "ConfirmedDate": "2026-10-30",
+  "Priority": 1,
+  "AllowPartialDelivery": 1,
+  "Status": "Açık"
+ },
+ "Forecast": {
+  "LocationCode": "ORM-01",
+  "MaterialCode": "MAM-001",
+  "CustomerCode": "MUS-A",
+  "ProjectCode": "PRJ-01",
+  "Period": "2026-12-01",
+  "Quantity": 100
+ },
+ "Stock": {
+  "LocationCode": "ORM-01",
+  "MaterialCode": "HAM-003",
+  "Warehouse": "ANA",
+  "LotNo": "L-2410-07",
+  "StockStatus": "Serbest",
+  "ProjectCode": "PRJ-01",
+  "Quantity": 80.0,
+  "QualityEntryDate": "2026-10-30",
+  "ExpiryDate": "2027-06-30"
+ },
+ "WorkOrder": {
+  "LocationCode": "ORM-01",
+  "OrderNo": "WO-5001",
+  "MaterialCode": "MAM-004",
+  "OrderType": "Üretim",
+  "Status": "Yayınlandı",
+  "OrderQty": 10.0,
+  "OpenQty": 10.0,
+  "StartDate": "2026-11-02",
+  "DueDate": "2026-11-06",
+  "ProjectCode": "PRJ-01",
+  "SalesOrderNo": "SO-1004",
+  "SalesOrderLineNo": 1,
+  "ParentWorkOrderNo": "WO-5001",
+  "LastActivityDate": "2026-10-26"
+ },
+ "WorkOrderComponent": {
+  "WorkOrderNo": "WO-5001",
+  "MaterialCode": "SAT-039",
+  "RequiredQty": 60,
+  "IssuedQty": 0.0
+ },
+ "WorkOrderOperation": {
+  "WorkOrderNo": "WO-5001",
+  "OpNo": 10,
+  "SeqNo": 1,
+  "ResourceCode": "A-02",
+  "PlannedConsumption": 19.82,
+  "ConfirmedConsumption": 0.0,
+  "Status": "Açık"
+ },
+ "PurchaseOrderLine": {
+  "LocationCode": "ORM-01",
+  "OrderNo": "PO-2001",
+  "LineNo": 1,
+  "OrderType": "Satın alma",
+  "SupplierCode": "TED-06",
+  "MaterialCode": "SAT-026",
+  "OpenQty": 200.0,
+  "RequestedDate": "2026-11-26",
+  "ConfirmedDate": "2026-11-02",
+  "ProjectCode": "PRJ-01",
+  "WorkOrderNo": "WO-3001",
+  "Status": "Açık"
+ },
+ "ProductionConfirmation": {
+  "WorkOrderNo": "WO-5002",
+  "OpNo": 10,
+  "SeqNo": 1,
+  "ResourceCode": "A-02",
+  "ConfirmedQty": 5.0,
+  "ActualConsumption": 2.95,
+  "StartAt": "2026-10-23T08:00:00",
+  "EndAt": "2026-10-23T11:00:00"
+ }
+}

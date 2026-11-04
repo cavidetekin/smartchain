@@ -407,6 +407,16 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 
 **İz yazılamazsa:** işlem geri alınır, `SystemEvent` (bileşen "Denetim izi"), 503 `audit_failed`. Excel'de dosya verilmez (`export_trace_failed` kalktı).
 
+## Excel şablonu (ekran 02, fonksiyon 02, K-110)
+
+| Uç nokta | Cevap |
+|---|---|
+| Ortak liste `data-entities` | `Name`, `EntityClass`, `Description`, `Version`, `FieldCount`, `RequiredCount`, `CatalogOrder`, `Entity` (varsayılan gizli). 26 tablo; kaynak docs/03 kataloğu, etiketli ek alanlar `FieldDefinition`'dan sayılır |
+| `GET /api/templates/{entity}/info` | `entity`, `name`, `version`, `file_name`, `field_count`, `required` (etiketler). Bilinmiyorsa 404 `entity_not_found` |
+| `GET /api/templates/{entity}` | xlsx; `smartchain_<kısa ad>_v<sürüm>.xlsx`. İz "Şablon indirme" aynı işlemde; yazılamazsa dosya yok, 503 `audit_failed` |
+
+Hepsi fonksiyon 02 okuma: System owner, Admin, Key user; End user 403. Üretici `app/integration/template.py` veritabanı bilmez; etiketleri servis verir, kirli Excel (docs/11) veri setinden alır.
+
 ## WebSocket mesajları (fonksiyon 48)
 
 API, `adm.Job`'u `UpdatedAt` ile izler ve değişen işi sahibinin bağlantılarına iter (K-69). Sıradaki işlerin sırası değişince onlara da mesaj gider. Ara durumlar izleme aralığında birleşebilir; istemci her mesajı işin son hali olarak alır.

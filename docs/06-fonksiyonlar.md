@@ -106,36 +106,37 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü
   - Nereden: Veri yükleme ekranı · varlık satırı menüsü 'Şablonu indir' · Entegrasyon ekranı Excel kartı
 - **01:** Kullanıcı varlık satırından 'Şablonu indir' seçer.
-- **02:** Sistem veri sözlüğünden sütunları üretir: 1. satır alan adı, 2. satır açıklama ve kural (tip, zorunlu, liste), 3. satır örnek kayıt.
+- **02:** Sistem sözleşmeden (docs/03) sütunları üretir: 1. satır teknik alan adı, veri 2. satırdan. Zorunlu alanın başlığı koyu indigo, ötekiler açık indigo. Etiket, açıklama, tip, boş bırakılırsa, Smartchain değerleri ve örnek Açıklama sayfasında.
 - **GIRDI**
   - Varlık seçimi
-  - Veri sözlüğü (FieldDefinition): alan, tip, zorunluluk, varsayılan, açıklama
-  - Kod listeleri: kaynak tipi, birim, takvim, tedarikçi kodları
-- **03:** Kod listesi olan alanlara açılır liste (veri doğrulama) bağlanır; listeler 'Kodlar' sayfasında tutulur.
+  - Sözleşme (docs/03): alan, tip, zorunluluk, yoksa ne olur, açıklama; etiket FieldDefinition'dan
+- **03:** Zorlama yoktur: açılır liste ve Excel doğrulaması konmaz (K-58, K-110). Değer listeleri ve referansın hangi tablonun kodu olduğu Açıklama sayfasında yazar; ERP'nin farklı değerleri veri kuralıyla çevrilir, tutarsızlık doğrulamada görünür.
 - **04:** Tarih ve sayı biçimleri sabitlenir; sütun genişlikleri ayarlanır.
 - **05:** Şablon sürümü ve varlık adı gizli bir sayfaya yazılır; yüklemede (03) bu bilgiyle tanınır.
 - **06:** Dosya 'smartchain_<varlık>_v<sürüm>.xlsx' adıyla indirilir; indirme denetim izine yazılır.
 - **ÇIKTI**
-  - xlsx dosyası: veri sayfası, Kodlar sayfası, Açıklama sayfası, gizli sürüm bilgisi
+  - xlsx dosyası: veri sayfası, Açıklama sayfası, gizli sürüm bilgisi
   - Denetim izi kaydı (kim, hangi varlık, hangi sürüm)
 
 ### 02 · Excel şablonu indirme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F02 · A Veri alma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Şablon elle sürdürülmez, her seferinde veri sözlüğünden üretilir.
-  - Veri sözlüğü değişince şablon sürümü artar; eski sürümle yükleme uyarı verir (03).
+  - Şablon elle sürdürülmez, her seferinde sözleşmeden üretilir.
+  - Sözleşme değişince şablon sürümü artar (test zorunlu kılar); etiket değişikliği artırmaz. Eski sürümle yükleme uyarı verir (03).
+  - Yalnız etiketli ek alan şablonda yer alır.
   - Yalnız o varlığın alanları; sistem alanları (Id, versiyon) şablonda yoktur.
-  - Şablon dilde Türkçe açıklama, alan adları veri sözlüğündeki teknik adlardır.
+  - Şablon dilde Türkçe açıklama, alan adları sözleşmedeki teknik adlardır; eşleme yoktur.
 - **HATA VE ISTISNA**
-  - Veri sözlüğünde tanımsız varlık: menü seçeneği pasif.
+  - Bilinmeyen varlık: 'Varlık bulunamadı'.
   - Dosya üretilemezse hata bildirimi; log kaydı.
   - Tarayıcı indirmeyi engellerse yeniden deneme bağlantısı.
 - **ETKISI VE TETIKLENENLER**
   - Yok; yalnız dosya üretir.
   - Denetim izi kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez.
-- **ÖRNEK:** Kaynak şablonu v3: 12 sütun, 4 zorunlu (Code, Name, ResourceType, CapacityUnit). ResourceType hücresinde açılır liste: Makine, Hat, Fırın, İşçi grubu, Fason.
+- **ÖRNEK:** Kaynak şablonu v1: 15 alan, 2 zorunlu (LocationCode, Code). Açıklama sayfasında ResourceType için Smartchain değerleri: Makine, İşçi, Fason, Diğer; boş bırakılırsa veri kuralıyla doldurulur. Başka bir değer yazılabilir, doğrulamada bilgi olarak görünür.
+- **Uygulama (3.1, K-110):** Şablon bilgisi önizleme sayfası yerine satır menüsünden açılan pencere. Mockup'taki 2. ve 3. satır, açılır liste, Kodlar sayfası, `CalendarId`, "v3" ve "Takvim ve vardiya" satırı geçersiz (K-65, K-110). Ekran 02 iskelet: tablo listesi ve satır menüsü; sayılar ve yükleme düğmeleri 3.3–5.5'te. Entegrasyon ekranı Excel kartı 5.6'da aynı uca bağlanır.
 
 ### 02 · Excel şablonu indirme · Menüden indirme
 <sub>24. Ekranlar ve fonksiyonlar · F02 · A Veri alma · Mockup 1/2</sub>
@@ -152,28 +153,27 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![02 · Excel şablonu indirme · Şablon önizleme](mockups/m24f-0344-02-excel-sablonu-indirme-sablon-onizleme.png)
 
-- **Üç başlık satırı:** Alan adı, açıklama ve kural, örnek kayıt; veri 4. satırdan başlar.
-- **Açılır listeler:** Kod listesi olan alanlar Excel'de liste olarak gelir; yazım hatası azalır.
-- **Kodlar sayfası:** Listeler ayrı sayfada; kullanıcı kodların anlamını görür.
-- **Sözlükten üretim:** Şablon bilgisi kartı: sürüm, alan sayısı, zorunlu alanlar.
+- **Tek başlık satırı:** Teknik ad, zorunlu alanda koyu; veri 2. satırdan başlar (K-110).
+- **Açıklama sayfası:** Etiket, tip, boş bırakılırsa, Smartchain değerleri ve örnek. Açılır liste ve Kodlar sayfası yok.
+- **Sözleşmeden üretim:** Şablon bilgisi: sürüm, alan sayısı, zorunlu alanlar.
 
 ### 03 · Excel ile yükleme
 <sub>24. Ekranlar ve fonksiyonlar · F03 · A Veri alma · Çalışma prensibi 1/2</sub>
 
-- Entegrasyonu olmayan ya da ERP'de tutulmayan varlıkları (kaynak, takvim, vardiya gibi) Excel şablonuyla ham veriye almak; sonrası ERP'den çekilen veriyle aynı yoldan ilerler.
+- Entegrasyonu olmayan ya da ERP'de tutulmayan varlıkları (kaynak, tahmin gibi; takvim ve vardiya ekrandan: K-65) Excel şablonuyla ham veriye almak; sonrası ERP'den çekilen veriyle aynı yoldan ilerler.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
   - Nereden: Veri yükleme ekranı · 'Excel'den yükle' · varlık satırı menüsü
-- **01:** Dosya sürükle-bırak ya da seçimle alınır; gizli sayfadan varlık ve şablon sürümü tanınır, sütunlar alanlara eşlenir.
+- **01:** Dosya sürükle-bırak ya da seçimle alınır; gizli sayfadan varlık ve şablon sürümü tanınır, kolonlar 1. satırdaki teknik adla bulunur (eşleme yok, K-110).
 - **02:** Yükleme modu seçilir: 'ekle / güncelle' dosyadaki kayıtları işler; 'tam' dosyada olmayan kayıtları silinmiş sayar (uyarı ile).
 - **GIRDI**
   - Şablondan üretilmiş xlsx dosyası (tek varlık)
   - Yükleme modu: ekle / güncelle ya da tam
-  - Veri sözlüğü (tip, zorunluluk, kod listeleri)
-- **03:** Satır bazlı ön kontrol: tip, zorunlu alan, kod listesi, tekrar eden kod. Sonuç sayılarla ve satır listesiyle gösterilir.
+  - Sözleşme (tip, uzunluk, zorunluluk)
+- **03:** Satır bazlı ön kontrol: tip, uzunluk, zorunlu alan, tekrar eden kod; değer listesi dışı değer bilgi olarak. Sonuç sayılarla ve satır listesiyle gösterilir.
 - **04:** Kullanıcı hatalı satırları atlayarak devam eder ya da hata raporunu (hata sütunu eklenmiş xlsx) indirip vazgeçer.
 - **ÇIKTI**
   - ImportBatch (Excel) ve ham veri satırları
@@ -189,10 +189,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Excel ile yükleme yalnız yöntemi Excel olan varlıklar için; ERP'den gelen varlığı düzeltmek için elle değer / toplu düzeltme (12, 15) kullanılır.
   - Tek dosya tek varlık; en fazla 200.000 satır (parametre).
   - Aynı kodun tekrarı hata; dosyadaki son satır değil, kullanıcı karar verir.
-  - Eski şablon sürümüyle yükleme uyarı verir, eşleme adla yapılır; eşlenemeyen sütun bilgi olarak listelenir.
+  - Eski şablon sürümüyle yükleme uyarı verir; tanınmayan kolon bilgi olarak listelenir, eksik zorunlu kolon hatadır.
   - Yükleme veri versiyonu açmaz; versiyon 05 / 06 ile oluşur.
 - **HATA VE ISTISNA**
-  - Dosya tanınmadı (gizli sayfa yok): kullanıcı varlığı elle seçer, sütun eşlemesi gösterilir.
+  - Dosya tanınmadı (gizli sayfa yok): kullanıcı varlığı elle seçer, kolonlar yine teknik adla bulunur.
   - Tüm satırlar hatalı: parti oluşturulmaz, rapor indirilir.
   - Dosya bozuk ya da çok büyük: anlaşılır mesaj, limit yazılır.
   - Yükleme sırasında bağlantı koparsa parti 'tamamlanmadı'; yeniden yükleme gerekir.
@@ -201,7 +201,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veri yükleme ekranında varlık satırı 'Excel · bekliyor' olur.
   - Denetim izi: dosya adı, satır sayısı, kullanıcı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; etkiler yüklemeyle (05 / 06) oluşur.
-- **ÖRNEK:** kaynak_v3.xlsx · 46 satır: 3 hata (boş kapasite, kod listesinde olmayan tip, olmayan takvim), 1 uyarı. Kullanıcı 43 satırla devam eder, hata raporunu indirir.
+- **ÖRNEK:** smartchain_kaynak_v1.xlsx · 46 satır: 3 hata (boş kod, çok uzun ad, sayı alanında metin), 1 bilgi (değer listesi dışı tip). Kullanıcı 43 satırla devam eder, hata raporunu indirir.
 
 ### 03 · Excel ile yükleme · Dosya ve mod
 <sub>24. Ekranlar ve fonksiyonlar · F03 · A Veri alma · Mockup 1/2</sub>

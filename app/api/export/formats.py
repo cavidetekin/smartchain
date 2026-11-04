@@ -146,6 +146,13 @@ def header_format() -> CellFormat:
     return CellFormat(fill=color("table-head-bg"), color=color("table-head-text"), bold=True)
 
 
+def template_header_format(required: bool) -> CellFormat:
+    """Şablon başlığı (K-110): zorunlu alan koyu indigo, öteki alanlar açık indigo."""
+    if required:
+        return CellFormat(fill=color("indigo-900"), color=color("surface"), bold=True)
+    return CellFormat(fill=color("indigo-100"), color=color("indigo-900"), bold=True)
+
+
 def group_format(depth: int) -> CellFormat:
     """Grup başlık satırı: 1. düzey koyu ton ve kalın, alt düzeyler açık ton (K-85)."""
     return CellFormat(fill=color("table-group-1-bg" if depth == 0 else "table-group-2-bg"), color=color("text"), bold=depth == 0)

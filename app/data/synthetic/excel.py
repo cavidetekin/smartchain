@@ -1,29 +1,21 @@
 """Kirli hâl: entegrasyon biçiminde Excel ve beklenen hatalar (docs/11, K-78, K-79).
 
 Temiz hâl stg.* alanlarına çevrilir (Id → kod), kasıtlı hatalar eklenir; varlık başına bir dosya (tek dosya tek
-varlık). Sayfa düzeni (geçici, 3.1'deki şablonla kesinleşir): 1. satır alan adı, 2. satır açıklama, veri 3. satırdan.
+varlık). Sayfa düzeni şablon üreticisinden (K-110): 1. satır alan adı, veri 2. satırdan; etiket veri setinden, veritabanı gerekmez.
 Hatalar başka satırları zincirleme etkilemeyecek yerlerdedir: ETL sonrası ana veri = temiz hâl − beklenen fark.
 """
 import json
 from datetime import date, datetime
 from pathlib import Path
 
-from openpyxl import Workbook
-from openpyxl.styles import Font
-
+from app.integration import contract
+from app.integration.contract import FIRST_DATA_ROW, stg_columns
+from app.integration.template import write_template
 from db import models
 from . import dataset as d
 from .dataset import Dataset
 
-FIRST_DATA_ROW = 3
 EMPTY_ENTITIES = {"Forecast"}  # docs/11: tahmin üretilmez
-
-STG_EXCLUDED = {"StagingRowId", "ImportBatchId", "RowStatus", "ErrorText"}
-
-
-def stg_columns(entity: str) -> list:
-    t = models.metadata.tables[f"stg.{entity}"]
-    return [c for c in t.columns if c.name not in STG_EXCLUDED]
 
 
 def stg_entities() -> list[str]:
@@ -163,35 +155,23 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
     return stg, errors
 
 
-def _cell(v):
-    if isinstance(v, bool):
-        return 1 if v else 0
-    return v
+def labels_of(entity: str) -> dict[str, str]:
+    """Veri setindeki ek alan etiketleri (K-88); yalnız etiketli ek alan dosyaya girer."""
+    return {f["FieldName"]: f["Label"] for f in d.FIELD_DEFINITIONS if f["TableName"] == entity}
 
 
 def write_excel(ds: Dataset, out: Path) -> dict:
     """Kirli hâli yazar: varlık başına Excel ve beklenen-hatalar.json. Özet döndürür."""
     out.mkdir(parents=True, exist_ok=True)
     stg, errors = make_dirty(ds)
+    extra = [("Set", d.SET_NAME), ("Tohum", ds.seed), ("Üretim günü", ds.generated_on.isoformat()), ("Hafta 1", ds.start.isoformat())]
     for entity, rows in stg.items():
-        wb = Workbook()
-        ws = wb.active
-        ws.title = entity
-        cols = stg_columns(entity)
-        ws.append([c.name for c in cols])
-        ws.append([c.comment or "" for c in cols])
-        for r in rows:
-            ws.append([_cell(r[c.name]) for c in cols])
-        for cell in ws[1]:
-            cell.font = Font(bold=True)
-        ws.freeze_panes = "A3"
-        info = wb.create_sheet("_Surum")
-        for k, v in [("Set", d.SET_NAME), ("Varlık", f"stg.{entity}"), ("Tohum", ds.seed),
-                     ("Üretim günü", ds.generated_on.isoformat()), ("Hafta 1", ds.start.isoformat()),
-                     ("Düzen", "1. satır alan adı, 2. satır açıklama, veri 3. satırdan (geçici; 3.1 şablonu)")]:
-            info.append([k, v])
-        info.sheet_state = "hidden"
-        wb.save(out / f"{entity}.xlsx")
+        labels = labels_of(entity)
+        shown = {f.name for f in contract.fields(entity, labels)}
+        lost = {k for r in rows for k, v in r.items() if k not in shown and v not in (None, "")}
+        if lost:
+            raise ValueError(f"{entity}: dolu alan şablonda yok: {sorted(lost)}")
+        write_template(str(out / f"{entity}.xlsx"), contract.entity(entity), labels, extra, rows)
     manifest = {
         "set": d.SET_NAME, "seed": ds.seed, "generated_on": ds.generated_on.isoformat(),
         "week1": ds.start.isoformat(), "first_data_row": FIRST_DATA_ROW,

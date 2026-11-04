@@ -135,6 +135,23 @@ export const tr = {
     levels: { full: "Tam", owner: "Sahibi", self: "Kendi", read: "Salt okunur", none: "Yok" } as Record<string, string>,
   },
   // Denetim izi (ekran 26, fonksiyon 98; K-108, docs/12)
+  // Veri yükleme (ekran 02, fonksiyon 02; K-110)
+  dataLoad: {
+    title: "Veri yükleme",
+    rowMenu: (name: string) => `${name} işlemleri`,
+    download: (version: unknown) => `Şablonu indir (v${String(version)})`,
+    info: "Şablon bilgisi",
+    upload: "Excel'den yükle",
+    lastUpload: "Son Excel yüklemesini gör",
+    exclude: "Bu tabloyu çekimden çıkar",
+    comingIn: (step: string) => `${step} adımında gelecek.`,
+    version: "Şablon sürümü",
+    fileName: "Dosya",
+    fieldCount: "Toplam alan",
+    required: "Zorunlu alan",
+    downloadButton: "İndir",
+    failed: "Şablon indirilemedi.",
+  },
   auditLog: {
     title: "Denetim izi",
     detailTitle: "Kayıt detayı",

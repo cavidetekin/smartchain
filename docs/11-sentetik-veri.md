@@ -81,7 +81,7 @@ python -m app.data.synthetic check                                     # sayıla
 | 5 | Bakım ve izin | `T-02` bakım hafta 2 Salı–Çarşamba · `W-007` izin hafta 3 · `W-015` rapor hafta 1 | Kayıtlar ufukta, var olan kaynak ve çalışanda |
 
 **Kirli hâl.** `data/synthetic/v0/kirli/` altında varlık başına bir Excel (25 dosya) ve `beklenen-hatalar.json`; her gün yeniden üretilebildiği için git'e girmez.
-- **Sayfa düzeni (geçici; 3.1'deki şablonla kesinleşir):** 1. satır `stg` alan adı, 2. satır açıklama, veri 3. satırdan. Gizli `_Surum` sayfasında set, tohum ve üretim günü.
+- **Sayfa düzeni (K-110):** şablon üreticisiyle yazılır (`app/integration/template.py`): 1. satır `stg` alan adı, veri 2. satırdan; Açıklama sayfası; gizli `_Surum` sayfasında tablo, sürüm, set, tohum ve üretim günü. Etiketsiz ek alan kolonu yoktur. Etiket veri setinden gelir, veritabanı gerekmez.
 - **Kapsam:** Takvim, vardiya ve duruş entegrasyonla gelmediği için yoktur (K-65). Sipariş, stok ve iş emri üretimde API veya SQL ile gelir; ETL testleri için aynı `stg` biçiminde Excel'e konur.
 - **Hataların yeri:** Başka satırı zincirleme etkilemez. ETL sonrası ana veri = temiz hâl − aşağıdaki fark. Satır numaraları `beklenen-hatalar.json`'dadır.
 - **Mesaj metni:** Burada öneridir; 3.4'te kesinleşir ve oradaki test bu dosyayla karşılaştırır.

@@ -28,7 +28,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Entegrasyon tasarım ilkeleri
 <sub>26. Entegrasyon tasarımı · Entegrasyon ilkeleri</sub>
 
-- **Tek veri sözleşmesi:** Hangi yöntemle gelirse gelsin veri aynı sözleşmeye (varlık, alan, tip, anahtar, zorunluluk) iner. Sözleşme veri sözlüğünden (FieldDefinition) üretilir; şablon, arayüz tablosu ve API şeması aynı kaynaktan türer.
+- **Tek veri sözleşmesi:** Hangi yöntemle gelirse gelsin veri aynı sözleşmeye (varlık, alan, tip, anahtar, zorunluluk) iner. Sözleşme bu dosyadaki `stg.*` tablolarıdır; şablon, arayüz tablosu ve API şeması aynı kaynaktan türer. `FieldDefinition` yalnız etiket verir (K-110).
 - **ERP bağımsız:** Ürün hiçbir ERP'ye özel alan taşımaz. ERP'ye özgü her şey adaptörde ve eşleme tanımında kalır; yeni ERP yeni adaptör demektir, ürün değişmez.
 - **Yalnız okuma (Faz 1):** Smartchain ERP'den okur, ERP'ye yazmaz. Plan çıktıları Excel listesi olarak çıkar ve ERP'ye elle girilir. Geri yazma Faz 2 (API).
 - **Üç yöntem, varlık başına bir tane:** API, SQL arayüz tabloları ve Excel. Her varlık tek yöntemle beslenir; yöntem müşteriye göre seçilir, karışık kurulum normaldir (ör. siparişler API, kaynaklar Excel).
@@ -76,7 +76,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Faz 2: ERP'ye API ile geri yazma
 - **Excel şablonları**
   - Key user doldurur, ekrandan yükler
-  - Sözlükten üretilen şablon
+  - Sözleşmeden üretilen şablon
 - **Excel okuyucu**
   - Şablon sürümü ve varlık tanıma
   - Satır bazlı ön kontrol
@@ -120,6 +120,40 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Sevkiyat / sipariş kapanışı (yeni) | İşlem verisi | API · SQL | ERP | Gece artımlı | OrderNo+LineNo+ShipDate | A-22 · raporlar 17, 19 |
 | Birim maliyet (Material ek alanı, yeni) | Ana veri | API · SQL · Excel | ERP | Gece tam | MaterialCode | A-22 · stok değeri, tutar |
 | Çıkış: satın alma talebi, iş emri açma, fason listesi | Plan çıktısı | Excel (Faz 1) · API (Faz 2) | Smartchain | Yayın sonrası, istek üzerine | PlannedOrder.Id | Faz 1 Excel |
+
+### Veri sözleşmesi · varlık kataloğu
+<sub>26. Entegrasyon tasarımı · Veri sözleşmesi · Geliştirme 3.1 (K-110)</sub>
+
+- Şablonu ve ekran 02'yi besler; sıra referans verisinden işlem verisine. Kod bu tablodan üretilir (`python db/generate.py`, K-64). Sürüm, sözleşme değişince burada artar. Transfer (TransferOrder) çok lokasyonda geldiği için `stg` tablosu ve şablonu yoktur (Faz 2).
+
+| VARLIK | AD | SINIF | AÇIKLAMA | DOSYA ADI | SÜRÜM |
+|---|---|---|---|---|---|
+| Location | Lokasyon | Ana veri | Tesisler, depolar ve fason depoları | lokasyon | 1 |
+| UnitOfMeasure | Birim | Ana veri | Ölçü birimleri | birim | 1 |
+| UomConversion | Birim dönüşümü | Ana veri | Malzeme bazında birimler arası çevrim oranları | birim-donusumu | 1 |
+| Material | Malzeme | Ana veri | Hammadde, yarı mamul ve nihai ürünler ile planlama bilgileri | malzeme | 1 |
+| ProductionVersion | Üretim versiyonu | Ana veri | Bir malzemenin ürün ağacı ve rotasını belirleyen üretim versiyonları | uretim-versiyonu | 1 |
+| BOM | Ürün ağacı | Ana veri | Malzemelerin bileşenleri ve miktarları | urun-agaci | 1 |
+| Routing | Rota | Ana veri | Üretim operasyonları, kullandıkları kaynaklar ve süreleri | rota | 1 |
+| ResourceGroup | Kaynak grubu | Ana veri | Makine ve işçi kaynak grupları | kaynak-grubu | 1 |
+| Resource | Kaynak | Ana veri | Makine, işçi ve fason kaynakları ve kapasiteleri | kaynak | 1 |
+| CompetenceGroup | Yetkinlik grubu | Ana veri | İşçilerin yetkinlik grupları | yetkinlik-grubu | 1 |
+| Worker | İşçi | Ana veri | İşçiler ve bağlı oldukları kaynak grupları | isci | 1 |
+| WorkerCompetence | İşçi yetkinliği | Ana veri | Hangi işçinin hangi yetkinliğe sahip olduğu | isci-yetkinligi | 1 |
+| WorkerAbsence | İşçi izni | İşlem verisi | İşçilerin izin ve rapor kayıtları | isci-izni | 1 |
+| Supplier | Tedarikçi | Ana veri | Tedarikçiler ve fasoncular | tedarikci | 1 |
+| MaterialSupplier | Malzeme tedarikçisi | Ana veri | Malzemelerin tedarikçileri, temin süreleri ve sipariş koşulları | malzeme-tedarikcisi | 1 |
+| Customer | Müşteri | Ana veri | Müşteriler | musteri | 1 |
+| ProjectGroup | Proje grubu | Ana veri | Stok ve kapasiteyi paylaşan proje grupları | proje-grubu | 1 |
+| Project | Proje | Ana veri | Proje bazlı planlanan işler | proje | 1 |
+| SalesOrderLine | Satış siparişi | İşlem verisi | Müşteri sipariş ve teklif satırları | satis-siparisi | 1 |
+| Forecast | Tahmin | İşlem verisi | Malzeme ve dönem bazında talep tahminleri | tahmin | 1 |
+| Stock | Stok | İşlem verisi | Lot ve duruma göre eldeki stok | stok | 1 |
+| WorkOrder | İş emri | İşlem verisi | Açık üretim, fason ve yeniden işleme emirleri | is-emri | 1 |
+| WorkOrderComponent | İş emri bileşeni | İşlem verisi | İş emirlerinin bileşenleri ve çekilen miktarlar | is-emri-bileseni | 1 |
+| WorkOrderOperation | İş emri operasyonu | İşlem verisi | İş emirlerinin operasyonları ve kalan işi | is-emri-operasyonu | 1 |
+| PurchaseOrderLine | Satın alma siparişi | İşlem verisi | Açık satın alma ve fason sipariş satırları, talepler dahil | satin-alma-siparisi | 1 |
+| ProductionConfirmation | Üretim gerçekleşmesi | İşlem verisi | Operasyon bazında üretim gerçekleşmeleri | uretim-gerceklesmesi | 1 |
 
 ### stg.Material
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 1/2</sub>
@@ -616,8 +650,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Yöntem 3 · Excel şablonları
 <sub>26. Entegrasyon tasarımı · Yöntem 3 · Excel şablonları</sub>
 
-- **Ne zaman:** ERP'de tutulmayan ya da entegrasyonu olmayan varlıklar: kaynaklar, takvim, vardiya, duruş, tahmin; ilk kurulumda tüm ana veri; ERP'den gelen veriyi düzeltmek için toplu düzeltme (15).
-- **Şablon:** Veri sözlüğünden üretilir (02): 1. satır alan adı, 2. satır açıklama ve kural, 3. satır örnek; kod listeleri açılır liste; 'Kodlar' ve 'Açıklama' sayfaları; gizli sürüm bilgisi.
+- **Ne zaman:** ERP'de tutulmayan ya da entegrasyonu olmayan varlıklar: kaynaklar, tahmin; ilk kurulumda tüm ana veri (takvim, vardiya ve duruş Excel'den gelmez, ekrandan girilir: K-65); ERP'den gelen veriyi düzeltmek için toplu düzeltme (15).
+- **Şablon:** Sözleşmeden üretilir (02, K-110): 1. satır teknik alan adı, veri 2. satırdan; zorunlu alanın başlığı koyu. Etiket, açıklama, tip, boş bırakılırsa ne olacağı, Smartchain değerleri ve örnek 'Açıklama' sayfasında; gizli sürüm bilgisi. Eşleme yok: kolon adla bulunur. Açılır liste ve Excel doğrulaması yok: staging ERP'nin dilidir (K-58), farklı değerler veri kuralıyla çevrilir, tutarsızlık doğrulamada görünür.
 - **Yükleme:** Ekrandan sürükle-bırak (03): varlık ve sürüm tanıma, mod (ekle / güncelle ya da tam), satır bazlı ön kontrol, hata raporu, geçerli satırlarla devam.
 - **Sınırlar:** Tek dosya tek varlık; 200.000 satır (parametre); eski şablon sürümü uyarı verir. Excel yolu ERP'den gelen varlığın master'ı olamaz (çakışma: ERP ezer, alan ayarına göre).
 - **Dışa aktarma:** Aynı şablonlarla ana veri dışa aktarılır, düzeltilir ve elle değer olarak geri yüklenir; plan çıktıları (satın alma talebi, iş emri açma) ERP'nin alışık olduğu sütun düzeninde Excel listesi.
@@ -647,7 +681,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Ana veri (malzeme, ağaç, rota, tedarikçi, müşteri, proje) | ERP | Salt okunur; elle değer alan bazında | ERP ezer; elle değer alan ayarına göre kalır (FieldDefinition.ManualOverrides) |
 | Kaynak temel bilgisi (kod, ad, grup) | ERP ya da Excel | Salt okunur | Kaynağa göre |
 | Kaynak planlama alanları (tip, kapasite birimi, günlük kapasite, verim, kritik, sonsuz limit) | Smartchain | Kural ya da elle; ERP'de varsa başlangıç değeri | Smartchain değeri kalır; ERP değeri FieldValueSource.ErpValue'da görünür |
-| Takvim, vardiya, duruş | ERP varsa ERP, yoksa Smartchain (Excel) | Elle düzenlenebilir | Kaynağa göre |
+| Takvim, vardiya, duruş | Smartchain (K-65) | Ekrandan girilir | Smartchain değeri kalır |
 | Siparişler, stok, iş emirleri, gerçekleşmeler | ERP | Salt okunur | Her yüklemede ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
 | Tahmin | ERP ya da Excel | Excel ile yüklenir | Son yükleme geçerli; versiyonlu |
 | Parametreler, senaryo tanımları, kurallar, elle değerler | Smartchain | Ekrandan | ERP'ye gitmez |
@@ -658,7 +692,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Gece tam çekim · 22:00:** Tüm ERP varlıkları tam çekim, doğrulama, tam yükleme (v+1), ardından senaryolar. Bitiş sınırı 06:00. Excel varlıkları son yüklenen haliyle kalır.
 - **Gün içi kısmi · elle:** Stok ve siparişler (satış, satın alma, iş emri) Key user tarafından çekilip kısmi yüklenir; 'yeni veri var' bildirimi. Hedef 5 dk altı.
-- **Haftalık ve elle:** Takvim, vardiya, tahmin, kaynak: haftalık ya da değişince Excel ile. Ham veri temizliği Pazar 03:00.
+- **Haftalık ve elle:** Tahmin ve kaynak: haftalık ya da değişince Excel ile; takvim ve vardiya ekrandan (K-65). Ham veri temizliği Pazar 03:00.
 - **Artımlı çekim:** API'de LastModified, SQL'de SC_LAST_MODIFIED varsa yalnız değişenler; silinenler için tam liste ya da SC_ACTION = D gerekir. Artımlı destek yoksa tam çekim (varsayılan).
 - **Zamanlama ayarı:** Saatler ve paralellik Entegrasyon ekranında (Admin); bitiş sınırı ve işçi sayısı System owner ayarı. Müşterinin ERP gece işleriyle çakışmaması için saat devreye almada belirlenir.
 - **Çakışma yönetimi:** Gece akışı sırasında elle çekim kapalı; gün içi kısmi yükleme sırasında ikinci yükleme kuyrukta bekler. Yükleme açık çalışmaları etkilemez.

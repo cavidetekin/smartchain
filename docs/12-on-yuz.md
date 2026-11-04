@@ -313,6 +313,10 @@ Başlık "Denetim izi", altında ekranı dolduran ortak tablo: Zaman, Kullanıc�
 
 **Detay penceresi:** satır sonundaki göz. Zaman (saniyeli), Kullanıcı, İşlem, Nesne tipi, Nesne; altında Alan · Eski · Yeni tablosu. "Bu nesnenin tüm geçmişi" aynı pencerede zaman sırasıyla listeler (son 200); satır o kaydı açar, "Geri" döner. Nesnesi olmayan kayıtta düğme pasif, nedeni ipucunda. Key user'da yalnız kendi kayıtları.
 
+## Veri yükleme (3.1, K-110; ekran 02, fonksiyon 02)
+
+İskelet. Başlık "Veri yükleme", altında ekranı dolduran ortak tablo: Tablo, Kategori, Açıklama (tek cümle, docs/03 kataloğundan), Sürüm, Toplam alan, Zorunlu alan, Yükleme sırası; Teknik tablo adı Alanlar panelinden. Satır menüsü: Şablonu indir (v1) tek tıkla; Şablon bilgisi penceresi (sürüm, dosya, toplam alan, zorunlu alanlar; İndir). Değeri olmayan satır görünmez. Boş bırakılınca ne olacağı Excel'in Açıklama sayfasında. Excel'den yükle, Son Excel yüklemesini gör ve Bu tabloyu çekimden çıkar pasif, ipucunda gelecekleri adım. Son yükleme zamanı 3.2'de, Yöntem 3.3'te; üst düğmeler, sağ paneller ve sayı kolonları 5.5'te.
+
 ## Durum
 
 | Parça | Durum |

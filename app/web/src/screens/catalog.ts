@@ -76,7 +76,7 @@ export const SCREENS: Screen[] = [
   { no: "21", fn: 85, name: "Raporlar", path: "/takip/raporlar", group: "takip", step: "9.3", icon: FileChartColumn,
     description: "Onaylı plan ve senaryo raporları; Excel'e aktarım. Raporlar 9.4'te bu başlığın altına gelir." },
 
-  { no: "02", fn: 3, name: "Veri yükleme", path: "/veri/veri-yukleme", group: "veri", step: "5.5", icon: Upload,
+  { no: "02", fn: 3, name: "Veri yükleme", path: "/veri/veri-yukleme", group: "veri", step: "3.1", icon: Upload,
     description: "Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi yükleme, yükleme geçmişi." },
   { no: "03", fn: 10, name: "Ana veri", path: "/veri/ana-veri", group: "veri", step: "6.1", icon: Table2,
     description: "Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya." },

@@ -1,0 +1,106 @@
+{
+  "Location": {
+    "version": 1,
+    "contract": "a7e3ade877d4cb54"
+  },
+  "UnitOfMeasure": {
+    "version": 1,
+    "contract": "37f973974500306a"
+  },
+  "UomConversion": {
+    "version": 1,
+    "contract": "fad583de241659e7"
+  },
+  "Material": {
+    "version": 1,
+    "contract": "db94d49379b0578f"
+  },
+  "ProductionVersion": {
+    "version": 1,
+    "contract": "5d045f608596e814"
+  },
+  "BOM": {
+    "version": 1,
+    "contract": "3871a08963929736"
+  },
+  "Routing": {
+    "version": 1,
+    "contract": "4f635b552c25af10"
+  },
+  "ResourceGroup": {
+    "version": 1,
+    "contract": "cb142fa3d03da54c"
+  },
+  "Resource": {
+    "version": 1,
+    "contract": "1921114c219380dd"
+  },
+  "CompetenceGroup": {
+    "version": 1,
+    "contract": "2ae1353537955b94"
+  },
+  "Worker": {
+    "version": 1,
+    "contract": "f3b85850f66579a2"
+  },
+  "WorkerCompetence": {
+    "version": 1,
+    "contract": "ccb33bdee5eb61f7"
+  },
+  "WorkerAbsence": {
+    "version": 1,
+    "contract": "287024c7a298e522"
+  },
+  "Supplier": {
+    "version": 1,
+    "contract": "c97ea5758dcc7569"
+  },
+  "MaterialSupplier": {
+    "version": 1,
+    "contract": "1ebef4c5e4e6a936"
+  },
+  "Customer": {
+    "version": 1,
+    "contract": "56b9c8d3eae015d4"
+  },
+  "ProjectGroup": {
+    "version": 1,
+    "contract": "8fa3323ad1d1f037"
+  },
+  "Project": {
+    "version": 1,
+    "contract": "e85551e67c8f45d3"
+  },
+  "SalesOrderLine": {
+    "version": 1,
+    "contract": "9a7c5fb65819994d"
+  },
+  "Forecast": {
+    "version": 1,
+    "contract": "c28cead505545f63"
+  },
+  "Stock": {
+    "version": 1,
+    "contract": "5dbd75555f3ee49b"
+  },
+  "WorkOrder": {
+    "version": 1,
+    "contract": "e347769b21cbb655"
+  },
+  "WorkOrderComponent": {
+    "version": 1,
+    "contract": "d475a555e912699e"
+  },
+  "WorkOrderOperation": {
+    "version": 1,
+    "contract": "4efa2cdea2151a43"
+  },
+  "PurchaseOrderLine": {
+    "version": 1,
+    "contract": "48bd9efe24c72a15"
+  },
+  "ProductionConfirmation": {
+    "version": 1,
+    "contract": "4137bfc5b5dfd586"
+  }
+}

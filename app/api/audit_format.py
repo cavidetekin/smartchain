@@ -31,6 +31,8 @@ FIELD_LABELS = {
     "list": "Liste", "title": "Liste", "rows": "Satır", "size": "Boyut (bayt)", "seconds": "Süre (sn)", "background": "Arka planda",
     "columns": "Kolonlar", "filters": "Filtreler", "sort": "Sıralama", "group_by": "Gruplama", "scope": "Kapsam", "data_version": "Veri versiyonu",
     "field": "Alan", "dir": "Yön",
+    # Şablon indirme
+    "entity_name": "Tablo", "version": "Sürüm", "field_count": "Alan sayısı",
 }
 
 # Kodlu değerler; anahtara göre. Burada olmayan değer (ad, adres, serbest metin) olduğu gibi görünür.

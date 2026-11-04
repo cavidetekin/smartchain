@@ -126,10 +126,17 @@ def expand(rows, keymap):
         dict(
             name=r["ALAN"], type=r["TIP"], key=r.get("ANAHTAR", ""), desc=r.get("AÇIKLAMA", ""), label=r.get("ETİKET", ""),
             required=r.get(keymap["req"], "") == "E", default=r.get("VARSAYILAN", ""),
-            source=r.get(keymap["src"], ""), workspace=r.get("ÇALIŞ.", "") == "E",
+            source=r.get(keymap["src"], ""), workspace=r.get("ÇALIŞ.", "") == "E", missing=r.get("YOKSA", ""),
         )
         for r in out
     ]
+
+
+def read_catalog() -> list[tuple]:
+    """docs/03 Varlık kataloğu (K-110): (tablo, ad, sınıf, açıklama, dosya adı, sürüm)."""
+    lines = (DOCS / "03-entegrasyon.md").read_text(encoding="utf-8").splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("| VARLIK | AD | SINIF | AÇIKLAMA |"))
+    return [(r["VARLIK"], r["AD"], r["SINIF"], r["AÇIKLAMA"], r["DOSYA ADI"], int(r["SÜRÜM"])) for r in parse_rows(lines, start)[1]]
 
 
 def build_spec():
@@ -227,6 +234,11 @@ def render_models(spec) -> str:
         "",
         "SCHEMAS = " + repr(list(SCHEMA_TITLE)),
         "",
+        "# docs/03 Varlık kataloğu (K-110): tablo, ad, sınıf, açıklama, dosya adı, sürüm",
+        "ENTITY_CATALOG = (",
+        *[f"    {row!r}," for row in read_catalog()],
+        ")",
+        "",
     ]
     for t in spec:
         schema, name = t["schema"], t["name"]
@@ -234,7 +246,7 @@ def render_models(spec) -> str:
         cols, extra = [], []
         if schema == "stg":
             fields = [dict(name=n, type=ty, key="", desc=d, required=r, default="", source="Sistem")
-                      for n, ty, d, r in STAGING_COLS] + [dict(f, required=False) for f in fields
+                      for n, ty, d, r in STAGING_COLS] + [dict(f, required=False, contract_required=f["required"]) for f in fields
                                                           if f["name"] not in ("ImportBatchId",)]
         elif t["versioned"]:
             have = {f["name"] for f in fields}
@@ -283,6 +295,10 @@ def render_models(spec) -> str:
                 if schema in ("core", "param"):  # veri sözlüğü (K-104, db/dictionary.py); DDL'e girmez
                     info += [f"'source': {q(f.get('source', ''))}", f"'workspace': {bool(f.get('workspace'))}"]
                     info += [f"'default': {q(f['default'])}"] if f.get("default") else []
+                kw.append(f"info={{{', '.join(info)}}}")
+            if "contract_required" in f:  # sözleşme (K-110): kolon boş kalabilir (ham veri), şablon ve doğrulama buradan okur
+                info = ([f"'label': {q(label)}"] if label else []) + ([f"'values': {json.dumps(values, ensure_ascii=False)}"] if values else [])
+                info += [f"'required': {f['contract_required']}", f"'key': {q(f['key'])}", f"'missing': {q(f['missing'])}"]
                 kw.append(f"info={{{', '.join(info)}}}")
             cols.append(f"    sa.Column({', '.join(args + kw)}),")
         if uk:

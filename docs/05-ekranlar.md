@@ -270,6 +270,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kısmi yükleme:** Hatalı varlık seçilmeden diğerleri yüklenir; yeni veri versiyonu oluşur.
 - **Hata detayı:** Hatalı satır ve nedeni sağda; düzeltme kaynakta ya da elle yapılır.
 - **Geçmiş:** Gece ve elle yüklemeler kullanıcı ve sonuçla birlikte saklanır.
+- **Uygulama (3.1, K-110):** iskelet: 26 tablo ortak tabloda, satır menüsünde şablon indirme ve şablon bilgisi. Son yükleme zamanı 3.2'de, Yöntem 3.3'te; sayılar, üst düğmeler, sağ paneller 5.5'te.
 
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>
