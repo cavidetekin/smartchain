@@ -1,5 +1,6 @@
 """Excel yükleme performansı (K-129): eşikteki dosya istek içinde kalmalı; 200.000 satır iş kuyruğunda ölçülür. Ayrıca: pytest -m perf."""
 import io
+import statistics
 import time
 from datetime import date, timedelta
 
@@ -23,6 +24,7 @@ pytestmark = [pytest.mark.db, pytest.mark.perf]
 
 TABLE = "Material"  # en geniş tablo
 TARGET_SYNC_SECONDS = 15
+RUNS = 3  # docs/08: her ölçüm birkaç denemenin ortancası
 PREFIX = "pytest.yukleme-perf."
 
 
@@ -70,11 +72,15 @@ def test_threshold_file_stays_under_target_in_the_request(user):
     data = body(40000)
     assert len(data) <= IMPORT_DEFAULTS["ImportSyncMaxMb"] * 1024 * 1024
     client = TestClient(create_app(), raise_server_exceptions=False)
-    start = time.perf_counter()
-    r = client.post(f"/api/imports/{TABLE}", content=data, headers={**auth(user), "X-File-Name": "m.xlsx"})
-    seconds = time.perf_counter() - start
-    print(f"\n40.000 satır, {len(data) / 1e6:.1f} MB, API dahil: {seconds:.1f} sn")
-    assert r.status_code == 200 and r.json()["valid"] == 40000
+    times = []
+    for _ in range(RUNS):
+        start = time.perf_counter()
+        r = client.post(f"/api/imports/{TABLE}", content=data, headers={**auth(user), "X-File-Name": "m.xlsx"})
+        times.append(time.perf_counter() - start)
+        assert r.status_code == 200 and r.json()["valid"] == 40000
+        assert client.post(f"/api/imports/{r.json()['batch_id']}/cancel", headers=auth(user)).status_code == 200  # sonraki deneme önceki satırları silmekle uğraşmasın
+    seconds = statistics.median(times)
+    print(f"\n40.000 satır, {len(data) / 1e6:.1f} MB, API dahil: ortanca {seconds:.1f} sn ({', '.join(f'{x:.1f}' for x in times)})")
     assert seconds < TARGET_SYNC_SECONDS
 
 
@@ -94,14 +100,17 @@ def test_largest_file_finishes_as_a_job(db_engine, user, monkeypatch):
     data = body(IMPORT_DEFAULTS["ImportMaxRows"])
     path = service._folder() / "perf.xlsx"
     path.write_bytes(data)
-    with Session(db_engine) as s:
-        batch_id = repo.create_batch(s, TABLE, "Değişen", "perf.xlsx", user, contract.entity(TABLE).version)
-        repo.set_batch(s, batch_id, FilePath=str(path))
-        s.commit()
-        start = time.perf_counter()
-        service.run_precheck(s, batch_id)
-        seconds = time.perf_counter() - start
-    print(f"\n200.000 satır, {len(data) / 1e6:.1f} MB, iş: {seconds:.1f} sn")
-    with db_engine.connect() as c:
-        assert c.execute(text(f"SELECT COUNT(*) FROM stg.[{TABLE}] WHERE ImportBatchId = :b"), {"b": batch_id}).scalar() == 200000
+    times = []
+    for _ in range(RUNS):
+        with Session(db_engine) as s:
+            batch_id = repo.create_batch(s, TABLE, "Değişen", "perf.xlsx", user, contract.entity(TABLE).version)
+            repo.set_batch(s, batch_id, FilePath=str(path))
+            s.commit()
+            start = time.perf_counter()
+            service.run_precheck(s, batch_id)
+            times.append(time.perf_counter() - start)
+        with db_engine.begin() as c:
+            assert c.execute(text(f"SELECT COUNT(*) FROM stg.[{TABLE}] WHERE ImportBatchId = :b"), {"b": batch_id}).scalar() == 200000
+            c.execute(text(f"DELETE FROM stg.[{TABLE}]"))
+    print(f"\n200.000 satır, {len(data) / 1e6:.1f} MB, iş: ortanca {statistics.median(times):.1f} sn ({', '.join(f'{x:.1f}' for x in times)})")
     path.unlink(missing_ok=True)
