@@ -66,15 +66,15 @@ def test_download_writes_trace_and_info_does_not(db_engine, client, people):
         assert c.execute(text("SELECT COUNT(*) FROM adm.AuditLog WHERE ObjectType = N'Template'")).scalar_one() == 0
 
     r = client.get("/api/templates/Resource", headers=h)
-    assert r.status_code == 200 and "smartchain_kaynak_v1.xlsx" in r.headers["content-disposition"]
+    assert r.status_code == 200 and "smartchain_kaynak_v3.xlsx" in r.headers["content-disposition"]
     assert [c.value for c in sheet(r)[1]] == [f.name for f in contract.fields("Resource")]
 
     with db_engine.connect() as c:
         row = c.execute(text("SELECT TOP 1 Id, Action, UserId, ObjectKey FROM adm.AuditLog WHERE ObjectType = N'Template' ORDER BY Id DESC")).one()
-    assert (row.Action, row.UserId, row.ObjectKey) == ("Şablon indirme", people[KEY_USER], "smartchain_kaynak_v1.xlsx")
+    assert (row.Action, row.UserId, row.ObjectKey) == ("Şablon indirme", people[KEY_USER], "smartchain_kaynak_v3.xlsx")
     seen = client.get(f"/api/audit-log/{row.Id}", headers=auth(people[ADMIN])).json()
     assert seen["object_type"] == "Şablon"
-    assert {c["field"]: c["new"] for c in seen["changes"]} == {"Tablo": "Kaynak", "Sürüm": "1", "Alan sayısı": "15"}
+    assert {c["field"]: c["new"] for c in seen["changes"]} == {"Tablo": "Kaynak", "Sürüm": "3", "Alan sayısı": "17"}
 
 
 def test_no_file_without_trace(db_engine, client, people):
@@ -92,15 +92,15 @@ def test_labels_from_dictionary_version_stays(db_engine, client, people):
         c.execute(text("UPDATE adm.FieldDefinition SET Label = N'Tezgâh adı' WHERE TableName = N'Resource' AND FieldName = N'Name'"))
     h = auth(people[KEY_USER])
     r = client.get("/api/templates/Resource", headers=h)
-    assert "smartchain_kaynak_v1.xlsx" in r.headers["content-disposition"]
+    assert "smartchain_kaynak_v3.xlsx" in r.headers["content-disposition"]
     assert "AdditionalNumber1" in [c.value for c in sheet(r)[1]]
     labels = {row[0]: row[1] for row in sheet(r, "Açıklama").iter_rows(min_row=3, values_only=True)}
     assert labels["AdditionalNumber1"] == "Birim ağırlık" and labels["Name"] == "Tezgâh adı"
     info = client.get("/api/templates/Resource/info", headers=h).json()
-    assert info["field_count"] == 16 and info["version"] == 1
+    assert info["field_count"] == 18 and info["version"] == 3
 
     body = {"fields": ["Name", "FieldCount"], "filters": [{"field": "Name", "op": "equals", "value": "Kaynak"}]}
-    assert client.post("/api/data-entities/query", headers=h, json=body).json()["rows"][0]["FieldCount"] == 16
+    assert client.post("/api/data-entities/query", headers=h, json=body).json()["rows"][0]["FieldCount"] == 18
 
 
 def test_info_lists_required_fields(client, people):
@@ -119,15 +119,15 @@ def test_entity_list_sorts_filters_and_exports(client, people):
 
     # satır menüsü gizli kolonları da okur
     only = client.post("/api/data-entities/query", headers=h, json={"fields": ["EntityClass"], "limit": 1}).json()["rows"][0]
-    assert only["Entity"] == "Location" and only["Name"] == "Lokasyon" and only["Version"] == 1
+    assert only["Entity"] == "Location" and only["Name"] == "Lokasyon" and only["Version"] == 2
 
     fields = ["Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount"]
     body = client.post("/api/data-entities/query", headers=h, json={"fields": fields, "limit": 100}).json()
-    assert [r["Name"] for r in body["rows"]] == [e.name for e in contract.ENTITIES] and body["total"] == 26
+    assert [r["Name"] for r in body["rows"]] == [e.name for e in contract.ENTITIES] and body["total"] == 25
     assert all(r["Entity"] for r in body["rows"])  # satır menüsü gizli kolonu da okur
     resource = next(r for r in body["rows"] if r["Name"] == "Kaynak")
-    assert (resource["Version"], resource["FieldCount"], resource["RequiredCount"]) == (1, 15, 2)
-    assert resource["Description"] == "Makine, işçi ve fason kaynakları ve kapasiteleri"
+    assert (resource["Version"], resource["FieldCount"], resource["RequiredCount"]) == (3, 17, 2)
+    assert resource["Description"] == "Makine, işçi ve fason kaynakları"
 
     sorted_rows = client.post("/api/data-entities/query", headers=h, json={"fields": fields, "limit": 100, "sort": [{"field": "FieldCount", "dir": "desc"}]}).json()["rows"]
     assert sorted_rows[0]["FieldCount"] >= sorted_rows[-1]["FieldCount"]
@@ -137,4 +137,4 @@ def test_entity_list_sorts_filters_and_exports(client, people):
     r = client.post("/api/data-entities/export", headers=h, json={"fields": fields})
     assert r.status_code == 200, r.text
     rows = list(load_workbook(io.BytesIO(r.content)).worksheets[0].iter_rows(values_only=True))
-    assert rows[0][0] == "Tablo" and len(rows) == 27
+    assert rows[0][0] == "Tablo" and len(rows) == 26

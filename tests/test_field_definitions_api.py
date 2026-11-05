@@ -88,7 +88,7 @@ def test_excel(client, people):
     # açıklama kolon açıksa ya da Sütunlar "Tümü" seçilirse çıkar
     r = client.post("/api/field-definitions/export", headers=auth(people[SYSTEM_OWNER]), json={
         "fields": ["FieldName"], "scope": {"columns": "all"},
-        "filters": [{"field": "TableName", "op": "in", "values": ["Resource"]}, {"field": "FieldName", "op": "equals", "value": "IsConstrained"}]})
+        "filters": [{"field": "TableName", "op": "in", "values": ["Resource"]}, {"field": "FieldName", "op": "equals", "value": "IsCritical"}]})
     assert r.status_code == 200, r.text
     rows = list(load_workbook(io.BytesIO(r.content)).worksheets[0].iter_rows(values_only=True))
     at = rows[0].index("Açıklama")

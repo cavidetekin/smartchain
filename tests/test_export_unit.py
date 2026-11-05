@@ -137,6 +137,30 @@ def test_aggregate_formats():
     assert formats.aggregate_number_format(col, "count", 3) == "#,##0"
 
 
+def test_percent_column_formats():
+    """K-113: hücrede oran durur, biçim yüzde gösterir; ortalama bir ondalık fazla."""
+    col = {"type": "number", "decimals": 2, "percent": True}
+    assert formats.column_number_format(col) == "%#,##0.00"
+    assert formats.aggregate_number_format(col, "avg", None) == "%#,##0.000" and formats.aggregate_number_format(col, "sum", None) == "%#,##0.00"
+    assert formats.aggregate_number_format(col, "count", None) == "#,##0"
+    buffer = io.BytesIO()
+    writer = XlsxWriter(buffer, [{"field": "ScrapRatio", "label": "Fire oranı", **col}])
+    writer.header()
+    writer.data_row({"ScrapRatio": Decimal("0.05")})
+    writer.save()
+    buffer.seek(0)
+    cell = load_workbook(buffer)["Veri"].cell(row=2, column=1)
+    assert cell.value == 0.05 and cell.number_format == "%#,##0.00"
+
+
+def test_percent_descriptions():
+    assert describe.tr_percent(0.05, 2) == "%5,00" and describe.tr_percent(0.0225) == "%2,25"
+    assert describe.describe_filter({"op": "gt", "value": 0.05}, "Fire oranı", 2, True) == "Fire oranı: > %5,00"
+    assert describe.describe_filter({"op": "between", "min": 0.01, "max": 0.1}, "Fire oranı", 2, True) == "Fire oranı: %1,00–%10,00"
+    rule = {"field": "ScrapRatio", "condition": {"op": "gt", "value": 0.05}, "format": {"bold": True}}
+    assert describe.describe_rule(rule, "Fire oranı", {}, 2, True) == "Fire oranı: > %5,00 → kalın"
+
+
 def test_describe_texts_are_turkish():
     assert describe.tr_number(1234567.5, 2) == "1.234.567,50"
     assert describe.tr_number(20, 0) == "20"

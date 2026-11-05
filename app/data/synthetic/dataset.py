@@ -38,6 +38,7 @@ BOTTLENECK_RESOURCE = "M5-01"
 BOTTLENECK_PRODUCTS = ("MAM-001", "MAM-002", "MAM-003")
 BOTTLENECK_HOURS = 3.0          # bu mamullerin gövde parçasının 5 eksende birim süresi
 LIGHT_M5_HOURS = 0.3
+LABOR_GROUP = "CG-MON"  # işçilik satırlarının grubu: montajcı yetkinliği (K-116, K-117)
 LATE_MATERIAL, LATE_SUPPLIER, LATE_PRODUCT, LATE_ORDER = "HAM-012", "TED-04", "MAM-008", "SO-1027"
 LATE_LEAD_DAYS = 56
 LIMIT_SUPPLIER, LIMIT_MATERIAL, LIMIT_QTY = "TED-05", "SAT-003", 400
@@ -72,6 +73,7 @@ class Dataset:
     start: date                                         # hafta 1 Pazartesi
     tables: dict[str, list[dict]] = field(default_factory=dict)   # core tablo → satırlar
     params: dict[str, list[dict]] = field(default_factory=dict)   # param tablo → satırlar
+    lead_days: dict[int, int] = field(default_factory=dict)       # malzeme Id → üretim süresi; tabloda yok, senaryoların iç hesabı (K-12)
 
     @property
     def horizon_end(self) -> date:
@@ -152,6 +154,7 @@ def generate(on: date | None = None, seed: int = SEED) -> Dataset:
 def _organisation(b: _Builder, rng: random.Random) -> None:
     ds = b.ds
     b.add("Location", Code=LOCATION_CODE, Name="Örnek Makina A.Ş. · Merkez fabrika", Type="Tesis",
+          IsFactory=True, IsDepot=True, IsSubcontractor=False, IsActive=True,
           Country="Türkiye", CountryCode="TR", City="Kocaeli")
     # Decimals: miktar ondalığı (K-88); ERP'den gelmez, Smartchain'de tutulur.
     for code, name, decimals in [("ADET", "Adet", 0), ("KG", "Kilogram", 3), ("M", "Metre", 2), ("SAAT", "Saat", 2)]:
@@ -169,9 +172,21 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
     groups = [("TORNA", "CNC torna"), ("ISL3", "3 eksen işleme"), ("ISL5", "5 eksen işleme"),
               ("TASLAMA", "Taşlama"), ("MONTAJ", "Montaj"), ("KALITE", "Kalite kontrol")]
     for code, name in groups:
-        b.add("ResourceGroup", LocationId=1, Code=code, Name=name)
-    for code, name in [("CG-CNC", "CNC operatörü"), ("CG-MON", "Montajcı"), ("CG-KAL", "Kalite teknisyeni")]:
-        b.add("CompetenceGroup", LocationId=1, Code=code, Name=name)
+        b.add("ResourceGroup", LocationId=1, Code=code, Name=name, Type="Makine grubu", IsResourceGroup=True,
+              IsCompetenceGroup=False, IsActive=True)
+    # Yetkinlikler kaynak grubudur (K-117).
+    for code, name in [("CG-CNC", "CNC operatörü"), (LABOR_GROUP, "Montajcı"), ("CG-KAL", "Kalite teknisyeni")]:
+        b.add("ResourceGroup", LocationId=1, Code=code, Name=name, Type="Yetkinlik", IsResourceGroup=False,
+              IsCompetenceGroup=True, IsActive=True)
+
+    def resource(code, name, kind, flag, critical, daily, quantity=1, **extra):
+        """Tip bayrakla ifade edilir (K-117); kapasite alanları Smartchain'de tanımlanır, core'da durur."""
+        flags = dict(IsEmployee=False, IsMachine=False, IsFurnace=False, IsMold=False, IsOther=False, IsSubcontractor=False)
+        return b.add("Resource", LocationId=1, Code=code, Name=name, ResourceType=kind, **{**flags, flag: True}, IsActive=True,
+                     IsCritical=critical, CapacityUnit="SAAT", DailyCapacity=daily, Quantity=quantity, CalendarId=cal["Id"], **extra)
+
+    def assign(resource_row, group):
+        b.add("ResourceGroupAssignment", LocationId=1, ResourceGroupId=b.id("ResourceGroup", group), ResourceId=resource_row["Id"])
 
     machines = ([(f"T-0{i}", f"CNC torna {i}", "TORNA", 15.0) for i in range(1, 5)]
                 + [(f"M3-0{i}", f"3 eksen işleme merkezi {i}", "ISL3", 15.0) for i in range(1, 4)]
@@ -180,15 +195,11 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
                 + [(f"A-0{i}", f"Montaj hattı {i}", "MONTAJ", 15.0) for i in range(1, 3)]
                 + [("Q-01", "Kalite kontrol istasyonu", "KALITE", 7.5)])
     for code, name, group, daily in machines:
-        b.add("Resource", LocationId=1, Code=code, Name=name, ResourceGroupId=b.id("ResourceGroup", group),
-              ResourceType="Makine", ResourceRole="Primary", IsConstrained=True, CapacityUnit="Saat",
-              DailyCapacity=daily, Quantity=1, CalendarId=cal["Id"])
+        assign(resource(code, name, "Makine", "IsMachine", True, daily, ProductionLocation="Hol 1"), group)
     # Fason kaynaklar tedarikçiye bağlanır (_suppliers'ta SupplierId yazılır).
     for code, name, lead in [("F-ISIL", "Fason ısıl işlem", 5), ("F-KAPLA", "Fason kaplama", 4)]:
-        b.add("Resource", LocationId=1, Code=code, Name=name, ResourceGroupId=None, ResourceType="Fason",
-              ResourceRole="Primary", IsConstrained=False, CapacityUnit="Saat", DailyCapacity=24.0, Quantity=1,
-              CalendarId=cal["Id"], SubconPlanningType="Tedarik süresi", SubconFixedLeadTimeDays=lead,
-              SubconVariableDaysPerUnit=0.0)
+        resource(code, name, "Fason", "IsSubcontractor", False, 24.0, SubconPlanningType="Tedarik süresi",
+                 SubconFixedLeadTimeDays=lead, SubconVariableDaysPerUnit=0.0)
 
     b.add("ResourceCapacityProfile", ResourceId=b.id("Resource", "G-02"), ValidFrom=ds.day(9), ValidTo=ds.day(10, 6),
           DailyCapacity=7.5)
@@ -204,9 +215,9 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
 
     s1, s2 = b.id("Shift", "S1"), b.id("Shift", "S2")
     valid = dict(ValidFrom=ds.start - timedelta(days=HISTORY_DAYS), ValidTo=ds.horizon_end)
-    b.add("ShiftPlan", CompetenceGroupId=b.id("CompetenceGroup", "CG-MON"), ShiftId=s1, Headcount=6, **valid)
-    b.add("ShiftPlan", CompetenceGroupId=b.id("CompetenceGroup", "CG-MON"), ShiftId=s2, Headcount=4, **valid)
-    b.add("ShiftPlan", CompetenceGroupId=b.id("CompetenceGroup", "CG-KAL"), ShiftId=s1, Headcount=2, **valid)
+    b.add("ShiftPlan", ResourceGroupId=b.id("ResourceGroup", "CG-MON"), ShiftId=s1, Headcount=6, **valid)
+    b.add("ShiftPlan", ResourceGroupId=b.id("ResourceGroup", "CG-MON"), ShiftId=s2, Headcount=4, **valid)
+    b.add("ShiftPlan", ResourceGroupId=b.id("ResourceGroup", "CG-KAL"), ShiftId=s1, Headcount=2, **valid)
 
     names = set()
     for i in range(1, 26):
@@ -223,19 +234,24 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
             group, comps = "KALITE", ["CG-KAL"]
         else:
             group, comps = "MONTAJ", ["CG-MON", "CG-KAL"]
-        w = b.add("Worker", LocationId=1, Code=f"W-{i:03d}", Name=name, ResourceGroupId=b.id("ResourceGroup", group),
-                  IsActive=True)
+        w = resource(f"W-{i:03d}", name, "İşçi", "IsEmployee", True, 7.5)  # işçiler kaynaktır (K-117)
+        assign(w, group)
         for c in comps:
-            b.add("WorkerCompetence", with_id=False, WorkerId=w["Id"], CompetenceGroupId=b.id("CompetenceGroup", c))
+            assign(w, c)
     # Durum 5: izin (hafta 3, bütün hafta) ve rapor (hafta 1, Salı–Çarşamba); ayrıca ileride bir izin.
     for code, start, end, kind in [(LEAVE_WORKER, ds.day(3, 0), ds.day(3, 5), "İzin"),
                                    (SICK_WORKER, ds.day(1, 1), ds.day(1, 3), "Rapor"),
                                    ("W-021", ds.day(9, 3), ds.day(9, 5), "İzin")]:
-        b.add("WorkerAbsence", WorkerId=b.id("Worker", code), StartAt=datetime.combine(start, time(0, 0)),
-              EndAt=datetime.combine(end, time(0, 0)), AbsenceType=kind)
+        # Bitiş günü dahil (K-117); W-021 günde 4 saat kısmi devamsızlık.
+        b.add("EmployeeAbsence", LocationId=1, ResourceId=b.id("Resource", code), AbsenceType=kind, StartDate=start,
+              EndDate=end - timedelta(days=1), HoursPerDay=4.0 if code == "W-021" else None)
 
 
 # --- Malzemeler ---
+
+MATERIAL_TYPE = {"Nihai ürün": "MAM", "Yarı mamul": "YRM", "Hammadde": "HAM"}
+# Satın alınan malzeme grubu → (marka, kutu içi, palet içi); hayali değerler (K-113).
+PURCHASED_PACK = {"Rulman": ("Ayaz", 10, 500), "Bağlantı": ("Demir", 100, 5000)}
 
 # Ek alan örneği (K-59, K-88; tablo bileşeni denemesi 1.3): Material.AdditionalText1 "Malzeme sınıfı".
 MATERIAL_CLASS = {"Nihai ürün": "A", "Yarı mamul": "B", "Hammadde": "C"}
@@ -245,19 +261,24 @@ FIELD_DEFINITIONS = [dict(TableName="Material", FieldName="AdditionalText1", Fie
 def _materials(b: _Builder, rng: random.Random) -> None:
     def mat(code, name, level, group, uom, producible, lead=None, **extra):
         row = dict(LocationId=1, Code=code, Name=name, BaseUom=uom, MaterialGroup=group,
-                   MaterialLevel=level, IsPurchasable=not producible, IsProducible=producible,
-                   IsSellable=level == "Nihai ürün", DefaultProcurement="Üretim" if producible else "Satın alma",
-                   Ownership="Kendi", IsProjectTracked=False, IsPhantom=False,
-                   ProductionLeadTimeDays=lead if producible else None,
+                   MaterialLevel=level, MaterialType=MATERIAL_TYPE[level], PlannerCode="PLN-1" if producible else "PLN-2",
+                   MRPGroup="URETIM" if producible else "SATINALMA", IsActive=True, IsCritical=False,
+                   IsPurchasable=not producible, IsProducible=producible, IsSellable=level == "Nihai ürün",
+                   IsSubcontractable=False, DefaultSupplyType="Üretim" if producible else "Satın alma",
+                   IsCustomerSupplied=False, IsCustomTracked=False, IsPhantom=False,
+                   StockCoverageDays=lead if producible else None,
                    GoodsReceiptDays=None if producible else 1,
                    LotSizePolicy="Lot-for-lot" if producible else None,
                    AdditionalText1=MATERIAL_CLASS[level])
-        return b.add("Material", **{**row, **extra})
+        added = b.add("Material", **{**row, **extra})
+        if producible and lead:
+            b.ds.lead_days[added["Id"]] = lead
+        return added
 
     for code, name, _ in FINISHED:
         lead = 3
         mat(code, name, "Nihai ürün", "Mamul", "ADET", True, lead,
-            IsProjectTracked=code == "MAM-006")
+            IsCustomTracked=code == "MAM-006")
     n_alt = n_prc = 0
     for f, (fcode, _, short) in enumerate(FINISHED):
         for a, aname in enumerate(ASSEMBLIES):
@@ -277,7 +298,7 @@ def _materials(b: _Builder, rng: random.Random) -> None:
     for i in range(20):  # çubuk
         n += 1
         if n == 12:
-            mat(LATE_MATERIAL, "Dövme flanş Ø200 S355", "Hammadde", "Dövme", "ADET", False)
+            mat(LATE_MATERIAL, "Dövme flanş Ø200 S355", "Hammadde", "Dövme", "ADET", False, IsCritical=True)
             n += 1
         mat(f"HAM-{n:03d}", f"Çelik çubuk Ø{30 + 5 * (i % 10)} {grades[i % 5]}", "Hammadde", "Çubuk", "KG", False)
     while n < 40:  # levha
@@ -299,14 +320,16 @@ def _materials(b: _Builder, rng: random.Random) -> None:
                     ("Rondela M10", "Bağlantı"), ("Rondela M12", "Bağlantı"), ("Yaylı pim Ø5×30", "Bağlantı")])
     assert len(purchased) == 39
     for i, (name, group) in enumerate(purchased[:39], 1):
+        brand, box, pallet = PURCHASED_PACK.get(group, (None, None, None))
         mat(f"SAT-{i:03d}", name, "Hammadde", group, "ADET", False,
-            SafetyStock=20 if group == "Rulman" else None, MinLot=50 if group == "Bağlantı" else None)
+            SafetyStock=20 if group == "Rulman" else None, MinLot=50 if group == "Bağlantı" else None,
+            Brand=brand, QtyPerBox=box, QtyPerPallet=pallet, IsCritical=group == "Rulman")
     # H4 için yalnız Material'da geçen malzeme: müşteri temin, satın alınmaz, hiçbir yerde kullanılmaz.
     m = mat(ISOLATED_MATERIAL, "Müşteri temin etiket seti", "Hammadde", "Aksesuar", "ADET", False)
-    m.update(IsPurchasable=False, Ownership="Müşteri", GoodsReceiptDays=None)
+    m.update(IsPurchasable=False, IsCustomerSupplied=True, GoodsReceiptDays=None)
 
     for code, factor in [("HAM-001", 5.55), ("HAM-002", 7.55), ("HAM-003", 9.86), ("HAM-004", 12.48)]:
-        b.add("UomConversion", MaterialId=b.id("Material", code), FromUom="M", ToUom="KG", Factor=factor)
+        b.add("UomConversion", MaterialId=b.id("Material", code), FromUom="M", FromUomName="Metre", ToUom="KG", ToUomName="Kilogram", Factor=factor)
 
 
 # --- Ürün ağacı ve rota ---
@@ -315,28 +338,35 @@ def _structure(b: _Builder, rng: random.Random) -> None:
     res = lambda code: b.id("Resource", code)  # noqa: E731
     sat_pool = [f"SAT-{i:03d}" for i in range(1, 40) if i != 3]
     ham_pool = [f"HAM-{i:03d}" for i in range(1, 41) if f"HAM-{i:03d}" != LATE_MATERIAL]
-    cg_mon = b.id("CompetenceGroup", "CG-MON")
     light_m5 = {"PRC-026", "PRC-042", "PRC-050", "PRC-063", "PRC-071"}  # 5 eksende kısa işlenen parçalar
 
     def version(code):
-        return b.add("ProductionVersion", MaterialId=b.id("Material", code), Code="V1", IsDefault=True,
-                     BaseQuantity=1.0, RouteCode=f"R-{code}", ValidFrom=b.ds.start - timedelta(days=365))
+        return b.add("ProductionVersion", LocationId=1, MaterialId=b.id("Material", code), Code="V1", Name="Standart üretim",
+                     Type="Standart", IsActive=True, Priority=1, BaseQuantity=1.0, BOMCode=f"B-{code}", RouteCode=f"R-{code}",
+                     ValidFrom=b.ds.start - timedelta(days=365))
 
     def bom(pv, comp, qty, op=None):
-        b.add("BOM", ProductionVersionId=pv["Id"], ComponentMaterialId=b.id("Material", comp), Quantity=qty,
-              ScrapPct=None, IsFixedQuantity=False, OpNo=op)
+        b.add("BOM", LocationId=1, MaterialId=pv["MaterialId"], Code=pv["BOMCode"], ComponentMaterialId=b.id("Material", comp),
+              OperationNo=op, SequenceNo=1, Quantity=qty, ScrapRatio=None, IsPhantom=False, IsLotBasedUsage=False)
 
     def op(code, no, name, resource, cons, **extra):
-        b.add("Routing", RouteCode=f"R-{code}", OpNo=no, SeqNo=1, OperationName=name, ResourceId=res(resource),
-              ResourceRole="Primary", Consumption=round(cons, 3), ResourceNumber=1,
-              IsSubcontracted=resource.startswith("F-"), **extra)
+        if resource.startswith("F-"):  # fason operasyonu olan malzeme fasona verilebilir
+            next(m for m in b.t["Material"] if m["Code"] == code)["IsSubcontractable"] = True
+        return b.add("Routing", LocationId=1, RouteCode=f"R-{code}", OperationNo=no, SequenceNo=1, OperationName=name, ResourceId=res(resource),
+                     ResourceRole="Primary", Consumption=round(cons, 3), ResourceNumber=1,
+                     IsSubcontracted=resource.startswith("F-"), IsActive=True, IsLotBasedUsage=False, **extra)
+
+    def crew(row, people=2):
+        """İşçilik ayrı kaynak satırı (K-116): işçi grubu, Secondary, kişi sayısı, süre ana satırla aynı."""
+        b.add("Routing", LocationId=1, RouteCode=row["RouteCode"], OperationNo=row["OperationNo"], SequenceNo=2, OperationName=row["OperationName"],
+              ResourceId=None, ResourceGroupId=b.id("ResourceGroup", LABOR_GROUP), ResourceRole="Secondary", Consumption=row["Consumption"],
+              ResourceNumber=people, IsSubcontracted=False, IsActive=True, IsLotBasedUsage=False)
 
     n_alt = n_prc = 0
     for fcode, _, _ in FINISHED:
         pv_f = version(fcode)
-        op(fcode, 10, "Son montaj", rng.choice(["A-01", "A-02"]), rng.uniform(1.0, 2.0),
-           LaborType="Yetkinlik grubu", LaborRefId=cg_mon, LaborBasis="Ekip", CrewSize=2)
-        op(fcode, 20, "Son kontrol", "Q-01", 0.3, LaborType="Yok")
+        crew(op(fcode, 10, "Son montaj", rng.choice(["A-01", "A-02"]), rng.uniform(1.0, 2.0)))
+        op(fcode, 20, "Son kontrol", "Q-01", 0.3)
         for sat in rng.sample(sat_pool, rng.choice([2, 3])):
             bom(pv_f, sat, rng.choice([2, 4, 6, 8]), 10)
         for a in range(3):
@@ -344,8 +374,7 @@ def _structure(b: _Builder, rng: random.Random) -> None:
             acode = f"ALT-{n_alt:03d}"
             bom(pv_f, acode, 1, 10)
             pv_a = version(acode)
-            op(acode, 10, "Alt montaj", rng.choice(["A-01", "A-02"]), rng.uniform(0.5, 1.2),
-               LaborType="Yetkinlik grubu", LaborRefId=cg_mon, LaborBasis="Ekip", CrewSize=2)
+            crew(op(acode, 10, "Alt montaj", rng.choice(["A-01", "A-02"]), rng.uniform(0.5, 1.2)))
             extra_sat = rng.sample(sat_pool, rng.choice([1, 2]))
             if a == 1:
                 extra_sat = ["SAT-003"] + extra_sat[:1]  # rulman 6205: her mil grubunda (durum 3)
@@ -387,9 +416,9 @@ def _suppliers(b: _Builder, rng: random.Random) -> None:
                             ("TED-03", "Bağlantı Elemanları Ltd.", False), (LATE_SUPPLIER, "Ege Dövme Sanayi", False),
                             (LIMIT_SUPPLIER, "Rulman Dağıtım A.Ş.", False), ("TED-06", "Sızdırmazlık Elemanları", False),
                             ("TED-07", "Isıl İşlem Hizmetleri", True), ("TED-08", "Yüzey Kaplama Atölyesi", True)]:
-        b.add("Supplier", Code=code, Name=name, IsSubcontractor=sub)
-    b.find("Resource", "F-ISIL")["SupplierId"] = b.id("Supplier", "TED-07")
-    b.find("Resource", "F-KAPLA")["SupplierId"] = b.id("Supplier", "TED-08")
+        b.add("Supplier", Code=code, Name=name, IsSubcontractor=sub, IsActive=True, Country="Türkiye", City="Kocaeli" if sub else "İstanbul")
+    b.find("Resource", "F-ISIL")["SubcontractorId"] = b.id("Supplier", "TED-07")
+    b.find("Resource", "F-KAPLA")["SubcontractorId"] = b.id("Supplier", "TED-08")
 
     by_group = {"Çubuk": "TED-01", "Levha": "TED-02", "Bağlantı": "TED-03", "Rulman": LIMIT_SUPPLIER,
                 "Conta": "TED-06", "Aksesuar": "TED-03", "Dövme": LATE_SUPPLIER}
@@ -397,23 +426,24 @@ def _suppliers(b: _Builder, rng: random.Random) -> None:
         if not m["IsPurchasable"]:
             continue
         lead = LATE_LEAD_DAYS if m["Code"] == LATE_MATERIAL else rng.choice([7, 10, 14, 14, 21])
-        b.add("MaterialSupplier", MaterialId=m["Id"], SupplierId=b.id("Supplier", by_group[m["MaterialGroup"]]),
-              Priority=1, QuotaPct=None, LeadTimeDays=lead, LeadTimeBasis="Takvim günü",
-              MinOrderQty=m.get("MinLot"), OrderMultiple=None, MaxOrderQty=None)
+        b.add("MaterialSupplier", LocationId=1, MaterialId=m["Id"], SupplierId=b.id("Supplier", by_group[m["MaterialGroup"]]), IsActive=True,
+              Priority=1, QuotaRatio=None, FixedLeadTimeDays=lead, VariableLeadTimeDays=None, LeadTimeBasis="Takvim günü",
+              MinimumOrderQuantity=m.get("MinLot"), OrderLotSize=None, MaximumOrderQuantity=None)
         if m["MaterialGroup"] in ("Çubuk", "Conta") and rng.random() < 0.3:  # ikinci tedarikçi
-            b.add("MaterialSupplier", MaterialId=m["Id"],
+            b.add("MaterialSupplier", LocationId=1, MaterialId=m["Id"], IsActive=True,
                   SupplierId=b.id("Supplier", "TED-02" if m["MaterialGroup"] == "Çubuk" else "TED-03"),
-                  Priority=2, QuotaPct=30.0, LeadTimeDays=lead + 7, LeadTimeBasis="Takvim günü")
+                  Priority=2, QuotaRatio=0.30, FixedLeadTimeDays=lead + 7, LeadTimeBasis="Takvim günü")
 
     for code, name, prio, partial in [("MUS-A", "Akdeniz Pompa Sistemleri", 1, False),
                                       ("MUS-B", "Kuzey Enerji Ekipmanları", 2, True),
                                       ("MUS-C", "Orta Anadolu Makine", 3, True)]:
-        b.add("Customer", Code=code, Name=name, Priority=prio, AllowPartialDelivery=partial)
-    b.add("ProjectGroup", Code="PG-01", Name="Enerji santrali projeleri", IsolationRule="Ortaktan beslenir")
+        b.add("Customer", Code=code, Name=name, Priority=prio, AllowPartialDelivery=partial, CustomerGroup="Yurt içi", IsActive=True,
+              Country="Türkiye", Region="Marmara", City="İstanbul", IsCustomTracked=code == "MUS-A")
+    b.add("ProjectGroup", Code="PG-01", Name="Enerji santrali projeleri", TrackingRule="Ortaktan beslenir", Priority=1, IsActive=True)
     b.add("Project", Code="PRJ-01", Name="Santral A pompa paketi", ProjectGroupId=1,
-          IsolationRule="Ortaktan beslenir", Priority=1, IsClosed=False)
+          TrackingRule="Ortaktan beslenir", Priority=1, IsActive=True)
     b.add("Project", Code="PRJ-02", Name="Arıtma tesisi redüktörleri", ProjectGroupId=1,
-          IsolationRule="Tam izolasyon", Priority=2, IsClosed=False)
+          TrackingRule="Tam izolasyon", Priority=2, IsActive=True)
 
 
 # --- Satış siparişleri ---
@@ -441,18 +471,26 @@ def _orders(b: _Builder, rng: random.Random) -> None:
         else:
             fg, qty = rng.choice(fillers), rng.choice([5, 8, 10, 12, 15, 20, 25])
             due, cust, prj = ds.day(rng.randint(1, HORIZON_WEEKS), 4), rng.choice(["MUS-A", "MUS-B", "MUS-C"]), None
-        b.add("SalesOrderLine", LocationId=1, OrderNo=no, LineNo=1, LineItemNo=None, Type="Kesin",
+        b.add("SalesOrderLine", LocationId=1, OrderNo=no, LineNo=1, LineItemNo=0, Type="Kesin", IsQuote=False,
               CustomerId=b.id("Customer", cust), MaterialId=b.id("Material", fg),
-              ProjectId=b.id("Project", prj) if prj else None, OpenQty=float(qty), RequestedDate=due,
+              ProjectId=b.id("Project", prj) if prj else None, OpenQuantity=float(qty), OrderedQuantity=float(qty),
+              DeliveredQuantity=0.0, Uom=None, IsActive=True, IsOnHold=False, IsCustomTracked=bool(prj), RequestedDate=due,
               ConfirmedDate=due if rng.random() < 0.6 else None, Priority=None, AllowPartialDelivery=None,
               Status="Açık")
     for no, fg, qty, week in [("SO-1041", "MAM-004", 30, 9), ("SO-1042", "MAM-007", 15, 12)]:  # teklif (K-60)
-        b.add("SalesOrderLine", LocationId=1, OrderNo=no, LineNo=1, LineItemNo=None, Type="Teklif",
+        b.add("SalesOrderLine", LocationId=1, OrderNo=no, LineNo=1, LineItemNo=0, Type="Teklif", IsQuote=True,
               CustomerId=b.id("Customer", "MUS-B"), MaterialId=b.id("Material", fg), ProjectId=None,
-              OpenQty=float(qty), RequestedDate=ds.day(week, 4), ConfirmedDate=None, Status="Açık")
+              OpenQuantity=float(qty), OrderedQuantity=float(qty), DeliveredQuantity=0.0, Uom=None, IsActive=True, IsOnHold=False,
+              IsCustomTracked=False, RequestedDate=ds.day(week, 4), ConfirmedDate=None, Status="Açık")
 
 
 # --- Stok ---
+
+def _stock_flags(status: str, tracked: bool = False) -> dict:
+    """Sahada bayrakları veri kuralı doldurur (K-121); burada ham durumla uyumlu yazılır."""
+    return {"IsAvailable": status == "Serbest", "IsInQuality": status == "Kalitede", "IsBlocked": status == "Bloke",
+            "IsActive": True, "IsCustomTracked": tracked}
+
 
 def _stock(b: _Builder, rng: random.Random) -> None:
     ds = b.ds
@@ -467,17 +505,22 @@ def _stock(b: _Builder, rng: random.Random) -> None:
         else:
             qty = float(rng.choice([0, 40, 100, 250, 500]))
         if qty:
-            b.add("Stock", LocationId=1, MaterialId=m["Id"], Warehouse="ANA", LotNo=None, StockStatus="Serbest",
-                  ProjectId=None, Quantity=qty)
+            b.add("Stock", LocationId=1, MaterialId=m["Id"], Warehouse="ANA", LotNo=None, Status="Serbest",
+                  ProjectId=None, Quantity=qty, **_stock_flags("Serbest"))
     mid = lambda c: b.id("Material", c)  # noqa: E731
-    b.add("Stock", LocationId=1, MaterialId=mid("HAM-005"), Warehouse="ANA", LotNo="L-2410-07", StockStatus="Kalitede",
-          ProjectId=None, Quantity=200.0, QualityEntryDate=ds.generated_on + timedelta(days=3))  # K-9
-    b.add("Stock", LocationId=1, MaterialId=mid("SAT-015"), Warehouse="ANA", LotNo="L-2409-21", StockStatus="Bloke",
-          ProjectId=None, Quantity=60.0)
-    b.add("Stock", LocationId=1, MaterialId=mid("MAM-004"), Warehouse="MAMUL", LotNo=None, StockStatus="Serbest",
-          ProjectId=None, Quantity=5.0)
-    b.add("Stock", LocationId=1, MaterialId=mid("MAM-006"), Warehouse="MAMUL", LotNo=None, StockStatus="Serbest",
-          ProjectId=b.id("Project", "PRJ-01"), Quantity=3.0)
+    b.add("Stock", LocationId=1, MaterialId=mid("HAM-005"), Warehouse="ANA", LotNo="L-2410-07", Status="Kalitede",
+          ProjectId=None, Quantity=200.0, QualityEntryDate=ds.generated_on - timedelta(days=4),
+          ExpectedAcceptanceDate=ds.generated_on + timedelta(days=3), **_stock_flags("Kalitede"))  # K-9
+    b.add("Stock", LocationId=1, MaterialId=mid("SAT-015"), Warehouse="ANA", LotNo="L-2409-21", Status="Bloke",
+          ProjectId=None, Quantity=60.0, **_stock_flags("Bloke"))
+    b.add("Stock", LocationId=1, MaterialId=mid("MAM-004"), Warehouse="MAMUL", LotNo=None, Status="Serbest",
+          ProjectId=None, Quantity=5.0, **_stock_flags("Serbest"))
+    b.add("Stock", LocationId=1, MaterialId=mid("MAM-006"), Warehouse="MAMUL", LotNo=None, Status="Serbest",
+          ProjectId=b.id("Project", "PRJ-01"), Quantity=3.0, **_stock_flags("Serbest", tracked=True))
+    # Devreye almada açık, ERP'de doğrudan yapılmış ödünç (K-119).
+    b.add("BorrowPayback", LocationId=1, MaterialId=mid("MAM-006"), LendingProjectId=b.id("Project", "PRJ-01"),
+          BorrowingProjectId=b.id("Project", "PRJ-02"), BorrowedQuantity=2.0, PaidBackQuantity=0.0,
+          BorrowDate=ds.start - timedelta(days=14), PaybackDueDate=ds.day(3, 0))
 
 
 # --- İş emirleri ---
@@ -496,32 +539,38 @@ def _work_orders(b: _Builder, rng: random.Random) -> None:
         m = b.find("Material", code)
         pv = pv_by_mat[m["Id"]]
         open_qty = float(qty // 2) if started else float(qty)
-        wo = b.add("WorkOrder", LocationId=1, OrderNo=no, MaterialId=m["Id"], OrderType="Üretim",
-                   Status="Başladı" if started else "Yayınlandı", OrderQty=float(qty), OpenQty=open_qty,
+        wo = b.add("WorkOrder", LocationId=1, WorkOrderNo=no, MaterialId=m["Id"], ProductionVersionId=pv["Id"], ProductionOrderType="Üretim",
+                   Status="Başladı" if started else "Yayınlandı", Priority=None, OrderedQuantity=float(qty), OpenQuantity=open_qty,
+                   CompletedQuantity=float(qty) - open_qty, ScrapQuantity=0.0, Uom=None,
                    StartDate=ds.start - timedelta(days=rng.choice([5, 8, 12])) if started else ds.day(week, 0),
-                   DueDate=ds.day(week, 4), ProjectId=None,
+                   DueDate=ds.day(week, 4), ProjectId=None, CustomerId=so_mam004["CustomerId"] if no == "WO-5001" else None,
                    SalesOrderLineId=so_mam004["Id"] if no == "WO-5001" else None,
                    ParentWorkOrderId=None,
-                   LastActivityDate=ds.generated_on - timedelta(days=1) if started else None)
-        for line in (r for r in b.t["BOM"] if r["ProductionVersionId"] == pv["Id"]):
+                   LastActivityDate=ds.generated_on - timedelta(days=1) if started else None,
+                   IsFixed=False, IsReleased=True, IsStarted=started, IsProduction=True, IsSubcontract=False, IsRework=False,  # K-121
+                   IsOnHold=False, IsCustomTracked=False)
+        for line in (r for r in b.t["BOM"] if r["MaterialId"] == m["Id"] and r["Code"] == pv["BOMCode"]):
             required = round(line["Quantity"] * qty, 4)
             issued = required if started else 0.0
-            b.add("WorkOrderComponent", WorkOrderId=wo["Id"], MaterialId=line["ComponentMaterialId"],
-                  RequiredQty=required, IssuedQty=issued, RemainingQty=round(required - issued, 4))
-        for i, r in enumerate(x for x in b.t["Routing"] if x["RouteCode"] == pv["RouteCode"]):
+            b.add("WorkOrderComponent", LocationId=1, WorkOrderId=wo["Id"], MaterialId=line["ComponentMaterialId"],
+                  OperationNo=line["OperationNo"], SequenceNo=line["SequenceNo"], RequiredQuantity=required, IssuedQuantity=issued,
+                  RemainingQuantity=round(required - issued, 4), UnitUsage=line["Quantity"], Uom=None, ScrapRatio=line["ScrapRatio"],
+                  IsLotBasedUsage=line["IsLotBasedUsage"], IsPhantom=line["IsPhantom"])
+        for i, r in enumerate(x for x in b.t["Routing"] if x["RouteCode"] == pv["RouteCode"] and x["ResourceRole"] == "Primary"):
             planned = round(r["Consumption"] * qty, 4)
             done = round(planned / 2, 4) if started and i == 0 else 0.0
-            b.add("WorkOrderOperation", WorkOrderId=wo["Id"], OpNo=r["OpNo"], SeqNo=r["SeqNo"],
-                  ResourceId=r["ResourceId"], PlannedConsumption=planned, ConfirmedConsumption=done,
-                  RemainingConsumption=round(planned - done, 4), Status="Açık")
+            b.add("WorkOrderOperation", LocationId=1, WorkOrderId=wo["Id"], OperationNo=r["OperationNo"], SequenceNo=r["SequenceNo"],
+                  OperationName=r["OperationName"], ResourceId=r["ResourceId"], ResourceGroupId=r.get("ResourceGroupId"),
+                  ResourceRole=r["ResourceRole"], ResourceNumber=r["ResourceNumber"], PlannedConsumption=planned, ConfirmedConsumption=done,
+                  RemainingConsumption=round(planned - done, 4), Status="Açık", IsCompleted=False, IsLotBasedUsage=r["IsLotBasedUsage"],
+                  IsSubcontracted=r["IsSubcontracted"], IsActive=r["IsActive"], ProductionLocation=r.get("ProductionLocation"),
+                  TransferQuantity=r.get("TransferQuantity"), WaitingTimeHours=r.get("WaitingTimeHours"), TransferTimeHours=r.get("TransferTimeHours"))
             if done:
-                start = datetime.combine(ds.start - timedelta(days=3), time(8, 0))
-                b.add("ProductionConfirmation", WorkOrderId=wo["Id"], OpNo=r["OpNo"], SeqNo=r["SeqNo"],
-                      ResourceId=r["ResourceId"], ConfirmedQty=float(qty - open_qty), ActualConsumption=round(done, 3),
-                      StartAt=start, EndAt=start + timedelta(hours=max(1, round(done))))
+                b.add("ProductionConfirmation", LocationId=1, ConfirmationNo=f"T-{no}", WorkOrderId=wo["Id"], MaterialId=m["Id"],  # K-125
+                      ConfirmedQuantity=float(qty - open_qty), StartDate=ds.start - timedelta(days=3), EndDate=ds.start - timedelta(days=3))
     # Alt montaj iş emri, mamul iş emrinin alt kırılımı.
-    parent = next(w for w in b.t["WorkOrder"] if w["OrderNo"] == "WO-5001")
-    child = next(w for w in b.t["WorkOrder"] if w["OrderNo"] == "WO-5002")
+    parent = next(w for w in b.t["WorkOrder"] if w["WorkOrderNo"] == "WO-5001")
+    child = next(w for w in b.t["WorkOrder"] if w["WorkOrderNo"] == "WO-5002")
     child["ParentWorkOrderId"] = parent["Id"]
 
 
@@ -540,9 +589,11 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
     def po(material_id, qty, req, conf, supplier_id, kind="Satın alma", wo=None, no=None):
         nonlocal n
         n += 1
-        b.add("PurchaseOrderLine", LocationId=1, OrderNo=no or f"PO-{n}", LineNo=1, OrderType=kind,
-              SupplierId=supplier_id, MaterialId=material_id, OpenQty=float(qty), RequestedDate=req,
-              ConfirmedDate=conf, ProjectId=None, WorkOrderId=wo, Status="Açık")
+        b.add("PurchaseOrderLine", LocationId=1, PurchaseOrderNo=no or f"PO-{n}", LineNo=1, OrderType=kind,
+              SupplierId=supplier_id, MaterialId=material_id, OpenQuantity=float(qty), OrderedQuantity=float(qty), ReceivedQuantity=0.0,
+              Uom=None, RequestedDate=req, ConfirmedDate=conf, ProjectId=None, CustomerId=None, SalesOrderLineId=None, WorkOrderId=wo, Status="Açık",
+              IsPurchaseRequest=kind == "Satın alma talebi", IsPurchase=kind == "Satın alma", IsSubcontract=kind == "Fason",  # K-121
+              IsActive=True, IsCustomTracked=False)
 
     for m in rng.sample(candidates, 20):
         req = ds.day(rng.randint(1, 6), rng.randint(0, 4))
@@ -596,30 +647,35 @@ def _iso(v) -> str:
 
 def _business_keys(ds: Dataset) -> None:
     c = ds.code
-    pv = lambda id_: ds.by_id("ProductionVersion", id_)  # noqa: E731
-    wo = lambda id_: ds.by_id("WorkOrder", id_)["OrderNo"]  # noqa: E731
+    wo = lambda id_: ds.by_id("WorkOrder", id_)["WorkOrderNo"]  # noqa: E731
+    so_line = lambda id_: "|" if id_ is None else "{OrderNo}|{LineNo}".format(**ds.by_id("SalesOrderLine", id_))  # noqa: E731
     keys = {
-        "BOM": lambda r: f"{c('Material', pv(r['ProductionVersionId'])['MaterialId'])}|"
-                         f"{pv(r['ProductionVersionId'])['Code']}|{c('Material', r['ComponentMaterialId'])}",
+        "Material": lambda r: f"{LOCATION_CODE}|{r['Code']}",  # K-113
+        "BOM": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Code']}|{c('Material', r['ComponentMaterialId'])}|"
+                         f"{r['OperationNo'] or ''}|{r['SequenceNo']}",  # K-115
         "CalendarDay": lambda r: f"{c('Calendar', r['CalendarId'])}|{_iso(r['Date'])}",
-        "ProductionVersion": lambda r: f"{c('Material', r['MaterialId'])}|{r['Code']}",
-        "Routing": lambda r: f"{r['RouteCode']}|{r['OpNo']}|{r['SeqNo']}|{c('Resource', r['ResourceId'])}",
-        "MaterialSupplier": lambda r: f"{c('Material', r['MaterialId'])}|{c('Supplier', r['SupplierId'])}",
+        "ProductionVersion": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Code']}",  # K-114
+        "Routing": lambda r: f"{LOCATION_CODE}|{r['RouteCode']}|{r['OperationNo']}|{r['SequenceNo']}",  # K-116
+        "MaterialSupplier": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{c('Supplier', r['SupplierId'])}",  # K-118
         "UomConversion": lambda r: f"{c('Material', r['MaterialId'])}|{r['FromUom']}|{r['ToUom']}",
         "ResourceCapacityProfile": lambda r: f"{c('Resource', r['ResourceId'])}|{_iso(r['ValidFrom'])}",
         "ResourceDowntime": lambda r: f"{c('Resource', r['ResourceId'])}|{_iso(r['StartAt'])}",
-        "ShiftPlan": lambda r: f"{c('CompetenceGroup', r['CompetenceGroupId'])}|{c('Shift', r['ShiftId'])}|"
+        "BorrowPayback": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{c('Project', r['LendingProjectId'])}|"
+                                   f"{c('Project', r['BorrowingProjectId'])}|{_iso(r['BorrowDate'])}",  # K-119
+        "Resource": lambda r: f"{LOCATION_CODE}|{r['Code']}",  # K-117
+        "ResourceGroup": lambda r: f"{LOCATION_CODE}|{r['Code']}",
+        "ResourceGroupAssignment": lambda r: f"{LOCATION_CODE}|{c('ResourceGroup', r['ResourceGroupId'])}|{c('Resource', r['ResourceId'])}",
+        "EmployeeAbsence": lambda r: f"{LOCATION_CODE}|{c('Resource', r['ResourceId'])}|{r['AbsenceType']}|{_iso(r['StartDate'])}",
+        "ShiftPlan": lambda r: f"{c('ResourceGroup', r['ResourceGroupId'])}|{c('Shift', r['ShiftId'])}|"
                                f"{_iso(r['ValidFrom'])}",
-        "WorkerCompetence": lambda r: f"{c('Worker', r['WorkerId'])}|{c('CompetenceGroup', r['CompetenceGroupId'])}",
-        "WorkerAbsence": lambda r: f"{c('Worker', r['WorkerId'])}|{_iso(r['StartAt'])}",
-        "SalesOrderLine": lambda r: f"{r['OrderNo']}|{r['LineNo']}|{_iso(r['LineItemNo'])}",
-        "Stock": lambda r: f"{c('Material', r['MaterialId'])}|{r['Warehouse']}|{_iso(r['LotNo'])}|{r['StockStatus']}|"
-                           f"{c('Project', r['ProjectId']) or ''}",
-        "WorkOrder": lambda r: r["OrderNo"],
-        "WorkOrderComponent": lambda r: f"{wo(r['WorkOrderId'])}|{c('Material', r['MaterialId'])}",
-        "WorkOrderOperation": lambda r: f"{wo(r['WorkOrderId'])}|{r['OpNo']}|{r['SeqNo']}",
-        "PurchaseOrderLine": lambda r: f"{r['OrderNo']}|{r['LineNo']}",
-        "ProductionConfirmation": lambda r: f"{wo(r['WorkOrderId'])}|{r['OpNo']}|{r['SeqNo']}|{_iso(r['StartAt'])}",
+        "SalesOrderLine": lambda r: f"{LOCATION_CODE}|{r['OrderNo']}|{r['LineNo']}|{_iso(r['LineItemNo'])}",  # K-120
+        "Stock": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Warehouse']}|{_iso(r['LotNo'])}|{r['Status']}|"
+                           f"{c('Project', r['ProjectId']) or ''}|{c('Customer', r.get('CustomerId')) or ''}|{so_line(r.get('SalesOrderLineId'))}",  # K-123
+        "WorkOrder": lambda r: f"{LOCATION_CODE}|{r['WorkOrderNo']}",  # K-124
+        "WorkOrderComponent": lambda r: f"{LOCATION_CODE}|{wo(r['WorkOrderId'])}|{c('Material', r['MaterialId'])}|{_iso(r['OperationNo'])}|{_iso(r['SequenceNo'])}",
+        "WorkOrderOperation": lambda r: f"{LOCATION_CODE}|{wo(r['WorkOrderId'])}|{r['OperationNo']}|{r['SequenceNo']}",
+        "PurchaseOrderLine": lambda r: f"{LOCATION_CODE}|{r['PurchaseOrderNo']}|{r['LineNo']}",  # K-125
+        "ProductionConfirmation": lambda r: f"{LOCATION_CODE}|{r['ConfirmationNo']}",
     }
     for table, rows in ds.tables.items():
         if table in ("Location", "UnitOfMeasure"):

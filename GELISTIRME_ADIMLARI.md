@@ -46,22 +46,22 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 ## Aşama 3 · Veri alma (Extract)
 
 - [x] 3.1 Excel şablonu üretimi (02) · ekran 02 iskeleti · K-110
-- [ ] 3.1b Alan gözden geçirmesi (A-17): 26 tablonun alanları yükleme sırasıyla tablo tablo gözden geçirilir; değişiklikler toplu olarak docs/02, docs/03, şema, şablon, sentetik veri ve kirli Excel'e işlenir. 3.2'den önce yapılır.
-- [ ] 3.2 Excel yükleme → Staging (03) · ekran 02: menüde "Excel'den yükle" açılır, "Son yükleme zamanı" kolonu · çözülecekler: `stg` tablolarındaki tekil indeksler (`UX_Material_Code`, `UX_BOM_MaterialCode_ProductionVersionCode`, `UX_Routing_…` gibi) kalkmalı, yoksa tekrar eden satır ham veriye yazılamaz (H4) ve çok bileşenli ağaç reddedilir (docs/03'te ANAHTAR kolonu varlık listesindeki anahtarlarla da uyumsuz; 3.4 ile birlikte); `ImportBatch`'te dosya adı, kullanıcı ve şablon sürümü yok; fonksiyon 03'ün modu (ekle/güncelle, tam) ile `LoadType` (`Tam \| Değişen`) farkı; tekrar eden anahtarda fonksiyon 03 (kullanıcı karar verir) ile docs/11 H4 (iki satır da yüklenmez) farkı; yöntem kısıtı 3.3'e kadar uygulanmaz
+- [x] 3.1b Alan gözden geçirmesi (A-17; K-111…K-128): 26 tablonun alanları yükleme sırasıyla tablo tablo gözden geçirilir; değişiklikler toplu olarak docs/02, docs/03, şema, şablon, sentetik veri ve kirli Excel'e işlenir. 3.2'den önce yapılır.
+- [ ] 3.2 Excel yükleme → Staging (03) · `BOM.SequenceNo` ERP'den gelmezse veri alınırken atanabilir, nasıl atanacağı burada netleşir (K-115) · ekran 02: menüde "Excel'den yükle" açılır, "Son yükleme zamanı" kolonu · çözülecekler: `stg` tablolarındaki tekil indeksler (`UX_Material_LocationCode_Code`, `UX_BOM_LocationCode_MaterialCode_Code_ComponentMaterialCode_OperationNo_SequenceNo`, `UX_Routing_…` gibi) kalkmalı, yoksa tekrar eden satır ham veriye yazılamaz (H4) (docs/03'te ANAHTAR kolonu varlık listesindeki anahtarlarla da uyumsuz; 3.4 ile birlikte); `ImportBatch`'te dosya adı, kullanıcı ve şablon sürümü yok; fonksiyon 03'ün modu (ekle/güncelle, tam) ile `LoadType` (`Tam \| Değişen`) farkı; tekrar eden anahtarda fonksiyon 03 (kullanıcı karar verir) ile docs/11 H4 (iki satır da yüklenmez) farkı; yöntem kısıtı 3.3'e kadar uygulanmaz
 - [ ] 3.3 SQL arayüz okuyucu → Staging (01), entegrasyon tanımı (91) · A-38: ham tablo + view akışı, varlık başına yöntem seçimi (view, Excel, API) · ekran 02: "Yöntem" kolonu (Excel, SQL, API), "Bu tabloyu çekimden çıkar", yönteme göre şablon ve yükleme kısıtı (K-110)
-- [ ] 3.4 Yapısal doğrulama ve hata raporu (04): tip, zorunlu alan, tekrar eden anahtar · yalnız yapısal kontrol (tip, uzunluk, zorunlu alan); değer listesi dışı değerler doğrulamada bilgi olarak gösterilir (K-110)
+- [ ] 3.4 Yapısal doğrulama ve hata raporu (04): "boşsa hata" türündeki kontroller (ör. `Resource.CapacityUnit`, K-117) veri kurallarından sonra çalışır; kuralla dolacak satırlar önceden reddedilmez · tip, zorunlu alan, tekrar eden anahtar · yalnız yapısal kontrol (tip, uzunluk, zorunlu alan); değer listesi dışı değerler doğrulamada bilgi olarak gösterilir (K-110) · yeni birim kodu ilk görülünce bilgi satırı ("Yeni birim: Kg"), yüklemeyi durdurmaz; `UomConversion.Factor` sıfırdan büyük olmalı, değilse satır hatası (K-112) · aynı ağacı kullanan üretim versiyonlarının `BaseQuantity`'si farklıysa uyarı (K-115) · rota satırında `ResourceCode` ya da `ResourceGroupCode` dolu olmalı, ikisi de boşsa satır hatası; ikisi de doluysa `ResourceCode` geçerli, kaynak o grubun üyesi değilse uyarı; bir kaynak grubundaki kaynakların kapasite birimi farklıysa uyarı (K-116)
 
 ## Aşama 4 · Dönüştürme (Transform)
 
-- [ ] 4.1 Veri kuralı uygulama, Staging üzerinde (19)
+- [ ] 4.1 Veri kuralı uygulama, Staging üzerinde (19) · Lokasyon bayrakları (K-111): boş bayrak kuralla dolar; `Type` ile bayraklar arasında ürün içinde bağ, varsayılan kural ya da varsayılan değer yok, ilişki kurulumda müşteriye göre veri kuralıyla tanımlanır
 - [ ] 4.2 Veri kuralları ekranı (04): tanımlama, önizleme, sıralama, aç/kapa (16–18)
 - [ ] 4.3 Aktarım filtresi (yeni, 99): tanım ve önizleme · yöntem açık (A-34; teknik kapsam view'da, iş kapsamı burada: A-38)
-- [ ] 4.4 Referans kontrolü ve kod→Id eşleme
+- [ ] 4.4 Referans kontrolü ve kod→Id eşleme · birim alanları referans kontrolüne girmez (K-112) · `UomConversion` lokasyondan bağımsızdır: dönüşüm satırı aynı `MaterialCode`'a sahip her lokasyonun malzemesine bağlanır (K-112, docs/03)
 
 ## Aşama 5 · Yükleme (Load)
 
 - [ ] 5.1 Değer önceliği (ERP, kural, elle, varsayılan) ve ERP değerinin saklanması (FieldValueSource) · veri sözlüğünde Sınıf, Değer önceliği, Manuel, Senaryo, Zorunlu ve Varsayılan değer düzenlemesi açılır (pencerede pasif öğeler aktifleşir); zorunlu ve `DataRule` kilidi, varsayılan tip denetimi, etki sayısı ve "Şimdi uygula" (K-104)
-- [ ] 5.2 Tam yükleme ve veri versiyonu (05, 07) · yüklemenin özet denetim kaydı (K-108)
+- [ ] 5.2 Tam yükleme ve veri versiyonu (05, 07) · yüklemenin özet denetim kaydı (K-108) · `core.UnitOfMeasure` diğer tablolarda geçen birim kodlarından otomatik oluşur (`Material.BaseUom`, `Resource.CapacityUnit`, `UomConversion.FromUom` ve `ToUom`, `BOM.ComponentUom`, `SalesOrderLine.Uom`, `Forecast.Uom`, `Stock.Uom`, `WorkOrder.Uom`, `WorkOrderComponent.Uom`, `PurchaseOrderLine.Uom`), `Name` boşsa `FromUomName` ya da `ToUomName`'den dolar, `Decimals` için varsayılan yazılmaz (K-112) · birim dönüşümü kullanılırken ters yön ve zincir kuralı (docs/03, K-112)
 - [ ] 5.3 Kısmi yükleme (06)
 - [ ] 5.4 Aktarım raporu, yükleme geçmişi, ham veri temizliği (08, 09)
 - [ ] 5.5 Veri yükleme ekranı (02): ETL'in tamamı tek ekranda, adım adım durumuyla · yükleme işinin özeti (`Job.Summary`: "Tam yükleme · <tarih>"; K-107) · 3.1'deki iskeletin kalanı: sayılar, üst düğmeler, sağ paneller
@@ -71,11 +71,13 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 - [ ] 6.1 Ana veri ekranları (03, fn 10), sekme sekme:
   - [ ] Lokasyon
-  - [ ] Kaynak
-  - [ ] Malzeme
-  - [ ] Ürün ağacı
+  - [ ] Birim: ad ve ondalık hane burada elle ya da veri kuralıyla yönetilir (K-112)
+  - [ ] Birim dönüşümü
+  - [ ] Kaynak: günlük kapasite, paralel adet, kapasite kaynağı, fason parametreleri ve takvim burada tanımlanır, entegre edilmez (K-117)
+  - [ ] Malzeme: malzeme blokajı (fonksiyon 99, K-126) bu sekmeden tanımlanır, tablosu bu adımda açılır; motorda uygulanışı Aşama 10
+  - [ ] Ürün ağacı: `ScrapRatio` yüzde gösterilir (`percent`, K-113)
   - [ ] Rota
-  - [ ] Tedarikçi
+  - [ ] Tedarikçi: `MaterialSupplier.QuotaRatio` yüzde gösterilir (`percent`, K-113, K-118)
   - [ ] Müşteri
   - [ ] Proje
   - [ ] Takvim
@@ -83,13 +85,13 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 6.2 Değerin kaynağı (11), elle değer girme ve kaldırma (12, 13) · U-15, U-16: yapıştırma, toplu düzenleme, doğrulama, kaydetme
 - [ ] 6.3 Değişiklik geçmişi (14) · denetim izinden okur; denetim izinde "Kayda git" ve bağlı kayıtlar (K-108)
 - [ ] 6.4 Excel ile toplu düzeltme (15)
-- [ ] 6.5 Veri kalitesi ekranı (05) · kontrol, düzeltme aksiyonu (20, 21)
+- [ ] 6.5 Veri kalitesi ekranı (05) · kontrol, düzeltme aksiyonu (20, 21) · aktif ve kritik olup kapasitesi tanımsız kaynak uyarı (K-117) · tedarik satırında `FixedLeadTimeDays` ve `VariableLeadTimeDays` ikisi de boşsa uyarı (K-118)
 
 ## Aşama 7 · Parametreler
 
-- [ ] 7.1 Parametre seti (22)
+- [ ] 7.1 Parametre seti (22) · tedarikçi seçim kuralı seçilir: en kısa tedarik süresi ya da `Priority` (K-118) · `SafetyStock` ile `StockCoverageDays` ikisi de doluysa hangisinin geçerli olacağı (büyük olan, yalnız miktar, yalnız gün…) motor parametresi olarak burada seçilir (K-113)
 - [ ] 7.2 Zaman yapısı (23)
-- [ ] 7.3 Kapasite parametreleri (24)
+- [ ] 7.3 Kapasite parametreleri (24) · verim ve hedef doluluk burada tanımlanır, entegre edilmez; vardiyadaki kişi sayısının işçi kaynaklarının kapasitesine nasıl dönüşeceği burada netleşir (K-117)
 - [ ] 7.4 Alokasyon ve öncelik kuralı (25)
 - [ ] 7.5 Uyarı eşikleri (26)
 - [ ] 7.6 Gece senaryo tanımları ekranı (07) · tanım, sıra ve aç/kapa (27, 28)
@@ -119,10 +121,10 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 10 · Motor
 
-- [ ] 10.1 Ön hesap (29)
-- [ ] 10.2 MRP patlatma (30)
-- [ ] 10.3 Kurallı yerleştirme ve sezgisel (33)
-- [ ] 10.4 Model kurma, LP (31)
+- [ ] 10.1 Ön hesap (29) · motor teklifi `SalesOrderLine.IsQuote`'tan okur, plana dahil etme senaryo parametresi bu bayrağa bağlıdır (K-60, K-127) · ürünün kendi geçerli versiyonu yoksa motor `MaterialReference` ile referans ürünün ağacını ve rotasını kullanır; `ReferenceProductionVersionCode` boşsa versiyonu motor seçer, `TimeFactor` süreye uygulanır (K-126) · iş emrinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır, gelmediyse `ProductionVersionCode`'un ağacına ve rotasına gider; `WorkOrder.IsFixed` iş emrinin tarihi ve miktarı değişmez (K-124) · `Stock.ExpectedAcceptanceDate`: kalitedeki stoğun kullanılabilir hâle gelmesi beklenen tarih motorda nasıl kullanılır (K-9, K-123) · `Forecast.DeliveryPoint`: tahmin miktarı dönemin başında mı sonunda mı hazır olmalı; hangi tahmin tipinin plana gireceği veri kuralıyla (K-122) · beklemedeki satırın (`SalesOrderLine.IsOnHold`) planda nasıl ele alınacağı (K-120) · plana yalnız `IsActive` malzeme girer (K-113) · `ResourceGroupAssignment` geçerlilik tarihleri yalnız girdi, motor şimdilik kullanmaz; `IsFurnace` ve `IsMold` Faz 1 planlamada kullanılmaz (K-117) · birim dönüşümü kullanılırken ters yön ve zincir kuralı, motorun bütün adımlarında (docs/03, K-112)
+- [ ] 10.2 MRP patlatma (30) · tedarik süresi = `FixedLeadTimeDays` + miktar × `VariableLeadTimeDays`; ikisi de boşsa süre 0 sayılmaz, satır kullanılmaz; 7.1'deki kurala göre tek tedarikçi (en kısa süre ya da `Priority`), `QuotaRatio` kullanılmaz (K-118) · güvenlik stoğu hedefi 7.1'deki parametreye göre `SafetyStock` ya da `StockCoverageDays`'ten (K-113)
+- [ ] 10.3 Kurallı yerleştirme ve sezgisel (33) · rota satırında yalnız grup doluysa operasyon grubun herhangi bir kaynağında yapılabilir, seçim motorun kararı (K-116)
+- [ ] 10.4 Model kurma, LP (31) · malzeme kısıtı yalnız `IsCritical` malzemelere uygulanır, kritik olmayanın her zaman temin edilebildiği varsayılır (K-113) · alternatif versiyon seçimi (A-40) · kaynak grubu satırında kaynak seçimi ve tüketim biriminin nasıl okunacağı (K-116) · alternatif bileşen ve operasyon kullanımı (A-41) · `BorrowPayback`: açık ödünçler motora girdi, önerilen ödüncün onay akışı ve geri ödeme kısıtı; tablo hem ERP'den hem Smartchain'in onayladığı ödünçlerden beslenir, kaynak ayrımı (ERP ya da Smartchain) gerekir, tam yükleme Smartchain kayıtlarını silmez, K-18 ile ilişkisi burada netleşir (K-119)
 - [ ] 10.5 Çözücü adaptörü ve süre bütçesi (32, 34) · çalışan işi durdur ve en iyi çözümü sakla, iptal; onaylanmayan durdurmayı sonlandırma (K-107)
   - [ ] Çalışan modelin LP dosyası, çözüm (solution) dosyası ve çözücü logu her plan hesabı için ayrı klasöre yazılır (K-77)
 - [ ] 10.6 Son hesap (35)
@@ -160,6 +162,7 @@ Adımı kapanmış ama elle denenmesi sonraya bırakılmış işler.
 
 Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alınır.
 
+- **Malzeme bazlı ikame:** ağaçtan bağımsız ikame tablosu şimdilik yok; ağaç içi alternatif `BOM.AlternativeGroup` (A-41), ağaç bazlı alternatif ayrı ağaç kodu ve üretim versiyonu (A-40) ile çözülür (K-115).
 - **Yapılandırılabilir grafik (9.3'te ele alınır):** grafik, gruplanmış tablonun başka bir çizimi olarak liste altyapısının (K-87, K-90) üstüne kurulur: X ekseni gruplanan alan, değer toplanan alan ve toplam tipi, seri ikinci gruplama; tipler çubuk, yığılmış çubuk, çizgi, çubuk + çizgi (pasta yok). Görünümle kaydedilir (K-89), Excel'e gerçek grafik olarak taşınır; seri renkleri 1.2'deki sırayla, kırmızı ve kiremit seri rengi olmaz. Kullanıcı kendi grafiğini kurar, kurulumda hazır görünümler bırakılır; End user da kurabilir (K-99). Gantt, kapasite doluluk, pegging gibi planlama ekranlarının görselleri sabittir, yapılandırılmaz. Kütüphane pakete gömülü, internetsiz. Ana sayfanın küçük grafikleri (9.1) aynı altyapıyı kullanır.
 - **1.6 Koşullu biçimlendirme:** çoklu koşul (VE/VEYA), renk skalası ve veri çubuğu, grup başlığı ve ara toplam satırlarına kural.
 - **Kullanıcılar (2.3):** lisans kullanıcı sınırı ve sayacı (fonksiyon 88; lisans dosyası 11.3'te gelir, sınır ona bağlı; System owner hesapları lisans kullanıcı sayısına girmez); kapatılan kullanıcının uyarılarının devri (9. aşama); kapatılan kullanıcının açık çalışmalarının devri (çalışma adımları); kapatılan kullanıcının paylaşılan görünümleri kalır, kimse değiştiremez (devir yok); kullanılmayan geçici şifrenin süresi yok.
@@ -168,11 +171,17 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 - **Kullanıcı e-postası:** kullanıcıya e-posta adresi alanı; geçici şifre kurum içi e-posta sunucusuyla (SMTP, internet gerekmez) gönderilir. "Kapalı ağ, e-posta yok" ifadesi (fonksiyon 88) bu ihtimale göre düzeltilir.
 - **Roller:** Admin'in bir paylaşılan görünümü ya da kural setini herkes veya bir rol için varsayılan yapması (K-89 notu); çalışma devralma.
 - **9.2 Uyarılar:** rolü bozuk oturum kapatılınca Admin'e uyarı düşmesi (fonksiyon 90; 2.2'de yalnız denetim izine "Geçersiz rol" yazılıyor).
+- **Operasyon öncül ve ardılı:** Faz 1'de rota doğrusaldır (`OperationNo` sırası); paralel rota ihtiyacı çıkarsa eklenir.
 - **Sentetik veri:** kilogram ve metre birimli malzemelere kesirli miktar (güvenlik stoğu, lot) verilmesi (docs/11 açık iş).
 - **Performans:** paralel plan ipucunun (`app/api/lists/query.py`, `PARALLEL_HINT`) bir ayara bağlanması; çok kullanıcılı sunucuda işlemci kapışması. İpucu iki sorguda: gruplama sorgusu (`groups_query`, grup ağacı ve ara toplamlar; K-90) ve Excel'e aktarım sorgusu (`export_query`, bütün satırlar tek sorguda; K-91).
 
 ## Açık konular
 
+- **A-43 · Maliyet verisi.** Alternatif versiyon, fason ve fazla mesai kararları ile raporlar (A-22) için birim üretim maliyeti, fason maliyeti, fazla mesai maliyeti, stok tutma maliyeti ve gecikme cezası gerekebilir. Aşama 10'dan önce karara bağlanır (docs/00).
+- **A-42 · Rotada lot bazlı tüketim.** `Routing.IsLotBasedUsage` pratikte hazırlık süresidir; set-up Faz 1 dışı olduğu için alan sözleşmeye girer, motorda kullanımı sonraya kalır. Faz 1 motorunun dolu satırı nasıl ele alacağı Aşama 10'da netleşir (docs/00).
+- **A-41 · Alternatif bileşen ve alternatif operasyon kullanımı.** Aynı `AlternativeGroup` koduna sahip ürün ağacı ve rota satırları birbirinin alternatifidir. Tüketim sırası, miktar eşdeğerliği, modeldeki karşılığı ve kritik malzeme etkisi Aşama 10'da karara bağlanır; `Material.IsPhantom` ile `BOM.IsPhantom` çelişirse ağaç satırındaki geçerlidir (docs/00).
+- **A-40 · Alternatif versiyon seçimi.** Versiyon seçimi motorun kararıdır, aynı malzeme aynı dönemde birden fazla versiyonla üretilebilir. Modeldeki karşılığı, `Priority`'nin kullanımı, aday versiyonlar, MRP ve pegging etkisi Aşama 10'da karara bağlanır (docs/00).
+- **A-39 · Özel takibin proje dışına genişlemesi.** `IsCustomTracked` proje, müşteri ya da siparişe ayrılmayı anlatır; bugünkü motor tasarımı yalnız projeye kurulu. Sahip alanı, netleştirme ve pegging sırası, takip kuralları, `Customer.IsCustomTracked`, `SalesOrderLine.IsCustomTracked`, `Stock.IsCustomTracked`, `WorkOrder.IsCustomTracked` ve `PurchaseOrderLine.IsCustomTracked` ile birlikte okunuş, `Stock`, `WorkOrder` ve `PurchaseOrderLine`'daki proje, müşteri ve sipariş sahipliğinin birlikte okunuşu ve kompakt yöntemin ölçeği Aşama 10'da karara bağlanır; Faz 1 motor davranışı değişmez (docs/00).
 - **A-38 · SQL entegrasyonunda ham tablo + view akışı.** Müşteri ERP verisini olduğu gibi ham tablolara yazar, kurulumda yazılan view'lar sözleşmeye çevirir, Smartchain view'dan staging'e alır. "Bitti" sinyali, view ile kural sınırı, view bakımı ve uyum denetimi; yöntem varlık başına seçilir (view, Excel, API). 3.3'te karara bağlanır (docs/00).
 - **A-37 · Değişiklik etkisi ve yeniden hesap yönetimi.** Bir girdi değişince hangi sonuçların yenileneceği: türetilmiş hesap ve göstergeler anında, plan motorla; bağımlılık haritası ve girdi damgası. 8.2'den önce karara bağlanır (docs/00).
 - **A-34 · Aktarım filtresinin yöntemi.** Kapsam filtresi (pasif malzeme, kapalı sipariş, başka lokasyon gibi) nasıl tanımlanacak? Değişen kayıtlar K-40 ve A-23'e, hatalı satırların ayıklanması 26. adımdaki hata yönetimine bağlı.

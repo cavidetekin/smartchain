@@ -51,6 +51,11 @@ def number_format(decimals: int) -> str:
     return "#,##0" + ("." + "0" * decimals if decimals > 0 else "")
 
 
+def percent_format(decimals: int) -> str:
+    """Yüzde biçim kodu (K-113): hücrede oran durur, Excel 100'le çarpıp %5,00 gösterir."""
+    return "%" + number_format(decimals)
+
+
 def column_number_format(col: dict, unit_decimals: int | None = None) -> str | None:
     """Kolonun Excel biçim kodu; sayı dışı alanlarda tarih biçimi ya da None (metin)."""
     kind = col["type"]
@@ -59,6 +64,8 @@ def column_number_format(col: dict, unit_decimals: int | None = None) -> str | N
     if kind == "number":
         if col.get("decimals_from_unit"):
             return number_format(DEFAULT_UNIT_DECIMALS if unit_decimals is None else unit_decimals)
+        if col.get("percent"):
+            return percent_format(col.get("decimals") or 0)
         return number_format(col.get("decimals") or 0)
     if kind == "date":
         return DATE_FORMAT
@@ -139,7 +146,8 @@ def aggregate_number_format(col: dict, fn: str, unit_decimals: int | None) -> st
         base = DEFAULT_UNIT_DECIMALS if unit_decimals is None else unit_decimals
     else:
         base = col.get("decimals") or 0
-    return number_format(base + 1 if fn in ("avg", "avg_nonzero", "wavg") else base)
+    digits = base + 1 if fn in ("avg", "avg_nonzero", "wavg") else base
+    return percent_format(digits) if col.get("percent") else number_format(digits)
 
 
 def header_format() -> CellFormat:

@@ -5,6 +5,15 @@ const LOCALE = "tr-TR";
 const numberFormats = new Map<number, Intl.NumberFormat>();
 
 /** Biçimlendirici ondalık sayısına göre bir kez kurulur (her hücrede yeniden kurmak tabloyu yavaşlatıyordu). */
+/** Oran → yüzde (K-113): 0,05 → %5,00. */
+export function formatPercent(ratio: number, fractionDigits = 2): string {
+  return `%${formatNumber(ratio * 100, fractionDigits)}`;
+}
+
+/** Yüzde girişi ile saklanan oran arasında çeviri; kayan nokta artığı kalmasın. */
+export const percentInput = (ratio: number): number => Number((ratio * 100).toFixed(6));
+export const percentValue = (input: number): number => Number((input / 100).toFixed(8));
+
 export function formatNumber(value: number, fractionDigits = 0): string {
   let f = numberFormats.get(fractionDigits);
   if (!f) {

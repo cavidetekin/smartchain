@@ -93,14 +93,16 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
         ("Kolonlar", f"{'Görünen' if req.scope.columns == 'visible' else 'Tümü'} · {len(columns)}: "
                      + ", ".join(c["label"] for c in columns)),
         ("Filtreler", "; ".join(describe.describe_filter(f.model_dump(by_alias=True, exclude_none=True), labels.get(f.field, f.field),
-                                                         b.columns.get(f.field, {}).get("decimals"))
+                                                         b.columns.get(f.field, {}).get("decimals"),
+                                                         b.columns.get(f.field, {}).get("percent", False))
                                 for f in filters) or "yok"),
         ("Sıralama", describe.describe_sort([s.model_dump() for s in req.sort], labels) or "liste varsayılanı"),
         ("Gruplama", " › ".join(labels.get(g, g) for g in group_by) or "yok"),
         ("Ara toplamlar", describe.describe_aggregates({f: s.model_dump(exclude_none=True) for f, s in specs.items()}, labels) or "yok"),
         ("Koşullu biçim", "; ".join(describe.describe_rule(r.model_dump(mode="json", by_alias=True, exclude_none=True),
                                                            labels.get(r.field, r.field), labels,
-                                                           b.columns.get(r.field, {}).get("decimals"))
+                                                           b.columns.get(r.field, {}).get("decimals"),
+                                                           b.columns.get(r.field, {}).get("percent", False))
                                     for r in rules) or "yok"),
         ("Dışa aktaran", repo.user_name(session, user_id) or f"#{user_id}"),
         ("Zaman", f"{_now_local():%d.%m.%Y %H:%M}"),

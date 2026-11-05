@@ -23,6 +23,8 @@ export interface ListColumn {
   decimals: number | null;
   /** Miktar kolonu: ondalık her satırda birimden (satırdaki _unit_decimals; K-88). */
   decimals_from_unit: boolean;
+  /** Yüzde gösterim (K-113): veride oran (0,05), ekranda %5,00; filtre ve kural değeri yüzde girilir, oran saklanır. */
+  percent: boolean;
   /** Gruplamada varsayılan ara toplam (K-90). */
   aggregate: AggFn | null;
   default_visible: boolean;

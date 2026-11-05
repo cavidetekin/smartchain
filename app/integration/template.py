@@ -18,7 +18,7 @@ from .contract import FIRST_DATA_ROW, Entity, TemplateField, fields
 
 NOTES_SHEET, VERSION_SHEET = "Açıklama", "_Surum"
 NOTES_INTRO = "Koyu başlıklı alanlar zorunludur."
-VALUES_NOTE = "ERP'deki farklı değerler veri kuralıyla çevrilir."
+VALUES_NOTE = "ERP'deki farklı değerler veri kuralıyla bu değerlere çevrilir."
 NOTE_HEADERS = ("Alan", "Etiket", "Açıklama", "Tip", "Boş bırakılırsa", "Smartchain değerleri", "Örnek")
 NOTE_WIDTHS = (26, 30, 56, 20, 28, 52, 20)
 NOTE_HEADER_ROW = 1

@@ -86,11 +86,11 @@ def test_group_order_follows_sort_and_is_turkish(api):
 @needs_db
 def test_weighted_average_matches_database(api, db_engine):
     with db_engine.connect() as conn:
-        avg = float(conn.execute(text("SELECT AVG(ProductionLeadTimeDays) FROM core.Material WHERE VersionTo IS NULL "
+        avg = float(conn.execute(text("SELECT AVG(StockCoverageDays) FROM core.Material WHERE VersionTo IS NULL "
                                       "AND MaterialLevel = N'Yarı mamul'")).scalar_one())
     t = groups(api, group_by=["MaterialLevel", "MaterialGroup"])
     yarim = next(g for g in t["groups"] if g["key"] == ["Yarı mamul"])
-    assert yarim["aggregates"]["ProductionLeadTimeDays"] == pytest.approx(avg)
+    assert yarim["aggregates"]["StockCoverageDays"] == pytest.approx(avg)
 
 
 @needs_db
@@ -130,7 +130,7 @@ def test_empty_group_is_last_and_rows_read_by_null_key(api, db_engine):
 @needs_db
 @pytest.mark.parametrize("flt, expected", [
     ({"field": "MaxStock", "op": "empty"}, 200),
-    ({"field": "ProductionLeadTimeDays", "op": "empty"}, 80),
+    ({"field": "StockCoverageDays", "op": "empty"}, 80),
     ({"field": "Name", "op": "empty"}, 0),
     ({"field": "UpdatedAt", "op": "empty"}, 0),
 ])
@@ -172,37 +172,37 @@ def test_each_aggregate_function_matches_database(api, db_engine):
     where = "VersionTo IS NULL AND MaterialLevel = N'Yarı mamul'"
     try:
         with db_engine.begin() as conn:
-            conn.execute(text(f"UPDATE core.Material SET ProductionLeadTimeDays = 0 WHERE Code = 'ALT-001' AND VersionTo IS NULL"))
+            conn.execute(text(f"UPDATE core.Material SET StockCoverageDays = 0 WHERE Code = 'ALT-001' AND VersionTo IS NULL"))
             conn.execute(text(f"UPDATE core.Material SET MaxStock = Id % 5 + 1 WHERE {where} AND Id % 2 = 0"))
-            row = conn.execute(text(f"""SELECT SUM(ProductionLeadTimeDays), AVG(ProductionLeadTimeDays),
-                SUM(ProductionLeadTimeDays) / NULLIF(SUM(CASE WHEN ProductionLeadTimeDays <> 0 THEN 1 END), 0),
-                MIN(ProductionLeadTimeDays), MAX(ProductionLeadTimeDays), COUNT(ProductionLeadTimeDays),
-                SUM(ProductionLeadTimeDays * MaxStock) / SUM(CASE WHEN ProductionLeadTimeDays IS NOT NULL THEN MaxStock END)
+            row = conn.execute(text(f"""SELECT SUM(StockCoverageDays), AVG(StockCoverageDays),
+                SUM(StockCoverageDays) / NULLIF(SUM(CASE WHEN StockCoverageDays <> 0 THEN 1 END), 0),
+                MIN(StockCoverageDays), MAX(StockCoverageDays), COUNT(StockCoverageDays),
+                SUM(StockCoverageDays * MaxStock) / SUM(CASE WHEN StockCoverageDays IS NOT NULL THEN MaxStock END)
                 FROM core.Material WHERE {where}""")).one()
         expected = dict(zip(["sum", "avg", "avg_nonzero", "min", "max", "count", "wavg"], row))
         for fn, want in expected.items():
             spec = {"fn": fn, "weight": "MaxStock"} if fn == "wavg" else {"fn": fn}
-            t = groups(api, group_by=["MaterialLevel"], aggregates={"ProductionLeadTimeDays": spec})
-            got = next(g for g in t["groups"] if g["key"] == [level])["aggregates"]["ProductionLeadTimeDays"]
+            t = groups(api, group_by=["MaterialLevel"], aggregates={"StockCoverageDays": spec})
+            got = next(g for g in t["groups"] if g["key"] == [level])["aggregates"]["StockCoverageDays"]
             assert got == pytest.approx(float(want)), fn
         assert expected["avg_nonzero"] != expected["avg"]  # sıfır gerçekten fark yaratıyor
     finally:
         with db_engine.begin() as conn:
-            conn.execute(text("UPDATE core.Material SET ProductionLeadTimeDays = 2 WHERE Code = 'ALT-001' AND VersionTo IS NULL"))
+            conn.execute(text("UPDATE core.Material SET StockCoverageDays = 2 WHERE Code = 'ALT-001' AND VersionTo IS NULL"))
             conn.execute(text(f"UPDATE core.Material SET MaxStock = NULL WHERE {where}"))
 
 
 @needs_db
 def test_weighted_average_with_empty_weight_is_empty(api):
-    t = groups(api, group_by=["MaterialLevel"], aggregates={"ProductionLeadTimeDays": {"fn": "wavg", "weight": "MaxStock"}})
-    assert all(g["aggregates"]["ProductionLeadTimeDays"] is None for g in t["groups"])  # MaxStock hep boş
-    assert t["aggregate_specs"] == {"ProductionLeadTimeDays": {"fn": "wavg", "weight": "MaxStock"}}
+    t = groups(api, group_by=["MaterialLevel"], aggregates={"StockCoverageDays": {"fn": "wavg", "weight": "MaxStock"}})
+    assert all(g["aggregates"]["StockCoverageDays"] is None for g in t["groups"])  # MaxStock hep boş
+    assert t["aggregate_specs"] == {"StockCoverageDays": {"fn": "wavg", "weight": "MaxStock"}}
 
 
 @needs_db
 def test_default_aggregates_come_from_list_definition(api):
-    t = groups(api, group_by=["MaterialLevel"], fields=["Code", "SafetyStock", "ProductionLeadTimeDays"])
-    assert t["aggregate_specs"] == {"SafetyStock": {"fn": "sum"}, "ProductionLeadTimeDays": {"fn": "avg"}}
+    t = groups(api, group_by=["MaterialLevel"], fields=["Code", "SafetyStock", "StockCoverageDays"])
+    assert t["aggregate_specs"] == {"SafetyStock": {"fn": "sum"}, "StockCoverageDays": {"fn": "avg"}}
     t = groups(api, group_by=["MaterialLevel"], aggregates={"SafetyStock": {"fn": "none"}})
     assert t["aggregate_specs"] == {} and t["groups"][0]["aggregates"] == {}
 

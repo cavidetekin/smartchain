@@ -32,6 +32,8 @@ class ListDefinition:
     decimals: Mapping[str, int] = field(default_factory=dict)
     unit_field: str | None = None
     unit_decimals: frozenset[str] = field(default_factory=frozenset)
+    # Yüzde gösterim (K-113): veride oran (0,05), ekranda ve Excel'de %5,00; ondalık yüzde değerinin, decimals'ta yazılır.
+    percent: frozenset[str] = field(default_factory=frozenset)
     # Gruplamada varsayılan ara toplam (K-90): request.AGG_FNS'ten biri; yazılmayan kolonun varsayılanı yok.
     aggregates: Mapping[str, str] = field(default_factory=dict)
     # Sürümsüz liste (2.3; ör. kullanıcılar): sürüm koşulu yok, veri versiyonu aranmaz, Excel adında versiyon yok.
@@ -111,6 +113,7 @@ def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
             "decimals": (None if name in defn.unit_decimals else defn.decimals[name]) if kind == "number"
                         else 0 if kind == "integer" else None,
             "decimals_from_unit": name in defn.unit_decimals,
+            "percent": name in defn.percent,
             "aggregate": defn.aggregates.get(name),
             "default_visible": name in defn.default_visible,
         })

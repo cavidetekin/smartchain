@@ -51,7 +51,7 @@ def test_columns_include_labelled_additional_field(api):
     body = api.get("/api/materials/columns").json()
     assert body["chunk_size"] == 100
     cols = {c["field"]: c for c in body["columns"]}
-    assert (cols["ProductionLeadTimeDays"]["decimals"], cols["SafetyStock"]["decimals"]) == (0, None)
+    assert (cols["StockCoverageDays"]["decimals"], cols["SafetyStock"]["decimals"]) == (0, None)
     assert cols["SafetyStock"]["decimals_from_unit"] is True
     assert cols["AdditionalText1"]["label"] == "Malzeme sınıfı"
     assert "AdditionalText2" not in cols
@@ -108,7 +108,7 @@ def test_turkish_sort_and_case_insensitive_search(api):
     ({"field": "AdditionalText1", "op": "equals", "value": "a"}, 10),
     ({"field": "SafetyStock", "op": "eq", "value": 20}, 6),
     ({"field": "SafetyStock", "op": "gt", "value": 0}, 6),
-    ({"field": "ProductionLeadTimeDays", "op": "lt", "value": 3}, None),
+    ({"field": "StockCoverageDays", "op": "lt", "value": 3}, None),
 ])
 def test_filter_operators(api, flt, expected):
     body = query(api, filters=[flt])

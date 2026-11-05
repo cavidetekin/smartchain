@@ -15,7 +15,7 @@ from db import models
 from . import dataset as d
 from .dataset import Dataset
 
-EMPTY_ENTITIES = {"Forecast"}  # docs/11: tahmin üretilmez
+EMPTY_ENTITIES = {"Forecast", "MaterialReference"}  # docs/11: tahmin üretilmez; her üretilen malzemenin kendi versiyonu var
 
 
 def stg_entities() -> list[str]:
@@ -25,38 +25,32 @@ def stg_entities() -> list[str]:
 def _resolvers(ds: Dataset) -> dict:
     """stg kod alanı → temiz satırdan kodu üreten işlev."""
     c = ds.code
-    pv = lambda r: ds.by_id("ProductionVersion", r["ProductionVersionId"])  # noqa: E731
 
     def wo(field):
-        return lambda r: None if r.get(field) is None else ds.by_id("WorkOrder", r[field])["OrderNo"]
-
-    def labor_ref(r):
-        if r.get("LaborRefId") is None:
-            return None
-        table = "CompetenceGroup" if r.get("LaborType") == "Yetkinlik grubu" else "ResourceGroup"
-        return c(table, r["LaborRefId"])
+        return lambda r: None if r.get(field) is None else ds.by_id("WorkOrder", r[field])["WorkOrderNo"]
 
     def so(field):
         return lambda r: None if r.get("SalesOrderLineId") is None else ds.by_id("SalesOrderLine", r["SalesOrderLineId"])[field]
 
     return {
         "LocationCode": lambda r: d.LOCATION_CODE,
-        "MaterialCode": lambda r: c("Material", r["MaterialId"] if "MaterialId" in r else pv(r)["MaterialId"]),
+        "MaterialCode": lambda r: c("Material", r["MaterialId"]),
         "ComponentMaterialCode": lambda r: c("Material", r["ComponentMaterialId"]),
-        "ProductionVersionCode": lambda r: pv(r)["Code"],
         "SupplierCode": lambda r: c("Supplier", r.get("SupplierId")),
         "CustomerCode": lambda r: c("Customer", r.get("CustomerId")),
         "ProjectCode": lambda r: c("Project", r.get("ProjectId")),
         "ProjectGroupCode": lambda r: c("ProjectGroup", r.get("ProjectGroupId")),
+        "LendingProjectCode": lambda r: c("Project", r["LendingProjectId"]),
+        "BorrowingProjectCode": lambda r: c("Project", r["BorrowingProjectId"]),
         "ResourceCode": lambda r: c("Resource", r.get("ResourceId")),
         "ResourceGroupCode": lambda r: c("ResourceGroup", r.get("ResourceGroupId")),
-        "WorkerCode": lambda r: c("Worker", r["WorkerId"]),
-        "CompetenceGroupCode": lambda r: c("CompetenceGroup", r["CompetenceGroupId"]),
-        "WorkOrderNo": wo("WorkOrderId"),
+        "SubcontractorCode": lambda r: c("Supplier", r.get("SubcontractorId")),
+        "WorkOrderNo": lambda r: r["WorkOrderNo"] if "WorkOrderNo" in r else wo("WorkOrderId")(r),  # iş emrinin kendi kolonu da bu adda (K-124)
         "ParentWorkOrderNo": wo("ParentWorkOrderId"),
+        "ProductionVersionCode": lambda r: c("ProductionVersion", r.get("ProductionVersionId")),
         "SalesOrderNo": so("OrderNo"),
         "SalesOrderLineNo": so("LineNo"),
-        "LaborRefCode": labor_ref,
+        "SalesOrderLineItemNo": so("LineItemNo"),
     }
 
 
@@ -104,8 +98,8 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
     stg["BOM"].append(bom_extra)
 
     # H3 · negatif miktar (var olan satırlarda).
-    po_i = _find(stg["PurchaseOrderLine"], OrderNo="PO-2060", LineNo=1)
-    stg["PurchaseOrderLine"][po_i]["OpenQty"] = -50.0
+    po_i = _find(stg["PurchaseOrderLine"], PurchaseOrderNo="PO-2060", LineNo=1)
+    stg["PurchaseOrderLine"][po_i]["OpenQuantity"] = -50.0
     bom_i = _find(stg["BOM"], MaterialCode="ALT-012", ComponentMaterialCode="SAT-010")
     stg["BOM"][bom_i]["Quantity"] = -2.0
 
@@ -129,18 +123,18 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
              behaviour="Satır yüklenmez", message="Malzeme bulunamadı: MAM-099 (partide ve geçerli veride yok).",
              core_difference=["SalesOrderLine SO-1099 yok (temiz hâlde de yok)"]),
         dict(code="H2", type="Tanımsız malzeme kodu", file="BOM.xlsx",
-             rows=[row("BOM", MaterialCode="ALT-005", ComponentMaterialCode="SAT-999")], key="ALT-005|V1|SAT-999",
+             rows=[row("BOM", MaterialCode="ALT-005", ComponentMaterialCode="SAT-999")], key="ALT-005|B-ALT-005|SAT-999",
              field="ComponentMaterialCode", value="SAT-999", step="Fonksiyon 04-02 referans kontrolü (geliştirme 3.4, 4.4)",
              severity="hata", behaviour="Satır yüklenmez",
              message="Malzeme bulunamadı: SAT-999 (partide ve geçerli veride yok).",
              core_difference=["BOM ALT-005 → SAT-999 yok (temiz hâlde de yok)"]),
         dict(code="H3", type="Negatif miktar", file="PurchaseOrderLine.xlsx",
-             rows=[row("PurchaseOrderLine", OrderNo="PO-2060", LineNo=1)], key="PO-2060|1", field="OpenQty",
+             rows=[row("PurchaseOrderLine", PurchaseOrderNo="PO-2060", LineNo=1)], key="PO-2060|1", field="OpenQuantity",
              value=-50.0, step="Fonksiyon 04-03 mantıksal kontrol (geliştirme 3.4)", severity="hata",
-             behaviour="Satır yüklenmez", message="OpenQty negatif olamaz (-50).",
+             behaviour="Satır yüklenmez", message="OpenQuantity negatif olamaz (-50).",
              core_difference=["PurchaseOrderLine PO-2060|1 eksik"]),
         dict(code="H3", type="Negatif miktar", file="BOM.xlsx",
-             rows=[row("BOM", MaterialCode="ALT-012", ComponentMaterialCode="SAT-010")], key="ALT-012|V1|SAT-010",
+             rows=[row("BOM", MaterialCode="ALT-012", ComponentMaterialCode="SAT-010")], key="ALT-012|B-ALT-012|SAT-010",
              field="Quantity", value=-2.0, step="Fonksiyon 04-03 mantıksal kontrol (geliştirme 3.4)", severity="hata",
              behaviour="Satır yüklenmez", message="Quantity negatif olamaz (-2).",
              core_difference=["BOM ALT-012 → SAT-010 eksik"]),

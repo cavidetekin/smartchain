@@ -63,8 +63,10 @@ def test_columns_types_filters_and_labels():
     assert (cols["IsSellable"]["type"], cols["IsSellable"]["values"]) == ("bool", [True, False])
     assert (cols["SafetyStock"]["type"], cols["SafetyStock"]["decimals"]) == ("number", None)
     assert cols["SafetyStock"]["decimals_from_unit"] and cols["MinLot"]["decimals_from_unit"]
-    assert (cols["AssemblyScrapPct"]["decimals"], cols["AssemblyScrapPct"]["decimals_from_unit"]) == (1, False)
-    assert (cols["ProductionLeadTimeDays"]["decimals"], cols["GoodsReceiptDays"]["decimals"]) == (0, 0)  # gün
+    assert (cols["ScrapRatio"]["decimals"], cols["ScrapRatio"]["decimals_from_unit"], cols["ScrapRatio"]["percent"]) == (2, False, True)  # K-113
+    assert [f for f, c in cols.items() if c["percent"]] == ["ScrapRatio"]
+    assert cols["QtyPerBox"]["decimals_from_unit"] and cols["QtyPerPallet"]["decimals_from_unit"]
+    assert (cols["StockCoverageDays"]["decimals"], cols["GoodsReceiptDays"]["decimals"]) == (0, 0)  # gün
     assert (cols["ShelfLifeDays"]["decimals"], cols["Code"]["decimals"]) == (0, None)
     assert (cols["ShelfLifeDays"]["type"], cols["ShelfLifeDays"]["filter"]) == ("integer", "number")
     assert (cols["UpdatedAt"]["type"], cols["UpdatedAt"]["filter"]) == ("datetime", "date")
@@ -146,6 +148,7 @@ def test_every_number_field_declares_decimals(defn):
     assert fixed & unit == set()                      # ikisi birden olmaz
     assert numbers - fixed - unit == set()            # hiçbiri olmaz
     assert fixed | unit <= numbers
+    assert defn.percent <= fixed                      # yüzde gösterimin ondalığı sabit (K-113)
     assert not unit or defn.unit_field in defn.sa_table.c
 
 

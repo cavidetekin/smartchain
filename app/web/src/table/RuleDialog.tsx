@@ -3,7 +3,7 @@
 // seçilmezse zemine göre okunur renk kendiliğinden (uyarı yok). Değer girişleri filtre menüsündekilerle aynı ortak alanlar.
 import { useMemo, useState } from "react";
 
-import { formatDate, formatNumber, toIsoDate } from "../format";
+import { formatDate, formatNumber, formatPercent, percentInput, percentValue, toIsoDate } from "../format";
 import { tr } from "../i18n/tr";
 import { Checkbox, DateField, Dialog, NumberField, RadioGroup, Segment, SelectField, TextareaField, TextField } from "../ui";
 import { ColorPicker } from "../ui/ColorPicker";
@@ -63,7 +63,7 @@ export function RuleDialog({ rule, isNew, columns, onClose, onSave }: {
   const condition: RuleCondition = { ...cond, op };
   const ready = conditionReady(col, condition) && hasFormat;
 
-  const sample = kind === "number" ? formatNumber(1234, col.decimals ?? 0) : kind === "date" ? formatDate(new Date())
+  const sample = kind === "number" ? (col.percent ? formatPercent(0.05, col.decimals ?? 2) : formatNumber(1234, col.decimals ?? 0)) : kind === "date" ? formatDate(new Date())
     : kind === "bool" ? T.yes : col.label;
 
   const valueInputs = () => {
@@ -83,18 +83,22 @@ export function RuleDialog({ rule, isNew, columns, onClose, onSave }: {
     }
     if (kind === "number") {
       const decimals = col.decimals ?? 3;
+      // Yüzde gösterimli kolonda giriş yüzde, kuralda saklanan oran (K-113).
+      const shown = (v: number | null | undefined) => v == null ? null : col.percent ? percentInput(v) : v;
+      const stored = (v: number) => col.percent ? percentValue(v) : v;
+      const suffix = col.percent ? " (%)" : "";
       if (op === "between") {
         return (
           <div className="sc-table-pop-pair">
-            <NumberField label={T.min} value={cond.min ?? null} decimals={decimals}
-                         onChange={(v) => setCond({ ...cond, op, min: v ?? undefined })} />
-            <NumberField label={T.max} value={cond.max ?? null} decimals={decimals}
-                         onChange={(v) => setCond({ ...cond, op, max: v ?? undefined })} />
+            <NumberField label={T.min + suffix} value={shown(cond.min)} decimals={decimals}
+                         onChange={(v) => setCond({ ...cond, op, min: v === null ? undefined : stored(v) })} />
+            <NumberField label={T.max + suffix} value={shown(cond.max)} decimals={decimals}
+                         onChange={(v) => setCond({ ...cond, op, max: v === null ? undefined : stored(v) })} />
           </div>
         );
       }
-      return <NumberField label={T.value} value={typeof cond.value === "number" ? cond.value : null} decimals={decimals}
-                          onChange={(v) => setCond({ op, ...(v !== null ? { value: v } : {}) })} />;
+      return <NumberField label={T.value + suffix} value={typeof cond.value === "number" ? shown(cond.value) : null} decimals={decimals}
+                          onChange={(v) => setCond({ op, ...(v !== null ? { value: stored(v) } : {}) })} />;
     }
     if (kind === "date") {
       if (op === "relative") {

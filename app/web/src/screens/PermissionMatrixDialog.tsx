@@ -1,4 +1,4 @@
-// Yetki matrisi (fonksiyon 90, K-100; ekran 22'den açılır): 13 grup × 4 rol. İstisnalar Excel'de, fonksiyon düzeyinde görünür.
+// Yetki matrisi (fonksiyon 90, K-100; ekran 22'den açılır): 14 grup × 4 rol. İstisnalar Excel'de, fonksiyon düzeyinde görünür.
 import { useEffect, useState } from "react";
 
 import { ApiError } from "../api/client";

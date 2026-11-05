@@ -52,7 +52,7 @@ def test_reporting_is_open_to_every_role(api, roles, role):  # noqa: F811
     assert r.status_code == 201, r.text
     assert api.post("/api/materials/export", headers=h, json={"fields": ["Code", "Name"]}).status_code == 200
     me = api.get("/api/auth/me", headers=h).json()
-    assert me["role"] == role and me["permissions"]["86"] == "full" and len(me["permissions"]) == 98
+    assert me["role"] == role and me["permissions"]["86"] == "full" and len(me["permissions"]) == 99
 
 
 def test_jobs_own_and_others(db_session, roles, db_engine):

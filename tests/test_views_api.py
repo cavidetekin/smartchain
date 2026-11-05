@@ -139,7 +139,7 @@ def test_relative_date_filter_is_stored_relative(api, users, db_engine, monkeypa
 
 
 def test_aggregate_choice_is_saved_with_view(api, users):
-    agg = {"ProductionLeadTimeDays": {"fn": "wavg", "weight": "SafetyStock"}, "SafetyStock": {"fn": "max"}}
+    agg = {"StockCoverageDays": {"fn": "wavg", "weight": "SafetyStock"}, "SafetyStock": {"fn": "max"}}
     v = create(api, users[0], "pytest Ara toplam", {**DEFINITION, "aggregates": agg})
     assert v["definition"]["aggregates"] == agg
     got = next(x for x in listed(api, users[0])["views"] if x["id"] == v["id"])

@@ -122,6 +122,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **19 · Kural uygulama:** Her yüklemede otomatik çalışır; elle de tetiklenebilir.
 - **20 · Veri kalitesi kontrolü:** Ana veri ve işlem verisi uyarıları önem sırasıyla üretilir.
 - **21 · Kalite düzeltme aksiyonu:** Satırdan düzeltme ekranına gidilir ya da önerilen kural uygulanır.
+- **99 · Malzeme blokajı:** Malzemenin üretimi, satın alması ya da satışı belli bir dönem için durdurulur.
 
 #### PARAMETRE
 
@@ -270,7 +271,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kısmi yükleme:** Hatalı varlık seçilmeden diğerleri yüklenir; yeni veri versiyonu oluşur.
 - **Hata detayı:** Hatalı satır ve nedeni sağda; düzeltme kaynakta ya da elle yapılır.
 - **Geçmiş:** Gece ve elle yüklemeler kullanıcı ve sonuçla birlikte saklanır.
-- **Uygulama (3.1, K-110):** iskelet: 26 tablo ortak tabloda, satır menüsünde şablon indirme ve şablon bilgisi. Son yükleme zamanı 3.2'de, Yöntem 3.3'te; sayılar, üst düğmeler, sağ paneller 5.5'te.
+- **Uygulama (3.1, K-110):** iskelet: 25 tablo ortak tabloda, satır menüsünde şablon indirme ve şablon bilgisi. Son yükleme zamanı 3.2'de, Yöntem 3.3'te; sayılar, üst düğmeler, sağ paneller 5.5'te.
 
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>
@@ -281,6 +282,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Değerin kaynağı:** Her hücrede ERP, kural, elle ya da varsayılan etiketi görünür.
 - **Elle düzeltme:** Elle değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
 - **İz:** Her değişiklik kim, ne zaman, eski ve yeni değerle geçmişte tutulur.
+- **Malzeme blokajı (fonksiyon 99, K-126):** Malzeme sekmesinden tanımlanır (6.1).
 
 ### Veri kuralları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 04/25</sub>

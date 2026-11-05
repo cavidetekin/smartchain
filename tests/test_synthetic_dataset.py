@@ -16,7 +16,7 @@ gen = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gen)
 
 DAY = date(2026, 10, 27)
-EMPTY = {"Forecast", "TransferOrder"}  # docs/11: tahmin üretilmez; tek lokasyon
+EMPTY = {"Forecast", "TransferOrder", "MaterialReference"}  # docs/11: tahmin üretilmez; tek lokasyon; her üretilen malzemenin kendi versiyonu var
 LOADER_FILLS = {"VersionFrom", "VersionTo", "ImportBatchId", "UpdatedAt", "IsSynthetic"}
 
 
@@ -28,7 +28,7 @@ def ds():
 def test_sizes_match_docs(ds):
     sm = s.summary(ds)
     assert 190 <= sm["Malzeme"] <= 210
-    assert sm["Kaynak"] == 15 and sm["Açık kesin sipariş"] == 40
+    assert sm["Kaynak"] == 40 and sm["Çalışan"] == 25 and sm["Açık kesin sipariş"] == 40
     assert sm["Müşteri"] == 3 and sm["Tedarikçi"] == 8 and 23 <= sm["Çalışan"] <= 27
     assert ds.horizon_end == ds.start + timedelta(weeks=13, days=-1)
     assert ds.start.weekday() == 0 and ds.start <= DAY < ds.start + timedelta(days=7)  # hafta 1 (K-79)
@@ -60,9 +60,9 @@ def test_values_fit_schema(ds):
 def test_references_resolve(ds):
     """Her ...Id alanı var olan bir kayda gider (K-58: ana tablolar Id ile)."""
     targets = {**{k: (v if isinstance(v, str) else v[0]) for k, v in gen.REF_TARGET.items()},
-               "LocationId": "Location", "CalendarId": "Calendar", "ShiftId": "Shift", "WorkerId": "Worker",
-               "CompetenceGroupId": "CompetenceGroup", "ResourceGroupId": "ResourceGroup",
-               "ProjectGroupId": "ProjectGroup", "CustomerId": "Customer", "ProductionVersionId": "ProductionVersion",
+               "LocationId": "Location", "CalendarId": "Calendar", "ShiftId": "Shift",
+               "ResourceGroupId": "ResourceGroup",
+               "ProjectGroupId": "ProjectGroup", "CustomerId": "Customer",
                "SalesOrderLineId": "SalesOrderLine"}
     missing = []
     for name, rows in ds.tables.items():
@@ -72,9 +72,36 @@ def test_references_resolve(ds):
                     if targets[k] in ds.tables and v not in {x["Id"] for x in ds.rows(targets[k])}:
                         missing.append(f"{name}.{k}={v}")
     assert not missing
-    labor = [r for r in ds.rows("Routing") if r.get("LaborRefId")]
-    assert labor and all(r["LaborType"] == "Yetkinlik grubu" and ds.code("CompetenceGroup", r["LaborRefId"])
+    labor = [r for r in ds.rows("Routing") if r["ResourceRole"] == "Secondary"]  # K-116: işçilik ayrı satır
+    assert labor and all(r["ResourceId"] is None and ds.code("ResourceGroup", r["ResourceGroupId"]) == d.LABOR_GROUP and r["ResourceNumber"] == 2
                          for r in labor)
+    primary = {(r["RouteCode"], r["OperationNo"]): r for r in ds.rows("Routing") if r["ResourceRole"] == "Primary"}
+    assert all(r["Consumption"] == primary[(r["RouteCode"], r["OperationNo"])]["Consumption"] and r["SequenceNo"] == 2 for r in labor)
+    assert all(r["ResourceId"] or r["ResourceGroupId"] for r in ds.rows("Routing"))
+    keys = [(r["RouteCode"], r["OperationNo"], r["SequenceNo"]) for r in ds.rows("Routing")]
+    assert len(keys) == len(set(keys))
+    worker_ops = {o["WorkOrderId"] for o in ds.rows("WorkOrderOperation") if o["ResourceId"] is None}
+    assert not worker_ops  # iş emri operasyonu yalnız Primary satırdan
+
+
+def test_resource_side(ds):
+    """K-117: tip bayrakla; işçi kaynak, yetkinlik grup; atama ve izin kaynağa bağlı."""
+    flags = ("IsEmployee", "IsMachine", "IsFurnace", "IsMold", "IsOther", "IsSubcontractor")
+    assert all(sum(bool(r[f]) for f in flags) == 1 for r in ds.rows("Resource"))
+    assert not [r for r in ds.rows("Resource") if r["IsFurnace"] or r["IsMold"]]  # Faz 1 dışı
+    groups = {g["Id"]: g for g in ds.rows("ResourceGroup")}
+    assert {g["Code"] for g in groups.values() if g["IsCompetenceGroup"]} == {"CG-CNC", "CG-MON", "CG-KAL"}
+    assignments = ds.rows("ResourceGroupAssignment")
+    keys = [(a["ResourceGroupId"], a["ResourceId"]) for a in assignments]
+    assert len(keys) == len(set(keys))
+    employees = {r["Id"] for r in ds.rows("Resource") if r["IsEmployee"]}
+    machines = {r["Id"] for r in ds.rows("Resource") if r["IsMachine"]}
+    assert employees == {a["ResourceId"] for a in assignments if groups[a["ResourceGroupId"]]["IsCompetenceGroup"]}
+    assert machines <= {a["ResourceId"] for a in assignments}
+    assert not {a["ResourceId"] for a in assignments if groups[a["ResourceGroupId"]]["IsCompetenceGroup"]} & machines
+    assert all(a["ResourceId"] in employees and a["EndDate"] >= a["StartDate"] for a in ds.rows("EmployeeAbsence"))
+    assert {s["ResourceGroupId"] for s in ds.rows("ShiftPlan")} <= {g for g in groups if groups[g]["IsCompetenceGroup"]}
+    assert not [r for r in ds.rows("Routing") if r["ResourceRole"] == "Secondary" and not groups[r["ResourceGroupId"]]["IsCompetenceGroup"]]
 
 
 def test_bom_is_acyclic_with_three_or_four_levels(ds):
@@ -102,7 +129,7 @@ def test_deterministic_and_seed_sensitive(ds):
     again = generate(DAY)
     assert again.tables == ds.tables and again.params == ds.params
     other = generate(DAY, seed=7)
-    assert [w["Name"] for w in other.rows("Worker")] != [w["Name"] for w in ds.rows("Worker")]
+    assert [r["Name"] for r in other.rows("Resource") if r["IsEmployee"]] != [r["Name"] for r in ds.rows("Resource") if r["IsEmployee"]]
 
 
 # Takvim ayına bağlı alanlar (aylık tedarikçi limiti, durum 3) hafta kaymasıyla değil, aya göre belirlenir.
@@ -113,7 +140,7 @@ def test_dates_shift_with_generation_day(ds):
     later = generate(DAY + timedelta(days=7))
     for name, rows in ds.tables.items():
         for a, b in zip(rows, later.rows(name)):
-            if (name, a.get("OrderNo")) in MONTH_BOUND:
+            if (name, a.get("PurchaseOrderNo")) in MONTH_BOUND:
                 continue
             for k, v in a.items():
                 if isinstance(v, (date, datetime)):
@@ -137,6 +164,6 @@ def test_bottleneck_orders(ds):
     m5 = ds.get("Resource", Code=d.BOTTLENECK_RESOURCE)["Id"]
     for so in s.open_firm_orders(ds):
         if 3 <= ds.week_of(so["RequestedDate"]) <= 5:
-            load_by_order[so["OrderNo"]] = s.resource_hours(ds, so["MaterialId"], so["OpenQty"], m5)
+            load_by_order[so["OrderNo"]] = s.resource_hours(ds, so["MaterialId"], so["OpenQuantity"], m5)
     heavy = {k for k, v in load_by_order.items() if v >= 40}
     assert heavy == {f"SO-{n}" for n in range(1011, 1017)}

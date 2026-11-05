@@ -33,7 +33,7 @@ from conftest import FAKE_USER
 
 pytestmark = pytest.mark.db
 
-FIELDS = ["Code", "Name", "MaterialGroup", "SafetyStock", "ProductionLeadTimeDays", "UpdatedAt", "IsPurchasable"]
+FIELDS = ["Code", "Name", "MaterialGroup", "SafetyStock", "StockCoverageDays", "UpdatedAt", "IsPurchasable"]
 SORT = [{"field": "MaterialGroup", "dir": "desc"}, {"field": "Code", "dir": "asc"}]
 FILTERS = [{"field": "Name", "op": "contains", "value": "mil"}]
 
@@ -85,7 +85,7 @@ def test_sync_export_matches_screen_query(api, user, db_engine):
     assert [r[0] for r in rows[1:]] == [s["Code"] for s in screen] and len(screen) > 0
     for row, s in zip(rows[1:], screen):  # sayılar sayı olarak, ekrandaki değerle aynı
         assert row[3] == (None if s["SafetyStock"] is None else pytest.approx(float(s["SafetyStock"])))
-        assert row[4] == s["ProductionLeadTimeDays"]
+        assert row[4] == s["StockCoverageDays"]
     assert all(r[6] in ("Evet", "Hayır") for r in rows[1:])
     info = dict(wb["Bilgi"].iter_rows(values_only=True))
     assert info["Filtreler"] == "Malzeme adı: içerir 'mil'"

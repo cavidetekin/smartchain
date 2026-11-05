@@ -11,7 +11,7 @@ import type {
 
 export const col = (field: string, label: string, type: ListColumn["type"], filter: ListColumn["filter"],
                     extra: Partial<ListColumn> = {}): ListColumn => ({
-  field, label, type, filter, values: null, values_from_server: false, decimals: null, decimals_from_unit: false,
+  field, label, type, filter, values: null, values_from_server: false, decimals: null, decimals_from_unit: false, percent: false,
   aggregate: null, default_visible: true, ...extra,
 });
 
@@ -24,7 +24,7 @@ export const COLUMNS: ListColumn[] = [
   col("SafetyStock", "Güvenlik stoğu", "number", "number", { decimals_from_unit: true, aggregate: "sum" }),
   col("UpdatedAt", "Son değişiklik zamanı", "datetime", "date"),
   col("AdditionalText1", "Malzeme sınıfı", "text", "text", { default_visible: false }),
-  col("ProductionLeadTimeDays", "Üretim süresi (gün)", "number", "number", { decimals: 0, aggregate: "avg", default_visible: false }),
+  col("StockCoverageDays", "Stok gün kapsamı", "number", "number", { decimals: 0, aggregate: "avg", default_visible: false }),
   col("LastReceiptDate", "Son giriş tarihi", "date", "date", { default_visible: false }),
 ];
 export const STANDARD_FIELDS = ["Code", "Name", "MaterialLevel", "MaterialGroup", "IsSellable", "SafetyStock", "UpdatedAt"];
@@ -137,7 +137,7 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
         return { Id: i + 1, Code: prefix ? `${prefix}-${i}` : `M-${i}`, Name: `Malzeme ${i}`, MaterialLevel: "Hammadde",
                  MaterialGroup: "Çubuk", IsSellable: i % 2 === 0, SafetyStock: i % 2 === 0 ? 1234 : 12.25,
                  _unit_decimals: i % 2 === 0 ? 0 : 3, UpdatedAt: "2026-10-27T09:20:00+00:00", AdditionalText1: "A",
-                 ProductionLeadTimeDays: i % 4 === 3 ? null : 3, LastReceiptDate: i % 3 === 0 ? null : "2026-10-20" };
+                 StockCoverageDays: i % 4 === 3 ? null : 3, LastReceiptDate: i % 3 === 0 ? null : "2026-10-20" };
       });
       if (body.rules?.length) {
         if (ruleGate.hold) await new Promise<void>((resolve) => { ruleGate.release = resolve; });

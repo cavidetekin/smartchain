@@ -21,21 +21,26 @@ MASTER_DATA, TRANSACTION_DATA = "Ana veri", "İşlem verisi"
 EXAMPLES = Path(__file__).with_name("template_examples.json")   # sentetik veriden türetilmiş sabit örnekler
 EXAMPLE_TEXT, EXAMPLE_NUMBER = "Örnek", 10                      # etiketlenen ek alanlar
 
+UNIT_CODE = "Birim kodu; yeni kod yüklemede oluşur"  # birim şablonu yok, kod yüklemede oluşur (K-112)
 BLANK_ROW_REJECTED, BLANK_STAYS, BLANK_RULE = "Satır yüklenmez", "Boş kalır", "Veri kuralıyla doldurulur"
+RULE_THEN_DEFAULT = "kural, yoksa varsayılan "
+EITHER = "alternatif "   # iki alandan biri dolu olmalı (K-116)
 
 # Referans alanı → hangi tablonun kodu (docs/03 ANAHTAR = REF; yeni referans eklenince test düşer).
 REF_TEXT = {
-    "LocationCode": "Lokasyon tablosundaki kod", "BaseUom": "Birim tablosundaki kod", "FromUom": "Birim tablosundaki kod",
-    "ToUom": "Birim tablosundaki kod", "CapacityUnit": "Birim tablosundaki kod", "MaterialCode": "Malzeme tablosundaki kod",
+    "LocationCode": "Lokasyon tablosundaki kod", "BaseUom": UNIT_CODE, "FromUom": UNIT_CODE,
+    "ToUom": UNIT_CODE, "ComponentUom": UNIT_CODE, "Uom": UNIT_CODE, "CapacityUnit": UNIT_CODE, "MaterialCode": "Malzeme tablosundaki kod",
     "ComponentMaterialCode": "Malzeme tablosundaki kod", "ResourceCode": "Kaynak tablosundaki kod",
-    "ResourceGroupCode": "Kaynak grubu tablosundaki kod", "LaborRefCode": "Yetkinlik grubu ya da Kaynak grubu tablosundaki kod",
-    "CompetenceGroupCode": "Yetkinlik grubu tablosundaki kod", "WorkerCode": "İşçi tablosundaki kod", "SupplierCode": "Tedarikçi tablosundaki kod",
-    "CustomerCode": "Müşteri tablosundaki kod", "ProjectCode": "Proje tablosundaki kod", "ProjectGroupCode": "Proje grubu tablosundaki kod",
+    "ResourceGroupCode": "Kaynak grubu tablosundaki kod",
+    "SubcontractorCode": "Tedarikçi tablosundaki kod", "SupplierCode": "Tedarikçi tablosundaki kod",
+    "CustomerCode": "Müşteri tablosundaki kod", "ProjectCode": "Proje tablosundaki kod",
+    "LendingProjectCode": "Proje tablosundaki kod", "BorrowingProjectCode": "Proje tablosundaki kod", "ProjectGroupCode": "Proje grubu tablosundaki kod",
     "SalesOrderNo": "Satış siparişi tablosundaki sipariş numarası", "SalesOrderLineNo": "Satış siparişi tablosundaki satır numarası",
+    "SalesOrderLineItemNo": "Satış siparişi tablosundaki alt satır numarası",
     "WorkOrderNo": "İş emri tablosundaki numara", "ParentWorkOrderNo": "İş emri tablosundaki numara",
+    "ProductionVersionCode": "Üretim versiyonu tablosundaki kod", "ReferenceProductionVersionCode": "Üretim versiyonu tablosundaki kod",
+    "ReferenceMaterialCode": "Malzeme tablosundaki kod",
 }
-# Faz 1 dışı değerler: sözleşmede kalır, Smartchain değerlerinde yazmaz; gelirse değer listesi dışı bilgi olarak görünür (K-110).
-OUT_OF_PHASE = {("Resource", "ResourceType"): frozenset({"Kalıp", "Fırın"})}
 
 
 @dataclass(frozen=True)
@@ -70,7 +75,7 @@ class TemplateField:
     type_text: str
     required: bool                  # boşsa satır yüklenmez
     blank: str                      # boş bırakılırsa ne olur
-    values: tuple[str, ...]         # Smartchain değerleri (Faz 1 dışı olanlar hariç)
+    values: tuple[str, ...]         # Smartchain değerleri
     ref_text: str                   # referansta hangi tablonun kodu
     example: object
 
@@ -108,6 +113,10 @@ def blank_text(missing: str) -> str:
         return BLANK_STAYS
     if missing == "kural ya da elle":
         return BLANK_RULE
+    if missing.startswith(EITHER):
+        return f"{missing.removeprefix(EITHER)} da boşsa satır yüklenmez"
+    if missing.startswith(RULE_THEN_DEFAULT):
+        return f"{BLANK_RULE}; kural yoksa {missing.removeprefix(RULE_THEN_DEFAULT)} kabul edilir"
     if missing.startswith("varsayılan "):
         return f"{missing.removeprefix('varsayılan ')} kabul edilir"
     raise ValueError(f"Bilinmeyen YOKSA: {missing!r}")
@@ -147,11 +156,10 @@ def fields(table: str, labels: Mapping[str, str] | None = None) -> list[Template
             continue
         kind, type_text = _kind(col)
         blank = blank_text(col.info.get("missing", ""))
-        excluded = OUT_OF_PHASE.get((table, col.name), frozenset())
         out.append(TemplateField(
             name=col.name, label=label, description=_description(col, label), kind=kind, type_text=type_text,
             required=blank == BLANK_ROW_REJECTED, blank=blank,
-            values=tuple(v for v in col.info.get("values") or () if v not in excluded),
+            values=tuple(col.info.get("values") or ()),
             ref_text=REF_TEXT.get(col.name, "") if "REF" in col.info.get("key", "") else "",
             example=_example(table, col.name, kind)))
     return out

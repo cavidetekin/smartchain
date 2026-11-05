@@ -8,24 +8,25 @@ MATERIALS = ListDefinition(
     file_slug="malzeme",
     function=10,  # Ana veri görüntüleme (K-100)
     fields=(
-        "Code", "Name", "MaterialLevel", "MaterialGroup", "BaseUom", "DefaultProcurement", "Ownership",
-        "IsPurchasable", "IsProducible", "IsSellable", "IsProjectTracked", "IsPhantom",
-        "ProductionLeadTimeDays", "GoodsReceiptDays", "SafetyStock", "MaxStock", "LotSizePolicy",
-        "MinLot", "MaxLot", "LotMultiple", "AssemblyScrapPct", "ShelfLifeDays",
+        "Code", "Name", "MaterialLevel", "MaterialType", "MaterialGroup", "Brand", "PlannerCode", "MRPGroup", "BaseUom",
+        "DefaultSupplyType", "IsCustomerSupplied", "IsActive", "IsCritical", "IsPurchasable", "IsProducible", "IsSellable",
+        "IsSubcontractable", "IsCustomTracked", "IsPhantom", "GoodsReceiptDays", "SafetyStock", "StockCoverageDays",
+        "MaxStock", "LotSizePolicy", "MinLot", "MaxLot", "LotMultiple", "QtyPerBox", "QtyPerPallet", "ScrapRatio", "ShelfLifeDays",
         *(f"AdditionalText{i}" for i in range(1, 8)), *(f"AdditionalNumber{i}" for i in range(1, 4)),
         "UpdatedAt",
     ),
-    default_visible=("Code", "Name", "MaterialLevel", "MaterialGroup", "BaseUom", "DefaultProcurement",
-                     "ProductionLeadTimeDays", "SafetyStock", "UpdatedAt"),
+    default_visible=("Code", "Name", "MaterialLevel", "MaterialGroup", "BaseUom", "DefaultSupplyType",
+                     "SafetyStock", "UpdatedAt"),
     default_sort=(("Code", "asc"),),
     server_values=frozenset({"MaterialGroup", "BaseUom"}),
-    # Gün ondalıksız, yüzde 1; miktarlar temel birimin ondalığıyla (K-88).
+    # Gün ondalıksız; fire oranı yüzde gösterilir, 2 ondalık (K-113); miktarlar temel birimin ondalığıyla (K-88).
     decimals={
-        "ProductionLeadTimeDays": 0, "GoodsReceiptDays": 0, "AssemblyScrapPct": 1,
+        "StockCoverageDays": 0, "GoodsReceiptDays": 0, "ScrapRatio": 2,
         "AdditionalNumber1": 2, "AdditionalNumber2": 2, "AdditionalNumber3": 2,
     },
+    percent=frozenset({"ScrapRatio"}),
     unit_field="BaseUom",
-    unit_decimals=frozenset({"SafetyStock", "MaxStock", "MinLot", "MaxLot", "LotMultiple"}),
+    unit_decimals=frozenset({"SafetyStock", "MaxStock", "MinLot", "MaxLot", "LotMultiple", "QtyPerBox", "QtyPerPallet"}),
     aggregates={"SafetyStock": "sum", "MaxStock": "sum",
-                "ProductionLeadTimeDays": "avg", "GoodsReceiptDays": "avg", "AssemblyScrapPct": "avg"},
+                "StockCoverageDays": "avg", "GoodsReceiptDays": "avg", "ScrapRatio": "avg"},
 )

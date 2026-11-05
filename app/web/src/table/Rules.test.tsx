@@ -102,24 +102,24 @@ describe("alan karşılaştırması", () => {
     let dialog = await newRuleFrom("Güvenlik stoğu");
     await userEvent.click(within(dialog).getByRole("radio", { name: "Alan" }));
     const ref = within(dialog).getByRole("combobox", { name: "Karşılaştırılan alan" });
-    expect([...ref.querySelectorAll("option")].map((o) => o.textContent)).toEqual(["—", "Üretim süresi (gün)"]);  // gizli de
-    await userEvent.selectOptions(ref, "ProductionLeadTimeDays");
+    expect([...ref.querySelectorAll("option")].map((o) => o.textContent)).toEqual(["—", "Stok gün kapsamı"]);  // gizli de
+    await userEvent.selectOptions(ref, "StockCoverageDays");
     expect(within(dialog).getByRole("checkbox", { name: "Boşları 0 say" })).toBeChecked();
     await userEvent.click(within(dialog).getByRole("radio", { name: "Yukarı ok" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(lastQuery().rules).toEqual(
-      [{ field: "SafetyStock", condition: { op: "gt", field_ref: "ProductionLeadTimeDays" } }]));
+      [{ field: "SafetyStock", condition: { op: "gt", field_ref: "StockCoverageDays" } }]));
     await waitFor(() => expect(cell(3).querySelector(".sc-rule-icon")).not.toBeNull());  // 12,25 > boş (0)
     expect(cell(1).querySelector(".sc-rule-icon")).not.toBeNull();                         // 12,25 > 3
 
     const panel = await openPanel("Güvenlik stoğu");
-    expect(panel).toHaveTextContent("Güvenlik stoğu > Üretim süresi (gün)");
-    await userEvent.click(within(panel).getByRole("button", { name: "Güvenlik stoğu > Üretim süresi (gün) kuralını düzenle" }));
+    expect(panel).toHaveTextContent("Güvenlik stoğu > Stok gün kapsamı");
+    await userEvent.click(within(panel).getByRole("button", { name: "Güvenlik stoğu > Stok gün kapsamı kuralını düzenle" }));
     dialog = await screen.findByRole("dialog", { name: "Biçim kuralını düzenle" });
     await userEvent.click(within(dialog).getByRole("checkbox", { name: "Boşları 0 say" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(lastQuery().rules?.[0].condition).toEqual(
-      { op: "gt", field_ref: "ProductionLeadTimeDays", empty_as_zero: false }));
+      { op: "gt", field_ref: "StockCoverageDays", empty_as_zero: false }));
     await waitFor(() => expect(cell(3).querySelector(".sc-rule-icon")).toBeNull());       // boş artık tutmaz
   });
 });
@@ -322,7 +322,7 @@ describe("sıra, öncelik, aç/kapa, sil, etki", () => {
 
 describe("görünüm ve Excel", () => {
   it("gizli alanın kuralı listede 'alan gizli', istekte yok; görünümle kaydedilir; Excel'e aktif ve görünenler gider", async () => {
-    const hidden = rule("h", { op: "gt", value: 1 }, { bold: true }, { field: "ProductionLeadTimeDays" });
+    const hidden = rule("h", { op: "gt", value: 1 }, { bold: true }, { field: "StockCoverageDays" });
     const visible = rule("v", { op: "gt", value: 100 }, { fill: "#f7dcd5", icon: "flag" });
     await openWithRules([visible, hidden]);
     await waitFor(() => expect(lastQuery().rules).toEqual([{ field: "SafetyStock", condition: { op: "gt", value: 100 } }]));

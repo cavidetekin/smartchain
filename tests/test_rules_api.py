@@ -167,9 +167,9 @@ def test_number_field_ref(txn):
 
 ORDER_LINES = ListDefinition(
     name="pytest_order_lines", table="core.SalesOrderLine",
-    fields=("OrderNo", "LineNo", "OpenQty", "RequestedDate", "ConfirmedDate", "UpdatedAt"),
+    fields=("OrderNo", "LineNo", "OpenQuantity", "RequestedDate", "ConfirmedDate", "UpdatedAt"),
     default_visible=("OrderNo", "LineNo", "RequestedDate", "ConfirmedDate", "UpdatedAt"),
-    default_sort=(("OrderNo", "asc"), ("LineNo", "asc")), decimals={"OpenQty": 2})
+    default_sort=(("OrderNo", "asc"), ("LineNo", "asc")), decimals={"OpenQuantity": 2})
 
 
 def local_day(iso: str) -> date:

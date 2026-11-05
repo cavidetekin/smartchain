@@ -202,7 +202,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>19. Mimari kararlar · Ana veri ve parametre</sub>
 
 - ANA VERI · PLANLAMA PARAMETRESI
-- **Örnek:** ResourceType, IsConstrained, kapasite birimi, günlük kapasite, kaynak adedi Kapasite katsayısı, fazla mesai dahil mi, alokasyon oranları, öncelik kuralı, model tipi
+- **Örnek:** IsCritical, kapasite birimi, günlük kapasite, kaynak adedi Kapasite katsayısı, fazla mesai dahil mi, alokasyon oranları, öncelik kuralı, model tipi
 - **Nereden gelir:** ERP; gelmiyorsa ETL'deki veri kuralları; gerekirse ana veri ekranında elle düzeltme Smartchain'de tanımlanır
 - **Kapsam:** Genel; bütün senaryolarda aynı Senaryoya özel olabilir
 - **Nerede değişir:** Ana veri yönetimi ekranında; sonraki yüklemeyle veri versiyonuna girer Senaryo tanımında ya da çalışmada

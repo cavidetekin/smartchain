@@ -306,10 +306,10 @@ describe("gruplama ve ara toplam (U-11, K-90)", () => {
   it("iki düzey ve ortalama (bir ondalık fazla); kolon menüsünden gruplama", async () => {
     const user = userEvent.setup();
     const tree = [group(["Hammadde"], 2, {
-      aggregates: { ProductionLeadTimeDays: 2.7833 },
-      children: [group(["Hammadde", "Çubuk"], 2, { aggregates: { ProductionLeadTimeDays: 3 } })],
+      aggregates: { StockCoverageDays: 2.7833 },
+      children: [group(["Hammadde", "Çubuk"], 2, { aggregates: { StockCoverageDays: 3 } })],
     })];
-    const view = savedView(4, "Süre", { columns: [{ field: "Code" }, { field: "ProductionLeadTimeDays" }] });
+    const view = savedView(4, "Süre", { columns: [{ field: "Code" }, { field: "StockCoverageDays" }] });
     await openTable({ groups: tree, views: { views: [view], default_view_id: 4 } });
     await user.click(screen.getByRole("button", { name: "Malzeme kodu kolon işlemleri" }));
     expect(screen.getByRole("menuitem", { name: "Bu alana göre grupla" })).toBeEnabled();
@@ -355,9 +355,9 @@ describe("aktif filtre etiketleri (U-12)", () => {
       .toBe("Hammadde, Yarı mamul +1");
     expect(describeFilter({ field: "MaterialGroup", op: "in", values: ["Çubuk"], empty: true }, c("MaterialGroup"))).toBe("Çubuk, boş");
     expect(describeFilter({ field: "IsSellable", op: "in", values: [true] }, c("IsSellable"))).toBe("Evet");
-    expect(describeFilter({ field: "ProductionLeadTimeDays", op: "between", min: 10, max: 1000 }, c("ProductionLeadTimeDays"))).toBe("10–1.000");
-    expect(describeFilter({ field: "ProductionLeadTimeDays", op: "between", min: 10 }, c("ProductionLeadTimeDays"))).toBe("≥ 10");
-    expect(describeFilter({ field: "ProductionLeadTimeDays", op: "gt", value: 5 }, c("ProductionLeadTimeDays"))).toBe("> 5");
+    expect(describeFilter({ field: "StockCoverageDays", op: "between", min: 10, max: 1000 }, c("StockCoverageDays"))).toBe("10–1.000");
+    expect(describeFilter({ field: "StockCoverageDays", op: "between", min: 10 }, c("StockCoverageDays"))).toBe("≥ 10");
+    expect(describeFilter({ field: "StockCoverageDays", op: "gt", value: 5 }, c("StockCoverageDays"))).toBe("> 5");
     expect(describeFilter({ field: "UpdatedAt", op: "between", from: "2026-10-27", to: "2026-11-03" }, c("UpdatedAt"))).toBe("27.10.2026–03.11.2026");
     expect(describeFilter({ field: "UpdatedAt", op: "between", from: "2026-10-27" }, c("UpdatedAt"))).toBe("27.10.2026 ve sonrası");
     expect(describeFilter({ field: "UpdatedAt", op: "relative", value: "next_4_weeks" }, c("UpdatedAt"))).toBe("sonraki 4 hafta");
@@ -422,9 +422,9 @@ describe("boş değer (U-13)", () => {
 });
 
 describe("ara toplam türü (K-90)", () => {
-  const view = savedView(4, "Süre", { columns: [{ field: "Code" }, { field: "SafetyStock" }, { field: "ProductionLeadTimeDays" }],
+  const view = savedView(4, "Süre", { columns: [{ field: "Code" }, { field: "SafetyStock" }, { field: "StockCoverageDays" }],
                                        group_by: ["MaterialLevel"] });
-  const tree = [group(["Hammadde"], 4, { aggregates: { SafetyStock: 7, ProductionLeadTimeDays: 2.7833 },
+  const tree = [group(["Hammadde"], 4, { aggregates: { SafetyStock: 7, StockCoverageDays: 2.7833 },
                                         unit_decimals: { SafetyStock: 0 } })];
   const openMenu = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
     await user.click(screen.getByRole("button", { name: `${label} kolon işlemleri` }));
@@ -436,7 +436,7 @@ describe("ara toplam türü (K-90)", () => {
   it("varsayılan liste tanımından; menüden her tür seçilir ve sunucuya gider", async () => {
     const user = userEvent.setup();
     await openTable({ groups: tree, views: { views: [view], default_view_id: 4 } });
-    await waitFor(() => expect(lastGroups().aggregates).toEqual({ SafetyStock: { fn: "sum" }, ProductionLeadTimeDays: { fn: "avg" } }));
+    await waitFor(() => expect(lastGroups().aggregates).toEqual({ SafetyStock: { fn: "sum" }, StockCoverageDays: { fn: "avg" } }));
     let menu = await openMenu(user, "Güvenlik stoğu");
     expect(within(menu).getAllByRole("menuitemradio").map((b) => b.textContent)).toEqual([
       "Toplam", "Ortalama (boşlar hariç)", "Ortalama (sıfırlar hariç)", "Ağırlıklı ortalama…", "En küçük", "En büyük",
@@ -452,24 +452,24 @@ describe("ara toplam türü (K-90)", () => {
     expect(within(row).getByTitle("Sayı (dolu satır)")).toHaveTextContent(/^n7$/);  // tür öneki "n", sayı ondalıksız
     menu = await openMenu(user, "Güvenlik stoğu");
     await user.click(within(menu).getByRole("menuitemradio", { name: "Yok" }));
-    await waitFor(() => expect(lastGroups().aggregates).toEqual({ ProductionLeadTimeDays: { fn: "avg" } }));
+    await waitFor(() => expect(lastGroups().aggregates).toEqual({ StockCoverageDays: { fn: "avg" } }));
   });
 
   it("ağırlıklı ortalama: ağırlık alanı seçilir; ortalama bir ondalık fazla; görünümle kaydedilir", async () => {
     const user = userEvent.setup();
     await openTable({ groups: tree, views: { views: [view], default_view_id: 4 } });
-    const menu = await openMenu(user, "Üretim süresi (gün)");
+    const menu = await openMenu(user, "Stok gün kapsamı");
     await user.click(within(menu).getByRole("menuitemradio", { name: "Ağırlıklı ortalama…" }));
     const weight = within(menu).getByLabelText("Ağırlık alanı");
     expect([...(weight as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(["Alan seçin", "Güvenlik stoğu"]);
     await user.selectOptions(weight, "SafetyStock");
-    await waitFor(() => expect(lastGroups().aggregates.ProductionLeadTimeDays).toEqual({ fn: "wavg", weight: "SafetyStock" }));
+    await waitFor(() => expect(lastGroups().aggregates.StockCoverageDays).toEqual({ fn: "wavg", weight: "SafetyStock" }));
     const row = (await screen.findAllByRole("row", { expanded: true }))[0];
     expect(within(row).getByTitle("Ağırlıklı ortalama (ağırlık: Güvenlik stoğu)")).toHaveTextContent("2,8");
     expect(screen.getByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeInTheDocument();
     await viewAction(user, "Kaydet");
     await waitFor(() => expect((lastViewCall("PUT")?.body as { definition: { aggregates: unknown } }).definition.aggregates)
-      .toEqual({ ProductionLeadTimeDays: { fn: "wavg", weight: "SafetyStock" } }));
+      .toEqual({ StockCoverageDays: { fn: "wavg", weight: "SafetyStock" } }));
   });
 
   it("kayıtlı görünümdeki seçim açılışta uygulanır; metin alanında Ara toplam yok", async () => {

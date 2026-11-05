@@ -11,6 +11,7 @@ Ardından yeni geçiş:  alembic -c db/alembic.ini revision --autogenerate -m ".
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -56,21 +57,30 @@ REF_TARGET = {
     "MaterialId": "Material", "ComponentMaterialId": "Material",
     "PlanRunId": "PlanRun", "CurrentPlanRunId": "PlanRun",
     "ResourceId": "Resource", "ParameterSetId": "ParameterSet", "ProjectId": "Project",
+    "LendingProjectId": "Project", "BorrowingProjectId": "Project",
     "WorkOrderId": "WorkOrder", "ParentWorkOrderId": "WorkOrder", "SupplierId": "Supplier",
     "ResourceGroupId": "ResourceGroup", "WorkspaceId": "Workspace", "DataVersionId": "DataVersion",
-    "CalendarId": "Calendar", "WorkerId": "Worker", "ScenarioId": "Scenario",
+    "CalendarId": "Calendar", "ScenarioId": "Scenario", "SubcontractorId": "Supplier",
     "ImportBatchId": "ImportBatch", "DataRuleId": "DataRule", "CustomerId": "Customer",
     "CreatedBy": "AppUser", "RequestedBy": "AppUser", "CancelledBy": "AppUser", "PublishedBy": "AppUser",
-    "OwnerUserId": "AppUser", "UserId": "AppUser", "CompetenceGroupId": "CompetenceGroup",
+    "OwnerUserId": "AppUser", "UserId": "AppUser",
     "ShiftPlanId": "ShiftPlan", "ShiftId": "Shift", "ScenarioDefinitionId": "ScenarioDefinition",
-    "SalesOrderLineId": "SalesOrderLine", "ProjectGroupId": "ProjectGroup",
-    "ProductionVersionId": "ProductionVersion", "ViewId": "TableView",
+    "SalesOrderLineId": "SalesOrderLine", "ProjectGroupId": "ProjectGroup", "ProductionVersionId": "ProductionVersion",
+    "ReferenceMaterialId": "Material", "ReferenceProductionVersionId": "ProductionVersion",
+    "ViewId": "TableView",
     "BaseUom": ("UnitOfMeasure", "Code"), "FromUom": ("UnitOfMeasure", "Code"),
     "ToUom": ("UnitOfMeasure", "Code"), "CapacityUnit": ("UnitOfMeasure", "Code"),
+    "ComponentUom": ("UnitOfMeasure", "Code"), "Uom": ("UnitOfMeasure", "Code"),
     "WarningCode": ("WarningDefinition", "Code"),
 }
 
 ADDITIONAL = re.compile(r"^Additional(Text|Number)1[–-](\d+)$")
+
+
+def unique_index_name(table: str, columns: list[str]) -> str:
+    """UX_<tablo>_<alanlar>; SQL Server ad sınırını (128) aşarsa kısaltılır, özet adı tekil tutar."""
+    name = f"UX_{table}_{'_'.join(columns)}"
+    return name if len(name) <= 128 else f"{name[:119]}_{hashlib.sha1(name.encode()).hexdigest()[:8]}"
 
 
 def parse_rows(lines, start):
@@ -303,7 +313,7 @@ def render_models(spec) -> str:
             cols.append(f"    sa.Column({', '.join(args + kw)}),")
         if uk:
             where = ', mssql_where=sa.text("VersionTo IS NULL")' if t["versioned"] else ""
-            extra.append(f'    sa.Index("UX_{name}_{"_".join(uk)}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
+            extra.append(f'    sa.Index("{unique_index_name(name, uk)}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
         out.append(f"{name if schema != 'stg' else 'stg_' + name} = sa.Table(")
         out.append(f"    {q(name)}, metadata,")
         out += cols + extra

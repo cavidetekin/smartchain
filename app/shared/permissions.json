@@ -175,6 +175,19 @@
         "Key user": "self",
         "End user": "none"
       }
+    },
+    {
+      "key": "B2",
+      "letter": "B",
+      "name": "Malzeme blokajı",
+      "first": 99,
+      "last": 99,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
     }
   ],
   "functions": [
@@ -1254,6 +1267,17 @@
         "Admin": "full",
         "Key user": "self",
         "End user": "none"
+      }
+    },
+    {
+      "no": 99,
+      "name": "Malzeme blokajı",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
       }
     }
   ],

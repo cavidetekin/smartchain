@@ -19,7 +19,7 @@ import {
 } from "react";
 
 import { ApiError, saveBlob } from "../api/client";
-import { formatDate, formatDateTime, formatNumber } from "../format";
+import { formatDate, formatDateTime, formatNumber, formatPercent } from "../format";
 import { tr } from "../i18n/tr";
 import { useShell } from "../shell/ShellContext";
 import { Alert, Button } from "../ui";
@@ -84,6 +84,7 @@ export function formatCell(col: ListColumn, v: unknown, row?: Row): string {
   if (v === null || v === undefined || v === "") return "";
   switch (col.type) {
     case "number": {
+      if (col.percent) return formatPercent(Number(v), col.decimals ?? 2);
       const unit = row?._unit_decimals;
       const decimals = col.decimals_from_unit ? (typeof unit === "number" ? unit : DEFAULT_UNIT_DECIMALS) : col.decimals ?? 0;
       return formatNumber(Number(v), decimals);
@@ -112,7 +113,8 @@ function formatAggregate(col: ListColumn, spec: AggSpec,
   if (v === null || v === undefined) return "";
   if (spec.fn === "count") return formatNumber(v, 0);
   const base = col.decimals_from_unit ? node.unit_decimals[col.field] ?? DEFAULT_UNIT_DECIMALS : col.decimals ?? 0;
-  return formatNumber(v, ["avg", "avg_nonzero", "wavg"].includes(spec.fn) ? base + 1 : base);
+  const digits = ["avg", "avg_nonzero", "wavg"].includes(spec.fn) ? base + 1 : base;
+  return col.percent ? formatPercent(v, digits) : formatNumber(v, digits);
 }
 
 const isNumeric = (c: ListColumn) => c.type === "number" || c.type === "integer";

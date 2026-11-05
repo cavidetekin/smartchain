@@ -98,7 +98,7 @@ Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz.
 
 ## Yetki (K-99, K-100, fonksiyon 90)
 
-Matris kodda (`app/api/permissions.py`): 4 rol × 98 fonksiyon; grup tablosu docs/06 fonksiyon 90'da. Hücre düzeyleri `full` (tam), `owner` (hepsini okur, yalnız kendi nesnesini değiştirir), `self` (yalnız kendi kayıtları), `read` (salt okunur), `none`. `GET /api/auth/me` rolün düzeylerini `permissions`'ta verir; arayüz menüyü ve düğmeleri buna göre gösterir, güvenlik sunucudadır.
+Matris kodda (`app/api/permissions.py`): 4 rol × 99 fonksiyon; grup tablosu docs/06 fonksiyon 90'da. Hücre düzeyleri `full` (tam), `owner` (hepsini okur, yalnız kendi nesnesini değiştirir), `self` (yalnız kendi kayıtları), `read` (salt okunur), `none`. `GET /api/auth/me` rolün düzeylerini `permissions`'ta verir; arayüz menüyü ve düğmeleri buna göre gösterir, güvenlik sunucudadır.
 
 - **Her uç nokta bir fonksiyon ve erişime bağlıdır** (`deps.require(fn, access)`, `access`: `read` | `write`). Bağsız uç nokta testte yakalanır; açık olanlar yalnız `GET /api/health` ve `POST /api/auth/login`.
 - **Yetkisiz istek 403 `forbidden`**; denetim izine "Yetkisiz istek" (ObjectType "Fonksiyon", ObjectKey fonksiyon numarası; NewValue rol, yöntem, adres, gereken rol):
@@ -167,7 +167,7 @@ Veri sözlüğü listesi `field-definitions` adıyla ortak liste sözleşmesini 
 | `PUT /api/field-definitions/{tablo}/{alan}/label` | `{"label"}`, en çok 40 karakter; boşsa standart etiket. Aynı tabloda aynı etiket 409 `label_taken`. İz "Alan etiketi değişikliği" |
 | `GET /api/settings/login-policy` | `{"values", "defaults", "limits"}` |
 | `PUT /api/settings/login-policy` | Değişen anahtarlar; sınır dışı ya da uyarı süresi oturum süresinden kısa değilse 422, hiçbiri yazılmaz. İz "Ayar değişikliği", anahtar başına |
-| `GET /api/permissions/matrix` | Roller, 13 grup satırı, 98 fonksiyon, istisnalar |
+| `GET /api/permissions/matrix` | Roller, 14 grup satırı, 99 fonksiyon, istisnalar |
 | `GET /api/permissions/matrix/export` | Excel: fonksiyon düzeyinde 98 satır. İz "Dışa aktarım" |
 
 ## Liste sorgusu (K-87)
@@ -194,6 +194,7 @@ Bütün tablolar (ana veri, plan, rapor) aynı sözleşmeyle okunur. Filtre, sı
 - **Tip** (`type`) veritabanı tipinden gelir: `text`, `integer`, `number`, `bool`, `date`, `datetime`.
 - **Ondalık** (`decimals`): gösterilecek ondalık sayısı liste tanımından gelir, veritabanı ölçeğinden değil (gün ve adet gibi tam sayı anlamındaki alanlar 0). `integer` için 0; sayı dışı alanlarda `null`.
 - **Ondalık birimden** (`decimals_from_unit: true`, `decimals: null`): miktar kolonları; her satırda temel birimin ondalığı (UnitOfMeasure.Decimals, K-88) kullanılır. Sorgu cevabında her satır bunu `_unit_decimals` alanında taşır (birim bilinmiyorsa 2).
+- **Yüzde gösterim** (`percent: true`): değer veride oran (0,05), `decimals` yüzde değerinin ondalığı; ekran ve Excel `%5,00` gösterir (K-113). Sorgu cevabı, filtre ve koşullu biçim oranla çalışır, Excel hücresinde de oran durur.
 - Liste tanımında her `number` alanı ya sabit ondalıkla ya da "ondalık birimden" işaretlenir; ikisi birden ya da hiçbiri hatadır (testte).
 - **Filtre tipi** (`filter`) tipten gelir: metin → `text`; değer listeli metin (K-80) ve `bool` → `list` (değerler `values`'ta; bool için Evet / Hayır = `true` / `false`); liste tanımında işaretli kodlu alanlar → `list`, değerler `values` uç noktasından (`values_from_server: true`); sayı → `number`; tarih → `date`.
 
@@ -235,7 +236,7 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset":
 
 ### Gruplama · `POST /api/<liste>/groups` (K-90)
 
-İstek: `{"group_by": ["MaterialLevel", "MaterialGroup"], "fields": ["SafetyStock", …], "aggregates": {"SafetyStock": {"fn": "sum"}, "ProductionLeadTimeDays": {"fn": "wavg", "weight": "SafetyStock"}}, "filters": [...], "sort": [...]}`. `aggregates` verilmezse görünen kolonlarda (`fields`) liste tanımının varsayılanı kullanılır. Cevap:
+İstek: `{"group_by": ["MaterialLevel", "MaterialGroup"], "fields": ["SafetyStock", …], "aggregates": {"SafetyStock": {"fn": "sum"}, "StockCoverageDays": {"fn": "wavg", "weight": "SafetyStock"}}, "filters": [...], "sort": [...]}`. `aggregates` verilmezse görünen kolonlarda (`fields`) liste tanımının varsayılanı kullanılır. Cevap:
 
 ```json
 {"groups": [{"key": ["Hammadde"], "count": 80, "aggregates": {"SafetyStock": 120.0}, "mixed_units": ["SafetyStock"],
@@ -282,7 +283,7 @@ Kullanıcı oturumdan gelir (K-97).
 ```json
 {"v": 1, "columns": [{"field": "Code", "width": 7.5}, {"field": "Name", "width": null}], "pinned": 1,
  "sort": [{"field": "Code", "dir": "asc"}], "filters": [{"field": "UpdatedAt", "op": "relative", "value": "this_week"}],
- "group_by": ["MaterialLevel"], "aggregates": {"ProductionLeadTimeDays": {"fn": "wavg", "weight": "SafetyStock"}}}
+ "group_by": ["MaterialLevel"], "aggregates": {"StockCoverageDays": {"fn": "wavg", "weight": "SafetyStock"}}}
 ```
 
 - `columns` görünen alanlar, görünen sırada; `width` rem (boşsa tipin varsayılanı). `pinned` soldan sabit kolon sayısı. `aggregates` kullanıcının varsayılandan farklı seçtiği ara toplam türleri (K-90).
@@ -411,7 +412,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 
 | Uç nokta | Cevap |
 |---|---|
-| Ortak liste `data-entities` | `Name`, `EntityClass`, `Description`, `Version`, `FieldCount`, `RequiredCount`, `CatalogOrder`, `Entity` (varsayılan gizli). 26 tablo; kaynak docs/03 kataloğu, etiketli ek alanlar `FieldDefinition`'dan sayılır |
+| Ortak liste `data-entities` | `Name`, `EntityClass`, `Description`, `Version`, `FieldCount`, `RequiredCount`, `CatalogOrder`, `Entity` (varsayılan gizli). 24 tablo; kaynak docs/03 kataloğu, etiketli ek alanlar `FieldDefinition`'dan sayılır |
 | `GET /api/templates/{entity}/info` | `entity`, `name`, `version`, `file_name`, `field_count`, `required` (etiketler). Bilinmiyorsa 404 `entity_not_found` |
 | `GET /api/templates/{entity}` | xlsx; `smartchain_<kısa ad>_v<sürüm>.xlsx`. İz "Şablon indirme" aynı işlemde; yazılamazsa dosya yok, 503 `audit_failed` |
 

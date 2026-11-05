@@ -11,74 +11,73 @@
 - **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
 - **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.
 
-## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58) (26 tablo)
+## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58) (25 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `stg.Material` | Malzeme ve planlama ana verisi. | Entegrasyon |  | 33 |
-| `stg.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Entegrasyon |  | 19 |
-| `stg.UnitOfMeasure` | Ölçü birimi. | Entegrasyon |  | 2 |
-| `stg.UomConversion` | Malzeme bazında birim dönüşümü. | Entegrasyon |  | 4 |
-| `stg.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode ile bağlanır. Faz 1'de varsayılan versiyon kullanılır. | Entegrasyon |  | 12 |
-| `stg.BOM` | Ürün ağacı satırı. | Entegrasyon |  | 12 |
-| `stg.Routing` | Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OpNo, sonra SeqNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile. | Entegrasyon |  | 20 |
-| `stg.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Entegrasyon |  | 25 |
-| `stg.ResourceGroup` | Kaynak grubu (makine grubu, işçi kaynak grubu). | Entegrasyon |  | 13 |
-| `stg.CompetenceGroup` | İşçi yetkinlik grubu. | Entegrasyon |  | 3 |
-| `stg.Worker` | İşçi. | Entegrasyon |  | 15 |
-| `stg.WorkerCompetence` | İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa. | Entegrasyon |  | 2 |
-| `stg.WorkerAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 4 |
-| `stg.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 13 |
-| `stg.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Entegrasyon |  | 16 |
-| `stg.Customer` | Müşteri. | Entegrasyon |  | 14 |
-| `stg.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Entegrasyon |  | 3 |
+| `stg.Material` | Malzeme ve planlama ana verisi. | Entegrasyon |  | 42 |
+| `stg.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Entegrasyon |  | 23 |
+| `stg.UomConversion` | Malzeme bazında birim dönüşümü. | Entegrasyon |  | 6 |
+| `stg.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode, ürün ağacına BOMCode ile bağlanır. Versiyon seçimi motorun kararıdır; aynı malzeme aynı dönemde birden fazla versiyonla üretilebilir. | Entegrasyon |  | 17 |
+| `stg.BOM` | Ürün ağacı satırı. | Entegrasyon |  | 18 |
+| `stg.Routing` | Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile. | Entegrasyon |  | 24 |
+| `stg.MaterialReference` | Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır. | Entegrasyon |  | 7 |
+| `stg.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Entegrasyon |  | 27 |
+| `stg.ResourceGroup` | Kaynak ve yetkinlik grubu. Kapasite havuzu değil, uygun kaynaklar listesidir; kapasite yalnız kaynakta tutulur. | Entegrasyon |  | 17 |
+| `stg.ResourceGroupAssignment` | Kaynağın gruba ataması; bir kaynak birden fazla gruba atanabilir, yetkinlik matrisi bu tablodur. Geçerlilik tarihleri yalnız girdi. | Entegrasyon |  | 5 |
+| `stg.EmployeeAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 6 |
+| `stg.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 16 |
+| `stg.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Entegrasyon |  | 19 |
+| `stg.Customer` | Müşteri. | Entegrasyon |  | 20 |
+| `stg.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Entegrasyon |  | 5 |
 | `stg.Project` | Proje. | Entegrasyon |  | 16 |
-| `stg.SalesOrderLine` | Müşteri sipariş satırı; teklifler Type = Teklif ile gelir. Vade: teyit tarihi, yoksa istek tarihi. | Entegrasyon |  | 19 |
-| `stg.Forecast` | Talep tahmini (netleme ön hesapta). | Entegrasyon |  | 11 |
-| `stg.Stock` | Stok; lot ve durum bazında. Sahip: proje ya da ortak. | Entegrasyon |  | 14 |
-| `stg.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 19 |
-| `stg.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 9 |
-| `stg.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 12 |
-| `stg.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 17 |
-| `stg.ProductionConfirmation` | Üretim gerçekleşmeleri; ilk günden tutulur (verim önerisi ve ileriki fazlar). | Entegrasyon |  | 13 |
+| `stg.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur. Vade: teyit tarihi, yoksa istek tarihi. | Entegrasyon |  | 26 |
+| `stg.Forecast` | Talep tahmini (netleme ön hesapta). | Entegrasyon |  | 15 |
+| `stg.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | Entegrasyon |  | 8 |
+| `stg.Stock` | Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak. | Entegrasyon |  | 25 |
+| `stg.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 34 |
+| `stg.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
+| `stg.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 25 |
+| `stg.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 29 |
+| `stg.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
 
 ## `core` · Ana veri ve işlem verisi (33 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `core.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Ana veri |  | 21 |
+| `core.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Ana veri |  | 25 |
 | `core.UnitOfMeasure` | Ölçü birimi. | Ana veri |  | 3 |
-| `core.UomConversion` | Malzeme bazında birim dönüşümü. | Ana veri | evet | 5 |
+| `core.UomConversion` | Malzeme bazında birim dönüşümü. | Ana veri | evet | 7 |
 | `core.Calendar` | Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 3 |
 | `core.CalendarDay` | Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 4 |
-| `core.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Ana veri | evet | 27 |
-| `core.ResourceGroup` | Kaynak grubu (makine grubu, işçi kaynak grubu). | Ana veri | evet | 14 |
+| `core.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Ana veri | evet | 35 |
+| `core.ResourceGroup` | Kaynak ve yetkinlik grubu. Kapasite havuzu değil, uygun kaynaklar listesidir; kapasite yalnız kaynakta tutulur. | Ana veri | evet | 18 |
 | `core.ResourceCapacityProfile` | Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 5 |
 | `core.ResourceDowntime` | Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 8 |
-| `core.CompetenceGroup` | İşçi yetkinlik grubu. | Ana veri | evet | 4 |
-| `core.Worker` | İşçi. | Ana veri | evet | 16 |
-| `core.WorkerCompetence` | İşçi–yetkinlik grubu eşleşmesi; çoktan çoğa. | Ana veri | evet | 2 |
+| `core.ResourceGroupAssignment` | Kaynağın gruba ataması; bir kaynak birden fazla gruba atanabilir, yetkinlik matrisi bu tablodur. Geçerlilik tarihleri yalnız girdi. | Ana veri | evet | 6 |
 | `core.Shift` | Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 6 |
-| `core.ShiftPlan` | Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 7 |
-| `core.WorkerAbsence` | Kişi bazında izin ve rapor. | İşlem verisi | evet | 5 |
-| `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 34 |
-| `core.Supplier` | Tedarikçi ve fasoncu. | Ana veri | evet | 14 |
-| `core.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Ana veri | evet | 17 |
-| `core.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode ile bağlanır. Faz 1'de varsayılan versiyon kullanılır. | Ana veri | evet | 13 |
-| `core.BOM` | Ürün ağacı satırı. | Ana veri | evet | 12 |
-| `core.Routing` | Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OpNo, sonra SeqNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile. | Ana veri | evet | 21 |
-| `core.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Ana veri | evet | 4 |
+| `core.ShiftPlan` | Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 6 |
+| `core.EmployeeAbsence` | Kişi bazında izin ve rapor. | İşlem verisi | evet | 7 |
+| `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 43 |
+| `core.Supplier` | Tedarikçi ve fasoncu. | Ana veri | evet | 17 |
+| `core.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Ana veri | evet | 20 |
+| `core.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode, ürün ağacına BOMCode ile bağlanır. Versiyon seçimi motorun kararıdır; aynı malzeme aynı dönemde birden fazla versiyonla üretilebilir. | Ana veri | evet | 18 |
+| `core.BOM` | Ürün ağacı satırı. | Ana veri | evet | 19 |
+| `core.Routing` | Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile. | Ana veri | evet | 25 |
+| `core.MaterialReference` | Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır. | Ana veri | evet | 8 |
+| `core.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Ana veri | evet | 6 |
 | `core.Project` | Proje. | Ana veri | evet | 17 |
-| `core.Customer` | Müşteri. | Ana veri | evet | 15 |
-| `core.SalesOrderLine` | Müşteri sipariş satırı; teklifler Type = Teklif ile gelir, plana dahil olmaları senaryo parametresi. Vade: teyit tarihi, yoksa istek tarihi. | İşlem verisi | evet | 20 |
-| `core.Forecast` | Talep tahmini (netleme ön hesapta). | İşlem verisi | evet | 12 |
-| `core.Stock` | Stok; lot ve durum bazında. Sahip: proje ya da ortak. | İşlem verisi | evet | 15 |
-| `core.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | İşlem verisi | evet | 19 |
-| `core.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | İşlem verisi | evet | 11 |
-| `core.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | İşlem verisi | evet | 14 |
-| `core.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | İşlem verisi | evet | 18 |
+| `core.Customer` | Müşteri. | Ana veri | evet | 21 |
+| `core.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur, plana dahil olmaları senaryo parametresi. Vade: teyit tarihi, yoksa istek tarihi. | İşlem verisi | evet | 27 |
+| `core.Forecast` | Talep tahmini (netleme ön hesapta). | İşlem verisi | evet | 16 |
+| `core.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | İşlem verisi | evet | 9 |
+| `core.Stock` | Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak. | İşlem verisi | evet | 24 |
+| `core.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | İşlem verisi | evet | 33 |
+| `core.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | İşlem verisi | evet | 19 |
+| `core.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | İşlem verisi | evet | 27 |
+| `core.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | İşlem verisi | evet | 28 |
 | `core.TransferOrder` | Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep). | İşlem verisi | evet | 13 |
-| `core.ProductionConfirmation` | Üretim gerçekleşmeleri; ilk günden tutulur (verim önerisi ve ileriki fazlar). | İşlem verisi | evet | 14 |
+| `core.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | İşlem verisi | evet | 13 |
 
 ## `param` · Planlama parametreleri ve senaryo tanımları (11 tablo)
 

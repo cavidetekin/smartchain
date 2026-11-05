@@ -2,7 +2,7 @@
 // Her menüde "boş" seçilebilir (U-13). describeFilter aktif filtre etiketinin metnidir (U-12).
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { fold, formatDate, formatNumber, toIsoDate } from "../format";
+import { fold, formatDate, formatNumber, formatPercent, percentInput, percentValue, toIsoDate } from "../format";
 import { tr } from "../i18n/tr";
 import { Button, Checkbox, DateField, NumberField, RadioGroup, SearchField, Segment, SelectField, TextField } from "../ui";
 import { listApi, type ListColumn, type ListFilter, type ListValue, type NumberOp, type ValueCount } from "./types";
@@ -30,7 +30,8 @@ function parseIso(s: string | undefined): Date | null {
 
 /** Aktif filtre etiketinin metni (U-12): "içerir 'mil'", "10–100", "bu hafta", "Çubuk, Levha +2", "boş". */
 export function describeFilter(f: ListFilter, column: ListColumn): string {
-  const num = (n: number | undefined) => formatNumber(n ?? 0, column.decimals ?? (Number.isInteger(n) ? 0 : 2));
+  const num = (n: number | undefined) => column.percent ? formatPercent(n ?? 0, column.decimals ?? 2)
+    : formatNumber(n ?? 0, column.decimals ?? (Number.isInteger(n) ? 0 : 2));
   const date = (s: string | undefined) => formatDate(parseIso(s)!);
   switch (f.op) {
     case "empty": return T.chipEmpty;
@@ -161,9 +162,13 @@ type NumberMode = NumberOp | "empty";
 
 function NumberFilter({ column, filter, onApply }: MenuProps) {
   const [op, setOp] = useState<NumberMode>((filter?.op as NumberMode) ?? "between");
-  const [min, setMin, getMin] = useLatest<number | null>(filter?.min ?? null);
-  const [max, setMax, getMax] = useLatest<number | null>(filter?.max ?? null);
-  const [value, setValue, getValue] = useLatest<number | null>(typeof filter?.value === "number" ? filter.value : null);
+  // Yüzde gösterimli kolonda giriş yüzde, filtrede saklanan oran (K-113).
+  const shown = (v: number | null | undefined) => v == null ? null : column.percent ? percentInput(v) : v;
+  const stored = (v: number) => column.percent ? percentValue(v) : v;
+  const suffix = column.percent ? " (%)" : "";
+  const [min, setMin, getMin] = useLatest<number | null>(shown(filter?.min));
+  const [max, setMax, getMax] = useLatest<number | null>(shown(filter?.max));
+  const [value, setValue, getValue] = useLatest<number | null>(typeof filter?.value === "number" ? shown(filter.value) : null);
   const decimals = column.decimals ?? 3;  // birimden gelen miktarda girişi yuvarlamamak için en çok 3
   const ready = op === "empty" || (op === "between" ? min !== null || max !== null : value !== null);
   const submit = (e: FormEvent) => {
@@ -172,9 +177,9 @@ function NumberFilter({ column, filter, onApply }: MenuProps) {
     if (op === "empty") {
       onApply({ field: column.field, op: "empty" });
     } else if (op === "between" && (lo !== null || hi !== null)) {
-      onApply({ field: column.field, op, ...(lo !== null ? { min: lo } : {}), ...(hi !== null ? { max: hi } : {}) });
+      onApply({ field: column.field, op, ...(lo !== null ? { min: stored(lo) } : {}), ...(hi !== null ? { max: stored(hi) } : {}) });
     } else if (op !== "between" && v !== null) {
-      onApply({ field: column.field, op, value: v });
+      onApply({ field: column.field, op, value: stored(v) });
     }
   };
   return (
@@ -184,11 +189,11 @@ function NumberFilter({ column, filter, onApply }: MenuProps) {
                                      { value: "empty" as const, label: T.emptyShort }]} />
       {op === "between" && (
         <div className="sc-table-pop-pair">
-          <NumberField label={T.min} value={min} onChange={setMin} decimals={decimals} />
-          <NumberField label={T.max} value={max} onChange={setMax} decimals={decimals} />
+          <NumberField label={T.min + suffix} value={min} onChange={setMin} decimals={decimals} />
+          <NumberField label={T.max + suffix} value={max} onChange={setMax} decimals={decimals} />
         </div>
       )}
-      {op !== "between" && op !== "empty" && <NumberField label={T.value} value={value} onChange={setValue} decimals={decimals} />}
+      {op !== "between" && op !== "empty" && <NumberField label={T.value + suffix} value={value} onChange={setValue} decimals={decimals} />}
       <Actions canApply={ready} onClear={() => onApply(null)} />
     </form>
   );

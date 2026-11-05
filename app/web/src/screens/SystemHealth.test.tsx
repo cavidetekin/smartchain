@@ -55,7 +55,8 @@ async function open(role = "Admin", routes = {}, rows?: object[]) {
   const m = backend(routes, rows);
   const me = role === "Admin" ? { ...meAs("Admin"), id: 5 } : meAs(role);
   renderApp("/yonetim/sistem-sagligi", me);
-  await screen.findByRole("button", { name: `#${(rows?.[0] as { Id: number } | undefined)?.Id ?? 61} işinin işlemleri` }, { timeout: 5000 });
+  // Dosyanın ilk testinde tablo soğuk çizilir; tam takımın paralel yükünde 5 sn yetmeyebiliyor.
+  await screen.findByRole("button", { name: `#${(rows?.[0] as { Id: number } | undefined)?.Id ?? 61} işinin işlemleri` }, { timeout: 10_000 });
   return m;
 }
 

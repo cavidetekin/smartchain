@@ -45,7 +45,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 
 ## Faz 1 dışı (dokunma)
 
-Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yalnız uyarı var), LLM, çoklu lokasyon, ERP'ye geri yazma, AD / SSO, bulut.
+Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yalnız uyarı var), LLM, çoklu lokasyon, ERP'ye geri yazma, AD / SSO, bulut, verim önerisi (K-128).
 
 ## Docs haritası
 
@@ -57,7 +57,7 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/03-entegrasyon.md` | Entegrasyon tasarımı ve `stg.*` tabloları (MDD 26) |
 | `docs/04-arayuz-prensipleri.md` | U-1…U-24 (MDD 23) |
 | `docs/05-ekranlar.md` | 26 ekran ve ekran mockupları (MDD 24) |
-| `docs/06-fonksiyonlar.md` | 98 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
+| `docs/06-fonksiyonlar.md` | 99 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
 | `docs/07-veritabani.md` | Veritabanı haritası: şemalar ve tablolar (üretilmiş) |
 | `docs/08-api.md` | API kuralları: katmanlar, adresler, hata cevabı, log, ayarlar |
 | `docs/09-motor-arayuzu.md` | Motor arayüzü, sahte motor, motor servisi (geliştirme 0.5) |

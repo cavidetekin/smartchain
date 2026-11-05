@@ -90,7 +90,7 @@ describe("hücre biçimi ve liste", () => {
   it("aktif kurallar: pasif, gizli alan ve bilinmeyen karşılaştırma alanı hariç", () => {
     const known = new Set(COLUMNS.map((c) => c.field));
     const withRef = { ...r("d", "SafetyStock", { bold: true }), condition: { op: "gt" as const, field_ref: "Gone" } };
-    const list = [rules[0], { ...rules[1], enabled: false }, r("e", "ProductionLeadTimeDays", { bold: true }), withRef];
+    const list = [rules[0], { ...rules[1], enabled: false }, r("e", "StockCoverageDays", { bold: true }), withRef];
     expect(activeRules(list, ["Code", "SafetyStock"], known).map((x) => x.id)).toEqual(["a"]);
   });
 
@@ -98,7 +98,7 @@ describe("hücre biçimi ve liste", () => {
     const stock = COLUMNS.find((c) => c.field === "SafetyStock")!;
     const name = COLUMNS.find((c) => c.field === "Name")!;
     expect([canUseFieldRef(stock, "gt"), canUseFieldRef(stock, "between"), canUseFieldRef(name, "equals")]).toEqual([true, false, false]);
-    expect(refCandidates(stock, COLUMNS).map((c) => c.field)).toEqual(["ProductionLeadTimeDays"]);
+    expect(refCandidates(stock, COLUMNS).map((c) => c.field)).toEqual(["StockCoverageDays"]);
   });
 
   it("sürükle-bırak ve kimlik", () => {
