@@ -190,7 +190,10 @@ const POLICY_GROUPS: FormGroup[] = [
   { title: T.passwordGroup, keys: ["PasswordMinLength", "PasswordHistoryCount", "PasswordMaxAgeDays"], checkbox: "PasswordRequireLetterAndDigit" },
   { title: T.sessionGroup, keys: ["LoginMaxFailedAttempts", "LoginLockMinutes", "SessionIdleMinutes", "SessionWarningMinutes"] },
 ];
-const HEALTH_GROUPS: FormGroup[] = [{ title: T.healthGroup, keys: ["DiskWarnPercent", "QueueWaitWarnMinutes", "SystemEventRetentionDays"] }];
+const HEALTH_GROUPS: FormGroup[] = [
+  { title: T.healthGroup, keys: ["DiskWarnPercent", "QueueWaitWarnMinutes", "SystemEventRetentionDays"] },
+  { title: T.importGroup, keys: ["ImportSyncMaxMb", "ImportMaxMb", "ImportMaxRows"] },
+];
 
 const warningShorter = (key: string, values: FormValues) => {
   const [warning, idle] = [values.SessionWarningMinutes, values.SessionIdleMinutes];

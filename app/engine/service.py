@@ -20,9 +20,10 @@ from sqlalchemy.orm import Session
 
 from app import __version__
 from app.jobs import events, queue
-from app.jobs.constants import CHANNELS, TYPE_EXPORT
+from app.jobs.constants import CHANNELS, TYPE_EXPORT, TYPE_PRECHECK
 from app.jobs.settings import HEALTH_DEFAULTS, JobSettings, read_int_settings, read_settings
 from .export_job import export_process_main
+from .import_job import import_process_main
 from .job import plan_run_id_of, process_main
 from .settings import EngineSettings, read_engine_settings
 from .writer import write_failure
@@ -114,10 +115,9 @@ class EngineService:
                     self._spawn(s, job, channel)
 
     def _spawn(self, session: Session, job: dict, channel: str) -> None:
-        export = job["JobType"] == TYPE_EXPORT
-        plan_run_id = None if export else plan_run_id_of(job["Payload"])
+        target = {TYPE_EXPORT: export_process_main, TYPE_PRECHECK: import_process_main}.get(job["JobType"], process_main)
+        plan_run_id = plan_run_id_of(job["Payload"]) if target is process_main else None
         budget = self.engine_settings.time_budget(channel)
-        target = export_process_main if export else process_main
         process = self._ctx.Process(target=target, args=(job["Id"], job["Attempt"], int(budget)),
                                     name=f"smartchain-job-{job['Id']}", daemon=True)
         process.start()

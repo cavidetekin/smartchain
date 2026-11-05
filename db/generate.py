@@ -11,7 +11,6 @@ Ardından yeni geçiş:  alembic -c db/alembic.ini revision --autogenerate -m ".
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from pathlib import Path
@@ -49,6 +48,7 @@ STAGING_COLS = [
     ("ImportBatchId", "bigint", "Yükleme partisi", True),
     ("RowStatus", "nvarchar(15)", "Yeni | Hatalı | Aktarıldı", True),
     ("ErrorText", "nvarchar(400)", "Hata açıklaması", False),
+    ("SourceRowNo", "int", "Kaynaktaki satır no", False),
 ]
 
 # Alan adı -> hedef tablo (ve kolon)
@@ -63,7 +63,7 @@ REF_TARGET = {
     "CalendarId": "Calendar", "ScenarioId": "Scenario", "SubcontractorId": "Supplier",
     "ImportBatchId": "ImportBatch", "DataRuleId": "DataRule", "CustomerId": "Customer",
     "CreatedBy": "AppUser", "RequestedBy": "AppUser", "CancelledBy": "AppUser", "PublishedBy": "AppUser",
-    "OwnerUserId": "AppUser", "UserId": "AppUser",
+    "OwnerUserId": "AppUser", "UserId": "AppUser", "UploadedBy": "AppUser",
     "ShiftPlanId": "ShiftPlan", "ShiftId": "Shift", "ScenarioDefinitionId": "ScenarioDefinition",
     "SalesOrderLineId": "SalesOrderLine", "ProjectGroupId": "ProjectGroup", "ProductionVersionId": "ProductionVersion",
     "ReferenceMaterialId": "Material", "ReferenceProductionVersionId": "ProductionVersion",
@@ -75,12 +75,6 @@ REF_TARGET = {
 }
 
 ADDITIONAL = re.compile(r"^Additional(Text|Number)1[–-](\d+)$")
-
-
-def unique_index_name(table: str, columns: list[str]) -> str:
-    """UX_<tablo>_<alanlar>; SQL Server ad sınırını (128) aşarsa kısaltılır, özet adı tekil tutar."""
-    name = f"UX_{table}_{'_'.join(columns)}"
-    return name if len(name) <= 128 else f"{name[:119]}_{hashlib.sha1(name.encode()).hexdigest()[:8]}"
 
 
 def parse_rows(lines, start):
@@ -311,9 +305,9 @@ def render_models(spec) -> str:
                 info += [f"'required': {f['contract_required']}", f"'key': {q(f['key'])}", f"'missing': {q(f['missing'])}"]
                 kw.append(f"info={{{', '.join(info)}}}")
             cols.append(f"    sa.Column({', '.join(args + kw)}),")
-        if uk:
+        if uk and schema != "stg":  # stg ham veridir: anahtar sözleşmede kalır, tekrar kontrolü onu okur (K-129)
             where = ', mssql_where=sa.text("VersionTo IS NULL")' if t["versioned"] else ""
-            extra.append(f'    sa.Index("{unique_index_name(name, uk)}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
+            extra.append(f'    sa.Index("UX_{name}_{"_".join(uk)}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
         out.append(f"{name if schema != 'stg' else 'stg_' + name} = sa.Table(")
         out.append(f"    {q(name)}, metadata,")
         out += cols + extra
@@ -341,7 +335,7 @@ def render_map(spec) -> str:
         "- **Aynı ad, iki katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla), `core.Material` Smartchain'in tablosu (Id ile). Aktarım `stg`'den `core`'a yapılır (K-58).",
         "- **Versiyonlu tablolar:** `VersionFrom`, `VersionTo`, `ImportBatchId`, `BusinessKey`, `UpdatedAt` alanlarını taşır. Birincil anahtar `Id + VersionFrom`; `Id` bir kaydın bütün versiyonlarında aynıdır. Güncel kayıtta `VersionTo` boştur; tekillik (UK) yalnız güncel kayıtlarda aranır.",
         "- **İlişkiler:** Versiyonsuz tabloya giden ilişkiler veritabanında yabancı anahtarla (FK) korunur. Versiyonlu tabloya giden ilişkilerde FK yoktur, yalnız indeks vardır; bütünlüğü aktarım adımı (kod→Id) sağlar.",
-        "- **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.",
+        "- **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`, `SourceRowNo`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.",
         "- **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.",
         "",
     ]

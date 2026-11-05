@@ -16,7 +16,8 @@ from db.dictionary import description, is_additional
 from db.models import ENTITY_CATALOG, metadata
 
 FIRST_DATA_ROW = 2
-STG_EXCLUDED = frozenset({"StagingRowId", "ImportBatchId", "RowStatus", "ErrorText"})
+STG_EXCLUDED = frozenset({"StagingRowId", "ImportBatchId", "RowStatus", "ErrorText", "SourceRowNo"})
+ERROR_COLUMN = "Hata"  # hata raporunun son kolonu (K-129)
 MASTER_DATA, TRANSACTION_DATA = "Ana veri", "İşlem verisi"
 EXAMPLES = Path(__file__).with_name("template_examples.json")   # sentetik veriden türetilmiş sabit örnekler
 EXAMPLE_TEXT, EXAMPLE_NUMBER = "Örnek", 10                      # etiketlenen ek alanlar

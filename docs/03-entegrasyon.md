@@ -775,8 +775,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Ne zaman:** ERP'de tutulmayan ya da entegrasyonu olmayan varlıklar: kaynaklar, tahmin; ilk kurulumda tüm ana veri (takvim, vardiya ve duruş Excel'den gelmez, ekrandan girilir: K-65); ERP'den gelen veriyi düzeltmek için toplu düzeltme (15).
 - **Şablon:** Sözleşmeden üretilir (02, K-110): 1. satır teknik alan adı, veri 2. satırdan; zorunlu alanın başlığı koyu. Etiket, açıklama, tip, boş bırakılırsa ne olacağı, Smartchain değerleri ve örnek 'Açıklama' sayfasında; gizli sürüm bilgisi. Eşleme yok: kolon adla bulunur. Açılır liste ve Excel doğrulaması yok: staging ERP'nin dilidir (K-58); değer listeli alanlarda farklı değerler veri kuralıyla bu değerlere çevrilir, ham alanlar bayrağa dönüştürülür (K-121); tutarsızlık doğrulamada görünür.
-- **Yükleme:** Ekrandan sürükle-bırak (03): varlık ve sürüm tanıma, mod (ekle / güncelle ya da tam), satır bazlı ön kontrol, hata raporu, geçerli satırlarla devam.
-- **Sınırlar:** Tek dosya tek varlık; 200.000 satır (parametre); eski şablon sürümü uyarı verir. Excel yolu ERP'den gelen varlığın master'ı olamaz (çakışma: ERP ezer, alan ayarına göre).
+- **Yükleme:** Ekrandan sürükle-bırak (03): varlık ve sürüm tanıma, mod (ekle / güncelle ya da tam), satır bazlı ön kontrol, hata raporu, geçerli satırlarla devam. Hatalı satır ham veriye alınmaz, bulgu listesinde ve hata raporunda durur (K-129).
+- **Anahtar:** Tablolardaki ANAHTAR kolonu veritabanı indeksi değildir: `stg` ham veridir, aynı anahtar aynı partide (hata) ve sonraki partide (normal) gelebilir. Tekrar kontrolü bu tanımı okur (K-129). `stg` tablolarının standart alanları: `StagingRowId`, `ImportBatchId`, `RowStatus`, `ErrorText`, `SourceRowNo` (kaynaktaki satır no).
+- **Sınırlar:** Tek dosya tek varlık; 200.000 satır ve 100 MB (parametre); eski şablon sürümü uyarı verir. Excel yolu ERP'den gelen varlığın master'ı olamaz (çakışma: ERP ezer, alan ayarına göre).
 - **Dışa aktarma:** Aynı şablonlarla ana veri dışa aktarılır, düzeltilir ve elle değer olarak geri yüklenir; plan çıktıları (satın alma talebi, iş emri açma) ERP'nin alışık olduğu sütun düzeninde Excel listesi.
 
 ### Alan eşleme ve dönüşüm kuralları

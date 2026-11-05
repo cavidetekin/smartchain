@@ -65,8 +65,10 @@ def _write_notes(wb: Workbook, found: list[TemplateField], header, styles: Mappi
 
 
 def write_template(target: str | BinaryIO, entity: Entity, labels: Mapping[str, str] | None = None,
-                   extra_info: Iterable[tuple[str, object]] = (), rows: Iterable[Mapping] = ()) -> list[TemplateField]:
-    """Şablonu yazar, alanlarını döndürür. rows: kirli Excel'in satırları; hatalı değer de yazılır."""
+                   extra_info: Iterable[tuple[str, object]] = (), rows: Iterable[Mapping] = (),
+                   extra_column: str | None = None) -> list[TemplateField]:
+    """Şablonu yazar, alanlarını döndürür. rows: kirli Excel'in ve hata raporunun satırları; hatalı değer de yazılır.
+    extra_column: sona eklenen düz kolon (hata raporu, K-129); yeniden yüklemede tanınmayan kolon sayılır."""
     found = fields(entity.table, labels)
     wb = Workbook(target, {**WORKBOOK_OPTIONS, "constant_memory": False})
     styles = _Formats(wb)
@@ -79,10 +81,15 @@ def write_template(target: str | BinaryIO, entity: Entity, labels: Mapping[str, 
     for col, f in enumerate(found):
         ws.set_column(col, col, COLUMN_WIDTH, column_styles.get(f.kind))
         ws.write_string(0, col, f.name, required_header if f.required else other_header)
+    if extra_column:
+        ws.set_column(len(found), len(found), NOTE_WIDTHS[2])
+        ws.write_string(0, len(found), extra_column, other_header)
     ws.freeze_panes(FIRST_DATA_ROW - 1, 0)
     for row, data in enumerate(rows, FIRST_DATA_ROW - 1):
         for col, f in enumerate(found):
             _write_cell(ws, row, col, data.get(f.name), column_styles.get(f.kind))
+        if extra_column:
+            _write_cell(ws, row, len(found), data.get(extra_column), None)
 
     info = wb.add_worksheet(VERSION_SHEET)
     info.set_column(0, 1, 28)

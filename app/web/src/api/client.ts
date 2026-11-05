@@ -124,6 +124,15 @@ export async function downloadFile(path: string, fallback: string): Promise<void
   saveBlob(await r.blob(), fileNameFrom(r.headers.get("Content-Disposition"), fallback));
 }
 
+/** Dosyayı ham gövdeyle yükler (K-129); cevap durumu 200 ya da 202. */
+export async function uploadFile<T>(path: string, file: File): Promise<T> {
+  return readJson<T>(await fetch(path, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": file.type || "application/octet-stream", "X-File-Name": encodeURIComponent(file.name) },
+    body: file,
+  }));
+}
+
 export interface DataVersion {
   id: number;
   location_code: string;
@@ -144,6 +153,9 @@ export interface Job {
   cancel_reason?: string | null;
   cancelled_by_name?: string | null;
   progress: string | null;
+  /** Excel ön kontrol işinin partisi (K-129). */
+  import_batch_id?: number | null;
+  ended_at?: string | null;
   error_text?: string | null;
   queue_position: number | null;
   updated_at: string;
@@ -166,6 +178,9 @@ export const api = {
 
 /** İş türü ve durumları (app/jobs/constants.py). */
 export const JOB_EXPORT = "Dışa aktarım";
+export const JOB_PRECHECK = "Excel ön kontrol";
+/** "Sonucu aç": o işin ön kontrol penceresi (ekran 02, K-129). */
+export const importResultPath = (batchId: number) => `/veri/veri-yukleme?parti=${batchId}`;
 export const JOB_LOAD = "Yükleme";
 export const JOB_DONE = "Bitti";
 export const JOB_FAILED = "Hata";

@@ -9,6 +9,9 @@ pydantic-settings==2.16.1
 websockets==17.3
 # Excel'e aktarım (K-91): XlsxWriter, BSD-2-Clause; bağımlılığı yok
 XlsxWriter==3.3.0
+# Excel yükleme (K-129): openpyxl, MIT; bağımlılığı et_xmlfile, MIT
+openpyxl==3.1.5
+et_xmlfile==2.0.0
 # Çözücü (K-76): HiGHS, MIT; numpy bağımlılığı
 highspy==1.15.1
 numpy==2.5.4

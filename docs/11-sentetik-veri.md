@@ -101,9 +101,9 @@ python -m app.data.synthetic check                                     # sayıla
 | Kod | Hata | Nerede | Adım · sınıf · davranış | Mesaj (öneri) | Ana veride fark |
 |---|---|---|---|---|---|
 | H1 | Eksik rota | `ProductionVersion`: `PRC-033` → `R-PRC-033`; `Routing`'de bu rota yok | Fonksiyon 20 veri kalitesi (6.5), ön hesapta da (29) · uyarı · satır yüklenir | "Malzeme PRC-033'ün rotası yok (R-PRC-033); kapasite tüketmeden planlanır." | `R-PRC-033` rota satırları yok |
-| H2 | Tanımsız malzeme kodu | `SalesOrderLine`: `SO-1099` → `MAM-099` · `BOM`: `ALT-005` → `SAT-999` | 04-02 referans (3.4, 4.4) · hata · satır yüklenmez | "Malzeme bulunamadı: MAM-099 (partide ve geçerli veride yok)." | Yok (fazladan satırlar) |
+| H2 | Tanımsız malzeme kodu | `SalesOrderLine`: `SO-1099` → `MAM-099` · `BOM`: `ALT-005` → `SAT-999` | 04-02 referans (4.4) · hata · satır yüklenmez | "Malzeme bulunamadı: MAM-099 (partide ve geçerli veride yok)." | Yok (fazladan satırlar) |
 | H3 | Negatif miktar | `PurchaseOrderLine`: `PO-2060/1` OpenQuantity −50 · `BOM`: `ALT-012` → `SAT-010` Quantity −2 | 04-03 mantıksal (3.4) · hata · satır yüklenmez | "OpenQuantity negatif olamaz (-50)." | `PO-2060/1` ve `ALT-012 → SAT-010` eksik |
-| H4 | Tekrar eden anahtar | `Material`: `SAT-040` iki satır, adları farklı | 04-01 yapısal (3.4) · hata · iki satır da yüklenmez | "Tekrar eden anahtar: Material.Code = SAT-040 (satır n ve n+1)." | `SAT-040` eksik (başka dosyada geçmez) |
+| H4 | Tekrar eden anahtar | `Material`: `SAT-040` iki satır, adları farklı | Fonksiyon 03 ön kontrol ve 04-01 yapısal (3.2, 3.4; aynı kod) · hata · iki satır da ham veriye alınmaz | "Aynı kayıt n ve n+1. satırlarda" | `SAT-040` eksik (başka dosyada geçmez) |
 
 **Ek alan etiketi (K-104):** yükleme etiketi yalnız boşsa yazar; System owner'ın etiketi korunur.
 

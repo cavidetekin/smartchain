@@ -15,7 +15,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 3 Talep
   - 7 Arz ve stok
   - 6 Parametre
-  - 9 Veri yönetimi
+  - 10 Veri yönetimi
   - 13 Plan
   - 6 Sistem
 - **Kararlar**
@@ -94,7 +94,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Alan grupları ve veri akışı
 <sub>21. Veri modeli · Genel görünüm</sub>
 
-- **Veri yönetimi  9 tablo:** ImportBatch · Staging · DataRule · FieldDefinition · ManualValue · DataVersion
+- **Veri yönetimi  10 tablo:** ImportBatch · ImportFinding · Staging · DataRule · FieldDefinition · ManualValue · DataVersion
 - **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** ParameterSet · PlanningSetting · PriorityRule · AllocationRule
@@ -208,6 +208,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ManualValue:** Kayıt bazında elle girilen değer
 - **FieldValueSource:** Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır)
 - **ImportBatch:** Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla
+- **ImportFinding:** Partinin bulguları (ön kontrol ve doğrulama)
 - **stg.*:** Entegrasyon tabloları: her varlık için bir tane (stg.Material…); ilişkiler kodla
 - **DataVersion:** Yükleme ile oluşan dondurulmuş veri versiyonu
 - **DataVersionEntity:** Kısmi yüklemede hangi varlıkların yüklendiği
@@ -1285,7 +1286,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır.
+- Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -1294,9 +1295,32 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | EntityName | nvarchar(60) |  | Varlık | Sistem | H | E |  |
 | LoadType | nvarchar(10) |  | Tam \| Değişen | Sistem | H | E |  |
 | ReceivedAt | datetime2 |  | Alınma zamanı | Sistem | H | E |  |
-| Status | nvarchar(15) |  | Alındı \| Doğrulandı \| Hatalı \| Yüklendi | Sistem | H | E |  |
+| Status | nvarchar(15) |  | Ön kontrol \| Alındı \| Doğrulandı \| Hatalı \| Yüklendi \| Tamamlanmadı \| Vazgeçildi | Sistem | H | E |  |
 | RowCount | int |  | Satır sayısı | Sistem | H | H |  |
 | ErrorCount | int |  | Hatalı satır | Sistem | H | H |  |
+| UploadedBy | int | FK | Yükleyen kullanıcı; Excel yüklemesinde dolu | Sistem | H | H |  |
+| FileName | nvarchar(255) |  | Yüklenen dosyanın adı | Sistem | H | H |  |
+| FilePath | nvarchar(400) |  | Sunucuda saklanan dosyanın yolu | Sistem | H | H |  |
+| TemplateVersion | int |  | Dosyanın şablon sürümü | Sistem | H | H |  |
+| JobId | bigint |  | Büyük dosyada ön kontrol işi | Sistem | H | H |  |
+
+### ImportFinding
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Partinin bulguları: ön kontrol (fonksiyon 03) ve doğrulama (fonksiyon 04) aynı listeye yazar.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| ImportBatchId | bigint | FK,IX | Parti | Sistem | H | E |  |
+| RowNo | int |  | Dosyadaki satır no; dosya düzeyi bulguda boş | Sistem | H | H |  |
+| Severity | nvarchar(10) |  | Hata \| Uyarı \| Bilgi | Sistem | H | E |  |
+| CheckCode | nvarchar(30) |  | Kontrolün kodu | Sistem | H | E |  |
+| FieldName | nvarchar(200) |  | Alanın etiketi; tekrar eden anahtarda boş | Sistem | H | H |  |
+| Value | nvarchar(255) |  | Dosyadaki değer | Sistem | H | H |  |
+| Message | nvarchar(400) |  | Sorun | Sistem | H | E |  |
+| RowKey | nvarchar(200) |  | Kaydın anahtarı | Sistem | H | H |  |
 
 ### stg.*
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1647,8 +1671,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım … | Sistem | H | E |  |
-| Channel | nvarchar(15) |  | Gece \| Hesaplama \| Dışa aktarım | Sistem | H | E |  |
+| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol … | Sistem | H | E |  |
+| Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |
 | RequestedBy | int | FK | Başlatan | Sistem | H | H |  |
@@ -1745,7 +1769,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İş kuyruğu ayarları (K-68); satır yoksa varsayılan geçerlidir:
   - `JobLimitInteractive`: hesaplama kanalında aynı anda çalışan iş (3)
   - `JobLimitNight`: gece kanalında aynı anda çalışan iş (2)
-  - `JobLimitExport`: dışa aktarım kanalında aynı anda çalışan iş (2; K-93)
+  - `JobLimitExport`: Excel kanalında aynı anda çalışan iş (2; K-93, K-129)
   - `JobHeartbeatTimeoutSeconds`: kalp atışı bu kadar saniye gelmezse iş takılmış sayılır (120)
   - `JobMaxAttempts`: takılan iş en fazla bu kadar denenir, sonra Hata (2)
 - Motor ayarları (K-71; fonksiyon 34):
@@ -1763,6 +1787,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `ExportMaxRows`: bir aktarımda en çok satır (500000)
   - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
 - Sistem sağlığı (K-106; fonksiyon 94): `DiskWarnPercent` (85), `QueueWaitWarnMinutes` (10), `SystemEventRetentionDays` (90).
+- Excel yükleme (K-129; fonksiyon 03): `ImportSyncMaxMb`: bu boyuta kadar ön kontrol istek içinde, üstü iş kuyruğunda (5); `ImportMaxMb`: en büyük dosya (100); `ImportMaxRows`: bir dosyada en çok satır (200000).
 - Giriş, şifre ve oturum ayarları (K-97, K-98; fonksiyon 89). Şifre kuralı değişikliği bir sonraki şifre değişiminde geçerli olur:
   - `PasswordMinLength`: şifrede en az karakter (10)
   - `PasswordRequireLetterAndDigit`: şifrede harf ve rakam zorunlu, 1 ya da 0 (1)

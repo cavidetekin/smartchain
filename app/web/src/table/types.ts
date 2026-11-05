@@ -16,6 +16,8 @@ export interface AggSpec {
 export interface ListColumn {
   field: string;
   label: string;
+  /** Başlığın ipucu (K-129). */
+  note?: string | null;
   type: ColumnType;
   filter: FilterType;
   values: ListValue[] | null;

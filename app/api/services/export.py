@@ -1,7 +1,7 @@
 """Excel'e aktarım (K-91, K-93; fonksiyon 86, docs/08 "Dışa aktarım").
 
 Ekranda ne görünüyorsa o aktarılır: aynı liste sözleşmesi (K-87) ve grup ağacı (K-90). Satır sayısı ExportSyncMaxRows'u
-aşmıyorsa dosya hemen döner; aşıyorsa "Dışa aktarım" kanalında iş olarak kuyruğa girer (motor servisi üretir).
+aşmıyorsa dosya hemen döner; aşıyorsa "Excel" kanalında iş olarak kuyruğa girer (motor servisi üretir).
 Her aktarım AuditLog'a yazılır; iz yazılamazsa dosya verilmez.
 """
 import io
@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app import __version__
 from app.jobs import queue
-from app.jobs.constants import CHANNEL_EXPORT, STATUS_DONE, TYPE_EXPORT
+from app.jobs.constants import CHANNEL_EXCEL, STATUS_DONE, TYPE_EXPORT
 from app.jobs.settings import JobSettings
 from ..errors import DB_UNAVAILABLE, AppError
 from ..export import describe
@@ -222,7 +222,7 @@ def start(session: Session | None, defn: ListDefinition, user_id: int, req: Expo
         if plan.rows > settings["ExportSyncMaxRows"]:
             payload = {"list": defn.name, "user_id": user_id, "file_name": plan.file_name, "rows": plan.rows,
                        "request": req.model_dump(mode="json", by_alias=True)}
-            job_id = queue.enqueue(session, TYPE_EXPORT, CHANNEL_EXPORT, user_id, payload,
+            job_id = queue.enqueue(session, TYPE_EXPORT, CHANNEL_EXCEL, user_id, payload,
                                    summary=f"{plan.defn.title} · {describe.tr_number(plan.rows, 0)} satır")
             return {"job_id": job_id, "file_name": plan.file_name, "rows": plan.rows}
         t0 = time.perf_counter()

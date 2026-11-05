@@ -30,6 +30,7 @@ $Package = $PSScriptRoot
 $ConfigDir = Join-Path $DataDir 'config'
 $LogDir = Join-Path $DataDir 'logs'
 $ExportDir = Join-Path $DataDir 'exports'   # arka planda hazırlanan Excel dosyaları (K-93)
+$ImportDir = Join-Path $DataDir 'imports'   # yüklenen Excel dosyaları (K-129)
 $ConfigFile = Join-Path $ConfigDir 'smartchain.env'
 $Python = Join-Path $InstallDir 'python\python.exe'
 $SetupDir = Join-Path $InstallDir 'setup'
@@ -100,7 +101,7 @@ function Remove-IisSite {
 }
 
 try {
-    New-Item -ItemType Directory -Force -Path $ConfigDir, $LogDir, $ExportDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $ConfigDir, $LogDir, $ExportDir, $ImportDir | Out-Null
     $log = Start-InstallLog -LogDir $LogDir -Prefix 'install'
     $env:SMARTCHAIN_INSTALL_SQL_PASSWORD = $SqlPassword
 
@@ -192,6 +193,7 @@ try {
             "SMARTCHAIN_DB_URL=$url",
             "SMARTCHAIN_LOG_DIR=$LogDir",
             "SMARTCHAIN_EXPORT_DIR=$ExportDir",
+            "SMARTCHAIN_IMPORT_DIR=$ImportDir",
             'SMARTCHAIN_LOG_LEVEL=INFO',
             'SMARTCHAIN_ENABLE_DOCS=false',
             'SMARTCHAIN_JOB_WATCH_SECONDS=1.0',
@@ -231,7 +233,8 @@ try {
         Set-SidAcl -Path $LogDir -FullSids $script:SidSystem, $script:SidAdministrators -ModifySids $services
         Set-SidAcl -Path $ExportDir -FullSids $script:SidSystem, $script:SidAdministrators `
             -ModifySids $ServiceSids['SmartchainEngine'] -ReadSids $ServiceSids['SmartchainApi']
-        Write-Log 'Ayar, log ve dışa aktarım klasörü yetkileri verildi (SID)' 'OK'
+        Set-SidAcl -Path $ImportDir -FullSids $script:SidSystem, $script:SidAdministrators -ModifySids $services
+        Write-Log 'Ayar, log, dışa aktarım ve yükleme klasörü yetkileri verildi (SID)' 'OK'
     } { Remove-SmartchainServices }
 
     # --- 6 · Veritabanı (geri alınmaz: veri korunur) ---

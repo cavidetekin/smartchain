@@ -119,12 +119,12 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
              core_difference=[f"Routing {route}: {len(removed)} satır dosyada yok"]),
         dict(code="H2", type="Tanımsız malzeme kodu", file="SalesOrderLine.xlsx",
              rows=[row("SalesOrderLine", OrderNo="SO-1099")], key="SO-1099|1|", field="MaterialCode", value="MAM-099",
-             step="Fonksiyon 04-02 referans kontrolü (geliştirme 3.4, 4.4)", severity="hata",
+             step="Fonksiyon 04-02 referans kontrolü (geliştirme 4.4)", severity="hata",
              behaviour="Satır yüklenmez", message="Malzeme bulunamadı: MAM-099 (partide ve geçerli veride yok).",
              core_difference=["SalesOrderLine SO-1099 yok (temiz hâlde de yok)"]),
         dict(code="H2", type="Tanımsız malzeme kodu", file="BOM.xlsx",
              rows=[row("BOM", MaterialCode="ALT-005", ComponentMaterialCode="SAT-999")], key="ALT-005|B-ALT-005|SAT-999",
-             field="ComponentMaterialCode", value="SAT-999", step="Fonksiyon 04-02 referans kontrolü (geliştirme 3.4, 4.4)",
+             field="ComponentMaterialCode", value="SAT-999", step="Fonksiyon 04-02 referans kontrolü (geliştirme 4.4)",
              severity="hata", behaviour="Satır yüklenmez",
              message="Malzeme bulunamadı: SAT-999 (partide ve geçerli veride yok).",
              core_difference=["BOM ALT-005 → SAT-999 yok (temiz hâlde de yok)"]),
@@ -140,10 +140,9 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
              core_difference=["BOM ALT-012 → SAT-010 eksik"]),
         dict(code="H4", type="Tekrar eden anahtar", file="Material.xlsx",
              rows=[mat_i + FIRST_DATA_ROW, mat_i + 1 + FIRST_DATA_ROW], key=d.ISOLATED_MATERIAL, field="Code",
-             value=d.ISOLATED_MATERIAL, step="Fonksiyon 04-01 yapısal kontrol (geliştirme 3.4)", severity="hata",
-             behaviour="İki satır da yüklenmez (hangisinin doğru olduğu bilinemez)",
-             message=(f"Tekrar eden anahtar: Material.Code = {d.ISOLATED_MATERIAL} "
-                      f"(satır {mat_i + FIRST_DATA_ROW} ve {mat_i + 1 + FIRST_DATA_ROW})."),
+             value=d.ISOLATED_MATERIAL, step="Fonksiyon 03 ön kontrol, 04-01 yapısal kontrol (geliştirme 3.2, 3.4; aynı kod)", severity="hata",
+             behaviour="İki satır da ham veriye alınmaz (hangisinin doğru olduğu bilinemez)",
+             message=f"Aynı kayıt {mat_i + FIRST_DATA_ROW} ve {mat_i + 1 + FIRST_DATA_ROW}. satırlarda",
              core_difference=[f"Material {d.ISOLATED_MATERIAL} eksik (başka hiçbir dosyada geçmez)"]),
     ]
     return stg, errors

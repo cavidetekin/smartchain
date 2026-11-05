@@ -25,7 +25,7 @@ const openDialog = async () => {
 };
 
 const job = (status: string, extra: Record<string, unknown> = {}) => ({
-  id: 81, job_type: "Dışa aktarım", channel: "Dışa aktarım", status, progress: null, queue_position: null,
+  id: 81, job_type: "Dışa aktarım", channel: "Excel", status, progress: null, queue_position: null,
   updated_at: "2026-10-28T10:00:00+00:00", ...extra,
 });
 

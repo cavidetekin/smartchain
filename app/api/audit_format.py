@@ -33,6 +33,8 @@ FIELD_LABELS = {
     "field": "Alan", "dir": "Yön",
     # Şablon indirme
     "entity_name": "Tablo", "version": "Sürüm", "field_count": "Alan sayısı",
+    # Excel yükleme (K-129)
+    "mode": "Mod", "valid": "Geçerli satır", "errors": "Hatalı satır", "template_version": "Şablon sürümü", "file_name": "Dosya adı",
 }
 
 # Kodlu değerler; anahtara göre. Burada olmayan değer (ad, adres, serbest metin) olduğu gibi görünür.
@@ -61,7 +63,7 @@ SETTING_LABELS = {
     "PasswordMinLength": "En az karakter", "PasswordRequireLetterAndDigit": "Harf ve rakam zorunlu", "PasswordHistoryCount": "Son kaç şifreden farklı",
     "PasswordMaxAgeDays": "Geçerlilik süresi (gün)", "LoginMaxFailedAttempts": "Kilit için hatalı giriş sayısı", "LoginLockMinutes": "Kilit süresi (dk)",
     "SessionIdleMinutes": "Oturumun kapandığı süre (dk)", "SessionWarningMinutes": "Kapanmadan önce uyarı (dk)",
-    "DiskWarnPercent": "Disk uyarı eşiği (%)", "QueueWaitWarnMinutes": "Kuyruk bekleme eşiği (dk)", "SystemEventRetentionDays": "Hataların saklanma süresi (gün)",
+    "DiskWarnPercent": "Disk uyarı eşiği (%)", "QueueWaitWarnMinutes": "Kuyruk bekleme eşiği (dk)", "ImportSyncMaxMb": "Beklemeden kontrol edilen en büyük dosya (MB)", "ImportMaxMb": "En büyük dosya (MB)", "ImportMaxRows": "Dosyada en çok satır", "SystemEventRetentionDays": "Hataların saklanma süresi (gün)",
 }
 OTHER_LISTS = {"permissions": "Yetki matrisi"}  # ortak liste olmayan dışa aktarımlar
 RETIRED_FIELDS = {"IsPermanent": "Silinemez"}  # listeden kalkan alanlar: eski aktarım kayıtlarında geçer

@@ -112,9 +112,9 @@ def test_info_lists_required_fields(client, people):
 def test_entity_list_sorts_filters_and_exports(client, people):
     h = auth(people[KEY_USER])
     cols = {c["field"]: c for c in client.get("/api/data-entities/columns", headers=h).json()["columns"]}
-    assert list(cols) == ["Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "CatalogOrder", "Entity"]
+    assert list(cols) == ["Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity"]
     assert {f: c["label"] for f, c in cols.items()} == {"Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "RequiredCount": "Zorunlu alan",
-                                                        "CatalogOrder": "Yükleme sırası", "Entity": "Teknik tablo adı"}
+                                                        "LastLoadAt": "Son yükleme zamanı", "CatalogOrder": "Yükleme sırası", "Entity": "Teknik tablo adı"}
     assert [f for f, c in cols.items() if not c["default_visible"]] == ["Entity"] and cols["EntityClass"]["values"] == ["Ana veri", "İşlem verisi"]
 
     # satır menüsü gizli kolonları da okur

@@ -1,6 +1,6 @@
 """Excel'e aktarım (K-91, K-93; fonksiyon 86): sentetik v0 ve yerel SQL Server ile.
 
-Anlık aktarım ekrandaki sorguyla aynı satırları aynı sırada verir; eşik üstü "Dışa aktarım" kanalında iş olur, motor
+Anlık aktarım ekrandaki sorguyla aynı satırları aynı sırada verir; eşik üstü "Excel" kanalında iş olur, motor
 servisi dosyayı üretir; her aktarım AuditLog'a yazılır. Test kullanıcısının iz satırları sonra silinir.
 """
 import io
@@ -23,7 +23,7 @@ from app.api.services import export as export_service
 from app.engine.export_job import run_export_job
 from app.engine.service import EngineService
 from app.jobs import queue
-from app.jobs.constants import (CHANNEL_EXPORT, CHANNEL_INTERACTIVE, STATUS_DONE, STATUS_FAILED, STATUS_QUEUED, TYPE_EXPORT,
+from app.jobs.constants import (CHANNEL_EXCEL, CHANNEL_INTERACTIVE, STATUS_DONE, STATUS_FAILED, STATUS_QUEUED, TYPE_EXPORT,
                                 TYPE_WORKSPACE)
 from app.jobs.settings import JobSettings
 
@@ -183,7 +183,7 @@ def test_above_threshold_becomes_export_job(api, user, db_engine, db_session):
     assert out["rows"] > 10 and out["file_name"].startswith("smartchain_malzeme_")
     job = queue.get_job(db_session, out["job_id"], JobSettings())
     assert job["Summary"] == f"Malzeme listesi · {out['rows']:,} satır".replace(",", ".")  # K-107
-    assert (job["JobType"], job["Channel"], job["Status"], job["RequestedBy"]) == (TYPE_EXPORT, CHANNEL_EXPORT,
+    assert (job["JobType"], job["Channel"], job["Status"], job["RequestedBy"]) == (TYPE_EXPORT, CHANNEL_EXCEL,
                                                                                       STATUS_QUEUED, user)
     assert json.loads(job["Payload"])["request"]["filters"][0]["value"] == "zzz"
     r = api.get(f"/api/exports/{out['job_id']}/file", headers=auth(user))
@@ -193,7 +193,7 @@ def test_above_threshold_becomes_export_job(api, user, db_engine, db_session):
 
 def test_export_job_writes_file_audit_and_download(api, user, db_engine, db_session, test_users):
     out = enqueue_big(api, user, db_engine)
-    job = queue.claim_next(db_session, CHANNEL_EXPORT, JobSettings())
+    job = queue.claim_next(db_session, CHANNEL_EXCEL, JobSettings())
     assert job["Id"] == out["job_id"]
     run_export_job(job["Id"], job["Attempt"])
     db_session.expire_all()
@@ -221,7 +221,7 @@ def test_export_job_writes_file_audit_and_download(api, user, db_engine, db_sess
 
 def test_export_job_failure_marks_job_failed(api, user, db_engine, db_session, monkeypatch):
     out = enqueue_big(api, user, db_engine)
-    job = queue.claim_next(db_session, CHANNEL_EXPORT, JobSettings())
+    job = queue.claim_next(db_session, CHANNEL_EXCEL, JobSettings())
     monkeypatch.setattr(export_repo, "write_audit", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("iz yok")))
     run_export_job(job["Id"], job["Attempt"])
     db_session.expire_all()
@@ -233,18 +233,18 @@ def test_export_job_failure_marks_job_failed(api, user, db_engine, db_session, m
 def test_export_channel_has_own_limit(user, db_session):
     settings = JobSettings(limit_export=2, limit_interactive=1)
     for _ in range(3):
-        queue.enqueue(db_session, TYPE_EXPORT, CHANNEL_EXPORT, user, {})
+        queue.enqueue(db_session, TYPE_EXPORT, CHANNEL_EXCEL, user, {})
     queue.enqueue(db_session, TYPE_WORKSPACE, CHANNEL_INTERACTIVE, user, {})
-    claimed = [queue.claim_next(db_session, CHANNEL_EXPORT, settings) for _ in range(3)]
+    claimed = [queue.claim_next(db_session, CHANNEL_EXCEL, settings) for _ in range(3)]
     assert [j is not None for j in claimed] == [True, True, False]
     assert queue.claim_next(db_session, CHANNEL_INTERACTIVE, settings) is not None  # aktarım yeniden hesabı bekletmez
     c = queue.counters(db_session, settings)
-    assert c[CHANNEL_EXPORT] == {"running": 2, "queued": 1, "limit": 2}
+    assert c[CHANNEL_EXCEL] == {"running": 2, "queued": 1, "limit": 2}
 
 
 def test_engine_service_dispatches_export_job_by_type(api, user, db_engine, db_session):
     out = enqueue_big(api, user, db_engine)
-    svc = EngineService(db_engine, job_settings=JobSettings(), channels=(CHANNEL_EXPORT,))
+    svc = EngineService(db_engine, job_settings=JobSettings(), channels=(CHANNEL_EXCEL,))
     svc.start()
     try:
         end = time.monotonic() + 60

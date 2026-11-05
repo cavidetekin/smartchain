@@ -14,7 +14,7 @@ from app.api.db import get_engine
 from app.api.main import create_app
 from app.engine.export_job import run_export_job
 from app.jobs import queue
-from app.jobs.constants import CHANNEL_EXPORT
+from app.jobs.constants import CHANNEL_EXCEL
 from app.jobs.settings import JobSettings
 
 from test_export_api import FIELDS, export, setting, user  # noqa: F401  (fikstür ve yardımcılar)
@@ -83,7 +83,7 @@ def background_file(api, user, db_engine, db_session) -> int:  # noqa: F811
     r = export(api, user)
     assert r.status_code == 202, r.status_code
     setting(db_engine, "ExportSyncMaxRows", 10000)
-    job = queue.claim_next(db_session, CHANNEL_EXPORT, JobSettings())
+    job = queue.claim_next(db_session, CHANNEL_EXCEL, JobSettings())
     run_export_job(job["Id"], job["Attempt"])
     db_session.commit()  # testin oturumu bağlantıyı bırakır
     return r.json()["job_id"]

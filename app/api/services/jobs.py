@@ -1,10 +1,11 @@
 """İş kuyruğu servisi (fonksiyon 47, 48, 93'ün çekirdeği). Sorgular app.jobs.queue'dadır; motor servisi de onu kullanır."""
+import json
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.jobs import queue
-from app.jobs.constants import CHANNEL_NIGHT, TYPE_LOAD
+from app.jobs.constants import CHANNEL_NIGHT, TYPE_LOAD, TYPE_PRECHECK
 from app.jobs.settings import read_settings
 from ..errors import DB_UNAVAILABLE, AppError
 from ..permissions import SYSTEM_OWNER, Access, role_message
@@ -23,6 +24,13 @@ def _iso(value: datetime | None) -> str | None:
     return value.replace(tzinfo=timezone.utc).isoformat(timespec="seconds") if value else None
 
 
+def _import_batch(job: dict) -> int | None:
+    """Excel ön kontrol işinin partisi: "Sonucu aç" bağlantısı için (K-129). Payload'un kendisi gösterilmez."""
+    if job["JobType"] != TYPE_PRECHECK or not job["Payload"]:
+        return None
+    return json.loads(job["Payload"]).get("batch_id")
+
+
 def to_public(job: dict) -> dict:
     """API ve WebSocket'te işin görünen hali. Payload (iç parametreler) gösterilmez."""
     return {
@@ -38,6 +46,7 @@ def to_public(job: dict) -> dict:
         "cancel_reason": job["CancelReason"],
         "cancelled_by_name": job["CancelledByName"],
         "progress": job["Progress"],
+        "import_batch_id": _import_batch(job),
         "attempt": job["Attempt"],
         "error_text": job["ErrorText"],
         "queue_position": job["QueuePosition"],

@@ -327,6 +327,8 @@ Başlık "Denetim izi", altında ekranı dolduran ortak tablo: Zaman, Kullanıc�
 | Tablo bileşeni ve liste sorgu sözleşmesi | uygulandı (1.3) |
 | Görünüm: kayıtlı görünüm, kolon düzeni, gruplama, filtre etiketleri, boş | uygulandı (1.4) |
 | Dışa aktarım: Excel'e aktarım, kapsam penceresi, arka plan ve bildirim | uygulandı (1.5) |
+| Excel yükleme penceresi (ekran 02, fonksiyon 03): Dosya, Ön kontrol, Doğrulama; "Ön kontrol bitti" bildirimi ve "Sonucu aç"; tablonun sabit filtresi (`baseFilters`) | uygulandı (3.2) |
+| Kolon başlığı ipucu: yalnız alanın açıklaması (veri sözlüğü ya da kolon notu); açıklama yoksa ipucu çıkmaz, kullanım metni yok (K-129) | uygulandı (3.2) |
 | Koşullu biçimlendirme: kurallar, palet, okunurluk, ikon, Excel'e taşınma | uygulandı (1.6) |
 | Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |
 | Arayüz metinleri kurala göre sadeleşti | uygulandı (2.3c) |

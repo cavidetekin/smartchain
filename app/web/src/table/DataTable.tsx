@@ -229,7 +229,7 @@ function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec })
   );
 }
 
-export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
+export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilters }: {
   list: string;
   /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
   cellRender?: CellRender;
@@ -237,6 +237,8 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
   rowMenu?: RowMenuSpec;
   /** Artınca (işlemden sonra) satırlar yeniden okunur. */
   reloadKey?: number;
+  /** Sabit filtre (ör. tek parti, K-129): her sorguya eklenir, etiketlerde görünmez, kaldırılamaz; Excel de yalnız bu satırları alır. */
+  baseFilters?: ListFilter[];
 }) {
   const { fontSize, userId, trackExport } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
@@ -332,9 +334,11 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
       return { col, numeric: isNumeric(col), className, style: i === 0 && indent ? { ...style, paddingLeft: indent } : style };
     });
   }, [s.order, s.widths, s.pinned, groupDepth, byField]);
-  const requestKey = JSON.stringify([s.order, s.sort, s.filters, active.map(toRequestRule)]);
+  const baseKey = JSON.stringify(baseFilters ?? []);
+  const fixed = useMemo(() => JSON.parse(baseKey) as ListFilter[], [baseKey]);
+  const requestKey = JSON.stringify([s.order, s.sort, s.filters, fixed, active.map(toRequestRule)]);
   const request: ListRequest | null = useMemo(() => (ready ? {
-    fields: s.order, sort: s.sort, filters: s.filters, ...(active.length ? { rules: active.map(toRequestRule) } : {}),
+    fields: s.order, sort: s.sort, filters: [...fixed, ...s.filters], ...(active.length ? { rules: active.map(toRequestRule) } : {}),
   } : null), [ready, requestKey]); // requestKey alanları, sıralamayı, filtreleri ve kuralları taşır
   const grouped = s.groupBy.length > 0;
   const flat = useListQuery(list, grouped ? null : request, chunkSize);
@@ -414,7 +418,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
     update((st) => ({ ...st, filters: withFilter(st.filters, field, f) }));
     setPop(null);
   };
-  const others = useMemo(() => s.filters.filter((f) => f.field !== pop?.field), [s.filters, pop?.field]);
+  const others = useMemo(() => [...fixed, ...s.filters.filter((f) => f.field !== pop?.field)], [fixed, s.filters, pop?.field]);
   const filterOf = (field: string) => s.filters.find((f) => f.field === field);
 
   const columnAction = (field: string, action: ColumnAction) => {
@@ -492,7 +496,8 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
   /** Ekrandaki görünüm durumu + kapsam (K-91): anlık dosya iner, arka plandaki iş bildirimle izlenir. */
   const runExport = async (scope: ExportScope) => {
     const result = await listApi(list).export({
-      fields: s.order, widths: s.widths, sort: s.sort, filters: s.filters, group_by: s.groupBy, aggregates, scope,
+      fields: s.order, widths: s.widths, sort: s.sort, filters: [...fixed, ...s.filters], group_by: s.groupBy, aggregates,
+      scope: fixed.length ? { ...scope, rows: "filtered" } : scope,  // "Tümü" sabit filtreyi aşmaz
       rules: active,
     });
     if (result.kind === "file") saveBlob(result.blob, result.fileName);
@@ -586,7 +591,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
         <div className="sc-table-toolbar-main">
           <ViewBar views={views} state={s} onClearSort={() => update((st) => ({ ...st, sort: [] }))} />
           <output className="sc-table-count sc-num" aria-label={T.countLabel}>
-            {T.count(formatNumber(filtered), formatNumber(total))}
+            {T.count(formatNumber(filtered), formatNumber(fixed.length ? filtered : total))}
           </output>
         </div>
         <div className="sc-table-tools" ref={panelRef}>
@@ -670,7 +675,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
                         onDragOver={(e) => dragOver(col.field, e)} onDrop={(e) => drop(col.field, e)}
                         onDragEnd={() => setDrag(null)}>
                       <div className="sc-table-head">
-                        <button type="button" className="sc-table-sort" title={`${T.sortHint}. ${T.moveHint}`}
+                        <button type="button" className="sc-table-sort" title={col.note ?? undefined}
                                 onClick={h.column.getToggleSortingHandler()} onKeyDown={(e) => onHeaderKey(col.field, e)}>
                           <span className="sc-table-label">{col.label}</span>
                           {dir === "asc" && <ArrowUp aria-hidden="true" />}
@@ -739,7 +744,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0 }: {
       )}
 
       {exporting && exportInfo && (
-        <ExportDialog info={exportInfo} filtered={filtered} total={total} visibleColumns={visible.length}
+        <ExportDialog info={exportInfo} filtered={filtered} total={fixed.length ? filtered : total} visibleColumns={visible.length}
                       allColumns={columns.length} hasFilters={s.filters.length > 0}
                       onClose={() => setExporting(false)} onExport={runExport} />
       )}

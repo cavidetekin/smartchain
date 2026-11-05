@@ -57,6 +57,7 @@ Ortam değişkenleri (`SMARTCHAIN_` önekiyle) ya da kök klasördeki `.env` dos
 | `SMARTCHAIN_ENABLE_DOCS` | `false` |
 | `SMARTCHAIN_JOB_WATCH_SECONDS` | `1.0` · iş kuyruğunu izleme aralığı; `0` izlemeyi kapatır |
 | `SMARTCHAIN_EXPORT_DIR` | `exports` · arka planda hazırlanan Excel dosyaları (K-93); süresi geçenleri motor servisi siler |
+| `SMARTCHAIN_IMPORT_DIR` | `imports` · yüklenen Excel dosyaları (K-129); silme 5.4'te |
 | `SMARTCHAIN_SESSION_COOKIE_SECURE` | `true` · oturum çerezi yalnız HTTPS'te gider (K-97). HTTPS'siz test kurulumunda ve testlerde `false`. Edge ve Chrome `http://localhost`'ta da kabul eder |
 | `SMARTCHAIN_ALLOWED_ORIGINS` | boş · durum değiştiren isteklerde izin verilen `Origin`'ler, virgülle (ör. `http://localhost:5173`). Boşsa `Origin`'in host'u isteğin `Host`'u olmalı (K-97) |
 
@@ -335,7 +336,7 @@ Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "f
 
 - `scope.rows`: `filtered` (ekrandaki filtrelerle) ya da `all` (filtresiz); `scope.columns`: `visible` (`fields`, ekrandaki sırayla) ya da `all` (listenin bütün alanları: önce görünenler, sonra diğerleri). Gruplama ve ara toplamlar istekteki gibi (ekrandaki gibi) her zaman yazılır; Bilgi sayfası her dosyada vardır (K-91).
 - Satır sayısı `ExportSyncMaxRows` (10.000) ve altıysa **200**: dosya gövdede (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`), adı `Content-Disposition`'da.
-- Üstüyse **202** `{"job_id": 81, "file_name": "…", "rows": 142000}`: iş "Dışa aktarım" kanalında (K-93). İlerleme ve bitiş WebSocket iş mesajlarıyla gelir; iş sonucu `{"file_name", "size", "rows"}`.
+- Üstüyse **202** `{"job_id": 81, "file_name": "…", "rows": 142000}`: iş "Excel" kanalında (K-93, K-129). İlerleme ve bitiş WebSocket iş mesajlarıyla gelir; iş sonucu `{"file_name", "size", "rows"}`.
 - `ExportMaxRows`'u (500.000) aşarsa 422 `export_too_large` ("filtreyi daraltın").
 - İz: her aktarım `adm.AuditLog`'a yazılır (Action "Dışa aktarım", ObjectType liste adı, ObjectKey dosya adı, NewValue JSON: kapsam, filtreler, kolonlar, satır sayısı, boyut, süre, veri versiyonu); arka planda iz, dosya hazır olunca iş bitişiyle aynı işlemde yazılır. İz yazılamazsa dosya verilmez (anlıkta 503, arka planda iş Hata).
 
@@ -408,11 +409,29 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 
 **İz yazılamazsa:** işlem geri alınır, `SystemEvent` (bileşen "Denetim izi"), 503 `audit_failed`. Excel'de dosya verilmez (`export_trace_failed` kalktı).
 
+## Excel yükleme (ekran 02, fonksiyon 03, K-129)
+
+Fonksiyon 03: System owner, Admin, Key user; End user 403. Devam ve vazgeç yalnız yükleyen (403 `import_not_owner`). Dosya ham gövdeyle gelir (`python-multipart` yok), akışla diske yazılır.
+
+| Uç nokta | Cevap |
+|---|---|
+| `POST /api/imports/{entity}?mode=Değişen\|Tam` · gövde xlsx, başlık `X-File-Name` (URL kodlu) | `ImportSyncMaxMb` ve altı **200** özet; üstü **202** `{batch_id, job_id}`. 404 `entity_not_found`, 413 `import_too_large`, 422 `import_bad_file`, `import_wrong_entity`, `import_missing_columns`; bunlarda parti oluşmaz (büyük dosyada son ikisi işte: parti Hatalı) |
+| `GET /api/imports/{id}` | Özet: tablo, dosya, sürüm durumu, mod, durum, okunan, geçerli, hatalı, uyarı ve bilgi, dosya düzeyi bulgular, iş |
+| `GET /api/imports/pending/{entity}` | Kullanıcının bu tablodaki açık ön kontrolü ya da `null` |
+| Ortak liste `import-findings` | Satır, kod, alan, değer, sorun, önem; arayüz partiyi sabit filtreyle verir |
+| `POST /api/imports/{id}/continue` | Parti "Alındı", iz "Excel yükleme" aynı işlemde; 409 `import_not_pending` |
+| `POST /api/imports/{id}/cancel` | Satırlar ve dosya silinir, "Vazgeçildi"; sıradaki iş iptal edilir, çalışan iş sonraki parçada durur |
+| `GET /api/imports/{id}/error-report` | Hatalı satırlar, özgün değerler, sonda "Hata" kolonu; iz "Hata raporu indirme". 410 `import_file_gone` |
+
+**Ölçüm (Malzeme, 32 alan; `python -m pytest -m perf`):** 40.000 satır (4,9 MB) API dahil 12,5 sn, hedef 15 sn; 200.000 satır (24,6 MB) işte 52,5 sn. Bu yüzden eşik 5 MB. Dosyayı açmak metin tablosunu belleğe okur: küçük dosya tek açılışla işlenir, büyük dosya istekte açılmaz (yalnız paket denetimi); yanlış tablo ve eksik kolon büyük dosyada işte anlaşılır, parti "Hatalı" olur, nedeni özette yazar. Liste dışı değer bilgisi alan ve değer başına tektir (en çok 1000): ERP'nin kendi değerleri her satırda bilgi yazdırmaz.
+
+**Liste ek alanı:** kolon tanımında `note` başlığın ipucudur: liste tanımının notu, yoksa alanın veri sözlüğündeki açıklaması; etiketle aynıysa ya da yoksa boş. **İş cevabı:** "Excel ön kontrol" işinde `import_batch_id` ("Sonucu aç"). **İz:** `mode` pencerede görünen adla: "Ekle / güncelle", "Tam".
+
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 
 | Uç nokta | Cevap |
 |---|---|
-| Ortak liste `data-entities` | `Name`, `EntityClass`, `Description`, `Version`, `FieldCount`, `RequiredCount`, `CatalogOrder`, `Entity` (varsayılan gizli). 24 tablo; kaynak docs/03 kataloğu, etiketli ek alanlar `FieldDefinition`'dan sayılır |
+| Ortak liste `data-entities` | `Name`, `EntityClass`, `Description`, `Version`, `FieldCount`, `RequiredCount`, `LastLoadAt` (Alındı, Doğrulandı ya da Yüklendi partinin en yeni zamanı), `CatalogOrder`, `Entity` (varsayılan gizli). 25 tablo; kaynak docs/03 kataloğu, etiketli ek alanlar `FieldDefinition`'dan sayılır |
 | `GET /api/templates/{entity}/info` | `entity`, `name`, `version`, `file_name`, `field_count`, `required` (etiketler). Bilinmiyorsa 404 `entity_not_found` |
 | `GET /api/templates/{entity}` | xlsx; `smartchain_<kısa ad>_v<sürüm>.xlsx`. İz "Şablon indirme" aynı işlemde; yazılamazsa dosya yok, 503 `audit_failed` |
 

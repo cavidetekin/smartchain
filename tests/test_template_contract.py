@@ -39,6 +39,11 @@ def test_descriptions_are_one_short_plain_sentence():
         assert not re.search(r"K-\d+|stg\.|[A-Z][a-z]+[A-Z]", e.description), e.table  # karar numarası ve teknik ad yok
 
 
+def stg_key(table: str) -> list[str]:
+    """stg indeks taşımaz, anahtar sözleşmede (K-129)."""
+    return [c.name for c in stg_columns(table) if "UK" in c.info.get("key", "")]
+
+
 def test_catalog_covers_every_staging_table():
     assert sorted(TABLES) == sorted(t.name for t in metadata.sorted_tables if t.schema == "stg") and len(TABLES) == 25
     assert {e.data_class for e in ENTITIES} == {MASTER_DATA, TRANSACTION_DATA}
@@ -213,7 +218,7 @@ def test_stock_v2():
     for name in ("IsAvailable", "IsInQuality", "IsBlocked", "IsActive", "IsCustomTracked"):
         assert found[name].blank == "Veri kuralıyla doldurulur" and core[name].server_default is None and core[name].nullable, name
     assert [c.name for c in stg_columns("Stock") if "UK" in c.info.get("key", "")] == ["LocationCode", "MaterialCode", "Warehouse", "LotNo", "Status", "ProjectCode", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo", "SalesOrderLineItemNo"]
-    assert all(len(i.name) <= 128 for i in metadata.tables["stg.Stock"].indexes) and found["SalesOrderLineItemNo"].label == "Bağlı sipariş alt satırı"
+    assert not [i for i in metadata.tables["stg.Stock"].indexes if i.unique] and found["SalesOrderLineItemNo"].label == "Bağlı sipariş alt satırı"
     assert found["ProjectCode"].label == "Sahip proje" and "müşteri ve sipariş boşsa" in found["ProjectCode"].description
     key = next(i for i in metadata.tables["core.Stock"].indexes if i.unique)
     assert [c.name for c in key.columns] == ["LocationId", "MaterialId", "Warehouse", "LotNo", "Status", "ProjectId", "CustomerId", "SalesOrderLineId"] and str(key.dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
@@ -323,7 +328,7 @@ def test_supplier_and_material_supplier_v2():
     assert (core.QuotaRatio.type.precision, core.QuotaRatio.type.scale) == (6, 4) and found["QuotaRatio"].example == 0.3
     assert found["OrderLotSize"].description == "Sipariş miktarı bu sayının katı olur"
     assert [c.name for c in stg_columns("MaterialSupplier") if "UK" in c.info.get("key", "")] == ["LocationCode", "MaterialCode", "SupplierCode"]
-    keys = {t: next(i for i in metadata.tables[f"{t}.MaterialSupplier"].indexes if i.unique) for t in ("stg", "core")}
+    keys = {t: next(i for i in metadata.tables[f"{t}.MaterialSupplier"].indexes if i.unique) for t in ("core",)}
     assert [c.name for c in keys["core"].columns] == ["LocationId", "MaterialId", "SupplierId"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
     assert contract.entity("MaterialSupplier").file_name == "smartchain_malzeme-tedarikcisi_v2.xlsx"
@@ -350,8 +355,8 @@ def test_resource_example_in_docs():
     for name in ("DailyCapacity", "Quantity", "CapacitySource", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit", "CalendarId"):
         assert name in core and name not in found, name
     assert core.DailyCapacity.nullable and core.CalendarId.nullable
-    keys = {t: next(i for i in metadata.tables[f"{t}.Resource"].indexes if i.unique) for t in ("stg", "core")}
-    assert [c.name for c in keys["stg"].columns] == ["LocationCode", "Code"] and [c.name for c in keys["core"].columns] == ["LocationId", "Code"]
+    keys = {t: next(i for i in metadata.tables[f"{t}.Resource"].indexes if i.unique) for t in ("core",)}
+    assert stg_key("Resource") == ["LocationCode", "Code"] and [c.name for c in keys["core"].columns] == ["LocationId", "Code"]
 
 
 def test_resource_group_v2_and_new_tables():
@@ -406,8 +411,8 @@ def test_uom_conversion_v2():
     assert found["Factor"].label == "Çarpan" and found["Factor"].description == "1 kaynak birim = çarpan × hedef birim"
     assert [c.name for c in stg_columns("UomConversion") if "UK" in c.info.get("key", "")] == ["MaterialCode", "FromUom", "ToUom"]
     assert contract.entity("UomConversion").file_name == "smartchain_birim-donusumu_v2.xlsx"
-    keys = {t: next(i for i in metadata.tables[f"{t}.UomConversion"].indexes if i.unique) for t in ("stg", "core")}
-    assert [c.name for c in keys["stg"].columns] == ["MaterialCode", "FromUom", "ToUom"]
+    keys = {t: next(i for i in metadata.tables[f"{t}.UomConversion"].indexes if i.unique) for t in ("core",)}
+    assert stg_key("UomConversion") == ["MaterialCode", "FromUom", "ToUom"]
     assert [c.name for c in keys["core"].columns] == ["MaterialId", "FromUom", "ToUom"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"  # K-63: tekillik güncel kayıtta
 
@@ -431,8 +436,8 @@ def test_routing_v2():
     assert found["ResourceRole"].blank == "Primary kabul edilir" and found["ResourceNumber"].blank == "1 kabul edilir"  # değişmeyen varsayılanlar
     assert found["Consumption"].description == "Baz miktar için kaynak tüketimi (kaynağın kapasite biriminde)"
     assert [c.name for c in stg_columns("Routing") if "UK" in c.info.get("key", "")] == ["LocationCode", "RouteCode", "OperationNo", "SequenceNo"]
-    keys = {t: next(i for i in metadata.tables[f"{t}.Routing"].indexes if i.unique) for t in ("stg", "core")}
-    assert [c.name for c in keys["stg"].columns] == ["LocationCode", "RouteCode", "OperationNo", "SequenceNo"]
+    keys = {t: next(i for i in metadata.tables[f"{t}.Routing"].indexes if i.unique) for t in ("core",)}
+    assert stg_key("Routing") == ["LocationCode", "RouteCode", "OperationNo", "SequenceNo"]
     assert [c.name for c in keys["core"].columns] == ["LocationId", "RouteCode", "OperationNo", "SequenceNo"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
     assert contract.entity("Routing").file_name == "smartchain_rota_v2.xlsx"
@@ -456,8 +461,8 @@ def test_bom_v2():
     assert not core.LocationId.nullable and not core.MaterialId.nullable and not core.Code.nullable
     expected = ["LocationCode", "MaterialCode", "Code", "ComponentMaterialCode", "OperationNo", "SequenceNo"]
     assert [c.name for c in stg_columns("BOM") if "UK" in c.info.get("key", "")] == expected
-    keys = {t: next(i for i in metadata.tables[f"{t}.BOM"].indexes if i.unique) for t in ("stg", "core")}
-    assert [c.name for c in keys["stg"].columns] == expected
+    keys = {t: next(i for i in metadata.tables[f"{t}.BOM"].indexes if i.unique) for t in ("core",)}
+    assert stg_key("BOM") == expected
     assert [c.name for c in keys["core"].columns] == ["LocationId", "MaterialId", "Code", "ComponentMaterialId", "OperationNo", "SequenceNo"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
     assert contract.entity("BOM").file_name == "smartchain_urun-agaci_v2.xlsx"
@@ -475,8 +480,8 @@ def test_production_version_v2():
     core = metadata.tables["core.ProductionVersion"].c
     assert core.IsActive.nullable and core.IsActive.server_default is None and not core.BOMCode.nullable and not core.LocationId.nullable
     assert [c.name for c in stg_columns("ProductionVersion") if "UK" in c.info.get("key", "")] == ["LocationCode", "MaterialCode", "Code"]
-    keys = {t: next(i for i in metadata.tables[f"{t}.ProductionVersion"].indexes if i.unique) for t in ("stg", "core")}
-    assert [c.name for c in keys["stg"].columns] == ["LocationCode", "MaterialCode", "Code"]
+    keys = {t: next(i for i in metadata.tables[f"{t}.ProductionVersion"].indexes if i.unique) for t in ("core",)}
+    assert stg_key("ProductionVersion") == ["LocationCode", "MaterialCode", "Code"]
     assert [c.name for c in keys["core"].columns] == ["LocationId", "MaterialId", "Code"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
     assert contract.entity("ProductionVersion").file_name == "smartchain_uretim-versiyonu_v2.xlsx"
@@ -498,8 +503,8 @@ def test_material_v3():
     assert found["DefaultSupplyType"].values == ("Üretim", "Satın alma", "Fason")
     assert [f.name for f in found.values() if f.required] == ["LocationCode", "Code", "BaseUom"]
     assert [c.name for c in stg_columns("Material") if "UK" in c.info.get("key", "")] == ["LocationCode", "Code"]
-    keys = {t: next(i for i in metadata.tables[f"{t}.Material"].indexes if i.unique) for t in ("stg", "core")}
-    assert [c.name for c in keys["stg"].columns] == ["LocationCode", "Code"] and [c.name for c in keys["core"].columns] == ["LocationId", "Code"]
+    keys = {t: next(i for i in metadata.tables[f"{t}.Material"].indexes if i.unique) for t in ("core",)}
+    assert stg_key("Material") == ["LocationCode", "Code"] and [c.name for c in keys["core"].columns] == ["LocationId", "Code"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
     assert contract.entity("Material").file_name == "smartchain_malzeme_v3.xlsx"
 

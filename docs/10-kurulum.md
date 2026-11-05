@@ -36,6 +36,7 @@ Adım 0.6'da kurulan iskelet. Kurulum paketinin tamamı (MSI, imza, kod korumas�
 | `C:\ProgramData\Smartchain\config\smartchain.env` | Ayarlar: bağlantı, log klasörü, oturum çerezinin `Secure` bayrağı (`SMARTCHAIN_SESSION_COOKIE_SECURE`: `-CertThumbprint` verildiyse `true`, HTTPS'siz test kurulumunda `false`; K-97). Yalnız SYSTEM, Yöneticiler ve servis hesapları okur. |
 | `C:\ProgramData\Smartchain\logs\` | `smartchain.log` (API), `engine.log` (motor), servis çıktıları, `install-<tarih>.log` |
 | `C:\ProgramData\Smartchain\exports\` | Arka planda hazırlanan Excel dosyaları (`SMARTCHAIN_EXPORT_DIR`, K-93); motor servisi yazar (değiştirme yetkisi), API okur (okuma yetkisi; SID ile, K-73); süresi geçince motor servisi siler |
+| `C:\ProgramData\Smartchain\imports\` | Yüklenen Excel dosyaları (`SMARTCHAIN_IMPORT_DIR`, K-129) |
 
 Servisler ayarları `SMARTCHAIN_CONFIG` ortam değişkeniyle verilen dosyadan okur. Ortam değişkeni dosyadaki değeri ezer.
 
@@ -68,6 +69,7 @@ Hariç tutma müşteri BT'sinin kararıdır; ürün bunları kendiliğinden tan�
 | Yer | Yol | Neden |
 |---|---|---|
 | Aktarım klasörü | `C:\ProgramData\Smartchain\exports\` (`SMARTCHAIN_EXPORT_DIR`, K-93) | Arka planda hazırlanan Excel dosyaları buraya yazılır |
+| Yükleme klasörü | `C:\ProgramData\Smartchain\imports\` (`SMARTCHAIN_IMPORT_DIR`, K-129) | Yüklenen Excel dosyaları; silme 5.4'te |
 | Motor model ve çözüm dosyaları klasörü | `C:\ProgramData\Smartchain\solver\` (K-77; geliştirme 10.5'te gelir) | Her plan hesabı model, çözüm ve log dosyası yazar |
 | SQL Server veri ve log dosyaları | `SELECT physical_name FROM sys.master_files;` ile görülür (`tempdb` dahil) | Her sorgu ve yazma bu dosyalardan geçer |
 | Geçici klasör | `NT SERVICE\SmartchainApi` ve `NT SERVICE\SmartchainEngine` hesaplarının `TEMP` klasörü | Excel yazıcısı sabit bellek kipinde satırları önce buraya yazar (K-91); anlık aktarım da |
@@ -103,7 +105,7 @@ Hariç tutma müşteri BT'sinin kararıdır; ürün bunları kendiliğinden tan�
 7. Servisler başlatılır; IIS sitesi ve ters vekil kurulur.
 8. Sağlık kontrolü IIS üzerinden yapılır (`/api/health`). Geçmezse 7 → 3 geri alınır (ön koşullar ve veritabanı yerinde kalır), neden yazılır.
 
-**Arayüz:** `web.config` `/api` ve `/api/ws`'i API servisine yönlendirir; dosya olmayan diğer adresler `index.html`'e gider (tek sayfa uygulaması, adres yenilenince de çalışır); `.woff2` türü tanımlıdır.
+**Arayüz:** `web.config` `/api` ve `/api/ws`'i API servisine yönlendirir, istek boyutu sınırını `ImportMaxMb` varsayılanına (100 MB) çıkarır (IIS varsayılanı 30 MB); dosya olmayan diğer adresler `index.html`'e gider (tek sayfa uygulaması, adres yenilenince de çalışır); `.woff2` türü tanımlıdır.
 
 IIS portunu "Default Web Site" kullanıyorsa o site durdurulur ve kaldırmada yeniden başlatılır. Başka bir site kullanıyorsa kurulum durur.
 

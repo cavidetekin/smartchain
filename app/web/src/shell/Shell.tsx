@@ -1,8 +1,8 @@
 // Kabuk (docs/12, K-82): kenar menü + bağlam çubuğu + çalışma alanı.
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Outlet } from "react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Outlet, useNavigate } from "react-router";
 
-import { emitNotice, type Job } from "../api/client";
+import { emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, type Job } from "../api/client";
 import { authApi } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
 import { IdleWatch } from "../auth/IdleWatch";
@@ -15,6 +15,8 @@ import { ShellContext, type TrackedExport } from "./ShellContext";
 import { Sidebar } from "./Sidebar";
 
 /** Oturum kapısının (auth/AuthGate) içinde açılır; kullanıcı oturumdan gelir (K-97). */
+const RECENT_CHECK_MS = 10 * 60 * 1000;  // sayfa yenilenirse: yeni biten ön kontrol yine bildirilir
+
 export function Shell() {
   const me = useAuth().me!;
   const userId = me.id;
@@ -42,8 +44,28 @@ export function Shell() {
 
   // Arka plandaki Excel aktarımları (K-91): iş göstergesinin aldığı iş mesajlarıyla izlenir.
   const trackExport = useCallback((e: TrackedExport) => setExports((x) => [...x, e]), []);
-  const onJob = useCallback((job: Job) => setExports((x) => (
-    x.some((e) => e.jobId === job.id) ? x.map((e) => (e.jobId === job.id ? { ...e, job } : e)) : x)), []);
+  // Excel ön kontrol işleri (K-129): bu sayfada biten ya da yeni bitmiş iş bildirim olur; eski işler listede kalır.
+  const [checks, setChecks] = useState<Job[]>([]);
+  const seenChecks = useRef(new Map<number, string>());
+  const navigate = useNavigate();
+  const onCheck = useCallback((job: Job) => {
+    if (job.job_type !== JOB_PRECHECK || (job.requested_by ?? userId) !== userId) return;
+    const before = seenChecks.current.get(job.id);
+    seenChecks.current.set(job.id, job.status);
+    const ended = job.status === JOB_DONE || job.status === JOB_FAILED;
+    const wasEnded = before === JOB_DONE || before === JOB_FAILED;
+    const recent = !!job.ended_at && Date.now() - Date.parse(job.ended_at) < RECENT_CHECK_MS;
+    if (ended && !wasEnded && (before !== undefined || recent)) setChecks((x) => [...x.filter((j) => j.id !== job.id), job]);
+  }, [userId]);
+  const dismissCheck = useCallback((jobId: number) => setChecks((x) => x.filter((j) => j.id !== jobId)), []);
+  const openCheck = useCallback((job: Job) => {
+    dismissCheck(job.id);
+    if (job.import_batch_id) navigate(importResultPath(job.import_batch_id));
+  }, [dismissCheck, navigate]);
+  const onJob = useCallback((job: Job) => {
+    onCheck(job);
+    setExports((x) => (x.some((e) => e.jobId === job.id) ? x.map((e) => (e.jobId === job.id ? { ...e, job } : e)) : x));
+  }, [onCheck]);
   const dismissExport = useCallback((jobId: number) => setExports((x) => x.filter((e) => e.jobId !== jobId)), []);
 
   const setCollapsedRemembered = (value: boolean) => {
@@ -88,7 +110,7 @@ export function Shell() {
           <Outlet />
         </main>
       </div>
-      <ExportToasts items={exports} onDismiss={dismissExport} />
+      <ExportToasts items={exports} onDismiss={dismissExport} checks={checks} onOpenCheck={openCheck} onDismissCheck={dismissCheck} />
       <ForbiddenNotice />
       <IdleWatch me={me} />
     </div>

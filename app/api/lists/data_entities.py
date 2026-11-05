@@ -10,6 +10,8 @@ from db.models import metadata
 from .definition import ListDefinition
 
 FD = metadata.tables["adm.FieldDefinition"]
+BATCH = metadata.tables["adm.ImportBatch"]
+LOADED_STATUSES = ("Alındı", "Doğrulandı", "Yüklendi")  # ham veriye alınmış partiler (K-129)
 
 
 def _text(value: str) -> sa.ColumnElement:
@@ -33,10 +35,14 @@ _labelled = (sa.select(sa.func.count()).select_from(FD)
              .where(FD.c.TableName == _catalog.c.Entity, FD.c.FieldName.like("Additional%"), FD.c.Label.is_not(None), FD.c.Label != "")
              .correlate(_catalog).scalar_subquery())
 
-SOURCE = sa.select(_catalog.c.Id, _catalog.c.Id.label("CatalogOrder"), _catalog.c.Entity, _catalog.c.Name, _catalog.c.EntityClass, _catalog.c.Description, _catalog.c.Version,
-                   (_catalog.c.BaseFieldCount + _labelled).label("FieldCount"), _catalog.c.RequiredCount).subquery("de")
+_last_load = (sa.select(sa.func.max(BATCH.c.ReceivedAt))
+              .where(BATCH.c.EntityName == _catalog.c.Entity, BATCH.c.Status.in_(LOADED_STATUSES))
+              .correlate(_catalog).scalar_subquery())
 
-FIELDS = ("Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "CatalogOrder", "Entity")
+SOURCE = sa.select(_catalog.c.Id, _catalog.c.Id.label("CatalogOrder"), _catalog.c.Entity, _catalog.c.Name, _catalog.c.EntityClass, _catalog.c.Description, _catalog.c.Version,
+                   (_catalog.c.BaseFieldCount + _labelled).label("FieldCount"), _catalog.c.RequiredCount, _last_load.label("LastLoadAt")).subquery("de")
+
+FIELDS = ("Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity")
 
 DATA_ENTITIES = ListDefinition(
     name="data-entities",
@@ -50,7 +56,8 @@ DATA_ENTITIES = ListDefinition(
     fields=FIELDS,
     default_visible=tuple(f for f in FIELDS if f != "Entity"),
     default_sort=(("CatalogOrder", "asc"),),  # referans verisinden işlem verisine (docs/03)
-    labels={"Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "RequiredCount": "Zorunlu alan",
+    labels={"Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "LastLoadAt": "Son yükleme zamanı", "RequiredCount": "Zorunlu alan",
             "Entity": "Teknik tablo adı", "CatalogOrder": "Yükleme sırası"},
     values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA]},
+    notes={"LastLoadAt": "Dosyanın ham veriye alındığı zaman; ana tablolara yükleme ayrı adımdır."},
 )

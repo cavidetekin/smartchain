@@ -8,7 +8,7 @@ import { tr } from "../i18n/tr";
 import { Button } from "./Button";
 
 export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, wide,
-                         dismissible = true, cancelLabel, blurred, noCancel, xwide }: {
+                         dismissible = true, cancelLabel, blurred, noCancel, xwide, extraActions }: {
   title: string;
   /** Başlığın altında sessiz satır (ör. kaynak ve satır sayısı). */
   subtitle?: ReactNode;
@@ -29,6 +29,8 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   cancelLabel?: string;
   /** Arka plan bulanık (sayfa etkileşimi kilitli; 2.1). */
   blurred?: boolean;
+  /** Vazgeç'in solunda ek düğmeler (ör. Hata raporunu indir). */
+  extraActions?: ReactNode;
   /** Yalnız birincil düğme (salt okunur pencere); Esc yine kapatır. */
   noCancel?: boolean;
 }) {
@@ -75,6 +77,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
         </div>
         <div className="sc-dialog-body">{children}</div>
         <div className="sc-dialog-actions">
+          {extraActions}
           {(dismissible || cancelLabel) && !noCancel && (
             <Button variant={cancelLabel ? "secondary" : "ghost"} onClick={onClose}>{cancelLabel ?? tr.ui.cancel}</Button>
           )}

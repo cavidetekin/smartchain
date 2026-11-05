@@ -6,7 +6,9 @@
 import { Activity, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { api, emitNotice, HEALTH_EVENT, JOB_DONE, JOB_EXPORT, JOB_LOAD, type Job } from "../api/client";
+import { useNavigate } from "react-router";
+
+import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_DONE, JOB_EXPORT, JOB_LOAD, JOB_PRECHECK, type Job } from "../api/client";
 import { connect, type ConnectionState, socketUrl } from "../api/socket";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
@@ -36,6 +38,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [everyone, setEveryone] = useState<Job[] | null>(null);  // "Herkesin işleri" seçiliyken
   const me = useAuth().me!;
+  const navigate = useNavigate();
   const canSeeAll = can(me, 93, "read", false);
   const [cancelling, setCancelling] = useState<Job | null>(null);
   const toldCancelled = useRef(new Set<number>());
@@ -175,6 +178,9 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
                   {showAll && j.requested_by !== me.id && j.requested_by_name && ` · ${tr.jobs.ownerOf(j.requested_by_name)}`}
                   {j.job_type === JOB_EXPORT && j.status === JOB_DONE && (j.requested_by ?? me.id) === me.id && (
                     <> · <button type="button" className="sc-link-btn" onClick={() => download(j)}>{tr.jobs.download}</button></>
+                  )}
+                  {j.job_type === JOB_PRECHECK && j.status === JOB_DONE && j.import_batch_id && (j.requested_by ?? me.id) === me.id && (
+                    <> · <button type="button" className="sc-link-btn" onClick={() => { setOpen(false); navigate(importResultPath(j.import_batch_id!)); }}>{tr.jobs.openResult}</button></>
                   )}
                   {j.cancel_reason && ` · ${j.cancel_reason}`}
                   {canCancel(j) && (

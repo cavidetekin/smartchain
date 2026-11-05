@@ -8,7 +8,7 @@
 - **Aynı ad, iki katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla), `core.Material` Smartchain'in tablosu (Id ile). Aktarım `stg`'den `core`'a yapılır (K-58).
 - **Versiyonlu tablolar:** `VersionFrom`, `VersionTo`, `ImportBatchId`, `BusinessKey`, `UpdatedAt` alanlarını taşır. Birincil anahtar `Id + VersionFrom`; `Id` bir kaydın bütün versiyonlarında aynıdır. Güncel kayıtta `VersionTo` boştur; tekillik (UK) yalnız güncel kayıtlarda aranır.
 - **İlişkiler:** Versiyonsuz tabloya giden ilişkiler veritabanında yabancı anahtarla (FK) korunur. Versiyonlu tabloya giden ilişkilerde FK yoktur, yalnız indeks vardır; bütünlüğü aktarım adımı (kod→Id) sağlar.
-- **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
+- **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`, `SourceRowNo`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
 - **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.
 
 ## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58) (25 tablo)
@@ -112,7 +112,7 @@
 | `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan |  | 8 |
 | `planning.PlanMetric` | Senaryo karşılaştırma metrikleri; senaryo silinse de özet kısa süre kalır. | Plan |  | 3 |
 
-## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (21 tablo)
+## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (22 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -121,7 +121,8 @@
 | `adm.DataRuleCondition` | Kural koşulları (VE / VEYA). | Veri yönetimi |  | 6 |
 | `adm.ManualValue` | Kayıt bazında elle girilen değer. | Veri yönetimi |  | 8 |
 | `adm.FieldValueSource` | Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır). | Veri yönetimi |  | 6 |
-| `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. | Veri yönetimi |  | 8 |
+| `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129). | Veri yönetimi |  | 13 |
+| `adm.ImportFinding` | Partinin bulguları: ön kontrol (fonksiyon 03) ve doğrulama (fonksiyon 04) aynı listeye yazar. | Veri yönetimi |  | 9 |
 | `adm.DataVersion` | Yükleme ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi. | Veri yönetimi |  | 7 |
 | `adm.DataVersionEntity` | Kısmi yüklemede hangi varlıkların yüklendiği. | Veri yönetimi |  | 3 |
 | `adm.AppUser` | Uygulama kullanıcısı (Faz 1'de yerel). | Sistem |  | 14 |

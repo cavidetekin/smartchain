@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 import sqlalchemy as sa
 
-from db.dictionary import standard_label
+from db.dictionary import description, standard_label
 from db.models import metadata
 
 ADDITIONAL = re.compile(r"Additional(Text|Number)\d+$")
@@ -43,6 +43,8 @@ class ListDefinition:
     source: sa.FromClause | None = None
     labels: Mapping[str, str] = field(default_factory=dict)
     values: Mapping[str, list[str]] = field(default_factory=dict)
+    # Kolon başlığının ipucu (ör. Son yükleme zamanı neyi anlatır, K-129).
+    notes: Mapping[str, str] = field(default_factory=dict)
     # Kullanıcının görebildiği satırlar (K-101, K-108): (rol, kullanıcı) → koşul ya da None (hepsi). Bilinmiyorsa None gelir.
     row_scope: Callable[[str | None, int | None], sa.ColumnElement | None] | None = None
     # Satır işlemi için her satırda dönen alanlar (ör. bileşik anahtar; K-104), görünmeseler de.
@@ -96,6 +98,12 @@ def filter_type(defn: ListDefinition, col: sa.Column) -> str:
     return {"integer": "number", "number": "number", "date": "date", "datetime": "date"}.get(kind, "text")
 
 
+def _note(defn: ListDefinition, name: str, col: sa.ColumnElement, label: str) -> str | None:
+    """Başlığın ipucu: liste tanımının notu, yoksa alanın açıklaması (veri sözlüğüyle aynı metin); etiketle aynıysa yok."""
+    text = defn.notes.get(name) or description(name, getattr(col, "comment", None))
+    return text if text and text != label else None
+
+
 def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
     """Kolonlar; labels: FieldDefinition.Label (alan → etiket). Etiketsiz ek alan listelenmez (K-88)."""
     table = defn.sa_table
@@ -116,5 +124,6 @@ def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
             "percent": name in defn.percent,
             "aggregate": defn.aggregates.get(name),
             "default_visible": name in defn.default_visible,
+            "note": _note(defn, name, col, label),
         })
     return out

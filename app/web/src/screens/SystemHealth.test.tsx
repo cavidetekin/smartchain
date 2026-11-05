@@ -274,7 +274,7 @@ describe("iş paneli", () => {
     backend({ "/api/jobs": { body: { jobs: [], counters: {} } } });
     renderApp("/ana-sayfa", meAs("Key user"));
     await waitFor(() => expect(FakeWebSocket.instances.length).toBeGreaterThan(0));
-    const message = { type: "job", job: { id: 61, job_type: "Dışa aktarım", summary: "Malzeme listesi · 142.000 satır", channel: "Dışa aktarım", status: "İptal", progress: null, queue_position: null,
+    const message = { type: "job", job: { id: 61, job_type: "Dışa aktarım", summary: "Malzeme listesi · 142.000 satır", channel: "Excel", status: "İptal", progress: null, queue_position: null,
                                            updated_at: "2026-11-03T12:00:00+00:00", cancel_reason: "Kuyruk boşalıyor" } };
     act(() => FakeWebSocket.instances[0].send(message));
     expect(await screen.findByText("İşiniz iptal edildi · Malzeme listesi · 142.000 satır: Kuyruk boşalıyor")).toBeInTheDocument();

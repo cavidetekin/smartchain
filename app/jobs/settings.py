@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
-from .constants import CHANNEL_EXPORT, CHANNEL_INTERACTIVE, CHANNEL_NIGHT
+from .constants import CHANNEL_EXCEL, CHANNEL_INTERACTIVE, CHANNEL_NIGHT
 
 log = logging.getLogger("smartchain.jobs")
 
@@ -20,6 +20,8 @@ DEFAULTS = {
 
 # Sistem sağlığı (K-106): eşikler ve hataların saklanma süresi (gün)
 HEALTH_DEFAULTS = {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90}
+# Excel yükleme (K-129): ölçüme göre 5 MB'a kadar istek içinde (docs/08)
+IMPORT_DEFAULTS = {"ImportSyncMaxMb": 5, "ImportMaxMb": 100, "ImportMaxRows": 200000}
 
 
 @dataclass(frozen=True)
@@ -32,7 +34,7 @@ class JobSettings:
 
     def limit(self, channel: str) -> int:
         return {CHANNEL_INTERACTIVE: self.limit_interactive, CHANNEL_NIGHT: self.limit_night,
-                CHANNEL_EXPORT: self.limit_export}[channel]
+                CHANNEL_EXCEL: self.limit_export}[channel]
 
 
 def read_int_settings(session: Session, defaults: dict[str, int], minimum: int = 1) -> dict[str, int]:

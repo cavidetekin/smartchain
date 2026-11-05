@@ -12,12 +12,40 @@ export type ExportItem = TrackedExport & { job?: Job };
 /** "Hazır · 4,8 MB" → "4,8 MB" (iş ilerlemesi, services/export.run_job). */
 export const readySize = (progress: string | null | undefined) => progress?.split(" · ")[1] ?? "";
 
-export function ExportToasts({ items, onDismiss }: { items: ExportItem[]; onDismiss(jobId: number): void }) {
+export function ExportToasts({ items, onDismiss, checks = [], onOpenCheck, onDismissCheck }: {
+  items: ExportItem[];
+  onDismiss(jobId: number): void;
+  /** Biten Excel ön kontrol işleri (K-129). */
+  checks?: Job[];
+  onOpenCheck?(job: Job): void;
+  onDismissCheck?(jobId: number): void;
+}) {
   const shown = items.filter((e) => e.job && (e.job.status === JOB_DONE || e.job.status === JOB_FAILED));
-  if (!shown.length) return null;
+  if (!shown.length && !checks.length) return null;
   return (
     <div className="sc-toasts" role="region" aria-label={tr.jobs.notifications}>
       {shown.map((e) => <ExportToast key={e.jobId} item={e} onDismiss={() => onDismiss(e.jobId)} />)}
+      {checks.map((j) => <PrecheckToast key={j.id} job={j} onOpen={() => onOpenCheck?.(j)} onDismiss={() => onDismissCheck?.(j.id)} />)}
+    </div>
+  );
+}
+
+function PrecheckToast({ job, onOpen, onDismiss }: { job: Job; onOpen(): void; onDismiss(): void }) {
+  const failed = job.status === JOB_FAILED;
+  return (
+    <div className={`sc-toast${failed ? " is-error" : ""}`} role="status">
+      <div className="sc-toast-body">
+        <p className="sc-toast-title">{failed ? tr.jobs.precheckFailed : tr.jobs.precheckDone}</p>
+        <p className="sc-toast-sub">
+          {job.summary}
+          {!failed && job.import_batch_id && (
+            <> · <button type="button" className="sc-toast-link" onClick={onOpen}>{tr.jobs.openResult}</button></>
+          )}
+        </p>
+      </div>
+      <button type="button" className="sc-toast-close" onClick={onDismiss} aria-label={tr.ui.close} title={tr.ui.close}>
+        <X aria-hidden="true" />
+      </button>
     </div>
   );
 }

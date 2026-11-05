@@ -64,8 +64,8 @@ describe("ekran 02", () => {
     const item = (name: string | RegExp) => within(menu).getByRole("menuitem", { name });
     expect(item("Şablonu indir (v1)")).toBeEnabled();
     expect(item("Şablon bilgisi")).toBeEnabled();
-    expect(item("Excel'den yükle")).toBeDisabled();
-    expect(item("Excel'den yükle")).toHaveAttribute("title", "3.2 adımında gelecek.");
+    expect(item("Excel'den yükle")).toBeEnabled();
+    expect(item("Excel'den yükle")).not.toHaveAttribute("title");
     expect(item("Son Excel yüklemesini gör")).toBeDisabled();
     expect(item("Bu tabloyu çekimden çıkar")).toBeDisabled();
   });

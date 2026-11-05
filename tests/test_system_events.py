@@ -6,7 +6,7 @@ from sqlalchemy import text
 from app.api.deps import COOKIE
 from app.api.main import create_app
 from app.jobs import events, queue
-from app.jobs.constants import CHANNEL_EXPORT, CHANNEL_INTERACTIVE, STATUS_FAILED, STATUS_QUEUED, TYPE_EXPORT, TYPE_WORKSPACE
+from app.jobs.constants import CHANNEL_EXCEL, CHANNEL_INTERACTIVE, STATUS_FAILED, STATUS_QUEUED, TYPE_EXPORT, TYPE_WORKSPACE
 
 from auth_helpers import token
 
@@ -75,7 +75,7 @@ def test_job_failure_writes_event_in_same_transaction(db_session, job_settings, 
 
 
 def test_export_failure_component(db_session, job_settings, test_users):
-    job = running(db_session, job_settings, test_users[0], TYPE_EXPORT, CHANNEL_EXPORT)
+    job = running(db_session, job_settings, test_users[0], TYPE_EXPORT, CHANNEL_EXCEL)
     queue.fail(db_session, job["Id"], job["Attempt"], "Dosya yok")
     assert rows(db_session)[0]["Component"] == "Dışa aktarım"
 

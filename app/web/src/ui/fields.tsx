@@ -200,7 +200,7 @@ export function Checkbox({ label, checked, onChange, disabled }: {
 }
 
 export function RadioGroup({ label, options, value, onChange }: {
-  label: string; options: { value: string; label: string }[]; value: string; onChange(v: string): void;
+  label: string; options: { value: string; label: ReactNode }[]; value: string; onChange(v: string): void;
 }) {
   const name = useId();
   return (

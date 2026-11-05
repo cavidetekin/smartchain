@@ -159,6 +159,21 @@ def test_service_templates(name, module):
         assert "--host 127.0.0.1" in root.findtext("arguments")  # K-74: dışarıya yalnız IIS
 
 
+def test_web_config_allows_the_largest_upload():
+    """K-129: ImportMaxMb varsayılanı 100 MB; IIS varsayılanı 30 MB olduğu için yükleme sınırda kalırdı."""
+    from app.jobs.settings import IMPORT_DEFAULTS
+    root = ET.fromstring(render("web.config", API_PORT=8000))
+    assert int(root.find("./system.webServer/security/requestFiltering/requestLimits").get("maxAllowedContentLength")) == IMPORT_DEFAULTS["ImportMaxMb"] * 1024 * 1024
+
+
+def test_upload_folder_and_reader_are_in_the_package():
+    """K-129: yükleme klasörü kurulur, API ve motor yazabilir; dosya okuyucu pakette."""
+    install = (INSTALLER / "install.ps1").read_text(encoding="utf-8")
+    assert "SMARTCHAIN_IMPORT_DIR=$ImportDir" in install and "Set-SidAcl -Path $ImportDir" in install
+    runtime = (INSTALLER / "requirements-runtime.txt").read_text(encoding="utf-8")
+    assert "openpyxl==" in runtime and "et_xmlfile==" in runtime
+
+
 def test_web_config_proxies_api_and_websocket():
     root = ET.fromstring(render("web.config", API_PORT=8000))
     rule = root.find("./system.webServer/rewrite/rules/rule")
@@ -239,10 +254,9 @@ def test_settings_read_config_file(tmp_path, monkeypatch):
     assert Settings(_env_file=config_files()).log_level == "WARNING"
 
 
-# --- Veritabanı adımı, yerel SQL Server'da (isteğe bağlı: geçici veritabanı açılır ve silinir) ---
+# --- Veritabanı adımı, yerel SQL Server'da (geçici veritabanı açılır ve silinir) ---
 
-@pytest.mark.skipif(os.environ.get("SMARTCHAIN_TEST_INSTALL_DB") != "1",
-                    reason="SMARTCHAIN_TEST_INSTALL_DB=1 ile çalışır (geçici veritabanı açar, geçişleri çalıştırır)")
+@pytest.mark.db
 def test_setup_db_on_local_server(monkeypatch):
     name = "Smartchain_install_test"  # silinir; koruma: setup_db.refuse_in_tests, tests/test_db_guard.py
     monkeypatch.setenv("SMARTCHAIN_DB_URL", os.environ.get("SMARTCHAIN_DB_URL", ""))  # migrate değiştirir, test sonunda geri gelir
@@ -267,7 +281,7 @@ def test_setup_db_on_local_server(monkeypatch):
             members = [u.upper() for u in setup_db._role_members(c, setup_db.APP_ROLE)]
             assert names[0].upper() in members and names[0].upper() not in [u.upper() for u in setup_db._role_members(c, "db_owner")]
         with setup_db._connect(db) as c:
-            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0037"
+            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0038"
             assert c.execute("SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')").fetchone()[0] == setup_db.COLLATION
         # İlk hesap (K-102): temiz veritabanında açılır, ikinci çalıştırmada dokunulmaz, --reset yeni şifre verir.
         user_name, password = setup_db.first_account(ROOT, db, reset=False)

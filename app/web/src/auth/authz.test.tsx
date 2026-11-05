@@ -105,7 +105,7 @@ describe("pasif düğme ipucu", () => {
 
 describe("iş paneli: iptal ve herkesin işleri", () => {
   const job = (id: number, requested_by: number, extra = {}) => ({
-    id, job_type: "Dışa aktarım", channel: "Dışa aktarım", status: "Sırada", progress: null, queue_position: 1,
+    id, job_type: "Dışa aktarım", channel: "Excel", status: "Sırada", progress: null, queue_position: 1,
     updated_at: "2026-10-27T09:20:00+00:00", requested_by, requested_by_name: requested_by === 3 ? "Mert Planlama" : "Ayşe Yönetici",
     ...extra,
   });

@@ -180,7 +180,8 @@ def test_settings_only_system_owner(client, people, role):
 def test_settings_defaults_limits_and_audit(db_engine, client, people):
     owner = people[SYSTEM_OWNER]
     body = client.get(SETTINGS, headers=auth(owner)).json()
-    assert body["values"] == body["defaults"] == {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90}
+    assert body["values"] == body["defaults"] == {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90, "ImportSyncMaxMb": 5, "ImportMaxMb": 100, "ImportMaxRows": 200000}
+    assert body["limits"]["ImportMaxRows"] == {"min": 1000, "max": 1000000}
     assert body["limits"]["SystemEventRetentionDays"] == {"min": 7, "max": 3650}
     for bad in ({"DiskWarnPercent": 0}, {"DiskWarnPercent": 100}, {"QueueWaitWarnMinutes": 0}, {"SystemEventRetentionDays": 6}):
         r = client.put(SETTINGS, headers=auth(owner), json=bad)

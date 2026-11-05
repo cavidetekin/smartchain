@@ -168,18 +168,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü
   - Nereden: Veri yükleme ekranı · 'Excel'den yükle' · varlık satırı menüsü
 - **01:** Dosya sürükle-bırak ya da seçimle alınır; gizli sayfadan varlık ve şablon sürümü tanınır, kolonlar 1. satırdaki teknik adla bulunur (eşleme yok, K-110).
-- **02:** Yükleme modu seçilir: 'ekle / güncelle' dosyadaki kayıtları işler; 'tam' dosyada olmayan kayıtları silinmiş sayar (uyarı ile).
+- **02:** Yükleme modu seçilir: 'ekle / güncelle' dosyadaki kayıtları işler (`LoadType` Değişen); 'tam' dosyada olmayan kayıtları silinmiş sayar (`LoadType` Tam, uyarı ile).
 - **GIRDI**
   - Şablondan üretilmiş xlsx dosyası (tek varlık)
   - Yükleme modu: ekle / güncelle ya da tam
   - Sözleşme (tip, uzunluk, zorunluluk)
-- **03:** Satır bazlı ön kontrol: tip, uzunluk, zorunlu alan, tekrar eden kod; değer listesi dışı değer bilgi olarak. Sonuç sayılarla ve satır listesiyle gösterilir.
+- **03:** Satır bazlı ön kontrol: tip, uzunluk, sayı aralığı, zorunlu alan, tekrar eden anahtar; değer listesi dışı değer bilgi olarak. Sonuç sayılarla ve satır listesiyle gösterilir. Kontrol kodu fonksiyon 04'ün yapısal kontrolüyle ortaktır (`app/integration/structural.py`).
 - **04:** Kullanıcı hatalı satırları atlayarak devam eder ya da hata raporunu (hata sütunu eklenmiş xlsx) indirip vazgeçer.
 - **ÇIKTI**
   - ImportBatch (Excel) ve ham veri satırları
   - Hata raporu xlsx (isteğe bağlı)
   - Yükleme geçmişi kaydı; dosya bir hafta ham veriyle birlikte saklanır
-- **05:** Geçerli satırlar ham veri tablosuna yazılır; ImportBatch (yöntem = Excel) oluşur, dosya adı ve kullanıcı kaydedilir.
+- **05:** Dosya bir kez okunur: geçerli satırlar kontrol sırasında ham veriye yazılır, parti 'Ön kontrol'de olduğu için kimse okumaz. 'Devam' partiyi 'Alındı' yapar, 'vazgeç' satırları ve dosyayı siler. ImportBatch (yöntem = Excel) dosya adı, kullanıcı ve şablon sürümünü taşır. Büyük dosyada ön kontrol iş kuyruğunda çalışır (K-129).
 - **06:** Parti doğrulamaya (04) girer; ardından kullanıcı tam ya da kısmi yükleme (05 / 06) yapar.
 
 ### 03 · Excel ile yükleme · kurallar ve etkiler
@@ -187,20 +187,31 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Excel ile yükleme yalnız yöntemi Excel olan varlıklar için; ERP'den gelen varlığı düzeltmek için elle değer / toplu düzeltme (12, 15) kullanılır.
-  - Tek dosya tek varlık; en fazla 200.000 satır (parametre).
-  - Aynı kodun tekrarı hata; dosyadaki son satır değil, kullanıcı karar verir.
+  - Tek dosya tek varlık; en fazla 200.000 satır ve 100 MB (parametre). Dosya başka varlığın şablonuysa reddedilir.
+  - Aynı anahtarın tekrarı hata: iki satır da ham veriye alınmaz, hangisinin doğru olduğunu sistem seçmez (K-129).
+  - 'Boşsa satır yüklenmez' alanlar burada reddedilir; veri kuralıyla dolan alanlar (`Resource.CapacityUnit`) reddedilmez, kontrolü kurallardan sonradır.
   - Eski şablon sürümüyle yükleme uyarı verir; tanınmayan kolon bilgi olarak listelenir, eksik zorunlu kolon hatadır.
   - Yükleme veri versiyonu açmaz; versiyon 05 / 06 ile oluşur.
 - **HATA VE ISTISNA**
-  - Dosya tanınmadı (gizli sayfa yok): kullanıcı varlığı elle seçer, kolonlar yine teknik adla bulunur.
-  - Tüm satırlar hatalı: parti oluşturulmaz, rapor indirilir.
+  - Dosya tanınmadı (gizli sayfa yok): satırın varlığı kabul edilir, uyarı verilir; kolonlar yine teknik adla bulunur.
+  - Tüm satırlar hatalı: parti 'Hatalı' kalır, devam edilemez, rapor indirilir.
   - Dosya bozuk ya da çok büyük: anlaşılır mesaj, limit yazılır.
-  - Yükleme sırasında bağlantı koparsa parti 'tamamlanmadı'; yeniden yükleme gerekir.
+  - Ön kontrol yarıda kalırsa parti 'Tamamlanmadı', satırları silinir; yeniden yükleme gerekir.
 - **ETKISI VE TETIKLENENLER**
   - Doğrulama (04) başlar.
   - Veri yükleme ekranında varlık satırı 'Excel · bekliyor' olur.
   - Denetim izi: dosya adı, satır sayısı, kullanıcı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; etkiler yüklemeyle (05 / 06) oluşur.
+- **Uygulama (3.2, K-129):** Hata raporu yalnız hatalı satırları, özgün değerleriyle ve sonda 'Hata' kolonuyla verir; düzeltilip yeniden yüklenebilir. Pencere: Dosya, Ön kontrol, Doğrulama (3.4'te). 5 MB'a kadar istek içinde, üstü 'Excel ön kontrol' işi; büyük dosyada yanlış tablo ve eksik kolon işte anlaşılır, parti 'Hatalı' olur.
+- **Mockup'tan farklar (3.2 demosu, K-129):**
+  - Değer listesi dışı değer her satırda ayrı değil, alan ve değer başına tek satır bilgi olarak gösterilir; satır no o değerin ilk görüldüğü satırdır, bilgi sayısı da buna göre sayılır (en çok 1000). ERP'nin kendi değerleri her satırda bilgi üretirdi: 200.000 satırda 154 sn yerine 52 sn. "Kod listesinde yok" hata değil bilgidir (K-110).
+  - 1. adımda satır sayısı ve şablon sürümü gösterilmez: tarayıcıda xlsx okuyucu yok, bu bilgi yüklemeden sonra 2. adımda gelir. Alt başlıkta yalnız tablo adı var.
+  - Mod metinleri: **Ekle / güncelle:** Sadece dosyadaki kayıtlar güncellenir, mevcut kayıtlar korunur · **Tam:** Mevcut kayıtlar silinir, yeni kayıtlar yüklenir.
+  - Ön kontrol tablosu: "Kod" yerine "Kayıt", anahtarın tamamı (`FAB01 · SAT-040`); "Alan" veri sözlüğündeki Türkçe etiket; tekrar eden anahtarda Alan ve Değer boş, Sorun "Aynı kayıt 201 ve 202. satırlarda".
+  - Yanlış tablonun dosyası: "Bu dosya Malzeme tablosu içermemektedir." (seçilen tablonun adı); hata görünürken "Ön kontrole geç" pasif, yeni dosya seçilince açılır.
+  - Bilgi düzeyi dosya bulguları (tanınmayan kolon) bant olarak değil, tabloda satır olarak görünür; uyarılar (eski şablon) bant olarak kalır.
+  - Büyük dosya: bekleme metni "Pencereyi kapatabilirsiniz. İş tamamlanınca tekrar açabilirsiniz.", üstünde durum (sırada, dosya açılıyor, n satır). İş bitince "Ön kontrol bitti" bildirimi; bildirimdeki ve iş listesindeki "Sonucu aç" o işin penceresini açar; "⋯ → Excel'den yükle" de aynı yere döner.
+  - Denetim izinde mod pencerede görünen adla yazılır ("Ekle / güncelle", "Tam"); vazgeç denetim izine yazılmaz. Yöntem kısıtı 3.3'te, 'Excel · bekliyor' 5.5'te, dosya ve terk edilen parti temizliği 5.4'te.
 - **ÖRNEK:** smartchain_kaynak_v1.xlsx · 46 satır: 3 hata (boş kod, çok uzun ad, sayı alanında metin), 1 bilgi (değer listesi dışı tip). Kullanıcı 43 satırla devam eder, hata raporunu indirir.
 
 ### 03 · Excel ile yükleme · Dosya ve mod
@@ -219,7 +230,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![03 · Excel ile yükleme · Ön kontrol](mockups/m24f-0348-03-excel-ile-yukleme-on-kontrol.png)
 
 - **Sayılarla özet:** Okunan, geçerli, hatalı, uyarı; karar vermeden önce tek bakış.
-- **Satır bazında sorun:** Satır no, kod, alan, değer ve anlaşılır sorun metni; öneri parantezde.
+- **Satır bazında sorun:** Satır no, kayıt, alan, değer ve anlaşılır sorun metni; öneri parantezde.
 - **İki çıkış yolu:** Hata raporunu indir ve düzelt, ya da geçerli satırlarla devam et.
 - **Uyarı yüklenir:** Uyarı seviyesi satır alınır, veri kalitesi listesine düşer.
 
@@ -233,7 +244,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Sistem (çekim ve Excel yüklemesi sonrası otomatik) · elle 'Yeniden doğrula': Key user ve üstü
   - Nereden: Çekim (01) ve Excel yüklemesinin (03) sonunda otomatik · Veri yükleme ekranı 'Yeniden doğrula'
-- **01:** Yapısal kontrol: zorunlu alan, tip, uzunluk, birim kodu, tekrar eden anahtar.
+- **01:** Yapısal kontrol: zorunlu alan, tip, uzunluk, birim kodu, tekrar eden anahtar. Fonksiyon 03'ün ön kontrolüyle aynı koddur (K-129).
 - **02:** Referans kontrolü: rota → kaynak, ağaç → malzeme, sipariş → müşteri ve malzeme, stok → malzeme. Referans önce aynı partide, sonra geçerli veride aranır.
 - **03:** Mantıksal kontrol: negatif miktar ve süre, ürün ağacı döngüsü, başlangıç > bitiş, takvimsiz kaynak, sıfır kapasite, minimum parti > yıllık talep.
 - **GIRDI**
