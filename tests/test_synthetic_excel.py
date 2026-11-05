@@ -185,6 +185,11 @@ def test_material_file(written):
     assert {r["Code"] for r in data if r["IsCustomTracked"] == 1} == {"MAM-006"}
     assert d.LATE_MATERIAL in {r["Code"] for r in data if r["IsCritical"] == 1} and all(r["IsCritical"] in (0, 1) for r in data)
     assert any(r["IsSubcontractable"] == 1 for r in data) and {r["DefaultSupplyType"] for r in data} == {"Üretim", "Satın alma"}
+    marked = {r["Code"]: r for r in data if r["IsNonStockable"] == 1}
+    assert set(marked) == set(d.NON_STOCKABLE) and all(r["IsNonStockable"] in (0, 1) for r in data)  # K-113 eki
+    assert {r["IsProducible"] for r in marked.values()} == {0, 1}  # biri üretilen, biri satın alınan
+    _, stock = read(out, "Stock")
+    assert not set(d.NON_STOCKABLE) & {r["MaterialCode"] for r in stock}  # temiz veride uyarı çıkmaz (3.4)
 
 
 def test_location_flags_in_the_file(written):
@@ -210,7 +215,7 @@ def test_same_layout_as_template(written):
 def test_only_labelled_additional_fields(written):
     ds, out, _ = written
     header, rows = read(out, "Material")
-    assert [h for h in header if h.startswith("Additional")] == ["AdditionalText1"] and len(header) == 33
+    assert [h for h in header if h.startswith("Additional")] == ["AdditionalText1"] and len(header) == 34
     assert {r["AdditionalText1"] for r in rows} >= {"A", "B", "C"}
     notes = {r[0]: r[1] for r in load_workbook(out / "Material.xlsx")["Açıklama"].iter_rows(min_row=3, values_only=True)}
     assert notes["AdditionalText1"] == "Malzeme sınıfı"

@@ -287,7 +287,8 @@ def test_material_fields_in_the_dictionary(db_engine):
         rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, DefaultValue FROM adm.FieldDefinition WHERE TableName = N'Material'"))}
     assert not {"DefaultProcurement", "AssemblyScrapPct", "IsProjectTracked", "ProductionLeadTimeDays", "Ownership"} & set(rows)
     assert (rows["DefaultSupplyType"].StandardLabel, rows["ScrapRatio"].StandardLabel, rows["IsCustomTracked"].StandardLabel) == ("Tedarik türü", "Fire oranı", "Özel takip")
-    assert all(rows[n].DefaultValue is None for n in ("IsActive", "IsSubcontractable", "IsCustomerSupplied"))
+    assert all(rows[n].DefaultValue is None for n in ("IsActive", "IsSubcontractable", "IsCustomerSupplied", "IsNonStockable"))
+    assert rows["IsNonStockable"].StandardLabel == "Stok tutulamaz"
     assert rows["QtyPerPallet"].StandardLabel == "Palet içi miktar" and rows["StockCoverageDays"].StandardLabel == "Stok gün kapsamı"
 
 

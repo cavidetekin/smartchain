@@ -567,6 +567,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|---|
 | IsCustomTracked | bit |  | Malzeme ortak havuzdan değil, belli bir talebe (proje, müşteri ya da sipariş) ayrılmış olarak takip edilir; hangi talebe ayrıldığı talep kaydından gelir | Özel takip | Kural ya da elle | H | H | 0 |
 | IsPhantom | bit |  | Hayalet yarı mamul |  | ERP | H | H | 0 |
+| IsNonStockable | bit |  | Stok tutulamaz; üretilen ya da teslim alınan miktar beklemeden tüketilir, dönem sonu stoğu sıfırdır | Stok tutulamaz | ERP, yoksa kural | H | H |  |
 | GoodsReceiptDays | decimal(9,2) |  | Mal kabul süresi (iş günü) |  | ERP, yoksa kural | H | H | 0 |
 | SafetyStock | decimal(18,4) |  | Güvenlik stoğu |  | ERP | H | H | 0 |
 | StockCoverageDays | decimal(9,2) |  | Gün cinsinden güvenlik stoğu | Stok gün kapsamı | ERP | H | H |  |

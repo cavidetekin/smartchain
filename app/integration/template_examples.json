@@ -43,6 +43,7 @@
   "IsCustomerSupplied": 0,
   "IsCustomTracked": 0,
   "IsPhantom": 0,
+  "IsNonStockable": 0,
   "GoodsReceiptDays": 1,
   "SafetyStock": 20,
   "StockCoverageDays": 3,

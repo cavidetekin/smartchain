@@ -133,7 +133,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|
 | Location | Lokasyon | Ana veri | Tesisler, depolar ve fason depoları | lokasyon | 2 |
 | UomConversion | Birim dönüşümü | Ana veri | Malzeme bazında birimler arası çevrim oranları | birim-donusumu | 2 |
-| Material | Malzeme | Ana veri | Hammadde, yarı mamul ve nihai ürünler ile planlama bilgileri | malzeme | 3 |
+| Material | Malzeme | Ana veri | Hammadde, yarı mamul ve nihai ürünler ile planlama bilgileri | malzeme | 4 |
 | ProductionVersion | Üretim versiyonu | Ana veri | Bir malzemenin ürün ağacı ve rotasını belirleyen üretim versiyonları | uretim-versiyonu | 2 |
 | BOM | Ürün ağacı | Ana veri | Malzemelerin bileşenleri ve miktarları | urun-agaci | 2 |
 | Routing | Rota | Ana veri | Üretim operasyonları, kullandıkları kaynaklar ve süreleri | rota | 2 |
@@ -192,6 +192,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|
 | IsCustomTracked | bit |  | H | Malzeme ortak havuzdan değil, belli bir talebe (proje, müşteri ya da sipariş) ayrılmış olarak takip edilir; hangi talebe ayrıldığı talep kaydından gelir | Kural ya da elle | varsayılan 0 |
 | IsPhantom | bit |  | H | Hayalet yarı mamul | ERP | varsayılan 0 |
+| IsNonStockable | bit |  | H | Stok tutulamaz; üretilen ya da teslim alınan miktar beklemeden tüketilir, dönem sonu stoğu sıfırdır | ERP, yoksa kural | kural ya da elle |
 | GoodsReceiptDays | decimal(9,2) |  | H | Mal kabul süresi (iş günü) | ERP, yoksa kural | kural ya da elle |
 | SafetyStock | decimal(18,4) |  | H | Güvenlik stoğu | ERP | varsayılan 0 |
 | StockCoverageDays | decimal(9,2) |  | H | Gün cinsinden güvenlik stoğu | ERP | boş kalır |

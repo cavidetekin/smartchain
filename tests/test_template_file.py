@@ -222,7 +222,7 @@ def test_additional_field_appears_with_its_label_version_stays():
     assert "AdditionalNumber1" in [c.value for c in wb["Malzeme"][1]] and "AdditionalNumber2" not in [c.value for c in wb["Malzeme"][1]]
     extra = notes(wb)["AdditionalNumber1"]
     assert extra["Etiket"] == "Birim ağırlık" and extra["Açıklama"] is None and extra["Örnek"] == 10
-    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 3  # ek alan etiketi sürümü artırmaz; Malzeme v3 sözleşmeden (K-113)
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 4  # ek alan etiketi sürümü artırmaz; Malzeme v4 sözleşmeden (K-113)
 
 
 def test_routing_template_v2():

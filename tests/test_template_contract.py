@@ -492,12 +492,12 @@ def test_material_v3():
     found = {f.name: f for f in fields("Material")}
     assert not {"DefaultProcurement", "AssemblyScrapPct", "IsProjectTracked", "ProductionLeadTimeDays", "Ownership"} & (set(found) | set(metadata.tables["core.Material"].c.keys()))
     assert {n: found[n].label for n in ("MaterialType", "Brand", "PlannerCode", "MRPGroup", "IsActive", "IsSubcontractable", "IsCustomerSupplied",
-                                        "StockCoverageDays", "QtyPerBox", "QtyPerPallet", "DefaultSupplyType", "ScrapRatio", "IsCustomTracked", "IsCritical")} == {
+                                        "StockCoverageDays", "QtyPerBox", "QtyPerPallet", "DefaultSupplyType", "ScrapRatio", "IsCustomTracked", "IsCritical", "IsNonStockable")} == {
         "MaterialType": "Malzeme tipi", "Brand": "Marka", "PlannerCode": "Planlamacı", "MRPGroup": "MRP grubu", "IsActive": "Aktif",
         "IsSubcontractable": "Fasona verilebilir", "IsCustomerSupplied": "Müşteri temin malzemesi", "StockCoverageDays": "Stok gün kapsamı",
-        "QtyPerBox": "Kutu içi miktar", "QtyPerPallet": "Palet içi miktar", "DefaultSupplyType": "Tedarik türü", "ScrapRatio": "Fire oranı", "IsCustomTracked": "Özel takip", "IsCritical": "Kritik malzeme"}
+        "QtyPerBox": "Kutu içi miktar", "QtyPerPallet": "Palet içi miktar", "DefaultSupplyType": "Tedarik türü", "ScrapRatio": "Fire oranı", "IsCustomTracked": "Özel takip", "IsCritical": "Kritik malzeme", "IsNonStockable": "Stok tutulamaz"}
     core = metadata.tables["core.Material"].c
-    for name in ("IsActive", "IsSubcontractable", "IsCustomerSupplied", "IsCritical"):  # boşsa kural; varsayılan yok
+    for name in ("IsActive", "IsSubcontractable", "IsCustomerSupplied", "IsCritical", "IsNonStockable"):  # boşsa kural; varsayılan yok
         assert found[name].blank == "Veri kuralıyla doldurulur" and core[name].server_default is None and "default" not in core[name].info and core[name].nullable
     assert (core.ScrapRatio.type.precision, core.ScrapRatio.type.scale) == (6, 4) and found["ScrapRatio"].example == 0.02
     assert found["DefaultSupplyType"].values == ("Üretim", "Satın alma", "Fason")
@@ -506,7 +506,7 @@ def test_material_v3():
     keys = {t: next(i for i in metadata.tables[f"{t}.Material"].indexes if i.unique) for t in ("core",)}
     assert stg_key("Material") == ["LocationCode", "Code"] and [c.name for c in keys["core"].columns] == ["LocationId", "Code"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
-    assert contract.entity("Material").file_name == "smartchain_malzeme_v3.xlsx"
+    assert contract.entity("Material").file_name == "smartchain_malzeme_v4.xlsx"
 
 
 def test_out_of_phase_flags_stay_in_contract():

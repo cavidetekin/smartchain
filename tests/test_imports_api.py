@@ -178,6 +178,22 @@ def test_no_template_info_and_unknown_column_are_notes(db_engine, client, people
     assert stg_rows(db_engine)[0]["AdditionalText1"] is None
 
 
+def test_material_v3_file_without_non_stockable_is_accepted(client, people, db_engine):
+    """K-113 eki: v3 dosyasında kolon yok; eski sürüm uyarısıyla yüklenir, değer boş kalır."""
+    book = load_workbook(io.BytesIO(xlsx([{"LocationCode": "ORM-01", "Code": "A-1", "Name": "Ad", "BaseUom": "ADET"}], "Material")))
+    sheet = book[contract.entity("Material").name]
+    sheet.delete_cols([c.value for c in sheet[1]].index("IsNonStockable") + 1)
+    for row in book["_Surum"].iter_rows():
+        if row[0].value == "Sürüm":
+            row[1].value = 3
+    buffer = io.BytesIO()
+    book.save(buffer)
+    s = upload(client, people[KEY_USER], buffer.getvalue(), "Material", name="malzeme.xlsx").json()
+    assert s["template_version"] == 3 and s["current_version"] == 4 and s["valid"] == 1 and s["errors"] == 0
+    assert any("v3" in f["message"] for f in s["file_findings"])
+    assert stg_rows(db_engine, "Material")[0]["IsNonStockable"] is None
+
+
 def test_old_template_version_warns(client, people):
     buffer = io.BytesIO()
     wb_path = xlsx(GOOD)

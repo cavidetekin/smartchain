@@ -113,6 +113,17 @@ def test_columns():
     assert [x.check for x in check_columns("Resource", [*fields, "Code"])] == ["repeated_column"]
 
 
+def test_non_stockable_is_optional_and_not_defaulted():
+    """K-113 eki: eski şablonda kolon yok, yükleme durmaz; boş değer boş kalır; ön kontrol kural uygulamaz."""
+    fields = [f.name for f in contract.fields("Material")]
+    assert "IsNonStockable" in fields
+    assert check_columns("Material", [n for n in fields if n != "IsNonStockable"]) == []
+    base = {"LocationCode": "L", "Code": "A", "Name": "Ad", "BaseUom": "ADET"}
+    row, found = findings("Material", base)
+    assert row is not None and row["IsNonStockable"] is None and not found
+    assert findings("Material", {**base, "IsNonStockable": 1})[0]["IsNonStockable"] == 1
+
+
 def test_duplicate_message_and_key():
     assert duplicate_message([201, 202]) == "Aynı kayıt 201 ve 202. satırlarda"
     assert duplicate_message([1, 2, 3]) == "Aynı kayıt 1, 2 ve 3. satırlarda"

@@ -44,6 +44,7 @@ LATE_LEAD_DAYS = 56
 LIMIT_SUPPLIER, LIMIT_MATERIAL, LIMIT_QTY = "TED-05", "SAT-003", 400
 IMPOSSIBLE_ORDER, IMPOSSIBLE_PRODUCT = "SO-1040", "MAM-010"
 MAINTENANCE_RESOURCE, LEAVE_WORKER, SICK_WORKER = "T-02", "W-007", "W-015"
+NON_STOCKABLE = ("ALT-013", "SAT-030")   # stok tutulamaz (K-113): üretilen ve satın alınan; ikisinde de stok yok
 ISOLATED_MATERIAL = "SAT-040"   # yalnız Material'da geçer (kirli hâlde tekrar eden anahtar, H4)
 NO_ROUTE_PART = "PRC-033"       # kirli hâlde rotası çıkarılır (H1)
 
@@ -265,7 +266,7 @@ def _materials(b: _Builder, rng: random.Random) -> None:
                    MRPGroup="URETIM" if producible else "SATINALMA", IsActive=True, IsCritical=False,
                    IsPurchasable=not producible, IsProducible=producible, IsSellable=level == "Nihai ürün",
                    IsSubcontractable=False, DefaultSupplyType="Üretim" if producible else "Satın alma",
-                   IsCustomerSupplied=False, IsCustomTracked=False, IsPhantom=False,
+                   IsCustomerSupplied=False, IsCustomTracked=False, IsPhantom=False, IsNonStockable=code in NON_STOCKABLE,
                    StockCoverageDays=lead if producible else None,
                    GoodsReceiptDays=None if producible else 1,
                    LotSizePolicy="Lot-for-lot" if producible else None,

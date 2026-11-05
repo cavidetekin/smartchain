@@ -15,7 +15,7 @@
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `stg.Material` | Malzeme ve planlama ana verisi. | Entegrasyon |  | 42 |
+| `stg.Material` | Malzeme ve planlama ana verisi. | Entegrasyon |  | 43 |
 | `stg.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Entegrasyon |  | 23 |
 | `stg.UomConversion` | Malzeme bazında birim dönüşümü. | Entegrasyon |  | 6 |
 | `stg.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode, ürün ağacına BOMCode ile bağlanır. Versiyon seçimi motorun kararıdır; aynı malzeme aynı dönemde birden fazla versiyonla üretilebilir. | Entegrasyon |  | 17 |
@@ -58,7 +58,7 @@
 | `core.Shift` | Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 6 |
 | `core.ShiftPlan` | Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 6 |
 | `core.EmployeeAbsence` | Kişi bazında izin ve rapor. | İşlem verisi | evet | 7 |
-| `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 43 |
+| `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 44 |
 | `core.Supplier` | Tedarikçi ve fasoncu. | Ana veri | evet | 17 |
 | `core.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Ana veri | evet | 20 |
 | `core.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode, ürün ağacına BOMCode ile bağlanır. Versiyon seçimi motorun kararıdır; aynı malzeme aynı dönemde birden fazla versiyonla üretilebilir. | Ana veri | evet | 18 |

@@ -124,6 +124,11 @@ def test_sort_is_turkish_and_stable():
     assert '"MaterialLevel" COLLATE Turkish_100_CI_AS' in order or "MaterialLevel] COLLATE Turkish_100_CI_AS" in order
 
 
+def test_non_stockable_column_is_listed_but_hidden_by_default():
+    """K-113 eki: kolon var, varsayılanda kapalı; IsPhantom'dan hemen sonra."""
+    assert MATERIALS.fields[MATERIALS.fields.index("IsPhantom") + 1] == "IsNonStockable" and "IsNonStockable" not in MATERIALS.default_visible
+
+
 def test_default_fields_and_sort():
     q = builder().rows_query(QueryRequest(), 100)
     names = [c.name for c in q.selected_columns]
