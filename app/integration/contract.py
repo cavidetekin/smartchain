@@ -16,16 +16,29 @@ from db.dictionary import description, is_additional
 from db.models import ENTITY_CATALOG, metadata
 
 FIRST_DATA_ROW = 2
-STG_EXCLUDED = frozenset({"StagingRowId", "ImportBatchId", "RowStatus", "ErrorText", "SourceRowNo"})
+STG_EXCLUDED = frozenset({"StagingRowId", "ImportBatchId", "RowStatus", "ErrorText", "SourceRowNo", "IsCurrent"})
 ERROR_COLUMN = "Hata"  # hata raporunun son kolonu (K-129)
 MASTER_DATA, TRANSACTION_DATA = "Ana veri", "İşlem verisi"
 EXAMPLES = Path(__file__).with_name("template_examples.json")   # sentetik veriden türetilmiş sabit örnekler
 EXAMPLE_TEXT, EXAMPLE_NUMBER = "Örnek", 10                      # etiketlenen ek alanlar
 
 UNIT_CODE = "Birim kodu; yeni kod yüklemede oluşur"  # birim şablonu yok, kod yüklemede oluşur (K-112)
-BLANK_ROW_REJECTED, BLANK_STAYS, BLANK_RULE = "Satır yüklenmez", "Boş kalır", "Veri kuralıyla doldurulur"
-RULE_THEN_DEFAULT = "kural, yoksa varsayılan "
-EITHER = "alternatif "   # iki alandan biri dolu olmalı (K-116)
+BLANK_ROW_REJECTED = "Satır yüklenmez"
+AFTER_RULES = "hata (kurallardan sonra)"          # BOŞSA (K-138): kuralla dolabilir, dolmazsa validasyonda Hata
+LEAD_TIME_AFTER_RULES = "tedarik süresi doluysa hata (kurallardan sonra)"
+EITHER = "alternatif "   # iki alandan biri dolu olmalı (K-116); kontrolü validasyonda (RTG.NO_RESOURCE, WOO.NO_RESOURCE)
+BLANK_MEANINGS = {      # docs/03 BOŞSA → şablonun "Boş bırakılırsa" satırı
+    "yok": "Yok sayılır",
+    "sınırsız": "Sınır yok",
+    "bilinmiyor": "Bilinmiyor; planda kullanılmaz",
+    "temel birim": "Temel birimde kabul edilir",
+    "tam gün": "Tam gün kabul edilir",
+    "ilk operasyon": "İlk operasyonda gerekir",
+    "motor seçer": "Plan hesabı seçer",
+    "gruptan": "Proje grubunun değeri geçerli",
+    "müşteriden": "Müşterinin değeri geçerli",
+    "bütün malzemeler": "Bütün malzemelere uygulanır",
+}
 
 # Referans alanı → hangi tablonun kodu (docs/03 ANAHTAR = REF; yeni referans eklenince test düşer).
 REF_TEXT = {
@@ -107,20 +120,18 @@ def _standard_label(table: str, col: sa.Column) -> str | None:
 
 
 def blank_text(missing: str) -> str:
-    """docs/03 YOKSA → kullanıcının okuyacağı somut sonuç. Bilinmeyen kural test düşürür."""
-    if missing.startswith("hata"):
+    """docs/03 BOŞSA → kullanıcının okuyacağı somut sonuç (K-138). Bilinmeyen değer test düşürür."""
+    if missing == "hata (satır atlanır)":
         return BLANK_ROW_REJECTED
-    if missing == "boş kalır":
-        return BLANK_STAYS
-    if missing == "kural ya da elle":
-        return BLANK_RULE
+    if missing == AFTER_RULES:
+        return "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez"
+    if missing == LEAD_TIME_AFTER_RULES:
+        return "Tedarik süresi doluysa veri kuralıyla doldurulur; dolmazsa satır yüklenmez"
     if missing.startswith(EITHER):
         return f"{missing.removeprefix(EITHER)} da boşsa satır yüklenmez"
-    if missing.startswith(RULE_THEN_DEFAULT):
-        return f"{BLANK_RULE}; kural yoksa {missing.removeprefix(RULE_THEN_DEFAULT)} kabul edilir"
-    if missing.startswith("varsayılan "):
-        return f"{missing.removeprefix('varsayılan ')} kabul edilir"
-    raise ValueError(f"Bilinmeyen YOKSA: {missing!r}")
+    if missing in BLANK_MEANINGS:
+        return BLANK_MEANINGS[missing]
+    raise ValueError(f"Bilinmeyen BOŞSA: {missing!r}")
 
 
 def _description(col: sa.Column, label: str) -> str:
@@ -173,7 +184,9 @@ def base_counts(table: str) -> tuple[int, int]:
 
 
 def contract_hash(table: str) -> str:
-    """Sözleşmenin özeti: alan, tip, zorunlu, liste, anahtar; bütün ek alanlar dahil. Etiket girmez: eşleşme teknik adla."""
-    parts = [(c.name, str(c.type), bool(c.info.get("required")), c.info.get("missing", ""), c.info.get("values") or [], c.info.get("key", ""))
+    """Sözleşmenin özeti: alan, tip, zorunlu, ön kontrolde boşsa satır atlanır mı, liste, anahtar; bütün ek alanlar dahil.
+    Etiket ve BOŞSA'nın açıklama metni girmez (K-138): eşleşme teknik adla, Açıklama sayfası yeni metni hemen gösterir."""
+    parts = [(c.name, str(c.type), bool(c.info.get("required")), blank_text(c.info.get("missing", "")) == BLANK_ROW_REJECTED,
+              c.info.get("values") or [], c.info.get("key", ""))
              for c in stg_columns(table)]
     return hashlib.sha256(json.dumps(parts, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]

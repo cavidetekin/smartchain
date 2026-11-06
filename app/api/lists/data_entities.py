@@ -13,6 +13,9 @@ FD = metadata.tables["adm.FieldDefinition"]
 BATCH = metadata.tables["adm.ImportBatch"]
 CONFIG = metadata.tables["adm.IntegrationEntity"]
 USER = metadata.tables["adm.AppUser"]
+RUN = metadata.tables["adm.ValidationRun"]
+FINDING = metadata.tables["adm.ValidationFinding"]
+JOB = metadata.tables["adm.Job"]
 SQL, EXCEL = "SQL", "Excel"
 NO_VIEW, RECHECK = "View tanımlı değil", "Yeniden denetle"
 LOADED_STATUSES = ("Alındı", "Doğrulandı", "Yüklendi")  # ham veriye alınmış partiler (K-129)
@@ -43,6 +46,23 @@ _last_load = (sa.select(sa.func.max(BATCH.c.ReceivedAt))
               .where(BATCH.c.EntityName == _catalog.c.Entity, BATCH.c.Status.in_(LOADED_STATUSES))
               .correlate(_catalog).scalar_subquery())
 
+# Validasyon çipi (K-134, K-139): son tablo içi çalışma; işi düşmüşse Valide edilemedi; bittiyse sonuç bulgulardan
+_last_run = (sa.select(RUN.c.Id).where(RUN.c.EntityName == _catalog.c.Entity, RUN.c.Scope == "Tablo içi")
+             .order_by(RUN.c.Id.desc()).limit(1).correlate(_catalog).scalar_subquery())
+_run_state = sa.select(RUN.c.State).where(RUN.c.Id == _last_run).scalar_subquery()
+_job_status = sa.select(JOB.c.Status).select_from(RUN.join(JOB, JOB.c.Id == RUN.c.JobId)).where(RUN.c.Id == _last_run).scalar_subquery()
+
+
+def _rows(severity: str) -> sa.ScalarSelect:
+    return (sa.select(sa.func.count(sa.distinct(FINDING.c.StagingRowId)))
+            .where(FINDING.c.EntityName == _catalog.c.Entity, FINDING.c.Severity == severity).correlate(_catalog).scalar_subquery())
+
+
+_errors, _warnings = _rows("Hata"), _rows("Uyarı")
+_validation = sa.case(
+    (sa.and_(_run_state.in_(["Sırada", "Kurallar çalışıyor", "Valide ediliyor"]), _job_status.is_not(None), _job_status.not_in(["Sırada", "Çalışıyor"])), _text("Valide edilemedi")),
+    (_run_state == "Bitti", sa.case((_errors > 0, _text("Hatalı")), (_warnings > 0, _text("Uyarılı")), else_=_text("Geçti"))),
+    else_=_run_state).label("Validation")
 _method = sa.func.coalesce(CONFIG.c.Method, _text(EXCEL)).label("Method")
 _is_sql = sa.func.coalesce(CONFIG.c.Method, _text(EXCEL)) == _text(SQL)
 _warning = sa.case((sa.and_(_is_sql, CONFIG.c.ViewName.is_(None)), _text(NO_VIEW)),
@@ -53,12 +73,13 @@ _match = sa.case((CONFIG.c.MatchedColumns.is_not(None),
 
 SOURCE = (sa.select(_catalog.c.Id, _catalog.c.Id.label("CatalogOrder"), _catalog.c.Entity, _catalog.c.Name, _catalog.c.EntityClass, _catalog.c.Description, _catalog.c.Version,
                     (_catalog.c.BaseFieldCount + _labelled).label("FieldCount"), _catalog.c.RequiredCount, _last_load.label("LastLoadAt"),
+                    _validation, _errors.label("ValidationErrors"), _warnings.label("ValidationWarnings"),
                     _method, sa.cast(sa.func.coalesce(CONFIG.c.IsPullEnabled, sa.literal_column("1")), sa.Boolean).label("IsPullEnabled"), CONFIG.c.ViewName, _warning, _match,
                     CONFIG.c.LastCheckStatus, CONFIG.c.LastCheckMessage, CONFIG.c.LastPullStatus, CONFIG.c.LastPullMessage, CONFIG.c.LastPullAt,
                     CONFIG.c.DisabledReason, CONFIG.c.DisabledAt, sa.func.coalesce(USER.c.FullName, USER.c.UserName).label("DisabledByName"))
           .select_from(_catalog.outerjoin(CONFIG, CONFIG.c.EntityName == _catalog.c.Entity).outerjoin(USER, USER.c.Id == CONFIG.c.DisabledBy)).subquery("data_entities"))
 
-FIELDS = ("Name", "Method", "IsPullEnabled", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity", "ViewName")
+FIELDS = ("Name", "Method", "IsPullEnabled", "Validation", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity", "ViewName")
 HIDDEN_FIELDS = ("Entity", "ViewName")
 PULL_KEYS = ("Method", "IsPullEnabled", "ViewName", "Warning", "DisabledReason", "DisabledByName", "DisabledAt")
 
@@ -70,16 +91,18 @@ DATA_ENTITIES = ListDefinition(
     function=2,  # Excel şablonu indirme (K-100)
     versioned=False,
     source=SOURCE,
-    key_fields=("Entity", "Name", "Version", *PULL_KEYS),  # satır menüsü ve ipucu bunları okur, kolon gizli olsa da
+    key_fields=("Entity", "Name", "Version", *PULL_KEYS, "ValidationErrors", "ValidationWarnings"),  # satır menüsü ve ipucu bunları okur, kolon gizli olsa da
     fields=FIELDS,
     default_visible=tuple(f for f in FIELDS if f not in HIDDEN_FIELDS),
     default_sort=(("CatalogOrder", "asc"),),  # referans verisinden işlem verisine (docs/03)
     labels={"Method": "Yöntem", "IsPullEnabled": "Çekim", "ViewName": "View", "Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "LastLoadAt": "Son yükleme zamanı", "RequiredCount": "Zorunlu alan",
-            "Entity": "Teknik tablo adı", "CatalogOrder": "Yükleme sırası"},
-    values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA], "Method": [EXCEL, SQL]},
+            "Entity": "Teknik tablo adı", "CatalogOrder": "Yükleme sırası", "Validation": "Validasyon"},
+    values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA], "Method": [EXCEL, SQL],
+            "Validation": ["Sırada", "Kurallar çalışıyor", "Valide ediliyor", "Geçti", "Uyarılı", "Hatalı", "Valide edilemedi"]},
     notes={"LastLoadAt": "Satırların ham veriye alındığı zaman; ana tablolara yükleme ayrı adımdır.",
            "Method": "Çekim yöntemi. Excel'den yükleme yöntemden bağımsız her zaman açıktır.",
-           "IsPullEnabled": "Yalnız SQL çekimini durdurur; Excel'den yükleme açık kalır."},
+           "IsPullEnabled": "Yalnız SQL çekimini durdurur; Excel'den yükleme açık kalır.",
+           "Validation": "Staging'deki güncel hâlin validasyonu; çipe tıklayınca bulgular açılır."},
 )
 
 INTEGRATION_FIELDS = ("Name", "Method", "ViewName", "ColumnMatch", "LastPullStatus", "LastPullAt", "CatalogOrder", "Entity")

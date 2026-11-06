@@ -24,7 +24,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 ## Veri
 
 - **İki katman (K-58).** Entegrasyon tabloları (`stg.*`) ERP'nin dilidir: Id yok, ilişkiler kodla (MaterialCode, LocationCode…). Ana tablolar Id + Code taşır; motor, ekranlar ve raporlar yalnız ana tabloları okur.
-- **ETL sırası:** Staging'e çekme (SQL view, Excel; API Faz 2) → yapısal doğrulama → veri kuralları → aktarım filtresi (A-34) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle, varsayılan; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
+- **ETL sırası:** Staging'e çekme (SQL view, Excel; API Faz 2) → yapısal doğrulama → veri kuralları → aktarım filtresi (A-34) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle; varsayılan yok, K-138; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
 - **Ek alanlar (K-59):** ana veride AdditionalText1–7 ve AdditionalNumber1–3, yapı ve işlem verisinde AdditionalText1–3 ve AdditionalNumber1–2; etiketleri FieldDefinition'da.
 - Tablo ve alan adları `docs/02-veri-modeli.md` ve `docs/03-entegrasyon.md` ile birebir; sözleşme alan adlarını değiştirme.
 - **Şemalar (K-62):** `stg` entegrasyon, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem. Aynı ad iki katmanda: `stg.Material` → `core.Material`.
@@ -56,8 +56,8 @@ Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yal
 | `docs/02-veri-modeli.md` | Ana tablolar ve alanlar (MDD 21) |
 | `docs/03-entegrasyon.md` | Entegrasyon tasarımı ve `stg.*` tabloları (MDD 26) |
 | `docs/04-arayuz-prensipleri.md` | U-1…U-24 (MDD 23) |
-| `docs/05-ekranlar.md` | 26 ekran ve ekran mockupları (MDD 24) |
-| `docs/06-fonksiyonlar.md` | 99 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
+| `docs/05-ekranlar.md` | 27 ekran ve ekran mockupları (MDD 24) |
+| `docs/06-fonksiyonlar.md` | 100 fonksiyonun çalışma prensipleri ve mockupları (MDD 24) |
 | `docs/07-veritabani.md` | Veritabanı haritası: şemalar ve tablolar (üretilmiş) |
 | `docs/08-api.md` | API kuralları: katmanlar, adresler, hata cevabı, log, ayarlar |
 | `docs/09-motor-arayuzu.md` | Motor arayüzü, sahte motor, motor servisi (geliştirme 0.5) |

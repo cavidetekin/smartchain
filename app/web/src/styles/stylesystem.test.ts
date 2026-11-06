@@ -83,6 +83,15 @@ describe("sayı kartı ve pencere tablosu (3.3 kontrol demosu)", () => {
     expect(rules(sheets["components.css"]).filter((r) => /\.sc-kpi/.test(r.selector) && r.selector.includes(" ")).map((r) => r.selector)).toEqual([]);
   });
 
+  it("üst şerit her ekranda aynı: beyaz kart, etiket solda, araç çubuğuna --top-strip-gap; ekrana özel şerit yok", () => {
+    expect(body(".sc-top-strip")).toMatch(/background:\s*var\(--surface\)/);
+    expect(body(".sc-top-strip")).toMatch(/margin-bottom:\s*var\(--top-strip-gap\)/);
+    expect(body(".sc-top-strip .sc-field")).toMatch(/flex-direction:\s*row/);
+    expect(token("top-strip-gap")).toBe(token("space-3"));
+    const strips = rules(sheets["components.css"]).flatMap((r) => r.selector.match(/\.sc-[\w-]*-strip\b/g) ?? []);
+    expect([...new Set(strips)].sort()).toEqual([".sc-service-strip", ".sc-top-strip"]); // servis şeridi durum kartıdır, ayar değil
+  });
+
   it("pencere tablosu pencereye sığar", () => {
     expect(body(".sc-table-grid--fit")).toMatch(/table-layout:\s*auto/);
     expect(body(".sc-table-grid--fit")).toMatch(/width:\s*100%/);

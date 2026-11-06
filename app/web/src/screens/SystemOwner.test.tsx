@@ -20,7 +20,7 @@ const ROWS = [{ Id: 1, TableName: "Material", FieldName: "AdditionalText2", Disp
 const field = (extra: Partial<FieldDetail> = {}): FieldDetail => ({
   table: "Material", field: "AdditionalText2", label: "Müşteri grubu", standard_label: "Ek metin alanı 2", description: "Ek metin alanları", is_additional: true,
   field_class: "Ana veri", value_priority: "ERP ezer", manual_overrides: true, editable_in_workspace: false, is_required: false,
-  default_value: "12", options: { field_class: ["Ana veri", "Parametre", "İşlem verisi"], value_priority: ["ERP ezer", "Kural ezer"] },
+  if_empty: "yok", options: { field_class: ["Ana veri", "Parametre", "İşlem verisi"], value_priority: ["ERP ezer", "Kural ezer"] },
   used_in_views: 0, used_in_rules: 0, ...extra,
 });
 
@@ -109,8 +109,8 @@ describe("alan penceresi", () => {
     expect(within(dialog).getByLabelText("Senaryo")).toBeDisabled();
     expect(within(dialog).getByLabelText("Senaryo")).not.toBeChecked();
     expect(within(dialog).getByLabelText("Zorunlu")).toBeDisabled();
-    expect(within(dialog).getByLabelText("Varsayılan değer")).toBeDisabled();
-    expect(within(dialog).getByLabelText("Varsayılan değer")).toHaveValue("12");
+    expect(within(dialog).getByLabelText("Boşsa")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Boşsa")).toHaveValue("yok");
     expect(within(dialog).getByLabelText("Etiket")).toBeEnabled();
     expect(dialog.querySelectorAll(".sc-field-rows > *")).toHaveLength(7);
     const save = within(dialog).getByRole("button", { name: "Kaydet" });
@@ -224,7 +224,7 @@ describe("yetki matrisi (ekran 22)", () => {
     "/api/permissions/matrix/export": { body: {}, headers: { "Content-Disposition": "attachment; filename*=UTF-8''smartchain_yetki-matrisi_x.xlsx" } },
   });
 
-  it.each(["System owner", "Admin"])("%s açar: 14 grup, 4 rol, Excel; istisna bölümü yok", async (role) => {
+  it.each(["System owner", "Admin"])("%s açar: 15 grup (başlık dahil 16 satır), 4 rol, Excel; istisna bölümü yok", async (role) => {
     const user = userEvent.setup();
     const m = usersBackend();
     renderApp("/yonetim/kullanicilar", meAs(role));
@@ -233,7 +233,7 @@ describe("yetki matrisi (ekran 22)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Yetki matrisi" });
     expect(dialog).toHaveClass("sc-dialog--xwide");
     const table = await within(dialog).findByRole("table", { name: "Yetki matrisi" });
-    expect(within(table).getAllByRole("row")).toHaveLength(15);
+    expect(within(table).getAllByRole("row")).toHaveLength(16);
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Fonksiyon grubu", "System owner", "Admin", "Key user", "End user"]);
     const parameter = within(table).getByRole("row", { name: /^Parametre / });
     expect(within(parameter).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Tam", "Tam", "Tam", "Yok"]);

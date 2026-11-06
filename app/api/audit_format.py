@@ -37,6 +37,8 @@ FIELD_LABELS = {
     "pull_method": "Yöntem", "view": "View", "database": "SQL kaynağı", "entities": "Tablolar", "read_anyway": "Yine de oku",
     # Excel yükleme (K-129)
     "mode": "Mod", "valid": "Geçerli satır", "errors": "Hatalı satır", "template_version": "Şablon sürümü", "file_name": "Dosya adı",
+    # Validasyon ve validasyon kuralları (K-134, K-136)
+    "rule_name": "Kural", "severity": "Sınıf", "active": "Aktif", "message": "Mesaj", "condition": "Koşul", "deleted": "Silindi", "reset": "İlk hâline döndü", "error_threshold": "Hata eşiği (%)",
 }
 
 # Kodlu değerler; anahtara göre. Burada olmayan değer (ad, adres, serbest metin) olduğu gibi görünür.

@@ -3,7 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity, Boxes, CalendarClock, CalendarRange, ChartGantt, ClipboardList, Database, Factory, FileChartColumn,
-  FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, Moon, Network, Package, Plug, ScrollText, Send, Settings,
+  FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, ListChecks, Moon, Network, Package, Plug, ScrollText, Send, Settings,
   ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles,
 } from "lucide-react";
 
@@ -82,6 +82,8 @@ export const SCREENS: Screen[] = [
     description: "Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya." },
   { no: "04", fn: 16, name: "Veri kuralları", path: "/veri/veri-kurallari", group: "veri", step: "4.2", icon: WandSparkles,
     description: "Kural listesi, kural editörü, önizleme (kaç kayıt değişir)." },
+  { no: "27", fn: 100, name: "Validasyon kuralları", path: "/veri/validasyon-kurallari", group: "veri", step: "3.4", icon: ListChecks,
+    description: "Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu; hazır ve kullanıcı kuralları, hata eşiği." },
   { no: "05", fn: 20, name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
     description: "Ana veri ve işlem verisi uyarıları; düzeltme listesi." },
 

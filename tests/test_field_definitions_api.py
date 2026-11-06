@@ -57,10 +57,10 @@ def test_list_columns_filter_group_and_keys(client, people):
     h = auth(people[SYSTEM_OWNER])
     cols = {c["field"]: c for c in client.get("/api/field-definitions/columns", headers=h).json()["columns"]}
     assert list(cols) == ["TableName", "FieldName", "DisplayLabel", "Description", "FieldClass", "ValuePriority", "ManualOverrides",
-                          "EditableInWorkspace", "IsRequired", "DefaultValue", "IsAdditional"]
+                          "EditableInWorkspace", "IsRequired", "IfEmpty", "IsAdditional"]
     assert cols["Description"]["label"] == "Açıklama"
     assert [f for f, c in cols.items() if not c["default_visible"]] == ["Description"]  # Alanlar panelinden açılır
-    assert [cols[f]["label"] for f in ("ManualOverrides", "EditableInWorkspace", "DefaultValue")] == ["Manuel", "Senaryo", "Varsayılan değer"]
+    assert [cols[f]["label"] for f in ("ManualOverrides", "EditableInWorkspace", "IfEmpty")] == ["Manuel", "Senaryo", "Boşsa"]
     assert cols["FieldClass"]["values"] == ["Ana veri", "Parametre", "İşlem verisi"]
     assert cols["IsAdditional"]["type"] == "bool" and cols["TableName"]["values_from_server"] is True
 
@@ -78,12 +78,12 @@ def test_list_columns_filter_group_and_keys(client, people):
 
 def test_excel(client, people):
     r = client.post("/api/field-definitions/export", headers=auth(people[SYSTEM_OWNER]), json={
-        "fields": ["TableName", "FieldName", "DisplayLabel", "IsRequired", "ManualOverrides", "EditableInWorkspace", "DefaultValue"],
+        "fields": ["TableName", "FieldName", "DisplayLabel", "IsRequired", "ManualOverrides", "EditableInWorkspace", "IfEmpty"],
         "filters": [{"field": "TableName", "op": "in", "values": ["Material"]}]})
     assert r.status_code == 200, r.text
     assert "smartchain_veri-sozlugu_2" in r.headers["content-disposition"]
     sheet = load_workbook(io.BytesIO(r.content)).worksheets[0]
-    assert [c.value for c in next(sheet.iter_rows())] == ["Tablo", "Alan", "Etiket", "Zorunlu", "Manuel", "Senaryo", "Varsayılan değer"]
+    assert [c.value for c in next(sheet.iter_rows())] == ["Tablo", "Alan", "Etiket", "Zorunlu", "Manuel", "Senaryo", "Boşsa"]
 
     # açıklama kolon açıksa ya da Sütunlar "Tümü" seçilirse çıkar
     r = client.post("/api/field-definitions/export", headers=auth(people[SYSTEM_OWNER]), json={

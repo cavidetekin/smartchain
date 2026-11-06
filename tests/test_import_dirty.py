@@ -57,20 +57,20 @@ def test_every_file_is_read(uploaded):
 def test_only_the_duplicate_is_an_error(uploaded):
     _, _, results, _, _ = uploaded
     assert {e: s["errors"] for e, s in results.items() if s["errors"]} == {"Material": 2}
-    assert {e: s["notes"] for e, s in results.items() if s["notes"]} == {}
+    assert {e: s["notes"] for e, s in results.items() if s["notes"]} == {"Material": 1}  # liste dışı değer örneği V-MAT-8 (K-137): bilgi
 
 
 def test_duplicate_matches_the_manifest(db_engine, uploaded):
     _, manifest, results, client, user = uploaded
     h4 = next(e for e in manifest["errors"] if e["code"] == "H4")
     s = results["Material"]
-    assert (s["read"], s["valid"], s["errors"]) == (201, 199, 2)
+    assert (s["read"], s["valid"], s["errors"]) == (209, 207, 2)  # 8 hazır kural örneği dahil (docs/11)
     body = {"fields": ["RowNo", "RowKey", "Message", "Severity"], "sort": [{"field": "RowNo", "dir": "asc"}],
-            "filters": [{"field": "ImportBatchId", "op": "eq", "value": s["batch_id"]}], "offset": 0, "limit": 10}
+            "filters": [{"field": "ImportBatchId", "op": "eq", "value": s["batch_id"]}, {"field": "Severity", "op": "in", "values": ["Hata"]}], "offset": 0, "limit": 10}
     rows = client.post("/api/import-findings/query", json=body, headers=auth(user)).json()["rows"]
     assert [r["RowNo"] for r in rows] == h4["rows"] and {r["Message"] for r in rows} == {h4["message"]} and rows[0]["RowKey"] == "ORM-01 · SAT-040"
     with db_engine.connect() as c:
-        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 199
+        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 207
         assert c.execute(text("SELECT COUNT(*) FROM stg.Material WHERE Code = N'SAT-040'")).scalar() == 0
 
 

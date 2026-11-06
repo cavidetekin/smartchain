@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from db.dictionary import is_additional
 from db.models import metadata
 
-from .contract import EITHER, TemplateField, fields, stg_columns
+from .contract import TemplateField, fields, stg_columns
 
 ERROR, WARNING, INFO = "Hata", "Uyarı", "Bilgi"
 VALUE_LENGTH = 255
@@ -159,7 +159,6 @@ class RowChecker:
             t = columns[f.name].type
             if f.kind == "number":
                 self._digits[f.name] = t.precision - t.scale
-        self._either = [f for f in self.fields if columns[f.name].info.get("missing", "").startswith(EITHER)]
         self._key = key_fields(self.table)
 
     def row_key(self, raw: Mapping[str, object]) -> str | None:
@@ -186,9 +185,6 @@ class RowChecker:
                     add(ERROR, "required", "Zorunlu alan boş.", f)
             elif f.values and converted not in f.values:
                 add(INFO, "value_list", f"Smartchain değerleri: {', '.join(f.values)}.", f, value)
-        if self._either and all(out.get(f.name) is None and raw.get(f.name) in (None, "") for f in self._either):
-            names = " ya da ".join(f.label for f in self._either)
-            add(ERROR, "either", f"{names} dolu olmalı.", self._either[0])
         return (None if any(x.severity == ERROR for x in findings) else out), findings
 
 

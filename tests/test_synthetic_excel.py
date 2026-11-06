@@ -9,6 +9,7 @@ from app.data.synthetic import dataset as d
 from app.data.synthetic.dataset import generate
 from app.data.synthetic.excel import FIRST_DATA_ROW, labels_of, stg_entities, to_staging, write_excel
 from app.integration import contract
+from app.integration.structural import key_fields as contract_keys
 
 DAY = date(2026, 10, 27)
 
@@ -21,11 +22,26 @@ def written(tmp_path_factory):
     return ds, out, manifest
 
 
-def read(out, entity):
+def _examples(out, entity) -> set[tuple]:
+    """Hazır kural örnekleri (docs/11, K-137): temiz verinin özelliklerini bilerek bozar, burada sayılmaz."""
+    manifest = json.loads((out / "beklenen-hatalar.json").read_text(encoding="utf-8"))
+    return {tuple(norm(_date(v)) for v in e["key"].values()) for e in manifest["errors"] if e.get("example") and e["table"] == entity}
+
+
+def _date(v):
+    return date.fromisoformat(v) if isinstance(v, str) and len(v) == 10 and v[4] == "-" and v[7] == "-" else v
+
+
+def read(out, entity, examples: bool = False):
     ws = load_workbook(out / f"{entity}.xlsx", read_only=True).worksheets[0]
     rows = list(ws.iter_rows(values_only=True))
     header, data = rows[0], rows[FIRST_DATA_ROW - 1:]
-    return list(header), [dict(zip(header, r)) for r in data]
+    found = [dict(zip(header, r)) for r in data]
+    if not examples:
+        skip = _examples(out, entity)
+        keys = contract_keys(entity)
+        found = [r for r in found if tuple(norm(r.get(k)) for k in keys) not in skip]
+    return list(header), found
 
 
 def norm(v):
@@ -39,9 +55,9 @@ def norm(v):
 def test_one_file_per_integration_entity_with_stg_headers(written):
     ds, out, manifest = written
     files = sorted(p.name for p in out.glob("*.xlsx"))
-    assert files == sorted(f"{e}.xlsx" for e in stg_entities()) and len(files) == 23
+    assert files == sorted([f"{e}.xlsx" for e in stg_entities()] + ["MaterialReference.xlsx"]) and len(files) == 24  # benzetilen ürün: yalnız örnekler (K-137)
     for entity in stg_entities():
-        header, data = read(out, entity)
+        header, data = read(out, entity, examples=True)
         assert header == [f.name for f in contract.fields(entity, labels_of(entity))]  # şablonla aynı (K-110)
         assert len(data) == manifest["files"][f"{entity}.xlsx"]
     assert (out / "beklenen-hatalar.json").exists()
@@ -124,7 +140,7 @@ def test_supplier_files(written):
     header, data = read(out, "MaterialSupplier")
     assert not {"LeadTimeDays", "QuotaPct", "MinOrderQty", "OrderMultiple", "MaxOrderQty"} & set(header)
     assert {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["FixedLeadTimeDays"] is not None for r in data)
-    assert {r["QuotaRatio"] for r in data if r["QuotaRatio"] is not None} == {0.3} and {r["IsActive"] for r in data} == {1}
+    assert {r["QuotaRatio"] for r in data if r["QuotaRatio"] is not None} == {0.3, 0.7} and {r["IsActive"] for r in data} == {1}
     _, suppliers = read(out, "Supplier")
     assert all(r["Country"] == "Türkiye" and r["City"] and r["IsActive"] == 1 for r in suppliers)
 
@@ -231,14 +247,16 @@ def test_filled_field_missing_from_template_stops_the_writer(tmp_path, monkeypat
 def test_expected_errors_are_where_listed(written):
     ds, out, manifest = written
     saved = json.loads((out / "beklenen-hatalar.json").read_text(encoding="utf-8"))
-    assert {e["code"] for e in saved["errors"]} == {"H1", "H2", "H3", "H4"}
-    for e in saved["errors"]:
-        header, data = read(out, e["file"].removesuffix(".xlsx"))
+    found = [e for e in saved["errors"] if e["code"] != "V"]  # V: hazır kural örnekleri (K-137), tests/test_validation_dirty.py
+    assert {e["code"] for e in found} == {"H1", "H2", "H3", "H4"}
+    assert all(e["rules"] or e["example"] for e in saved["errors"] if e["code"] == "V")
+    for e in found:
+        header, data = read(out, e["file"].removesuffix(".xlsx"), examples=True)
         for row in e["rows"]:
             assert norm(data[row - FIRST_DATA_ROW][e["field"]]) == e["value"], e
         assert e["severity"] in ("hata", "uyarı") and e["message"] and e["step"]
     h4 = next(e for e in saved["errors"] if e["code"] == "H4")
-    _, mats = read(out, "Material")
+    _, mats = read(out, "Material", examples=True)
     a, b = (mats[r - FIRST_DATA_ROW] for r in h4["rows"])
     assert a["Code"] == b["Code"] == d.ISOLATED_MATERIAL and a["Name"] != b["Name"]
 
@@ -261,7 +279,7 @@ def test_other_rows_equal_clean_state(written):
     clean = to_staging(ds)
     error_rows = {}
     for e in manifest["errors"]:
-        if e["severity"] == "hata":  # uyarılı satır (H1) yüklenir, temiz hâlde de vardır
+        if e.get("severity") == "hata":  # uyarılı satır (H1) yüklenir, temiz hâlde de vardır; V örnekleri read'de ayıklanır
             error_rows.setdefault(e["file"].removesuffix(".xlsx"), set()).update(e["rows"])
     for entity in stg_entities():
         header, data = read(out, entity)

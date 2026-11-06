@@ -16,6 +16,7 @@ from app.integration import contract, structural
 from app.integration.sql_source import NO_SIGNAL, RUNNING, Signal, SourceError
 from app.jobs import queue
 from app.jobs.constants import ACTIVE_STATUSES, CHANNEL_PULL, TYPE_PULL
+from app.validation import engine as validation
 
 from ..errors import AppError
 from ..export.describe import tr_number
@@ -150,7 +151,7 @@ def _outcome(entity: contract.Entity, row: dict | None, status: str, reason: str
 
 
 def _read_table(session: Session, entity: contract.Entity, row: dict, job_id: int, user_id: int | None, read_anyway: bool,
-                progress: Callable[[str], None] | None) -> dict:
+                progress: Callable[[str], None] | None, group: int | None = None) -> dict:
     table, view = entity.table, row["ViewName"]
     labels = lists_repo.read_labels(session, table)
     with integration.open_source(session) as source:
@@ -179,6 +180,9 @@ def _read_table(session: Session, entity: contract.Entity, row: dict, job_id: in
     batch = imports_repo.get_batch(session, batch_id)
     if batch["Status"] == imports_repo.PENDING:
         imports_repo.set_batch(session, batch_id, Status=imports_repo.RECEIVED)
+        # Güncel hâl ve doğrulama (K-133, K-134); toplu çekimde tablolar arası kurallar grubun sonunda; commit eder
+        validation.on_received(session, entity.table, batch_id, validation.current.FULL,
+                               validation.TRIGGER_BULK if group else validation.TRIGGER_PULL, user_id, group)
     session.commit()
     errors = batch["ErrorCount"] or 0
     status = imports_repo.status_of(session, batch_id)
@@ -186,14 +190,14 @@ def _read_table(session: Session, entity: contract.Entity, row: dict, job_id: in
 
 
 def _pull_one(session: Session, entity: contract.Entity, row: dict | None, job_id: int, user_id: int | None, read_anyway: bool, wait_seconds: int,
-              progress: Callable[[str], None] | None) -> dict:
+              progress: Callable[[str], None] | None, group: int | None = None) -> dict:
     skip = _skip_reason(row)
     if skip:
         return _outcome(entity, row, SKIPPED, skip)
     attempts: list[dict] = []
     for attempt in range(1, MAX_TRIES + 1):
         try:
-            return {**_read_table(session, entity, row, job_id, user_id, read_anyway, progress), "attempts": attempts}
+            return {**_read_table(session, entity, row, job_id, user_id, read_anyway, progress, group), "attempts": attempts}
         except SourceError as exc:  # yapı eksik (sinyal tablosu, view): yeniden denemek düzeltmez
             session.rollback()
             return _outcome(entity, row, ERROR, str(exc), attempts=attempts)
@@ -212,6 +216,7 @@ def run_job(session: Session, job_id: int, attempt: int, payload: dict, progress
     rows = repo.all_entities(session)
     wait = repo.read_pull_settings(session)["PullRetryWaitSeconds"]
     targets = _targets(payload.get("entities") or None)
+    group = job_id if len(targets) > 1 else None  # toplu çekim: tablolar arası doğrulama bütün tablolar bitince (K-134)
     results: list[dict] = []
     for index, entity in enumerate(targets, 1):
         row = rows.get(entity.table)
@@ -219,7 +224,7 @@ def run_job(session: Session, job_id: int, attempt: int, payload: dict, progress
         def step(text: str, name: str = entity.name, i: int = index) -> None:
             progress(f"{i} / {len(targets)} · {name} · {text}")
 
-        outcome = _pull_one(session, entity, row, job_id, payload.get("user_id"), entity.table in (payload.get("read_anyway") or ()), wait, step)
+        outcome = _pull_one(session, entity, row, job_id, payload.get("user_id"), entity.table in (payload.get("read_anyway") or ()), wait, step, group)
         results.append(outcome)
         if outcome["status"] != SKIPPED:
             values = {"LastPullStatus": outcome["status"], "LastPullMessage": (outcome["reason"] or "")[:400] or None}
@@ -231,7 +236,10 @@ def run_job(session: Session, job_id: int, attempt: int, payload: dict, progress
     read = [r for r in results if r["status"] == RECEIVED]
     failed = [r for r in results if r["status"] in (ERROR, FAILED, INCOMPLETE)]
     text = f"{len(read)} tablo alındı · {tr_number(sum(r['read'] or 0 for r in read), 0)} satır" + (f" · {len(failed)} tablo sorunlu" if failed else "")
-    return queue.finish(session, job_id, attempt, progress=text[:100])
+    ok = queue.finish(session, job_id, attempt, progress=text[:100])
+    if group:
+        validation.maybe_start_cross(session, group)
+    return ok
 
 
 def fail_job(session: Session, job_id: int) -> None:

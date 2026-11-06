@@ -68,7 +68,7 @@ function FieldDialog({ table, field, onClose, onDone }: { table: string; field: 
             <Checkbox label={T.manualOverrides} disabled checked={Boolean(detail.manual_overrides)} onChange={noop} />
             <Checkbox label={T.editableInWorkspace} disabled checked={detail.editable_in_workspace} onChange={noop} />
             <Checkbox label={T.required} disabled checked={Boolean(detail.is_required)} onChange={noop} />
-            <TextField label={T.defaultValue} disabled value={detail.default_value ?? ""} onChange={noop} />
+            <TextField label={T.ifEmpty} disabled value={detail.if_empty ?? ""} onChange={noop} />
           </div>
           {hides && <Alert tone="risk">{T.usedWarning(detail.used_in_views, detail.used_in_rules)}</Alert>}
         </>

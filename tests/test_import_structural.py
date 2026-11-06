@@ -78,10 +78,11 @@ def test_rule_filled_field_is_not_rejected_before_rules():
     assert row is not None and row["CapacityUnit"] is None and not found
 
 
-def test_either_pair():
+def test_either_pair_is_checked_in_validation():
+    """Kaynak ve kaynak grubu ikisi boş: ön kontrol satırı alır, validasyonda Hata (RTG.NO_RESOURCE, K-137)."""
     base = {"LocationCode": "L", "RouteCode": "R", "OperationNo": 10, "SequenceNo": 1, "Consumption": 1}
     row, found = findings("Routing", base)
-    assert row is None and found[0].check == "either" and "Kaynak" in found[0].message and "Kaynak grubu" in found[0].message
+    assert row is not None and not [x for x in found if x.severity == ERROR]
     assert findings("Routing", {**base, "ResourceGroupCode": "G"})[0] is not None
     assert findings("Routing", {**base, "ResourceCode": "A"})[0] is not None
 

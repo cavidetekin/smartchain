@@ -116,6 +116,7 @@ SQL çekimi kullanılacaksa Smartchain'in instance'ında ayrı bir veritabanı a
 - **Müşteri ETL hesabı:** Müşteri ya da kurulumcu açar; yazma yetkisi yalnız bu veritabanındadır, Smartchain veritabanına erişimi olmaz. Bu, ürüne ayrılmış instance'a dışarıdan bir yazıcı demektir; yedekleme ve disk planına eklenir.
 - **`ERP_LoadLog`** ve ham tablolar müşteri sorumluluğundadır (docs/03 Yöntem 2). View'ları kurulum yazar.
 - **Ayar:** Veritabanı adı ekran 23'te girilir (`IntegrationDatabase`, System owner), Bağlantıyı test et sonucu gösterir.
+- **Veri kuralları (K-138):** Varsayılan değer yoktur. BOŞSA'sı "hata (kurallardan sonra)" olan alanları ERP göndermiyorsa kurulumda veri kuralıyla doldurulur; yoksa o tablonun bütün satırları doğrulamada Hata olur ve yüklenmez. En sık: bütün tablolardaki `IsActive` (ör. "IsActive boşsa 1"), `Location.Type`, `ResourceRole`, `ResourceNumber`, `Resource.CapacityUnit`, `Resource.IsCritical`, `Material.DefaultSupplyType`, `Customer.AllowPartialDelivery`, `ProjectGroup.TrackingRule`, `Forecast.DeliveryPoint`; tedarik süresi geliyorsa `MaterialSupplier.LeadTimeBasis`. İlk çekimden sonra Veri yükleme ekranındaki Doğrulama çekmecesi eksik kuralı gösterir.
 - **Sürüm notu kuralı:** Yeni sürüm bir tabloya zorunlu alan eklerse sürüm notunda "view güncellemesi gerekir" yazılır; isteğe bağlı alan eksikse yalnız uyarı çıkar.
 
 ## İlk hesap (K-102)

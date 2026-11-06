@@ -112,19 +112,23 @@
 | `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan |  | 8 |
 | `planning.PlanMetric` | Senaryo karşılaştırma metrikleri; senaryo silinse de özet kısa süre kalır. | Plan |  | 3 |
 
-## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (24 tablo)
+## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (28 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
 | `adm.FieldDefinition` | Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını System owner yönetir. | Veri yönetimi |  | 11 |
 | `adm.DataRule` | Veri kuralı: 'X = … ise Alan = …'. | Veri yönetimi |  | 11 |
-| `adm.DataRuleCondition` | Kural koşulları (VE / VEYA). | Veri yönetimi |  | 6 |
+| `adm.DataRuleCondition` | Kural koşulları: aynı GroupNo'daki koşullar VE, gruplar arası VEYA (K-136); koşul editörü validasyon kurallarıyla ortaktır. | Veri yönetimi |  | 7 |
 | `adm.ManualValue` | Kayıt bazında elle girilen değer. | Veri yönetimi |  | 8 |
 | `adm.FieldValueSource` | Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır). | Veri yönetimi |  | 6 |
 | `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129). | Veri yönetimi |  | 15 |
-| `adm.ImportFinding` | Partinin bulguları: ön kontrol (fonksiyon 03) ve doğrulama (fonksiyon 04) aynı listeye yazar. | Veri yönetimi |  | 9 |
-| `adm.IntegrationEntity` | Tablo başına çekim ayarı (K-130). Satır yoksa ya da yöntem boşsa tablo Excel sayılır, çekim açıktır. | Veri yönetimi |  | 18 |
+| `adm.ImportFinding` | Partinin ön kontrol bulguları (fonksiyon 03). Validasyon (fonksiyon 04) partiye değil staging'in güncel hâline aittir, bulguları `ValidationFinding`'dedir (K-134). | Veri yönetimi |  | 9 |
+| `adm.IntegrationEntity` | Tablo başına çekim ayarı (K-130). Satır yoksa ya da yöntem boşsa tablo Excel sayılır, çekim açıktır. | Veri yönetimi |  | 19 |
 | `adm.IntegrationViewVersion` | View'ın sürüm geçmişi (K-130): tanım değişince yeni sürüm. Smartchain view oluşturmaz, yalnız okur ve saklar. | Veri yönetimi |  | 8 |
+| `adm.ValidationRule` | Validasyon kuralı (K-136, ekran 27). Yapısal kontroller ve hazır kurallar koddaki katalogdan kurulur (geçişte eksik olan eklenir; sınıfı ve aktifliği kullanıcıda kalır); kullanıcı kuralı ekrandan eklenir. | Veri yönetimi |  | 13 |
+| `adm.ValidationRuleCondition` | Kullanıcı kuralının ve düzenlenmiş hazır kuralın koşulları (K-136, K-139): aynı GroupNo'daki koşullar VE, gruplar arası VEYA. Operatörler `DataRuleCondition` ile aynıdır. | Veri yönetimi |  | 7 |
+| `adm.ValidationRun` | Tablo başına validasyon çalışması (K-134): çipin durumu son çalışmadan, sonucu bulgulardan okunur. | Veri yönetimi |  | 16 |
+| `adm.ValidationFinding` | Staging'in güncel hâlinin validasyon bulguları (K-134). Bir kural yeniden çalışınca o kuralın o tablodaki bulguları yenilenir; güncel hâlden çıkan satırın bulguları silinir. Ön kontrol bulguları `ImportFinding`'dedir. | Veri yönetimi |  | 10 |
 | `adm.DataVersion` | Yükleme ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi. | Veri yönetimi |  | 7 |
 | `adm.DataVersionEntity` | Kısmi yüklemede hangi varlıkların yüklendiği. | Veri yönetimi |  | 3 |
 | `adm.AppUser` | Uygulama kullanıcısı (Faz 1'de yerel). | Sistem |  | 14 |

@@ -1,4 +1,4 @@
-// Excel'den yükle penceresi (ekran 02, fonksiyon 03, K-129): Dosya → Ön kontrol → Doğrulama (3.4). Küçük dosya istek içinde biter,
+// Excel'den yükle penceresi (ekran 02, fonksiyon 03, K-129): Dosya → Ön kontrol. "Devam" pencereyi kapatır, doğrulama arka planda (K-134). Küçük dosya istek içinde biter,
 // büyük dosya iş olur; pencere iş bitene kadar özeti yoklar, kapatılırsa iş sürer ve yeniden açınca kaldığı yerden döner.
 import { Upload } from "lucide-react";
 import { type DragEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,16 +37,14 @@ const progressText = (s: ImportSummary) => {
 };
 
 function Steps({ step, done }: { step: Step; done?: boolean }) {
-  const items = [T.stepFile, T.stepCheck, T.stepValidate];
+  const items = [T.stepFile, T.stepCheck];
   return (
     <ol className="sc-steps" aria-label={T.steps}>
       {items.map((label, i) => {
         const n = i + 1;
-        const later = n === 3;
-        const state = later ? "is-later" : n < step || done ? "is-done" : n === step ? "is-current" : "";
+        const state = n < step || done ? "is-done" : n === step ? "is-current" : "";
         return (
-          <li key={label} className={`sc-step ${state}`} aria-current={n === step && !done ? "step" : undefined}
-              aria-disabled={later || undefined} title={later ? T.validateLater : undefined}>
+          <li key={label} className={`sc-step ${state}`} aria-current={n === step && !done ? "step" : undefined}>
             {`${n}. ${label}`}
           </li>
         );
@@ -155,8 +153,9 @@ export function ImportDialog({ entity, name, batchId: opened, onClose, onReceive
     setBusy(true);
     setError(null);
     try {
-      setSummary(await dataLoadApi.continueBatch(summary.batch_id));
+      await dataLoadApi.continueBatch(summary.batch_id);
       onReceived();
+      onClose();  // doğrulama arka planda; bitince bildirim (K-134)
     } catch (e) {
       fail(e);
     } finally {

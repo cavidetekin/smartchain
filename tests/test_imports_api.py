@@ -228,14 +228,15 @@ def test_duplicate_key_rejects_both_rows(db_engine, client, people):
 
 
 def test_same_key_in_two_batches_is_allowed(db_engine, client, people):
-    """stg'de tekil indeks yok: aynı anahtar sonraki partide gelir (K-129)."""
+    """stg'de partiye bağlı tekil indeks yok: aynı anahtar sonraki partide gelir (K-129); tekillik yalnız güncel hâlde (K-133)."""
     first = upload(client, people[KEY_USER], xlsx(GOOD)).json()
     assert client.post(f"/api/imports/{first['batch_id']}/continue", headers=auth(people[KEY_USER])).status_code == 200
     second = upload(client, people[ADMIN], xlsx(GOOD)).json()
     assert second["valid"] == 3 and len(stg_rows(db_engine)) == 6
     with db_engine.connect() as c:
         assert c.execute(text("SELECT COUNT(*) FROM sys.indexes i JOIN sys.tables t ON t.object_id = i.object_id "
-                              "WHERE SCHEMA_NAME(t.schema_id) = N'stg' AND i.is_unique = 1 AND i.is_primary_key = 0")).scalar() == 0
+                              "WHERE SCHEMA_NAME(t.schema_id) = N'stg' AND i.is_unique = 1 AND i.is_primary_key = 0 "
+                              "AND NOT (i.has_filter = 1 AND i.filter_definition = N'([IsCurrent]=(1))')")).scalar() == 0
 
 
 def test_continue_writes_trace_and_changes_status(db_engine, client, people):

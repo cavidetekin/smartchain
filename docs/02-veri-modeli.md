@@ -5,7 +5,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 21. Veri modeli
 <sub>tamamlandı</sub>
 
-- **Ne yapılacak:** Varlıklar ve ilişkileri, her tablonun alanları; her alanın tipi, ana kaynağı, sınıfı, çalışmada değiştirilebilir olup olmadığı, zorunluluğu ve varsayılanı. ERP'den bağımsız veri sözleşmesinin temeli. Çıktı: veri modeli, alan sözlüğü ve UML (Excel ve diyagramlar)
+- **Ne yapılacak:** Varlıklar ve ilişkileri, her tablonun alanları; her alanın tipi, ana kaynağı, sınıfı, çalışmada değiştirilebilir olup olmadığı, zorunluluğu ve boşsa anlamı (K-138). ERP'den bağımsız veri sözleşmesinin temeli. Çıktı: veri modeli, alan sözlüğü ve UML (Excel ve diyagramlar)
   - Bu adımın slaytları
   - 4 İlkeler ve genel görünüm
   - 6 Tablo listesi
@@ -38,7 +38,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Adlandırma:** Tablo ve alan adları İngilizce (Resource.ResourceType), açıklamalar Türkçe. Veritabanı MS SQL Server.
 - **Lokasyon:** Lokasyon bütün ana ve işlem verisi tablolarında baştan var; Faz 1'de her lokasyon kendi içinde planlanır.
 - **Veri sınıfları:** Ana veri genel ve bütün senaryolarda aynı; parametre Smartchain'de, parametre setine bağlı ve senaryoya özel olabilir; işlem verisi ERP'den gelen hareketler.
-- **Değer kaynağı:** Her alanın değeri ERP, kural, elle ya da varsayılandan gelir; öncelik veri sözlüğünde (FieldDefinition) alan bazında tanımlıdır. ERP değeri ezilse bile saklanır.
+- **Değer kaynağı:** Her alanın değeri ERP, kural ya da elle gelir; varsayılan değer yoktur (K-138). Öncelik veri sözlüğünde (FieldDefinition) alan bazında tanımlıdır. ERP değeri ezilse bile saklanır.
+- **Boşsa (K-138):** Veri tablolarının BOŞSA kolonu, kurallardan sonra boş kalan alanın anlamını yazar: hata (satır atlanır), hata (kurallardan sonra), yok, sınırsız, bilinmiyor, temel birim ya da alana özgü anlam. Anlamlar docs/03'teki entegrasyon tablolarıyla aynıdır; Id alanı kod alanının anlamını taşır. Parametre, plan ve sistem tablolarında VARSAYILAN kalır: bunlar veri değildir.
 - **Veri versiyonları:** Versiyonlu tablolarda her kayıt hangi veri versiyonundan hangisine kadar geçerli olduğunu taşır (VersionFrom, VersionTo). Kısmi yüklemede sadece değişen kayıtlar yazılır; veri kopyalanmaz.
 - **Çalışmalar:** Çalışmadaki geçici değişiklikler tek bir tabloda tutulur (WorkspaceOverride); ana veri değişmez.
 - **Plan çıktıları:** Bütün plan çıktıları bir plan hesabına (PlanRun) bağlıdır; onaylı plan yayınlanan hesabı gösterir.
@@ -65,7 +66,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### AKTARIM
 
-- **1 · Doğrulama Tip, zorunlu alan, tekrar eden anahtar**
+- **1 · Validasyon Tip, zorunlu alan, tekrar eden anahtar**
 - **Kod → Id eşleme Bilinmeyen kod: satır Hatalı, ana tabloya geçmez:** 2
 - **3 · Veri kuralları Eksik alanlar kural ya da elle değerle tamamlanır**
 - **4 · Versiyonlu yazma Değişen kayıtlar yeni veri versiyonuyla**
@@ -240,25 +241,25 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonsuz · Faz 1
 - Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | int | PK | Lokasyon kimliği |  | Sistem | H | E |  |
-| Code | nvarchar(30) | UK | Lokasyon kodu |  | ERP | H | E |  |
-| Name | nvarchar(100) |  | Lokasyon adı |  | ERP | H | H |  |
-| Type | nvarchar(15) |  | Tesis \| Depo \| Fason deposu | Lokasyon tipi | ERP, yoksa kural | H | E | Tesis |
-| IsFactory | bit |  | Tesis mi | Tesis | Kural, ERP ya da Excel | H | E | 0 |
-| IsDepot | bit |  | Depo mu | Depo | Kural, ERP ya da Excel | H | E | 0 |
-| IsSubcontractor | bit |  | Fason deposu mu | Fason deposu | Kural, ERP ya da Excel | H | E | 0 |
-| IsActive | bit |  | Aktif mi | Aktif | Kural, ERP ya da Excel | H | E | 1 |
-| Country | nvarchar(100) |  | Ülke |  | ERP | H | H |  |
-| CountryCode | nvarchar(10) |  | Ülke kodu |  | ERP | H | H |  |
-| Region | nvarchar(100) |  | Bölge |  | ERP | H | H |  |
-| RegionCode | nvarchar(20) |  | Bölge kodu |  | ERP | H | H |  |
-| City | nvarchar(100) |  | Şehir |  | ERP | H | H |  |
-| CityCode | nvarchar(20) |  | Şehir kodu |  | ERP | H | H |  |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) |  | Sistem | H | H | 0 |
+| Code | nvarchar(30) | UK | Lokasyon kodu |  | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(100) |  | Lokasyon adı |  | ERP | H | H | bilinmiyor |
+| Type | nvarchar(15) |  | Tesis \| Depo \| Fason deposu | Lokasyon tipi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| IsFactory | bit |  | Tesis mi | Tesis | Kural, ERP ya da Excel | H | H | yok |
+| IsDepot | bit |  | Depo mu | Depo | Kural, ERP ya da Excel | H | H | yok |
+| IsSubcontractor | bit |  | Fason deposu mu | Fason deposu | Kural, ERP ya da Excel | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | Kural, ERP ya da Excel | H | E | hata (kurallardan sonra) |
+| Country | nvarchar(100) |  | Ülke |  | ERP | H | H | bilinmiyor |
+| CountryCode | nvarchar(10) |  | Ülke kodu |  | ERP | H | H | bilinmiyor |
+| Region | nvarchar(100) |  | Bölge |  | ERP | H | H | bilinmiyor |
+| RegionCode | nvarchar(20) |  | Bölge kodu |  | ERP | H | H | bilinmiyor |
+| City | nvarchar(100) |  | Şehir |  | ERP | H | H | bilinmiyor |
+| CityCode | nvarchar(20) |  | Şehir kodu |  | ERP | H | H | bilinmiyor |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) |  | Sistem | H | H |  |
 
 ### UnitOfMeasure
 <sub>21. Veri modeli · Ortak</sub>
@@ -266,14 +267,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonsuz · Faz 1
 - Ölçü birimi.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
-| Code | nvarchar(10) | PK | Birim kodu (AD, KG, SAAT…) | Birim kodu | Yüklemede diğer tablolardan | H | E |  |
-| Name | nvarchar(50) |  | Birim adı |  | Birim dönüşümündeki ad, elle ya da kural | H | H |  |
-| Decimals | tinyint |  | Miktar ondalığı; ERP'den gelmez, Smartchain'de tutulur (K-88) |  | Elle ya da kural | H | H |  |
+| Code | nvarchar(10) | PK | Birim kodu (AD, KG, SAAT…) | Birim kodu | Yüklemede diğer tablolardan | H | E | hata (satır atlanır) |
+| Name | nvarchar(50) |  | Birim adı |  | Birim dönüşümündeki ad, elle ya da kural | H | H | bilinmiyor |
+| Decimals | tinyint |  | Miktar ondalığı; ERP'den gelmez, Smartchain'de tutulur (K-88) |  | Elle ya da kural | H | H | bilinmiyor |
 
 - **Oluşma (K-112):** Entegrasyon tablosu ve şablonu yoktur. Yüklemede (5.2) diğer tablolarda geçen birim kodlarından otomatik oluşur; ad boşsa UomConversion'daki FromUomName ya da ToUomName'den doldurulur. Ad ve ondalık ana veri ekranında elle ya da veri kuralıyla yönetilir (6.1).
-- **Decimals:** bu birimdeki miktarlar ekranda bu kadar ondalıkla gösterilir (K-88). ERP aktarımı ezmez. Varsayılan değeri yoktur, kurulumda tanımlanır.
+- **Decimals:** bu birimdeki miktarlar ekranda bu kadar ondalıkla gösterilir (K-88). ERP aktarımı ezmez. Boşsa bilinmiyor (ekranda değer olduğu gibi gösterilir); kurulumda tanımlanır.
 
 ### UomConversion
 <sub>21. Veri modeli · Ortak</sub>
@@ -281,15 +282,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Malzeme bazında birim dönüşümü.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| MaterialId | bigint | FK,UK | Malzeme (boşsa genel dönüşüm) | Malzeme | ERP | H | H |  |
-| FromUom | nvarchar(10) | FK,UK | Kaynak birim |  | ERP | H | E |  |
-| FromUomName | nvarchar(50) |  | Kaynak birim adı |  | ERP | H | H |  |
-| ToUom | nvarchar(10) | FK,UK | Hedef birim |  | ERP | H | E |  |
-| ToUomName | nvarchar(50) |  | Hedef birim adı |  | ERP | H | H |  |
-| Factor | decimal(18,6) |  | 1 kaynak birim = çarpan × hedef birim | Çarpan | ERP | H | E |  |
+| MaterialId | bigint | FK,UK | Malzeme (boşsa genel dönüşüm) | Malzeme | ERP | H | H | bütün malzemeler |
+| FromUom | nvarchar(10) | FK,UK | Kaynak birim |  | ERP | H | E | hata (satır atlanır) |
+| FromUomName | nvarchar(50) |  | Kaynak birim adı |  | ERP | H | H | bilinmiyor |
+| ToUom | nvarchar(10) | FK,UK | Hedef birim |  | ERP | H | E | hata (satır atlanır) |
+| ToUomName | nvarchar(50) |  | Hedef birim adı |  | ERP | H | H | bilinmiyor |
+| Factor | decimal(18,6) |  | 1 kaynak birim = çarpan × hedef birim | Çarpan | ERP | H | E | hata (satır atlanır) |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Calendar
@@ -298,11 +299,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|
 | Id | int | PK | Takvim kimliği | Sistem | H | E |  |
-| Code | nvarchar(30) | UK | Takvim kodu | Kural ya da elle | H | E |  |
-| Name | nvarchar(100) |  | Takvim adı | Kural ya da elle | H | H |  |
+| Code | nvarchar(30) | UK | Takvim kodu | Kural ya da elle | H | E | hata (satır atlanır) |
+| Name | nvarchar(100) |  | Takvim adı | Kural ya da elle | H | H | bilinmiyor |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### CalendarDay
@@ -311,12 +312,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
-| CalendarId | int | PK,FK | Takvim |  | Kural ya da elle | H | E |  |
-| Date | date | PK | Gün |  | Kural ya da elle | H | E |  |
-| IsWorkingDay | bit |  | Çalışma günü mü |  | Kural ya da elle | H | E | 1 |
-| WorkingFraction | decimal(5,4) |  | Günün çalışılan oranı (yarım gün 0,5) | Çalışma oranı | Kural ya da elle | H | H | 1 |
+| CalendarId | int | PK,FK | Takvim |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| Date | date | PK | Gün |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| IsWorkingDay | bit |  | Çalışma günü mü |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| WorkingFraction | decimal(5,4) |  | Günün çalışılan oranı (yarım gün 0,5) | Çalışma oranı | Kural ya da elle | H | H | tam gün |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Resource
@@ -325,23 +326,23 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| Code | nvarchar(50) | UK | Kaynak kodu |  | ERP | H | E |  |
-| Name | nvarchar(150) |  | Kaynak adı |  | ERP | H | H |  |
-| ResourceType | nvarchar(50) |  | ERP'den gelen ham değer; tip bayraklarla ifade edilir | Kaynak tipi | ERP | H | H |  |
-| IsEmployee | bit |  | Kaynak işçi mi | İşçi | ERP, yoksa kural | H | H |  |
-| IsMachine | bit |  | Kaynak makine mi | Makine | ERP, yoksa kural | H | H |  |
-| IsFurnace | bit |  | Kaynak fırın mı; Faz 1 planlamada kullanılmaz | Fırın | ERP, yoksa kural | H | H |  |
-| IsMold | bit |  | Kaynak kalıp mı; Faz 1 planlamada kullanılmaz | Kalıp | ERP, yoksa kural | H | H |  |
-| IsOther | bit |  | Diğer kaynak mı | Diğer | ERP, yoksa kural | H | H |  |
-| IsSubcontractor | bit |  | Kaynak fason mu | Fason | ERP, yoksa kural | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| IsCritical | bit |  | 1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır) | Kritik kaynak | ERP, yoksa kural | H | H |  |
-| CapacityUnit | nvarchar(10) | FK | Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir | Kapasite birimi | ERP, yoksa kural | H | E |  |
-| DailyCapacity | decimal(18,4) |  | Bir adet kaynağın bir çalışma günündeki kapasitesi | Günlük kapasite | Kural ya da elle | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| Code | nvarchar(50) | UK | Kaynak kodu |  | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(150) |  | Kaynak adı |  | ERP | H | H | bilinmiyor |
+| ResourceType | nvarchar(50) |  | ERP'den gelen ham değer; tip bayraklarla ifade edilir | Kaynak tipi | ERP | H | H | bilinmiyor |
+| IsEmployee | bit |  | Kaynak işçi mi | İşçi | ERP, yoksa kural | H | H | yok |
+| IsMachine | bit |  | Kaynak makine mi | Makine | ERP, yoksa kural | H | H | yok |
+| IsFurnace | bit |  | Kaynak fırın mı; Faz 1 planlamada kullanılmaz | Fırın | ERP, yoksa kural | H | H | yok |
+| IsMold | bit |  | Kaynak kalıp mı; Faz 1 planlamada kullanılmaz | Kalıp | ERP, yoksa kural | H | H | yok |
+| IsOther | bit |  | Diğer kaynak mı | Diğer | ERP, yoksa kural | H | H | yok |
+| IsSubcontractor | bit |  | Kaynak fason mu | Fason | ERP, yoksa kural | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsCritical | bit |  | 1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır) | Kritik kaynak | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| CapacityUnit | nvarchar(10) | FK | Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir | Kapasite birimi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| DailyCapacity | decimal(18,4) |  | Bir adet kaynağın bir çalışma günündeki kapasitesi | Günlük kapasite | Kural ya da elle | H | H | bilinmiyor |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Resource
@@ -350,20 +351,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
-| Quantity | int |  | Paralel kaynak adedi |  | Kural ya da elle | H | E | 1 |
-| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır) | Çalışma takvimi | Kural ya da elle | H | H |  |
-| CapacitySource | nvarchar(10) |  | İşçi gruplarında: Vardiyadan \| Doğrudan | Kapasite kaynağı | Kural ya da elle | H | H | Doğrudan |
-| SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Fason planlama tipi | Kural ya da elle | H | H |  |
-| SubcontractorId | bigint | FK | Fasonda fasoncu | Fasoncu | ERP | H | H |  |
-| SubconFixedLeadTimeDays | decimal(9,2) |  | Fasonda sabit süre (taşıma ve kuyruk) | Fason sabit süresi (gün) | Kural ya da elle | H | H |  |
-| SubconVariableDaysPerUnit | decimal(18,6) |  | Fasonda birim başına gün (fasoncunun hızı) | Fason birim süresi (gün) | Kural ya da elle | H | H |  |
-| ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat) | Üretim yeri | ERP | H | H |  |
-| RemainingOverTimeYear | decimal(9,2) |  | Yıllık kalan fazla mesai (saat) |  | ERP | H | H |  |
-| RemainingOverTimeMonth | decimal(9,2) |  | Aylık kalan fazla mesai (saat) |  | ERP | H | H |  |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| Quantity | int |  | Paralel kaynak adedi |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır) | Çalışma takvimi | Kural ya da elle | H | H | bilinmiyor |
+| CapacitySource | nvarchar(10) |  | İşçi gruplarında: Vardiyadan \| Doğrudan | Kapasite kaynağı | Kural ya da elle | H | H | bilinmiyor |
+| SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Fason planlama tipi | Kural ya da elle | H | H | bilinmiyor |
+| SubcontractorId | bigint | FK | Fasonda fasoncu | Fasoncu | ERP | H | H | bilinmiyor |
+| SubconFixedLeadTimeDays | decimal(9,2) |  | Fasonda sabit süre (taşıma ve kuyruk) | Fason sabit süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
+| SubconVariableDaysPerUnit | decimal(18,6) |  | Fasonda birim başına gün (fasoncunun hızı) | Fason birim süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
+| ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat) | Üretim yeri | ERP | H | H | bilinmiyor |
+| RemainingOverTimeYear | decimal(9,2) |  | Yıllık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
+| RemainingOverTimeMonth | decimal(9,2) |  | Aylık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.3). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5).
@@ -376,18 +377,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Kaynak ve yetkinlik grubu. Kapasite havuzu değil, uygun kaynaklar listesidir; kapasite yalnız kaynakta tutulur.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon | ERP | H | E |  |
-| Code | nvarchar(50) | UK | Grup kodu | ERP | H | E |  |
-| Name | nvarchar(150) |  | Grup adı | ERP | H | H |  |
-| Type | nvarchar(50) |  | Grup tipi; ERP'den gelen ham değer | ERP | H | H |  |
-| IsResourceGroup | bit |  | Kaynak grubu | ERP, yoksa kural | H | H |  |
-| IsCompetenceGroup | bit |  | Yetkinlik grubu | ERP, yoksa kural | H | H |  |
-| IsActive | bit |  | Aktif | ERP, yoksa kural | H | H |  |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H |  |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon | ERP | H | E | hata (satır atlanır) |
+| Code | nvarchar(50) | UK | Grup kodu | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(150) |  | Grup adı | ERP | H | H | bilinmiyor |
+| Type | nvarchar(50) |  | Grup tipi; ERP'den gelen ham değer | ERP | H | H | bilinmiyor |
+| IsResourceGroup | bit |  | Kaynak grubu | ERP, yoksa kural | H | H | yok |
+| IsCompetenceGroup | bit |  | Yetkinlik grubu | ERP, yoksa kural | H | H | yok |
+| IsActive | bit |  | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### ResourceCapacityProfile
@@ -396,13 +397,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ResourceId | bigint | FK | Kaynak |  | Kural ya da elle | H | E |  |
-| ValidFrom | date |  | Başlangıç |  | Kural ya da elle | H | E |  |
-| ValidTo | date |  | Bitiş |  | Kural ya da elle | H | E |  |
-| DailyCapacity | decimal(18,4) |  | Bu aralıktaki günlük kapasite | Günlük kapasite | Kural ya da elle | E | E |  |
+| ResourceId | bigint | FK | Kaynak |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| ValidFrom | date |  | Başlangıç |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| ValidTo | date |  | Bitiş |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| DailyCapacity | decimal(18,4) |  | Bu aralıktaki günlük kapasite | Günlük kapasite | Kural ya da elle | E | E | hata (satır atlanır) |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### ResourceDowntime
@@ -411,16 +412,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ResourceId | bigint | FK | Kaynak |  | Kural ya da elle | H | E |  |
-| DowntimeType | nvarchar(10) |  | Bakım \| Arıza | Duruş tipi | Kural ya da elle | H | E |  |
-| StartAt | datetime2 |  | Başlangıç |  | Kural ya da elle | E | E |  |
-| EndAt | datetime2 |  | Bitiş |  | Kural ya da elle | E | E |  |
-| AffectedQuantity | int |  | Etkilenen kaynak adedi |  | Kural ya da elle | E | E | 1 |
+| ResourceId | bigint | FK | Kaynak |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| DowntimeType | nvarchar(10) |  | Bakım \| Arıza | Duruş tipi | Kural ya da elle | H | E | hata (satır atlanır) |
+| StartAt | datetime2 |  | Başlangıç |  | Kural ya da elle | E | E | hata (satır atlanır) |
+| EndAt | datetime2 |  | Bitiş |  | Kural ya da elle | E | E | hata (satır atlanır) |
+| AffectedQuantity | int |  | Etkilenen kaynak adedi |  | Kural ya da elle | E | E | hata (satır atlanır) |
 | DurationDays | decimal(9,4) |  | Süre, gün olarak (yarım gün 0,5) | Süre (gün) | Ön hesap | H | H |  |
-| Note | nvarchar(400) |  | Açıklama |  | Kullanıcı | H | H |  |
+| Note | nvarchar(400) |  | Açıklama |  | Kullanıcı | H | H | bilinmiyor |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### ResourceEfficiency
@@ -459,14 +460,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Kaynağın gruba ataması; bir kaynak birden fazla gruba atanabilir, yetkinlik matrisi bu tablodur. Geçerlilik tarihleri yalnız girdi.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| ResourceGroupId | bigint | FK,UK | Kaynak ya da yetkinlik grubu | Grup | ERP | H | E |  |
-| ResourceId | bigint | FK,UK | Kaynak |  | ERP | H | E |  |
-| ValidFrom | date |  | Geçerlilik başlangıcı |  | ERP | H | H |  |
-| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| ResourceGroupId | bigint | FK,UK | Kaynak ya da yetkinlik grubu | Grup | ERP | H | E | hata (satır atlanır) |
+| ResourceId | bigint | FK,UK | Kaynak |  | ERP | H | E | hata (satır atlanır) |
+| ValidFrom | date |  | Geçerlilik başlangıcı |  | ERP | H | H | sınırsız |
+| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H | sınırsız |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Shift
@@ -475,14 +476,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| LocationId | int | FK | Lokasyon | Kural ya da elle | H | E |  |
-| Code | nvarchar(20) | UK | Vardiya kodu | Kural ya da elle | H | E |  |
-| StartTime | time |  | Başlangıç saati | Kural ya da elle | H | E |  |
-| EndTime | time |  | Bitiş saati | Kural ya da elle | H | E |  |
-| BreakMinutes | int |  | Mola süresi (dk) | Kural ya da elle | H | H | 0 |
+| LocationId | int | FK | Lokasyon | Kural ya da elle | H | E | hata (satır atlanır) |
+| Code | nvarchar(20) | UK | Vardiya kodu | Kural ya da elle | H | E | hata (satır atlanır) |
+| StartTime | time |  | Başlangıç saati | Kural ya da elle | H | E | hata (satır atlanır) |
+| EndTime | time |  | Bitiş saati | Kural ya da elle | H | E | hata (satır atlanır) |
+| BreakMinutes | int |  | Mola süresi (dk) | Kural ya da elle | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### ShiftPlan
@@ -491,14 +492,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | ResourceGroupId | bigint | FK | Kaynak ya da yetkinlik grubu |  | Kural ya da elle | H | H |  |
-| ShiftId | bigint | FK | Vardiya |  | Kural ya da elle | H | E |  |
-| ValidFrom | date |  | Başlangıç |  | Kural ya da elle | H | E |  |
-| ValidTo | date |  | Bitiş |  | Kural ya da elle | H | E |  |
-| Headcount | int |  | Kişi sayısı |  | Kural ya da elle | E | E |  |
+| ShiftId | bigint | FK | Vardiya |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| ValidFrom | date |  | Başlangıç |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| ValidTo | date |  | Bitiş |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| Headcount | int |  | Kişi sayısı |  | Kural ya da elle | E | E | hata (satır atlanır) |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### EmployeeAbsence
@@ -507,15 +508,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Kişi bazında izin ve rapor.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| ResourceId | bigint | FK,UK | Kaynak |  | ERP | H | E |  |
-| AbsenceType | nvarchar(50) | UK | ERP'den gelen ham değer (izin, rapor…) | Devamsızlık tipi | ERP | H | E |  |
-| StartDate | date | UK | Başlangıç |  | ERP | H | E |  |
-| EndDate | date |  | Bitiş günü dahil | Bitiş | ERP | H | E |  |
-| HoursPerDay | decimal(9,2) |  | Günlük devamsız saat; kısmi devamsızlık için, boşsa tam gün | Günlük saat | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| ResourceId | bigint | FK,UK | Kaynak |  | ERP | H | E | hata (satır atlanır) |
+| AbsenceType | nvarchar(50) | UK | ERP'den gelen ham değer (izin, rapor…) | Devamsızlık tipi | ERP | H | E | hata (satır atlanır) |
+| StartDate | date | UK | Başlangıç |  | ERP | H | E | hata (satır atlanır) |
+| EndDate | date |  | Bitiş günü dahil | Bitiş | ERP | H | E | hata (satır atlanır) |
+| HoursPerDay | decimal(9,2) |  | Günlük devamsız saat; kısmi devamsızlık için, boşsa tam gün | Günlük saat | ERP | H | H | tam gün |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### OvertimeLimit
@@ -537,27 +538,27 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Malzeme ve planlama ana verisi.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon | ERP | H | E |  |
-| Code | nvarchar(50) | UK | Malzeme kodu | ERP | H | E |  |
-| Name | nvarchar(200) |  | Malzeme adı | ERP | H | H |  |
-| BaseUom | nvarchar(10) | FK | Temel birim | ERP | H | E |  |
-| MaterialGroup | nvarchar(50) |  | Malzeme grubu | ERP | H | H |  |
-| MaterialLevel | nvarchar(15) |  | Malzeme seviyesi: Hammadde \| Yarı mamul \| Nihai ürün | ERP, yoksa kural | H | H |  |
-| MaterialType | nvarchar(50) |  | Malzeme tipi | ERP | H | H |  |
-| Brand | nvarchar(50) |  | Marka | ERP | H | H |  |
-| PlannerCode | nvarchar(50) |  | Planlamacı | ERP | H | H |  |
-| MRPGroup | nvarchar(50) |  | MRP grubu; planlama parametreleri aynı olan malzemeleri gruplar | ERP | H | H |  |
-| IsActive | bit |  | Aktif | ERP, yoksa kural | H | H |  |
-| IsCritical | bit |  | Kritik malzeme; malzeme kısıtı yalnız kritik malzemelere uygulanır, kritik olmayanın her zaman temin edilebildiği varsayılır | ERP, yoksa kural | H | H |  |
-| IsPurchasable | bit |  | Satın alınabilir | ERP, yoksa kural | H | H | 0 |
-| IsProducible | bit |  | Üretilebilir | ERP, yoksa kural | H | H | 0 |
-| IsSellable | bit |  | Satılabilir | ERP, yoksa kural | H | H | 0 |
-| IsSubcontractable | bit |  | Fasona verilebilir | ERP, yoksa kural | H | H |  |
-| DefaultSupplyType | nvarchar(10) |  | Tedarik türü: Üretim \| Satın alma \| Fason | ERP, yoksa kural | H | H |  |
-| IsCustomerSupplied | bit |  | Müşteri temin malzemesi | Kural ya da elle | H | H |  |
+| LocationId | int | FK,UK | Lokasyon | ERP | H | E | hata (satır atlanır) |
+| Code | nvarchar(50) | UK | Malzeme kodu | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(200) |  | Malzeme adı | ERP | H | H | bilinmiyor |
+| BaseUom | nvarchar(10) | FK | Temel birim | ERP | H | E | hata (satır atlanır) |
+| MaterialGroup | nvarchar(50) |  | Malzeme grubu | ERP | H | H | bilinmiyor |
+| MaterialLevel | nvarchar(15) |  | Malzeme seviyesi: Hammadde \| Yarı mamul \| Nihai ürün | ERP, yoksa kural | H | H | bilinmiyor |
+| MaterialType | nvarchar(50) |  | Malzeme tipi | ERP | H | H | bilinmiyor |
+| Brand | nvarchar(50) |  | Marka | ERP | H | H | bilinmiyor |
+| PlannerCode | nvarchar(50) |  | Planlamacı | ERP | H | H | bilinmiyor |
+| MRPGroup | nvarchar(50) |  | MRP grubu; planlama parametreleri aynı olan malzemeleri gruplar | ERP | H | H | bilinmiyor |
+| IsActive | bit |  | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsCritical | bit |  | Kritik malzeme; malzeme kısıtı yalnız kritik malzemelere uygulanır, kritik olmayanın her zaman temin edilebildiği varsayılır | ERP, yoksa kural | H | H | yok |
+| IsPurchasable | bit |  | Satın alınabilir | ERP, yoksa kural | H | H | yok |
+| IsProducible | bit |  | Üretilebilir | ERP, yoksa kural | H | H | yok |
+| IsSellable | bit |  | Satılabilir | ERP, yoksa kural | H | H | yok |
+| IsSubcontractable | bit |  | Fasona verilebilir | ERP, yoksa kural | H | H | yok |
+| DefaultSupplyType | nvarchar(10) |  | Tedarik türü: Üretim \| Satın alma \| Fason | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsCustomerSupplied | bit |  | Müşteri temin malzemesi | Kural ya da elle | H | H | yok |
 
 ### Material
 <sub>21. Veri modeli · Malzeme · 2/2</sub>
@@ -565,25 +566,25 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Malzeme ve planlama ana verisi.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
-| IsCustomTracked | bit |  | Malzeme ortak havuzdan değil, belli bir talebe (proje, müşteri ya da sipariş) ayrılmış olarak takip edilir; hangi talebe ayrıldığı talep kaydından gelir | Özel takip | Kural ya da elle | H | H | 0 |
-| IsPhantom | bit |  | Hayalet yarı mamul |  | ERP | H | H | 0 |
-| IsNonStockable | bit |  | Stok tutulamaz; üretilen ya da teslim alınan miktar beklemeden tüketilir, dönem sonu stoğu sıfırdır | Stok tutulamaz | ERP, yoksa kural | H | H |  |
-| GoodsReceiptDays | decimal(9,2) |  | Mal kabul süresi (iş günü) |  | ERP, yoksa kural | H | H | 0 |
-| SafetyStock | decimal(18,4) |  | Güvenlik stoğu |  | ERP | H | H | 0 |
-| StockCoverageDays | decimal(9,2) |  | Gün cinsinden güvenlik stoğu | Stok gün kapsamı | ERP | H | H |  |
-| MaxStock | decimal(18,4) |  | Maksimum stok |  | ERP | H | H |  |
-| LotSizePolicy | nvarchar(15) |  | Lot politikası (üretimde): Lot-for-lot \| Sabit \| Dönemsel | Lot politikası | ERP, yoksa kural | H | H | Lot-for-lot |
-| MinLot | decimal(18,4) |  | Üretimde minimum | Minimum lot | ERP | H | H |  |
-| MaxLot | decimal(18,4) |  | Üretimde maksimum | Maksimum lot | ERP | H | H |  |
-| LotMultiple | decimal(18,4) |  | Üretimde kat | Lot katı | ERP | H | H |  |
-| QtyPerBox | decimal(18,4) |  | Temel birimde kutu içi miktar | Kutu içi miktar | ERP | H | H |  |
-| QtyPerPallet | decimal(18,4) |  | Temel birimde palet içi miktar | Palet içi miktar | ERP | H | H |  |
-| ScrapRatio | decimal(6,4) |  | Oran olarak fire (0,05 = %5) | Fire oranı | ERP | H | H | 0 |
-| ShelfLifeDays | int |  | Raf ömrü; şimdilik yalnız uyarı için kullanılır | Raf ömrü (gün) | ERP | H | H |  |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| IsCustomTracked | bit |  | Malzeme ortak havuzdan değil, belli bir talebe (proje, müşteri ya da sipariş) ayrılmış olarak takip edilir; hangi talebe ayrıldığı talep kaydından gelir | Özel takip | Kural ya da elle | H | H | yok |
+| IsPhantom | bit |  | Hayalet yarı mamul |  | ERP | H | H | yok |
+| IsNonStockable | bit |  | Stok tutulamaz; üretilen ya da teslim alınan miktar beklemeden tüketilir, dönem sonu stoğu sıfırdır | Stok tutulamaz | ERP, yoksa kural | H | H | yok |
+| GoodsReceiptDays | decimal(9,2) |  | Mal kabul süresi (iş günü) |  | ERP, yoksa kural | H | H | yok |
+| SafetyStock | decimal(18,4) |  | Güvenlik stoğu |  | ERP | H | H | yok |
+| StockCoverageDays | decimal(9,2) |  | Gün cinsinden güvenlik stoğu | Stok gün kapsamı | ERP | H | H | yok |
+| MaxStock | decimal(18,4) |  | Maksimum stok |  | ERP | H | H | sınırsız |
+| LotSizePolicy | nvarchar(15) |  | Lot politikası (üretimde): Lot-for-lot \| Sabit \| Dönemsel | Lot politikası | ERP, yoksa kural | H | H | yok |
+| MinLot | decimal(18,4) |  | Üretimde minimum | Minimum lot | ERP | H | H | yok |
+| MaxLot | decimal(18,4) |  | Üretimde maksimum | Maksimum lot | ERP | H | H | sınırsız |
+| LotMultiple | decimal(18,4) |  | Üretimde kat | Lot katı | ERP | H | H | yok |
+| QtyPerBox | decimal(18,4) |  | Temel birimde kutu içi miktar | Kutu içi miktar | ERP | H | H | bilinmiyor |
+| QtyPerPallet | decimal(18,4) |  | Temel birimde palet içi miktar | Palet içi miktar | ERP | H | H | bilinmiyor |
+| ScrapRatio | decimal(6,4) |  | Oran olarak fire (0,05 = %5) | Fire oranı | ERP | H | H | yok |
+| ShelfLifeDays | int |  | Raf ömrü; şimdilik yalnız uyarı için kullanılır | Raf ömrü (gün) | ERP | H | H | sınırsız |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Supplier
@@ -592,17 +593,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Tedarikçi ve fasoncu.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| Code | nvarchar(50) | UK | Tedarikçi kodu |  | ERP | H | E |  |
-| Name | nvarchar(200) |  | Ad | Tedarikçi adı | ERP | H | H |  |
-| IsSubcontractor | bit |  | Fasoncu mu |  | ERP, yoksa kural | H | H | 0 |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| Country | nvarchar(100) |  | Ülke |  | ERP | H | H |  |
-| City | nvarchar(100) |  | Şehir |  | ERP | H | H |  |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| Code | nvarchar(50) | UK | Tedarikçi kodu |  | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(200) |  | Ad | Tedarikçi adı | ERP | H | H | bilinmiyor |
+| IsSubcontractor | bit |  | Fasoncu mu |  | ERP, yoksa kural | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| Country | nvarchar(100) |  | Ülke |  | ERP | H | H | bilinmiyor |
+| City | nvarchar(100) |  | Şehir |  | ERP | H | H | bilinmiyor |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### MaterialSupplier
@@ -611,25 +612,25 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E |  |
-| SupplierId | bigint | FK,UK | Tedarikçi |  | ERP | H | E |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| Priority | int |  | Öncelik |  | ERP, yoksa kural | H | H | 1 |
-| QuotaRatio | decimal(6,4) |  | Oran olarak kota (0,30 = %30) | Kota oranı | ERP, yoksa kural | H | H |  |
-| FixedLeadTimeDays | decimal(9,2) |  | Miktardan bağımsız kısım | Sabit tedarik süresi (gün) | ERP | H | H |  |
-| VariableLeadTimeDays | decimal(18,6) |  | Birim başına gün; miktar arttıkça uzayan kısım | Değişken tedarik süresi | ERP | H | H |  |
-| LeadTimeBasis | nvarchar(15) |  | Takvim günü \| İş günü | Tedarik süresi esası | Kural ya da elle | H | H | Takvim günü |
-| MinimumOrderQuantity | decimal(18,4) |  | Minimum sipariş miktarı |  | ERP | H | H |  |
-| OrderLotSize | decimal(18,4) |  | Sipariş miktarı bu sayının katı olur | Sipariş katı | ERP | H | H |  |
-| MaximumOrderQuantity | decimal(18,4) |  | Maksimum | Maksimum sipariş miktarı | ERP | H | H |  |
-| ValidFrom | date |  | Geçerlilik başlangıcı |  | ERP | H | H |  |
-| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E | hata (satır atlanır) |
+| SupplierId | bigint | FK,UK | Tedarikçi |  | ERP | H | E | hata (satır atlanır) |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| Priority | int |  | Öncelik |  | ERP, yoksa kural | H | H | yok |
+| QuotaRatio | decimal(6,4) |  | Oran olarak kota (0,30 = %30) | Kota oranı | ERP, yoksa kural | H | H | yok |
+| FixedLeadTimeDays | decimal(9,2) |  | Miktardan bağımsız kısım | Sabit tedarik süresi (gün) | ERP | H | H | bilinmiyor |
+| VariableLeadTimeDays | decimal(18,6) |  | Birim başına gün; miktar arttıkça uzayan kısım | Değişken tedarik süresi | ERP | H | H | bilinmiyor |
+| LeadTimeBasis | nvarchar(15) |  | Takvim günü \| İş günü | Tedarik süresi esası | Kural ya da elle | H | H | tedarik süresi doluysa hata (kurallardan sonra) |
+| MinimumOrderQuantity | decimal(18,4) |  | Minimum sipariş miktarı |  | ERP | H | H | yok |
+| OrderLotSize | decimal(18,4) |  | Sipariş miktarı bu sayının katı olur | Sipariş katı | ERP | H | H | yok |
+| MaximumOrderQuantity | decimal(18,4) |  | Maksimum | Maksimum sipariş miktarı | ERP | H | H | sınırsız |
+| ValidFrom | date |  | Geçerlilik başlangıcı |  | ERP | H | H | sınırsız |
+| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H | sınırsız |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Tedarik süresi (K-118):** Toplam süre = sabit + miktar × değişken. İkisi de zorunlu değil, boşsa boş kalır. İkisi de boşsa süre 0 sayılmaz: veri kalitesinde uyarı, motor bu satırı kullanmaz.
@@ -658,23 +659,23 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode, ürün ağacına BOMCode ile bağlanır. Versiyon seçimi motorun kararıdır; aynı malzeme aynı dönemde birden fazla versiyonla üretilebilir.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Üretilen malzeme |  | ERP | H | E |  |
-| Code | nvarchar(30) | UK | Versiyon kodu |  | ERP | H | E |  |
-| Name | nvarchar(100) |  | Versiyon adı |  | ERP | H | H |  |
-| Type | nvarchar(50) |  | Versiyonları ayrıştırmak için kurallarda kullanılır; değer listesi yok | Versiyon tipi | ERP | H | H |  |
-| IsActive | bit |  | Aktif |  | ERP, yoksa kural | H | H |  |
-| Priority | int |  | Versiyonlar arası tercih bilgisi; motora girdi | Öncelik | ERP | H | H |  |
-| BaseQuantity | decimal(18,4) |  | Baz miktar (rota ve ağaç bu miktar için) | Baz miktar | ERP | H | H | 1 |
-| BOMCode | nvarchar(50) |  | Versiyonun kullandığı ürün ağacı | Ürün ağacı kodu | ERP | H | E |  |
-| RouteCode | nvarchar(50) |  | Rota kodu | Rota kodu | ERP | H | E |  |
-| ValidFrom | date |  | Geçerlilik başlangıcı |  | ERP | H | H |  |
-| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Üretilen malzeme |  | ERP | H | E | hata (satır atlanır) |
+| Code | nvarchar(30) | UK | Versiyon kodu |  | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(100) |  | Versiyon adı |  | ERP | H | H | bilinmiyor |
+| Type | nvarchar(50) |  | Versiyonları ayrıştırmak için kurallarda kullanılır; değer listesi yok | Versiyon tipi | ERP | H | H | bilinmiyor |
+| IsActive | bit |  | Aktif |  | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| Priority | int |  | Versiyonlar arası tercih bilgisi; motora girdi | Öncelik | ERP | H | H | yok |
+| BaseQuantity | decimal(18,4) |  | Baz miktar (rota ve ağaç bu miktar için) | Baz miktar | ERP | H | H | hata (kurallardan sonra) |
+| BOMCode | nvarchar(50) |  | Versiyonun kullandığı ürün ağacı | Ürün ağacı kodu | ERP | H | E | hata (satır atlanır) |
+| RouteCode | nvarchar(50) |  | Rota kodu | Rota kodu | ERP | H | E | hata (satır atlanır) |
+| ValidFrom | date |  | Geçerlilik başlangıcı |  | ERP | H | H | sınırsız |
+| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H | sınırsız |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### BOM
@@ -683,24 +684,24 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Ürün ağacı satırı.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Üretilen malzeme |  | ERP | H | E |  |
-| Code | nvarchar(50) | UK | Ürün ağacı kodu |  | ERP | H | E |  |
-| ComponentMaterialId | bigint | FK,UK | Bileşen |  | ERP | H | E |  |
-| OperationNo | int | UK | Bağlı olduğu operasyon no (ihtiyaç tarihi için) | Operasyon no | ERP | H | H |  |
-| SequenceNo | int | UK | Sıra no; aynı bileşen iki kez geçerse operasyon no ile ayrışır | Sıra no | ERP | H | H |  |
-| Quantity | decimal(18,6) |  | Baz miktar için bileşen miktarı | Bileşen miktarı | ERP | H | E |  |
-| ComponentUom | nvarchar(10) | FK | Bileşen miktarının birimi; boşsa bileşenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Bileşen birimi | ERP | H | H |  |
-| ScrapRatio | decimal(6,4) |  | Oran olarak fire (0,05 = %5) | Fire oranı | ERP | H | H | 0 |
-| IsPhantom | bit |  | Hayalet bileşen |  | ERP | H | H | 0 |
-| IsLotBasedUsage | bit |  | Doluysa bileşen üretilen miktardan bağımsız, her üretim lotu için sabit kullanılır; değilse birim başına | Lot bazlı kullanım | ERP | H | H | 0 |
-| AlternativeGroup | nvarchar(50) |  | Aynı grup koduna sahip satırlar birbirinin alternatifidir | Alternatif grubu | ERP | H | H |  |
-| AlternativePriority | int |  | Grup içindeki tercih bilgisi | Alternatif önceliği | ERP | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Üretilen malzeme |  | ERP | H | E | hata (satır atlanır) |
+| Code | nvarchar(50) | UK | Ürün ağacı kodu |  | ERP | H | E | hata (satır atlanır) |
+| ComponentMaterialId | bigint | FK,UK | Bileşen |  | ERP | H | E | hata (satır atlanır) |
+| OperationNo | int | UK | Bağlı olduğu operasyon no (ihtiyaç tarihi için) | Operasyon no | ERP | H | H | ilk operasyon |
+| SequenceNo | int | UK | Sıra no; aynı bileşen iki kez geçerse operasyon no ile ayrışır | Sıra no | ERP | H | H | bilinmiyor |
+| Quantity | decimal(18,6) |  | Baz miktar için bileşen miktarı | Bileşen miktarı | ERP | H | E | hata (satır atlanır) |
+| ComponentUom | nvarchar(10) | FK | Bileşen miktarının birimi; boşsa bileşenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Bileşen birimi | ERP | H | H | temel birim |
+| ScrapRatio | decimal(6,4) |  | Oran olarak fire (0,05 = %5) | Fire oranı | ERP | H | H | yok |
+| IsPhantom | bit |  | Hayalet bileşen |  | ERP | H | H | yok |
+| IsLotBasedUsage | bit |  | Doluysa bileşen üretilen miktardan bağımsız, her üretim lotu için sabit kullanılır; değilse birim başına | Lot bazlı kullanım | ERP | H | H | yok |
+| AlternativeGroup | nvarchar(50) |  | Aynı grup koduna sahip satırlar birbirinin alternatifidir | Alternatif grubu | ERP | H | H | yok |
+| AlternativePriority | int |  | Grup içindeki tercih bilgisi | Alternatif önceliği | ERP | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Versiyonla bağ (K-115):** Ürün ağacı kendi koduyla tanımlanır; üretim versiyonu ağacı `ProductionVersion.BOMCode` ile gösterir, aynı ağaç birden fazla versiyonda kullanılabilir.
@@ -712,19 +713,19 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| RouteCode | nvarchar(50) | UK | Rota kodu |  | ERP | H | E |  |
-| OperationNo | int | UK | Operasyon no (birinci sıralama) | Operasyon no | ERP | H | E |  |
-| SequenceNo | int | UK | Operasyon içindeki alt sıra (ikinci sıralama) | Sıra no | ERP | H | E |  |
-| OperationName | nvarchar(150) |  | Operasyon adı |  | ERP | H | H |  |
-| ResourceId | bigint | FK | Kaynak |  | ERP | H | H |  |
-| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | H |  |
-| ResourceRole | nvarchar(10) |  | Primary \| Secondary | Kaynak rolü | ERP, yoksa kural | H | E | Primary |
-| Consumption | decimal(18,6) |  | Baz miktar için kaynak tüketimi (kaynağın kapasite biriminde) | Kaynak tüketimi | ERP | H | E |  |
-| ResourceNumber | int |  | Operasyonda aynı anda kullanılan kaynak adedi | Kaynak adedi | ERP, yoksa kural | H | E | 1 |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| RouteCode | nvarchar(50) | UK | Rota kodu |  | ERP | H | E | hata (satır atlanır) |
+| OperationNo | int | UK | Operasyon no (birinci sıralama) | Operasyon no | ERP | H | E | hata (satır atlanır) |
+| SequenceNo | int | UK | Operasyon içindeki alt sıra (ikinci sıralama) | Sıra no | ERP | H | E | hata (satır atlanır) |
+| OperationName | nvarchar(150) |  | Operasyon adı |  | ERP | H | H | bilinmiyor |
+| ResourceId | bigint | FK | Kaynak |  | ERP | H | H | alternatif Kaynak grubu |
+| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | H | alternatif Kaynak |
+| ResourceRole | nvarchar(10) |  | Primary \| Secondary | Kaynak rolü | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| Consumption | decimal(18,6) |  | Baz miktar için kaynak tüketimi (kaynağın kapasite biriminde) | Kaynak tüketimi | ERP | H | E | hata (satır atlanır) |
+| ResourceNumber | int |  | Operasyonda aynı anda kullanılan kaynak adedi | Kaynak adedi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Kaynak ya da kaynak grubu (K-116):** Her satırda `ResourceId` ya da `ResourceGroupId`'den biri dolu olmalı. İkisi de doluysa kaynak geçerlidir; kaynak o grubun üyesi değilse doğrulamada uyarı. Yalnız grup doluysa operasyon grubun herhangi bir kaynağında yapılabilir; seçim motorun kararıdır. Gruptaki kaynakların kapasite birimi farklıysa doğrulamada uyarı.
@@ -736,19 +737,19 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
-| IsSubcontracted | bit |  | Fason operasyon |  | ERP | H | H | 0 |
-| TransferQuantity | decimal(18,4) |  | Transfer partisi | Transfer miktarı | ERP | H | H |  |
-| IsActive | bit |  | Operasyon plana dahil mi | Aktif | ERP, yoksa kural | H | H |  |
-| IsLotBasedUsage | bit |  | Doluysa tüketim üretilen miktardan bağımsız, lot başına sabit; pratikte hazırlık süresi | Lot bazlı kullanım | ERP | H | H | 0 |
-| ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat); ileride kısıtlar için | Üretim yeri | ERP | H | H |  |
-| WaitingTimeHours | decimal(9,2) |  | Operasyon öncesi kuyruk beklemesi | Bekleme süresi (saat) | ERP | H | H |  |
-| TransferTimeHours | decimal(9,2) |  | Sonraki operasyona taşıma | Taşıma süresi (saat) | ERP | H | H |  |
-| AlternativeGroup | nvarchar(50) |  | Aynı gruptaki satırlar birbirinin alternatifidir | Alternatif grubu | ERP | H | H |  |
-| AlternativePriority | int |  | Grup içindeki tercih bilgisi | Alternatif önceliği | ERP | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| IsSubcontracted | bit |  | Fason operasyon |  | ERP | H | H | yok |
+| TransferQuantity | decimal(18,4) |  | Transfer partisi | Transfer miktarı | ERP | H | H | yok |
+| IsActive | bit |  | Operasyon plana dahil mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsLotBasedUsage | bit |  | Doluysa tüketim üretilen miktardan bağımsız, lot başına sabit; pratikte hazırlık süresi | Lot bazlı kullanım | ERP | H | H | yok |
+| ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat); ileride kısıtlar için | Üretim yeri | ERP | H | H | bilinmiyor |
+| WaitingTimeHours | decimal(9,2) |  | Operasyon öncesi kuyruk beklemesi | Bekleme süresi (saat) | ERP | H | H | yok |
+| TransferTimeHours | decimal(9,2) |  | Sonraki operasyona taşıma | Taşıma süresi (saat) | ERP | H | H | yok |
+| AlternativeGroup | nvarchar(50) |  | Aynı gruptaki satırlar birbirinin alternatifidir | Alternatif grubu | ERP | H | H | yok |
+| AlternativePriority | int |  | Grup içindeki tercih bilgisi | Alternatif önceliği | ERP | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### MaterialReference
@@ -757,16 +758,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Benzetilen ürün |  | ERP | H | E |  |
-| ReferenceMaterialId | bigint | FK,UK | Referans ürün |  | ERP | H | E |  |
-| ReferenceProductionVersionId | bigint | FK | Referans ürünün versiyonu; boşsa motor seçer | Referans ürünün versiyonu | ERP | H | H |  |
-| ValidFrom | date | UK | Geçerlilik başlangıcı |  | ERP | H | H |  |
-| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H |  |
-| TimeFactor | decimal(9,4) |  | Süre çarpanı; 1,2 = %20 daha uzun | Süre çarpanı | ERP | H | H | 1 |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Benzetilen ürün |  | ERP | H | E | hata (satır atlanır) |
+| ReferenceMaterialId | bigint | FK,UK | Referans ürün |  | ERP | H | E | hata (satır atlanır) |
+| ReferenceProductionVersionId | bigint | FK | Referans ürünün versiyonu; boşsa motor seçer | Referans ürünün versiyonu | ERP | H | H | motor seçer |
+| ValidFrom | date | UK | Geçerlilik başlangıcı |  | ERP | H | H | sınırsız |
+| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H | sınırsız |
+| TimeFactor | decimal(9,4) |  | Süre çarpanı; 1,2 = %20 daha uzun | Süre çarpanı | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Kullanım (K-126):** Ürünün kendi geçerli versiyonu yoksa motor referans ürünün ağacını ve rotasını kullanır; motorda uygulanışı Aşama 10.
@@ -777,14 +778,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Proje grubu (grup içi paylaşım için).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| Code | nvarchar(50) | UK | Grup kodu |  | ERP ya da kural | H | E |  |
-| Name | nvarchar(200) |  | Proje grubu adı |  | ERP ya da kural | H | H |  |
-| TrackingRule | nvarchar(20) |  | Tam izolasyon \| Ortaktan beslenir \| Grup içi paylaşım | Takip kuralı | ERP ya da kural | H | H | Ortaktan beslenir |
-| Priority | int |  | Proje grubu önceliği | Öncelik | ERP ya da kural | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP ya da kural | H | H |  |
+| Code | nvarchar(50) | UK | Grup kodu |  | ERP ya da kural | H | E | hata (satır atlanır) |
+| Name | nvarchar(200) |  | Proje grubu adı |  | ERP ya da kural | H | H | bilinmiyor |
+| TrackingRule | nvarchar(20) |  | Tam izolasyon \| Ortaktan beslenir \| Grup içi paylaşım | Takip kuralı | ERP ya da kural | H | H | hata (kurallardan sonra) |
+| Priority | int |  | Proje grubu önceliği | Öncelik | ERP ya da kural | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | ERP ya da kural | H | H | hata (kurallardan sonra) |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Project
@@ -793,17 +794,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Proje.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| Code | nvarchar(50) | UK | Proje kodu |  | ERP ya da kural | H | E |  |
-| Name | nvarchar(200) |  | Proje adı |  | ERP ya da kural | H | H |  |
-| ProjectGroupId | bigint | FK | Proje grubu |  | ERP ya da kural | H | H |  |
-| TrackingRule | nvarchar(20) |  | Proje bazında takip kuralı (grubu ezer) | Takip kuralı | ERP ya da kural | H | H |  |
-| Priority | int |  | Proje önceliği |  | ERP ya da kural | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP ya da kural | H | H |  |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| Code | nvarchar(50) | UK | Proje kodu |  | ERP ya da kural | H | E | hata (satır atlanır) |
+| Name | nvarchar(200) |  | Proje adı |  | ERP ya da kural | H | H | bilinmiyor |
+| ProjectGroupId | bigint | FK | Proje grubu |  | ERP ya da kural | H | H | yok |
+| TrackingRule | nvarchar(20) |  | Proje bazında takip kuralı (grubu ezer) | Takip kuralı | ERP ya da kural | H | H | gruptan |
+| Priority | int |  | Proje önceliği |  | ERP ya da kural | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | ERP ya da kural | H | H | hata (kurallardan sonra) |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Customer
@@ -812,21 +813,21 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ana veri · versiyonlu · Faz 1
 - Müşteri.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| Code | nvarchar(50) | UK | Müşteri kodu |  | ERP | H | E |  |
-| Name | nvarchar(200) |  | Ad | Müşteri adı | ERP | H | H |  |
-| Priority | int |  | Müşteri önceliği |  | Kural ya da elle | H | H |  |
-| AllowPartialDelivery | bit |  | Kısmi teslimata izin |  | ERP, yoksa kural | H | H | 1 |
-| CustomerGroup | nvarchar(50) |  | Müşteri grubu |  | ERP | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| Country | nvarchar(100) |  | Ülke |  | ERP | H | H |  |
-| Region | nvarchar(100) |  | Bölge |  | ERP | H | H |  |
-| City | nvarchar(100) |  | Şehir |  | ERP | H | H |  |
-| IsCustomTracked | bit |  | Bu müşterinin talepleri ortak havuzdan değil, müşteriye ayrılmış olarak takip edilir | Özel takip | ERP, yoksa kural | H | H |  |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| Code | nvarchar(50) | UK | Müşteri kodu |  | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(200) |  | Ad | Müşteri adı | ERP | H | H | bilinmiyor |
+| Priority | int |  | Müşteri önceliği |  | Kural ya da elle | H | H | yok |
+| AllowPartialDelivery | bit |  | Kısmi teslimata izin |  | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| CustomerGroup | nvarchar(50) |  | Müşteri grubu |  | ERP | H | H | bilinmiyor |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| Country | nvarchar(100) |  | Ülke |  | ERP | H | H | bilinmiyor |
+| Region | nvarchar(100) |  | Bölge |  | ERP | H | H | bilinmiyor |
+| City | nvarchar(100) |  | Şehir |  | ERP | H | H | bilinmiyor |
+| IsCustomTracked | bit |  | Bu müşterinin talepleri ortak havuzdan değil, müşteriye ayrılmış olarak takip edilir | Özel takip | ERP, yoksa kural | H | H | yok |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### SalesOrderLine
@@ -835,32 +836,32 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Müşteri sipariş satırı; teklifler IsQuote ile okunur, plana dahil olmaları senaryo parametresi. Vade: teyit tarihi, yoksa istek tarihi.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| OrderNo | nvarchar(30) | UK | Sipariş no |  | ERP | H | E |  |
-| LineNo | int | UK | Satır no |  | ERP | H | E |  |
-| LineItemNo | int | UK | Alt satır no (ERP satırı kırılımlıysa) | Alt satır no | ERP | H | H | 0 |
-| Type | nvarchar(50) |  | ERP'den ham sipariş tipi; veri kurallarında kullanılır, değer listesi yok | Sipariş tipi | ERP | H | H |  |
-| CustomerId | bigint | FK | Müşteri |  | ERP | H | E |  |
-| MaterialId | bigint | FK | Malzeme |  | ERP | H | E |  |
-| ProjectId | bigint | FK | Proje |  | ERP | H | H |  |
-| OpenQuantity | decimal(18,4) |  | Açık miktar |  | ERP | H | E |  |
-| OrderedQuantity | decimal(18,4) |  | Satırın orijinal miktarı | Sipariş miktarı | ERP | H | H |  |
-| DeliveredQuantity | decimal(18,4) |  | Teslim edilen miktar |  | ERP | H | H |  |
-| Uom | nvarchar(10) | FK | Açık, sipariş ve teslim miktarının birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Sipariş birimi | ERP | H | H |  |
-| RequestedDate | date |  | İstek tarihi |  | ERP | H | E |  |
-| ConfirmedDate | date |  | Teyit tarihi |  | ERP | H | H |  |
-| Priority | int |  | Satır önceliği |  | Kural ya da elle | H | H |  |
-| AllowPartialDelivery | bit |  | Kısmi teslimat (müşteriyi ezer) | Kısmi teslimat | ERP | H | H |  |
-| Status | nvarchar(50) |  | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | Sipariş durumu | ERP | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| IsOnHold | bit |  | Kredi, teknik onay ya da müşteri talebiyle bekletilen satır | Beklemede | ERP, yoksa kural | H | H |  |
-| IsCustomTracked | bit |  | Satır düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H |  |
-| IsQuote | bit |  | Teklif satırı; Type'tan veri kuralıyla doldurulur | Teklif | ERP, yoksa kural | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| OrderNo | nvarchar(30) | UK | Sipariş no |  | ERP | H | E | hata (satır atlanır) |
+| LineNo | int | UK | Satır no |  | ERP | H | E | hata (satır atlanır) |
+| LineItemNo | int | UK | Alt satır no (ERP satırı kırılımlıysa) | Alt satır no | ERP | H | H | yok |
+| Type | nvarchar(50) |  | ERP'den ham sipariş tipi; veri kurallarında kullanılır, değer listesi yok | Sipariş tipi | ERP | H | H | bilinmiyor |
+| CustomerId | bigint | FK | Müşteri |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK | Malzeme |  | ERP | H | E | hata (satır atlanır) |
+| ProjectId | bigint | FK | Proje |  | ERP | H | H | yok |
+| OpenQuantity | decimal(18,4) |  | Açık miktar |  | ERP | H | E | hata (satır atlanır) |
+| OrderedQuantity | decimal(18,4) |  | Satırın orijinal miktarı | Sipariş miktarı | ERP | H | H | bilinmiyor |
+| DeliveredQuantity | decimal(18,4) |  | Teslim edilen miktar |  | ERP | H | H | yok |
+| Uom | nvarchar(10) | FK | Açık, sipariş ve teslim miktarının birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Sipariş birimi | ERP | H | H | temel birim |
+| RequestedDate | date |  | İstek tarihi |  | ERP | H | E | hata (satır atlanır) |
+| ConfirmedDate | date |  | Teyit tarihi |  | ERP | H | H | bilinmiyor |
+| Priority | int |  | Satır önceliği |  | Kural ya da elle | H | H | yok |
+| AllowPartialDelivery | bit |  | Kısmi teslimat (müşteriyi ezer) | Kısmi teslimat | ERP | H | H | müşteriden |
+| Status | nvarchar(50) |  | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | Sipariş durumu | ERP | H | H | bilinmiyor |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsOnHold | bit |  | Kredi, teknik onay ya da müşteri talebiyle bekletilen satır | Beklemede | ERP, yoksa kural | H | H | yok |
+| IsCustomTracked | bit |  | Satır düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H | yok |
+| IsQuote | bit |  | Teklif satırı; Type'tan veri kuralıyla doldurulur | Teklif | ERP, yoksa kural | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Forecast
@@ -869,21 +870,21 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Talep tahmini (netleme ön hesapta).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E |  |
-| CustomerId | bigint | FK,UK | Müşteri |  | ERP | H | H |  |
-| ProjectId | bigint | FK,UK | Proje |  | ERP | H | H |  |
-| Period | date | UK | Dönem |  | ERP | H | E |  |
-| Type | nvarchar(50) | UK | Hangisinin plana gireceği veri kuralıyla seçilir; ERP'den ham değer, değer listesi yok | Tahmin tipi | ERP | H | H |  |
-| Quantity | decimal(18,4) |  | Miktar |  | ERP | H | E |  |
-| Uom | nvarchar(10) | FK | Miktarın birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H |  |
-| DeliveryPoint | nvarchar(10) |  | Miktarın dönemin başında mı sonunda mı hazır olması gerektiği: Başı \| Sonu | Teslim noktası | ERP, yoksa kural | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E | hata (satır atlanır) |
+| CustomerId | bigint | FK,UK | Müşteri |  | ERP | H | H | yok |
+| ProjectId | bigint | FK,UK | Proje |  | ERP | H | H | yok |
+| Period | date | UK | Dönem |  | ERP | H | E | hata (satır atlanır) |
+| Type | nvarchar(50) | UK | Hangisinin plana gireceği veri kuralıyla seçilir; ERP'den ham değer, değer listesi yok | Tahmin tipi | ERP | H | H | bilinmiyor |
+| Quantity | decimal(18,4) |  | Miktar |  | ERP | H | E | hata (satır atlanır) |
+| Uom | nvarchar(10) | FK | Miktarın birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H | temel birim |
+| DeliveryPoint | nvarchar(10) |  | Miktarın dönemin başında mı sonunda mı hazır olması gerektiği: Başı \| Sonu | Teslim noktası | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### BorrowPayback
@@ -892,17 +893,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E |  |
-| LendingProjectId | bigint | FK,UK | Ödünç veren proje |  | ERP | H | E |  |
-| BorrowingProjectId | bigint | FK,UK | Ödünç alan proje |  | ERP | H | E |  |
-| BorrowedQuantity | decimal(18,4) |  | Ödünç miktarı |  | ERP | H | E |  |
-| PaidBackQuantity | decimal(18,4) |  | Geri ödenen miktar |  | ERP | H | H |  |
-| BorrowDate | date | UK | Ödünç tarihi |  | ERP | H | E |  |
-| PaybackDueDate | date |  | Geri ödeme tarihi |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E | hata (satır atlanır) |
+| LendingProjectId | bigint | FK,UK | Ödünç veren proje |  | ERP | H | E | hata (satır atlanır) |
+| BorrowingProjectId | bigint | FK,UK | Ödünç alan proje |  | ERP | H | E | hata (satır atlanır) |
+| BorrowedQuantity | decimal(18,4) |  | Ödünç miktarı |  | ERP | H | E | hata (satır atlanır) |
+| PaidBackQuantity | decimal(18,4) |  | Geri ödenen miktar |  | ERP | H | H | yok |
+| BorrowDate | date | UK | Ödünç tarihi |  | ERP | H | E | hata (satır atlanır) |
+| PaybackDueDate | date |  | Geri ödeme tarihi |  | ERP | H | H | bilinmiyor |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Stock
@@ -911,29 +912,29 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E |  |
-| Warehouse | nvarchar(30) | UK | Depo |  | ERP | H | H |  |
-| LotNo | nvarchar(50) | UK | Lot / seri |  | ERP | H | H |  |
-| Status | nvarchar(50) | UK | ERP'den ham stok durumu; veri kurallarında kullanılır, değer listesi yok | Stok durumu | ERP | H | H |  |
-| ProjectId | bigint | FK,UK | Sahip proje; proje, müşteri ve sipariş boşsa stok ortaktır | Sahip proje | ERP | H | H |  |
-| CustomerId | bigint | FK,UK | Sahip müşteri; stoğun ayrıldığı müşteri, ileride kullanılmak üzere | Sahip müşteri | ERP | H | H |  |
-| SalesOrderLineId | bigint | FK,UK | Sahip sipariş satırı; stoğun ayrıldığı sipariş satırı, ileride kullanılmak üzere | Sahip sipariş satırı | ERP | H | H |  |
-| Quantity | decimal(18,4) |  | Miktar |  | ERP | H | E |  |
-| Uom | nvarchar(10) | FK | Miktarın birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H |  |
-| QualityEntryDate | date |  | Kaliteye giriş tarihi |  | ERP | H | H |  |
-| ExpectedAcceptanceDate | date |  | Kalitedeki stoğun kullanılabilir hâle gelmesi beklenen tarih | Beklenen kabul tarihi | ERP | H | H |  |
-| ExpiryDate | date |  | Son kullanma tarihi (raf ömrü sonraki faz) | Son kullanma tarihi | ERP | H | H |  |
-| IsAvailable | bit |  | Stok planda kullanılabilir; Status ve depoya göre veri kuralıyla doldurulur | Kullanılabilir | ERP, yoksa kural | H | H |  |
-| IsInQuality | bit |  | Stok planda kalitede sayılır; Status ve depoya göre veri kuralıyla doldurulur | Kalitede | ERP, yoksa kural | H | H |  |
-| IsBlocked | bit |  | Stok planda bloke sayılır; Status ve depoya göre veri kuralıyla doldurulur | Bloke | ERP, yoksa kural | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| IsCustomTracked | bit |  | Stok düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Malzeme |  | ERP | H | E | hata (satır atlanır) |
+| Warehouse | nvarchar(30) | UK | Depo |  | ERP | H | H | bilinmiyor |
+| LotNo | nvarchar(50) | UK | Lot / seri |  | ERP | H | H | bilinmiyor |
+| Status | nvarchar(50) | UK | ERP'den ham stok durumu; veri kurallarında kullanılır, değer listesi yok | Stok durumu | ERP | H | H | bilinmiyor |
+| ProjectId | bigint | FK,UK | Sahip proje; proje, müşteri ve sipariş boşsa stok ortaktır | Sahip proje | ERP | H | H | yok |
+| CustomerId | bigint | FK,UK | Sahip müşteri; stoğun ayrıldığı müşteri, ileride kullanılmak üzere | Sahip müşteri | ERP | H | H | yok |
+| SalesOrderLineId | bigint | FK,UK | Sahip sipariş satırı; stoğun ayrıldığı sipariş satırı, ileride kullanılmak üzere | Sahip sipariş satırı | ERP | H | H | yok |
+| Quantity | decimal(18,4) |  | Miktar |  | ERP | H | E | hata (satır atlanır) |
+| Uom | nvarchar(10) | FK | Miktarın birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H | temel birim |
+| QualityEntryDate | date |  | Kaliteye giriş tarihi |  | ERP | H | H | bilinmiyor |
+| ExpectedAcceptanceDate | date |  | Kalitedeki stoğun kullanılabilir hâle gelmesi beklenen tarih | Beklenen kabul tarihi | ERP | H | H | bilinmiyor |
+| ExpiryDate | date |  | Son kullanma tarihi (raf ömrü sonraki faz) | Son kullanma tarihi | ERP | H | H | sınırsız |
+| IsAvailable | bit |  | Stok planda kullanılabilir; Status ve depoya göre veri kuralıyla doldurulur | Kullanılabilir | ERP, yoksa kural | H | H | yok |
+| IsInQuality | bit |  | Stok planda kalitede sayılır; Status ve depoya göre veri kuralıyla doldurulur | Kalitede | ERP, yoksa kural | H | H | yok |
+| IsBlocked | bit |  | Stok planda bloke sayılır; Status ve depoya göre veri kuralıyla doldurulur | Bloke | ERP, yoksa kural | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsCustomTracked | bit |  | Stok düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### WorkOrder
@@ -942,38 +943,38 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Açık iş emri (üretim, fason, yeniden işleme).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| WorkOrderNo | nvarchar(30) | UK | İş emri no |  | ERP | H | E |  |
-| MaterialId | bigint | FK | Üretilen malzeme |  | ERP | H | E |  |
-| ProductionVersionId | bigint | FK | Üretim versiyonu; iş emrinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır, gelmediyse bu versiyonun ağacına ve rotasına gider | Üretim versiyonu | ERP | H | H |  |
-| ProductionOrderType | nvarchar(50) |  | ERP'den ham iş emri tipi; veri kurallarında kullanılır, değer listesi yok | İş emri tipi | ERP | H | H |  |
-| Status | nvarchar(50) |  | ERP'den ham iş emri durumu; veri kurallarında kullanılır, değer listesi yok | İş emri durumu | ERP | H | H |  |
-| Priority | int |  | İş emri önceliği | Öncelik | ERP | H | H |  |
-| OrderedQuantity | decimal(18,4) |  | İş emri miktarı |  | ERP | H | E |  |
-| OpenQuantity | decimal(18,4) |  | Açık miktar |  | ERP | H | E |  |
-| CompletedQuantity | decimal(18,4) |  | Tamamlanan miktar |  | ERP | H | H |  |
-| ScrapQuantity | decimal(18,4) |  | Hurda miktarı |  | ERP | H | H |  |
-| Uom | nvarchar(10) | FK | Miktarların birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H |  |
-| StartDate | date |  | Başlangıç |  | ERP | H | H |  |
-| DueDate | date |  | Bitiş |  | ERP | H | E |  |
-| ProjectId | bigint | FK | Proje (ayraç) | Proje | ERP | H | H |  |
-| CustomerId | bigint | FK | Müşteri |  | ERP | H | H |  |
-| SalesOrderLineId | bigint | FK | Bağlı sipariş satırı (ayraç) | Bağlı sipariş satırı | ERP | H | H |  |
-| ParentWorkOrderId | bigint | FK | Yeniden işlemede orijinal iş emri | Orijinal iş emri | Kural ya da elle | H | H |  |
-| LastActivityDate | date |  | Son hareket tarihi (eskime kontrolü) | Son hareket tarihi | ERP | H | H |  |
-| IsFixed | bit |  | Motor bu iş emrinin tarihini ve miktarını değiştirmez | Sabit | ERP, yoksa kural | H | H |  |
-| IsReleased | bit |  | İş emri yayınlandı; Status'tan veri kuralıyla doldurulur | Yayınlandı | ERP, yoksa kural | H | H |  |
-| IsStarted | bit |  | İş emri başladı; Status'tan veri kuralıyla doldurulur | Başladı | ERP, yoksa kural | H | H |  |
-| IsProduction | bit |  | Üretim iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Üretim | ERP, yoksa kural | H | H |  |
-| IsSubcontract | bit |  | Fason iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Fason | ERP, yoksa kural | H | H |  |
-| IsRework | bit |  | Yeniden işleme iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Yeniden işleme | ERP, yoksa kural | H | H |  |
-| IsOnHold | bit |  | Bekletilen iş emri | Beklemede | ERP, yoksa kural | H | H |  |
-| IsCustomTracked | bit |  | İş emri düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderNo | nvarchar(30) | UK | İş emri no |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK | Üretilen malzeme |  | ERP | H | E | hata (satır atlanır) |
+| ProductionVersionId | bigint | FK | Üretim versiyonu; iş emrinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır, gelmediyse bu versiyonun ağacına ve rotasına gider | Üretim versiyonu | ERP | H | H | bilinmiyor |
+| ProductionOrderType | nvarchar(50) |  | ERP'den ham iş emri tipi; veri kurallarında kullanılır, değer listesi yok | İş emri tipi | ERP | H | H | bilinmiyor |
+| Status | nvarchar(50) |  | ERP'den ham iş emri durumu; veri kurallarında kullanılır, değer listesi yok | İş emri durumu | ERP | H | H | bilinmiyor |
+| Priority | int |  | İş emri önceliği | Öncelik | ERP | H | H | yok |
+| OrderedQuantity | decimal(18,4) |  | İş emri miktarı |  | ERP | H | E | hata (satır atlanır) |
+| OpenQuantity | decimal(18,4) |  | Açık miktar |  | ERP | H | E | hata (satır atlanır) |
+| CompletedQuantity | decimal(18,4) |  | Tamamlanan miktar |  | ERP | H | H | yok |
+| ScrapQuantity | decimal(18,4) |  | Hurda miktarı |  | ERP | H | H | yok |
+| Uom | nvarchar(10) | FK | Miktarların birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H | temel birim |
+| StartDate | date |  | Başlangıç |  | ERP | H | H | bilinmiyor |
+| DueDate | date |  | Bitiş |  | ERP | H | E | hata (satır atlanır) |
+| ProjectId | bigint | FK | Proje (ayraç) | Proje | ERP | H | H | yok |
+| CustomerId | bigint | FK | Müşteri |  | ERP | H | H | yok |
+| SalesOrderLineId | bigint | FK | Bağlı sipariş satırı (ayraç) | Bağlı sipariş satırı | ERP | H | H | yok |
+| ParentWorkOrderId | bigint | FK | Yeniden işlemede orijinal iş emri | Orijinal iş emri | Kural ya da elle | H | H | yok |
+| LastActivityDate | date |  | Son hareket tarihi (eskime kontrolü) | Son hareket tarihi | ERP | H | H | bilinmiyor |
+| IsFixed | bit |  | Motor bu iş emrinin tarihini ve miktarını değiştirmez | Sabit | ERP, yoksa kural | H | H | yok |
+| IsReleased | bit |  | İş emri yayınlandı; Status'tan veri kuralıyla doldurulur | Yayınlandı | ERP, yoksa kural | H | H | yok |
+| IsStarted | bit |  | İş emri başladı; Status'tan veri kuralıyla doldurulur | Başladı | ERP, yoksa kural | H | H | yok |
+| IsProduction | bit |  | Üretim iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Üretim | ERP, yoksa kural | H | H | yok |
+| IsSubcontract | bit |  | Fason iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Fason | ERP, yoksa kural | H | H | yok |
+| IsRework | bit |  | Yeniden işleme iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Yeniden işleme | ERP, yoksa kural | H | H | yok |
+| IsOnHold | bit |  | Bekletilen iş emri | Beklemede | ERP, yoksa kural | H | H | yok |
+| IsCustomTracked | bit |  | İş emri düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Kendi satırları önce (K-124):** İş emrinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır; gelmediyse `ProductionVersionId`'nin ağacına ve rotasına gider. Motorda uygulanışı 10.1.
@@ -984,24 +985,24 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - İş emrinin bileşenleri ve çekilen miktar.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| WorkOrderId | bigint | FK,UK | İş emri |  | ERP | H | E |  |
-| MaterialId | bigint | FK,UK | Bileşen |  | ERP | H | E |  |
-| OperationNo | int | UK | Bağlı olduğu operasyon no (ihtiyaç tarihi için) | Operasyon no | ERP | H | H |  |
-| SequenceNo | int | UK | Sıra no; aynı bileşen iki kez geçerse operasyon no ile ayrışır | Sıra no | ERP | H | H |  |
-| RequiredQuantity | decimal(18,4) |  | Gereken miktar |  | ERP | H | E |  |
-| IssuedQuantity | decimal(18,4) |  | Çekilen miktar |  | ERP | H | H | 0 |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderId | bigint | FK,UK | İş emri |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK,UK | Bileşen |  | ERP | H | E | hata (satır atlanır) |
+| OperationNo | int | UK | Bağlı olduğu operasyon no (ihtiyaç tarihi için) | Operasyon no | ERP | H | H | ilk operasyon |
+| SequenceNo | int | UK | Sıra no; aynı bileşen iki kez geçerse operasyon no ile ayrışır | Sıra no | ERP | H | H | bilinmiyor |
+| RequiredQuantity | decimal(18,4) |  | Gereken miktar |  | ERP | H | E | hata (satır atlanır) |
+| IssuedQuantity | decimal(18,4) |  | Çekilen miktar |  | ERP | H | H | yok |
 | RemainingQuantity | decimal(18,4) |  | Kalan ihtiyaç |  | Ön hesap | H | H |  |
-| UnitUsage | decimal(18,6) |  | Üretilen bir birim için bileşen miktarı | Birim kullanım | ERP | H | H |  |
-| Uom | nvarchar(10) | FK | Bileşen miktarlarının birimi; boşsa bileşenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H |  |
-| ScrapRatio | decimal(6,4) |  | Oran olarak fire (0,05 = %5) | Fire oranı | ERP | H | H | 0 |
-| IsLotBasedUsage | bit |  | Doluysa bileşen üretilen miktardan bağımsız, her üretim lotu için sabit kullanılır; değilse birim başına | Lot bazlı kullanım | ERP | H | H | 0 |
-| IsPhantom | bit |  | Hayalet bileşen |  | ERP | H | H | 0 |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| UnitUsage | decimal(18,6) |  | Üretilen bir birim için bileşen miktarı | Birim kullanım | ERP | H | H | bilinmiyor |
+| Uom | nvarchar(10) | FK | Bileşen miktarlarının birimi; boşsa bileşenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H | temel birim |
+| ScrapRatio | decimal(6,4) |  | Oran olarak fire (0,05 = %5) | Fire oranı | ERP | H | H | yok |
+| IsLotBasedUsage | bit |  | Doluysa bileşen üretilen miktardan bağımsız, her üretim lotu için sabit kullanılır; değilse birim başına | Lot bazlı kullanım | ERP | H | H | yok |
+| IsPhantom | bit |  | Hayalet bileşen |  | ERP | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### WorkOrderOperation
@@ -1010,32 +1011,32 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - İş emrinin operasyonları ve kalan iş.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| WorkOrderId | bigint | FK,UK | İş emri |  | ERP | H | E |  |
-| OperationNo | int | UK | Operasyon no |  | ERP | H | E |  |
-| SequenceNo | int | UK | Operasyon içindeki alt sıra | Sıra no | ERP | H | E |  |
-| OperationName | nvarchar(150) |  | Operasyon adı |  | ERP | H | H |  |
-| ResourceId | bigint | FK | Kaynak |  | ERP | H | H |  |
-| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | H |  |
-| ResourceRole | nvarchar(10) |  | Primary \| Secondary | Kaynak rolü | ERP, yoksa kural | H | E | Primary |
-| ResourceNumber | int |  | Operasyonda aynı anda kullanılan kaynak adedi | Kaynak adedi | ERP, yoksa kural | H | E | 1 |
-| PlannedConsumption | decimal(18,6) |  | Planlanan tüketim |  | ERP | H | H |  |
-| ConfirmedConsumption | decimal(18,6) |  | Teyit edilen tüketim |  | ERP | H | H | 0 |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderId | bigint | FK,UK | İş emri |  | ERP | H | E | hata (satır atlanır) |
+| OperationNo | int | UK | Operasyon no |  | ERP | H | E | hata (satır atlanır) |
+| SequenceNo | int | UK | Operasyon içindeki alt sıra | Sıra no | ERP | H | E | hata (satır atlanır) |
+| OperationName | nvarchar(150) |  | Operasyon adı |  | ERP | H | H | bilinmiyor |
+| ResourceId | bigint | FK | Kaynak |  | ERP | H | H | alternatif Kaynak grubu |
+| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | H | alternatif Kaynak |
+| ResourceRole | nvarchar(10) |  | Primary \| Secondary | Kaynak rolü | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| ResourceNumber | int |  | Operasyonda aynı anda kullanılan kaynak adedi | Kaynak adedi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| PlannedConsumption | decimal(18,6) |  | Planlanan tüketim |  | ERP | H | H | bilinmiyor |
+| ConfirmedConsumption | decimal(18,6) |  | Teyit edilen tüketim |  | ERP | H | H | yok |
 | RemainingConsumption | decimal(18,6) |  | Kalan yük |  | Ön hesap | H | H |  |
-| Status | nvarchar(50) |  | ERP'den ham operasyon durumu; veri kurallarında kullanılır, değer listesi yok | Operasyon durumu | ERP | H | H |  |
-| IsCompleted | bit |  | Operasyon tamamlandı; Status'tan veri kuralıyla doldurulur | Tamamlandı | ERP, yoksa kural | H | H |  |
-| IsLotBasedUsage | bit |  | Doluysa tüketim üretilen miktardan bağımsız, lot başına sabit; pratikte hazırlık süresi | Lot bazlı kullanım | ERP | H | H | 0 |
-| IsSubcontracted | bit |  | Fason operasyon |  | ERP | H | H | 0 |
-| IsActive | bit |  | Operasyon plana dahil mi | Aktif | ERP, yoksa kural | H | H |  |
-| ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat); ileride kısıtlar için | Üretim yeri | ERP | H | H |  |
-| TransferQuantity | decimal(18,4) |  | Transfer partisi | Transfer miktarı | ERP | H | H |  |
-| WaitingTimeHours | decimal(9,2) |  | Operasyon öncesi kuyruk beklemesi | Bekleme süresi (saat) | ERP | H | H |  |
-| TransferTimeHours | decimal(9,2) |  | Sonraki operasyona taşıma | Taşıma süresi (saat) | ERP | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| Status | nvarchar(50) |  | ERP'den ham operasyon durumu; veri kurallarında kullanılır, değer listesi yok | Operasyon durumu | ERP | H | H | bilinmiyor |
+| IsCompleted | bit |  | Operasyon tamamlandı; Status'tan veri kuralıyla doldurulur | Tamamlandı | ERP, yoksa kural | H | H | yok |
+| IsLotBasedUsage | bit |  | Doluysa tüketim üretilen miktardan bağımsız, lot başına sabit; pratikte hazırlık süresi | Lot bazlı kullanım | ERP | H | H | yok |
+| IsSubcontracted | bit |  | Fason operasyon |  | ERP | H | H | yok |
+| IsActive | bit |  | Operasyon plana dahil mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat); ileride kısıtlar için | Üretim yeri | ERP | H | H | bilinmiyor |
+| TransferQuantity | decimal(18,4) |  | Transfer partisi | Transfer miktarı | ERP | H | H | yok |
+| WaitingTimeHours | decimal(9,2) |  | Operasyon öncesi kuyruk beklemesi | Bekleme süresi (saat) | ERP | H | H | yok |
+| TransferTimeHours | decimal(9,2) |  | Sonraki operasyona taşıma | Taşıma süresi (saat) | ERP | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Kaynak ya da kaynak grubu (K-124):** Rotadaki gibi her satırda `ResourceId` ya da `ResourceGroupId`'den biri dolu olmalı; ikisi de boşsa satır yüklenmez.
@@ -1046,33 +1047,33 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Açık satın alma ve fason siparişi satırı (ve talep).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| PurchaseOrderNo | nvarchar(30) | UK | Sipariş no |  | ERP | H | E |  |
-| LineNo | int | UK | Satır no |  | ERP | H | E |  |
-| OrderType | nvarchar(50) |  | ERP'den ham sipariş tipi; veri kurallarında kullanılır, değer listesi yok | Sipariş tipi | ERP | H | H |  |
-| SupplierId | bigint | FK | Tedarikçi |  | ERP | H | H |  |
-| MaterialId | bigint | FK | Malzeme |  | ERP | H | E |  |
-| OpenQuantity | decimal(18,4) |  | Açık miktar |  | ERP | H | E |  |
-| OrderedQuantity | decimal(18,4) |  | Sipariş miktarı |  | ERP | H | H |  |
-| ReceivedQuantity | decimal(18,4) |  | Teslim alınan miktar |  | ERP | H | H |  |
-| Uom | nvarchar(10) | FK | Miktarların birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H |  |
-| RequestedDate | date |  | İstenen tarih |  | ERP | H | H |  |
-| ConfirmedDate | date |  | Tedarikçi teyit tarihi |  | ERP | H | H |  |
-| ProjectId | bigint | FK | Proje |  | ERP | H | H |  |
-| CustomerId | bigint | FK | Müşteri |  | ERP | H | H |  |
-| SalesOrderLineId | bigint | FK | Bağlı sipariş satırı |  | ERP | H | H |  |
-| WorkOrderId | bigint | FK | Fasonda bağlı iş emri | Bağlı iş emri | ERP | H | H |  |
-| Status | nvarchar(50) |  | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | Durum | ERP | H | H |  |
-| IsPurchaseRequest | bit |  | Satın alma talebi; OrderType'tan veri kuralıyla doldurulur | Satın alma talebi | ERP, yoksa kural | H | H |  |
-| IsPurchase | bit |  | Satın alma siparişi; OrderType'tan veri kuralıyla doldurulur | Satın alma | ERP, yoksa kural | H | H |  |
-| IsSubcontract | bit |  | Fason siparişi; OrderType'tan veri kuralıyla doldurulur | Fason | ERP, yoksa kural | H | H |  |
-| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H |  |
-| IsCustomTracked | bit |  | Satır düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| PurchaseOrderNo | nvarchar(30) | UK | Sipariş no |  | ERP | H | E | hata (satır atlanır) |
+| LineNo | int | UK | Satır no |  | ERP | H | E | hata (satır atlanır) |
+| OrderType | nvarchar(50) |  | ERP'den ham sipariş tipi; veri kurallarında kullanılır, değer listesi yok | Sipariş tipi | ERP | H | H | bilinmiyor |
+| SupplierId | bigint | FK | Tedarikçi |  | ERP | H | H | bilinmiyor |
+| MaterialId | bigint | FK | Malzeme |  | ERP | H | E | hata (satır atlanır) |
+| OpenQuantity | decimal(18,4) |  | Açık miktar |  | ERP | H | E | hata (satır atlanır) |
+| OrderedQuantity | decimal(18,4) |  | Sipariş miktarı |  | ERP | H | H | bilinmiyor |
+| ReceivedQuantity | decimal(18,4) |  | Teslim alınan miktar |  | ERP | H | H | yok |
+| Uom | nvarchar(10) | FK | Miktarların birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Birim | ERP | H | H | temel birim |
+| RequestedDate | date |  | İstenen tarih |  | ERP | H | H | bilinmiyor |
+| ConfirmedDate | date |  | Tedarikçi teyit tarihi |  | ERP | H | H | bilinmiyor |
+| ProjectId | bigint | FK | Proje |  | ERP | H | H | yok |
+| CustomerId | bigint | FK | Müşteri |  | ERP | H | H | yok |
+| SalesOrderLineId | bigint | FK | Bağlı sipariş satırı |  | ERP | H | H | yok |
+| WorkOrderId | bigint | FK | Fasonda bağlı iş emri | Bağlı iş emri | ERP | H | H | yok |
+| Status | nvarchar(50) |  | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | Durum | ERP | H | H | bilinmiyor |
+| IsPurchaseRequest | bit |  | Satın alma talebi; OrderType'tan veri kuralıyla doldurulur | Satın alma talebi | ERP, yoksa kural | H | H | yok |
+| IsPurchase | bit |  | Satın alma siparişi; OrderType'tan veri kuralıyla doldurulur | Satın alma | ERP, yoksa kural | H | H | yok |
+| IsSubcontract | bit |  | Fason siparişi; OrderType'tan veri kuralıyla doldurulur | Fason | ERP, yoksa kural | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsCustomTracked | bit |  | Satır düzeyinde özel takip | Özel takip | ERP, yoksa kural | H | H | yok |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### TransferOrder
@@ -1081,18 +1082,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| OrderNo | nvarchar(30) | UK | Transfer no | ERP | H | E |  |
-| FromLocationId | int | FK | Çıkış lokasyonu | ERP | H | E |  |
-| ToLocationId | int | FK | Varış lokasyonu | ERP | H | E |  |
-| MaterialId | bigint | FK | Malzeme | ERP | H | E |  |
-| OpenQty | decimal(18,4) |  | Açık miktar | ERP | H | E |  |
-| ShipDate | date |  | Çıkış tarihi | ERP | H | H |  |
-| ReceiptDate | date |  | Varış tarihi | ERP | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H |  |
+| OrderNo | nvarchar(30) | UK | Transfer no | ERP | H | E | hata (satır atlanır) |
+| FromLocationId | int | FK | Çıkış lokasyonu | ERP | H | E | hata (satır atlanır) |
+| ToLocationId | int | FK | Varış lokasyonu | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK | Malzeme | ERP | H | E | hata (satır atlanır) |
+| OpenQty | decimal(18,4) |  | Açık miktar | ERP | H | E | hata (satır atlanır) |
+| ShipDate | date |  | Çıkış tarihi | ERP | H | H | bilinmiyor |
+| ReceiptDate | date |  | Varış tarihi | ERP | H | H | bilinmiyor |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
 
 ### ProductionConfirmation
@@ -1101,18 +1102,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - İşlem verisi · versiyonlu · Faz 1
 - Üretim gerçekleşmeleri: iş emri bazında stoğa girişler.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E |  |
-| ConfirmationNo | nvarchar(30) | UK | Teyit no |  | ERP | H | E |  |
-| WorkOrderId | bigint | FK | İş emri |  | ERP | H | E |  |
-| MaterialId | bigint | FK | Üretilen malzeme |  | ERP | H | E |  |
-| ConfirmedQuantity | decimal(18,4) |  | Teyit miktarı |  | ERP | H | E |  |
-| StartDate | date |  | Başlangıç |  | ERP | H | H |  |
-| EndDate | date |  | Bitiş |  | ERP | H | H |  |
-| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
-| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| ConfirmationNo | nvarchar(30) | UK | Teyit no |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderId | bigint | FK | İş emri |  | ERP | H | E | hata (satır atlanır) |
+| MaterialId | bigint | FK | Üretilen malzeme |  | ERP | H | E | hata (satır atlanır) |
+| ConfirmedQuantity | decimal(18,4) |  | Teyit miktarı |  | ERP | H | E | hata (satır atlanır) |
+| StartDate | date |  | Başlangıç |  | ERP | H | H | bilinmiyor |
+| EndDate | date |  | Bitiş |  | ERP | H | H | bilinmiyor |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### ParameterSet
@@ -1212,7 +1213,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | EditableInWorkspace | bit |  | Çalışmada geçici değiştirilebilir mi | Sistem | H | E | 0 |
 | ValuePriority | nvarchar(10) |  | ERP ezer \| Kural ezer | Sistem | H | H | ERP ezer |
 | ManualOverrides | bit |  | Elle değer her şeyi ezer mi | Sistem | H | H | 1 |
-| DefaultValue | nvarchar(200) |  | Varsayılan | Sistem | H | H |  |
+| IfEmpty | nvarchar(60) |  | Boşsa: docs/02 BOŞSA'dan, geçişte güncellenir, System owner değiştirmez (K-138) | Sistem | H | H |  |
 | IsRequired | bit |  | Zorunlu mu | Sistem | H | H | 0 |
 | Label | nvarchar(100) |  | Ekranda görünen etiket; standart alanın etiketini ezer, ek alanda boşsa alan gösterilmez (K-88); en çok 40 karakter girilir | Sistem | H | H |  |
 | StandardLabel | nvarchar(100) |  | docs'tan gelen etiket; kurulumda yazılır, System owner değiştirmez (K-104) | Sistem | H | H |  |
@@ -1242,16 +1243,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Kural koşulları (VE / VEYA).
+- Kural koşulları: aynı GroupNo'daki koşullar VE, gruplar arası VEYA (K-136); koşul editörü validasyon kurallarıyla ortaktır.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | DataRuleId | bigint | FK | Kural | Kullanıcı | H | E |  |
-| GroupNo | int |  | VEYA grubu | Kullanıcı | H | H | 1 |
+| GroupNo | int |  | VE grubu; gruplar arası VEYA | Kullanıcı | H | E |  |
 | FieldName | nvarchar(60) |  | Alan | Kullanıcı | H | E |  |
-| Operator | nvarchar(15) |  | Eşittir \| İçinde \| İle başlar \| İçerir \| Büyüktür \| Küçüktür \| Boş | Kullanıcı | H | E |  |
+| Operator | nvarchar(15) |  | = \| ≠ \| > \| < \| ≥ \| ≤ \| İçerir \| İle başlar \| Listede \| Boş \| Boş değil (K-139; ≠ boşu da kapsar) | Kullanıcı | H | E |  |
 | Value | nvarchar(200) |  | Değer | Kullanıcı | H | H |  |
+| CompareField | nvarchar(60) |  | Alan–alan karşılaştırmasında öteki alan (K-136) | Kullanıcı | H | H |  |
 
 ### ManualValue
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1281,7 +1283,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | TableName | nvarchar(60) | PK | Tablo | Sistem | H | E |  |
 | RecordId | bigint | PK | Kayıt | Sistem | H | E |  |
 | FieldName | nvarchar(60) | PK | Alan | Sistem | H | E |  |
-| Source | nvarchar(10) |  | ERP \| Kural \| Elle \| Varsayılan | Sistem | H | E |  |
+| Source | nvarchar(10) |  | ERP \| Kural \| Elle (K-138) | Sistem | H | E |  |
 | DataRuleId | bigint | FK | Uygulanan kural | Sistem | H | H |  |
 | ErpValue | nvarchar(200) |  | ERP'den gelen değer | Sistem | H | H |  |
 
@@ -1313,7 +1315,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Partinin bulguları: ön kontrol (fonksiyon 03) ve doğrulama (fonksiyon 04) aynı listeye yazar.
+- Partinin ön kontrol bulguları (fonksiyon 03). Validasyon (fonksiyon 04) partiye değil staging'in güncel hâline aittir, bulguları `ValidationFinding`'dedir (K-134).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -1342,6 +1344,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | DisabledBy | int | FK | Çekimi kapatan | Sistem | H | H |  |
 | DisabledAt | datetime2 |  | Çekimin kapatıldığı zaman | Sistem | H | H |  |
 | ViewName | nvarchar(128) |  | Entegrasyon veritabanındaki view | Kullanıcı | H | H |  |
+| ErrorThresholdPct | decimal(5,2) |  | Hata eşiği (%); boşsa eşik kontrolü yapılmaz, varsayılanı yok (K-135) | Kullanıcı | H | H |  |
 | LastCheckAt | datetime2 |  | Son uyum denetimi | Sistem | H | H |  |
 | LastCheckStatus | nvarchar(20) |  | Uyumlu \| Uyarılı \| Hatalı | Sistem | H | H |  |
 | LastCheckMessage | nvarchar(400) |  | Son denetimin özeti | Sistem | H | H |  |
@@ -1371,6 +1374,88 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | SeenAt | datetime2 |  | İlk görüldüğü zaman | Sistem | H | E |  |
 | AppVersion | nvarchar(20) |  | Smartchain sürümü | Sistem | H | E |  |
 
+### ValidationRule
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Validasyon kuralı (K-136, ekran 27). Yapısal kontroller ve hazır kurallar koddaki katalogdan kurulur (geçişte eksik olan eklenir; sınıfı ve aktifliği kullanıcıda kalır); kullanıcı kuralı ekrandan eklenir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | int | PK | Kayıt kimliği | Sistem | H | E |  |
+| EntityName | nvarchar(60) | UK | Tablo (`stg` adı) | Sistem | H | E |  |
+| Code | nvarchar(60) | UK | Yapısal ve hazır kuralda katalog kodu (ör. BOM.SELF); kullanıcı kuralında KUL-n | Sistem | H | E |  |
+| Name | nvarchar(200) |  | Kural; hazır kuralda kullanıcı dilinde ad (K-139) | Kullanıcı | H | E |  |
+| Kind | nvarchar(10) |  | Yapısal \| Hazır \| Kullanıcı | Sistem | H | E |  |
+| CheckType | nvarchar(20) |  | Yapısal \| Mantıksal \| Tablolar arası | Sistem | H | E |  |
+| Severity | nvarchar(10) |  | Hata \| Uyarı \| Bilgi | Kullanıcı | H | E |  |
+| Message | nvarchar(400) |  | Bulguda görünen mesaj | Kullanıcı | H | E |  |
+| ConditionText | nvarchar(400) |  | Koşulun okunur cümlesi; hazır kuralda katalogdan, kullanıcı kuralında kayıtta yazılır | Sistem | H | H |  |
+| IsActive | bit |  | Aktif; yapısal kontrol kapatılamaz | Kullanıcı | H | E |  |
+| IsCustomized | bit |  | Hazır kural düzenlendi: ad, mesaj ve koşul kullanıcıda, katalog ezmez; "İlk hâline döndür" sıfırlar (K-139) | Sistem | H | E |  |
+| UpdatedBy | int | FK | Son değiştiren | Sistem | H | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik | Sistem | H | H |  |
+
+### ValidationRuleCondition
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Kullanıcı kuralının ve düzenlenmiş hazır kuralın koşulları (K-136, K-139): aynı GroupNo'daki koşullar VE, gruplar arası VEYA. Operatörler `DataRuleCondition` ile aynıdır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| ValidationRuleId | int | FK | Kural | Sistem | H | E |  |
+| GroupNo | int |  | VE grubu; gruplar arası VEYA | Kullanıcı | H | E |  |
+| FieldName | nvarchar(60) |  | Alan | Kullanıcı | H | E |  |
+| Operator | nvarchar(15) |  | = \| ≠ \| > \| < \| ≥ \| ≤ \| İçerir \| İle başlar \| Listede \| Boş \| Boş değil (K-139; ≠ boşu da kapsar) | Kullanıcı | H | E |  |
+| Value | nvarchar(400) |  | Değer; Listede'de virgülle ayrılmış liste | Kullanıcı | H | H |  |
+| CompareField | nvarchar(60) |  | Alan–alan karşılaştırmasında öteki alan; doluysa Value boştur | Kullanıcı | H | H |  |
+
+### ValidationRun
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Tablo başına validasyon çalışması (K-134): çipin durumu son çalışmadan, sonucu bulgulardan okunur.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| EntityName | nvarchar(60) | IX | Tablo; tablolar arası toplu çalışmada boş | Sistem | H | H |  |
+| Scope | nvarchar(15) |  | Tablo içi \| Tablolar arası | Sistem | H | E |  |
+| TriggerType | nvarchar(20) |  | Yükleme \| Çekim \| Toplu çekim \| Yeniden valide et | Sistem | H | E |  |
+| BatchId | bigint |  | Çalışmayı başlatan parti (`ImportBatch.Id`); FK yok, ham veri temizliğinde parti silinse de çalışma kalır | Sistem | H | H |  |
+| JobId | bigint |  | Çalışmanın işi | Sistem | H | H |  |
+| GroupId | bigint | IX | Toplu çekimde çekim işinin Id'si; tablolar arası çalışma grubun çekimi ve bütün tablo içi çalışmaları bitince başlar (K-134) | Sistem | H | H |  |
+| State | nvarchar(20) |  | Sırada \| Kurallar çalışıyor \| Valide ediliyor \| Bitti \| Valide edilemedi | Sistem | H | E |  |
+| CurrentRows | int |  | Güncel kayıt sayısı | Sistem | H | H |  |
+| ErrorRows | int |  | Hata bulunan güncel kayıt | Sistem | H | H |  |
+| WarningRows | int |  | Uyarı bulunan güncel kayıt | Sistem | H | H |  |
+| InfoRows | int |  | Bilgi bulunan güncel kayıt | Sistem | H | H |  |
+| RequestedBy | int | FK | Başlatan kullanıcı; otomatik zincirde partiyi alan | Sistem | H | H |  |
+| CreatedAt | datetime2 |  | Sıraya girdiği zaman | Sistem | H | E |  |
+| StartedAt | datetime2 |  | Başlangıç | Sistem | H | H |  |
+| FinishedAt | datetime2 |  | Bitiş | Sistem | H | H |  |
+
+### ValidationFinding
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Staging'in güncel hâlinin validasyon bulguları (K-134). Bir kural yeniden çalışınca o kuralın o tablodaki bulguları yenilenir; güncel hâlden çıkan satırın bulguları silinir. Ön kontrol bulguları `ImportFinding`'dedir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| EntityName | nvarchar(60) | IX | Satırın tablosu | Sistem | H | E |  |
+| StagingRowId | bigint | IX | Güncel satır; tablo düzeyi bulguda boş | Sistem | H | H |  |
+| ValidationRuleId | int | FK,IX | Kural | Sistem | H | E |  |
+| Severity | nvarchar(10) |  | Hata \| Uyarı \| Bilgi (bulgu anındaki sınıf) | Sistem | H | E |  |
+| FieldName | nvarchar(60) |  | Alan | Sistem | H | H |  |
+| Value | nvarchar(255) |  | Alanın değeri | Sistem | H | H |  |
+| Message | nvarchar(400) |  | Sorun | Sistem | H | E |  |
+| RowKey | nvarchar(200) |  | Kaydın anahtarı | Sistem | H | H |  |
+| RunId | bigint | FK | Bulguyu yazan çalışma | Sistem | H | E |  |
+
 ### stg.*
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
@@ -1381,7 +1466,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | StagingRowId | bigint | PK | Satır kimliği | Sistem | H | E |  |
 | ImportBatchId | bigint | FK | Yükleme partisi | Sistem | H | E |  |
-| RowStatus | nvarchar(15) |  | Yeni \| Hatalı \| Aktarıldı | Sistem | H | E | Yeni |
+| RowStatus | nvarchar(15) |  | Yeni \| Hatalı \| Aktarıldı; güncel satırda Hata bulgusu varsa Hatalı, load almaz (K-134) | Sistem | H | E | Yeni |
+| IsCurrent | bit |  | Tablonun güncel hâlinde mi (K-133); güncel hâlde anahtar bir kez bulunur | Sistem | H | E |  |
 | ErrorText | nvarchar(400) |  | Hata açıklaması (ör. bilinmeyen MaterialCode) | Sistem | H | H |  |
 | …Code | nvarchar(50) | REF | İlişkiler kodla (LocationCode, MaterialCode…); aktarımda Id'ye eşlenir | ERP | H | E |  |
 | … |  |  | Varlığın sözleşme alanları ve ek alanları (26. adım) | ERP | H |  |  |
@@ -1720,8 +1806,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme … | Sistem | H | E |  |
-| Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel \| Veri çekme | Sistem | H | E |  |
+| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme \| Validasyon … | Sistem | H | E |  |
+| Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel \| Veri çekme \| Veri işleme | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |
 | RequestedBy | int | FK | Başlatan | Sistem | H | H |  |

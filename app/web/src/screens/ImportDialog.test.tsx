@@ -64,14 +64,12 @@ describe("Excel'den yükle", () => {
     expect(header("Tablo")).not.toHaveAttribute("title");
   });
 
-  it("adımlar; dosya seçilmeden ilerlenmez; üçüncü adım pasif ve gerekçeli", async () => {
+  it("iki adım (K-134); dosya seçilmeden ilerlenmez", async () => {
     await openDialog();
     expect(screen.getByRole("button", { name: "Ön kontrole geç" })).toBeDisabled();
     const steps = within(screen.getByRole("list", { name: "Adımlar" })).getAllByRole("listitem");
-    expect(steps.map((s) => s.textContent)).toEqual(["1. Dosya", "2. Ön kontrol", "3. Doğrulama"]);
+    expect(steps.map((s) => s.textContent)).toEqual(["1. Dosya", "2. Ön kontrol"]);
     expect(steps[0]).toHaveAttribute("aria-current", "step");
-    expect(steps[2]).toHaveAttribute("aria-disabled", "true");
-    expect(steps[2]).toHaveAttribute("title", "3.4 adımında gelecek.");
     expect(screen.getByRole("radio", { name: "Ekle / güncelle Sadece dosyadaki kayıtlar güncellenir, mevcut kayıtlar korunur" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Tam Mevcut kayıtlar silinir, yeni kayıtlar yüklenir" })).not.toBeChecked();
     expect(screen.getByText("Ekle / güncelle").tagName).toBe("STRONG");
@@ -122,15 +120,14 @@ describe("Excel'den yükle", () => {
     expect(screen.queryByText(/900/)).not.toBeInTheDocument();
   });
 
-  it("devam: sonuç metni, tablo yenilenir", async () => {
+  it("devam: pencere kapanır, tablo yenilenir; doğrulama arka planda (K-134)", async () => {
     const { user } = await openDialog({ "/api/imports/Resource": reply(SUMMARY), "/api/imports/41/continue": reply({ ...SUMMARY, status: "Alındı" }) });
     await choose(user);
     const before = calls().filter((c) => c.url.startsWith("/api/data-entities/query")).length;
     await user.click(await screen.findByRole("button", { name: "43 satırla devam et" }));
-    expect(await screen.findByText("43 satır ham veriye alındı. Doğrulama 3.4 adımında gelecek.")).toBeInTheDocument();
-    await waitFor(() => expect(calls().filter((c) => c.url.startsWith("/api/data-entities/query")).length).toBeGreaterThan(before));
-    await user.click(screen.getByRole("button", { name: "Kapat" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(calls().some((c) => c.url === "/api/imports/41/continue")).toBe(true);
+    await waitFor(() => expect(calls().filter((c) => c.url.startsWith("/api/data-entities/query")).length).toBeGreaterThan(before));
   });
 
   it("vazgeç partiyi kapatır; hata raporu indirir", async () => {
@@ -236,7 +233,7 @@ describe("Excel'den yükle", () => {
     });
 
     it.each([
-      ["Alındı", "43 satır ham veriye alındı. Doğrulama 3.4 adımında gelecek."],
+      ["Alındı", "43 satır ham veriye alındı. Validasyon arka planda çalışır; sonucu Veri yükleme tablosunda."],
       ["Vazgeçildi", "Bu yükleme kapatıldı."],
     ])("parti %s: %s", async (status, text) => {
       open({ "/api/imports/41": reply({ ...SUMMARY, status }) });

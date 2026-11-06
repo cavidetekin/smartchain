@@ -36,7 +36,7 @@ WITH q AS (
 )
 SELECT j.Id, j.JobType, j.Summary, j.Channel, j.Priority, j.Status, j.RequestedBy, j.Payload, j.Progress,
        j.HeartbeatAt, j.Attempt, j.ErrorText, j.CreatedAt, j.StartedAt, j.EndedAt, j.UpdatedAt,
-       j.CancelReason, j.DismissedAt, q.QueuePosition, u.Role AS RequestedByRole,
+       j.CancelReason, j.DismissedAt, j.Result, q.QueuePosition, u.Role AS RequestedByRole,
        CASE WHEN u.Role = N'System owner' THEN :support ELSE COALESCE(u.FullName, u.UserName) END AS RequestedByName,
        CASE WHEN c.Role = N'System owner' THEN :support ELSE COALESCE(c.FullName, c.UserName) END AS CancelledByName,
        DATEDIFF(second, j.StartedAt, ISNULL(j.EndedAt, SYSUTCDATETIME())) AS DurationSeconds,

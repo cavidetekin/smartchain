@@ -54,7 +54,7 @@ def detail(session: Session | None, table: str, field: str) -> dict:
                 "standard_label": row["StandardLabel"], "description": row["Description"], "is_additional": is_additional(field),
                 "field_class": row["FieldClass"], "value_priority": row["ValuePriority"],
                 "manual_overrides": row["ManualOverrides"], "editable_in_workspace": row["EditableInWorkspace"],
-                "is_required": row["IsRequired"], "default_value": row["DefaultValue"],
+                "is_required": row["IsRequired"], "if_empty": row["IfEmpty"],
                 "options": {"field_class": FIELD_DEFINITIONS.values["FieldClass"],
                             "value_priority": FIELD_DEFINITIONS.values["ValuePriority"]},
                 "used_in_views": views, "used_in_rules": rules}

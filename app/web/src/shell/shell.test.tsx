@@ -267,7 +267,7 @@ describe("iş göstergesi", () => {
     fireEvent.click(indicator);
     const panel = screen.getByRole("dialog", { name: "Arka plandaki işler" });
     expect(panel.textContent).not.toMatch(/Bildirimler/);  // sorun yokken metin yok
-    expect(panel).toHaveTextContent("Çalışma · Sırada · sıra 1");
+    expect(panel).toHaveTextContent("ÇalışmaSırada · sıra 1");  // kart: üstte iş, altta durum çipi (K-139)
     expect(panel).not.toHaveTextContent("#6");  // K-132
   });
 

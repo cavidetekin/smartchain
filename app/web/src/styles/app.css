@@ -99,8 +99,20 @@ svg { width: var(--icon); height: var(--icon); flex: none; }
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
   box-shadow: var(--shadow-popover); }
 .sc-popover-title { font-weight: var(--fw-semibold); margin: 0.25rem 0; }
-.sc-job-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
-.sc-job-list li { padding: 0.3rem 0; border-top: 1px solid var(--line); }
+/* İş paneli kartları (K-139) */
+.sc-popover.sc-jobs-panel { width: min(26rem, calc(100vw - 2rem)); }
+.sc-job-list { display: flex; flex-direction: column; gap: var(--space-2); margin: 0.5rem 0 0; padding: 0; list-style: none; }
+.sc-job-card { display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); }
+.sc-job-card-main { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; min-width: 0; }
+.sc-job-card-title { font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-job-card-toggle { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: var(--fw-semibold); text-align: left; cursor: pointer; }
+.sc-job-card-sub { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); font-size: var(--fs-sm); }
+.sc-job-card-sub .sc-tag { gap: var(--space-1); }
+.sc-job-card-action { flex: none; }
+.sc-job-card-rows { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-1) 0 0; padding: var(--space-2) 0 0; border-top: 1px solid var(--line); list-style: none; font-size: var(--fs-sm); }
+.sc-job-card-rows li { display: grid; grid-template-columns: minmax(0, 1fr) auto 2.5rem; align-items: center; gap: var(--space-2); }
+.sc-job-card-rows .sc-tag { gap: var(--space-1); }
+.sc-jobs-all { display: inline-block; margin-top: var(--space-2); }
 .sc-popover .sc-segment { display: flex; margin: 0.4rem 0 0.75rem; }
 .sc-popover .sc-segment button { flex: 1; }
 .sc-menu-btn { width: 100%; padding: 0.4rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--lead-50); }

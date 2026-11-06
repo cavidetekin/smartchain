@@ -188,6 +188,19 @@
         "Key user": "full",
         "End user": "read"
       }
+    },
+    {
+      "key": "B3",
+      "letter": "B",
+      "name": "Validasyon kuralları",
+      "first": 100,
+      "last": 100,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "read",
+        "End user": "none"
+      }
     }
   ],
   "functions": [
@@ -226,7 +239,7 @@
     },
     {
       "no": 4,
-      "name": "Doğrulama",
+      "name": "Validasyon",
       "group": "A",
       "levels": {
         "System owner": "full",
@@ -1278,6 +1291,17 @@
         "Admin": "full",
         "Key user": "full",
         "End user": "read"
+      }
+    },
+    {
+      "no": 100,
+      "name": "Validasyon kuralı tanımlama",
+      "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "read",
+        "End user": "none"
       }
     }
   ],

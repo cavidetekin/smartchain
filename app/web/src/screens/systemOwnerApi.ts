@@ -13,7 +13,7 @@ export interface FieldDetail {
   manual_overrides: boolean | null;
   editable_in_workspace: boolean;
   is_required: boolean | null;
-  default_value: string | null;
+  if_empty: string | null;
   options: { field_class: string[]; value_priority: string[] };
   used_in_views: number;
   used_in_rules: number;

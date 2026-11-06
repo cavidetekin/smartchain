@@ -13,6 +13,7 @@ from app.integration.contract import FIRST_DATA_ROW, stg_columns
 from app.integration.template import write_template
 from db import models
 from . import dataset as d
+from .examples import add_examples
 from .dataset import Dataset
 
 EMPTY_ENTITIES = {"Forecast", "MaterialReference"}  # docs/11: tahmin üretilmez; her üretilen malzemenin kendi versiyonu var
@@ -145,7 +146,19 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
              message=f"Aynı kayıt {mat_i + FIRST_DATA_ROW} ve {mat_i + 1 + FIRST_DATA_ROW}. satırlarda",
              core_difference=[f"Material {d.ISOLATED_MATERIAL} eksik (başka hiçbir dosyada geçmez)"]),
     ]
+    # Hazır validasyon kurallarının örnekleri (K-137): sona eklenir, yukarıdaki satır numaraları değişmez.
+    errors += [dict(code="V", type="Hazır kural", file=f"{e['table']}.xlsx", table=e["table"], key=e["key"], rules=e["rules"], example=e["example"],
+                    step="Fonksiyon 04 doğrulama (geliştirme 3.4)") for e in add_examples(stg)]
     return stg, errors
+
+
+CHANGED_DIR = "ekle-guncelle"
+
+
+def changed_batch(stg: dict[str, list[dict]]) -> dict:
+    """Demo (docs/11, K-133): iki tedarikçili malzemede ikinci kota 0,50; Ekle / güncelle ile yüklenince güncel hâlde toplam 1,20 olur."""
+    second = next(r for r in stg["MaterialSupplier"] if r.get("QuotaRatio") == 0.30)
+    return {**second, "QuotaRatio": 0.50}
 
 
 def labels_of(entity: str) -> dict[str, str]:
@@ -165,8 +178,13 @@ def write_excel(ds: Dataset, out: Path) -> dict:
         if lost:
             raise ValueError(f"{entity}: dolu alan şablonda yok: {sorted(lost)}")
         write_template(str(out / f"{entity}.xlsx"), contract.entity(entity), labels, extra, rows)
+    changed = changed_batch(stg)
+    (out / CHANGED_DIR).mkdir(exist_ok=True)
+    write_template(str(out / CHANGED_DIR / "MaterialSupplier.xlsx"), contract.entity("MaterialSupplier"), labels_of("MaterialSupplier"), extra, [changed])
     manifest = {
         "set": d.SET_NAME, "seed": ds.seed, "generated_on": ds.generated_on.isoformat(),
+        "changed_batch": {"file": f"{CHANGED_DIR}/MaterialSupplier.xlsx", "mode": "Değişen", "key": {k: changed[k] for k in ("LocationCode", "MaterialCode", "SupplierCode")},
+                          "rules": ["MS.QUOTA_SUM"]},
         "week1": ds.start.isoformat(), "first_data_row": FIRST_DATA_ROW,
         "files": {f"{e}.xlsx": len(r) for e, r in stg.items()}, "errors": errors,
     }

@@ -37,6 +37,9 @@ def run_pull_job(job_id: int, attempt: int) -> None:
             pull.fail_job(session, job_id)
             with Session(db) as s:
                 queue.fail(s, job_id, attempt, f"Çekim tamamlanamadı. Destek için iş numarası: {job_id}")
+            from app.validation import engine as validation
+            with Session(db) as s:  # okunan tabloların tablolar arası doğrulaması yine başlar (K-134)
+                validation.maybe_start_cross(s, job_id)
 
 
 def pull_process_main(job_id: int, attempt: int, _time_budget_seconds: int) -> None:

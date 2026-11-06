@@ -11,7 +11,7 @@ import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import { type LocalColumn, LocalTable } from "../table/LocalTable";
 import type { Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
-import { Alert, Badge, Button, Dialog, TextField, Tooltip } from "../ui";
+import { Alert, Badge, Button, Dialog, TextField, Tooltip, TopStrip } from "../ui";
 import { type EntityChange, integrationApi, METHOD_SQL, METHODS, type Connection, type Preview, type TestResult, type TestTable, type ViewVersion } from "./integrationApi";
 import { StateChip } from "./PullDialogs";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
@@ -201,7 +201,7 @@ export function Integration() {
   }), [isOwner, edits]);
   const needsView = (row: Row) => (row.ViewName ? ALLOWED : { allowed: false, reason: T.needsView });
   const testButton = (
-    <Button size="sm" variant="secondary" busy={busy} disabledReason={canTest ? (connection?.database ? null : T.needsDatabase) : forbiddenReason(91, "write")} onClick={() => void runTest()}>{T.test}</Button>
+    <Button variant="secondary" busy={busy} disabledReason={canTest ? (connection?.database ? null : T.needsDatabase) : forbiddenReason(91, "write")} onClick={() => void runTest()}>{T.test}</Button>
   );
 
   return (
@@ -210,16 +210,16 @@ export function Integration() {
         <h1>{T.title}</h1>
       </header>
       {error && <Alert tone="error">{error}</Alert>}
-      <div className="sc-integration-strip">
+      <TopStrip label={T.stripLabel}>
         {isOwner ? (
           <>
             <TextField label={T.database} value={database} onChange={setDatabase} />
-            <Button size="sm" variant="primary" disabled={database.trim() === (connection?.database ?? "")} onClick={() => void saveDatabase()}>{T.save}</Button>
+            <Button variant="primary" disabled={database.trim() === (connection?.database ?? "")} onClick={() => void saveDatabase()}>{T.save}</Button>
           </>
         ) : <p>{T.database}: <strong>{connection?.database ?? T.undefinedDatabase}</strong></p>}
         {testButton}
         {connection && <p className="sc-muted">{T.account(connection.account)}</p>}
-      </div>
+      </TopStrip>
       <DataTable list="integration-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey}
                  toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} />} />
       <UnsavedGuard dirty={edits.dirty} />

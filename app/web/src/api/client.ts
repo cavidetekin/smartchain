@@ -157,10 +157,26 @@ export interface Job {
   dismissed?: boolean;
   /** Excel ön kontrol işinin partisi (K-129). */
   import_batch_id?: number | null;
+  /** Validasyon işinin tablosu, tetikleyicisi, grubu (toplu çekimde çekim işinin Id'si) ve sonucu (K-134, K-139). */
+  validation?: JobValidation | null;
+  created_at?: string | null;
   ended_at?: string | null;
   error_text?: string | null;
   queue_position: number | null;
   updated_at: string;
+}
+
+export interface JobValidation {
+  entity: string | null;
+  name?: string | null;
+  trigger: string | null;
+  group?: number | null;
+  scope?: string | null;
+  outcome?: string | null;
+  error_rows?: number | null;
+  warning_rows?: number | null;
+  /** Tablolar arası işin sonunda gruptaki tabloların son sonucu (iş paneli kartı, K-139). */
+  tables?: { entity: string; name: string; outcome: string; error_rows: number; warning_rows: number }[] | null;
 }
 
 export interface JobList {
@@ -183,6 +199,11 @@ export const api = {
 export const JOB_EXPORT = "Dışa aktarım";
 export const JOB_PRECHECK = "Excel ön kontrol";
 export const JOB_PULL = "Veri çekme";
+export const JOB_VALIDATION = "Validasyon";
+/** Bildirim yalnız tek tablo yollarında; toplu çekimde çekim bildirimi yeter (K-134). */
+export const VALIDATION_NOTIFY = ["Yükleme", "Çekim", "Yeniden valide et"];
+/** "Sonucu aç": o tablonun validasyon çekmecesi (ekran 02, K-134). */
+export const validationResultPath = (entity: string) => `/veri/veri-yukleme?validasyon=${encodeURIComponent(entity)}`;
 /** "Sonucu aç": o işin ön kontrol penceresi (ekran 02, K-129). */
 export const importResultPath = (batchId: number) => `/veri/veri-yukleme?parti=${batchId}`;
 /** "Sonucu aç": o çekimin sonuç penceresi (ekran 02, K-130). */

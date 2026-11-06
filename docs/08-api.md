@@ -380,7 +380,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 ## İş kuyruğu (fonksiyon 47, 93)
 
 - Durumlar: Sırada → Çalışıyor → Bitti | Hata; Sırada → İptal (K-67).
-- Kanal sınırı: hesaplama 3, gece 2, Veri çekme 1 (`adm.SystemSetting`: `JobLimitInteractive`, `JobLimitNight`, `JobLimitPull`). İş alma uygulama kilidiyle sıraya konur; sıra önce öncelik, sonra istek sırası (K-68).
+- Kanal sınırı: hesaplama 3, gece 2, Veri çekme 1, Veri işleme 4 (K-134, ölçüm aşağıda) (`adm.SystemSetting`: `JobLimitInteractive`, `JobLimitNight`, `JobLimitPull`, `JobLimitProcessing`). İş alma uygulama kilidiyle sıraya konur; sıra önce öncelik, sonra istek sırası (K-68).
 - Çalışan iş kalp atışı yazar. `JobHeartbeatTimeoutSeconds` (120) boyunca gelmezse takılmış sayılır; `JobMaxAttempts` (2) dolana kadar yeniden sıraya döner, sonra Hata. Eski deneme işi artık yazamaz (her yazma deneme numarasıyla).
 
 ## Sistem sağlığı (ekran 24, K-106)
@@ -420,7 +420,7 @@ Fonksiyon 03: System owner, Admin, Key user; End user 403. Devam ve vazgeç yaln
 | `GET /api/imports/{id}` | Özet: tablo, dosya, sürüm durumu, mod, durum, okunan, geçerli, hatalı, uyarı ve bilgi, dosya düzeyi bulgular, iş |
 | `GET /api/imports/pending/{entity}` | Kullanıcının bu tablodaki açık ön kontrolü ya da `null` |
 | Ortak liste `import-findings` | Satır, kod, alan, değer, sorun, önem; arayüz partiyi sabit filtreyle verir |
-| `POST /api/imports/{id}/continue` | Parti "Alındı", iz "Excel yükleme" aynı işlemde; 409 `import_not_pending` |
+| `POST /api/imports/{id}/continue` | Parti "Alındı" ve staging'in güncel hâline işlenir (K-133), iz "Excel yükleme" ve "Validasyon" işi aynı işlemde; 409 `import_not_pending` |
 | `POST /api/imports/{id}/cancel` | Satırlar ve dosya silinir, "Vazgeçildi"; sıradaki iş iptal edilir, çalışan iş sonraki parçada durur |
 | `GET /api/imports/{id}/error-report` | Hatalı satırlar, özgün değerler, sonda "Hata" kolonu; iz "Hata raporu indirme". 410 `import_file_gone` |
 
@@ -449,6 +449,26 @@ Excel yükleme yöntemden bağımsızdır: yöntem ne olursa olsun, çekim açı
 **Tablo durumları:** Alındı, Hatalı, Tamamlanmadı (partisi vardır); Yeni veri yok, Veri güncellemesi devam ediyor, Atlandı, Hata (parti yok, önceki ham veri korunur).
 
 **Liste:** `data-entities`'e Yöntem, Çekim, uyarı (satır alanı); `integration-entities`: Yöntem, Kaynak, Alan uyumu, Son durum, Son okuma; `import-findings` SQL partilerini de gösterir.
+
+## Validasyon ve validasyon kuralları (ekran 02 ve 27, fonksiyon 04 ve 100, K-133…K-139)
+
+Validasyon tablonun staging'deki güncel hâline aittir, partiye değil. Kuyruğa yazan uç nokta yoktur: Excel'de "Devam" (`POST /api/imports/{id}/continue`) ve çekimde tablonun okunması işi kendisi ekler; elle yol "Yeniden valide et"tir.
+
+| Uç nokta | Yetki | Cevap |
+|---|---|---|
+| `GET /api/validation/{entity}` | Key user ve üstü (04 okuma) | Çekmece özeti: `state` (Sırada, Kurallar çalışıyor, Valide ediliyor, Bitti, Valide edilemedi), `outcome` (Geçti, Uyarılı, Hatalı), son parti (`received_at`, `method`, `uploaded_by_name`), `current_rows`, `error_rows`, `warning_rows`, `info_rows`, `error_rate`, `threshold` (boşsa `null`), `rules` (Bulgular görünümü, K-139: `[{id, name, severity, rows, message}]`; ağırdan hafife, çoktan aza; `message` yalnız tablo düzeyi bulguda, ör. "Karşılaştırılacak veri yok"). 404 `entity_not_found` |
+| `POST /api/validation/{entity}/revalidate` | Key user ve üstü (04 yazma) | **202** `{job_id}`; tablonun zinciri sıraya girer. Aynı tabloda sırada ya da çalışan validasyon varsa 409 `validation_running`. Güncel verisi yoksa 409 `validation_no_data`. İz "Yeniden validasyon" |
+| Ortak liste `validation-records-<entity>` | Key user ve üstü | Bulgusu olan güncel satırlar: ilk kolonlar Sorun (satırın bulguları) ve Sınıf (en ağır), sonra Satır ve sözleşmedeki bütün alanlar (etiketli ek alanlar dahil). Gizli `RuleIds` (",12,15,") kurala göre süzmek içindir: `contains` ",12," (Bulgular'da kurala tıklayınca, K-139). Excel'e aktarımı "Hatalı kayıtları indir"dir (K-91, K-93) |
+| Ortak liste `validation-rules` | Admin ve üstü yazar, Key user okur (100) | Tablo, Kural (kullanıcı dilinde ad), Koşul (`ConditionText`), Sınıf, Mesaj, Tür, Aktif; gizli Kod. Yapısal kontroller listede yoktur (K-139). Satırda `Editable` (pencerede düzenlenir) ve `IsCustomized` |
+| `GET /api/validation-rules/{id}` | Key user ve üstü (100 okuma) | Kural ve koşulları (`groups: [[{field, operator, value, compare_field}]]`); `editable`, `customized` (düzenlenmiş hazır kural) |
+| `GET /api/validation-rules/fields/{entity}` | Key user ve üstü (100 okuma) | Koşul editörünün alanları: ad, etiket, tip, değer listesi |
+| `PUT /api/validation-rules` · `{changes: [{id?, entity, name?, severity?, message?, active?, groups?, delete?, reset?}], thresholds: [{entity, value}]}` | Admin ve üstü (100 yazma) | Toplu kayıt (K-132), tek işlem: biri geçersizse hiçbiri yazılmaz. Düzenlenebilir hazır kuralda ad, mesaj ve koşul değişir (ilk düzenlemede katalog koşulu veritabanına kopyalanır, `IsCustomized`); `reset` "İlk hâline döndür"dür (K-139). Düzenlenemeyen hazır kuralda ad, mesaj ya da koşul 422 `validation`. 422 `validation_rule_locked` (yapısal kural), `validation_rule_builtin_delete` (hazır kural silinemez), `validation_rule_bad_condition`, `validation_rule_name_taken`, `validation_threshold_range` (0–100). Cevapta değişen tablolar (`changed_entities`, "Yeniden valide et" önerisi için). İz "Validasyon kuralı", "Hata eşiği" |
+
+**İş:** tip "Validasyon", kanal "Veri işleme" (sınır `JobLimitProcessing`), yükü `{entity, scope, trigger, batch_id, group}`; `scope` "Tablo içi" ya da "Tablolar arası"; `group` toplu çekimde çekim işinin Id'si. İş düşerse çalışma "Valide edilemedi", önceki bulgular kalır. İş cevabında `validation: {entity, name, trigger, group, scope, outcome, error_rows, warning_rows}` ve `created_at`: iş panelinin kartları (K-139) ve "Sonucu aç" (çekmece).
+
+**Kural kataloğu:** `app/validation/catalog.py`, docs/06 fonksiyon 04 tablosuyla birebir (test); veritabanıyla çalışma anında eşitlenir (validasyon işi, kural listesi, kayıt); düzenlenmiş hazır kuralın adı, mesajı ve koşulu ezilmez (K-139).
+
+**Ölçüm (`python -m pytest -m perf`, `tests/test_validation_perf.py`; satırların yarısı bulgulu, zor durum):** 200.000 satırlık Malzeme'nin tablo içi doğrulaması ortanca 39,4 sn (33,7–44,8). Sekiz tablo × 50.000 satır, paralel iş sayısına göre ortanca: 1 → 70,2 sn, 2 → 60,5 sn, 4 → 58,3 sn, 8 → 55,5 sn. Darboğaz SQL Server: 4'ten sonra kazanç %5 ve ölçümün kendi dağılımından küçük; `JobLimitProcessing` varsayılanı 4. Sunucuda ilk kurulumda yeniden ölçülür. Değerlendirme kümesel SQL'dir (`INSERT … SELECT`, kural başına); döngü kuralları Python'da, kenarlar tek sorguyla okunur. Geçiş ve kurulum eksik kuralı ekler; sınıfı ve aktifliği kullanıcıda kalır. Koşuldan SQL üretilir: alan adı sözleşmeden doğrulanır, değer parametreyle geçer.
 
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 

@@ -10,7 +10,7 @@ import sqlalchemy as sa
 SYSTEM_SOURCE = "Sistem"
 ADDITIONAL = re.compile(r"Additional(Text|Number)(\d+)$")
 ADDITIONAL_TITLE = {"Text": "Ek metin alanı", "Number": "Ek sayı alanı"}
-DOCS_COLUMNS = ("StandardLabel", "Description")
+DOCS_COLUMNS = ("StandardLabel", "Description", "IfEmpty")
 LABEL_LENGTH = 100
 DESCRIPTION_LENGTH = 200
 DECISION_NUMBER = re.compile(r"\s*\(K-\d+\)")
@@ -37,7 +37,7 @@ def description(column_name: str, comment: str | None) -> str | None:
 
 
 def fields(metadata: sa.MetaData) -> list[dict]:
-    """Sözlüğe girecek alanlar, docs'taki varsayılanlarıyla."""
+    """Sözlüğe girecek alanlar, docs'taki BOŞSA anlamlarıyla (K-138)."""
     out = []
     for table in metadata.tables.values():
         field_class = table.info.get("field_class")
@@ -49,7 +49,7 @@ def fields(metadata: sa.MetaData) -> list[dict]:
             out.append({
                 "TableName": table.name, "FieldName": col.name, "FieldClass": field_class,
                 "EditableInWorkspace": bool(col.info.get("workspace")), "ValuePriority": "ERP ezer", "ManualOverrides": True,
-                "DefaultValue": col.info.get("default") or None, "IsRequired": not col.nullable,
+                "IfEmpty": col.info.get("if_empty") or None, "IsRequired": not col.nullable,
                 "StandardLabel": standard_label(col.name, col.info.get("label")),
                 "Description": description(col.name, col.comment),
             })

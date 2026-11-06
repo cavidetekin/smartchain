@@ -40,6 +40,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi yükleme, yükleme geçmişi.
 - **03 · Ana veri ekranları:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya… Her değerin kaynağı (ERP, kural, elle) görünür; elle düzeltme yapılır.
 - **04 · Veri kuralları:** Kural listesi, kural editörü, önizleme (kaç kayıt değişir).
+- **27 · Validasyon kuralları:** Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu: yapısal kontroller, hazır kurallar, kullanıcı kuralları; tablo başına hata eşiği (K-136).
 - **05 · Veri kalitesi:** Ana veri ve işlem verisi uyarıları; düzeltme listesi.
 
 #### PARAMETRE
@@ -95,7 +96,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01 · Veri çekme:** Müşterinin view'larından SQL ile (K-130); gece zamanlanmış, istenirse elle tetiklenir.
 - **02 · Excel şablonu indirme:** Her varlık için veri sözleşmesine uygun boş şablon.
 - **03 · Excel ile yükleme:** Kullanıcı şablonu doldurup yükler.
-- **04 · Doğrulama:** Zorunlu alan, tip, birim, referans (olmayan kaynak ya da malzeme), ağaç döngüsü, negatif değer.
+- **04 · Validasyon:** Zorunlu alan, tip, birim, referans (olmayan kaynak ya da malzeme), ağaç döngüsü, negatif değer; staging'in güncel hâli üzerinde, otomatik zincirle (K-133, K-134).
 - **05 · Tam yükleme:** Tüm varlıklar yeni veri versiyonu olarak yüklenir.
 - **06 · Kısmi yükleme:** Seçilen varlıklar yüklenir; hatalı varlıkta önceki versiyon kullanılmaya devam eder.
 - **07 · Veri versiyonlama:** Her yükleme bir veri versiyonu açar (VersionFrom / VersionTo).
@@ -272,8 +273,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Hata detayı:** Hatalı satır ve nedeni sağda; düzeltme kaynakta ya da elle yapılır.
 - **Geçmiş:** Gece ve elle yüklemeler kullanıcı ve sonuçla birlikte saklanır.
 - **Uygulama (3.1, K-110):** iskelet: 25 tablo ortak tabloda, satır menüsünde şablon indirme ve şablon bilgisi. Yöntem 3.3'te; sayılar, üst düğmeler, sağ paneller 5.5'te.
-- **Uygulama (3.2, K-129):** satır menüsünde "Excel'den yükle" açılır: Dosya, Ön kontrol, Doğrulama (3.4'te) adımları. "Son yükleme zamanı" kolonu, ipucunda ham veriye alınma zamanı olduğu yazılır.
+- **Uygulama (3.2, K-129):** satır menüsünde "Excel'den yükle" açılır: Dosya ve Ön kontrol adımları (3.4'te doğrulama adımı kalktı, arka planda çalışır). "Son yükleme zamanı" kolonu, ipucunda ham veriye alınma zamanı olduğu yazılır.
 - **Uygulama (3.3, K-130, K-132):** Yöntem (Excel, SQL; yalnız System owner) ve Çekim (bütün satırlarda aç/kapa anahtarı; Admin ve üstü) kolonları hücre içi düzenlenir, tablonun sağ üstündeki Kaydet ile toplu kaydedilir; Key user salt okunur görür. Çekim kapatılırken sebep zorunlu; ipucunda sebep, kişi ve tarih; açarken uyarı. Yöntem SQL, view tanımsızsa tablo adının yanında sarı üçgen. Üstte "Veri çek": onay ve sonuç penceresi; satır menüsünde tek tablo. "Excel'den yükle" her zaman açık. "Seçilenleri yükle" ve "Tam yükle" 5.5'te.
+- **Uygulama (3.4, K-133, K-134, K-139):** "Validasyon" kolonunda tablo başına çip: gri Sırada → Kurallar çalışıyor → Valide ediliyor → yeşil Geçti / sarı Uyarılı · n / kırmızı Hatalı · n; iş düşerse Valide edilemedi. Çipe tıklayınca sağdan çekmece ("Validasyon · Malzeme"): son parti (zaman, yöntem, kişi), güncel kayıt sayısı; dört kart: Hatalı satır, Uyarılı satır, Bilgilendirme satırı, Hata oranı (altında "eşik yok" ya da "eşik %0,50"); "Bulgular" kural bazında (Kural, Sınıf, Satır sayısı; kurala tıklayınca Kayıtlar o kurala süzülür) ve "Kayıtlar" (ilk kolonlar Sorun ve Sınıf); "Hatalı kayıtları indir" ve "Yeniden valide et" (Key user ve üstü). Excel'den yükle penceresinde "Devam" pencereyi kapatır, validasyon bitince bildirim gelir.
 
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>
@@ -281,7 +283,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![Ana veri ekranları](mockups/m24e-0312-ana-veri-ekranlari.png)
 
 - **Tek ekran, sekmeler:** Kaynak, malzeme, ürün ağacı, rota, takvim ve diğer ana veriler aynı düzende.
-- **Değerin kaynağı:** Her hücrede ERP, kural, elle ya da varsayılan etiketi görünür.
+- **Değerin kaynağı:** Her hücrede ERP, kural ya da elle etiketi görünür; varsayılan yoktur (K-138).
 - **Elle düzeltme:** Elle değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
 - **İz:** Her değişiklik kim, ne zaman, eski ve yeni değerle geçmişte tutulur.
 - **Malzeme blokajı (fonksiyon 99, K-126):** Malzeme sekmesinden tanımlanır (6.1).
@@ -295,6 +297,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Koşul ve sonuç:** EĞER … O HALDE … kalıbı; kod bilmeden kural yazılır.
 - **Öncelik seçenekli:** ERP ile çakışırsa kim ezer, elle değer varsa ne olur: alan bazında seçilir.
 - **Önizleme:** Kaydetmeden önce hangi kayıtların nasıl değişeceği listelenir.
+- **Ekran 27 · Validasyon kuralları (3.4, K-136, K-139):** Bu ekran 25 ekranlık ilk listede yoktu; Veri menüsünde Veri kurallarından sonra. Mockup yok. Liste: Tablo, Kural (kullanıcı dilinde ad), Koşul (okunur cümle), Sınıf (pastel çip), Mesaj, Tür (Hazır / Kullanıcı), Aktif; Kod gizli kolon. Üst şerit (docs/12 · Üst şerit): tablo seçimi, seçili tablonun hata eşiği ve "Yeni kural" ("Tümü"de pasif). Yapısal kontroller listede görünmez; koşulu editörle ifade edilen hazır kural pencerede düzenlenir ("İlk hâline döndür" ile), ötekilerde sınıf ve aktiflik değişir; hazır kural silinmez; "Yeni kural" ile kullanıcı kuralı, koşul editörü ortak bileşen (docs/12). Değişiklik toplu kaydedilir (K-132), kaydedince "Yeniden valide et" önerilir. System owner ve Admin düzenler, Key user salt okunur görür, End user görmez. Fonksiyon 100, kural listesi docs/06 fonksiyon 04.
 
 ### Veri kalitesi
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 05/25</sub>
@@ -486,7 +489,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Tablolar:** Her tablo için yöntem, kaynak (view), kolon uyumu ve son durum.
 - **Zamanlanmış işler:** Gece veri çekme, senaryolar, ham veri ve senaryo temizliği.
 - **Servis hesapları:** Entegrasyon kullanıcıları ayrı tutulur; son kullanım görünür.
-- **Uygulama (3.3, K-130, K-132):** Tek satır şerit (SQL kaynağı, Kaydet, Bağlantıyı test et, hesap), ortak tablo, satır menüsünde Önizleme ve View sürümleri. Yöntem ve Kaynak tablo üzerinde System owner tarafından düzenlenir, Kaydet ile toplu kaydedilir. Mockup'tan farklar: API ve Excel kartı yok, alan eşleme yerine "Alan uyumu". Zamanlanmış işler kartı 5.6'da.
+- **Uygulama (3.3, K-130, K-132):** Üst şerit (SQL kaynağı, Kaydet, Bağlantıyı test et, hesap; docs/12 · Üst şerit, K-139), ortak tablo, satır menüsünde Önizleme ve View sürümleri. Yöntem ve Kaynak tablo üzerinde System owner tarafından düzenlenir, Kaydet ile toplu kaydedilir. Mockup'tan farklar: API ve Excel kartı yok, alan eşleme yerine "Alan uyumu". Zamanlanmış işler kartı 5.6'da.
 
 ### Sistem sağlığı
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 24/25</sub>

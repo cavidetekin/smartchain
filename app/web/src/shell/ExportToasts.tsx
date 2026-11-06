@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 
-import { api, JOB_DONE, JOB_FAILED, JOB_PULL, type Job } from "../api/client";
+import { api, JOB_DONE, JOB_FAILED, JOB_PULL, JOB_VALIDATION, type Job } from "../api/client";
 import { tr } from "../i18n/tr";
 import type { TrackedExport } from "./ShellContext";
 
@@ -36,14 +36,16 @@ export function ExportToasts({ items, onDismiss, checks = [], onOpenCheck, onDis
 function PrecheckToast({ job, onOpen, onDismiss }: { job: Job; onOpen(): void; onDismiss(): void }) {
   const failed = job.status === JOB_FAILED;
   const isPull = job.job_type === JOB_PULL;
-  const title = isPull ? (failed ? tr.jobs.pullFailed : tr.jobs.pullDone) : (failed ? tr.jobs.precheckFailed : tr.jobs.precheckDone);
+  const isValidation = job.job_type === JOB_VALIDATION;
+  const title = isValidation ? (failed ? tr.jobs.validationFailed : tr.jobs.validationDone)
+    : isPull ? (failed ? tr.jobs.pullFailed : tr.jobs.pullDone) : (failed ? tr.jobs.precheckFailed : tr.jobs.precheckDone);
   return (
     <div className={`sc-toast${failed ? " is-error" : ""}`} role="status">
       <div className="sc-toast-body">
         <p className="sc-toast-title">{title}</p>
         <p className="sc-toast-sub">
-          {job.summary}
-          {(isPull || (!failed && job.import_batch_id)) && (
+          {isValidation && !failed ? job.progress : job.summary}
+          {(isPull || isValidation || (!failed && job.import_batch_id)) && (
             <> · <button type="button" className="sc-toast-link" onClick={onOpen}>{tr.jobs.openResult}</button></>
           )}
         </p>

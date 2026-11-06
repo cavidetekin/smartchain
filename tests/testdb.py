@@ -113,6 +113,11 @@ def clear_leftovers(engine: Engine) -> None:
             c.execute(sa.text("DELETE FROM adm.DataVersion WHERE Id = :v"), {"v": version})
         c.execute(sa.text("DELETE FROM core.Location WHERE Code = N'TEST-ENG'"))
         c.execute(sa.text("DELETE FROM adm.Job"))
+        c.execute(sa.text("DELETE FROM adm.ValidationFinding"))  # doğrulama (K-134): kural tanımları kalır, kullanıcı kuralları ve eşikler silinir
+        c.execute(sa.text("DELETE FROM adm.ValidationRun"))
+        c.execute(sa.text("DELETE FROM adm.ValidationRuleCondition"))
+        c.execute(sa.text("DELETE FROM adm.ValidationRule WHERE Kind = N'Kullanıcı'"))
+        c.execute(sa.text("UPDATE adm.ValidationRule SET IsActive = 1"))
         c.execute(sa.text("DELETE FROM adm.IntegrationViewVersion"))
         c.execute(sa.text("DELETE FROM adm.IntegrationEntity"))
         c.execute(sa.text("DELETE FROM adm.SystemEvent"))

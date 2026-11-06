@@ -18,6 +18,7 @@ from app.integration.template import write_template
 from app.jobs import queue
 from app.jobs.constants import ACTIVE_STATUSES, CHANNEL_EXCEL, STATUS_DONE, STATUS_QUEUED, TYPE_PRECHECK
 from app.jobs.settings import JobSettings
+from app.validation import engine as validation
 
 from ..errors import AppError
 from ..export.describe import tr_number
@@ -358,7 +359,7 @@ def pending(session: Session | None, user: CurrentUser, table: str) -> dict | No
 
 
 def continue_batch(session: Session | None, user: CurrentUser, batch_id: int) -> dict:
-    """Parti "Alındı"; iz aynı işlemde, yazılamazsa geri alınır (K-108)."""
+    """Parti "Alındı"; iz aynı işlemde, yazılamazsa geri alınır (K-108). Güncel hâle işlenir, doğrulama sıraya girer (K-133, K-134)."""
     session = auth._require(session)
 
     def work():
@@ -370,7 +371,7 @@ def continue_batch(session: Session | None, user: CurrentUser, batch_id: int) ->
         audit.write_audit(session, ACTION_UPLOAD, user.id, OBJECT, batch["FileName"],
                           {"entity_name": entity.name, "mode": MODE_LABELS.get(batch["LoadType"], batch["LoadType"]), "rows": batch["RowCount"], "valid": batch["RowCount"] - (batch["ErrorCount"] or 0),
                            "errors": batch["ErrorCount"] or 0, "template_version": batch["TemplateVersion"]})
-        session.commit()
+        validation.on_received(session, entity.table, batch_id, batch["LoadType"], validation.TRIGGER_UPLOAD, user.id)  # K-133, K-134; commit eder
         return summary_of(session, batch_id)
 
     return auth._db(work)

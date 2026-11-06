@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 
-import { api, emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, JOB_PULL, pullResultPath, type Job } from "../api/client";
+import { api, emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job, VALIDATION_NOTIFY,
+  validationResultPath } from "../api/client";
 import { authApi } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
 import { IdleWatch } from "../auth/IdleWatch";
@@ -49,7 +50,8 @@ export function Shell() {
   const seenChecks = useRef(new Map<number, string>());
   const navigate = useNavigate();
   const onCheck = useCallback((job: Job) => {
-    if ((job.job_type !== JOB_PRECHECK && job.job_type !== JOB_PULL) || (job.requested_by ?? userId) !== userId || job.dismissed) return;
+    const validation = job.job_type === JOB_VALIDATION && VALIDATION_NOTIFY.includes(job.validation?.trigger ?? "") && Boolean(job.validation?.entity);
+    if ((job.job_type !== JOB_PRECHECK && job.job_type !== JOB_PULL && !validation) || (job.requested_by ?? userId) !== userId || job.dismissed) return;
     const before = seenChecks.current.get(job.id);
     seenChecks.current.set(job.id, job.status);
     const ended = job.status === JOB_DONE || job.status === JOB_FAILED;
@@ -64,6 +66,7 @@ export function Shell() {
   const openCheck = useCallback((job: Job) => {
     dismissCheck(job.id);
     if (job.job_type === JOB_PULL) navigate(pullResultPath(job.id));
+    else if (job.job_type === JOB_VALIDATION && job.validation?.entity) navigate(validationResultPath(job.validation.entity));
     else if (job.import_batch_id) navigate(importResultPath(job.import_batch_id));
   }, [dismissCheck, navigate]);
   const onJob = useCallback((job: Job) => {

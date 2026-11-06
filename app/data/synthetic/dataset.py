@@ -427,13 +427,14 @@ def _suppliers(b: _Builder, rng: random.Random) -> None:
         if not m["IsPurchasable"]:
             continue
         lead = LATE_LEAD_DAYS if m["Code"] == LATE_MATERIAL else rng.choice([7, 10, 14, 14, 21])
-        b.add("MaterialSupplier", LocationId=1, MaterialId=m["Id"], SupplierId=b.id("Supplier", by_group[m["MaterialGroup"]]), IsActive=True,
+        first = b.add("MaterialSupplier", LocationId=1, MaterialId=m["Id"], SupplierId=b.id("Supplier", by_group[m["MaterialGroup"]]), IsActive=True,
               Priority=1, QuotaRatio=None, FixedLeadTimeDays=lead, VariableLeadTimeDays=None, LeadTimeBasis="Takvim günü",
               MinimumOrderQuantity=m.get("MinLot"), OrderLotSize=None, MaximumOrderQuantity=None)
         if m["MaterialGroup"] in ("Çubuk", "Conta") and rng.random() < 0.3:  # ikinci tedarikçi
             b.add("MaterialSupplier", LocationId=1, MaterialId=m["Id"], IsActive=True,
                   SupplierId=b.id("Supplier", "TED-02" if m["MaterialGroup"] == "Çubuk" else "TED-03"),
                   Priority=2, QuotaRatio=0.30, FixedLeadTimeDays=lead + 7, LeadTimeBasis="Takvim günü")
+            first["QuotaRatio"] = 0.70  # kota toplamı 1 (MS.QUOTA_SUM, K-137)
 
     for code, name, prio, partial in [("MUS-A", "Akdeniz Pompa Sistemleri", 1, False),
                                       ("MUS-B", "Kuzey Enerji Ekipmanları", 2, True),
@@ -610,11 +611,19 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
     n = 2049
     po(b.id("Material", "SAT-021"), 200, ds.day(4, 2), None, b.id("Supplier", "TED-06"), kind="Satın alma talebi")
     fason_part = next(r for r in b.t["Routing"] if r["ResourceId"] == b.id("Resource", "F-ISIL"))["RouteCode"][2:]
-    po(b.id("Material", fason_part), 40, ds.day(2, 3), ds.day(2, 3), b.id("Supplier", "TED-07"), kind="Fason")
+    po(b.id("Material", fason_part), 40, ds.day(2, 3), ds.day(2, 3), b.id("Supplier", "TED-07"), kind="Fason", wo=_subcon_work_order(b, "F-ISIL"))
     kaplama = next(r for r in b.t["Routing"] if r["ResourceId"] == b.id("Resource", "F-KAPLA"))["RouteCode"][2:]
-    po(b.id("Material", kaplama), 25, ds.day(3, 1), None, b.id("Supplier", "TED-08"), kind="Fason")
+    po(b.id("Material", kaplama), 25, ds.day(3, 1), None, b.id("Supplier", "TED-08"), kind="Fason", wo=_subcon_work_order(b, "F-KAPLA"))
     n = 2059
     po(b.id("Material", "SAT-020"), 300, ds.day(2, 1), ds.day(2, 1), supplier_of[b.id("Material", "SAT-020")])  # PO-2060 (H3)
+
+
+def _subcon_work_order(b, resource_code: str) -> int | None:
+    """Fason siparişin bağlı iş emri (PO.SUBCON_NO_WO, K-137): o fason kaynağı kullanan operasyonu olan iş emri, yoksa fason operasyonu olan ilk iş emri."""
+    fason = {b.id("Resource", c) for c in ("F-ISIL", "F-KAPLA")}
+    ops = b.t["WorkOrderOperation"]
+    found = next((o for o in ops if o.get("ResourceId") == b.id("Resource", resource_code)), None) or next((o for o in ops if o.get("ResourceId") in fason), None)
+    return found["WorkOrderId"] if found else None
 
 
 def limit_month(ds: Dataset) -> tuple[date, date]:

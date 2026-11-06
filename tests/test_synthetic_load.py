@@ -69,7 +69,7 @@ def test_load_writes_every_table(db_engine, ds, loaded):
         lent = c.execute(text("SELECT LocationId, BusinessKey, BorrowedQuantity FROM core.BorrowPayback WHERE VersionFrom = :v"), {"v": v}).all()
         assert len(lent) == 1 and lent[0][0] == loaded["location_id"] and lent[0][1].startswith(f"{d.LOCATION_CODE}|MAM-006|PRJ-01|PRJ-02|")  # K-119
         ms = c.execute(text("SELECT MIN(LocationId), MIN(BusinessKey), MAX(QuotaRatio) FROM core.MaterialSupplier WHERE VersionFrom = :v"), {"v": v}).one()
-        assert ms[0] == loaded["location_id"] and ms[1].startswith(f"{d.LOCATION_CODE}|") and float(ms[2]) == 0.3  # K-118
+        assert ms[0] == loaded["location_id"] and ms[1].startswith(f"{d.LOCATION_CODE}|") and float(ms[2]) == 0.7  # K-118; ikinci tedarikçi %30, birinci %70 (MS.QUOTA_SUM, K-137)
         people = c.execute(text("SELECT COUNT(*), SUM(CAST(IsEmployee AS int)) FROM core.Resource WHERE VersionFrom = :v"), {"v": v}).one()
         assert tuple(people) == (40, 25)  # K-117: işçiler kaynak
         links = c.execute(text("SELECT COUNT(*) FROM core.ResourceGroupAssignment WHERE VersionFrom = :v"), {"v": v}).scalar()
@@ -122,8 +122,8 @@ def test_reload_replaces_previous_version_and_its_plans(db_engine, ds, loaded):
 LOCK_CASES = {
     "ParameterSet": ("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id VALUES (N'Gerçek set', 0)",
                      "DELETE FROM param.ParameterSet WHERE Id = :id", "parametre seti 'Gerçek set'"),
-    "Location": ("INSERT INTO core.Location (Code, Name, Type, IsSynthetic) OUTPUT inserted.Id "
-                 "VALUES (N'GERCEK-01', N'Gerçek fabrika', N'Tesis', 0)",
+    "Location": ("INSERT INTO core.Location (Code, Name, Type, IsActive, IsSynthetic) OUTPUT inserted.Id "
+                 "VALUES (N'GERCEK-01', N'Gerçek fabrika', N'Tesis', 1, 0)",
                  "DELETE FROM core.Location WHERE Id = :id", "lokasyon GERCEK-01"),
     "DataVersion": ("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType) OUTPUT inserted.Id "
                     "VALUES ((SELECT Id FROM core.Location WHERE Code = N'ORM-01'), SYSUTCDATETIME(), N'Tam')",

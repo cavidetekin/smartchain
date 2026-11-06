@@ -145,6 +145,7 @@ Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. M
 | Card, KpiCard | başlık, alt başlık, aksiyon; KPI değeri mono, durum varsa durum renginde |
 | Form alanları | metin, sayı (Türkçe 1.234,5; sağa yaslı), tarih (gg.aa.yyyy elle ya da takvimden: alanın yanındaki düğme Türkçe ay ve gün adlarıyla takvim açar, hafta Pazartesi başlar, her satırda ISO hafta numarası H44, "Bugün" düğmesi; ok tuşları gün/hafta, Page Up/Down ay, Enter seçer, Esc kapatır; görünür alana sığacak şekilde açılır; kendi bileşenimiz; giriş kutusu, takvim düğmesi hariç, her yazı boyutunda "gg.aa.yyyy"nin tamamını gösterecek en küçük genişlikte: `ch` cinsinden, eşit genişlikte rakamlarla), seçim, çok satırlı metin, onay kutusu, seçenek grubu, segment, arama; etiket, yardım, zorunlu işareti, hata. Etiket alanın üstünde, her alanda aynı boşlukla (seçenek grubu ve segment dahil). Arama kutusu tek satır yüksekliğinde, genişliği içeriğine göre. Çerçeve #B4B9C2 (mockup değeri) |
 | Alert | bilgi, olumlu, risk, hata; her tonun ikonu var; hata `role="alert"` |
+| TopStrip | ekranın üstündeki ayar ve filtre alanlarının şeridi (bkz. Üst şerit) |
 | OccupancyCell, OccupancyLegend | doluluk hücresi ve lejantı (eşikler parametre) |
 | Hücre işaretleri | manuel değişiklik (indigo çerçeve, U-4/U-16), dondurulmuş (gri ve kilit), kümülatif eksik (kiremit yazı); tablo 1.3'te kullanır |
 
@@ -170,6 +171,15 @@ Bütün ekranların tabloları tek bileşendir (`app/web/src/table/`), TanStack 
 - **Performans hedefi:** 50.000 satırlık tabloda filtre + iki alanlı sıralama + ilk 100 satır + iki sayım geliştirme makinesinde ortanca 300 ms altında (`tests/test_lists_perf.py`); 100.000 satırda DOM'da yalnız görünen satırlar ve en çok 2 × 10 tampon satır bulunur; aynı parça ikinci kez istenmez.
 - **Deneme sayfası:** `/tablo` menüde yer almaz; sentetik malzeme listesini gösterir (geliştirme ve gözden geçirme içindir). Gerçek malzeme ekranı 6.1'de.
 - 1.4'te: kayıtlı görünüm, kolon sürükleme ve sabitleme, gruplama, aktif filtre etiketleri, boş değer filtresi. 1.5'te: Excel'e aktarım ve yapıştırma.
+
+### Üst şerit (K-139; 3.4 ikinci demo)
+
+Ekranın üstündeki ayar ve filtre alanları (Entegrasyon'da SQL kaynağı; Validasyon kuralları'nda Tablo, Hata eşiği, Yeni kural) her ekranda aynı biçimdedir ve ortak bileşenle kurulur (`ui/TopStrip`):
+
+- **Kart:** beyaz kart (kart çerçevesi ve köşesi) içinde tek satır; sığmazsa alt satıra sarar.
+- **Etiket:** alanın solunda, aynı satırda; alan, düğme ve yazılar dikeyde ortalı, alan ve düğme aynı yükseklikte (normal boy). Yardım metni yok.
+- **Boşluk:** şerit ile tablo araç çubuğu (görünüm seçimi, Grupla, Alanlar) arasında her ekranda aynı boşluk, `--top-strip-gap` (`--space-3`). Hata bandı şeridin üstündedir, şerit ile araç çubuğu arasına girmez.
+- **Tek tanım:** ekrana özel şerit sınıfı yazılmaz (stil testi denetler). İlerleme ya da rol gösteren şeritler ve durum kartları (Sistem sağlığı servis şeridi) bu kurala girmez.
 
 ## Görünüm (1.4, K-89, K-90)
 
@@ -325,11 +335,11 @@ Başlık "Denetim izi", altında ekranı dolduran ortak tablo: Zaman, Kullanıc�
 
 ### Excel'den yükle penceresi (3.3)
 
-Dosya alanı yüksek, ortada yükleme ikonu; dosya seçilince adı ve boyutu aynı alanda. Yükleme modu yan yana iki seçim kartı (`ui` `ChoiceCards`): kalın başlık, altında açıklama, seçili kart indigo çerçeve. Hatalı satır bandı: "2 satır hatalı, ham veriye alınmaz."; hepsi hatalıysa "Geçerli satır yok, ham veriye alınmaz."
+İki adım: Dosya → Ön kontrol (3.4, K-134); "Devam" pencereyi kapatır, doğrulama arka planda çalışır. Dosya alanı yüksek, ortada yükleme ikonu; dosya seçilince adı ve boyutu aynı alanda. Yükleme modu yan yana iki seçim kartı (`ui` `ChoiceCards`): kalın başlık, altında açıklama, seçili kart indigo çerçeve. Hatalı satır bandı: "2 satır hatalı, ham veriye alınmaz."; hepsi hatalıysa "Geçerli satır yok, ham veriye alınmaz."
 
 ### Entegrasyon (ekran 23, 3.3, K-130)
 
-Üstte tek satır ince şerit: SQL kaynağı alanı, Kaydet, Bağlantıyı test et, "Hesap: …" yan yana. Ortak tablo: Tablo, Yöntem (seçim kutusu, System owner), Kaynak (view adı, hücre içi; System owner), Alan uyumu, Son durum, Son okuma. Alan uyumu tek kolon: tam uyumda "13 / 13" yeşil, yalnız isteğe bağlı kolon eksikse sarı, zorunlu kolon eksikse kırmızı (tablo okunamaz); bağlantı testi penceresinde de aynı. Bağlantı testinin özeti hizalı üç kolon: sabit genişlikte durum çipi, kontrol adı, ayrıntı. Satır menüsü: Önizleme (20 satır, satır bulgularıyla), View sürümleri. API kartı yok (11.5), Zamanlanmış işler kartı 5.6'da. Menüde Admin ve üstü görür.
+Üstte üst şerit (bkz. Üst şerit): SQL kaynağı alanı, Kaydet, Bağlantıyı test et, "Hesap: …" yan yana. Ortak tablo: Tablo, Yöntem (seçim kutusu, System owner), Kaynak (view adı, hücre içi; System owner), Alan uyumu, Son durum, Son okuma. Alan uyumu tek kolon: tam uyumda "13 / 13" yeşil, yalnız isteğe bağlı kolon eksikse sarı, zorunlu kolon eksikse kırmızı (tablo okunamaz); bağlantı testi penceresinde de aynı. Bağlantı testinin özeti hizalı üç kolon: sabit genişlikte durum çipi, kontrol adı, ayrıntı. Satır menüsü: Önizleme (20 satır, satır bulgularıyla), View sürümleri. API kartı yok (11.5), Zamanlanmış işler kartı 5.6'da. Menüde Admin ve üstü görür.
 
 ### Tablo içi düzenleme (K-132)
 
@@ -337,12 +347,28 @@ Hücre düzenleyicileri `table/CellEditors.tsx`, ortak tablonun `cellRender`'ıy
 
 ### Bilgi bandı, durum çipi, ipucu (K-132)
 
-- **Bilgi bandı:** Pencere ve kartlarda ekranın nasıl çalıştığını anlatan bant olmaz. Bant yalnız durum, uyarı ya da hata içindir.
-- **Durum çipleri:** Yeşil Alındı, Uyumlu. Sarı Uyarılı, Tamamlanmadı. Kırmızı Hata, Hatalı. Gri Atlandı, Yeni veri yok, Veri güncellemesi devam ediyor. Okunacak durum değildir, çip olmaz.
+- **Bilgi bandı:** Pencere ve kartlarda ekranın nasıl çalıştığını anlatan bant olmaz. Bant yalnız durum, uyarı ya da hata içindir; yapılan işin onayı ("sıraya girdi", "dosya hazırlanıyor") bant değildir, çip, iş paneli ya da bildirim gösterir (K-139). 3.4 taramasında kaldırılanlar: Validasyon kuralları "n tablonun doğrulaması sıraya girdi", çekmecede "Doğrulama sıraya girdi." ve "Dosya arka planda hazırlanıyor; bitince bildirim gelir.".
+- **Durum çipleri:** Yeşil Alındı, Uyumlu, Geçti. Sarı Uyarılı, Tamamlanmadı. Kırmızı Hata, Hatalı, Valide edilemedi. Gri Atlandı, Yeni veri yok, Veri güncellemesi devam ediyor, Sırada. Süren iş (Kurallar çalışıyor, Valide ediliyor) nötr çip ve dönen gösterge. Validasyon sınıfı (Hata, Uyarı, Bilgi) saydam pastel çiptir (K-139). Okunacak durum değildir, çip olmaz.
 - **İpucu:** Açıklama taşıyan ipucu `ui/Tooltip`'le; odakta da görünür, klavyeyle okunur.
 - **Pencere tabloları:** `table/LocalTable.tsx`: ortak tablonun görünümü (renkli başlık, tek satır, sıralama), satırlar sunucu listesinden değil pencerenin verisinden gelir. Önizleme, Veri çek, Çekim sonucu, Bağlantı testi. **Tek satır kuralının istisnası:** uzun metin kolonları (Not, Neden, Sorun) gerektiğinde alt satıra kayar. Pencere tabloları pencereye sığar, yatay kaydırma gerekmez: kolon genişliği içerikten, uzun metin kolonu kalan genişliği alır. Sunucu listesi olan pencere tablosu (bulgular) ortak tablonun pencere kipindedir (`DataTable fit wrapFields`): sabitleme ve genişlik ayarı yok, satır yüksekliği ölçülür. Kolonu çok olan önizlemede (ör. Malzeme, 33 alan) yatay kaydırma kalır.
 - **Sayı kartı (`KpiCard`):** yarı yükseklik; etiket üstte küçük, sayı altında; bütün ekranlarda aynı.
 - **Düğmeler (K-131):** `primary` indigo, `secondary` tonal mor, `danger` kiremit çerçeve, `neutral` Vazgeç ve araç çubuğu, `ghost` sessiz.
+
+### Validasyon çipi ve çekmece (3.4, K-134, K-139; ekran 02, fonksiyon 04)
+
+Veri yükleme tablosunda "Validasyon" kolonu: tablo başına çip, sayıyla ("Uyarılı · 3"); çip düğmedir, tıklayınca çekmece açılır. Validasyonu hiç çalışmamış tabloda çip yok. **Çekmece** (`ui/Drawer.tsx`, ortak bileşen): sağdan açılır, sayfanın üstünde durur, arkası karartılmaz, Esc ve kapatma düğmesiyle kapanır, odak içinde kalır; genişliği pencerenin yarısı, en az 640 px. Üstte başlık ("Validasyon · Malzeme" ve çip), altında son parti satırı (zaman · yöntem · kişi) ve güncel kayıt sayısı. Dört küçük sayı kartı: Hatalı satır, Uyarılı satır, Bilgilendirme satırı, Hata oranı (büyük "%0,97", altında küçük "eşik yok" ya da "eşik %0,50"); kontrol türü kırılımı yok. Segment: "Bulgular" kural bazındadır (pencere tablosu: Kural, Sınıf çipi, Satır sayısı; ağırdan hafife, çoktan aza; tablo düzeyi bulguda mesaj ve "—"); kural adı bağlantıdır, tıklayınca "Kayıtlar" o kurala süzülmüş açılır, üstte kaldırılabilir "Kural: …" çipi (süzme `RuleIds` alanıyla, kolonu görünmez). "Kayıtlar": ortak tablo; ilk kolonlar Sorun ve Sınıf, sonra Satır ve kaydın alanları; yatay kaydırma. Sağ altta "Hatalı kayıtları indir" (ikincil) ve "Yeniden valide et" (ikincil; Key user ve üstü). Bildirim: "Validasyon bitti · Malzeme · Uyarılı · 3", "Sonucu aç" Veri yükleme ekranını açar ve çekmeceyi gösterir.
+
+### İş paneli (K-69, K-139)
+
+Kabuktaki iş göstergesine tıklayınca açılan panel kartlardan oluşur. Her iş iki satırlı kart: üstte kalın iş ve tablo ("Validasyon · Stok"); altta durum çipi (bitmiş validasyonda kırmızı Hatalı · 2, sarı Uyarılı · 3, yeşil Geçti; öteki durumlar gri, sürende dönen gösterge) ve saat; sağda kısa "Aç" (validasyonda çekmece, ön kontrolde pencere, çekimde sonuç penceresi; Excel aktarımında "İndir"). Bir çekim ve onun validasyonları (toplu çekim, `validation.group`) tek karttır: başlık "Veri çekme · 6 tablo · 15:41", altında özet ("2 Hatalı · 1 Uyarılı · 3 Geçti"; tablolar arası validasyon bittiyse tabloların onun sonundaki sonucu); başlığa tıklayınca tablo satırları açılır (tablo, çip, "Aç"), tablolar arası validasyon satırı en sonda. Panelde son 5 kart; altta "Tümünü gör" Sistem sağlığının iş listesine gider (yetkisi olana). Sıradaki işte "İptal" ve "Herkesin işleri" seçeneği (K-100) kalır.
+
+### Validasyon kuralları (3.4, K-136, K-139; ekran 27, fonksiyon 100)
+
+Veri menüsünde Veri kurallarından sonra, adres `/veri/validasyon-kurallari`. Üstte üst şerit (bkz. Üst şerit): tablo seçimi ("Tümü" ya da tablo), seçili tablonun hata eşiği (sayı, %) ve "Yeni kural" (birincil); "Tümü"de eşik ve Yeni kural pasif. Ortak tablo: Tablo, Kural (kullanıcı dilinde ad), Koşul (okunur cümle, alt satıra kayar), Sınıf, Mesaj, Tür (çip: Hazır nötr, Kullanıcı mor), Aktif (anahtar); Kod kolonu varsayılan görünümde gizli, Alanlar'dan açılır. Yapısal kontroller listede yok. **Sınıf** saydam pastel çiptir (Hata açık kırmızı, Uyarı açık sarı, Bilgi açık mavi-gri); yazma yetkisinde çip seçim kutusudur, tıklayınca seçenekler açılır. Satır menüsü: "Düzenle" (kullanıcı kuralı ve koşulu editörle ifade edilen hazır kural; ötekilerde pasif, ipucu "yalnız sınıf ve aktiflik değişir"), hazır kuralda "İlk hâline döndür" (onay penceresi), kullanıcı kuralında "Sil". Sınıf ve aktiflik K-132 ile toplu kaydedilir; kayıttan sonra "Yeniden valide et" önerisi bir onay penceresidir (değişen tablolar listelenir); kabul edilince bant çıkmaz, işler iş panelinde görünür. Key user salt okunur görür.
+
+**Kural penceresi:** başlığın sağında Aktif anahtarı; Kural adı ve Mesaj yan yana; Sınıf üç parçalı seçim, seçili olan kendi pastel renginde; altında koşul editörü. Hazır kuralda alt satırda "İlk hâline döndür" (nötr düğme). Hazır kuralda yalnız değişen parçalar kaydedilir: yalnız sınıf ya da aktiflik değişirse kural "düzenlenmiş" sayılmaz.
+
+**Koşul editörü** (`table/ConditionEditor.tsx`, ortak bileşen; 4.2 veri kuralları da kullanır): bölüm başlığı "Koşullar"; her grup "Koşul Grubu 1", "Koşul Grubu 2" başlıklı kart, kartlar arasında belirgin "VEYA" ayırıcı. Her koşul tek satır: solda ikinci satırdan itibaren küçük "ve", alan, operatör, küçük "Değer / Alan" anahtarı, değer kutusu (Alan seçiliyse öteki alanın seçimi), kaldır düğmesi; satır etiketleri yalnız ekran okuyucuda. Operatörler: =, ≠, >, <, ≥, ≤, İçerir, İle başlar, Listede, Boş, Boş değil; metin dışı alanda İçerir ve İle başlar yok; "Değer / Alan" anahtarı yalnız karşılaştırmalarda. Boş ve Boş değil seçilince değer kutusu ve anahtar gizlenir. Değer girişi alan tipine göre (sayı, tarih, değer listesinde = ve ≠ için seçim); Listede virgülle. "+ Koşul ekle" grubun içinde, "+ VEYA grubu ekle" en altta mor ikincil düğme. Okunur cümle satırı yoktur (cümle listede Koşul kolonundadır).
 
 ## Durum
 
@@ -355,7 +381,7 @@ Hücre düzenleyicileri `table/CellEditors.tsx`, ortak tablonun `cellRender`'ıy
 | Tablo bileşeni ve liste sorgu sözleşmesi | uygulandı (1.3) |
 | Görünüm: kayıtlı görünüm, kolon düzeni, gruplama, filtre etiketleri, boş | uygulandı (1.4) |
 | Dışa aktarım: Excel'e aktarım, kapsam penceresi, arka plan ve bildirim | uygulandı (1.5) |
-| Excel yükleme penceresi (ekran 02, fonksiyon 03): Dosya, Ön kontrol, Doğrulama; "Ön kontrol bitti" bildirimi ve "Sonucu aç"; tablonun sabit filtresi (`baseFilters`) | uygulandı (3.2) |
+| Excel yükleme penceresi (ekran 02, fonksiyon 03): Dosya, Ön kontrol (3.4'te iki adım); "Ön kontrol bitti" bildirimi ve "Sonucu aç"; tablonun sabit filtresi (`baseFilters`) | uygulandı (3.2) |
 | Kolon başlığı ipucu: yalnız alanın açıklaması (veri sözlüğü ya da kolon notu); açıklama yoksa ipucu çıkmaz, kullanım metni yok (K-129) | uygulandı (3.2) |
 | Koşullu biçimlendirme: kurallar, palet, okunurluk, ikon, Excel'e taşınma | uygulandı (1.6) |
 | Giriş ve oturum: giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü, hareketsizlik | uygulandı (2.1) |
@@ -365,3 +391,6 @@ Hücre düzenleyicileri `table/CellEditors.tsx`, ortak tablonun `cellRender`'ıy
 | Sistem sağlığı: kartlar, servis şeridi, iş kuyruğu, son çalışmalar, hatalar; iptal nedeni, öne alma | uygulandı (2.5) |
 | Kullanıcılar ekranı: liste, satır menüsü, pencereler, geçici şifre; yazı boyutu kullanıcı kaydında | uygulandı (2.3) |
 | Yetki: role göre menü, yetkisiz ekran, pasif düğme ipucu, 403 bildirimi, iş panelinde iptal | uygulandı (2.2) |
+| Validasyon çipi ve çekmece (`ui/Drawer`), bildirim; Validasyon kuralları (ekran 27), ortak koşul editörü (`table/ConditionEditor`); Excel'den yükle iki adım | uygulandı (3.4) |
+| İş paneli kartları, çekim kartı; kural bazında Bulgular; pastel sınıf çipi; kural penceresi ve koşul editörünün yeni düzeni; bant taraması (K-139) | uygulandı (3.4) |
+| Üst şerit standardı (`ui/TopStrip`): Entegrasyon ve Validasyon kuralları (K-139) | uygulandı (3.4) |

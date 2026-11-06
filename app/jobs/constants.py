@@ -12,7 +12,8 @@ CHANNEL_NIGHT = "Gece"
 CHANNEL_INTERACTIVE = "Hesaplama"
 CHANNEL_EXCEL = "Excel"  # K-93, K-129: dışa aktarım ve ön kontrol; kendi sınırı, yeniden hesabı bekletmez
 CHANNEL_PULL = "Veri çekme"  # K-130: elle ve gece çekim; aynı anda tek çekim
-CHANNELS = (CHANNEL_INTERACTIVE, CHANNEL_NIGHT, CHANNEL_EXCEL, CHANNEL_PULL)
+CHANNEL_PROCESSING = "Veri işleme"  # K-134: rules, tablo içi ve tablolar arası validasyon
+CHANNELS = (CHANNEL_INTERACTIVE, CHANNEL_NIGHT, CHANNEL_EXCEL, CHANNEL_PULL, CHANNEL_PROCESSING)
 
 TYPE_NIGHT_SCENARIO = "Gece senaryosu"
 TYPE_WORKSPACE = "Çalışma"
@@ -21,4 +22,5 @@ TYPE_DATE_QUERY = "Termin sorgusu"
 TYPE_EXPORT = "Dışa aktarım"  # K-91, K-93: motor servisi Excel dosyası üretir
 TYPE_PRECHECK = "Excel ön kontrol"  # K-129: motor servisi yüklenen dosyayı kontrol eder
 TYPE_PULL = "Veri çekme"  # K-130: motor servisi view'ları okur, stg'ye yazar
-JOB_TYPES = (TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE, TYPE_LOAD, TYPE_DATE_QUERY, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL)
+TYPE_VALIDATION = "Validasyon"  # K-134: staging'in güncel hâlinde rules → validation
+JOB_TYPES = (TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE, TYPE_LOAD, TYPE_DATE_QUERY, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_VALIDATION)

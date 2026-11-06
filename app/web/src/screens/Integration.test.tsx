@@ -75,7 +75,7 @@ describe("ekran 23", () => {
 
   it("System owner: şeritte alan, Kaydet indigo, Bağlantıyı test et tonal mor, hesap", async () => {
     await open("System owner");
-    const strip = (await screen.findByRole("textbox", { name: /SQL kaynağı/ })).closest(".sc-integration-strip") as HTMLElement;
+    const strip = (await screen.findByRole("textbox", { name: /SQL kaynağı/ })).closest(".sc-top-strip") as HTMLElement;
     expect(within(strip).getByRole("button", { name: "Kaydet" }).className).toContain("sc-btn--primary");
     expect(within(strip).getByRole("button", { name: "Bağlantıyı test et" }).className).toContain("sc-btn--secondary");
     expect(await within(strip).findByText(/Hesap: SUNUCU/)).toBeInTheDocument();

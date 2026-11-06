@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.jobs import queue
-from app.jobs.constants import CHANNEL_NIGHT, TYPE_LOAD, TYPE_PRECHECK
+from app.jobs.constants import CHANNEL_NIGHT, TYPE_LOAD, TYPE_PRECHECK, TYPE_VALIDATION
 from app.jobs.settings import read_settings
 from ..errors import DB_UNAVAILABLE, AppError
 from ..permissions import SYSTEM_OWNER, Access, role_message
@@ -31,6 +31,17 @@ def _import_batch(job: dict) -> int | None:
     return json.loads(job["Payload"]).get("batch_id")
 
 
+def _validation(job: dict) -> dict | None:
+    """Validasyon işinin tablosu, tetikleyicisi, grubu (toplu çekimde çekim işi) ve sonucu: iş paneli ve bildirim (K-134, K-139)."""
+    if job["JobType"] != TYPE_VALIDATION or not job["Payload"]:
+        return None
+    payload = json.loads(job["Payload"])
+    result = json.loads(job.get("Result") or "{}") if job.get("Result") else {}
+    return {"entity": payload.get("entity"), "name": result.get("name"), "trigger": payload.get("trigger"), "group": payload.get("group"),
+            "scope": payload.get("scope"), "outcome": result.get("outcome"), "error_rows": result.get("error_rows"),
+            "warning_rows": result.get("warning_rows"), "tables": result.get("tables")}
+
+
 def to_public(job: dict) -> dict:
     """API ve WebSocket'te işin görünen hali. Payload (iç parametreler) gösterilmez."""
     return {
@@ -47,6 +58,7 @@ def to_public(job: dict) -> dict:
         "cancelled_by_name": job["CancelledByName"],
         "progress": job["Progress"],
         "import_batch_id": _import_batch(job),
+        "validation": _validation(job),
         "attempt": job["Attempt"],
         "error_text": job["ErrorText"],
         "dismissed": job.get("DismissedAt") is not None,

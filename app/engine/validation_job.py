@@ -1,0 +1,45 @@
+"""Validasyon işi (K-134, K-139): motor servisinin başlattığı ayrı süreç (pull_job deseni).
+
+Düşerse iş Hata, çalışma Valide edilemedi olur; önceki bulgular kalır.
+"""
+import json
+import logging
+
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.jobs import queue
+from .job import FORMAT
+
+log = logging.getLogger("smartchain.engine.validation")
+
+
+def run_validation_job(job_id: int, attempt: int) -> None:
+    """Servis bunu ayrı süreçte çağırır; testler doğrudan da çağırabilir."""
+    from app.api.db import get_engine
+    from app.validation import engine
+
+    db = get_engine()
+    with Session(db) as session:
+        payload = json.loads(session.execute(text("SELECT Payload FROM adm.Job WHERE Id = :id"), {"id": job_id}).scalar() or "{}")
+
+        def progress(stage: str) -> None:
+            with Session(db) as s:
+                queue.set_progress(s, job_id, attempt, stage[:100])
+
+        try:
+            if engine.run_job(session, job_id, attempt, payload, progress):
+                log.info("Validasyon işi %s bitti", job_id)
+            else:
+                log.warning("İş %s (deneme %s) artık bu sürecin değil", job_id, attempt)
+        except Exception:
+            log.exception("Validasyon işi %s hata", job_id)
+            with Session(db) as s:
+                queue.fail(s, job_id, attempt, f"Validasyon tamamlanamadı. Destek için iş numarası: {job_id}")
+            engine.fail_run(session, payload)
+
+
+def validation_process_main(job_id: int, attempt: int, _time_budget_seconds: int) -> None:
+    """Ayrı sürecin giriş noktası (multiprocessing spawn)."""
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    run_validation_job(job_id, attempt)

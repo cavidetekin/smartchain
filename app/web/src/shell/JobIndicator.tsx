@@ -1,17 +1,21 @@
 // İş kuyruğu göstergesi (K-69, fonksiyon 48): açılışta /api/jobs, sonra WebSocket ile canlı.
+// Panel kartlardan oluşur (K-139): her iş iki satır (üstte iş ve tablo, altta durum çipi ve saat, sağda "Aç"); bir çekim ve onun
+// validasyonları tek kart, tıklayınca tablo satırları açılır. Son 5 kart; "Tümünü gör" Sistem sağlığının iş listesine gider.
 // Bağlantı koparsa 10 sn'de yeniden bağlanır; bu arada 30 sn'de bir sorgulanır (yedek mod).
 // Excel aktarımı çalışırken çip ilerlemeyi yazar ("Excel hazırlanıyor · 120.000 / 142.000 satır"); biten aktarım
 // listede indirilir (K-91). Sıradaki işte "İptal": kendi işi herkese (48), başkasının işi Admin ve System owner'a (93);
 // "Herkesin işleri" seçeneği yalnız onlarda açık, diğer rollerde pasif ve ipuçlu (K-100).
-import { Activity, LoaderCircle } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useNavigate } from "react-router";
 
-import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_DONE, JOB_EXPORT, JOB_FAILED, JOB_LOAD, JOB_PRECHECK, JOB_PULL, pullResultPath, type Job } from "../api/client";
+import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_DONE, JOB_EXPORT, JOB_FAILED, JOB_LOAD, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job,
+  validationResultPath } from "../api/client";
 import { connect, type ConnectionState, socketUrl } from "../api/socket";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
+import { formatDateTime, serverDate } from "../format";
 import { tr } from "../i18n/tr";
 import { CancelJobDialog } from "../screens/CancelJobDialog";
 import { Checkbox } from "../ui";
@@ -22,6 +26,8 @@ const RUNNING = "Çalışıyor";
 const QUEUED = "Sırada";
 const CANCELLED = "İptal";
 const SYSTEM_OWNER = "System owner";
+const SYSTEM_HEALTH = "/yonetim/sistem-sagligi";
+const CROSS_SCOPE = "Tablolar arası";
 
 /** "120.000 / 142.000 satır" → 0,845; okunamazsa null (çubuk çizilmez). */
 export function progressRatio(progress: string | null | undefined): number | null {
@@ -29,6 +35,65 @@ export function progressRatio(progress: string | null | undefined): number | nul
   if (!m) return null;
   const [done, all] = [Number(m[1].replaceAll(".", "")), Number(m[2].replaceAll(".", ""))];
   return all > 0 ? Math.min(1, done / all) : null;
+}
+
+/** İş panelinin kartı (K-139): tek iş ya da bir çekim ve onun validasyonları. */
+export interface JobCard {
+  job: Job;
+  /** Çekim kartında grubun validasyon işleri (tablo içi, en sonda tablolar arası). */
+  children?: Job[];
+}
+
+export const CARD_LIMIT = 5;
+
+/** Kartlar: yeniden eskiye; toplu çekimin validasyonları (`validation.group` = çekim işi) çekim kartına girer. */
+export function buildCards(jobs: Job[]): JobCard[] {
+  const sorted = [...jobs].sort((a, b) => b.id - a.id);
+  const pulls = new Set(sorted.filter((j) => j.job_type === JOB_PULL).map((j) => j.id));
+  const grouped = new Map<number, Job[]>();
+  const cards: JobCard[] = [];
+  for (const j of sorted) {
+    const group = j.job_type === JOB_VALIDATION ? j.validation?.group : null;
+    if (group && pulls.has(group)) grouped.set(group, [...(grouped.get(group) ?? []), j]);
+    else cards.push({ job: j });
+  }
+  return cards.map((c) => (c.job.job_type !== JOB_PULL ? c : {
+    ...c,
+    children: (grouped.get(c.job.id) ?? []).sort((a, b) => Number(a.validation?.scope === CROSS_SCOPE) - Number(b.validation?.scope === CROSS_SCOPE) || a.id - b.id),
+  }));
+}
+
+const OUTCOME_TONE: Record<string, string> = { "Hatalı": "critical", "Uyarılı": "risk", "Geçti": "ok" };
+const hm = (iso: string | null | undefined) => (iso ? formatDateTime(serverDate(iso)).slice(-5) : "");
+
+/** Kartın durum çipi: bitmiş validasyonda sonuç ve sayı (kırmızı, sarı, yeşil); öteki durumlar gri (K-139). */
+export function cardState(j: Job): { text: string; tone: string; running: boolean } {
+  const v = j.validation;
+  if (j.job_type === JOB_VALIDATION && j.status === JOB_DONE && v?.outcome) {
+    const count = v.outcome === "Hatalı" ? v.error_rows : v.outcome === "Uyarılı" ? v.warning_rows : null;
+    return { text: tr.validation.chip(v.outcome, count ?? null), tone: OUTCOME_TONE[v.outcome] ?? "neutral", running: false };
+  }
+  if (j.status === JOB_FAILED) return { text: j.status, tone: "critical", running: false };
+  const extra = j.queue_position ? ` · ${tr.jobs.queuePosition(j.queue_position)}` : j.status === RUNNING && j.progress ? ` · ${j.progress}` : "";
+  return { text: `${j.status}${extra}`, tone: "neutral", running: j.status === RUNNING };
+}
+
+/** Çekim kartının özeti: tabloların son sonucu ("2 Hatalı · 1 Uyarılı · 3 Geçti"); tablolar arası bittiyse onun sonucu geçerlidir. */
+export function groupOutcomes(children: Job[]): { outcome: string; count: number }[] {
+  const cross = children.find((c) => c.validation?.scope === CROSS_SCOPE && c.status === JOB_DONE && c.validation?.tables);
+  const outcomes = cross
+    ? cross.validation!.tables!.map((t) => t.outcome)
+    : children.filter((c) => c.validation?.scope !== CROSS_SCOPE && c.status === JOB_DONE && c.validation?.outcome).map((c) => c.validation!.outcome!);
+  return ["Hatalı", "Uyarılı", "Geçti"].map((o) => ({ outcome: o, count: outcomes.filter((x) => x === o).length })).filter((x) => x.count);
+}
+
+function StateTag({ state }: { state: { text: string; tone: string; running: boolean } }) {
+  return (
+    <span className={`sc-tag sc-tag--${state.tone}`}>
+      {state.running && <LoaderCircle className="sc-spin" aria-hidden width={12} height={12} />}
+      {state.text}
+    </span>
+  );
 }
 
 export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
@@ -41,6 +106,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
   const navigate = useNavigate();
   const canSeeAll = can(me, 93, "read", false);
   const [cancelling, setCancelling] = useState<Job | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const toldCancelled = useRef(new Set<number>());
   const onJobRef = useRef(onJob);
   useEffect(() => {
@@ -127,10 +193,11 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
   const running = all.filter((j) => j.status === RUNNING).length;
   const queued = all.filter((j) => j.status === QUEUED).length;
   const delayed = conn === "connected" ? undefined : tr.jobs.delayed;  // sorun yokken metin yok
-  const recent = (everyone ?? all).sort((a, b) => b.id - a.id).slice(0, showAll ? 30 : 10);
+  const cards = buildCards(everyone ?? all).slice(0, CARD_LIMIT);
   const exporting = all.find((j) => j.job_type === JOB_EXPORT && j.status === RUNNING)
     ?? all.find((j) => j.job_type === JOB_EXPORT && j.status === QUEUED);
   const ratio = exporting?.status === RUNNING ? progressRatio(exporting.progress) : null;
+  const canSeeHealth = can(me, 94, "read", false);
 
   const download = async (j: Job) => {
     setDownloadError(null);
@@ -139,6 +206,91 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
     } catch (e) {
       setDownloadError(e instanceof Error ? e.message : String(e));
     }
+  };
+  const go = (path: string) => {
+    setOpen(false);
+    navigate(path);
+  };
+  const mine = (j: Job) => (j.requested_by ?? me.id) === me.id;
+  const ended = (j: Job) => j.status === JOB_DONE || j.status === JOB_FAILED;
+
+  /** Kartın sağındaki "Aç" (ya da "İndir"): iş türüne göre sonuç. */
+  const action = (j: Job, title: string) => {
+    if (j.job_type === JOB_EXPORT && j.status === JOB_DONE && mine(j)) {
+      return <button type="button" className="sc-link-btn" onClick={() => download(j)}>{tr.jobs.download}</button>;
+    }
+    const path = j.job_type === JOB_PRECHECK && j.status === JOB_DONE && j.import_batch_id && mine(j) ? importResultPath(j.import_batch_id)
+      : j.job_type === JOB_VALIDATION && j.validation?.entity && ended(j) ? validationResultPath(j.validation.entity)
+        : j.job_type === JOB_PULL && ended(j) && mine(j) ? pullResultPath(j.id) : null;
+    return path ? <button type="button" className="sc-link-btn" aria-label={tr.jobs.openOf(title)} onClick={() => go(path)}>{tr.jobs.open}</button> : null;
+  };
+  const meta = (j: Job) => (
+    <>
+      {showAll && j.requested_by !== me.id && j.requested_by_name && <span className="sc-muted">{tr.jobs.ownerOf(j.requested_by_name)}</span>}
+      {j.cancel_reason && <span className="sc-muted">{j.cancel_reason}</span>}
+      {canCancel(j) && (
+        <button type="button" className="sc-link-btn" onClick={() => void cancel(j)} aria-label={tr.jobs.cancelOf(j.id)}>{tr.jobs.cancel}</button>
+      )}
+    </>
+  );
+
+  const single = (j: Job) => {
+    const title = j.summary ?? j.job_type;
+    return (
+      <li key={j.id} className="sc-job-card">
+        <div className="sc-job-card-main">
+          <span className="sc-job-card-title">{title}</span>
+          <span className="sc-job-card-sub"><StateTag state={cardState(j)} /><span className="sc-num sc-muted">{hm(j.created_at ?? j.updated_at)}</span>{meta(j)}</span>
+        </div>
+        <span className="sc-job-card-action">{action(j, title)}</span>
+      </li>
+    );
+  };
+
+  const group = (card: JobCard) => {
+    const j = card.job;
+    const kids = card.children ?? [];
+    const title = `${j.summary ?? j.job_type} · ${hm(j.created_at ?? j.updated_at)}`;
+    const busy = j.status === RUNNING || j.status === QUEUED || kids.some((c) => c.status === RUNNING || c.status === QUEUED);
+    const parts = groupOutcomes(kids);
+    const isOpen = expanded.has(j.id);
+    const cross = kids.find((c) => c.validation?.scope === CROSS_SCOPE && c.status === JOB_DONE)?.validation?.tables ?? null;
+    const shownState = (c: Job) => {  // tablolar arası bittiyse tablonun son sonucu onunkidir
+      const t = cross?.find((x) => x.entity === c.validation?.entity);
+      return t ? cardState({ ...c, validation: { ...c.validation!, outcome: t.outcome, error_rows: t.error_rows, warning_rows: t.warning_rows } }) : cardState(c);
+    };
+    return (
+      <li key={j.id} className="sc-job-card">
+        <div className="sc-job-card-main">
+          <button type="button" className="sc-job-card-title sc-job-card-toggle" aria-expanded={isOpen} aria-label={tr.jobs.toggleGroup(title)}
+                  onClick={() => setExpanded((s) => { const n = new Set(s); if (n.has(j.id)) n.delete(j.id); else n.add(j.id); return n; })}>
+            {isOpen ? <ChevronDown aria-hidden width={14} height={14} /> : <ChevronRight aria-hidden width={14} height={14} />}
+            {title}
+          </button>
+          <span className="sc-job-card-sub">
+            {busy || !parts.length ? <StateTag state={cardState(j.status === JOB_DONE && busy ? { ...j, status: RUNNING, progress: null } : j)} /> : parts.map((p) => (
+              <span key={p.outcome} className={`sc-tag sc-tag--${OUTCOME_TONE[p.outcome]}`}>{tr.jobs.stateCount(p.count, p.outcome)}</span>
+            ))}
+            {meta(j)}
+          </span>
+          {isOpen && (
+            <ul className="sc-job-card-rows">
+              {kids.map((c) => {
+                const name = c.validation?.scope === CROSS_SCOPE ? tr.jobs.crossTables : c.validation?.name ?? c.summary ?? c.job_type;
+                return (
+                  <li key={c.id}>
+                    <span>{name}</span>
+                    <StateTag state={shownState(c)} />
+                    <span className="sc-job-card-action">{c.validation?.scope === CROSS_SCOPE ? null : action(c, name)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+        <span className="sc-job-card-action">{action(j, title)}</span>
+      </li>
+    );
   };
 
   return (
@@ -160,39 +312,22 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
         <span className={`sc-dot is-${conn}`} {...(delayed ? { "aria-label": delayed, role: "img" } : { "aria-hidden": true })} />
       </button>
       {open && (
-        <div className="sc-popover" role="dialog" aria-label={tr.jobs.title}>
+        <div className="sc-popover sc-jobs-panel" role="dialog" aria-label={tr.jobs.title}>
           <div className="sc-popover-title">{tr.jobs.title}</div>
           {delayed && <p className="sc-muted">{delayed}</p>}
           <span title={canSeeAll ? undefined : forbiddenReason(93, "read")}>
             <Checkbox label={tr.jobs.allJobs} checked={showAll} disabled={!canSeeAll}
                       onChange={(on) => (on ? void loadAll() : setEveryone(null))} />
           </span>
-          {recent.length === 0 ? (
+          {cards.length === 0 ? (
             <p className="sc-muted">{tr.jobs.empty}</p>
           ) : (
             <ul className="sc-job-list">
-              {recent.map((j) => (
-                <li key={j.id}>
-                  {j.summary ?? j.job_type} · {j.status}
-                  {j.queue_position ? ` · ${tr.jobs.queuePosition(j.queue_position)}` : j.progress ? ` · ${j.progress}` : ""}
-                  {showAll && j.requested_by !== me.id && j.requested_by_name && ` · ${tr.jobs.ownerOf(j.requested_by_name)}`}
-                  {j.job_type === JOB_EXPORT && j.status === JOB_DONE && (j.requested_by ?? me.id) === me.id && (
-                    <> · <button type="button" className="sc-link-btn" onClick={() => download(j)}>{tr.jobs.download}</button></>
-                  )}
-                  {j.job_type === JOB_PRECHECK && j.status === JOB_DONE && j.import_batch_id && (j.requested_by ?? me.id) === me.id && (
-                    <> · <button type="button" className="sc-link-btn" onClick={() => { setOpen(false); navigate(importResultPath(j.import_batch_id!)); }}>{tr.jobs.openResult}</button></>
-                  )}
-                  {j.job_type === JOB_PULL && (j.status === JOB_DONE || j.status === JOB_FAILED) && (j.requested_by ?? me.id) === me.id && (
-                    <> · <button type="button" className="sc-link-btn" onClick={() => { setOpen(false); navigate(pullResultPath(j.id)); }}>{tr.jobs.openResult}</button></>
-                  )}
-                  {j.cancel_reason && ` · ${j.cancel_reason}`}
-                  {canCancel(j) && (
-                    <> · <button type="button" className="sc-link-btn" onClick={() => void cancel(j)}
-                                 aria-label={tr.jobs.cancelOf(j.id)}>{tr.jobs.cancel}</button></>
-                  )}
-                </li>
-              ))}
+              {cards.map((c) => (c.job.job_type === JOB_PULL && c.children?.length ? group(c) : single(c.job)))}
             </ul>
+          )}
+          {canSeeHealth && (
+            <button type="button" className="sc-link-btn sc-jobs-all" onClick={() => go(SYSTEM_HEALTH)}>{tr.jobs.seeAll}</button>
           )}
           {downloadError && <p className="sc-field-error" role="alert">{downloadError}</p>}
         </div>

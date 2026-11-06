@@ -15,12 +15,12 @@ SOURCE = sa.select(
     sa.func.row_number().over(order_by=(FD.c.TableName, FD.c.FieldName)).label("Id"),
     FD.c.TableName, FD.c.FieldName,
     sa.func.coalesce(FD.c.Label, FD.c.StandardLabel).label("DisplayLabel"), FD.c.Description,
-    FD.c.FieldClass, FD.c.ValuePriority, FD.c.ManualOverrides, FD.c.EditableInWorkspace, FD.c.IsRequired, FD.c.DefaultValue,
+    FD.c.FieldClass, FD.c.ValuePriority, FD.c.ManualOverrides, FD.c.EditableInWorkspace, FD.c.IsRequired, FD.c.IfEmpty,
     sa.cast(sa.case((FD.c.FieldName.like("Additional%"), 1), else_=0), sa.Boolean).label("IsAdditional"),
 ).subquery("fd")
 
 FIELDS = ("TableName", "FieldName", "DisplayLabel", "Description", "FieldClass", "ValuePriority", "ManualOverrides",
-          "EditableInWorkspace", "IsRequired", "DefaultValue", "IsAdditional")
+          "EditableInWorkspace", "IsRequired", "IfEmpty", "IsAdditional")
 
 FIELD_DEFINITIONS = ListDefinition(
     name="field-definitions",
@@ -36,7 +36,7 @@ FIELD_DEFINITIONS = ListDefinition(
     default_sort=(("TableName", "asc"), ("FieldName", "asc")),
     labels={"TableName": "Tablo", "FieldName": "Alan", "DisplayLabel": "Etiket", "Description": "Açıklama", "FieldClass": "Sınıf",
             "ValuePriority": "Değer önceliği", "ManualOverrides": "Manuel", "EditableInWorkspace": "Senaryo",
-            "IsRequired": "Zorunlu", "DefaultValue": "Varsayılan değer", "IsAdditional": "Ek alan"},
+            "IsRequired": "Zorunlu", "IfEmpty": "Boşsa", "IsAdditional": "Ek alan"},
     values={"FieldClass": FD.c.FieldClass.info["values"], "ValuePriority": FD.c.ValuePriority.info["values"]},
     server_values=frozenset({"TableName"}),
 )

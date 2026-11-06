@@ -9,11 +9,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01 · Veri çekme:** ERP'deki güncel veriyi entegrasyon tanımlarına göre ham veri tablolarına (Staging) almak ve yüklemeye hazır bir ham veri partisi oluşturmak.
 - **02 · Excel şablonu indirme:** Her varlık için veri sözleşmesine birebir uyan, açıklamalı ve örnek satırlı boş Excel şablonu vermek; Excel yolunun hatasız olmasını sağlamak.
 - **03 · Excel ile yükleme:** Entegrasyonu olmayan ya da ERP'de tutulmayan varlıkları (kaynak, takvim, vardiya gibi) Excel şablonuyla ham veriye almak; sonrası ERP'den çekilen veriyle aynı yoldan ilerler.
-- **04 · Doğrulama:** Ham veri partisini yüklemeden önce yapısal, referans, mantıksal ve tutarlılık kontrollerinden geçirmek; hatalı satırın versiyona girmesini engellemek, uyarılı veriyi görünür kılmak.
+- **04 · Validasyon:** Staging'in güncel hâlini yüklemeden önce yapısal, mantıksal ve tablolar arası kontrollerden geçirmek (referans ve bütünlük 4.4); hatalı satırın versiyona girmesini engellemek, uyarılı veriyi görünür kılmak.
 - **05 · Tam yükleme:** Doğrulanmış partiyi bütün varlıklarıyla yeni bir veri versiyonuna almak; alan önceliklerini, veri kurallarını ve türetilmiş alanları uygulayıp veriyi plana hazır hale getirmek. Gece akışının standart yolu.
 - **06 · Kısmi yükleme:** Partideki yalnız seçilen varlıkları yeni veri versiyonuna almak; hatalı ya da gereksiz varlıkları dışarıda bırakırken diğer varlıklarda önceki versiyonun değerlerini korumak. Gün içi stok ve sipariş tazelemesinin yolu.
 - **07 · Veri versiyonlama:** Her yüklemenin dondurulmuş, karşılaştırılabilir bir veri kesiti oluşturması; her plan hesabının hangi veriyle yapıldığının bilinmesi ve onaylı planların verisinin hep saklanması.
-- **08 · Yükleme geçmişi:** Çekim, Excel yüklemesi, doğrulama, tam ve kısmi yüklemelerin kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
+- **08 · Yükleme geçmişi:** Çekim, Excel yüklemesi, validasyon, tam ve kısmi yüklemelerin kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
 - **09 · Ham veri temizliği:** Ham veri tablolarındaki eski partileri düzenli silerek disk alanını korumak; geçmiş kaydını ve versiyonlanmış veriyi etkilemeden.
 
 ### 01 · Veri çekme
@@ -41,7 +41,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Dolu ham veri tabloları (stg.*) ve ImportBatch kaydı: tablo bazında durum, satır ve hata sayısı
   - İş sonucu (tablo, durum, denemeler, hata metni) · Entegrasyon ekranında 'son okuma'
   - Elle çekimde sonuç penceresi; ana sayfada gece akışı satırı 5.6'da
-- **06:** Parti 'Alındı' olur; doğrulama (04) 3.4'te bağlanır. Gece akışında doğrulama sonrası tam yükleme (05) devam eder (5.6).
+- **06:** Parti 'Alındı' olur ve staging'in güncel hâline işlenir (K-133); tablonun validasyonu (04) arka planda başlar. Toplu çekimde tablolar arası validasyon bütün tablolar bitince çalışır (K-134). Gece akışında validasyon sonrası tam yükleme (05) devam eder (5.6).
 - **Sinyal (K-130):** Bir tablo için kendi satırı ile toplu satırlara birlikte bakılır. En son başlayan bitmemişse 'Veri güncellemesi devam ediyor'; değilse en son biten geçerlidir, son okunanla aynıysa 'Yeni veri yok' (elle çekimde o satırda 'Yine de oku'). Okuma sırasında yenileme başladıysa parti 'Tamamlanmadı'.
 
 ### 01 · Veri çekme · kurallar ve etkiler
@@ -62,12 +62,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hiçbir varlık çekilemezse gece akışı 'veri yok' ile durur; senaryolar son veri versiyonuyla çalışır ve 'eski veri' etiketi taşır (parametre, öneri).
   - Uyum denetimi: eksik zorunlu kolon ya da okunamayan view tablo hatasıdır, önceki ham veri korunur; eksik isteğe bağlı kolon, fazla kolon ve tip farkı uyarıdır; dönüşmeyen satır satır hatasıdır.
 - **ETKISI VE TETIKLENENLER**
-  - Doğrulama (04) 3.4'te bağlanır.
+  - Validasyon (04) 3.4'te bağlanır.
   - Entegrasyon ekranı 'son okuma' güncellenir; ana sayfa 'gece akışı' 5.6'da.
   - Elle tetikleme denetim izine (AuditLog) yazılır.
   - Sistem sağlığı: iş kuyruğu ve süre kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez. Çekim yalnız ham veriyi doldurur; geçerli tablolar, kurallar ve planlar yüklemeyle (05 / 06) etkilenir.
-- **ÖRNEK:** 22:00 Malzeme 8.412 satır (4 dk) → 22:04 Ürün ağacı 21.904 satır (9 dk) → Rota 3 denemede zaman aşımı → 22:21 çekim 6/7 varlıkla kapanır, doğrulama başlar.
+- **ÖRNEK:** 22:00 Malzeme 8.412 satır (4 dk) → 22:04 Ürün ağacı 21.904 satır (9 dk) → Rota 3 denemede zaman aşımı → 22:21 çekim 6/7 varlıkla kapanır, validasyon başlar.
 - **AÇIK KONU:** Çekim başarısız olduğunda gece senaryoları son veri versiyonuyla çalışsın mı, yoksa atlansın mı? Öneri: çalışsın, 'eski veri' etiketiyle.
 
 ### 01 · Veri çekme · Başlatma
@@ -97,11 +97,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![01 · Veri çekme · Sonuç ve hata](mockups/m24f-0340-01-veri-cekme-sonuc-ve-hata.png)
 
-- **Kısmi başarı:** 6 / 7 varlık çekildi; Rota hata ile işaretli, diğerleri doğrulamaya girdi.
+- **Kısmi başarı:** 6 / 7 varlık çekildi; Rota hata ile işaretli, diğerleri validasyona girdi.
 - **Hata detayı:** Deneme zamanları ve neden; önceki ham verinin korunduğu belirtilir.
 - **Tek varlık tekrar:** Rota için yeniden dene: tüm çekimi baştan başlatmak gerekmez.
-- **Bildirim:** Sağ altta uyarı tonunda bildirim; üstte doğrulamanın başladığı görünür.
-- **Uygulama (3.3, K-130):** Sonuç penceresi: tablo, kaynak, okunan, geçerli, hatalı, durum, neden; okunmayan tabloda '—'. Yalnız gerektiğinde küçük düğme: bulgusu olan satırda 'Bulgular', hatalı satırda 'Yeniden dene'. Doğrulama 3.4'te bağlanır.
+- **Bildirim:** Sağ altta uyarı tonunda bildirim; üstte validasyonun başladığı görünür.
+- **Uygulama (3.3, K-130):** Sonuç penceresi: tablo, kaynak, okunan, geçerli, hatalı, durum, neden; okunmayan tabloda '—'. Yalnız gerektiğinde küçük düğme: bulgusu olan satırda 'Bulgular', hatalı satırda 'Yeniden dene'. Validasyon 3.4'te bağlanır.
 
 ### 02 · Excel şablonu indirme
 <sub>24. Ekranlar ve fonksiyonlar · F02 · A Veri alma · Çalışma prensibi 1/2</sub>
@@ -118,7 +118,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - Varlık seçimi
   - Sözleşme (docs/03): alan, tip, zorunluluk, yoksa ne olur, açıklama; etiket FieldDefinition'dan
-- **03:** Zorlama yoktur: açılır liste ve Excel doğrulaması konmaz (K-58, K-110). Değer listeleri ve referansın hangi tablonun kodu olduğu Açıklama sayfasında yazar; değer listeli alanlarda ERP'nin farklı değerleri veri kuralıyla bu değerlere çevrilir, ham alanlar bayrağa dönüştürülür (K-121); tutarsızlık doğrulamada görünür.
+- **03:** Zorlama yoktur: açılır liste ve Excel doğrulaması konmaz (K-58, K-110). Değer listeleri ve referansın hangi tablonun kodu olduğu Açıklama sayfasında yazar; değer listeli alanlarda ERP'nin farklı değerleri veri kuralıyla bu değerlere çevrilir, ham alanlar bayrağa dönüştürülür (K-121); tutarsızlık validasyonda görünür.
 - **04:** Tarih ve sayı biçimleri sabitlenir; sütun genişlikleri ayarlanır.
 - **05:** Şablon sürümü ve varlık adı gizli bir sayfaya yazılır; yüklemede (03) bu bilgiyle tanınır.
 - **06:** Dosya 'smartchain_<varlık>_v<sürüm>.xlsx' adıyla indirilir; indirme denetim izine yazılır.
@@ -143,7 +143,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yok; yalnız dosya üretir.
   - Denetim izi kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez.
-- **ÖRNEK:** Kaynak şablonu v3: 17 alan, 2 zorunlu (LocationCode, Code). Rota şablonunda ResourceRole için Smartchain değerleri: Primary, Secondary; boş bırakılırsa Primary kabul edilir. Başka bir değer yazılabilir, doğrulamada bilgi olarak görünür.
+- **ÖRNEK:** Kaynak şablonu v3: 17 alan, 2 zorunlu (LocationCode, Code). Rota şablonunda ResourceRole için Smartchain değerleri: Primary, Secondary; boş bırakılırsa Primary kabul edilir. Başka bir değer yazılabilir, validasyonda bilgi olarak görünür.
 - **Uygulama (3.1, K-110):** Şablon bilgisi önizleme sayfası yerine satır menüsünden açılan pencere. Mockup'taki 2. ve 3. satır, açılır liste, Kodlar sayfası, `CalendarId`, "v3" ve "Takvim ve vardiya" satırı geçersiz (K-65, K-110). Ekran 02 iskelet: tablo listesi ve satır menüsü; sayılar ve yükleme düğmeleri 3.3–5.5'te. Entegrasyon ekranı Excel kartı 5.6'da aynı uca bağlanır.
 
 ### 02 · Excel şablonu indirme · Menüden indirme
@@ -188,7 +188,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hata raporu xlsx (isteğe bağlı)
   - Yükleme geçmişi kaydı; dosya bir hafta ham veriyle birlikte saklanır
 - **05:** Dosya bir kez okunur: geçerli satırlar kontrol sırasında ham veriye yazılır, parti 'Ön kontrol'de olduğu için kimse okumaz. 'Devam' partiyi 'Alındı' yapar, 'vazgeç' satırları ve dosyayı siler. ImportBatch (yöntem = Excel) dosya adı, kullanıcı ve şablon sürümünü taşır. Büyük dosyada ön kontrol iş kuyruğunda çalışır (K-129).
-- **06:** Parti doğrulamaya (04) girer; ardından kullanıcı tam ya da kısmi yükleme (05 / 06) yapar.
+- **06:** 'Devam' pencereyi kapatır; parti staging'in güncel hâline işlenir (K-133), validasyon (04) arka planda başlar, bitince bildirim gelir. Ardından tam ya da kısmi yükleme (05 / 06).
 
 ### 03 · Excel ile yükleme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F03 · A Veri alma · Çalışma prensibi 2/2</sub>
@@ -197,7 +197,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Excel'den yükleme yöntem ve çekim anahtarından bağımsız her zaman açıktır (K-130); partide yöntem kayıtlı kalır, yükleme en yeni partiyi alır (5.2). Yöntem değişince açık ön kontrol etkilenmez.
   - Tek dosya tek varlık; en fazla 200.000 satır ve 100 MB (parametre). Dosya başka varlığın şablonuysa reddedilir.
   - Aynı anahtarın tekrarı hata: iki satır da ham veriye alınmaz, hangisinin doğru olduğunu sistem seçmez (K-129).
-  - 'Boşsa satır yüklenmez' alanlar burada reddedilir; veri kuralıyla dolan alanlar (`Resource.CapacityUnit`) reddedilmez, kontrolü kurallardan sonradır.
+  - BOŞSA 'hata (satır atlanır)' alanlar burada reddedilir; 'hata (kurallardan sonra)' alanlar (`Resource.CapacityUnit` gibi) reddedilmez, kontrolü kurallardan sonra validasyondadır (K-138). 'Kaynak ve kaynak grubu ikisi boş' kontrolü de validasyondadır (3.4).
   - Eski şablon sürümüyle yükleme uyarı verir; tanınmayan kolon bilgi olarak listelenir, eksik zorunlu kolon hatadır.
   - Yükleme veri versiyonu açmaz; versiyon 05 / 06 ile oluşur.
 - **HATA VE ISTISNA**
@@ -206,11 +206,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Dosya bozuk ya da çok büyük: anlaşılır mesaj, limit yazılır.
   - Ön kontrol yarıda kalırsa parti 'Tamamlanmadı', satırları silinir; yeniden yükleme gerekir.
 - **ETKISI VE TETIKLENENLER**
-  - Doğrulama (04) başlar.
+  - Validasyon (04) arka planda başlar; çip 'Sırada'.
   - Veri yükleme ekranında varlık satırı 'Excel · bekliyor' olur.
   - Denetim izi: dosya adı, satır sayısı, kullanıcı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; etkiler yüklemeyle (05 / 06) oluşur.
-- **Uygulama (3.2, K-129):** Hata raporu yalnız hatalı satırları, özgün değerleriyle ve sonda 'Hata' kolonuyla verir; düzeltilip yeniden yüklenebilir. Pencere: Dosya, Ön kontrol, Doğrulama (3.4'te). 5 MB'a kadar istek içinde, üstü 'Excel ön kontrol' işi; büyük dosyada yanlış tablo ve eksik kolon işte anlaşılır, parti 'Hatalı' olur.
+- **Uygulama (3.2, K-129):** Hata raporu yalnız hatalı satırları, özgün değerleriyle ve sonda 'Hata' kolonuyla verir; düzeltilip yeniden yüklenebilir. Pencere iki adımdır: Dosya, Ön kontrol (3.4, K-134). 5 MB'a kadar istek içinde, üstü 'Excel ön kontrol' işi; büyük dosyada yanlış tablo ve eksik kolon işte anlaşılır, parti 'Hatalı' olur.
 - **Mockup'tan farklar (3.2 demosu, K-129):**
   - Değer listesi dışı değer her satırda ayrı değil, alan ve değer başına tek satır bilgi olarak gösterilir; satır no o değerin ilk görüldüğü satırdır, bilgi sayısı da buna göre sayılır (en çok 1000). ERP'nin kendi değerleri her satırda bilgi üretirdi: 200.000 satırda 154 sn yerine 52 sn. "Kod listesinde yok" hata değil bilgidir (K-110).
   - 1. adımda satır sayısı ve şablon sürümü gösterilmez: tarayıcıda xlsx okuyucu yok, bu bilgi yüklemeden sonra 2. adımda gelir. Alt başlıkta yalnız tablo adı var.
@@ -229,7 +229,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Sürükle-bırak:** Dosya alanı; varlık ve şablon sürümü dosyadan otomatik tanınır.
 - **Mod seçimi:** Ekle / güncelle varsayılan; 'tam' modun sonucu (silinmiş sayma) açıkça yazılır.
-- **Adım göstergesi:** Dosya → ön kontrol → doğrulama; kullanıcı nerede olduğunu görür.
+- **Adım göstergesi:** Dosya → ön kontrol; kullanıcı nerede olduğunu görür. Validasyon pencerede değil, arka planda (3.4, K-134).
 - **Sınır uyarısı:** ERP'den gelen varlıklar için doğru yol bilgi kutusunda gösterilir.
 
 ### 03 · Excel ile yükleme · Ön kontrol
@@ -242,70 +242,179 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **İki çıkış yolu:** Hata raporunu indir ve düzelt, ya da geçerli satırlarla devam et.
 - **Uyarı yüklenir:** Uyarı seviyesi satır alınır, veri kalitesi listesine düşer.
 
-### 04 · Doğrulama
+### 04 · Validasyon
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Çalışma prensibi 1/2</sub>
 
-- Ham veri partisini yüklemeden önce yapısal, referans, mantıksal ve tutarlılık kontrollerinden geçirmek; hatalı satırın versiyona girmesini engellemek, uyarılı veriyi görünür kılmak.
+- Staging'in güncel hâlini yüklemeden önce yapısal, mantıksal ve tablolar arası kontrollerden geçirmek; hatalı satırın versiyona girmesini engellemek, uyarılı veriyi görünür kılmak (K-133, K-134).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (çekim ve Excel yüklemesi sonrası otomatik) · elle 'Yeniden doğrula': Key user ve üstü
-  - Nereden: Çekim (01) ve Excel yüklemesinin (03) sonunda otomatik · Veri yükleme ekranı 'Yeniden doğrula'
-- **01:** Yapısal kontrol: zorunlu alan, tip, uzunluk, birim kodu, tekrar eden anahtar. Fonksiyon 03'ün ön kontrolüyle aynı koddur (K-129).
-- **02:** Referans kontrolü: rota → kaynak, ağaç → malzeme, sipariş → müşteri ve malzeme, stok → malzeme. Referans önce aynı partide, sonra geçerli veride aranır.
-- **03:** Mantıksal kontrol: negatif miktar ve süre, ürün ağacı döngüsü, başlangıç > bitiş, takvimsiz kaynak, sıfır kapasite, minimum parti > yıllık talep.
+  - Kim: Sistem (her batch staging'e alınınca otomatik) · elle 'Yeniden valide et': Key user ve üstü
+  - Nereden: Excel yüklemesinde 'Devam' (03), çekimde tablonun okunması (01) · Veri yükleme ekranı, "Validasyon" çipinin çekmecesi
+- **01:** Parti "Alındı" olunca güncel hâle işlenir (K-133) ve "Veri işleme" kanalına "Validasyon" işi yazılır; çip "Sırada" olur. Kullanıcı beklemez.
+- **02:** Rules: tablonun aktif veri kuralları güncel hâl üzerinde çalışır (19; 4.1'e kadar boş geçer). Çip "Kurallar çalışıyor".
+- **03:** Tablo içi validasyon: "hata (kurallardan sonra)" alanları (K-138), ardından tablonun hazır kuralları ve kullanıcı kuralları güncel hâl üzerinde çalışır. Çip "Valide ediliyor". Yapısal kontroller de burada, arka planda çalışır; kural listesinde görünmez (K-139).
 - **GIRDI**
-  - Ham veri partisi (ImportBatch + Staging)
-  - Veri sözlüğü: tip, zorunluluk, kod listeleri
-  - Geçerli veri versiyonu (referans ve tutarlılık kontrolleri için)
-  - Uyarı tanımları: hangi kontrol hata, hangisi uyarı; hata eşiği (%)
-- **04:** Tutarlılık: geçerli versiyonla karşılaştırma; yeni, değişen ve silinen (partide olmayan) kayıtlar sayılır.
-- **05:** Her bulgu hata (satır yüklenmez), uyarı (yüklenir, Veri kalitesi listesine düşer) ya da bilgi olarak sınıflanır; sınıf uyarı tanımlarından gelir.
+  - Staging'in güncel hâli (`IsCurrent`); core'a bakılmaz
+  - Validasyon kuralları (`adm.ValidationRule`, koşulları): sınıf, aktiflik
+  - Sözleşme: BOŞSA, değer listeleri, anahtar
+  - Hata eşiği (`IntegrationEntity.ErrorThresholdPct`)
+- **04:** Tablolar arası validasyon: başka tabloya bakan hazır kurallar. Toplu çekimde bütün tablolar bitince bir kez; tek tablo yüklemesinde o tabloyu okuyan kurallar yenilenir, bulgu satırın ait olduğu tablonun çipine yazılır. Bakılan tablonun güncel verisi yoksa kural atlanır, Bilgi: "Karşılaştırılacak veri yok".
+- **05:** Bulgular `ValidationFinding`'e yazılır; bir kural yeniden çalışınca o kuralın o tablodaki bulguları yenilenir. Hata bulunan güncel satırın `RowStatus`'u Hatalı olur.
 - **ÇIKTI**
-  - ImportBatch.Status (geçti / uyarı / hata), ErrorCount ve bulgu listesi (satır, kontrol, sorun, öneri)
-  - Veri kalitesi uyarısı adayları (yükleme ile listeye düşer)
-  - Doğrulama raporu (xlsx)
-- **06:** Varlık bazında özet ve satır listesi ImportBatch'e yazılır; ekran anlık güncellenir. Gece akışında hata eşiği aşılmayan varlıklar hatalı satırlar atlanarak yüklenir.
+  - Tablo başına çip: Geçti / Uyarılı · n / Hatalı · n
+  - Kural bazında bulgular (Kural, Sınıf, Satır sayısı) ve hatalı kayıtlar (Excel)
+  - Hata oranı ve eşik; bildirim
+- **06:** Bitince bildirim gelir ("Validasyon bitti · Malzeme · Uyarılı · 3", "Sonucu aç" çekmeceyi açar). İş panelinde iş kart olarak görünür (K-139). Gece akışında tam yükleme (05) devam eder (5.6).
 
-### 04 · Doğrulama · kurallar ve etkiler
+### 04 · Validasyon · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Doğrulama yalnız okur; geçerli veriyi ve ham veriyi değiştirmez.
-  - Hata satır düzeyindedir; varlık, hata eşiği (varsayılan %5) aşılmadıkça yüklenebilir.
-  - Referans eksikse satır hata; kuralla tamamlanabilecek boş alan (takvim) uyarıdır. Tedarik süresinin sabit ve değişken kısmı boşsa satır yüklenir, veri kalitesinde uyarı verir, motor bu satırı kullanmaz.
-  - Hangi kontrolün hata, hangisinin uyarı olduğu uyarı tanımlarıyla parametriktir.
+  - Validasyon yalnız okur; değer değiştirmez (değeri rules değiştirir). Yazdığı yalnız bulgu ve `RowStatus`'tur.
+  - Validasyon staging'in güncel hâline aittir, data quality load edilmiş veriye (20, Aşama 6). Ön kontrol bulguları partiye aittir (03); çekmece güncel hâlin validasyonunu gösterir.
+  - Sınıf: Hata satırı load edilmez; Uyarı load edilir; Bilgi yalnız bilgidir. Sınıf Validasyon kuralları ekranında (27) değiştirilir.
+  - Hata oranı = Hata bulunan güncel kayıt / güncel kayıt (ön kontrol hesaba girmez). Eşik tablo başınadır, varsayılanı yoktur, boşsa kontrol edilmez (K-135); 3.4'te yalnız gösterilir, load'a etkisi 5.2'de.
+  - Küme kuralları (döngü, toplam, çakışma) tablonun güncel hâline bakar.
+  - Tutarlılık sayıları (yeni, değişen, silinen kayıt) yükleme ekranında gösterilir (5.5); "satır sayısı dünden %30 az" uyarısı 5.5'tedir.
 - **HATA VE ISTISNA**
-  - Doğrulama çökerse parti 'doğrulanamadı', yükleme butonları kapalı; hata Sistem sağlığında.
-  - Hata eşiği aşılan varlık gece akışında yüklenmez, önceki versiyon kalır; ana sayfaya düşer.
-  - Elle yüklemede kullanıcı varlığı dışarıda bırakma ya da hatalı satırları atlama kararını verir.
+  - İş düşerse çip "Valide edilemedi"; önceki bulgular kalır, "Yeniden valide et" ile tekrarlanır.
+  - Motor servisi kapalıysa iş sırada bekler, çip "Sırada".
+  - Hata eşiği aşılan tablo gece akışında load edilmez, önceki versiyon kalır (5.2).
 - **ETKISI VE TETIKLENENLER**
+  - Veri yükleme ekranında çip ve çekmece; bildirim.
+  - Load (05 / 06) Hatalı satırı almaz.
   - Gece akışında tam yükleme (05) devam eder.
-  - Veri yükleme ekranında varlık durumları ve detay çekmecesi.
-  - Ana sayfada doğrulama satırı (uyarı sayısıyla).
-- **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; doğrulama yazmaz.
-- **ÖRNEK:** Parti #1187: Rota 6.230 satır, 3 hata (iki eksik kaynak referansı, bir negatif süre), 5 uyarı. Eşik %5, hata oranı %0,05 → Rota hatalı satırlar atlanarak yüklenebilir.
+- **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; validasyon değer yazmaz.
+- **ÖRNEK:** Rota 6.230 güncel kayıt, 3 Hata (iki satırda kaynak ve kaynak grubu boş, bir negatif süre), 5 Uyarı. Eşik %5, oran %0,05: çip "Hatalı · 3"; load hatalı satırları atlar.
+- **Uygulama (3.4, K-133…K-139):** İş tipi "Validasyon", kanal "Veri işleme" (sınır `JobLimitProcessing`, performans ölçümüyle). Rota ve iş emri operasyonunda "kaynak ve kaynak grubu ikisi boş" kontrolü ön kontrolden validasyona taşındı (hazır kural, Hata). Değer listesi dışı değer ön kontrol penceresinde de görünür (partiye ait).
 
-### 04 · Doğrulama · Sonuç özeti
+### 04 · Validasyon · hazır kurallar
+<sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Geliştirme 3.4 (K-137, K-139)</sub>
+
+- Kod kataloğu bu tablodan yazılır (`app/validation/catalog.py`); test ikisini karşılaştırır. AD ekranda "Kural" kolonudur; KOD varsayılan görünümde gizlidir. SINIF katalogdaki sınıftır, Validasyon kuralları ekranında değişir. Tür: Yapısal (listede görünmez, arka planda çalışır), Mantıksal (tablo içi), Küme (tablo içi, tablonun bütün güncel hâline bakar), Tablolar arası (OKUNAN tabloya bakar).
+- **DÜZENLENİR (K-139):** "Evet": koşul editörle ifade edilir; ad, mesaj, koşul, sınıf ve aktiflik pencerede değişir, "İlk hâline döndür" bu tablodaki hâline getirir. "Sınıf, aktiflik": döngü, toplam, çakışma, bayrak sayımı, bugünle karşılaştırma, hesaplı fark ya da tablolar arası; yalnız sınıf ve aktiflik tablodan değişir. "Kilitli": yapısal kontrol.
+- **Negatif değer alanları (ALL.NEGATIVE):** Material: GoodsReceiptDays, SafetyStock, StockCoverageDays, MaxStock, MinLot, MaxLot, LotMultiple, QtyPerBox, QtyPerPallet, ScrapRatio, ShelfLifeDays · UomConversion: Factor · ProductionVersion: BaseQuantity · BOM: Quantity, ScrapRatio · Routing: Consumption, ResourceNumber, TransferQuantity, WaitingTimeHours, TransferTimeHours · MaterialReference: TimeFactor · EmployeeAbsence: HoursPerDay · MaterialSupplier: QuotaRatio, FixedLeadTimeDays, VariableLeadTimeDays, MinimumOrderQuantity, OrderLotSize, MaximumOrderQuantity · SalesOrderLine: OpenQuantity, OrderedQuantity, DeliveredQuantity · Forecast: Quantity · BorrowPayback: BorrowedQuantity, PaidBackQuantity · Stock: Quantity · WorkOrder: OrderedQuantity, OpenQuantity, CompletedQuantity, ScrapQuantity · WorkOrderComponent: RequiredQuantity, IssuedQuantity, UnitUsage, ScrapRatio · WorkOrderOperation: ResourceNumber, PlannedConsumption, ConfirmedConsumption, TransferQuantity, WaitingTimeHours, TransferTimeHours · PurchaseOrderLine: OpenQuantity, OrderedQuantity, ReceivedQuantity · ProductionConfirmation: ConfirmedQuantity. Dışarıda: RemainingOverTimeYear, RemainingOverTimeMonth, öncelik alanları, satır ve sıra numaraları, ek alanlar.
+
+| KOD | TABLO | AD | KOŞUL | SINIF | TÜR | DÜZENLENİR | OKUNAN |
+|---|---|---|---|---|---|---|---|
+| STR.TYPE | Hepsi | Tip uymuyor | Tip ya da sayı aralığı uymuyor | Hata | Yapısal | Kilitli |  |
+| STR.LENGTH | Hepsi | Metin alana sığmıyor | Metin alana sığmıyor | Hata | Yapısal | Kilitli |  |
+| STR.REQUIRED | Hepsi | Zorunlu alan boş | Zorunlu alan boş: "hata (satır atlanır)" ön kontrolde, "hata (kurallardan sonra)" validasyonda | Hata | Yapısal | Kilitli |  |
+| STR.DUPLICATE | Hepsi | Aynı kayıt birden fazla satırda | Aynı anahtar birden fazla satırda | Hata | Yapısal | Kilitli |  |
+| ALL.OUT_OF_LIST | Hepsi | Liste dışı değer | Değer listeli alanda liste dışı değer (K-110) | Bilgi | Mantıksal | Sınıf, aktiflik |  |
+| LOC.NO_FLAG | Location | Lokasyon tipi yok | Tesis ≠ Evet ve Depo ≠ Evet ve Fason deposu ≠ Evet | Uyarı | Mantıksal | Evet |  |
+| ALL.NEGATIVE | Hepsi | Negatif değer | Miktar, süre, gün, oran, saat ya da kat alanlarından biri < 0 | Hata | Mantıksal | Evet |  |
+| UOM.FACTOR | UomConversion | Çarpan sıfır ya da negatif | Çarpan ≤ 0 | Hata | Mantıksal | Evet |  |
+| UOM.SAME_UOM | UomConversion | Kaynak ve hedef birim aynı | Hedef birim = Kaynak birim | Hata | Mantıksal | Evet |  |
+| UOM.INVERSE | UomConversion | Ters dönüşümle tutarsız | A→B ve B→A tanımlı, çarpımları 1 değil | Uyarı | Küme | Sınıf, aktiflik |  |
+| UOM.NEW_UOM | UomConversion | Yeni birim | Birim kodu malzemelerin temel birimlerinde geçmiyor (K-112) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
+| ALL.RATIO_RANGE | Hepsi | Oran 0–1 dışında | Fire oranı ya da kota oranı < 0 veya > 1 | Hata | Mantıksal | Evet |  |
+| MAT.MINLOT_MAXLOT | Material | Minimum lot maksimum lottan büyük | Minimum lot > Maksimum lot | Hata | Mantıksal | Evet |  |
+| MAT.SAFETY_MAX | Material | Güvenlik stoğu maksimum stoktan büyük | Güvenlik stoğu > Maksimum stok | Uyarı | Mantıksal | Evet |  |
+| MAT.ZERO_PACK | Material | Lot katı, kutu ya da palet miktarı sıfır | Lot katı = 0 veya Kutu içi miktar = 0 veya Palet içi miktar = 0 | Uyarı | Mantıksal | Evet |  |
+| MAT.SUPPLY_CONFLICT | Material | Tedarik türü bayraklarla çelişiyor | Tedarik türü = Üretim ve Üretilebilir ≠ Evet veya Tedarik türü = Satın alma ve Satın alınabilir ≠ Evet veya Tedarik türü = Fason ve Fasona verilebilir ≠ Evet | Uyarı | Mantıksal | Evet |  |
+| MAT.NO_SUPPLY | Material | Aktif malzemenin tedarik yolu yok | Üretilebilir ≠ Evet ve Satın alınabilir ≠ Evet ve Fasona verilebilir ≠ Evet ve Aktif = Evet | Uyarı | Mantıksal | Evet |  |
+| MAT.SAFETY_COVERAGE | Material | Güvenlik stoğu hem miktar hem gün | Stok gün kapsamı boş değil ve Güvenlik stoğu boş değil | Bilgi | Mantıksal | Evet |  |
+| ALL.DATE_ORDER | Hepsi | Başlangıç bitişten sonra | Başlangıç tarihi > bitiş tarihi (geçerlilik ya da plan tarihleri) | Hata | Mantıksal | Evet |  |
+| PV.BASEQTY | ProductionVersion | Baz miktar sıfır ya da negatif | Baz miktar ≤ 0 | Hata | Mantıksal | Evet |  |
+| PV.BASEQTY_DIFFERS | ProductionVersion | Aynı ağaçta baz miktar farklı | Aynı ürün ağacını kullanan versiyonlarda baz miktar farklı (K-115) | Uyarı | Küme | Sınıf, aktiflik |  |
+| PV.EXPIRED | ProductionVersion | Aktif versiyonun geçerliliği bitmiş | Aktif versiyonun geçerlilik bitişi geçmişte | Uyarı | Mantıksal | Sınıf, aktiflik |  |
+| BOM.SELF | BOM | Bileşen üretilen malzemenin kendisi | Bileşen kodu = Üretilen malzeme kodu | Hata | Mantıksal | Evet |  |
+| BOM.CYCLE | BOM | Ürün ağacında döngü | Malzeme dolaylı olarak kendi bileşeni | Hata | Küme | Sınıf, aktiflik |  |
+| BOM.ZERO_QTY | BOM | Bileşen miktarı sıfır | Bileşen miktarı = 0 | Uyarı | Mantıksal | Evet |  |
+| BOM.PRIORITY_NO_GROUP | BOM | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Mantıksal | Evet |  |
+| BOM.SINGLE_ALTERNATIVE | BOM | Alternatif grupta tek satır | Alternatif grupta tek satır | Uyarı | Küme | Sınıf, aktiflik |  |
+| RTG.NO_RESOURCE | Routing | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata | Mantıksal | Evet |  |
+| RTG.RESOURCE_NUMBER | Routing | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata | Mantıksal | Evet |  |
+| RTG.ZERO_CONSUMPTION | Routing | Tüketim sıfır | Kaynak tüketimi = 0 | Uyarı | Mantıksal | Evet |  |
+| RTG.PRIORITY_NO_GROUP | Routing | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Mantıksal | Evet |  |
+| RTG.NOT_MEMBER | Routing | Kaynak, kaynak grubunun üyesi değil | Kaynak, yazılan kaynak grubunun üyesi değil (K-116) | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
+| RTG.GROUP_UNIT | Routing | Kaynak grubunda kapasite birimleri farklı | Yazılan kaynak grubundaki kaynakların kapasite birimi farklı (K-116) | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment, Resource |
+| RTG.SUBCON_RESOURCE | Routing | Fason operasyonun kaynağı fason değil | Fason operasyon = Evet ama kaynak fason değil | Uyarı | Tablolar arası | Sınıf, aktiflik | Resource |
+| REF.SELF | MaterialReference | Malzeme kendisine benzetilmiş | Referans ürün = Benzetilen ürün | Hata | Mantıksal | Evet |  |
+| REF.CYCLE | MaterialReference | Referans zincirinde döngü | Referans zincirinde döngü | Hata | Küme | Sınıf, aktiflik |  |
+| REF.TIMEFACTOR | MaterialReference | Süre çarpanı sıfır ya da negatif | Süre çarpanı ≤ 0 | Hata | Mantıksal | Evet |  |
+| RG.NO_TYPE | ResourceGroup | Grup tipi yok | Kaynak grubu ≠ Evet ve Yetkinlik grubu ≠ Evet | Uyarı | Mantıksal | Evet |  |
+| RES.TYPE_FLAGS | Resource | Kaynak tipi tek değil | İşçi, Makine, Fırın, Kalıp, Diğer, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
+| RES.SUBCON_CONFLICT | Resource | Fason bayrağı fasoncuyla çelişiyor | Fasoncu boş ve Fason = Evet veya Fasoncu boş değil ve Fason ≠ Evet | Uyarı | Mantıksal | Evet |  |
+| RES.MONTH_YEAR | Resource | Aylık kalan fazla mesai yıllıktan büyük | Aylık kalan fazla mesai (saat) > Yıllık kalan fazla mesai (saat) | Uyarı | Mantıksal | Evet |  |
+| RES.PHASE1_UNUSED | Resource | Fırın ya da kalıp Faz 1'de kullanılmaz | Fırın = Evet veya Kalıp = Evet | Bilgi | Mantıksal | Evet |  |
+| RGA.COMPETENCE_NOT_EMPLOYEE | ResourceGroupAssignment | Yetkinlik grubunda işçi olmayan kaynak | Yetkinlik grubuna işçi olmayan kaynak atanmış | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroup, Resource |
+| ABS.HOURS | EmployeeAbsence | Günlük izin saati 0–24 dışında | Günlük saat ≤ 0 veya Günlük saat > 24 | Hata | Mantıksal | Evet |  |
+| ABS.NOT_EMPLOYEE | EmployeeAbsence | İzin kaydının kaynağı işçi değil | Kaynak işçi değil | Uyarı | Tablolar arası | Sınıf, aktiflik | Resource |
+| ABS.OVERLAP | EmployeeAbsence | İzinler çakışıyor | Aynı kişinin izinleri çakışıyor | Uyarı | Küme | Sınıf, aktiflik |  |
+| MS.MIN_MAX | MaterialSupplier | Minimum sipariş maksimumdan büyük | Minimum sipariş miktarı > Maksimum sipariş miktarı | Hata | Mantıksal | Evet |  |
+| MS.LOT | MaterialSupplier | Sipariş katı sıfır ya da negatif | Sipariş katı ≤ 0 | Hata | Mantıksal | Evet |  |
+| MS.NO_BASIS | MaterialSupplier | Tedarik süresi var, süre esası yok | Tedarik süresi esası boş ve Sabit tedarik süresi (gün) boş değil veya Tedarik süresi esası boş ve Değişken tedarik süresi boş değil | Hata | Mantıksal | Evet |  |
+| MS.NO_LEADTIME | MaterialSupplier | Tedarik süresi yok | Sabit tedarik süresi (gün) boş ve Değişken tedarik süresi boş | Uyarı | Mantıksal | Evet |  |
+| MS.QUOTA_SUM | MaterialSupplier | Kota toplamı 1 değil | Aynı malzeme ve lokasyonda dolu kota oranlarının toplamı 1 değil | Uyarı | Küme | Sınıf, aktiflik |  |
+| SO.ZERO_OPEN | SalesOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Mantıksal | Evet |  |
+| SO.DELIVERED | SalesOrderLine | Teslim edilen sipariş miktarından büyük | Teslim edilen miktar > Sipariş miktarı | Uyarı | Mantıksal | Evet |  |
+| SO.OPEN_MISMATCH | SalesOrderLine | Açık miktar sipariş eksi teslime eşit değil | Açık miktar ≠ Sipariş miktarı − Teslim edilen miktar (üçü de doluysa) | Uyarı | Mantıksal | Sınıf, aktiflik |  |
+| STK.LINE_NO_ORDER | Stock | Sipariş satırı var, sipariş no yok | Sahip sipariş satırı boş değil ve Sahip sipariş no boş | Hata | Mantıksal | Evet |  |
+| STK.ACCEPT_DATE | Stock | Kabul tarihi kaliteye girişten önce | Beklenen kabul tarihi < Kaliteye giriş tarihi | Hata | Mantıksal | Evet |  |
+| STK.STATUS_FLAGS | Stock | Stok durumu tek değil | Kullanılabilir, Kalitede, Bloke bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
+| STK.QUALITY_NO_DATE | Stock | Kalitedeki stokun kabul tarihi yok | Beklenen kabul tarihi boş ve Kalitede = Evet | Uyarı | Mantıksal | Evet |  |
+| STK.EXPIRED | Stock | Son kullanma tarihi geçmiş | Kullanılabilir stokta son kullanma tarihi geçmiş | Uyarı | Mantıksal | Sınıf, aktiflik |  |
+| STK.NON_STOCKABLE | Stock | Stok tutulamaz malzemede stok | Stok tutulamaz malzemede stok kaydı (K-113) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| STK.CUSTOM_NO_OWNER | Stock | Özel takipli stokun sahibi yok | Özel takip = Evet ve Sahip proje boş ve Sahip müşteri boş ve Sahip sipariş no boş | Uyarı | Mantıksal | Evet |  |
+| STK.ZERO_QTY | Stock | Stok miktarı sıfır | Miktar = 0 | Bilgi | Mantıksal | Evet |  |
+| BP.SAME_PROJECT | BorrowPayback | Ödünç veren ve alan proje aynı | Ödünç alan proje = Ödünç veren proje | Hata | Mantıksal | Evet |  |
+| BP.QTY | BorrowPayback | Ödünç miktarı sıfır ya da negatif | Ödünç miktarı ≤ 0 | Hata | Mantıksal | Evet |  |
+| BP.DUE_DATE | BorrowPayback | Geri ödeme tarihi ödünçten önce | Geri ödeme tarihi < Ödünç tarihi | Hata | Mantıksal | Evet |  |
+| BP.PAID | BorrowPayback | Geri ödenen ödünçten fazla | Geri ödenen miktar > Ödünç miktarı | Uyarı | Mantıksal | Evet |  |
+| WO.QTY | WorkOrder | İş emri miktarı sıfır ya da negatif | İş emri miktarı ≤ 0 | Hata | Mantıksal | Evet |  |
+| WO.START_DUE | WorkOrder | Başlangıç bitişten sonra | Başlangıç > Bitiş | Hata | Mantıksal | Evet |  |
+| WO.SELF_PARENT | WorkOrder | İş emri kendisinin yeniden işlemesi | Yeniden işlemede orijinal iş emri = İş emri no | Hata | Mantıksal | Evet |  |
+| WO.LINE_NO_ORDER | WorkOrder | Sipariş satırı var, sipariş no yok | Bağlı sipariş satır no boş değil ve Bağlı sipariş no (ayraç) boş | Hata | Mantıksal | Evet |  |
+| WO.OPEN_ORDERED | WorkOrder | Açık miktar iş emri miktarından büyük | Açık miktar > İş emri miktarı | Uyarı | Mantıksal | Evet |  |
+| WO.ZERO_OPEN | WorkOrder | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Mantıksal | Evet |  |
+| WO.TYPE_FLAGS | WorkOrder | İş emri tipi tek değil | Üretim, Fason, Yeniden işleme bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
+| WO.REWORK_NO_PARENT | WorkOrder | Yeniden işlemenin orijinal iş emri yok | Yeniden işlemede orijinal iş emri boş ve Yeniden işleme = Evet | Uyarı | Mantıksal | Evet |  |
+| WO.CUSTOM_NO_OWNER | WorkOrder | Özel takipli iş emrinin sahibi yok | Özel takip = Evet ve Proje (ayraç) boş ve Müşteri boş ve Bağlı sipariş no (ayraç) boş | Uyarı | Mantıksal | Evet |  |
+| WOC.ISSUED | WorkOrderComponent | Çekilen gereken miktardan fazla | Çekilen miktar > Gereken miktar | Uyarı | Mantıksal | Evet |  |
+| WOO.NO_RESOURCE | WorkOrderOperation | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata | Mantıksal | Evet |  |
+| WOO.RESOURCE_NUMBER | WorkOrderOperation | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata | Mantıksal | Evet |  |
+| WOO.CONFIRMED | WorkOrderOperation | Teyit edilen tüketim planlanandan fazla | Teyit edilen tüketim > Planlanan tüketim | Uyarı | Mantıksal | Evet |  |
+| PO.ZERO_OPEN | PurchaseOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Mantıksal | Evet |  |
+| PO.RECEIVED | PurchaseOrderLine | Teslim alınan sipariş miktarından büyük | Teslim alınan miktar > Sipariş miktarı | Uyarı | Mantıksal | Evet |  |
+| PO.TYPE_FLAGS | PurchaseOrderLine | Sipariş tipi tek değil | Satın alma talebi, Satın alma, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
+| PO.SUBCON_NO_WO | PurchaseOrderLine | Fason siparişin iş emri yok | Fasonda bağlı iş emri boş ve Fason = Evet | Uyarı | Mantıksal | Evet |  |
+| PO.NO_SUPPLIER | PurchaseOrderLine | Tedarikçi yok | Tedarikçi boş ve Satın alma talebi ≠ Evet | Uyarı | Mantıksal | Evet |  |
+| PO.NO_DATE | PurchaseOrderLine | İstenen ve teyit tarihi yok | İstenen tarih boş ve Tedarikçi teyit tarihi boş | Uyarı | Mantıksal | Evet |  |
+| PO.CUSTOM_NO_OWNER | PurchaseOrderLine | Özel takipli siparişin sahibi yok | Özel takip = Evet ve Proje boş ve Müşteri boş ve Bağlı sipariş no boş | Uyarı | Mantıksal | Evet |  |
+| PC.QTY | ProductionConfirmation | Teyit miktarı sıfır ya da negatif | Teyit miktarı ≤ 0 | Hata | Mantıksal | Evet |  |
+| PC.MATERIAL | ProductionConfirmation | Malzeme iş emrininkinden farklı | Malzeme, iş emrinin malzemesinden farklı | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+
+- Tedarikçi, Müşteri, Proje grubu, Proje, Tahmin, Kaynak grubu ataması (yetkinlik dışında), İş emri bileşeni (çekilen dışında): yalnız ortak kurallar.
+- **Kapsam dışı:** referans kontrolü (çocuk → ebeveyn, Hata) ve ebeveyn → çocuk bütünlük kontrolleri (Uyarı) 4.4'te aynı çerçeveye, Tablolar arası olarak eklenir.
+
+### 04 · Validasyon · Sonuç özeti
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Mockup 1/2</sub>
 
-![04 · Doğrulama · Sonuç özeti](mockups/m24f-0351-04-dogrulama-sonuc-ozeti.png)
+![04 · Validasyon · Sonuç özeti](mockups/m24f-0351-04-dogrulama-sonuc-ozeti.png)
 
 - **Varlık bazında sayılar:** Yeni, değişen, silinen, hata ve uyarı tek tabloda; durum çipi renkli.
-- **Kontrol türü kırılımı:** Yapısal, referans, mantıksal, tutarlılık; sorunun kaynağı anlaşılır.
+- **Kontrol türü kırılımı:** Yapısal, mantıksal, tablolar arası (4.4'te referans ve bütünlük); sorunun kaynağı anlaşılır.
 - **Seviye açıklaması:** Altta tek cümle: hata yüklenmez, uyarı yüklenir.
-- **Yeniden doğrula:** Kaynakta düzeltme sonrası tekrar; rapor indirilebilir.
+- **Yeniden valide et:** Kaynakta düzeltme ya da kural değişikliği sonrası tekrar; rapor indirilebilir.
+- **Uygulama (3.4):** Ayrı özet ekranı yoktur: sonuç Veri yükleme tablosunda "Validasyon" çipidir (K-134, K-139); kontrol türü kırılımı yok (K-139); yeni, değişen ve silinen sayıları 5.5'te.
 
-### 04 · Doğrulama · Varlık detayı
+### 04 · Validasyon · Varlık detayı
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Mockup 2/2</sub>
 
-![04 · Doğrulama · Varlık detayı](mockups/m24f-0352-04-dogrulama-varlik-detayi.png)
+![04 · Validasyon · Varlık detayı](mockups/m24f-0352-04-dogrulama-varlik-detayi.png)
 
 - **Çekmece:** Seçilen varlığın bulguları sağdan açılır; sayfa bağlamı kaybolmaz.
-- **Satır, kontrol, sorun, öneri:** Her bulguda ne, nerede, neden ve ne yapılmalı.
-- **Yükleme davranışı:** Atla ya da dışarıda bırak; eşik ve bu partideki oran yazılır.
-- **Kaynağa git:** Bulgudan ilgili ana veri kaydına ya da Excel'e geçiş.
+- **Satır, kontrol, sorun:** Her bulguda ne, nerede, neden.
+- **Yükleme davranışı:** Eşik ve bu tablodaki oran yazılır.
+- **Mockup'tan farklar (3.4, K-134, K-139):**
+  - Çekmece çipe tıklayınca açılır, başlığı "Validasyon · Malzeme". Üstte son partinin zamanı, yöntemi ve kişisi, güncel kayıt sayısı; altında dört kart: Hatalı satır, Uyarılı satır, Bilgilendirme satırı, Hata oranı (büyük oran, altında küçük "eşik yok" ya da "eşik %0,50"). Kontrol türü kırılımı yok.
+  - İki görünüm: "Bulgular" kural bazındadır (Kural, Sınıf çipi, Satır sayısı; ağırdan hafife, çoktan aza); kurala tıklayınca "Kayıtlar" o kurala takılan satırlarla süzülmüş açılır. "Kayıtlar": bulgusu olan güncel satırlar; ilk iki kolon Sorun ve Sınıf, sonra kaydın alanları.
+  - "Hatalı kayıtları indir": Kayıtlar görünümünün Excel'i, Sınıf kolonuyla süzülebilir. "Yeniden valide et": Key user ve üstü.
+  - Öneri kolonu ve "Kaynağa git" yok; atla ya da dışarıda bırak seçimi yok (load davranışı 5.2'de eşiğe bağlı).
 
 ### 05 · Tam yükleme
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Çalışma prensibi 1/3</sub>
@@ -322,11 +431,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - Doğrulanmış ham veri partisi
   - Hata eşiği ve yükleme davranışı (atla / dışarıda bırak)
-  - Veri sözlüğü: alan önceliği (ERP, kural, elle, varsayılan), Manuel ayarı
+  - Veri sözlüğü: alan önceliği (ERP, kural, elle; K-138), Manuel ayarı
   - Aktif veri kuralları (sıralı)
-- **03:** Alan önceliği uygulanır: ERP değeri FieldValueSource.ErpValue'ya yazılır; elle değer varsa sözlükteki ayara göre korunur ya da ezilir; kaynağı (ERP / kural / elle / varsayılan) kaydedilir.
+- **03:** Alan önceliği uygulanır: ERP değeri FieldValueSource.ErpValue'ya yazılır; elle değer varsa sözlükteki ayara göre korunur ya da ezilir; kaynağı (ERP / kural / elle) kaydedilir.
 - **04:** Veri kuralları sırayla çalışır (19); etkilenen kayıtlar ve kaynak etiketi güncellenir.
-- **05:** Türetilmiş alanlar hesaplanır: LLC, birim dönüşümleri, boş alanlara varsayılan.
+- **05:** Türetilmiş alanlar hesaplanır: LLC, birim dönüşümleri. Boş alan boş kalır, anlamı BOŞSA kolonundadır (K-138).
 - **ÇIKTI**
   - Yeni veri versiyonu (DataVersion + tüm varlıklar için DataVersionEntity)
   - Güncel ana veri ve işlem verisi; FieldValueSource (değer kaynağı)
@@ -359,10 +468,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Çalışma prensibi 3/3</sub>
 
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Geçerli değer ve kaynağı:** FieldValueSource Her alan için ERP / kural / elle / varsayılan önceliği yeniden uygulanır
+- **Geçerli değer ve kaynağı:** FieldValueSource Her alan için ERP / kural / elle önceliği yeniden uygulanır
 - **Kural sonuçları:** DataRule → hedef alanlar Kurallar yeni veri üzerinde sırayla yeniden çalışır
 - **En alt seviye kodu (LLC):** Material Ürün ağacı değiştiyse yeniden hesaplanır
-- **Türetilmiş alanlar:** Birim dönüşümü, varsayılanlar Yeni ve değişen kayıtlar için
+- **Türetilmiş alanlar:** Birim dönüşümü Yeni ve değişen kayıtlar için
 - **Veri kalitesi uyarıları:** Veri kalitesi listesi Yeni versiyon üzerinde baştan üretilir; kapatılanlar kapalı kalır
 - **Dünden bugüne farkı:** Ana sayfa Önceki versiyonla karşılaştırma
 - **Plan:** Senaryolar · çalışmalar Otomatik değil: gece senaryoları yeni versiyonla çalışır, açık çalışma eski versiyonda kalır
@@ -550,7 +659,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 08 · Yükleme geçmişi
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Çalışma prensibi 1/2</sub>
 
-- Çekim, Excel yüklemesi, doğrulama, tam ve kısmi yüklemelerin kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
+- Çekim, Excel yüklemesi, validasyon, tam ve kısmi yüklemelerin kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
 
 #### NASIL ÇALIŞIR
 
@@ -658,9 +767,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
 
 - **10 · Ana veri görüntüleme:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
-- **11 · Değerin kaynağını gösterme:** Her alanın geçerli değerinin nereden geldiğini (ERP, kural, elle, varsayılan) ve ezilmiş değerleri göstermek; kullanıcı veriye güvenirken neyin kimin kararı olduğunu bilir.
+- **11 · Değerin kaynağını gösterme:** Her alanın geçerli değerinin nereden geldiğini (ERP, kural, elle) ve ezilmiş değerleri göstermek; kullanıcı veriye güvenirken neyin kimin kararı olduğunu bilir.
 - **12 · Elle değer girme:** ERP'de olmayan ya da hatalı bir değeri kullanıcının eliyle düzeltmesi; alanın sözlük ayarına göre ERP ve kuralı ezerek ya da ezmeyerek, izlenebilir ve geri alınabilir biçimde.
-- **13 · Elle değeri kaldırma:** Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural, ERP ya da varsayılan) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
+- **13 · Elle değeri kaldırma:** Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural ya da ERP) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
 - **14 · Değişiklik geçmişi:** Bir kaydın alanlarının zaman içinde nasıl değiştiğini tek zaman çizgisinde göstermek: elle girişler, kural sonuçları ve ERP yüklemeleri; kim, ne zaman, eski ve yeni değer.
 - **15 · Excel ile toplu düzeltme (öneri):** Çok sayıda kaydı tek tek düzeltmek yerine filtrelenmiş listeyi Excel'e alıp düzeltmek ve değişen hücreleri elle değer olarak geri yüklemek; aynı izlenebilirlik ve geri alma ile.
 - **16 · Veri kuralı tanımlama:** ERP'den gelmeyen ya da hatalı alanları, kod bilmeden yazılan koşul–sonuç kurallarıyla tamamlamak; aynı kural her yüklemede tekrar çalışsın, değer kaynağı 'kural' olarak izlensin.
@@ -670,6 +779,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **20 · Veri kalitesi kontrolü:** Ana veri ve işlem verisini plan için gerekli tutarlılık kontrollerinden geçirip önem sırasıyla uyarı listesi üretmek; önceki listeyle karşılaştırıp neyin yeni, neyin kapandığını göstermek.
 - **21 · Kalite düzeltme aksiyonu:** Veri kalitesi uyarısından doğrudan düzeltmeye geçmek: kayda gidip elle düzeltmek, önerilen kuralı uygulamak, uyarıyı gerekçeyle 'bilerek böyle' kapatmak ya da kişiye atamak; tek tek ya da toplu.
 - **99 · Malzeme blokajı:** Belli bir dönem için malzemenin üretimini, satın almasını ya da satışını durdurmak.
+- **100 · Validasyon kuralı tanımlama:** Staging'deki veride hangi durumun Hata, Uyarı ya da Bilgi olacağını tablo başına tanımlamak; hazır kuralların sınıfını değiştirmek ya da kapatmak, kullanıcı kuralı eklemek, hata eşiğini girmek (K-136).
 
 ### 10 · Ana veri görüntüleme
 <sub>24. Ekranlar ve fonksiyonlar · F10 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
@@ -730,14 +840,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![10 · Ana veri görüntüleme · Detay kartı](mockups/m24f-0380-10-ana-veri-goruntuleme-detay-karti.png)
 
 - **Tüm alanlar tek kartta:** Listede görünmeyen alanlar (takvim, kapasite kaynağı) detayda.
-- **Kaynak sütunu:** Her alanın yanında ERP, kural (numarasıyla), elle ya da varsayılan.
+- **Kaynak sütunu:** Her alanın yanında ERP, kural (numarasıyla) ya da elle; boşsa alanın BOŞSA anlamı.
 - **Rol farkı:** Düzenle butonu Key user ve üstünde; End user düzenleyemez, görünüm ve Excel serbest (K-99).
 - **Geçmişe geçiş:** Geçmiş butonu değişiklik geçmişini (14) açar.
 
 ### 11 · Değerin kaynağını gösterme
 <sub>24. Ekranlar ve fonksiyonlar · F11 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
-- Her alanın geçerli değerinin nereden geldiğini (ERP, kural, elle, varsayılan) ve ezilmiş değerleri göstermek; kullanıcı veriye güvenirken neyin kimin kararı olduğunu bilir.
+- Her alanın geçerli değerinin nereden geldiğini (ERP, kural, elle) ve ezilmiş değerleri göstermek; kullanıcı veriye güvenirken neyin kimin kararı olduğunu bilir.
 
 #### NASIL ÇALIŞIR
 
@@ -749,9 +859,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - FieldValueSource: alan bazında kaynak (Source), kural numarası, saklanan ERP değeri
   - ManualValue: elle değer, kim, ne zaman, geçerlilik
-  - FieldDefinition: alanın öncelik sırası ve varsayılanı
-- **03:** Hücre üzerine gelince ipucu açılır: geçerli değer, elle giren ve tarih, kuralın adı ve ürettiği değer, ERP değeri, varsayılan ve alanın öncelik sırası.
-- **04:** Filtre ile 'kaynağı elle olanlar', 'kuralla değişenler', 'varsayılanda kalanlar' listelenir; sağda dağılım görünür.
+  - FieldDefinition: alanın öncelik sırası ve BOŞSA anlamı (K-138)
+- **03:** Hücre üzerine gelince ipucu açılır: geçerli değer, elle giren ve tarih, kuralın adı ve ürettiği değer, ERP değeri ve alanın öncelik sırası; değer boşsa BOŞSA anlamı.
+- **04:** Filtre ile 'kaynağı elle olanlar', 'kuralla değişenler', 'boş kalanlar' listelenir; sağda dağılım görünür.
 - **05:** Lejant tablo altında sabittir; Excel dışa aktarımında her alan için kaynak sütunu eklenir.
 - **ÇIKTI**
   - Hücre etiketi ve ipucu
@@ -765,7 +875,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kaynak bilgisi alan bazındadır; aynı kaydın alanları farklı kaynaktan gelebilir.
   - ERP değeri ezilse de saklanır ve ipucunda gösterilir; elle değer kaldırılınca (13) geri döner.
   - Kural kaynaklı değerde kural numarası bağlantıdır; tıklayınca kural editörü (16) açılır.
-  - Varsayılan, veri sözlüğündeki DefaultValue'dur; 'varsayılanda kalan' alanlar veri kalitesi için ipucudur.
+  - Varsayılan değer yoktur (K-138); 'boş kalan' alanlar veri kalitesi için ipucudur, anlamı veri sözlüğündeki Boşsa'dır.
 - **HATA VE ISTISNA**
   - Eski versiyonlardan kalan kayıtta kaynak bilgisi yoksa 'bilinmiyor' etiketi; sonraki yüklemede dolar.
   - İpucu klavyeyle de açılır (hücrede Enter); ekran okuyucu için etiket metni hücre içeriğindedir.
@@ -773,14 +883,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yok; görüntüleme.
   - Filtreler Veri kalitesi ekranı ve toplu düzeltme (15) ile paylaşılır.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez.
-- **ÖRNEK:** CNC torna 1 · Verim: geçerli %85 (elle, Cavide 21.10), kural 3 %80 (ezildi), ERP değeri gelmiyor, varsayılan %100. Öncelik: elle › kural › ERP › varsayılan.
+- **ÖRNEK:** CNC torna 1 · Verim: geçerli %85 (elle, Cavide 21.10), kural 3 %80 (ezildi), ERP değeri gelmiyor. Öncelik: elle › kural › ERP.
 
 ### 11 · Değerin kaynağını gösterme · Hücre ipucu
 <sub>24. Ekranlar ve fonksiyonlar · F11 · B Ana veri ve kurallar · Mockup 1/2</sub>
 
 ![11 · Değerin kaynağını gösterme · Hücre ipucu](mockups/m24f-0383-11-degerin-kaynagini-gosterme-hucre-ipucu.png)
 
-- **Katmanlar tek bakışta:** Geçerli değer, elle giren, kuralın ürettiği, ERP değeri ve varsayılan alt alta.
+- **Katmanlar tek bakışta:** Geçerli değer, elle giren, kuralın ürettiği ve ERP değeri alt alta.
 - **Ezilen değer kaybolmaz:** Kural 3'ün %80 değeri 'ezildi' notuyla görünür; ERP gelmiyorsa bu da yazar.
 - **Öncelik sırası:** Alanın sözlükteki öncelik sırası ipucunun altında; kullanıcı neden bu değer anlar.
 - **Erişilebilirlik:** Etiket metin olarak var; renk ikincil. İpucu klavyeyle de açılır.
@@ -791,8 +901,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![11 · Değerin kaynağını gösterme · Kaynağa göre filtre](mockups/m24f-0384-11-degerin-kaynagini-gosterme-kaynaga-gore-filtre.png)
 
 - **Filtre çipleri:** Değer kaynağı: kural ve Alan: Verim; liste 7 satıra iner.
-- **Dağılım kartı:** Alanın değerleri hangi kaynaktan geliyor; varsayılanda kalanlar hemen bulunur.
-- **Kalite ipucu:** Varsayılanda kalan 5 kaynak için doğrudan liste bağlantısı.
+- **Dağılım kartı:** Alanın değerleri hangi kaynaktan geliyor; boş kalanlar hemen bulunur.
+- **Kalite ipucu:** Değeri boş kalan 5 kaynak için doğrudan liste bağlantısı.
 - **Aynı filtre her yerde:** Veri kalitesi ve toplu düzeltme ekranları aynı filtreyi kullanır.
 
 ### 12 · Elle değer girme
@@ -885,7 +995,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 13 · Elle değeri kaldırma
 <sub>24. Ekranlar ve fonksiyonlar · F13 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
-- Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural, ERP ya da varsayılan) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
+- Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural ya da ERP) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
 
 #### NASIL ÇALIŞIR
 
@@ -896,7 +1006,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Etki önizlemesi: türetilmiş alanlar ve onaylı plandaki tahmini etki (ör. doluluk yükselir).
 - **GIRDI**
   - Kayıt, alan ve mevcut ManualValue
-  - Öncelik sırasındaki sonraki değer (FieldValueSource: kural sonucu, ERP değeri, varsayılan)
+  - Öncelik sırasındaki sonraki değer (FieldValueSource: kural sonucu, ERP değeri)
 - **03:** Onaylanınca ManualValue kapatılır (ValidUntil = şimdi), silinmez; FieldValueSource yeni kaynağa göre güncellenir.
 - **04:** Türetilmiş alanlar ve bu kayıt için veri kalitesi kontrolü yeniden çalışır; denetim izine 'elle değer kaldırıldı' yazılır.
 - **05:** Bildirimde 'Geri al' bağlantısı: kaldırılan elle değer tek tıkla yeniden açılır (geçerliliği devam eder).
@@ -909,19 +1019,19 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F13 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Geri dönülecek değer öncelik sırasıyla belirlenir: kural sonucu varsa kural, yoksa ERP, yoksa varsayılan.
+  - Geri dönülecek değer öncelik sırasıyla belirlenir: kural sonucu varsa kural, yoksa ERP.
   - Kaldırma silme değildir; geçmişte görünür ve geri alınabilir.
   - Süresi dolan elle değerler aynı yolu otomatik izler (12).
   - Çalışmadaki geçici değişiklikler bu işlemden etkilenmez.
 - **HATA VE ISTISNA**
-  - Geri dönülecek değer yoksa (kural yok, ERP gelmiyor, varsayılan tanımsız): alan boş kalır ve zorunluysa veri kalitesi 'kritik' uyarı üretir; onayda uyarılır.
+  - Geri dönülecek değer yoksa (kural yok, ERP gelmiyor): alan boş kalır (anlamı BOŞSA) ve zorunluysa veri kalitesi 'kritik' uyarı üretir; onayda uyarılır.
   - Çakışma: başka kullanıcı az önce değiştirdiyse pencere yenilenir.
 - **ETKISI VE TETIKLENENLER**
   - Türetilmiş kapasite güncellenir.
   - Veri kalitesi uyarısı doğabilir ya da kapanabilir.
   - Plan: çalışmada yeniden hesap gerekir.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Geçerli değer ve kaynağı:** FieldValueSource Alan kural / ERP / varsayılana döner
+- **Geçerli değer ve kaynağı:** FieldValueSource Alan kural ya da ERP değerine döner
 - **Türetilmiş kapasite:** Dönem kapasitesi Kapasite alanıysa hemen
 - **Veri kalitesi uyarısı:** Veri kalitesi listesi Bu kayıt için kontrol yeniden
 - **Doluluk ve plan:** CapacityLoad · PlanMetric Otomatik değil; çalışmada yeniden hesap
@@ -1022,7 +1132,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01:** 'Excel'e al': filtrelenmiş liste indirilir; elle değer alabilen alanlar düzenlenebilir, diğerleri gri ve kilitli; her hücrenin kaynak etiketi ve gizli kayıt anahtarı dosyadadır.
 - **02:** Kullanıcı Excel'de değerleri değiştirir (liste alanlarında açılır liste).
 - **GIRDI**
-  - Kapsam: sekme ve filtre (ör. verimi varsayılanda kalan kaynaklar)
+  - Kapsam: sekme ve filtre (ör. verimi boş kalan kaynaklar)
   - Veri sözlüğü: hangi alanlar elle değer alabilir (düzenlenebilir), hangileri kilitli
   - Düzeltilmiş xlsx; gizli kayıt anahtarı ve kaynak etiketleri
 - **03:** Dosya geri yüklenir; sistem gizli anahtarla kayıtları eşler ve yalnız değişen hücreleri bulur (dosya değeri ≠ geçerli değer).
@@ -1058,7 +1168,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Türetilmiş kapasite:** Dönem kapasitesi Kapsamdaki kaynaklar için
 - **Veri kalitesi uyarıları:** Veri kalitesi listesi Kapsamdaki kayıtlar için kontrol yeniden
 - **Doluluk ve plan:** CapacityLoad · PlanMetric Otomatik değil; çalışmada yeniden hesap
-- **ÖRNEK:** Verimi varsayılanda kalan 5 kaynak Excel'e alınır, ölçüm değerleri girilir, geri yüklenir: 6 değişen hücre, 1 hatalı (olmayan takvim) atlanır, 5 elle değer toplu işlem #T-118 olarak kaydedilir.
+- **ÖRNEK:** Verimi boş kalan 5 kaynak Excel'e alınır, ölçüm değerleri girilir, geri yüklenir: 6 değişen hücre, 1 hatalı (olmayan takvim) atlanır, 5 elle değer toplu işlem #T-118 olarak kaydedilir.
 - **AÇIK KONU:** Bu fonksiyon öneri. Alternatif: yalnız tek tek düzeltme (12) ve kurallar (16). Toplu düzeltme ilk kurulumda (ERP'de olmayan 40+ alan) zaman kazandırır.
 
 ### 15 · Excel ile toplu düzeltme (öneri) · Excel'e alma
@@ -1225,7 +1335,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - DataRule listesi (Seq, IsActive, hedef alan)
   - Mevcut etki sayıları (son uygulamadan)
   - Aynı hedef alana yazan kurallar
-- **03:** Aç / kapa anahtarı: kapatma onay ister; onayda kuralın şu an etkilediği kayıtlar ve kapatınca geri dönecek değerler (ERP, varsayılan) gösterilir, gerekçe istenir.
+- **03:** Aç / kapa anahtarı: kapatma onay ister; onayda kuralın şu an etkilediği kayıtlar ve kapatınca geri dönecek değerler (ERP ya da boş) gösterilir, gerekçe istenir.
 - **04:** 'Sırayı kaydet ve uygula': Seq ve IsActive yazılır, kurallar yeniden uygulanır (19); vazgeçilirse sıra eski haline döner.
 - **ÇIKTI**
   - Güncel Seq ve IsActive
@@ -1327,6 +1437,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kural etki sayıları:** Veri kuralları listesi Her uygulamada güncellenir
 - **Plan:** Senaryolar · çalışmalar Otomatik değil; gece senaryoları yeni değerlerle çalışır
 - **ÖRNEK:** 7 kural, 45 sn: 266 değişiklik, 11 atlanan (6 ERP ezer, 5 elle kalır). Kural 5 ve 7 aynı alana yazar; 7 sonra çalıştığı için rulmanlarda 14 gün kazanır. 21 uyarı kapandı, 2 yeni.
+- **Uygulama (3.4, K-134):** Rules otomatik validasyon zincirinin ilk adımıdır: her batch staging'e alınınca tablonun aktif kuralları staging'in güncel hâli üzerinde çalışır, ardından validasyon başlar. 3.4'te adım boş geçer; uygulama 4.1'de.
 
 ### 19 · Kural uygulama · Uygulama sürüyor
 <sub>24. Ekranlar ve fonksiyonlar · F19 · B Ana veri ve kurallar · Mockup 1/2</sub>
@@ -1513,6 +1624,34 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 6.1'de açılır.
 - **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motorda uygulanışı Aşama 10.
 - **Uygulama (K-126):** Henüz uygulanmadı; yalnız tanım.
+
+### 100 · Validasyon kuralı tanımlama
+<sub>24. Ekranlar ve fonksiyonlar · F100 · B Ana veri ve kurallar · Çalışma prensibi (Geliştirme 3.4, K-136)</sub>
+
+- Staging'deki veride hangi durumun Hata, Uyarı ya da Bilgi olacağını tablo başına tanımlamak: hazır kuralları düzenlemek ya da kapatmak, kod bilmeden kullanıcı kuralı eklemek, tablonun hata eşiğini girmek. Mockup yok.
+
+#### NASIL ÇALIŞIR
+
+- **KIM VE NEREDEN**
+  - Kim: System owner ve Admin düzenler · Key user görür · End user ekranı görmez
+  - Nereden: Validasyon kuralları ekranı (27), Veri menüsü
+- **01:** Liste tablo seçimiyle açılır ("Tümü" ya da bir tablo): Tablo, Kural (kullanıcı dilinde ad), Koşul (okunur cümle), Sınıf, Mesaj, Tür (Hazır / Kullanıcı), Aktif; Kod kolonu varsayılan görünümde gizli, Alanlar'dan açılır. Yapısal kontroller listede görünmez, arka planda çalışır (K-139).
+- **02:** Sınıf kolonu saydam pastel çiptir (Hata açık kırmızı, Uyarı açık sarı, Bilgi açık mavi-gri); tıklayınca seçim kutusu açılır. Aktif tablodan değişir. Koşulu editörle ifade edilen hazır kural (docs 04 tablosunda DÜZENLENİR "Evet") ve kullanıcı kuralı pencerede düzenlenir: ad, mesaj, koşul, sınıf, aktiflik. Hazır kuralda "İlk hâline döndür" katalogdaki hâline getirir; hazır kural silinmez. Öteki hazır kurallarda yalnız sınıf ve aktiflik değişir. Kullanıcı kuralı silinebilir.
+- **GIRDI**
+  - `adm.ValidationRule` ve `ValidationRuleCondition`
+  - Sözleşme: tablonun alanları, tipleri, değer listeleri (koşul editörü)
+  - `IntegrationEntity.ErrorThresholdPct` (seçili tablo)
+- **03:** "Yeni kural" seçili tablo için kullanıcı kuralı açar. Pencere: başlığın sağında Aktif anahtarı; ad ve mesaj yan yana; sınıf üç parçalı seçim, seçili olan kendi pastel renginde. Koşul editörü (ortak bileşen; 4.2 veri kuralları da kullanır): bölüm başlığı "Koşullar"; her grup "Koşul Grubu 1, 2…" kartı, aralarında belirgin "VEYA"; her koşul tek satır (alan, operatör, değer), ikinci satırdan itibaren solda "ve"; değer kutusunun solunda "Değer / Alan" anahtarı (Alan seçilince öteki alan seçilir); Boş ve Boş değil'de değer kutusu yok. "+ Koşul ekle" grubun içinde, "+ VEYA grubu ekle" en altta ikincil düğme. Operatörler: =, ≠, >, <, ≥, ≤, İçerir, İle başlar, Listede (virgülle), Boş, Boş değil; ≠ boş değeri de kapsar. Tablolar arası kullanıcı kuralı yoktur.
+- **04:** Üst şerit (docs/12 · Üst şerit): Tablo, Hata eşiği (%) ve Yeni kural; beyaz kart içinde tek satır, etiketler alanın solunda. Eşik boşsa eşik kontrolü yapılmaz (K-135). "Tümü" seçiliyken eşik ve Yeni kural pasiftir.
+- **ÇIKTI**
+  - Güncellenmiş kurallar ve eşik
+  - Denetim izi (kural başına eski ve yeni değer)
+  - "Yeniden valide et" önerisi
+- **05:** Değişiklikler toplu ve tek işlemde kaydedilir (Kaydet / Vazgeç, K-132); kaydedilmemiş değişiklikle çıkışta uyarı. Kaydedince değişen tablolar için "Yeniden valide et" önerilir; kabul edilirse o tablolarda zincir (04) çalışır, iş panelinde görünür (onay bandı yok, K-139).
+- **Kurallar:** Kural adı tabloda tekil; koşulsuz kullanıcı kuralı kaydedilmez; alan–alan karşılaştırmasında iki alanın tipi uyumlu olmalı; Listede değeri virgülle ayrılır. Sınıf, aktiflik ve koşul değişikliği yalnız bir sonraki validasyonda etkilidir; mevcut bulgular yeniden validasyona kadar kalır. Düzenlenmiş hazır kuralın adı, mesajı ve koşulu sürüm yükseltmesinde ezilmez (`IsCustomized`).
+- **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; etkisi bir sonraki validasyondadır (04).
+- **ÖRNEK:** Admin, Malzeme için "Minimum lot boş değil ve Maksimum lot boş" (VE) VEYA "Lot katı > Maksimum lot" kullanıcı kuralını Uyarı olarak ekler, "Güvenlik stoğu maksimum stoktan büyük" kuralının koşuluna "Maksimum stok > 0" ekler, "Güvenlik stoğu hem miktar hem gün" kuralını kapatır, eşiği %2 yapar, kaydeder ve "Yeniden valide et"i onaylar.
+- **Uygulama (3.4, K-139):** uygulandı. Sınıf ve aktiflik tablo içinde, toplu kayıtla (K-132); kural penceresi (kullanıcı kuralı, düzenlenebilir hazır kural, İlk hâline döndür, silme) tek kayıtla. Kaydedince değişen tablolar için "Yeniden valide et" onayı. Eşik seçili tablonun şeridinde, toplu kayıtla. Kural kodu: hazır kuralda katalog kodu, kullanıcı kuralında KUL-n.
 
 ### C · Parametre
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
@@ -2817,7 +2956,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
 
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
-- **40 · Gece akışı:** Her gece aynı sırayla: senaryo temizliği, veri çekme, doğrulama, tam yükleme, senaryoların sırayla ve paralel çalışması.
+- **40 · Gece akışı:** Her gece aynı sırayla: senaryo temizliği, veri çekme, validasyon, tam yükleme, senaryoların sırayla ve paralel çalışması.
 - **41 · Senaryoyu yeniden çalıştırma (öneri):** Hata veren ya da süre bütçesini aşan gece senaryosunu gündüz yeniden başlatmak; ya da tanım değişikliğinden sonra bir senaryoyu yeniden üretmek.
 - **42 · Senaryo karşılaştırma:** Gece senaryolarını aynı metriklerle yan yana görmek, en iyi değeri işaretlemek ve farkın hangi siparişlerden, kaynaklardan geldiğine inmek; çalışma açma kararı buradan verilir.
 - **43 · Çalışma açma:** Bir gece senaryosu üzerinde kullanıcının kendi çalışma alanını açmak; değişiklikler bu alana yazılır, yeniden hesap ve yayın buradan yapılır.
@@ -2831,7 +2970,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 40 · Gece akışı
 <sub>24. Ekranlar ve fonksiyonlar · F40 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
 
-- Her gece aynı sırayla: senaryo temizliği, veri çekme, doğrulama, tam yükleme, senaryoların sırayla ve paralel çalışması. Sabaha karşılaştırılabilir senaryolar hazır olur.
+- Her gece aynı sırayla: senaryo temizliği, veri çekme, validasyon, tam yükleme, senaryoların sırayla ve paralel çalışması. Sabaha karşılaştırılabilir senaryolar hazır olur.
 
 #### NASIL ÇALIŞIR
 
@@ -2839,7 +2978,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Sistem (zamanlanmış) · zamanlama ve senaryo tanımları: Admin ve üstü
   - Nereden: Zamanlanmış iş (21:30 silme, 22:00 çekim) · görünüm: Ana sayfa, Gece senaryoları, Sistem sağlığı
 - **01:** 21:30 temizlik: önceki gecenin senaryoları ve yayınlanmamış çalışmalar silinir; onaylı planlar ve bağlı veri versiyonları kalır (49).
-- **02:** 22:00 veri çekme (01) → doğrulama (04) → tam yükleme (05): yeni veri versiyonu. Hata eşiği aşan varlık dışarıda kalır (kısmiye döner).
+- **02:** 22:00 veri çekme (01) → validasyon (04) → tam yükleme (05): yeni veri versiyonu. Hata eşiği aşan varlık dışarıda kalır (kısmiye döner).
 - **GIRDI**
   - Zamanlanmış iş tanımları (saatler), aktif senaryo tanımları ve öncelik sırası
   - Sistem ayarları: paralel senaryo sayısı (2), gece bitiş sınırı (06:00), 'yükleme başarısızsa' davranışı
@@ -6416,7 +6555,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **89 · Giriş ve oturum:** Yerel kullanıcıyla güvenli giriş, şifre yönetimi ve oturum süresi; kapalı ağda dizin servisi olmadan kimlik doğrulama.
 - **90 · Rol bazlı yetki:** Her fonksiyonun ve ekranın hangi rolle kullanılabileceğini tek matriste tanımlamak ve her istekte sunucuda doğrulamak; arayüz yetkisiz aksiyonu gizler ya da pasifler.
 - **91 · Entegrasyon tanımı:** ERP ile veri alışverişini varlık bazında tanımlamak: yöntem (API, SQL arayüz tabloları, Excel), bağlantı, servis hesabı ve alan eşlemesi; hepsi tek veri sözleşmesine bağlıdır.
-- **92 · Zamanlanmış işler:** Gece akışını (çekim → doğrulama ve yükleme → senaryolar) ve bakım işlerini (senaryo silme, ham veri temizliği, versiyon sıkıştırma) zamanlamak, aç / kapa, sıra ve bağımlılıkla yönetmek.
+- **92 · Zamanlanmış işler:** Gece akışını (çekim → validasyon ve yükleme → senaryolar) ve bakım işlerini (senaryo silme, ham veri temizliği, versiyon sıkıştırma) zamanlamak, aç / kapa, sıra ve bağımlılıkla yönetmek.
 - **93 · İş kuyruğu yönetimi (öneri):** Çalışan ve bekleyen işleri (gece senaryoları, aktif hesaplamalar, yüklemeler, büyük dışa aktarımlar) görmek; bekleyeni iptal etmek, çalışanı en iyi çözümle durdurmak, öncelik vermek. Daha önce konuşulmadı (öneri).
 - **94 · Sistem sağlığı:** Uygulama, veritabanı ve motorun durumunu tek ekranda görmek: servisler, kuyruk, son çalışmalar ve süre trendleri, hatalar, disk.
 - **95 · Destek paketi:** Kapalı ağda uzaktan erişim olmadığından sorun incelemesi için log, ayar, sürüm ve iş kayıtlarını (isteğe bağlı anonim model girdisini) tek şifreli pakette dışa almak; biz paketi inceleyip çözüm üretiriz.
@@ -6626,6 +6765,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | K · Sistem ayarları, sürüm | 96–97 | tam | yok | yok | yok |
 | K · Denetim izi | 98 | tam | tam | kendi | yok |
 | B · Malzeme blokajı | 99 | tam | tam | tam | salt okunur |
+| B · Validasyon kuralları | 100 | tam | tam | salt okunur | yok |
 
 - **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur.
 - **Raporlama serbestliği (K-99):** görünüm kaydetme, alan ekleme ve çıkarma, sıralama, filtre, gruplama ve koşullu biçim fonksiyon sayılmaz; okuma yetkisi olan her listede herkese açıktır.
@@ -6752,7 +6892,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 92 · Zamanlanmış işler
 <sub>24. Ekranlar ve fonksiyonlar · F92 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
 
-- Gece akışını (çekim → doğrulama ve yükleme → senaryolar) ve bakım işlerini (senaryo silme, ham veri temizliği, versiyon sıkıştırma) zamanlamak, aç / kapa, sıra ve bağımlılıkla yönetmek.
+- Gece akışını (çekim → validasyon ve yükleme → senaryolar) ve bakım işlerini (senaryo silme, ham veri temizliği, versiyon sıkıştırma) zamanlamak, aç / kapa, sıra ve bağımlılıkla yönetmek.
 
 #### NASIL ÇALIŞIR
 
@@ -6765,7 +6905,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - İş tanımları: tür, saat ve günler, bağımlılık, kanal, öncelik, aktif
   - SystemSetting: bitiş sınırı (06:00), gece paralel senaryo (2)
   - Sunucu saati (kapalı ağda zaman sunucusu yok; sunucu saati referans)
-- **03:** Gece akışı zinciri sabittir: 22:00 çekim → doğrulama ve tam yükleme → senaryolar (sıra ve paralellik Gece senaryoları ekranında) → 06:00 bitiş sınırı.
+- **03:** Gece akışı zinciri sabittir: 22:00 çekim → validasyon ve tam yükleme → senaryolar (sıra ve paralellik Gece senaryoları ekranında) → 06:00 bitiş sınırı.
 - **04:** Zincir davranışı: çekim ya da yükleme hata verirse senaryolar son veri versiyonuyla 'eski veri' etiketiyle çalışır (parametre, 01); bir senaryo hata verirse diğerleri sürer.
 - **05:** 'Şimdi çalıştır': iş gece kanalına anında girer; gece akışıyla çakışırsa sıraya alınır. Kapsam seçilir (yalnız çekim ya da tüm zincir).
 - **ÇIKTI**

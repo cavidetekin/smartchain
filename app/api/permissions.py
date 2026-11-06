@@ -1,4 +1,4 @@
-"""Yetki matrisi (fonksiyon 90; K-99, K-100): 4 rol × 99 fonksiyon, Faz 1'de kodda sabit, tek kaynak.
+"""Yetki matrisi (fonksiyon 90; K-99, K-100): 4 rol × 100 fonksiyon, Faz 1'de kodda sabit, tek kaynak.
 
 Grup düzeyi docs/06 fonksiyon 90'daki tabloyla birebirdir (test). Arayüz rolün düzeylerini GET /api/auth/me ile alır;
 app/shared/permissions.json yalnız üretilmiş kopyadır (ön yüz testleri, ileride matris ekranı 2.4):
@@ -62,6 +62,7 @@ GROUP_ROWS: tuple[GroupRow, ...] = (
     GroupRow("K2", "K", "Sistem ayarları, sürüm", 96, 97, (F, N, N, N)),
     GroupRow("K3", "K", "Denetim izi", 98, 98, (F, F, S, N)),
     GroupRow("B2", "B", "Malzeme blokajı", 99, 99, (F, F, F, R)),
+    GroupRow("B3", "B", "Validasyon kuralları", 100, 100, (F, F, R, N)),
 )
 
 # Fonksiyon istisnaları: grup düzeyinden ayrılan hücreler (rol → düzey) ve gerekçesi.
@@ -78,7 +79,7 @@ _NAMES = """
 01 Veri çekme
 02 Excel şablonu indirme
 03 Excel ile yükleme
-04 Doğrulama
+04 Validasyon
 05 Tam yükleme
 06 Kısmi yükleme
 07 Veri versiyonlama
@@ -174,11 +175,12 @@ _NAMES = """
 97 Sürüm güncelleme (öneri)
 98 Denetim izi (öneri)
 99 Malzeme blokajı
+100 Validasyon kuralı tanımlama
 """
 
 
 def _parse_names() -> dict[int, str]:
-    return {int(line[:2]): line[3:] for line in _NAMES.strip().splitlines()}
+    return {int(no): name for no, name in (line.split(" ", 1) for line in _NAMES.strip().splitlines())}
 
 
 def _group_of(no: int) -> GroupRow:

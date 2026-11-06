@@ -22,7 +22,7 @@ def test_fields_match_docs():
         assert row["FieldClass"] == table["cls"], key
         assert row["IsRequired"] == field["required"], key
         assert row["EditableInWorkspace"] == field["workspace"], key
-        assert (row["DefaultValue"] or "") == field["default"], key
+        assert (row["IfEmpty"] or "") == field["if_empty"], key  # BOŞSA (K-138); varsayılan yok
 
 
 def test_only_core_and_param_with_no_name_clash():
@@ -97,20 +97,20 @@ def test_location_flags_in_the_dictionary(db_engine):
     """K-111: bayraklar etiketleriyle sözlükte; Type kalır; Name zorunlu değil."""
     with db_engine.connect() as c:
         rows = {r.FieldName: r for r in c.execute(text(
-            "SELECT FieldName, StandardLabel, IsRequired, DefaultValue FROM adm.FieldDefinition WHERE TableName = N'Location'"))}
+            "SELECT FieldName, StandardLabel, IsRequired, IfEmpty FROM adm.FieldDefinition WHERE TableName = N'Location'"))}
     assert rows["Type"].StandardLabel == "Lokasyon tipi" and not rows["Name"].IsRequired
-    assert {n: (rows[n].StandardLabel, rows[n].DefaultValue) for n in ("IsFactory", "IsDepot", "IsSubcontractor", "IsActive")} == {
-        "IsFactory": ("Tesis", "0"), "IsDepot": ("Depo", "0"), "IsSubcontractor": ("Fason deposu", "0"), "IsActive": ("Aktif", "1")}
+    assert {n: (rows[n].StandardLabel, rows[n].IfEmpty) for n in ("IsFactory", "IsDepot", "IsSubcontractor", "IsActive")} == {  # K-138: varsayılan yok
+        "IsFactory": ("Tesis", "yok"), "IsDepot": ("Depo", "yok"), "IsSubcontractor": ("Fason deposu", "yok"), "IsActive": ("Aktif", "hata (kurallardan sonra)")}
 
 
 @pytest.mark.db
 def test_unit_fields_in_the_dictionary(db_engine):
     """K-112: ondalığın varsayılanı yok; dönüşümün ad alanları etiketleriyle sözlükte."""
     with db_engine.connect() as c:
-        decimals = c.execute(text("SELECT DefaultValue FROM adm.FieldDefinition WHERE TableName = N'UnitOfMeasure' AND FieldName = N'Decimals'")).scalar_one()
+        decimals = c.execute(text("SELECT IfEmpty FROM adm.FieldDefinition WHERE TableName = N'UnitOfMeasure' AND FieldName = N'Decimals'")).scalar_one()
         rows = dict(c.execute(text("SELECT FieldName, StandardLabel FROM adm.FieldDefinition WHERE TableName = N'UomConversion'")).all())
         factor = c.execute(text("SELECT Description FROM adm.FieldDefinition WHERE TableName = N'UomConversion' AND FieldName = N'Factor'")).scalar_one()
-    assert decimals is None
+    assert decimals == "bilinmiyor"  # BOŞSA (K-138)
     assert (rows["FromUomName"], rows["ToUomName"], rows["Factor"]) == ("Kaynak birim adı", "Hedef birim adı", "Çarpan")
     assert factor == "1 kaynak birim = çarpan × hedef birim"
 
@@ -127,9 +127,9 @@ def test_dictionary_holds_only_current_fields(db_engine):
 def test_closing_changes_in_the_dictionary(db_engine):
     """K-127: ham alanlar zorunlu ve varsayılansız; teklif bayrağı; RemainingQuantity."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'SalesOrderLine', N'WorkOrderComponent')"))}
-    assert not rows[("SalesOrderLine", "Type")].IsRequired and rows[("SalesOrderLine", "Type")].DefaultValue is None and not rows[("SalesOrderLine", "Status")].IsRequired
-    assert rows[("SalesOrderLine", "IsQuote")].StandardLabel == "Teklif" and rows[("SalesOrderLine", "IsQuote")].DefaultValue is None
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'SalesOrderLine', N'WorkOrderComponent')"))}
+    assert not rows[("SalesOrderLine", "Type")].IsRequired and rows[("SalesOrderLine", "Type")].IfEmpty == "bilinmiyor" and not rows[("SalesOrderLine", "Status")].IsRequired
+    assert rows[("SalesOrderLine", "IsQuote")].StandardLabel == "Teklif" and rows[("SalesOrderLine", "IsQuote")].IfEmpty == "yok"
     assert ("WorkOrderComponent", "RemainingQuantity") in rows and ("WorkOrderComponent", "RemainingQty") not in rows
 
 
@@ -137,22 +137,22 @@ def test_closing_changes_in_the_dictionary(db_engine):
 def test_material_reference_and_capacity_unit_in_the_dictionary(db_engine):
     """K-126: yeni tablo etiketleriyle; K-117: kapasite biriminin varsayılanı kalktı, zorunlu kaldı."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'MaterialReference', N'Resource')"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'MaterialReference', N'Resource')"))}
     assert rows[("MaterialReference", "MaterialId")].StandardLabel == "Benzetilen ürün" and rows[("MaterialReference", "ReferenceMaterialId")].IsRequired
-    assert rows[("MaterialReference", "TimeFactor")].StandardLabel == "Süre çarpanı" and rows[("MaterialReference", "TimeFactor")].DefaultValue == "1"
+    assert rows[("MaterialReference", "TimeFactor")].StandardLabel == "Süre çarpanı" and rows[("MaterialReference", "TimeFactor")].IfEmpty == "yok"
     assert rows[("MaterialReference", "ReferenceProductionVersionId")].StandardLabel == "Referans ürünün versiyonu" and not rows[("MaterialReference", "ReferenceProductionVersionId")].IsRequired
-    assert rows[("Resource", "CapacityUnit")].IsRequired and rows[("Resource", "CapacityUnit")].DefaultValue is None
+    assert rows[("Resource", "CapacityUnit")].IsRequired and rows[("Resource", "CapacityUnit")].IfEmpty == "hata (kurallardan sonra)"
 
 
 @pytest.mark.db
 def test_purchase_and_confirmation_in_the_dictionary(db_engine):
     """K-125: eski ve kalkan alanlar yok; tip zorunlu kalır; bayraklar varsayılansız."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'PurchaseOrderLine', N'ProductionConfirmation')"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'PurchaseOrderLine', N'ProductionConfirmation')"))}
     assert not {("PurchaseOrderLine", "OrderNo"), ("PurchaseOrderLine", "OpenQty")} & set(rows)
     assert not {("ProductionConfirmation", n) for n in ("OpNo", "SeqNo", "ResourceId", "ActualConsumption", "ConfirmedQty", "StartAt", "EndAt")} & set(rows)
     assert not rows[("PurchaseOrderLine", "OrderType")].IsRequired and not rows[("PurchaseOrderLine", "Status")].IsRequired and rows[("PurchaseOrderLine", "PurchaseOrderNo")].StandardLabel == "Sipariş no"
-    assert rows[("PurchaseOrderLine", "IsPurchaseRequest")].StandardLabel == "Satın alma talebi" and rows[("PurchaseOrderLine", "IsPurchaseRequest")].DefaultValue is None
+    assert rows[("PurchaseOrderLine", "IsPurchaseRequest")].StandardLabel == "Satın alma talebi" and rows[("PurchaseOrderLine", "IsPurchaseRequest")].IfEmpty == "yok"
     assert rows[("PurchaseOrderLine", "SalesOrderLineId")].StandardLabel == "Bağlı sipariş satırı" and rows[("PurchaseOrderLine", "ReceivedQuantity")].StandardLabel == "Teslim alınan miktar"
     assert rows[("ProductionConfirmation", "ConfirmationNo")].StandardLabel == "Teyit no" and rows[("ProductionConfirmation", "ConfirmationNo")].IsRequired
     assert rows[("ProductionConfirmation", "MaterialId")].StandardLabel == "Üretilen malzeme" and rows[("ProductionConfirmation", "ConfirmedQuantity")].IsRequired and rows[("ProductionConfirmation", "StartDate")].StandardLabel == "Başlangıç"
@@ -162,14 +162,14 @@ def test_purchase_and_confirmation_in_the_dictionary(db_engine):
 def test_work_orders_in_the_dictionary(db_engine):
     """K-124: eski adlar yok; tipin varsayılanı ve zorunluluğu kalktı; operasyonda kaynak zorunlu değil."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName LIKE N'WorkOrder%'"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName LIKE N'WorkOrder%'"))}
     assert not {("WorkOrder", n) for n in ("OrderNo", "OrderType", "OrderQty", "OpenQty")} & set(rows)
     assert not {("WorkOrderComponent", "RequiredQty"), ("WorkOrderComponent", "IssuedQty"), ("WorkOrderOperation", "OpNo"), ("WorkOrderOperation", "SeqNo")} & set(rows)
     kind = rows[("WorkOrder", "ProductionOrderType")]
-    assert kind.StandardLabel == "İş emri tipi" and kind.DefaultValue is None and not kind.IsRequired and not rows[("WorkOrder", "Status")].IsRequired
-    assert rows[("WorkOrder", "ProductionVersionId")].StandardLabel == "Üretim versiyonu" and rows[("WorkOrder", "IsFixed")].StandardLabel == "Sabit" and rows[("WorkOrder", "IsFixed")].DefaultValue is None
-    assert rows[("WorkOrderComponent", "UnitUsage")].StandardLabel == "Birim kullanım" and rows[("WorkOrderComponent", "IssuedQuantity")].DefaultValue == "0" and rows[("WorkOrderComponent", "ScrapRatio")].DefaultValue == "0"
-    assert not rows[("WorkOrderOperation", "ResourceId")].IsRequired and rows[("WorkOrderOperation", "ResourceRole")].DefaultValue == "Primary" and rows[("WorkOrderOperation", "IsCompleted")].StandardLabel == "Tamamlandı"
+    assert kind.StandardLabel == "İş emri tipi" and kind.IfEmpty == "bilinmiyor" and not kind.IsRequired and not rows[("WorkOrder", "Status")].IsRequired
+    assert rows[("WorkOrder", "ProductionVersionId")].StandardLabel == "Üretim versiyonu" and rows[("WorkOrder", "IsFixed")].StandardLabel == "Sabit" and rows[("WorkOrder", "IsFixed")].IfEmpty == "yok"
+    assert rows[("WorkOrderComponent", "UnitUsage")].StandardLabel == "Birim kullanım" and rows[("WorkOrderComponent", "IssuedQuantity")].IfEmpty == "yok" and rows[("WorkOrderComponent", "ScrapRatio")].IfEmpty == "yok"
+    assert not rows[("WorkOrderOperation", "ResourceId")].IsRequired and rows[("WorkOrderOperation", "ResourceRole")].IfEmpty == "hata (kurallardan sonra)" and rows[("WorkOrderOperation", "IsCompleted")].StandardLabel == "Tamamlandı"
     assert rows[("WorkOrderOperation", "SequenceNo")].StandardLabel == "Sıra no"
 
 
@@ -177,54 +177,54 @@ def test_work_orders_in_the_dictionary(db_engine):
 def test_stock_in_the_dictionary(db_engine):
     """K-123: durumun varsayılanı ve zorunluluğu kalktı; yeni alanlar etiketleriyle."""
     with db_engine.connect() as c:
-        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName = N'Stock'"))}
-    assert "StockStatus" not in rows and rows["Status"].StandardLabel == "Stok durumu" and rows["Status"].DefaultValue is None and not rows["Status"].IsRequired
+        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName = N'Stock'"))}
+    assert "StockStatus" not in rows and rows["Status"].StandardLabel == "Stok durumu" and rows["Status"].IfEmpty == "bilinmiyor" and not rows["Status"].IsRequired
     assert {n: rows[n].StandardLabel for n in ("CustomerId", "SalesOrderLineId", "ExpectedAcceptanceDate", "Uom", "IsAvailable", "IsInQuality", "IsBlocked", "IsActive", "IsCustomTracked")} == {
         "CustomerId": "Sahip müşteri", "SalesOrderLineId": "Sahip sipariş satırı", "ExpectedAcceptanceDate": "Beklenen kabul tarihi", "Uom": "Birim",
         "IsAvailable": "Kullanılabilir", "IsInQuality": "Kalitede", "IsBlocked": "Bloke", "IsActive": "Aktif", "IsCustomTracked": "Özel takip"}
-    assert all(rows[n].DefaultValue is None for n in ("IsAvailable", "IsInQuality", "IsBlocked", "IsActive", "IsCustomTracked"))
+    assert [rows[n].IfEmpty for n in ("IsAvailable", "IsInQuality", "IsBlocked", "IsActive", "IsCustomTracked")] == ["yok", "yok", "yok", "hata (kurallardan sonra)", "yok"]
 
 
 @pytest.mark.db
 def test_forecast_in_the_dictionary(db_engine):
     """K-122: yeni alanlar etiketleriyle; bayrak ve teslim noktasının varsayılanı yok."""
     with db_engine.connect() as c:
-        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, DefaultValue FROM adm.FieldDefinition WHERE TableName = N'Forecast'"))}
+        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, IfEmpty FROM adm.FieldDefinition WHERE TableName = N'Forecast'"))}
     assert {n: rows[n].StandardLabel for n in ("Uom", "Type", "DeliveryPoint", "IsActive")} == {"Uom": "Birim", "Type": "Tahmin tipi", "DeliveryPoint": "Teslim noktası", "IsActive": "Aktif"}
-    assert rows["DeliveryPoint"].DefaultValue is None and rows["IsActive"].DefaultValue is None
+    assert rows["DeliveryPoint"].IfEmpty == "hata (kurallardan sonra)" and rows["IsActive"].IfEmpty == "hata (kurallardan sonra)"
 
 
 @pytest.mark.db
 def test_sales_order_in_the_dictionary(db_engine):
     """K-120: yeni ve adı değişen alanlar sözlükte."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE FieldName IN (N'OpenQty', N'OpenQuantity', N'OrderedQuantity', N'Uom', N'IsOnHold')"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE FieldName IN (N'OpenQty', N'OpenQuantity', N'OrderedQuantity', N'Uom', N'IsOnHold')"))}
     assert ("SalesOrderLine", "OpenQty") not in rows
     assert rows[("SalesOrderLine", "OpenQuantity")].IsRequired and rows[("SalesOrderLine", "OpenQuantity")].StandardLabel == "Açık miktar"
-    assert rows[("SalesOrderLine", "Uom")].StandardLabel == "Sipariş birimi" and rows[("SalesOrderLine", "IsOnHold")].DefaultValue is None
+    assert rows[("SalesOrderLine", "Uom")].StandardLabel == "Sipariş birimi" and rows[("SalesOrderLine", "IsOnHold")].IfEmpty == "yok"
 
 
 @pytest.mark.db
 def test_customer_and_project_in_the_dictionary(db_engine):
     """K-119: yeni ve adı değişen alanlar sözlükte; eski adlar yok; IsActive varsayılansız."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue FROM adm.FieldDefinition WHERE TableName IN (N'Customer', N'ProjectGroup', N'Project', N'BorrowPayback')"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty FROM adm.FieldDefinition WHERE TableName IN (N'Customer', N'ProjectGroup', N'Project', N'BorrowPayback')"))}
     assert not {("ProjectGroup", "IsolationRule"), ("Project", "IsolationRule"), ("Project", "IsClosed")} & set(rows)
     assert rows[("ProjectGroup", "TrackingRule")].StandardLabel == rows[("Project", "TrackingRule")].StandardLabel == "Takip kuralı"
-    assert rows[("ProjectGroup", "TrackingRule")].DefaultValue == "Ortaktan beslenir" and rows[("Project", "IsActive")].DefaultValue is None
-    assert rows[("Customer", "IsCustomTracked")].StandardLabel == "Özel takip" and rows[("Customer", "IsCustomTracked")].DefaultValue is None
-    assert rows[("ProjectGroup", "IsActive")].DefaultValue is None and rows[("BorrowPayback", "LendingProjectId")].StandardLabel == "Ödünç veren proje"
+    assert rows[("ProjectGroup", "TrackingRule")].IfEmpty == "hata (kurallardan sonra)" and rows[("Project", "IsActive")].IfEmpty == "hata (kurallardan sonra)"
+    assert rows[("Customer", "IsCustomTracked")].StandardLabel == "Özel takip" and rows[("Customer", "IsCustomTracked")].IfEmpty == "yok"
+    assert rows[("ProjectGroup", "IsActive")].IfEmpty == "hata (kurallardan sonra)" and rows[("BorrowPayback", "LendingProjectId")].StandardLabel == "Ödünç veren proje"
 
 
 @pytest.mark.db
 def test_supplier_fields_in_the_dictionary(db_engine):
     """K-118: yeni ve adı değişen alanlar sözlükte; eski adlar yok; süre zorunlu değil."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'Supplier', N'MaterialSupplier')"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'Supplier', N'MaterialSupplier')"))}
     assert not {f for _, f in rows} & {"LeadTimeDays", "QuotaPct", "MinOrderQty", "OrderMultiple", "MaxOrderQty"}
     assert rows[("MaterialSupplier", "QuotaRatio")].StandardLabel == "Kota oranı" and rows[("MaterialSupplier", "OrderLotSize")].StandardLabel == "Sipariş katı"
     assert not rows[("MaterialSupplier", "FixedLeadTimeDays")].IsRequired and rows[("MaterialSupplier", "LocationId")].IsRequired
-    assert rows[("MaterialSupplier", "IsActive")].DefaultValue is None and rows[("Supplier", "IsActive")].DefaultValue is None
+    assert rows[("MaterialSupplier", "IsActive")].IfEmpty == "hata (kurallardan sonra)" and rows[("Supplier", "IsActive")].IfEmpty == "hata (kurallardan sonra)"
     assert rows[("Supplier", "Country")].StandardLabel == "Ülke" and rows[("Supplier", "City")].StandardLabel == "Şehir"
 
 
@@ -232,10 +232,10 @@ def test_supplier_fields_in_the_dictionary(db_engine):
 def test_resource_side_in_the_dictionary(db_engine):
     """K-117: kalkan tablolar sözlükte yok; yeni tablolar ve alanlar var; kapasite alanı zorunlu değil."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition"))}
     assert not {t for t, _ in rows} & {"Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence"}
     assert not {("Resource", "ResourceRole"), ("Resource", "ResourceGroupId"), ("Resource", "IsConstrained"), ("Resource", "SupplierId"), ("ShiftPlan", "CompetenceGroupId")} & set(rows)
-    assert rows[("Resource", "IsCritical")].StandardLabel == "Kritik kaynak" and rows[("Resource", "IsCritical")].DefaultValue is None
+    assert rows[("Resource", "IsCritical")].StandardLabel == "Kritik kaynak" and rows[("Resource", "IsCritical")].IfEmpty == "hata (kurallardan sonra)"
     assert rows[("Resource", "SubcontractorId")].StandardLabel == "Fasoncu" and rows[("Resource", "IsEmployee")].StandardLabel == "İşçi"
     assert not rows[("Resource", "DailyCapacity")].IsRequired and not rows[("Resource", "CalendarId")].IsRequired and not rows[("Resource", "ResourceType")].IsRequired
     assert rows[("ResourceGroupAssignment", "ResourceGroupId")].IsRequired and rows[("EmployeeAbsence", "HoursPerDay")].StandardLabel == "Günlük saat"
@@ -246,20 +246,20 @@ def test_resource_side_in_the_dictionary(db_engine):
 def test_routing_fields_in_the_dictionary(db_engine):
     """K-116: yeni ve adı değişen alanlar sözlükte; işçilik alanları yok; kaynak zorunlu değil."""
     with db_engine.connect() as c:
-        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName = N'Routing'"))}
+        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName = N'Routing'"))}
     assert not {"OpNo", "SeqNo", "TransferLotQty", "LaborType", "LaborRefId", "LaborBasis", "CrewSize", "LaborTime"} & set(rows)
     assert {n: rows[n].StandardLabel for n in ("OperationNo", "SequenceNo", "TransferQuantity", "ResourceGroupId", "IsActive", "IsLotBasedUsage", "ProductionLocation", "WaitingTimeHours", "TransferTimeHours")} == {
         "OperationNo": "Operasyon no", "SequenceNo": "Sıra no", "TransferQuantity": "Transfer miktarı", "ResourceGroupId": "Kaynak grubu", "IsActive": "Aktif",
         "IsLotBasedUsage": "Lot bazlı kullanım", "ProductionLocation": "Üretim yeri", "WaitingTimeHours": "Bekleme süresi (saat)", "TransferTimeHours": "Taşıma süresi (saat)"}
-    assert not rows["ResourceId"].IsRequired and rows["LocationId"].IsRequired and rows["IsActive"].DefaultValue is None
-    assert (rows["ResourceRole"].DefaultValue, rows["ResourceNumber"].DefaultValue) == ("Primary", "1")
+    assert not rows["ResourceId"].IsRequired and rows["LocationId"].IsRequired and rows["IsActive"].IfEmpty == "hata (kurallardan sonra)"
+    assert (rows["ResourceRole"].IfEmpty, rows["ResourceNumber"].IfEmpty) == ("hata (kurallardan sonra)", "hata (kurallardan sonra)")  # K-138
 
 
 @pytest.mark.db
 def test_bom_fields_in_the_dictionary(db_engine):
     """K-115: yeni ve adı değişen alanlar sözlükte; eski bağ yok."""
     with db_engine.connect() as c:
-        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName = N'BOM'"))}
+        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName = N'BOM'"))}
     assert not {"ProductionVersionId", "OpNo", "ScrapPct", "IsFixedQuantity"} & set(rows)
     assert {n: rows[n].StandardLabel for n in ("OperationNo", "SequenceNo", "ScrapRatio", "IsLotBasedUsage", "ComponentUom", "Code")} == {
         "OperationNo": "Operasyon no", "SequenceNo": "Sıra no", "ScrapRatio": "Fire oranı", "IsLotBasedUsage": "Lot bazlı kullanım",
@@ -271,12 +271,12 @@ def test_bom_fields_in_the_dictionary(db_engine):
 def test_production_version_fields_in_the_dictionary(db_engine):
     """K-114: yeni alanlar etiketleriyle sözlükte; IsDefault yok; ParameterSet.IsDefault durur."""
     with db_engine.connect() as c:
-        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, DefaultValue, IsRequired FROM adm.FieldDefinition WHERE TableName = N'ProductionVersion'"))}
-        critical = c.execute(text("SELECT StandardLabel, DefaultValue FROM adm.FieldDefinition WHERE TableName = N'Material' AND FieldName = N'IsCritical'")).one()
-    assert "IsDefault" not in rows and tuple(critical) == ("Kritik malzeme", None)
+        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName = N'ProductionVersion'"))}
+        critical = c.execute(text("SELECT StandardLabel, IfEmpty FROM adm.FieldDefinition WHERE TableName = N'Material' AND FieldName = N'IsCritical'")).one()
+    assert "IsDefault" not in rows and tuple(critical) == ("Kritik malzeme", "yok")
     assert {n: rows[n].StandardLabel for n in ("Name", "Type", "IsActive", "Priority", "BOMCode")} == {
         "Name": "Versiyon adı", "Type": "Versiyon tipi", "IsActive": "Aktif", "Priority": "Öncelik", "BOMCode": "Ürün ağacı kodu"}
-    assert rows["BOMCode"].IsRequired and rows["LocationId"].IsRequired and rows["IsActive"].DefaultValue is None
+    assert rows["BOMCode"].IsRequired and rows["LocationId"].IsRequired and rows["IsActive"].IfEmpty == "hata (kurallardan sonra)"
     assert ("ParameterSet", "IsDefault") in EXPECTED
 
 
@@ -284,10 +284,10 @@ def test_production_version_fields_in_the_dictionary(db_engine):
 def test_material_fields_in_the_dictionary(db_engine):
     """K-113: yeni ve adı değişen alanlar sözlükte; kalkanlar yok; yeni bayrakların varsayılanı yok."""
     with db_engine.connect() as c:
-        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, DefaultValue FROM adm.FieldDefinition WHERE TableName = N'Material'"))}
+        rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, IfEmpty FROM adm.FieldDefinition WHERE TableName = N'Material'"))}
     assert not {"DefaultProcurement", "AssemblyScrapPct", "IsProjectTracked", "ProductionLeadTimeDays", "Ownership"} & set(rows)
     assert (rows["DefaultSupplyType"].StandardLabel, rows["ScrapRatio"].StandardLabel, rows["IsCustomTracked"].StandardLabel) == ("Tedarik türü", "Fire oranı", "Özel takip")
-    assert all(rows[n].DefaultValue is None for n in ("IsActive", "IsSubcontractable", "IsCustomerSupplied", "IsNonStockable"))
+    assert [rows[n].IfEmpty for n in ("IsActive", "IsSubcontractable", "IsCustomerSupplied", "IsNonStockable")] == ["hata (kurallardan sonra)", "yok", "yok", "yok"]
     assert rows["IsNonStockable"].StandardLabel == "Stok tutulamaz"
     assert rows["QtyPerPallet"].StandardLabel == "Palet içi miktar" and rows["StockCoverageDays"].StandardLabel == "Stok gün kapsamı"
 

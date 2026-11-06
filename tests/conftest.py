@@ -178,7 +178,7 @@ def engine_refs(db_engine, test_users):
     with Session(db_engine) as s:
         ensure_fixture_warning_definitions(s)
         s.execute(text("IF NOT EXISTS (SELECT 1 FROM core.Location WHERE Code = N'TEST-ENG') "
-                       "INSERT INTO core.Location (Code, Name, Type, IsSynthetic) VALUES (N'TEST-ENG', N'Motor testi', N'Tesis', 1)"))
+                       "INSERT INTO core.Location (Code, Name, Type, IsActive, IsSynthetic) VALUES (N'TEST-ENG', N'Motor testi', N'Tesis', 1, 1)"))
         loc = s.execute(text("SELECT Id FROM core.Location WHERE Code = N'TEST-ENG'")).scalar_one()
         dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType, IsSynthetic) "
                             "OUTPUT inserted.Id VALUES (:l, SYSUTCDATETIME(), N'Tam', 1)"), {"l": loc}).scalar_one()

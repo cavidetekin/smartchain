@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   Alert, Badge, Button, Checkbox, DateField, KpiCard, NumberField, OccupancyCell, OccupancyLegend, RadioGroup, SearchField,
-  Segment,
+  Segment, TextField, TopStrip,
 } from ".";
 
 describe("rozet ve uyarı (U-3)", () => {
@@ -146,6 +146,15 @@ describe("form alanları (U-19)", () => {
     expect(box.closest("label")).toHaveClass("sc-search-field");
     await userEvent.type(box, "x");
     expect(onChange).toHaveBeenCalledWith("x");
+  });
+});
+
+describe("üst şerit (K-139 eki)", () => {
+  it("ayar ve filtre alanları adlı grupta; etiket alana bağlı", () => {
+    render(<TopStrip label="Tablo ve eşik"><TextField label="Hata eşiği (%)" value="" onChange={() => {}} /><Button>Yeni kural</Button></TopStrip>);
+    const strip = screen.getByRole("group", { name: "Tablo ve eşik" });
+    expect(strip).toHaveClass("sc-top-strip");
+    expect(strip).toContainElement(screen.getByLabelText("Hata eşiği (%)"));
   });
 });
 

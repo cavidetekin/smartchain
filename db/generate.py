@@ -49,7 +49,11 @@ STAGING_COLS = [
     ("RowStatus", "nvarchar(15)", "Yeni | Hatalı | Aktarıldı", True),
     ("ErrorText", "nvarchar(400)", "Hata açıklaması", False),
     ("SourceRowNo", "int", "Kaynaktaki satır no", False),
+    ("IsCurrent", "bit", "Tablonun güncel hâlinde mi (K-133)", True),
 ]
+STAGING_DEFAULTS = {"IsCurrent": "0"}  # sistem alanı (K-138 veri alanı değil)
+SYSTEM_DEFAULTS = {"IsSynthetic": "0"}  # veri tablosundaki sistem alanı: BOŞSA kolonunda değil, burada (K-138)
+CURRENT_INDEX = "UX_{table}_Current"  # güncel hâlde anahtar bir kez (K-133)
 
 # Alan adı -> hedef tablo (ve kolon)
 REF_TARGET = {
@@ -129,8 +133,8 @@ def expand(rows, keymap):
     return [
         dict(
             name=r["ALAN"], type=r["TIP"], key=r.get("ANAHTAR", ""), desc=r.get("AÇIKLAMA", ""), label=r.get("ETİKET", ""),
-            required=r.get(keymap["req"], "") == "E", default=r.get("VARSAYILAN", ""),
-            source=r.get(keymap["src"], ""), workspace=r.get("ÇALIŞ.", "") == "E", missing=r.get("YOKSA", ""),
+            required=r.get(keymap["req"], "") == "E", default=r.get("VARSAYILAN", ""), if_empty=r.get("BOŞSA", ""),
+            source=r.get(keymap["src"], ""), workspace=r.get("ÇALIŞ.", "") == "E", missing=r.get("BOŞSA", ""),
         )
         for r in out
     ]
@@ -161,7 +165,7 @@ def build_spec():
             versioned="versiyonlu" in t["meta"], desc=t["desc"],
             fields=expand(t["rows"], {"req": "ZOR.", "src": "ANA KAYNAK"}),
         ))
-    stg = read_tables(DOCS / "03-entegrasyon.md", "YOKSA")
+    stg = read_tables(DOCS / "03-entegrasyon.md", "BOŞSA")
     smerged = {}
     for t in stg:
         if not t["name"].startswith("stg."):
@@ -203,7 +207,7 @@ def sa_type(t: str) -> str:
 
 
 def default_sql(f) -> str | None:
-    d = f["default"].strip()
+    d = f["default"].strip() or (SYSTEM_DEFAULTS.get(f["name"], "") if f.get("source") == "Sistem" else "")
     if not d:
         return None
     t = f["type"].lower()
@@ -249,7 +253,7 @@ def render_models(spec) -> str:
         fields = list(t["fields"])
         cols, extra = [], []
         if schema == "stg":
-            fields = [dict(name=n, type=ty, key="", desc=d, required=r, default="", source="Sistem")
+            fields = [dict(name=n, type=ty, key="", desc=d, required=r, default=STAGING_DEFAULTS.get(n, ""), source="Sistem")
                       for n, ty, d, r in STAGING_COLS] + [dict(f, required=False, contract_required=f["required"]) for f in fields
                                                           if f["name"] not in ("ImportBatchId",)]
         elif t["versioned"]:
@@ -299,6 +303,7 @@ def render_models(spec) -> str:
                 if schema in ("core", "param"):  # veri sözlüğü (K-104, db/dictionary.py); DDL'e girmez
                     info += [f"'source': {q(f.get('source', ''))}", f"'workspace': {bool(f.get('workspace'))}"]
                     info += [f"'default': {q(f['default'])}"] if f.get("default") else []
+                    info += [f"'if_empty': {q(f['if_empty'])}"] if f.get("if_empty") else []  # BOŞSA (K-138)
                 kw.append(f"info={{{', '.join(info)}}}")
             if "contract_required" in f:  # sözleşme (K-110): kolon boş kalabilir (ham veri), şablon ve doğrulama buradan okur
                 info = ([f"'label': {q(label)}"] if label else []) + ([f"'values': {json.dumps(values, ensure_ascii=False)}"] if values else [])
@@ -308,6 +313,8 @@ def render_models(spec) -> str:
         if uk and schema != "stg":  # stg ham veridir: anahtar sözleşmede kalır, tekrar kontrolü onu okur (K-129)
             where = ', mssql_where=sa.text("VersionTo IS NULL")' if t["versioned"] else ""
             extra.append(f'    sa.Index("UX_{name}_{"_".join(uk)}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
+        if uk and schema == "stg":  # güncel hâlde anahtar bir kez (K-133)
+            extra.append(f'    sa.Index("{CURRENT_INDEX.format(table=name)}", {", ".join(q(u) for u in uk)}, unique=True, mssql_where=sa.text("IsCurrent = 1")),')
         out.append(f"{name if schema != 'stg' else 'stg_' + name} = sa.Table(")
         out.append(f"    {q(name)}, metadata,")
         out += cols + extra
