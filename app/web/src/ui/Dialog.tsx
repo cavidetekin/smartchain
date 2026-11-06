@@ -8,7 +8,7 @@ import { tr } from "../i18n/tr";
 import { Button } from "./Button";
 
 export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, wide,
-                         dismissible = true, cancelLabel, blurred, noCancel, xwide, extraActions }: {
+                         dismissible = true, cancelLabel, blurred, noCancel, xwide, extraActions, className }: {
   title: string;
   /** Başlığın altında sessiz satır (ör. kaynak ve satır sayısı). */
   subtitle?: ReactNode;
@@ -29,6 +29,8 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   cancelLabel?: string;
   /** Arka plan bulanık (sayfa etkileşimi kilitli; 2.1). */
   blurred?: boolean;
+  /** Pencereye özel genişlik sınıfı. */
+  className?: string;
   /** Vazgeç'in solunda ek düğmeler (ör. Hata raporunu indir). */
   extraActions?: ReactNode;
   /** Yalnız birincil düğme (salt okunur pencere); Esc yine kapatır. */
@@ -69,7 +71,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
 
   return (
     <div className={`sc-dialog-backdrop${blurred ? " is-blurred" : ""}`}>
-      <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}${xwide ? " sc-dialog--xwide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
+      <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}${xwide ? " sc-dialog--xwide" : ""}${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
             onKeyDown={onKey} onSubmit={submit}>
         <div>
           <h2 id={titleId} className="sc-dialog-title">{title}</h2>
@@ -79,7 +81,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
         <div className="sc-dialog-actions">
           {extraActions}
           {(dismissible || cancelLabel) && !noCancel && (
-            <Button variant={cancelLabel ? "secondary" : "ghost"} onClick={onClose}>{cancelLabel ?? tr.ui.cancel}</Button>
+            <Button variant={cancelLabel ? "neutral" : "ghost"} onClick={onClose}>{cancelLabel ?? tr.ui.cancel}</Button>
           )}
           <Button type="submit" variant={danger ? "danger" : "primary"} busy={busy} disabled={submitDisabled}>{submitLabel}</Button>
         </div>

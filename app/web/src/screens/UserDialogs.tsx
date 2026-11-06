@@ -83,7 +83,7 @@ export function TemporaryPasswordDialog({ result, kind, onClose }: {
       <div className="sc-temp-password">
         <input ref={input} className="sc-input sc-num" readOnly value={password} autoComplete="off" spellCheck={false}
                aria-labelledby="sc-temp-password" onFocus={(e) => e.currentTarget.select()} />
-        <Button onClick={() => void copy()}>{copied === null ? T.copy : copied ? T.copied : T.copyFailed}</Button>
+        <Button variant="secondary" onClick={() => void copy()}>{copied === null ? T.copy : copied ? T.copied : T.copyFailed}</Button>
       </div>
       <p>{T.onceOnly}</p>
     </Dialog>

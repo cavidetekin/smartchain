@@ -5,7 +5,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 26. Entegrasyon tasarımı
 <sub>tamamlandı</sub>
 
-- **Ne yapılacak:** ERP bağımsız, tek veri sözleşmesi, üç yöntem (API, SQL arayüz tabloları, Excel). İlkeler, mimari, varlık ve alan düzeyi sözleşme, yöntem detayları, eşleme ve dönüşüm, veri sahipliği, zamanlama, hata yönetimi, çıkış, güvenlik, devreye alma, raporlar için ek veri. Çıktı: entegrasyon tasarımı ve veri sözleşmesi
+- **Ne yapılacak:** ERP bağımsız, tek veri sözleşmesi, yöntemler (SQL view ve Excel; API Faz 2). İlkeler, mimari, varlık ve alan düzeyi sözleşme, yöntem detayları, eşleme ve dönüşüm, veri sahipliği, zamanlama, hata yönetimi, çıkış, güvenlik, devreye alma, raporlar için ek veri. Çıktı: entegrasyon tasarımı ve veri sözleşmesi
   - Bu adımın slaytları
   - 01 İlkeler
   - 02 Mimari ve veri akışı
@@ -16,29 +16,29 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 43–46 Çıkış, güvenlik, devreye alma
   - 47–48 Ek veri (A-22), açık konular
 - **Kararlar**
-  - K-46  Tek veri sözleşmesi: şablon, SC_* arayüz tabloları ve API şeması aynı veri sözlüğünden üretilir; her varlık tek yöntemle beslenir.
+  - K-46  Tek veri sözleşmesi: şablon, SQL view'ları ve API şeması aynı sözleşmeye bağlıdır; çekim yöntemi tablo başına tektir, Excel'den yükleme her zaman açıktır (K-130).
   - K-47  Faz 1 yalnız okuma; plan çıktıları Excel listesi olarak ERP'ye elle girilir. Faz 2'de API ile geri yazma (yalnız yeni belge).
   - K-48  ERP ana veri ve işlem verisinde master; Kapasite tanımları (günlük kapasite, verim…) entegre edilmez, Smartchain ekranında tanımlanır (K-117); entegre edilen alanlarda ERP değeri FieldValueSource'ta saklanır.
-  - K-49  SQL arayüz tablolarını müşteri ETL'i doldurur; Smartchain ERP veritabanına doğrudan girmez.
+  - K-49  SQL ham tablolarını müşteri ETL'i doldurur; Smartchain ERP veritabanına doğrudan girmez (K-130).
 - **Açık konular**
-  - A-23  Artımlı çekimde silinen kayıtlar: SC_ACTION mi, haftalık tam çekim mi?
+  - A-23  Artımlı çekimde silinen kayıtlar: API'de açık (11.5); SQL her zaman tam okur (K-130).
   - A-24  ERP belge numarası ↔ Smartchain öneri bağı: ERP'de dış referans alanı var mı?
-  - A-25  Rota tüketim birimi dönüşümü adaptörde mi, veri kuralında mı?
+  - A-25  Kapandı (K-130): rota tüketim birimi dönüşümü view'da.
 
 ### Entegrasyon tasarım ilkeleri
 <sub>26. Entegrasyon tasarımı · Entegrasyon ilkeleri</sub>
 
-- **Tek veri sözleşmesi:** Hangi yöntemle gelirse gelsin veri aynı sözleşmeye (varlık, alan, tip, anahtar, zorunluluk) iner. Sözleşme bu dosyadaki `stg.*` tablolarıdır; şablon, arayüz tablosu ve API şeması aynı kaynaktan türer. `FieldDefinition` yalnız etiket verir (K-110).
+- **Tek veri sözleşmesi:** Hangi yöntemle gelirse gelsin veri aynı sözleşmeye (varlık, alan, tip, anahtar, zorunluluk) iner. Sözleşme bu dosyadaki `stg.*` tablolarıdır; şablon ve API şeması bu kaynaktan türer, SQL view'ları buna uyar. `FieldDefinition` yalnız etiket verir (K-110).
 - **ERP bağımsız:** Ürün hiçbir ERP'ye özel alan taşımaz. ERP'ye özgü her şey adaptörde ve eşleme tanımında kalır; yeni ERP yeni adaptör demektir, ürün değişmez.
 - **Yalnız okuma (Faz 1):** Smartchain ERP'den okur, ERP'ye yazmaz. Plan çıktıları Excel listesi olarak çıkar ve ERP'ye elle girilir. Geri yazma Faz 2 (API).
-- **Üç yöntem, varlık başına bir tane:** API, SQL arayüz tabloları ve Excel. Her varlık tek yöntemle beslenir; yöntem müşteriye göre seçilir, karışık kurulum normaldir (ör. siparişler API, kaynaklar Excel).
+- **Yöntemler (K-130):** Faz 1'de SQL view ve Excel; API Faz 2 (11.5). Çekim yöntemi tablo başına tektir, müşteriye göre seçilir, karışık kurulum normaldir (ör. siparişler SQL, kaynaklar Excel). Excel'den yükleme yöntemden bağımsız her zaman açıktır; partide yöntem kayıtlı kalır, yükleme en yeni partiyi alır (5.2).
 - **Ham veri önce, dönüşüm sonra:** Gelen veri önce olduğu gibi ham tablolara (Staging) yazılır; doğrulama ve dönüşüm sonra. Sorunlu yükleme geriye dönük incelenebilir, ham veri 1 hafta saklanır.
 - **Ham değer kurala girdidir (K-121):** ERP'den gelen ham değerler (Status, Type gibi) yalnız veri kurallarına girdidir; motor ve ekranlar bayrakları okur (IsActive, IsOnHold, IsReleased…). Bayraklar kurallarla ham değerden doldurulur. Ham değer ile bayrak çelişirse bayrak geçerlidir. Bütün tablolar için geçerlidir.
 - **ERP ana veri sahibidir:** Ana veri ve işlem verisinde ERP master'dır. Smartchain'e özgü alanlar (verim, kritik kaynak, parametreler) Smartchain'de tutulur; ERP'de yoksa kural ya da elle değerle tamamlanır.
 - **Hata izole edilir:** Bir varlığın hatası diğerlerini durdurmaz; satır hatası satırı atlatır, eşik aşımı varlığı dışarıda bırakır. Gece akışı bu kurallarla kendi kendine ilerler.
 - **Versiyonlu ve ya hep ya hiç:** Her yükleme yeni veri versiyonu açar; ortada kalan yükleme geri alınır. Açık çalışmalar kendi versiyonunda kalır.
 - **İzlenebilir:** Her çağrı, parti, satır sayısı ve hata loglanır; Entegrasyon ekranında 'son çağrı', Sistem sağlığında süreler. Müşteriyle konuşma dili: varlık, parti numarası, hata sınıfı.
-- **Kapalı ağ:** Entegrasyon müşteri ağı içinde kalır: API ERP sunucusuna, arayüz tabloları aynı SQL Server'a ya da müşteri veritabanına. İnternet yok, servis hesapları salt okunur.
+- **Kapalı ağ:** Entegrasyon müşteri ağı içinde kalır: ham tablolar Smartchain'in SQL Server instance'ında ayrı veritabanında, API ERP sunucusuna (Faz 2). İnternet yok, servis hesapları salt okunur.
 
 ### Entegrasyon mimarisi · veri akışı
 <sub>26. Entegrasyon tasarımı · Genel görünüm</sub>
@@ -58,13 +58,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Geçerli ana veri ve işlem verisi
   - Parametreler ve elle değerler (Smartchain sahibi)
   - Planlama motoru, ekranlar, raporlar
-- **Ara veritabanı (SQL arayüz)**
-  - Müşteri ETL'i SC_* tablolarını doldurur
+- **Entegrasyon veritabanı (ham tablolar ve view'lar)**
+  - Müşteri ETL'i ERP_* ham tablolarını doldurur, ERP_LoadLog'a bitti yazar
   - Aynı SQL Server ya da ayrı
 - **SQL okuyucu**
-  - SC_* tablolarını toplu okur
-  - LAST_MODIFIED ile artımlı
-  - Eşleme: sütun adı = sözleşme
+  - View_* okur, her zaman tam
+  - Önce sinyal ve uyum denetimi
+  - Eşleme yok: kolon adı = sözleşme
 - **Doğrulama → yükleme**
   - Yapısal, referans, mantıksal, tutarlılık
   - Alan önceliği: ERP / kural / elle / varsayılan
@@ -82,7 +82,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Şablon sürümü ve varlık tanıma
   - Satır bazlı ön kontrol
 - Faz 1: Excel listesi elle ERP'ye girilir · Faz 2: API ile geri yazma
-- Tüm akış müşteri ağı içinde; internet yok. Her varlık tek yöntemle beslenir, üç yöntem aynı ham tabloya iner.
+- Tüm akış müşteri ağı içinde; internet yok. Çekim yöntemi tablo başına tektir, Excel'den yükleme her zaman açıktır, üç yöntem aynı ham tabloya iner.
 
 ### Veri sözleşmesi · varlıklar
 <sub>26. Entegrasyon tasarımı · Veri sözleşmesi · varlık listesi · 1/2</sub>
@@ -761,15 +761,41 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Şema değişikliği:** Yanıtta beklenen alan yoksa varlık hata, Entegrasyon ekranında 'eşlenmemiş alan'. Yeni alanlar yok sayılır.
 - **Ağ:** ERP sunucusuna müşteri ağı içinden; güvenlik duvarında tek yön, tek port. Servis hesabı yalnız okuma yetkili.
 
-### Yöntem 2 · SQL arayüz tabloları
-<sub>26. Entegrasyon tasarımı · Yöntem 2 · SQL arayüz tabloları</sub>
+### Yöntem 2 · SQL ham tablo + view (K-130)
+<sub>26. Entegrasyon tasarımı · Yöntem 2 · SQL ham tablo + view</sub>
 
-- **Ne zaman:** ERP'nin servisi yoksa ya da müşteri BT'si veritabanı düzeyinde çalışmayı tercih ediyorsa. ERP veritabanına doğrudan girilmez; müşteri ETL'i ara tabloları doldurur.
-- **Tablolar:** Varlık başına bir SC_* tablosu (SC_MATERIAL, SC_BOM, SC_ROUTING, SC_RESOURCE, SC_STOCK, SC_SALES_ORDER, SC_PURCHASE_ORDER, SC_WORK_ORDER, SC_CONFIRMATION…). Sütun adları sözleşme alan adlarıyla birebir; şema veri sözlüğünden üretilir ve kurulum paketiyle verilir.
-- **Standart sütunlar:** Her tabloda: SC_BATCH (müşteri parti no), SC_LAST_MODIFIED, SC_ACTION (I / U / D, isteğe bağlı), SC_STATUS (Smartchain yazar: okundu / hata) ve SC_ERROR_TEXT. Smartchain yalnız durum sütunlarına yazar.
-- **Okuma:** Gece 22:00 ve elle tetiklemede toplu okuma; LAST_MODIFIED ile artımlı. Okunan satırlar ham tabloya kopyalanır, SC_STATUS = okundu; müşteri ETL'i okunanları temizleyebilir ya da üzerine yazabilir.
-- **Yer:** Ara veritabanı Smartchain'in SQL Server'ında ayrı bir veritabanı (önerilen) ya da müşterinin SQL Server'ında; bağlantı dizesi Entegrasyon ekranında, servis hesabı okuma + SC_STATUS yazma yetkili.
-- **Sorumluluk:** Tabloları doldurma ve zamanlama müşteri BT'sinde; Smartchain şemayı, örnek veriyi ve doğrulama raporunu verir. Devreye almada birlikte test edilir.
+- **Ne zaman:** ERP'nin servisi yoksa ya da müşteri BT'si veritabanı düzeyinde çalışmayı tercih ediyorsa. Smartchain ERP veritabanına girmez; müşteri ETL'i ham tabloları doldurur.
+- **Yer:** Smartchain'in SQL Server instance'ında ayrı entegrasyon veritabanı. Bağlantı tek ayardır (`IntegrationDatabase`): aynı instance, Windows kimliği, şifre saklanmaz. Servis hesapları bu veritabanında yalnız okur; müşteri ETL hesabı yalnız bu veritabanına yazar (docs/10).
+- **Ham tablolar:** Müşteri ERP verisini kendi biçiminde `ERP_*` tablolarına yazar (ör. `ERP_Material`) ve belirli saatlerde yeniler. Biçim serbesttir, Smartchain bu tabloları okumaz.
+- **View'lar:** Kurulumda tablo başına bir view `dbo` şemasına yazılır (ör. `View_Material`): sonucu sözleşme kolonlarıyla birebirdir (bu dosyadaki `stg.*` alan adları), eşleme tablosu yoktur. Ürün kodu müşteriye göre değişmez; view müşteriye özel kurulum verisidir.
+- **Bitti sinyali:** Müşteri yenilemeye başlarken `ERP_LoadLog`'a satır açar, bitince `FinishedAt` yazar. Tablo zorunludur.
+
+| KOLON | TİP | AÇIKLAMA |
+|---|---|---|
+| Id | bigint identity | Sinyal numarası |
+| EntityName | nvarchar(60), boş olabilir | `stg` tablo adı (Material, BOM…); boşsa bütün tablolar |
+| StartedAt | datetime2 | Yenilemenin başlangıcı |
+| FinishedAt | datetime2, boş olabilir | Bitiş; yenileme sürerken boş |
+
+- **Kurulum tavsiyesi:** Gece tam yenilemede toplu satır (`EntityName` boş), gün içi yenilemede tablo bazında satır.
+- **Sinyal kuralı:** Bir tablo için kendi satırı ile toplu satırlara birlikte bakılır. En son başlayan bitmemişse "Veri güncellemesi devam ediyor": hata yazılmaz, önceki ham veri korunur. Değilse en son biten geçerlidir; son okunanla aynıysa "Yeni veri yok": atlanır, elle çekimde o satırda "Yine de oku" seçilebilir. Okuma sırasında yenileme başladıysa parti Tamamlanmadı olur.
+- **Okuma:** Her zaman tam. Smartchain entegrasyon veritabanına yazmaz, DDL çalıştırmaz; okuma kaydı kendi tarafındadır (`ImportBatch.SourceObject`, `SignalId`). Satırlar Excel'le aynı kontrol kodundan geçer (K-129).
+- **Uyum denetimi:** Her okumadan önce ve Bağlantıyı test et ile. Kolon adı birebir. Eksik zorunlu kolon ya da okunamayan view: tablo hatası, okunmaz, önceki ham veri korunur. Eksik isteğe bağlı kolon, fazla kolon, tip farkı: uyarı. Dönüşmeyen satır: satır hatası. Sözleşme değiştiyse satırda "yeniden denetle" görünür. Yeni ürün sürümü zorunlu alan eklerse sürüm notunda "view güncellemesi gerekir" yazılır.
+- **View sürümleri:** Her denetim ve okumada tanım okunur, değiştiyse yeni sürüm kaydedilir (`adm.IntegrationViewVersion`), uyum denetimi başarısız olsa da. Smartchain view oluşturmaz ve geri yüklemez; geri dönüş kurulumcunundur.
+- **Sorumluluk:** Ham tabloları doldurma, sinyal ve zamanlama müşteri BT'sinde; view'ları kurulum yazar; Smartchain sözleşmeyi (şablon), uyum denetimini ve önizlemeyi verir.
+
+### View ile veri kuralı sınırı (K-130)
+<sub>26. Entegrasyon tasarımı · View ve kural sınırı</sub>
+
+- **Ölçüt:** Smartchain'in hiçbir zaman görmemesi gereken satır (başka şirket, test kaydı) view'da elenir; bugün dışarıda kalıp yarın girebilecek satır (pasif malzeme, kapalı sipariş) aktarım filtresindedir.
+
+| NEREDE | NE | ÖRNEK |
+|---|---|---|
+| View | Join, kolon adı, tip, birim dönüşümü, türetme, kesin kapsam | Rota süresi dk → saat; açık miktar = sipariş − teslim; başka şirket kodu elenir |
+| Veri kuralı | Değer listeleri ve bayraklar; ham değer view'dan çevrilmeden gelir (K-110, K-121) | `Status` → `IsOnHold`; tedarik türü 'S' → `DefaultSupplyType` = Satın alma |
+| Aktarım filtresi | Planlamacının görmesi ve değiştirmesi gereken iş kapsamı (A-34) | Pasif malzeme, kapalı sipariş |
+
+- Kod bu sınırı zorlayamaz; kurulumda bu tabloya göre yazılır.
 
 ### Yöntem 3 · Excel şablonları
 <sub>26. Entegrasyon tasarımı · Yöntem 3 · Excel şablonları</sub>
@@ -784,18 +810,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Alan eşleme ve dönüşüm kuralları
 <sub>26. Entegrasyon tasarımı · Alan eşleme ve dönüşüm</sub>
 
-- Eşleme tanımı kurulumda varlık başına yapılır ve Entegrasyon ekranında görünür: ERP alanı → sözleşme alanı, dönüşüm, yoksa ne olur. Eşleme ürünün parçası değil, kurulum verisidir.
+- SQL yönteminde eşleme tanımı yoktur: dönüşümler view'dadır, sonuç sözleşme kolonlarıyla birebirdir (K-130). API yönteminde (Faz 2) adaptördedir. Hangisi nerede yapılır: "View ile veri kuralı sınırı".
 
 | DÖNÜŞÜM TÜRÜ | ÖRNEK | KURAL |
 |---|---|---|
 | Doğrudan | ITEM_CODE → Material.Code | Tip ve uzunluk kontrolü; kırpma yok, uzunsa hata. |
-| Kod listesi | ERP birim 'ADET' → 'adet'; tedarik türü 'S' → DefaultSupplyType = Satın alma | Eşleme tablosu; listede olmayan kod hata ya da varsayılan (alan ayarı). |
+| Kod listesi | Tedarik türü 'S' → DefaultSupplyType = Satın alma | Veri kuralı (K-110, K-121); view çevirmez. Birim kodu olduğu gibi gelir (K-112). |
 | Birim dönüşümü | Rota süresi dakika → kaynak kapasite birimi saat | Kaynağın CapacityUnit'ine çevrilir; dönüşüm yoksa uyarı, kaynak kısıtsız sayılır. |
 | Birim dönüşümü · ters yön | M → KG tanımlı, KG → M tanımlı değil | Açıkça yazılan dönüşüm her zaman olduğu gibi kullanılır. 1/Factor yalnız ters yön hiç tanımlanmamışsa, kullanıldığı anda tam hassasiyetle hesaplanır, saklanmaz. |
 | Birim dönüşümü · zincir | KOLİ → ADET ve ADET → KG tanımlı | Zincirleme dönüşüm türetilmez: KOLİ → KG hesaplanmaz; gerekiyorsa ayrıca tanımlanır. |
 | Birim dönüşümü · lokasyon | HAM-001 iki lokasyonda var, dönüşüm satırı bir tane | UomConversion lokasyondan bağımsızdır, LocationCode taşımaz. MaterialCode, o koda sahip bütün lokasyonlardaki malzemeye uygulanır; kod→Id çevirisinde dönüşüm satırı aynı koddaki her lokasyonun malzemesine bağlanır. |
-| Tarih | '20261023' → 2026-10-23; vade: ConfirmedDate yoksa RequestedDate | Biçim adaptörde; boş tarih kural ya da varsayılanla. |
-| Türetme | SC_WORK_ORDER.OPEN_QTY = ORDER_QTY − CONFIRMED_QTY | Türetme adaptörde ya da ara tabloda; sözleşme alanı tek değer alır. |
+| Tarih | '20261023' → 2026-10-23; vade: ConfirmedDate yoksa RequestedDate | Biçim view'da ya da adaptörde; boş tarih kural ya da varsayılanla. |
+| Türetme | İş emri: açık miktar = sipariş − teslim | View'da ya da adaptörde; sözleşme alanı tek değer alır. |
 | Birleştirme | Stok: depo + lot + durum + proje → tek satır | Anahtar sözleşmede; ERP daha ayrıntılıysa toplanır, daha kabasa boş alanlar varsayılan. |
 | Smartchain alanı | Resource.DailyCapacity, verim | Entegre edilmez (K-117); Smartchain ekranında tanımlanır. |
 
@@ -821,7 +847,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Gece tam çekim · 22:00:** Tüm ERP varlıkları tam çekim, doğrulama, tam yükleme (v+1), ardından senaryolar. Bitiş sınırı 06:00. Excel varlıkları son yüklenen haliyle kalır.
 - **Gün içi kısmi · elle:** Stok ve siparişler (satış, satın alma, iş emri) Key user tarafından çekilip kısmi yüklenir; 'yeni veri var' bildirimi. Hedef 5 dk altı.
 - **Haftalık ve elle:** Tahmin ve kaynak: haftalık ya da değişince Excel ile; takvim ve vardiya ekrandan (K-65). Ham veri temizliği Pazar 03:00.
-- **Artımlı çekim:** API'de LastModified, SQL'de SC_LAST_MODIFIED varsa yalnız değişenler; silinenler için tam liste ya da SC_ACTION = D gerekir. Artımlı destek yoksa tam çekim (varsayılan).
+- **Artımlı çekim:** SQL her zaman tam okur (K-130). API'de (Faz 2) LastModified varsa yalnız değişenler; silinenler için tam liste gerekir (A-23). Artımlı destek yoksa tam çekim (varsayılan).
 - **Zamanlama ayarı:** Saatler ve paralellik Entegrasyon ekranında (Admin); bitiş sınırı ve işçi sayısı System owner ayarı. Müşterinin ERP gece işleriyle çakışmaması için saat devreye almada belirlenir.
 - **Çakışma yönetimi:** Gece akışı sırasında elle çekim kapalı; gün içi kısmi yükleme sırasında ikinci yükleme kuyrukta bekler. Yükleme açık çalışmaları etkilemez.
 
@@ -850,18 +876,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Güvenlik ve erişim
 <sub>26. Entegrasyon tasarımı · Güvenlik ve erişim</sub>
 
-- **Servis hesapları:** API ve SQL için ayrı hesaplar; yalnız okuma (SQL'de SC_STATUS yazma). Şifre ve anahtarlar sunucuda şifreli saklanır, ekranda gösterilmez, destek paketine girmez.
+- **Servis hesapları:** API ve SQL için ayrı hesaplar; yalnız okuma. SQL'de Windows kimliği, şifre saklanmaz (K-130). API anahtarları (Faz 2) sunucuda şifreli saklanır, ekranda gösterilmez, destek paketine girmez.
 - **Ağ:** Kapalı ağ; Smartchain sunucusu → ERP sunucusu tek yön. Güvenlik duvarı kuralı kurulum dokümanında; internet gerekmez.
 - **Veri:** Ham veri ve geçerli veri Smartchain SQL Server'ında; yedekleme kurulum tasarımında (27). Kişisel veri: işçi adı yalnız vardiya planı için, parametreyle anonim kod kullanılabilir (öneri).
 - **Log ve iz:** Her çağrı ve parti loglanır (gövde değil); elle tetiklemeler denetim izinde. Loglar destek paketiyle dışa alınır.
-- **Değişiklik yönetimi:** Eşleme ve bağlantı değişikliği 'test et' zorunlu; değişiklik denetim izinde; bir önceki tanıma geri dönülebilir (öneri).
-- **Yetki:** Entegrasyon tanımı: Admin ve üstü. Çekim ve yükleme: Key user ve üstü. End user hiçbirini görmez.
+- **Değişiklik yönetimi:** Yöntem, bağlantı ve view adı değişikliği denetim izinde; view'ın önceki sürümleri okunabilir, geri dönüş kurulumcunundur (K-130).
+- **Yetki (K-130):** Yöntem, veritabanı ve view adı: System owner. Çekim anahtarı, test ve önizleme: Admin ve üstü. Çekim ve yükleme: Key user ve üstü. Key user ayarları salt okunur görür, End user hiçbirini görmez.
 
 ### Entegrasyon devreye alma adımları
 <sub>26. Entegrasyon tasarımı · Devreye alma</sub>
 
 - **1 · Keşif:** ERP ve sürüm, servis var mı, veritabanı erişimi, hangi varlık nerede tutuluyor, hangi alanlar boş. Çıktı: yöntem kararı varlık başına.
-- **2 · Eşleme:** Alan eşleme tanımı varlık başına; kod listeleri; Smartchain'e özgü alanlar için kural taslakları. Çıktı: entegrasyon tanımı ve şablonlar.
+- **2 · View'lar:** Tablo başına view, uyum denetimi ve önizleme; değer listeleri için veri kuralları; Smartchain'e özgü alanlar için kural taslakları. Çıktı: entegrasyon tanımı ve şablonlar.
 - **3 · Test çekimi:** Her varlık için örnek çekim (ilk 200 satır), doğrulama raporu, eşlenmemiş alan ve hata listesi. Çıktı: düzeltme listesi (müşteri BT + biz).
 - **4 · Tam yükleme ve kalite:** İlk tam yükleme, veri kalitesi raporu, kurallarla tamamlama; sentetik yerine gerçek veriyle ilk plan. Çıktı: v1 veri versiyonu.
 - **5 · Paralel çalışma:** 2–4 hafta gece akışı; ana sayfa ve dünden bugüne ile izleme; ERP'ye Excel listesiyle giriş denemesi. Çıktı: hata eşiği ve zamanlama kararı.
@@ -876,7 +902,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|
 | Yöntem seçimi | Keşif, öneri, karar kaydı | ERP erişim bilgisi, servis / veritabanı imkânı |
 | API adaptörü | Geliştirme, test, paket | Servis hesabı, uç nokta dokümanı, güvenlik duvarı |
-| SQL arayüz tabloları | Şema, örnek veri, doğrulama raporu | ETL yazma, zamanlama, tabloları doldurma |
+| SQL ham tablo + view | Sözleşme, uyum denetimi, önizleme; view'ların kurulumda yazılması | ETL yazma, zamanlama, ham tabloları ve `ERP_LoadLog`'u doldurma |
 | Excel | Şablonlar, yükleme eğitimi | Doldurma ve yükleme (Key user) |
 | Eşleme ve kurallar | Taslak, kalite kontrolü | Onay, kod listelerinin anlamı |
 | Zamanlama | Varsayılan 22:00, bitiş 06:00 | ERP gece işleriyle çakışma kontrolü |
@@ -900,9 +926,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Açık konular ve kararlar
 <sub>26. Entegrasyon tasarımı · Açık konular</sub>
 
-- **Artımlı çekim ve silinenler:** Artımlı çekimde silinen kayıtları yakalamak için tam liste karşılaştırması mı, SC_ACTION = D mi? Öneri: SQL'de SC_ACTION, API'de haftada bir tam çekim.
+- **Artımlı çekim ve silinenler:** SQL her zaman tam okur (K-130). API'de: haftada bir tam çekim önerilir (A-23, 11.5).
 - **ERP belge numarası eşlemesi:** Faz 1'de ERP'de açılan siparişin Smartchain önerisine bağı: ERP'de dış referans alanı var mı, yoksa aksiyon listesinde elle mi? Kurulumda müşteriye göre.
 - **Sessiz hata eşiği:** Satır sayısı dünden %30 az ise 'şüpheli parti' uyarısı: eşik parametre mi, sabit mi? (öneri: parametre, varsayılan %30).
 - **Kişisel veri:** İşçi adı yerine anonim kod kullanımı: müşteri tercihi; parametre olarak öneriyoruz.
-- **Rota tüketim birimi:** Rota süresi ERP'de dakika ise kapasite birimine dönüşüm adaptörde mi, veri kuralında mı? Öneri: adaptörde; kural istisna için.
+- **Rota tüketim birimi:** Kapandı (K-130): dönüşüm view'da; kural istisna için.
 - **Faz 2 geri yazma kapsamı:** Yalnız satın alma talebi mi, planlı iş emri de mi? Müşteri ERP'sinin planlı sipariş kavramına bağlı; keşifte netleşir.

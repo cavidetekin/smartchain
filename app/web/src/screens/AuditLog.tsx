@@ -49,7 +49,7 @@ function Detail({ detail, onHistory }: { detail: AuditDetail; onHistory(): void 
         </table>
       )}
       <div>
-        <Button disabledReason={detail.has_object ? null : T.noObject} onClick={onHistory}>{T.history}</Button>
+        <Button variant="secondary" disabledReason={detail.has_object ? null : T.noObject} onClick={onHistory}>{T.history}</Button>
       </div>
     </>
   );

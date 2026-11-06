@@ -92,7 +92,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### VERI ALMA
 
-- **01 · Veri çekme:** ERP'den API ya da SQL arayüz tablolarıyla; gece zamanlanmış, istenirse elle tetiklenir.
+- **01 · Veri çekme:** Müşterinin view'larından SQL ile (K-130); gece zamanlanmış, istenirse elle tetiklenir.
 - **02 · Excel şablonu indirme:** Her varlık için veri sözleşmesine uygun boş şablon.
 - **03 · Excel ile yükleme:** Kullanıcı şablonu doldurup yükler.
 - **04 · Doğrulama:** Zorunlu alan, tip, birim, referans (olmayan kaynak ya da malzeme), ağaç döngüsü, negatif değer.
@@ -243,7 +243,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **88 · Kullanıcı yönetimi:** Açma, kapatma, rol atama, şifre sıfırlama.
 - **89 · Giriş ve oturum:** Yerel kullanıcıyla giriş, şifre değiştirme, oturum zaman aşımı.
 - **90 · Rol bazlı yetki:** System owner, Admin, Key user, End user; her fonksiyonda kontrol.
-- **91 · Entegrasyon tanımı:** Bağlantı, test, alan eşleme, servis hesabı.
+- **91 · Entegrasyon tanımı:** Yöntem, bağlantı, view, uyum denetimi ve test (K-130).
 - **92 · Zamanlanmış işler:** Veri çekme, senaryolar, ham veri ve senaryo temizliği.
 - **93 · İş kuyruğu yönetimi:** Çalışan ve bekleyen işler; iş iptal edilebilir. (öneri)
 - **94 · Sistem sağlığı:** Son çalışmalar, hatalar, süreler, disk.
@@ -273,6 +273,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Geçmiş:** Gece ve elle yüklemeler kullanıcı ve sonuçla birlikte saklanır.
 - **Uygulama (3.1, K-110):** iskelet: 25 tablo ortak tabloda, satır menüsünde şablon indirme ve şablon bilgisi. Yöntem 3.3'te; sayılar, üst düğmeler, sağ paneller 5.5'te.
 - **Uygulama (3.2, K-129):** satır menüsünde "Excel'den yükle" açılır: Dosya, Ön kontrol, Doğrulama (3.4'te) adımları. "Son yükleme zamanı" kolonu, ipucunda ham veriye alınma zamanı olduğu yazılır.
+- **Uygulama (3.3, K-130, K-132):** Yöntem (Excel, SQL; yalnız System owner) ve Çekim (bütün satırlarda aç/kapa anahtarı; Admin ve üstü) kolonları hücre içi düzenlenir, tablonun sağ üstündeki Kaydet ile toplu kaydedilir; Key user salt okunur görür. Çekim kapatılırken sebep zorunlu; ipucunda sebep, kişi ve tarih; açarken uyarı. Yöntem SQL, view tanımsızsa tablo adının yanında sarı üçgen. Üstte "Veri çek": onay ve sonuç penceresi; satır menüsünde tek tablo. "Excel'den yükle" her zaman açık. "Seçilenleri yükle" ve "Tam yükle" 5.5'te.
 
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>
@@ -481,10 +482,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Entegrasyon ve zamanlanmış işler](mockups/m24e-0332-entegrasyon-ve-zamanlanmis-isler.png)
 
-- **Üç yöntem:** API, SQL arayüz tabloları ve Excel; hepsi aynı veri sözleşmesine yazar.
-- **Varlık eşlemesi:** Her varlık için yöntem, kaynak ve alan eşleme durumu.
+- **İki yöntem (K-130):** SQL view ve Excel; ikisi de aynı veri sözleşmesine yazar. API 11.5'te.
+- **Tablolar:** Her tablo için yöntem, kaynak (view), kolon uyumu ve son durum.
 - **Zamanlanmış işler:** Gece veri çekme, senaryolar, ham veri ve senaryo temizliği.
 - **Servis hesapları:** Entegrasyon kullanıcıları ayrı tutulur; son kullanım görünür.
+- **Uygulama (3.3, K-130, K-132):** Tek satır şerit (SQL kaynağı, Kaydet, Bağlantıyı test et, hesap), ortak tablo, satır menüsünde Önizleme ve View sürümleri. Yöntem ve Kaynak tablo üzerinde System owner tarafından düzenlenir, Kaydet ile toplu kaydedilir. Mockup'tan farklar: API ve Excel kartı yok, alan eşleme yerine "Alan uyumu". Zamanlanmış işler kartı 5.6'da.
 
 ### Sistem sağlığı
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 24/25</sub>

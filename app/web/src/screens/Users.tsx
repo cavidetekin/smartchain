@@ -134,7 +134,7 @@ export function Users() {
       <header className="sc-page-head sc-page-head--row">
         <h1>{T.title}</h1>
         <div className="sc-page-head-actions">
-          {can(me, 90) && <Button onClick={() => setShown({ kind: "matrix" })}>{tr.matrix.title}</Button>}
+          {can(me, 90) && <Button variant="secondary" onClick={() => setShown({ kind: "matrix" })}>{tr.matrix.title}</Button>}
           <Button variant="primary" disabledReason={can(me, 88, "write") ? null : forbiddenReason(88, "write")}
                   onClick={() => setShown({ kind: "add" })}>
             {T.add}

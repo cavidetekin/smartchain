@@ -58,6 +58,7 @@ Kirli hâldeki kasıtlı hatalar: eksik rota, tanımsız malzeme kodu, negatif m
 python -m app.data.synthetic load   [--date 2026-10-27] [--seed 22]   # temiz hâli ana tablolara yükler (öncekini siler)
 python -m app.data.synthetic unload                                    # sentetik veriyi siler
 python -m app.data.synthetic excel  [--out data/synthetic/v0/kirli]    # kirli hâl: Excel + beklenen-hatalar.json
+python -m app.data.synthetic sql                                       # kirli hâl: entegrasyon veritabanına ham tablolar, view'lar, ERP_LoadLog (K-130)
 python -m app.data.synthetic check                                     # sayılar ve bilerek konmuş durumlar
 ```
 
@@ -108,6 +109,15 @@ python -m app.data.synthetic check                                     # sayıla
 **Ek alan etiketi (K-104):** yükleme etiketi yalnız boşsa yazar; System owner'ın etiketi korunur.
 
 **Tazeleme (K-103):** testler artık geliştirme veritabanına dokunmaz; geliştirme verisi son `load`'daki hâliyle kalır, tarihler zamanla eskir. Gerektiğinde `python -m app.data.synthetic load` (ya da `veri_demo.bat`). Test veritabanının verisini testler kendisi kurar.
+
+### SQL çekimi (geliştirme 3.3, K-130)
+
+`python -m app.data.synthetic sql` kirli hâli entegrasyon veritabanına yazar (varsayılan `SmartchainIntegration`; testte `_test` ile biter): `ERP_*` ham tablolar, `View_*` ve `ERP_LoadLog`'da biten bir toplu satır. Kaynak Excel'le aynı olduğu için H1–H4 aynıdır; `tests/test_pull_dirty.py` iki yolun sonucunu birebir karşılaştırır.
+
+- **Gerçekçi üç tablo:** Malzeme (`ERP_Material` ve `ERP_ItemGroup`, başka kolon adları, join), Ürün ağacı (`ERP_BOM`, başka kolon adları), Satış siparişi (`ERP_SalesOrder`, başka kolon adları, tarih metin). Kurulumda örnek alınabilir.
+- **Düz 20 tablo:** `ERP_<tablo>` ve `SELECT <kolonlar>`. Yalnız test içindir, müşteriye örnek değildir.
+- **Demo:** Malzeme, Ürün ağacı, Rota, Stok, Satış siparişi ve İş emri SQL; kalanı Excel.
+- **Kilit:** Yalnız `_test` ile biten ya da bu komutun açtığı veritabanına yazar; ham tablolar ve view'lar yeniden açılır.
 
 ### Kullanıcılar (geliştirme 2.1, K-98)
 

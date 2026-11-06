@@ -1,6 +1,6 @@
 // Test yardımcıları: sahte API (fetch) ve sahte WebSocket.
 import { render } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { createMemoryRouter, RouterProvider } from "react-router";
 import { vi } from "vitest";
 
 import matrix from "../../../shared/permissions.json";
@@ -99,9 +99,6 @@ export function mockSocket() {
 
 /** me: oturum açık kullanıcı (varsayılan ME); null oturumsuz; "ask" açılışta sunucuya sorulur (mockApi). */
 export function renderApp(path = "/ana-sayfa", me: Me | null | "ask" = ME) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App initialMe={me === "ask" ? undefined : me} />
-    </MemoryRouter>,
-  );
+  const router = createMemoryRouter([{ path: "*", element: <App initialMe={me === "ask" ? undefined : me} /> }], { initialEntries: [path] });
+  return render(<RouterProvider router={router} />);
 }

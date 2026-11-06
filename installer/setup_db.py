@@ -140,6 +140,27 @@ def apply_app_permissions(db_odbc: str, sids: list[str] = (), users: list[str] =
     return members
 
 
+def integration_read_statements(users: list[str]) -> list[str]:
+    """Entegrasyon veritabanında yalnız okuma (K-130): Smartchain oraya yazmaz, DDL çalıştırmaz."""
+    out = []
+    for user in users:
+        name = quote_name(user)
+        literal = user.replace("'", "''")
+        out += [f"IF DATABASE_PRINCIPAL_ID(N'{literal}') IS NULL CREATE USER {name} FOR LOGIN {name}",
+                f"ALTER ROLE db_datareader ADD MEMBER {name}"]
+    return out
+
+
+def setup_integration_database(master_odbc: str, integration_odbc: str, database: str, users: list[str]) -> bool:
+    """Boş entegrasyon veritabanı ve okuma yetkisi. Ham tablo ve view açmaz: ham tablolar müşterinin, view'lar kurulumun işidir. Açtıysa True."""
+    refuse_in_tests(database)
+    created = ensure_database(master_odbc, database)
+    with _connect(integration_odbc) as db:
+        for statement in integration_read_statements(users):
+            db.execute(statement)
+    return created
+
+
 def new_app_password() -> str:
     """SQL Server parola kuralına uyar; tırnak yok, komuta güvenle girer."""
     return "Sc1!" + secrets.token_hex(16)
@@ -243,6 +264,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--trust-server-certificate", action="store_true")
     p.add_argument("--sql-user", default="")
     p.add_argument("--service-sid", action="append", default=[])
+    p.add_argument("--integration-database", default="", help="setup: SQL çekimi için boş entegrasyon veritabanı (K-130)")
     p.add_argument("--env-file", default="", help="setup, SQL kimliği: uygulama hesabının bağlantısının yazılacağı smartchain.env")
     p.add_argument("--root", default=str(Path(__file__).resolve().parent), help="app ve db klasörlerinin olduğu yer")
     a = p.parse_args(argv)
@@ -263,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.path.insert(0, a.root)
         migrate(Path(a.root), db_odbc)
         print("Geçişler tamam (alembic upgrade head)")
+        integration_users = [SQL_APP_LOGIN] if a.sql_user else []
         if a.sql_user:  # K-109: servisler kurulum hesabıyla değil, ayrı uygulama hesabıyla bağlanır
             app_password = ensure_sql_app_login(master_odbc, db_odbc)
             apply_app_permissions(db_odbc, users=[SQL_APP_LOGIN])
@@ -272,8 +295,11 @@ def main(argv: list[str] | None = None) -> int:
                     sql_user=SQL_APP_LOGIN, sql_password=app_password)))
             print(f"Uygulama hesabı hazır: {SQL_APP_LOGIN}")
         else:
-            apply_app_permissions(db_odbc, sids=a.service_sid)
+            integration_users = apply_app_permissions(db_odbc, sids=a.service_sid)
             print(f"Uygulama rolü hazır: {APP_ROLE}")
+        if a.integration_database:
+            created = setup_integration_database(master_odbc, odbc_string(a.instance, a.integration_database, **conn), a.integration_database, integration_users)
+            print(f"Entegrasyon veritabanı {a.integration_database}: {'açıldı' if created else 'zaten var'}; servis hesapları yalnız okur")
     elif a.command == "first-account":
         created = first_account(Path(a.root), db_odbc, a.reset)
         # Şifre yalnız bu satırda, commit'ten sonra; install.ps1 loga yazmadan gösterir.

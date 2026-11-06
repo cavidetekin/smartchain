@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 
-import { emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, type Job } from "../api/client";
+import { api, emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, JOB_PULL, pullResultPath, type Job } from "../api/client";
 import { authApi } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
 import { IdleWatch } from "../auth/IdleWatch";
@@ -49,7 +49,7 @@ export function Shell() {
   const seenChecks = useRef(new Map<number, string>());
   const navigate = useNavigate();
   const onCheck = useCallback((job: Job) => {
-    if (job.job_type !== JOB_PRECHECK || (job.requested_by ?? userId) !== userId) return;
+    if ((job.job_type !== JOB_PRECHECK && job.job_type !== JOB_PULL) || (job.requested_by ?? userId) !== userId || job.dismissed) return;
     const before = seenChecks.current.get(job.id);
     seenChecks.current.set(job.id, job.status);
     const ended = job.status === JOB_DONE || job.status === JOB_FAILED;
@@ -57,10 +57,14 @@ export function Shell() {
     const recent = !!job.ended_at && Date.now() - Date.parse(job.ended_at) < RECENT_CHECK_MS;
     if (ended && !wasEnded && (before !== undefined || recent)) setChecks((x) => [...x.filter((j) => j.id !== job.id), job]);
   }, [userId]);
-  const dismissCheck = useCallback((jobId: number) => setChecks((x) => x.filter((j) => j.id !== jobId)), []);
+  const dismissCheck = useCallback((jobId: number) => {
+    setChecks((x) => x.filter((j) => j.id !== jobId));
+    void api.dismissJob(jobId).catch(() => undefined);  // kapatma işte saklanır (K-132)
+  }, []);
   const openCheck = useCallback((job: Job) => {
     dismissCheck(job.id);
-    if (job.import_batch_id) navigate(importResultPath(job.import_batch_id));
+    if (job.job_type === JOB_PULL) navigate(pullResultPath(job.id));
+    else if (job.import_batch_id) navigate(importResultPath(job.import_batch_id));
   }, [dismissCheck, navigate]);
   const onJob = useCallback((job: Job) => {
     onCheck(job);

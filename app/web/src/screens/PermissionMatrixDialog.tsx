@@ -55,7 +55,7 @@ export function PermissionMatrixDialog({ onClose }: { onClose(): void }) {
               ))}
             </tbody>
           </table>
-          <div><Button busy={exporting} onClick={() => void exportFile()}>{T.exportButton}</Button></div>
+          <div><Button variant="secondary" busy={exporting} onClick={() => void exportFile()}>{T.exportButton}</Button></div>
         </>
       )}
       {error && <Alert tone="error">{error}</Alert>}

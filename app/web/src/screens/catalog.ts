@@ -92,8 +92,8 @@ export const SCREENS: Screen[] = [
 
   { no: "22", fn: 88, name: "Kullanıcılar", path: "/yonetim/kullanicilar", group: "yonetim", step: "2.3", icon: Users,
     description: "Kullanıcı açma, kapatma, rol atama, şifre sıfırlama." },
-  { no: "23", fn: 91, name: "Entegrasyon", path: "/yonetim/entegrasyon", group: "yonetim", step: "5.6", icon: Plug,
-    description: "API, Excel ve SQL bağlantıları, servis hesapları, gece akışının zamanlaması." },
+  { no: "23", fn: 91, name: "Entegrasyon", path: "/yonetim/entegrasyon", group: "yonetim", step: "3.3", icon: Plug,
+    description: "SQL kaynağı, view'lar, kolon uyumu, bağlantı testi ve önizleme." },
   { no: "24", fn: 94, name: "Sistem sağlığı", path: "/yonetim/sistem-sagligi", group: "yonetim", step: "2.5", icon: HeartPulse,
     description: "Servis durumu, iş kuyruğu, son çalışmalar, hatalar." },
   { no: "26", fn: 98, name: "Denetim izi", path: "/yonetim/denetim-izi", group: "yonetim", step: "2.6", icon: ScrollText,

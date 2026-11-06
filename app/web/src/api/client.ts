@@ -153,6 +153,8 @@ export interface Job {
   cancel_reason?: string | null;
   cancelled_by_name?: string | null;
   progress: string | null;
+  /** Kullanıcı bildirimi kapattı; yeniden çıkmaz (K-132). */
+  dismissed?: boolean;
   /** Excel ön kontrol işinin partisi (K-129). */
   import_batch_id?: number | null;
   ended_at?: string | null;
@@ -173,14 +175,18 @@ export const api = {
   /** Sıradaki işi iptal eder (kendi işi 48; başkasının işi 93). */
   cancelJob: (jobId: number, reason?: string) => postJson<Job>(`/api/jobs/${jobId}/cancel`, reason ? { reason } : {}),
   /** Arka planda hazırlanan Excel dosyası (K-91). */
+  dismissJob: (jobId: number) => sendJson<null>("POST", `/api/jobs/${jobId}/dismiss`, {}),
   downloadExport: (jobId: number, fallback: string) => downloadFile(`/api/exports/${jobId}/file`, fallback),
 };
 
 /** İş türü ve durumları (app/jobs/constants.py). */
 export const JOB_EXPORT = "Dışa aktarım";
 export const JOB_PRECHECK = "Excel ön kontrol";
+export const JOB_PULL = "Veri çekme";
 /** "Sonucu aç": o işin ön kontrol penceresi (ekran 02, K-129). */
 export const importResultPath = (batchId: number) => `/veri/veri-yukleme?parti=${batchId}`;
+/** "Sonucu aç": o çekimin sonuç penceresi (ekran 02, K-130). */
+export const pullResultPath = (jobId: number) => `/veri/veri-yukleme?cekim=${jobId}`;
 export const JOB_LOAD = "Yükleme";
 export const JOB_DONE = "Bitti";
 export const JOB_FAILED = "Hata";

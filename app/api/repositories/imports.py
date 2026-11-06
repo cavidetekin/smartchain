@@ -47,8 +47,8 @@ def status_of(session: Session, batch_id: int) -> str | None:
 
 
 def open_batches(session: Session, table: str, user_id: int) -> list[dict]:
-    """Kullanıcının bu tablodaki açık ön kontrolleri, yeniden eskiye."""
-    rows = session.execute(sa.select(BATCH).where(BATCH.c.EntityName == table, BATCH.c.UploadedBy == user_id, BATCH.c.Status == PENDING)
+    """Kullanıcının bu tablodaki açık ön kontrolleri, yeniden eskiye. Okunan SQL partisi ön kontrol değildir (K-130)."""
+    rows = session.execute(sa.select(BATCH).where(BATCH.c.EntityName == table, BATCH.c.UploadedBy == user_id, BATCH.c.Status == PENDING, BATCH.c.Method == METHOD_EXCEL)
                            .order_by(BATCH.c.Id.desc())).mappings().all()
     return [dict(r) for r in rows]
 

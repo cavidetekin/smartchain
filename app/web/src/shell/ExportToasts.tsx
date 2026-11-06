@@ -3,11 +3,14 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 
-import { api, JOB_DONE, JOB_FAILED, type Job } from "../api/client";
+import { api, JOB_DONE, JOB_FAILED, JOB_PULL, type Job } from "../api/client";
 import { tr } from "../i18n/tr";
 import type { TrackedExport } from "./ShellContext";
 
 export type ExportItem = TrackedExport & { job?: Job };
+
+/** Bildirimde iş numarası gösterilmez (K-132); sunucu metni destek için numara yazar. */
+const SUPPORT_NUMBER = /\s*Destek için iş numarası:\s*\d+\.?/;
 
 /** "Hazır · 4,8 MB" → "4,8 MB" (iş ilerlemesi, services/export.run_job). */
 export const readySize = (progress: string | null | undefined) => progress?.split(" · ")[1] ?? "";
@@ -32,13 +35,15 @@ export function ExportToasts({ items, onDismiss, checks = [], onOpenCheck, onDis
 
 function PrecheckToast({ job, onOpen, onDismiss }: { job: Job; onOpen(): void; onDismiss(): void }) {
   const failed = job.status === JOB_FAILED;
+  const isPull = job.job_type === JOB_PULL;
+  const title = isPull ? (failed ? tr.jobs.pullFailed : tr.jobs.pullDone) : (failed ? tr.jobs.precheckFailed : tr.jobs.precheckDone);
   return (
     <div className={`sc-toast${failed ? " is-error" : ""}`} role="status">
       <div className="sc-toast-body">
-        <p className="sc-toast-title">{failed ? tr.jobs.precheckFailed : tr.jobs.precheckDone}</p>
+        <p className="sc-toast-title">{title}</p>
         <p className="sc-toast-sub">
           {job.summary}
-          {!failed && job.import_batch_id && (
+          {(isPull || (!failed && job.import_batch_id)) && (
             <> · <button type="button" className="sc-toast-link" onClick={onOpen}>{tr.jobs.openResult}</button></>
           )}
         </p>
@@ -71,7 +76,7 @@ function ExportToast({ item, onDismiss }: { item: ExportItem; onDismiss(): void 
           {failed ? tr.jobs.exportFailed(item.title) : tr.jobs.exportReady(item.title, readySize(item.job?.progress))}
         </p>
         <p className="sc-toast-sub">
-          {failed ? item.job?.error_text : error ?? (
+          {failed ? item.job?.error_text?.replace(SUPPORT_NUMBER, "") : error ?? (
             <>
               <span className="sc-num">{item.fileName}</span> ·{" "}
               <button type="button" className="sc-toast-link" disabled={busy} onClick={download}

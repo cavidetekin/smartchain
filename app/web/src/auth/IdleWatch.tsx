@@ -46,9 +46,17 @@ export function useIdle(me: Me, channel: BroadcastChannel | null, onTimeout: () 
     pending.current = false;
     const at = Date.now();
     seen(at);
-    channel?.postMessage({ type: "activity", at } satisfies TabMessage);
     void authApi.activity().catch(() => undefined);  // 401'de oturum olayı giriş sayfasına döndürür
+    try {
+      channel?.postMessage({ type: "activity", at } satisfies TabMessage);
+    } catch {
+      // sekmeler arası bildirim isteğe bağlı; süre sunucuda ölçülür
+    }
   }, [channel, seen]);
+
+  useEffect(() => {  // sayfayı açmak ya da yenilemek etkinliktir (K-132): F5 oturum uyarısı başlatmaz
+    if (Date.now() - last.current >= PING_EVERY_MS) ping();
+  }, [ping]);
 
   useEffect(() => {
     const onInput = () => {

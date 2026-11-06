@@ -34,7 +34,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Veri modelinin ilkeleri
 <sub>21. Veri modeli · İlkeler</sub>
 
-- **ERP'den bağımsız:** Tek veri sözleşmesi; API, Excel ve SQL arayüz tabloları aynı entegrasyon tablolarına (stg.*) iner.
+- **ERP'den bağımsız:** Tek veri sözleşmesi; API, Excel ve SQL view'ları aynı entegrasyon tablolarına (stg.*) iner.
 - **Adlandırma:** Tablo ve alan adları İngilizce (Resource.ResourceType), açıklamalar Türkçe. Veritabanı MS SQL Server.
 - **Lokasyon:** Lokasyon bütün ana ve işlem verisi tablolarında baştan var; Faz 1'de her lokasyon kendi içinde planlanır.
 - **Veri sınıfları:** Ana veri genel ve bütün senaryolarda aynı; parametre Smartchain'de, parametre setine bağlı ve senaryoya özel olabilir; işlem verisi ERP'den gelen hareketler.
@@ -51,7 +51,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · İki katman ve ek alanlar</sub>
 
 - ENTEGRASYON TABLOSU
-- **stg.Material:** ERP'nin dili: Id yok, ilişkiler kodla. API, SQL arayüzü ve Excel aynı yapıya iner.
+- **stg.Material:** ERP'nin dili: Id yok, ilişkiler kodla. API, SQL view'ları ve Excel aynı yapıya iner.
   - MaterialCode, LocationCode
   - Name, BaseUom, MaterialGroup …
   - AdditionalText1–7, AdditionalNumber1–3
@@ -82,7 +82,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | KAYNAK | ANLAMI | ÖRNEK ALAN |
 |---|---|---|
-| ERP | Entegrasyondan gelir (API, Excel, SQL arayüz tabloları). | Material.Code, SalesOrderLine.OpenQuantity |
+| ERP | Entegrasyondan gelir (API, Excel, SQL view'ları). | Material.Code, SalesOrderLine.OpenQuantity |
 | ERP, yoksa kural | ERP'de varsa oradan; yoksa veri kuralıyla doldurulur. | Material.MaterialLevel, Resource.IsCritical |
 | Kural ya da elle | ERP'de genelde yok; veri kuralıyla ya da ana veri ekranında elle. | Resource.DailyCapacity, Material.IsCustomTracked |
 | Smartchain (parametre) | Smartchain'de tanımlanan planlama parametresi; parametre setine bağlı. | ResourceEfficiency.EfficiencyPct, AllocationRule.SharePct |
@@ -94,7 +94,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Alan grupları ve veri akışı
 <sub>21. Veri modeli · Genel görünüm</sub>
 
-- **Veri yönetimi  10 tablo:** ImportBatch · ImportFinding · Staging · DataRule · FieldDefinition · ManualValue · DataVersion
+- **Veri yönetimi  12 tablo:** ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging · DataRule · FieldDefinition · ManualValue · DataVersion
 - **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** ParameterSet · PlanningSetting · PriorityRule · AllocationRule
@@ -209,6 +209,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **FieldValueSource:** Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır)
 - **ImportBatch:** Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla
 - **ImportFinding:** Partinin bulguları (ön kontrol ve doğrulama)
+- **IntegrationEntity:** Tablo başına çekim ayarı: yöntem, çekim anahtarı, view (K-130)
+- **IntegrationViewVersion:** View'ın sürüm geçmişi (K-130)
 - **stg.*:** Entegrasyon tabloları: her varlık için bir tane (stg.Material…); ilişkiler kodla
 - **DataVersion:** Yükleme ile oluşan dondurulmuş veri versiyonu
 - **DataVersionEntity:** Kısmi yüklemede hangi varlıkların yüklendiği
@@ -1299,11 +1301,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Status | nvarchar(15) |  | Ön kontrol \| Alındı \| Doğrulandı \| Hatalı \| Yüklendi \| Tamamlanmadı \| Vazgeçildi | Sistem | H | E |  |
 | RowCount | int |  | Satır sayısı | Sistem | H | H |  |
 | ErrorCount | int |  | Hatalı satır | Sistem | H | H |  |
-| UploadedBy | int | FK | Yükleyen kullanıcı; Excel yüklemesinde dolu | Sistem | H | H |  |
+| UploadedBy | int | FK | Yükleyen kullanıcı; Excel yüklemesinde ve elle çekimde dolu | Sistem | H | H |  |
 | FileName | nvarchar(255) |  | Yüklenen dosyanın adı | Sistem | H | H |  |
 | FilePath | nvarchar(400) |  | Sunucuda saklanan dosyanın yolu | Sistem | H | H |  |
 | TemplateVersion | int |  | Dosyanın şablon sürümü | Sistem | H | H |  |
-| JobId | bigint |  | Büyük dosyada ön kontrol işi | Sistem | H | H |  |
+| JobId | bigint |  | Büyük dosyada ön kontrol işi; SQL partisinde çekim işi | Sistem | H | H |  |
+| SourceObject | nvarchar(128) |  | SQL partisinde okunan view | Sistem | H | H |  |
+| SignalId | bigint |  | SQL partisinde okunan `ERP_LoadLog` satırı | Sistem | H | H |  |
 
 ### ImportFinding
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1322,6 +1326,50 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Value | nvarchar(255) |  | Dosyadaki değer | Sistem | H | H |  |
 | Message | nvarchar(400) |  | Sorun | Sistem | H | E |  |
 | RowKey | nvarchar(200) |  | Kaydın anahtarı | Sistem | H | H |  |
+
+### IntegrationEntity
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Tablo başına çekim ayarı (K-130). Satır yoksa ya da yöntem boşsa tablo Excel sayılır, çekim açıktır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| EntityName | nvarchar(60) | PK | Tablo (`stg` adı) | Sistem | H | E |  |
+| Method | nvarchar(10) |  | Excel \| SQL | Kullanıcı | H | H |  |
+| IsPullEnabled | bit |  | Çekim açık; kapalıysa SQL çekimi bu tabloyu atlar, Excel yükleme etkilenmez | Kullanıcı | H | E | 1 |
+| DisabledReason | nvarchar(400) |  | Çekimin kapatılma sebebi | Kullanıcı | H | H |  |
+| DisabledBy | int | FK | Çekimi kapatan | Sistem | H | H |  |
+| DisabledAt | datetime2 |  | Çekimin kapatıldığı zaman | Sistem | H | H |  |
+| ViewName | nvarchar(128) |  | Entegrasyon veritabanındaki view | Kullanıcı | H | H |  |
+| LastCheckAt | datetime2 |  | Son uyum denetimi | Sistem | H | H |  |
+| LastCheckStatus | nvarchar(20) |  | Uyumlu \| Uyarılı \| Hatalı | Sistem | H | H |  |
+| LastCheckMessage | nvarchar(400) |  | Son denetimin özeti | Sistem | H | H |  |
+| MatchedColumns | int |  | Uyan sözleşme kolonu | Sistem | H | H |  |
+| ExpectedColumns | int |  | Sözleşme kolonu | Sistem | H | H |  |
+| LastContractHash | nvarchar(32) |  | Son denetimdeki sözleşme özeti; değiştiyse yeniden denetlenir | Sistem | H | H |  |
+| LastPullAt | datetime2 |  | Son okuma | Sistem | H | H |  |
+| LastPullStatus | nvarchar(40) |  | Son çekim durumu | Sistem | H | H |  |
+| LastPullMessage | nvarchar(400) |  | Son çekim durumunun nedeni | Sistem | H | H |  |
+| UpdatedBy | int | FK | Son değiştiren | Sistem | H | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik | Sistem | H | H |  |
+
+### IntegrationViewVersion
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- View'ın sürüm geçmişi (K-130): tanım değişince yeni sürüm. Smartchain view oluşturmaz, yalnız okur ve saklar.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| EntityName | nvarchar(60) | IX | Tablo | Sistem | H | E |  |
+| ViewName | nvarchar(128) |  | View | Sistem | H | E |  |
+| VersionNo | int |  | Sürüm numarası | Sistem | H | E |  |
+| DefinitionHash | nvarchar(64) |  | Tanımın özeti | Sistem | H | E |  |
+| Definition | nvarchar(max) |  | View tanımı; şifrelenmiş view'da boş | Sistem | H | H |  |
+| SeenAt | datetime2 |  | İlk görüldüğü zaman | Sistem | H | E |  |
+| AppVersion | nvarchar(20) |  | Smartchain sürümü | Sistem | H | E |  |
 
 ### stg.*
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1672,12 +1720,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol … | Sistem | H | E |  |
-| Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel | Sistem | H | E |  |
+| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme … | Sistem | H | E |  |
+| Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel \| Veri çekme | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |
 | RequestedBy | int | FK | Başlatan | Sistem | H | H |  |
 | Payload | nvarchar(max) |  | İş parametreleri (JSON) | Sistem | H | H |  |
+| Result | nvarchar(max) |  | İşin sonucu (JSON); Veri çekme: tablo başına durum (K-130) | Sistem | H | H |  |
+| DismissedAt | datetime2 |  | Kullanıcı bildirimi kapattı; yeniden çıkmaz (K-132) | Sistem | H | H |  |
 | Progress | nvarchar(100) |  | İlerleme | Sistem | H | H |  |
 | HeartbeatAt | datetime2 |  | Son yaşam sinyali | Sistem | H | H |  |
 | Attempt | int |  | Deneme sayısı | Sistem | H | H | 0 |
@@ -1771,6 +1821,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `JobLimitInteractive`: hesaplama kanalında aynı anda çalışan iş (3)
   - `JobLimitNight`: gece kanalında aynı anda çalışan iş (2)
   - `JobLimitExport`: Excel kanalında aynı anda çalışan iş (2; K-93, K-129)
+  - `JobLimitPull`: Veri çekme kanalında aynı anda çalışan iş (1; K-130)
   - `JobHeartbeatTimeoutSeconds`: kalp atışı bu kadar saniye gelmezse iş takılmış sayılır (120)
   - `JobMaxAttempts`: takılan iş en fazla bu kadar denenir, sonra Hata (2)
 - Motor ayarları (K-71; fonksiyon 34):
@@ -1789,6 +1840,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
 - Sistem sağlığı (K-106; fonksiyon 94): `DiskWarnPercent` (85), `QueueWaitWarnMinutes` (10), `SystemEventRetentionDays` (90).
 - Excel yükleme (K-129; fonksiyon 03): `ImportSyncMaxMb`: bu boyuta kadar ön kontrol istek içinde, üstü iş kuyruğunda (5); `ImportMaxMb`: en büyük dosya (100); `ImportMaxRows`: bir dosyada en çok satır (200000).
+- SQL çekimi (K-130; fonksiyon 01, 91): `IntegrationDatabase`: entegrasyon veritabanının adı, boşsa SQL yolu kapalı; `PullRetryWaitSeconds`: geçici hatada denemeler arası bekleme (30).
 - Giriş, şifre ve oturum ayarları (K-97, K-98; fonksiyon 89). Şifre kuralı değişikliği bir sonraki şifre değişiminde geçerli olur:
   - `PasswordMinLength`: şifrede en az karakter (10)
   - `PasswordRequireLetterAndDigit`: şifrede harf ve rakam zorunlu, 1 ya da 0 (1)

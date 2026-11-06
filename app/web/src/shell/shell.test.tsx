@@ -48,9 +48,9 @@ describe("kenar menü", () => {
   it("ekrana tıklayınca boş sayfası ve adımı açılır", async () => {
     const user = userEvent.setup();
     renderApp();
-    await user.click(within(menu()).getByRole("link", { name: /Entegrasyon/ }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Entegrasyon");
-    expect(screen.getByText("Bu ekran 5.6 adımında gelecek.")).toBeInTheDocument();
+    await user.click(within(menu()).getByRole("link", { name: /Veri kalitesi/ }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Veri kalitesi");
+    expect(screen.getByText("Bu ekran 6.5 adımında gelecek.")).toBeInTheDocument();
   });
 });
 
@@ -267,7 +267,8 @@ describe("iş göstergesi", () => {
     fireEvent.click(indicator);
     const panel = screen.getByRole("dialog", { name: "Arka plandaki işler" });
     expect(panel.textContent).not.toMatch(/Bildirimler/);  // sorun yokken metin yok
-    expect(panel).toHaveTextContent("#6 Çalışma · Sırada · sıra 1");
+    expect(panel).toHaveTextContent("Çalışma · Sırada · sıra 1");
+    expect(panel).not.toHaveTextContent("#6");  // K-132
   });
 
   it("bağlantı koparsa yedek moda geçer ve 10 sn sonra yeniden bağlanır", async () => {

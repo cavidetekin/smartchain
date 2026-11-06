@@ -1,16 +1,20 @@
-"""Tablo listesi (ekran 02, fonksiyon 02, K-110): veri tablosu yok, katalog sabit değerli alt sorguya çevrilir.
+"""Tablo listesi (ekran 02 ve 23, K-110, K-130): veri tablosu yok, katalog sabit değerli alt sorguya çevrilir, tablo başına çekim ayarı eklenir.
 
 Böylece ortak tablo kendiliğinden sıralar, süzer, Excel'e aktarır. Alan sayısına etiketli ek alanlar (K-88) sonradan eklenir.
 """
 import sqlalchemy as sa
 
-from app.integration.contract import ENTITIES, MASTER_DATA, TRANSACTION_DATA, base_counts
+from app.integration.contract import ENTITIES, MASTER_DATA, TRANSACTION_DATA, base_counts, contract_hash
 from db.models import metadata
 
 from .definition import ListDefinition
 
 FD = metadata.tables["adm.FieldDefinition"]
 BATCH = metadata.tables["adm.ImportBatch"]
+CONFIG = metadata.tables["adm.IntegrationEntity"]
+USER = metadata.tables["adm.AppUser"]
+SQL, EXCEL = "SQL", "Excel"
+NO_VIEW, RECHECK = "View tanımlı değil", "Yeniden denetle"
 LOADED_STATUSES = ("Alındı", "Doğrulandı", "Yüklendi")  # ham veriye alınmış partiler (K-129)
 
 
@@ -27,7 +31,7 @@ def _row(order: int, entity) -> sa.Select:
     return sa.select(_number(order).label("Id"), _text(entity.table).label("Entity"), _text(entity.name).label("Name"),
                      _text(entity.data_class).label("EntityClass"), _text(entity.description).label("Description"),
                      _number(entity.version).label("Version"),
-                     _number(field_count).label("BaseFieldCount"), _number(required_count).label("RequiredCount"))
+                     _number(field_count).label("BaseFieldCount"), _number(required_count).label("RequiredCount"), _text(contract_hash(entity.table)).label("ContractHash"))
 
 
 _catalog = sa.union_all(*[_row(i, e) for i, e in enumerate(ENTITIES, 1)]).subquery("catalog")
@@ -39,10 +43,24 @@ _last_load = (sa.select(sa.func.max(BATCH.c.ReceivedAt))
               .where(BATCH.c.EntityName == _catalog.c.Entity, BATCH.c.Status.in_(LOADED_STATUSES))
               .correlate(_catalog).scalar_subquery())
 
-SOURCE = sa.select(_catalog.c.Id, _catalog.c.Id.label("CatalogOrder"), _catalog.c.Entity, _catalog.c.Name, _catalog.c.EntityClass, _catalog.c.Description, _catalog.c.Version,
-                   (_catalog.c.BaseFieldCount + _labelled).label("FieldCount"), _catalog.c.RequiredCount, _last_load.label("LastLoadAt")).subquery("de")
+_method = sa.func.coalesce(CONFIG.c.Method, _text(EXCEL)).label("Method")
+_is_sql = sa.func.coalesce(CONFIG.c.Method, _text(EXCEL)) == _text(SQL)
+_warning = sa.case((sa.and_(_is_sql, CONFIG.c.ViewName.is_(None)), _text(NO_VIEW)),
+                   (sa.and_(_is_sql, CONFIG.c.LastContractHash.is_not(None), CONFIG.c.LastContractHash != _catalog.c.ContractHash), _text(RECHECK)),
+                   else_=sa.null()).label("Warning")
+_match = sa.case((CONFIG.c.MatchedColumns.is_not(None),
+                  sa.cast(CONFIG.c.MatchedColumns, sa.Unicode(10)) + _text(" / ") + sa.cast(CONFIG.c.ExpectedColumns, sa.Unicode(10))), else_=sa.null()).label("ColumnMatch")
 
-FIELDS = ("Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity")
+SOURCE = (sa.select(_catalog.c.Id, _catalog.c.Id.label("CatalogOrder"), _catalog.c.Entity, _catalog.c.Name, _catalog.c.EntityClass, _catalog.c.Description, _catalog.c.Version,
+                    (_catalog.c.BaseFieldCount + _labelled).label("FieldCount"), _catalog.c.RequiredCount, _last_load.label("LastLoadAt"),
+                    _method, sa.cast(sa.func.coalesce(CONFIG.c.IsPullEnabled, sa.literal_column("1")), sa.Boolean).label("IsPullEnabled"), CONFIG.c.ViewName, _warning, _match,
+                    CONFIG.c.LastCheckStatus, CONFIG.c.LastCheckMessage, CONFIG.c.LastPullStatus, CONFIG.c.LastPullMessage, CONFIG.c.LastPullAt,
+                    CONFIG.c.DisabledReason, CONFIG.c.DisabledAt, sa.func.coalesce(USER.c.FullName, USER.c.UserName).label("DisabledByName"))
+          .select_from(_catalog.outerjoin(CONFIG, CONFIG.c.EntityName == _catalog.c.Entity).outerjoin(USER, USER.c.Id == CONFIG.c.DisabledBy)).subquery("data_entities"))
+
+FIELDS = ("Name", "Method", "IsPullEnabled", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity", "ViewName")
+HIDDEN_FIELDS = ("Entity", "ViewName")
+PULL_KEYS = ("Method", "IsPullEnabled", "ViewName", "Warning", "DisabledReason", "DisabledByName", "DisabledAt")
 
 DATA_ENTITIES = ListDefinition(
     name="data-entities",
@@ -52,12 +70,34 @@ DATA_ENTITIES = ListDefinition(
     function=2,  # Excel şablonu indirme (K-100)
     versioned=False,
     source=SOURCE,
-    key_fields=("Entity", "Name", "Version"),  # satır menüsü bunları okur, kolon gizli olsa da
+    key_fields=("Entity", "Name", "Version", *PULL_KEYS),  # satır menüsü ve ipucu bunları okur, kolon gizli olsa da
     fields=FIELDS,
-    default_visible=tuple(f for f in FIELDS if f != "Entity"),
+    default_visible=tuple(f for f in FIELDS if f not in HIDDEN_FIELDS),
     default_sort=(("CatalogOrder", "asc"),),  # referans verisinden işlem verisine (docs/03)
-    labels={"Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "LastLoadAt": "Son yükleme zamanı", "RequiredCount": "Zorunlu alan",
+    labels={"Method": "Yöntem", "IsPullEnabled": "Çekim", "ViewName": "View", "Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "LastLoadAt": "Son yükleme zamanı", "RequiredCount": "Zorunlu alan",
             "Entity": "Teknik tablo adı", "CatalogOrder": "Yükleme sırası"},
-    values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA]},
-    notes={"LastLoadAt": "Dosyanın ham veriye alındığı zaman; ana tablolara yükleme ayrı adımdır."},
+    values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA], "Method": [EXCEL, SQL]},
+    notes={"LastLoadAt": "Satırların ham veriye alındığı zaman; ana tablolara yükleme ayrı adımdır.",
+           "Method": "Çekim yöntemi. Excel'den yükleme yöntemden bağımsız her zaman açıktır.",
+           "IsPullEnabled": "Yalnız SQL çekimini durdurur; Excel'den yükleme açık kalır."},
+)
+
+INTEGRATION_FIELDS = ("Name", "Method", "ViewName", "ColumnMatch", "LastPullStatus", "LastPullAt", "CatalogOrder", "Entity")
+
+INTEGRATION_ENTITIES = ListDefinition(
+    name="integration-entities",
+    table="stg.*",
+    title="Entegrasyon tabloları",
+    file_slug="entegrasyon-tablolari",
+    function=91,  # Entegrasyon tanımı (K-130)
+    versioned=False,
+    source=SOURCE,
+    key_fields=("Entity", "Name", "Method", "ViewName", "LastCheckStatus", "LastCheckMessage", "LastPullMessage"),
+    fields=INTEGRATION_FIELDS,
+    default_visible=("Name", "Method", "ViewName", "ColumnMatch", "LastPullStatus", "LastPullAt"),
+    default_sort=(("CatalogOrder", "asc"),),
+    labels={"Name": "Tablo", "Method": "Yöntem", "ViewName": "Kaynak", "ColumnMatch": "Alan uyumu", "LastPullStatus": "Son durum",
+            "LastPullAt": "Son okuma", "CatalogOrder": "Yükleme sırası", "Entity": "Teknik tablo adı"},
+    values={"Method": [EXCEL, SQL]},
+    notes={"ColumnMatch": "Sözleşme kolonlarından view'da bulunanlar.", "LastPullAt": "View'ın son okunduğu zaman."},
 )

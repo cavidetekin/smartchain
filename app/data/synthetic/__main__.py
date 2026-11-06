@@ -3,6 +3,7 @@
   python -m app.data.synthetic load   [--date 2026-10-27] [--seed 22]   temiz hâli ana tablolara yükler (öncekini siler)
   python -m app.data.synthetic unload                                    sentetik veriyi siler
   python -m app.data.synthetic excel  [--out data/synthetic/v0/kirli]    kirli hâl: entegrasyon Excel'i + beklenen hatalar
+  python -m app.data.synthetic sql    [--database SmartchainIntegration] kirli hâl: entegrasyon veritabanına ham tablolar, view'lar, ERP_LoadLog (K-130)
   python -m app.data.synthetic check                                     sayılar ve bilerek konmuş durumlar
   python -m app.data.synthetic users                                     kullanıcılar: geçici şifreler (docs/11, 2.1)
 """
@@ -10,6 +11,8 @@ import argparse
 import sys
 from datetime import date
 from pathlib import Path
+
+from sqlalchemy import text
 
 from .dataset import SEED, generate
 from .situations import all_checks, summary
@@ -29,10 +32,11 @@ def _print_check(ds) -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m app.data.synthetic", description="Sentetik veri seti v0 (docs/11)")
-    p.add_argument("command", choices=["load", "unload", "excel", "check", "users"])
+    p.add_argument("command", choices=["load", "unload", "excel", "sql", "check", "users"])
     p.add_argument("--date", type=date.fromisoformat, default=None, help="üretim günü (varsayılan bugün)")
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--out", type=Path, default=ROOT / "data" / "synthetic" / "v0" / "kirli")
+    p.add_argument("--database", default=None, help="sql: entegrasyon veritabanı")
     a = p.parse_args(argv)
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
@@ -61,6 +65,20 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     from app.api.db import get_engine
+    if a.command == "sql":
+        from .sql import DATABASE, SyntheticSqlLock, configure_demo, write_sql
+        engine = get_engine()
+        with engine.connect() as c:
+            collation = c.execute(text("SELECT CONVERT(nvarchar(128), DATABASEPROPERTYEX(DB_NAME(), 'Collation'))")).scalar()
+        try:
+            m = write_sql(ds, engine.url, a.database or DATABASE, collation)
+        except SyntheticSqlLock as exc:
+            print(f"DURDU: {exc}", file=sys.stderr)
+            return 2
+        configure_demo(engine)
+        print(f"SQL kaynağı: {m['database']} · {len(m['tables'])} tablo, {sum(m['tables'].values())} satır, {len(m['errors'])} kasıtlı hata")
+        print("Demo: Ürün ağacı, Rota, Stok, Satış siparişi, İş emri SQL ve view'lı; Malzeme ekranda seçilir.")
+        return 0
     from .load import SyntheticLockError, load, unload
     try:
         if a.command == "unload":

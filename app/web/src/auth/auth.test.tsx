@@ -1,8 +1,12 @@
 // Giriş ve oturum (fonksiyon 89; K-97, K-98): giriş sayfası, zorunlu şifre değişikliği, kullanıcı menüsü,
 // hareketsizlik penceresi, oturum bitince giriş sayfasına dönüş.
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
+import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { App } from "../App";
 
 import { ME, mockApi, mockSocket, renderApp, type Reply } from "../test/helpers";
 import type { Me } from "./authApi";
@@ -239,6 +243,37 @@ describe("hareketsizlik (mockup m24f-0740)", () => {
     await act(async () => vi.advanceTimersByTime(30 * MIN + 1000));
     expect(await screen.findByRole("form", { name: "Giriş" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("30 dakika işlem yapılmadığı için oturumunuz kapandı.");
+  });
+
+  it("StrictMode kanalı kapatmaz: etkinlik sunucuya gider (3.3 demosu, F5 geri sayımı)", async () => {
+    class FakeChannel {
+      closed = false;
+      addEventListener() {}
+      removeEventListener() {}
+      close() { this.closed = true; }
+      postMessage() {
+        if (this.closed) throw new DOMException("kapalı", "InvalidStateError");
+      }
+    }
+    vi.stubGlobal("BroadcastChannel", FakeChannel);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const fetchMock = mockApi();
+    const router = createMemoryRouter([{ path: "*", element: <App initialMe={ME} /> }], { initialEntries: ["/ana-sayfa"] });
+    render(<StrictMode><RouterProvider router={router} /></StrictMode>);
+    await act(async () => vi.advanceTimersByTime(2 * MIN));
+    fireEvent.keyDown(window, { key: "a" });
+    expect(sent(fetchMock, "/api/auth/activity")).toHaveLength(1);
+    vi.unstubAllGlobals();
+  });
+
+  it("sayfayı yenilemek etkinliktir: geri sayım başlamaz (K-132)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const left = { ...ME, idle_seconds_left: 3 * 60 };
+    const fetchMock = mockApi({ "/api/auth/me": { body: left }, "/api/auth/activity": { body: { idle_seconds_left: 1800 } } });
+    renderApp("/ana-sayfa", left);
+    expect(sent(fetchMock, "/api/auth/activity")).toHaveLength(1);
+    await act(async () => vi.advanceTimersByTime(3000));
+    expect(screen.queryByRole("dialog", { name: "Oturumunuz kapanmak üzere" })).toBeNull();
   });
 
   it("tuş etkinliktir, fare gezdirmek değil; etkinlik en çok dakikada bir bildirilir", async () => {

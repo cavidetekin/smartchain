@@ -315,7 +315,34 @@ Başlık "Denetim izi", altında ekranı dolduran ortak tablo: Zaman, Kullanıc�
 
 ## Veri yükleme (3.1, K-110; ekran 02, fonksiyon 02)
 
-İskelet. Başlık "Veri yükleme", altında ekranı dolduran ortak tablo: Tablo, Kategori, Açıklama (tek cümle, docs/03 kataloğundan), Sürüm, Toplam alan, Zorunlu alan, Yükleme sırası; Teknik tablo adı Alanlar panelinden. Satır menüsü: Şablonu indir (v1) tek tıkla; Şablon bilgisi penceresi (sürüm, dosya, toplam alan, zorunlu alanlar; İndir). Değeri olmayan satır görünmez. Boş bırakılınca ne olacağı Excel'in Açıklama sayfasında. Excel'den yükle, Son Excel yüklemesini gör ve Bu tabloyu çekimden çıkar pasif, ipucunda gelecekleri adım. Son yükleme zamanı 3.2'de, Yöntem 3.3'te; üst düğmeler, sağ paneller ve sayı kolonları 5.5'te.
+İskelet. Başlık "Veri yükleme", altında ekranı dolduran ortak tablo: Tablo, Kategori, Açıklama (tek cümle, docs/03 kataloğundan), Sürüm, Toplam alan, Zorunlu alan, Yükleme sırası; Teknik tablo adı Alanlar panelinden. Satır menüsü: Şablonu indir (v1) tek tıkla; Şablon bilgisi penceresi (sürüm, dosya, toplam alan, zorunlu alanlar; İndir). Değeri olmayan satır görünmez. Boş bırakılınca ne olacağı Excel'in Açıklama sayfasında. Son Excel yüklemesini gör pasif, ipucunda geleceği adım. Son yükleme zamanı 3.2'de. Yükleme düğmeleri, sağ paneller ve sayı kolonları 5.5'te.
+
+**Uygulama (3.3, K-130).** Yöntem ve Çekim kolonları hücre içi düzenlenir. Yöntem: seçim kutusu (Excel, SQL), yalnız System owner. Çekim: aç/kapa anahtarı, bütün satırlarda, Admin ve üstü; kapatırken küçük sebep kutusu zorunlu, açarken uyarı; kapalıyken ipucu üç satır: "Çekim kapalı", "Sebep: …", "Kişi · tarih". Key user salt okunur görür. Uyarı kolon değildir: tablo adının yanında sade sarı üçgen, metni ipucunda (view tanımlı değil, yeniden denetle). Satır menüsünde Excel'den yükle her zaman açık, yöntemi SQL ise Veri çek. Üstte Veri çek.
+
+**Veri çek penceresi:** Yalnız SQL tabloları. Kolonlar Tablo, Kaynak, Durum; neden durum çipinin ipucunda. "Yeni veri yok" satırında "Yine de oku" seçimi. Düğmede sayı yazar ("3 tabloyu çek"). Okunacak satırda çip yok.
+
+**Çekim sonucu penceresi:** Tablo, Kaynak, Okunan, Geçerli, Hatalı, Durum, Neden; okunmayan tabloda sayılar "—". Yalnız gerektiğinde küçük tonal mor düğme: bulgusu olan satırda "Bulgular", hatalı satırda "Yeniden dene"; satır yüksekliğini bozmaz. İlerleme iş panelinde ve pencerede, bitince bildirim.
+
+### Excel'den yükle penceresi (3.3)
+
+Dosya alanı yüksek, ortada yükleme ikonu; dosya seçilince adı ve boyutu aynı alanda. Yükleme modu yan yana iki seçim kartı (`ui` `ChoiceCards`): kalın başlık, altında açıklama, seçili kart indigo çerçeve. Hatalı satır bandı: "2 satır hatalı, ham veriye alınmaz."; hepsi hatalıysa "Geçerli satır yok, ham veriye alınmaz."
+
+### Entegrasyon (ekran 23, 3.3, K-130)
+
+Üstte tek satır ince şerit: SQL kaynağı alanı, Kaydet, Bağlantıyı test et, "Hesap: …" yan yana. Ortak tablo: Tablo, Yöntem (seçim kutusu, System owner), Kaynak (view adı, hücre içi; System owner), Alan uyumu, Son durum, Son okuma. Alan uyumu tek kolon: tam uyumda "13 / 13" yeşil, yalnız isteğe bağlı kolon eksikse sarı, zorunlu kolon eksikse kırmızı (tablo okunamaz); bağlantı testi penceresinde de aynı. Bağlantı testinin özeti hizalı üç kolon: sabit genişlikte durum çipi, kontrol adı, ayrıntı. Satır menüsü: Önizleme (20 satır, satır bulgularıyla), View sürümleri. API kartı yok (11.5), Zamanlanmış işler kartı 5.6'da. Menüde Admin ve üstü görür.
+
+### Tablo içi düzenleme (K-132)
+
+Hücre düzenleyicileri `table/CellEditors.tsx`, ortak tablonun `cellRender`'ıyla kullanılır; taslak ve kayıt `table/useTableEdits.tsx`. Değişiklik anında kaydedilmez: tablonun sağ üstünde Kaydet ve Vazgeç çıkar, değişiklikler toplu ve tek işlemde kaydedilir, biri geçersizse hiçbiri yazılmaz. Vazgeç kaydedilmemişleri geri alır. Değişen hücre indigo çerçevelidir (U-4). Kaydedilmemiş değişiklikle ekrandan çıkılırsa ya da sayfa kapatılırsa uyarı çıkar. Seçim kutuları hep görünür. Veri yükleme, Entegrasyon ve sonraki bütün tablo içi düzenlemeler (6.x) bu kuralla çalışır.
+
+### Bilgi bandı, durum çipi, ipucu (K-132)
+
+- **Bilgi bandı:** Pencere ve kartlarda ekranın nasıl çalıştığını anlatan bant olmaz. Bant yalnız durum, uyarı ya da hata içindir.
+- **Durum çipleri:** Yeşil Alındı, Uyumlu. Sarı Uyarılı, Tamamlanmadı. Kırmızı Hata, Hatalı. Gri Atlandı, Yeni veri yok, Veri güncellemesi devam ediyor. Okunacak durum değildir, çip olmaz.
+- **İpucu:** Açıklama taşıyan ipucu `ui/Tooltip`'le; odakta da görünür, klavyeyle okunur.
+- **Pencere tabloları:** `table/LocalTable.tsx`: ortak tablonun görünümü (renkli başlık, tek satır, sıralama), satırlar sunucu listesinden değil pencerenin verisinden gelir. Önizleme, Veri çek, Çekim sonucu, Bağlantı testi. **Tek satır kuralının istisnası:** uzun metin kolonları (Not, Neden, Sorun) gerektiğinde alt satıra kayar. Pencere tabloları pencereye sığar, yatay kaydırma gerekmez: kolon genişliği içerikten, uzun metin kolonu kalan genişliği alır. Sunucu listesi olan pencere tablosu (bulgular) ortak tablonun pencere kipindedir (`DataTable fit wrapFields`): sabitleme ve genişlik ayarı yok, satır yüksekliği ölçülür. Kolonu çok olan önizlemede (ör. Malzeme, 33 alan) yatay kaydırma kalır.
+- **Sayı kartı (`KpiCard`):** yarı yükseklik; etiket üstte küçük, sayı altında; bütün ekranlarda aynı.
+- **Düğmeler (K-131):** `primary` indigo, `secondary` tonal mor, `danger` kiremit çerçeve, `neutral` Vazgeç ve araç çubuğu, `ghost` sessiz.
 
 ## Durum
 
@@ -323,6 +350,7 @@ Başlık "Denetim izi", altında ekranı dolduran ortak tablo: Zaman, Kullanıc�
 |---|---|
 | Teknoloji ve kabuk kararları | karar verildi (K-81, K-82) |
 | Kabuk | uygulandı (1.1) |
+| Hücre içi düzenleme, Yöntem ve Çekim kolonları, Yeniden çek, ekran 23 (K-130) | uygulandı (3.3) |
 | Stil sistemi ve ortak bileşenler | uygulandı (1.2) |
 | Tablo bileşeni ve liste sorgu sözleşmesi | uygulandı (1.3) |
 | Görünüm: kayıtlı görünüm, kolon düzeni, gruplama, filtre etiketleri, boş | uygulandı (1.4) |

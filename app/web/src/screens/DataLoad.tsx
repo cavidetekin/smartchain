@@ -1,14 +1,22 @@
-// Veri yükleme (ekran 02; K-110, K-129, docs/12). Tablo listesi, satır menüsü, Excel'den yükle; yöntem ve sayılar sonraki adımlarda.
-import { useEffect, useMemo, useState } from "react";
+// Veri yükleme (ekran 02; K-110, K-129, K-130, docs/12). Tablo listesi, yöntem ve çekim, satır menüsü, Excel'den yükle, Yeniden çek; sayılar 5.5'te.
+import { TriangleAlert } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import { can, forbiddenReason } from "../auth/permissions";
+import { formatDateTime, serverDate } from "../format";
 import { tr } from "../i18n/tr";
+import { SelectCell, SwitchCell } from "../table/CellEditors";
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import type { Row } from "../table/types";
-import { Alert, Dialog } from "../ui";
+import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
+import { Alert, Button, Dialog, Tooltip } from "../ui";
 import { dataLoadApi, type TemplateInfo } from "./dataLoadApi";
 import { ImportDialog } from "./ImportDialog";
+import { type EntityChange, integrationApi, METHOD_SQL, METHODS } from "./integrationApi";
+import { PullResultDialog, PullStartDialog, PullSwitchDialog } from "./PullDialogs";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 
 const T = tr.dataLoad;
@@ -46,6 +54,15 @@ function InfoDialog({ row, onClose, onDownload }: { row: Row; onClose(): void; o
 }
 
 export function DataLoad() {
+  const me = useAuth().me!;
+  const canMethod = can(me, 96, "write");
+  const canSwitch = can(me, 91, "write");
+  const canPull = can(me, 1, "write");
+  const [pullStart, setPullStart] = useState<{ entity?: string } | null>(null);
+  const [pullJob, setPullJob] = useState<number | null>(null);
+  const [switching, setSwitching] = useState<Row | null>(null);
+  const [saving, setSaving] = useState(false);
+  const edits = useTableEdits();
   const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
   const [infoRow, setInfoRow] = useState<Row | null>(null);
   const [uploadRow, setUploadRow] = useState<Row | null>(null);
@@ -53,12 +70,81 @@ export function DataLoad() {
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const resultBatch = Number(new URLSearchParams(search).get("parti")) || null;  // "Sonucu aç" (K-129)
+  const resultPull = Number(new URLSearchParams(search).get("cekim")) || null;  // "Sonucu aç" (K-130)
+  const shownPull = pullJob ?? resultPull;
+  const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
   const [error, setError] = useState<string | null>(null);
 
   const rowMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.rowMenu(String(row.Name)),
     onOpen: (row: Row, anchor: HTMLElement) => setMenu({ row, anchor }),
   }), []);
+
+  const toggle = useCallback((row: Row) => {
+    const key = String(row.Entity);
+    if (edits.changed(key, "IsPullEnabled")) {  // kaydedilmemiş değişikliği geri alır
+      edits.set(key, "IsPullEnabled", Boolean(row.IsPullEnabled), Boolean(row.IsPullEnabled));
+      edits.set(key, "PullReason", "", "");
+    } else {
+      setSwitching(row);
+    }
+  }, [edits]);
+  const confirmSwitch = (reason: string) => {
+    const row = switching!;
+    const key = String(row.Entity);
+    edits.set(key, "IsPullEnabled", !row.IsPullEnabled, Boolean(row.IsPullEnabled));
+    edits.set(key, "PullReason", reason, "");
+    setSwitching(null);
+  };
+  const saveEdits = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const changes: EntityChange[] = Object.entries(edits.drafts).map(([entity, d]) => ({
+        entity,
+        ...("Method" in d ? { method: String(d.Method) } : {}),
+        ...("IsPullEnabled" in d ? { pull_enabled: Boolean(d.IsPullEnabled), reason: d.PullReason ? String(d.PullReason) : undefined } : {}),
+      }));
+      await integrationApi.saveEntities(changes);
+      edits.discard();
+      refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : T.saveFailed);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cellRender = useMemo(() => ({
+    Name: (value: unknown, row: Row) => (
+      <span className="sc-name-cell">
+        <span className="sc-name-text">{String(value)}</span>
+        {Boolean(row.Warning) && <Tooltip content={String(row.Warning)} focusable><TriangleAlert className="sc-warn-icon" aria-label={T.warningOf(String(value), String(row.Warning))} /></Tooltip>}
+      </span>
+    ),
+    Method: (value: unknown, row: Row) => {
+      const key = String(row.Entity);
+      return <SelectCell label={T.method(String(row.Name))} value={edits.get(key, "Method", String(value))} options={METHODS} editable={canMethod} changed={edits.changed(key, "Method")}
+                         onChange={(next) => edits.set(key, "Method", next, String(value))} />;
+    },
+    IsPullEnabled: (value: unknown, row: Row) => {
+      const key = String(row.Entity);
+      const on = edits.get(key, "IsPullEnabled", Boolean(value));
+      const draftReason = edits.get(key, "PullReason", "");
+      const reason = draftReason || row.DisabledReason;
+      return (
+        <Tooltip content={on ? null : (
+          <>
+            <div>{T.pullOff}</div>
+            {Boolean(reason) && <div>{T.pullReason(String(reason))}</div>}
+            {!edits.changed(key, "IsPullEnabled") && Boolean(row.DisabledAt) && <div>{T.pullBy(String(row.DisabledByName ?? ""), formatDateTime(serverDate(String(row.DisabledAt))))}</div>}
+          </>
+        )}>
+          <SwitchCell label={T.pullSwitch(String(row.Name))} checked={on} editable={canSwitch} changed={edits.changed(key, "IsPullEnabled")} onToggle={() => toggle(row)} />
+        </Tooltip>
+      );
+    },
+  }), [canMethod, canSwitch, edits, toggle]);
 
   const download = (row: Row) => {
     setError(null);
@@ -69,20 +155,32 @@ export function DataLoad() {
 
   return (
     <section className="sc-page--fill">
-      <header className="sc-page-head">
+      <header className="sc-page-head sc-page-head--row">
         <h1>{T.title}</h1>
+        <div className="sc-page-head-actions">
+          <Button variant="primary" disabledReason={canPull ? null : forbiddenReason(1, "write")} onClick={() => setPullStart({})}>{T.pullNow}</Button>
+        </div>
       </header>
       {error && <Alert tone="error">{error}</Alert>}
-      <DataTable list="data-entities" rowMenu={rowMenu} reloadKey={reloadKey} />
+      <DataTable list="data-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey}
+                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} />} />
+      <UnsavedGuard dirty={edits.dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.Name))} anchor={menu.anchor} onClose={() => setMenu(null)}>
           <MenuItem label={T.download(menu.row.Version)} state={ALLOWED} onClick={() => download(menu.row)} />
           <MenuItem label={T.info} state={ALLOWED} onClick={() => { setInfoRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.upload} state={ALLOWED} onClick={() => { setUploadRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.lastUpload} state={later("5.4")} onClick={() => undefined} />
-          <MenuItem label={T.exclude} state={later("3.3")} onClick={() => undefined} />
+          {menu.row.Method === METHOD_SQL && (
+            <MenuItem label={T.pullNow} state={canPull ? ALLOWED : { allowed: false, reason: forbiddenReason(1, "write") }}
+                      onClick={() => { setPullStart({ entity: String(menu.row.Entity) }); setMenu(null); }} />
+          )}
         </RowPopMenu>
       )}
+      {pullStart && <PullStartDialog entity={pullStart.entity} onClose={() => setPullStart(null)} onStarted={(job) => { setPullStart(null); setPullJob(job); }} />}
+      {shownPull && <PullResultDialog key={shownPull} jobId={shownPull} onRetry={setPullJob} onChanged={refresh}
+                                      onClose={() => { setPullJob(null); if (resultPull) navigate(pathname, { replace: true }); }} />}
+      {switching && <PullSwitchDialog name={String(switching.Name)} enabling={!switching.IsPullEnabled} onClose={() => setSwitching(null)} onConfirm={confirmSwitch} />}
       {infoRow && <InfoDialog row={infoRow} onClose={() => setInfoRow(null)} onDownload={() => download(infoRow)} />}
       {uploadRow && <ImportDialog entity={String(uploadRow.Entity)} name={String(uploadRow.Name)} onClose={() => setUploadRow(null)}
                                   onReceived={() => setReloadKey((k) => k + 1)} />}

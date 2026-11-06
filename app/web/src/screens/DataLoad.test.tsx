@@ -67,7 +67,6 @@ describe("ekran 02", () => {
     expect(item("Excel'den yükle")).toBeEnabled();
     expect(item("Excel'den yükle")).not.toHaveAttribute("title");
     expect(item("Son Excel yüklemesini gör")).toBeDisabled();
-    expect(item("Bu tabloyu çekimden çıkar")).toBeDisabled();
   });
 
   it("şablon tek tıkla iner", async () => {

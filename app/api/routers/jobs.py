@@ -42,6 +42,11 @@ def cancel_job(job_id: int, body: CancelRequest = Body(default=CancelRequest()),
     return service.cancel(session, job_id, user, body.reason)
 
 
+@router.post("/jobs/{job_id}/dismiss", status_code=204, summary="Kendi işinin bildirimini kapat; yeniden çıkmaz")
+def dismiss_job(job_id: int, user: CurrentUser = Depends(write_own), session: Session = Depends(get_session)) -> None:
+    service.dismiss(session, job_id, user)
+
+
 @router.post("/jobs/{job_id}/prioritize", summary="Sıradaki işi kanalında öne al (93); Gece kanalında yok")
 def prioritize_job(job_id: int, user: CurrentUser = Depends(manage), session: Session = Depends(get_session)) -> dict:
     return service.prioritize(session, job_id, user)

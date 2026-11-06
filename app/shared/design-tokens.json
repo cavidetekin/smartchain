@@ -121,6 +121,9 @@
     "toast-link": "#8f98e3",
     "toast-muted": "#b4b9c2",
     "toast-ok": "#2f8f5b",
-    "toast-text": "#ffffff"
+    "toast-text": "#ffffff",
+    "violet-100": "#ede9fe",
+    "violet-200": "#ddd6fe",
+    "violet-700": "#6d28d9"
   }
 }

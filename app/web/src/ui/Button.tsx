@@ -1,4 +1,4 @@
-// Buton (K-85): birincil (indigo, U-4), ikincil, sessiz, geri alınamaz işlem (kiremit; yalnız onay penceresi).
+// Buton (K-131): ana aksiyon indigo dolgulu (primary), ikincil aksiyon tonal mor (secondary), geri dönüşü olmayan kiremit çerçeveli (danger), Vazgeç ve araç çubuğu nötr (neutral), sessiz (ghost).
 // disabledReason (K-100): bağlam dışı düğme gizlenmez; pasifleşir ve nedenini araç ipucunda ve ekran okuyucuda söyler.
 import type { LucideIcon } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
@@ -6,7 +6,7 @@ import { type ButtonHTMLAttributes, type ReactNode, type Ref, useId } from "reac
 
 import { tr } from "../i18n/tr";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "neutral" | "ghost" | "danger";
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -19,7 +19,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   ref?: Ref<HTMLButtonElement>;
 }
 
-export function Button({ variant = "secondary", size = "md", icon: Icon, busy, disabled, disabledReason, children,
+export function Button({ variant = "neutral", size = "md", icon: Icon, busy, disabled, disabledReason, children,
                          type = "button", className, ref, title, ...rest }: Props) {
   const reasonId = useId();
   return (

@@ -5,6 +5,7 @@ import { Navigate, Route, Routes } from "react-router";
 import type { Me } from "./auth/authApi";
 import { AuditLog } from "./screens/AuditLog";
 import { DataLoad } from "./screens/DataLoad";
+import { Integration } from "./screens/Integration";
 import { AuthProvider } from "./auth/AuthContext";
 import { AuthGate } from "./auth/AuthGate";
 import { LoginPage } from "./auth/LoginPage";
@@ -19,7 +20,7 @@ import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
 
 /** Yazılmış ekranlar; öteki ekranlar boş sayfasını gösterir. */
-const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "22": <Users />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog /> };
+const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog /> };
 
 /** initialMe yalnız testlerde verilir; verilmezse oturum açılışta sunucuya sorulur. */
 export function App({ initialMe }: { initialMe?: Me | null }) {

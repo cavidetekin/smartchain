@@ -72,9 +72,9 @@ describe("Excel'den yükle", () => {
     expect(steps[0]).toHaveAttribute("aria-current", "step");
     expect(steps[2]).toHaveAttribute("aria-disabled", "true");
     expect(steps[2]).toHaveAttribute("title", "3.4 adımında gelecek.");
-    expect(screen.getByRole("radio", { name: "Ekle / güncelle: Sadece dosyadaki kayıtlar güncellenir, mevcut kayıtlar korunur" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Tam: Mevcut kayıtlar silinir, yeni kayıtlar yüklenir" })).not.toBeChecked();
-    expect(screen.getByText("Ekle / güncelle:").tagName).toBe("STRONG");
+    expect(screen.getByRole("radio", { name: "Ekle / güncelle Sadece dosyadaki kayıtlar güncellenir, mevcut kayıtlar korunur" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Tam Mevcut kayıtlar silinir, yeni kayıtlar yüklenir" })).not.toBeChecked();
+    expect(screen.getByText("Ekle / güncelle").tagName).toBe("STRONG");
     expect(screen.getByText("Kaynak", { selector: ".sc-dialog-subtitle" })).toBeInTheDocument();  // alt başlıkta yalnız tablo adı
   });
 
@@ -107,15 +107,15 @@ describe("Excel'den yükle", () => {
       expect(screen.getByText(label).parentElement).toHaveTextContent(value);
     }
     expect(screen.queryByText("Tanınmayan kolon yok sayıldı: Hata.")).not.toBeInTheDocument();  // bant değil, tabloda satır
-    expect(await screen.findByText("TRN-12")).toBeInTheDocument();
+    expect(await screen.findByText("TRN-12", {}, { timeout: 5000 })).toBeInTheDocument();  // tablo üç istekle yüklenir
     expect(screen.getByText("Hata", { selector: ".sc-tag" })).toBeInTheDocument();
-    expect(screen.getByText(/Hatalı satırlar ham veriye alınmaz/)).toHaveTextContent("43 geçerli satırla");
+    expect(screen.getByText("3 satır hatalı, ham veriye alınmaz.")).toBeInTheDocument();
   });
 
   it("bulgu tablosu partiye sabit filtreyle bağlı; etiketlerde görünmez, sayaç parti içinde", async () => {
     const { user } = await openDialog({ "/api/imports/Resource": reply(SUMMARY) });
     await choose(user);
-    await screen.findByText("TRN-12");
+    await screen.findByText("TRN-12", {}, { timeout: 5000 });
     const query = calls().find((c) => c.url.startsWith("/api/import-findings/query"))!;
     expect(JSON.parse(String(query.init?.body)).filters).toEqual([{ field: "ImportBatchId", op: "eq", value: 41 }]);
     expect(screen.queryByText(/ImportBatchId/)).not.toBeInTheDocument();
@@ -153,7 +153,7 @@ describe("Excel'den yükle", () => {
     await choose(user);
     await screen.findByRole("button", { name: "46 satırla devam et" });
     expect(screen.queryByRole("button", { name: "Hata raporunu indir" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Hatalı satırlar ham veriye alınmaz/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/satır hatalı/)).not.toBeInTheDocument();
   });
 
   it("hepsi hatalıysa devam yok, rapor var", async () => {
@@ -161,7 +161,7 @@ describe("Excel'den yükle", () => {
     await choose(user);
     expect(await screen.findByRole("button", { name: "0 satırla devam et" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Hata raporunu indir" })).toBeEnabled();
-    expect(screen.getByText(/Geçerli satır yok/)).toBeInTheDocument();
+    expect(screen.getByText("Geçerli satır yok, ham veriye alınmaz.")).toBeInTheDocument();
   });
 
   it.each([
@@ -262,6 +262,30 @@ describe("Excel'den yükle", () => {
       await user.click(within(screen.getByRole("region", { name: "Bildirimler" })).getByRole("button", { name: "Sonucu aç" }));
       expect(await screen.findByText("Ön kontrol · kaynak.xlsx")).toBeInTheDocument();
       expect(screen.queryByText("Ön kontrol bitti")).not.toBeInTheDocument();
+    });
+
+    const endedJob = (extra = {}) => ({ id: 7, job_type: "Veri çekme", summary: "Veri çekme · 3 tablo", channel: "Veri çekme", status: "Bitti", progress: null, queue_position: null, created_at: "2026-11-05T10:00:00+00:00",
+                                        updated_at: "2026-11-05T10:00:00+00:00", ended_at: new Date().toISOString(), requested_by: 1, ...extra });
+
+    it("kapatılan bildirim işte saklanır, yeniden girişte çıkmaz; bildirimde iş numarası yok (K-132)", async () => {
+      const user = userEvent.setup();
+      const fetchMock = backend({ "/api/jobs": { body: { jobs: [endedJob()], counters: {} } as unknown as Reply["body"] }, "/api/jobs/7/dismiss": { status: 204, body: null } });
+      renderApp("/veri/veri-yukleme", { ...meAs("Key user"), id: 1 });
+      const toast = await screen.findByText("Çekim bitti", {}, { timeout: 5000 });
+      const region = screen.getByRole("region", { name: "Bildirimler" });
+      expect(region).not.toHaveTextContent("#7");
+      expect(toast).toBeInTheDocument();
+      await user.click(within(region).getByRole("button", { name: "Kapat" }));
+      await waitFor(() => expect(fetchMock.mock.calls.some(([u, init]) => String(u) === "/api/jobs/7/dismiss" && (init as RequestInit).method === "POST")).toBe(true));
+      expect(screen.queryByText("Çekim bitti")).not.toBeInTheDocument();
+    });
+
+    it("kapatılmış bildirim sayfa yenilenince gelmez", async () => {
+      backend({ "/api/jobs": { body: { jobs: [endedJob({ dismissed: true })], counters: {} } as unknown as Reply["body"] } });
+      renderApp("/veri/veri-yukleme", { ...meAs("Key user"), id: 1 });
+      await screen.findByText("Kaynak", {}, { timeout: 5000 });
+      await waitFor(() => expect(FakeWebSocket.instances.some((s) => s.url.includes("/api/ws"))).toBe(true));
+      expect(screen.queryByText("Çekim bitti")).not.toBeInTheDocument();
     });
   });
 

@@ -24,7 +24,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 ## Veri
 
 - **İki katman (K-58).** Entegrasyon tabloları (`stg.*`) ERP'nin dilidir: Id yok, ilişkiler kodla (MaterialCode, LocationCode…). Ana tablolar Id + Code taşır; motor, ekranlar ve raporlar yalnız ana tabloları okur.
-- **ETL sırası:** Staging'e çekme (API, SQL arayüz tabloları, Excel) → yapısal doğrulama → veri kuralları → aktarım filtresi (A-34) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle, varsayılan; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
+- **ETL sırası:** Staging'e çekme (SQL view, Excel; API Faz 2) → yapısal doğrulama → veri kuralları → aktarım filtresi (A-34) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle, varsayılan; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
 - **Ek alanlar (K-59):** ana veride AdditionalText1–7 ve AdditionalNumber1–3, yapı ve işlem verisinde AdditionalText1–3 ve AdditionalNumber1–2; etiketleri FieldDefinition'da.
 - Tablo ve alan adları `docs/02-veri-modeli.md` ve `docs/03-entegrasyon.md` ile birebir; sözleşme alan adlarını değiştirme.
 - **Şemalar (K-62):** `stg` entegrasyon, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem. Aynı ad iki katmanda: `stg.Material` → `core.Material`.
@@ -33,7 +33,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 
 ## Arayüz
 
-- U-1…U-24 bağlayıcıdır (`docs/04-arayuz-prensipleri.md`). Ekran ağırlıkla nötr, indigo aksiyon, durum renkleri yalnız durum için; her tablo sıralanır, filtrelenir, alanları açılıp kapanır; ana tablo ekrana sığar, kenar menü daraltılır; varsayılan yazı sıkıdır, kullanıcı dört boyuttan birini seçer.
+- U-1…U-24 bağlayıcıdır (`docs/04-arayuz-prensipleri.md`). Ekran ağırlıkla nötr, indigo ana aksiyon, mor ikincil aksiyon, durum renkleri yalnız durum için; her tablo sıralanır, filtrelenir, alanları açılıp kapanır; ana tablo ekrana sığar, kenar menü daraltılır; varsayılan yazı sıkıdır, kullanıcı dört boyuttan birini seçer.
 - Yazı tipleri Instrument Sans (metin) ve Inter (sayı, tarih, kod; eşit genişlikte rakamlar), pakete gömülü (K-86). Sayı ve tarih Türkçe biçimde.
 - Ön yüz React (TypeScript), internetsiz; tablolar kendi bileşenimiz (TanStack Table üzerine). Ekranlar kenar menüde gruplu, en çok iki seviye; üst sekmeyle ekran geçişi yok (K-81, K-82, `docs/12-on-yuz.md`).
 
@@ -80,6 +80,7 @@ uvicorn app.api.main:app --reload --port 8000      # API'yi başlat (geliştirme
 python -m app.engine.service                       # motor servisini başlat (geliştirme; sahte motor)
 python -m app.data.synthetic load                  # sentetik veri v0'ı ana tablolara yükle (docs/11, K-79)
 python -m app.data.synthetic excel                 # sentetik verinin kirli hâli (entegrasyon Excel'i)
+python -m app.data.synthetic sql                   # kirli hâl: entegrasyon veritabanına ham tablolar ve view'lar (K-130)
 python -m pytest                                   # testler (performans testleri hariç); Smartchain_test'te, başka veritabanı için SMARTCHAIN_TEST_DB_URL
 python -m pytest -m perf                           # performans testleri (ayrıca; ortanca ölçüm, docs/08)
 powershell -File installer\build.ps1               # internetsiz kurulum paketi (dist\), yalnız geliştirmede

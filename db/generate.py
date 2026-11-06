@@ -63,7 +63,7 @@ REF_TARGET = {
     "CalendarId": "Calendar", "ScenarioId": "Scenario", "SubcontractorId": "Supplier",
     "ImportBatchId": "ImportBatch", "DataRuleId": "DataRule", "CustomerId": "Customer",
     "CreatedBy": "AppUser", "RequestedBy": "AppUser", "CancelledBy": "AppUser", "PublishedBy": "AppUser",
-    "OwnerUserId": "AppUser", "UserId": "AppUser", "UploadedBy": "AppUser",
+    "OwnerUserId": "AppUser", "UserId": "AppUser", "UploadedBy": "AppUser", "DisabledBy": "AppUser", "UpdatedBy": "AppUser",
     "ShiftPlanId": "ShiftPlan", "ShiftId": "Shift", "ScenarioDefinitionId": "ScenarioDefinition",
     "SalesOrderLineId": "SalesOrderLine", "ProjectGroupId": "ProjectGroup", "ProductionVersionId": "ProductionVersion",
     "ReferenceMaterialId": "Material", "ReferenceProductionVersionId": "ProductionVersion",

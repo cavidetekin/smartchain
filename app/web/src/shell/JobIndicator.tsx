@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useNavigate } from "react-router";
 
-import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_DONE, JOB_EXPORT, JOB_LOAD, JOB_PRECHECK, type Job } from "../api/client";
+import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_DONE, JOB_EXPORT, JOB_FAILED, JOB_LOAD, JOB_PRECHECK, JOB_PULL, pullResultPath, type Job } from "../api/client";
 import { connect, type ConnectionState, socketUrl } from "../api/socket";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
@@ -69,7 +69,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
           // Başkası iptal etti (mesaj yalnız sahibine gelir; kendi iptalinde neden yok, K-107)
           if (job.status === CANCELLED && job.cancel_reason && !toldCancelled.current.has(job.id)) {
             toldCancelled.current.add(job.id);
-            emitNotice(tr.jobs.cancelledByOther(job.summary ?? `#${job.id}`, job.cancel_reason));
+            emitNotice(tr.jobs.cancelledByOther(job.summary ?? job.job_type, job.cancel_reason));
           }
         } else if (msg.type === "health") {
           window.dispatchEvent(new Event(HEALTH_EVENT));
@@ -173,7 +173,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
             <ul className="sc-job-list">
               {recent.map((j) => (
                 <li key={j.id}>
-                  <span className="sc-num">#{j.id}</span> {j.summary ?? j.job_type} · {j.status}
+                  {j.summary ?? j.job_type} · {j.status}
                   {j.queue_position ? ` · ${tr.jobs.queuePosition(j.queue_position)}` : j.progress ? ` · ${j.progress}` : ""}
                   {showAll && j.requested_by !== me.id && j.requested_by_name && ` · ${tr.jobs.ownerOf(j.requested_by_name)}`}
                   {j.job_type === JOB_EXPORT && j.status === JOB_DONE && (j.requested_by ?? me.id) === me.id && (
@@ -181,6 +181,9 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
                   )}
                   {j.job_type === JOB_PRECHECK && j.status === JOB_DONE && j.import_batch_id && (j.requested_by ?? me.id) === me.id && (
                     <> · <button type="button" className="sc-link-btn" onClick={() => { setOpen(false); navigate(importResultPath(j.import_batch_id!)); }}>{tr.jobs.openResult}</button></>
+                  )}
+                  {j.job_type === JOB_PULL && (j.status === JOB_DONE || j.status === JOB_FAILED) && (j.requested_by ?? me.id) === me.id && (
+                    <> · <button type="button" className="sc-link-btn" onClick={() => { setOpen(false); navigate(pullResultPath(j.id)); }}>{tr.jobs.openResult}</button></>
                   )}
                   {j.cancel_reason && ` · ${j.cancel_reason}`}
                   {canCancel(j) && (

@@ -16,6 +16,9 @@
   --indigo-500: #4f5bd5;
   --indigo-700: #333a94;
   --indigo-900: #1e2257;
+  --violet-100: #ede9fe;              /* ikincil aksiyon zemini (K-131) */
+  --violet-200: #ddd6fe;
+  --violet-700: #6d28d9;              /* ikincil aksiyon yazısı */
 
   /* Durum renkleri (U-2, K-85): yalnız durum için; her zaman yazı, değer ya da ikonla (U-3).
      Yazı-zemin kontrastları docs/12 · Stil sistemi; tokens.test.ts hesaplar. */

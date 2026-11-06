@@ -109,6 +109,15 @@ Hariç tutma müşteri BT'sinin kararıdır; ürün bunları kendiliğinden tan�
 
 IIS portunu "Default Web Site" kullanıyorsa o site durdurulur ve kaldırmada yeniden başlatılır. Başka bir site kullanıyorsa kurulum durur.
 
+## Entegrasyon veritabanı (K-130)
+
+SQL çekimi kullanılacaksa Smartchain'in instance'ında ayrı bir veritabanı açılır: `setup_db.py setup --integration-database <ad>`; `install.ps1` bu seçeneği almaz, gerektiğinde kurulumdan sonra ayrıca çalıştırılır. Servis hesaplarına bu veritabanında yalnız okuma verilir (`db_datareader`). Kurulum veritabanını açar, ham tabloları ve view'ları açmaz.
+
+- **Müşteri ETL hesabı:** Müşteri ya da kurulumcu açar; yazma yetkisi yalnız bu veritabanındadır, Smartchain veritabanına erişimi olmaz. Bu, ürüne ayrılmış instance'a dışarıdan bir yazıcı demektir; yedekleme ve disk planına eklenir.
+- **`ERP_LoadLog`** ve ham tablolar müşteri sorumluluğundadır (docs/03 Yöntem 2). View'ları kurulum yazar.
+- **Ayar:** Veritabanı adı ekran 23'te girilir (`IntegrationDatabase`, System owner), Bağlantıyı test et sonucu gösterir.
+- **Sürüm notu kuralı:** Yeni sürüm bir tabloya zorunlu alan eklerse sürüm notunda "view güncellemesi gerekir" yazılır; isteğe bağlı alan eksikse yalnız uyarı çıkar.
+
 ## İlk hesap (K-102)
 
 Kurulumun son adımı `smartchain` kullanıcı adıyla ("Destek ekibi") tek System owner hesabı açar. Geçici şifre kurulum özetinden sonra konsolda **bir kez** gösterilir, log dosyasına yazılmaz; ilk girişte değiştirilir. Herhangi bir System owner varsa (yeniden kurulum, onarım) adım hesaba dokunmaz, şifre gösterilmez.

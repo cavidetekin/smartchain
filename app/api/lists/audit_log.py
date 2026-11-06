@@ -21,7 +21,7 @@ SYSTEM_NAME = "Sistem"
 EXPORT_ACTION = "Dışa aktarım"
 EXPORT_TYPE = "Dışa aktarım"
 SETTING_TYPE = "SystemSetting"
-OBJECT_TYPE_LABELS = {"Fonksiyon": "Yetki", "FieldDefinition": "Veri sözlüğü", SETTING_TYPE: "Ayar", "Job": "İş", "TableView": "Görünüm", "Template": "Şablon", "ImportBatch": "Excel yükleme"}
+OBJECT_TYPE_LABELS = {"Fonksiyon": "Yetki", "FieldDefinition": "Veri sözlüğü", SETTING_TYPE: "Ayar", "Job": "İş", "TableView": "Görünüm", "Template": "Şablon", "IntegrationEntity": "Entegrasyon", "ImportBatch": "Excel yükleme"}
 
 
 def _text(value: str) -> sa.ColumnElement:

@@ -69,7 +69,7 @@ describe("kapsam penceresi ve anlık indirme", () => {
     await userEvent.click(within(dialog).getByRole("radio", { name: "Tümü (10)" }));
     expect(within(dialog).queryAllByRole("checkbox")).toEqual([]);
     // 50.000 satır anlık sınırı (10.000) aşar: arka planda hazırlanır
-    expect(dialog).toHaveTextContent("Dosya hazırlanıyor; hazır olunca bildirim gelir. 24 saat indirilebilir.");
+    expect(dialog.querySelector(".sc-alert")).toBeNull();  // anlatım bandı yok (K-132)
     await userEvent.click(within(dialog).getByRole("button", { name: "Hazırla" }));
     await waitFor(() => expect(calls.exports).toHaveLength(1));
     expect(calls.exports[0].body).toMatchObject({
@@ -137,7 +137,8 @@ describe("arka plan: ilerleme ve bildirim", () => {
     act(() => socket().send({ type: "job", job: job("Hata", { error_text: "Excel dosyası hazırlanamadı. Destek için iş numarası: 81" }) }));
     const toast = await screen.findByRole("region", { name: "Bildirimler" });
     expect(toast).toHaveTextContent("Malzeme listesi hazırlanamadı");
-    expect(toast).toHaveTextContent("Destek için iş numarası: 81");
+    expect(toast).toHaveTextContent("Excel dosyası hazırlanamadı.");
+    expect(toast).not.toHaveTextContent("iş numarası");  // K-132
     await userEvent.click(within(toast).getByRole("button", { name: "Kapat" }));
     expect(screen.queryByRole("region", { name: "Bildirimler" })).toBeNull();
   });

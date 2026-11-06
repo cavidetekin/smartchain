@@ -26,6 +26,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **U-1:** Ekran ağırlıkla nötrdür
 - Yaklaşık %70 kurşun, %20 indigo, %10 durum rengi. Göz yalnızca istisnaya gider.
 - EEF0FB · DCE0F7 · 8F98E3 · 4F5BD5 · 333A94 · 1E2257
+- **Düğme renkleri (K-131):** Ana aksiyon (Kaydet, Veri çek, Çekimi başlat) indigo dolgulu. İkincil aksiyon (Bağlantıyı test et, Önizleme, Hata raporunu indir gibi) tonal mor: açık lila zemin (#EDE9FE), koyu mor yazı (#6D28D9). Geri dönüşü olmayan aksiyon (Sil, Çekimi kapat) kiremit çerçeveli. Vazgeç ve tablo araç çubuğu nötr. Yeşil, sarı, kırmızı düğmede kullanılmaz.
 - **U-2:** Durum renkleri yalnızca durum içindir
 - Kurşun — zemin, metin, çizgi
 - Hardal = risk, kiremit = aşırı yük veya gecikme, yeşil = olumlu. Dekor için kullanılmaz.
@@ -48,7 +49,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Örnek ekran: kaynak doluluk raporu](mockups/m23-0291-ornek-ekran-kaynak-doluluk-raporu.png)
 
-- **Nötr zemin (U-1):** Menü, kartlar ve tablo kurşun tonlarında; indigo sadece seçim ve ana butonda.
+- **Nötr zemin (U-1):** Menü, kartlar ve tablo kurşun tonlarında; indigo seçim ve ana butonda, tonal mor ikincil butonda (K-131).
 - **Doluluk skalası (U-2):** Normal yük indigo tonlarında, risk hardal, %100 üstü kiremit.
 - **Değer + renk (U-3):** Her hücrede yüzde yazar; renk yalnızca vurgu yapar.
 - **Dünden farkı:** Değişim odaklı planlama: önceki plana göre kaç puan değiştiği görünür.

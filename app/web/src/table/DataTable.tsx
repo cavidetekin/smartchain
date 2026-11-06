@@ -181,7 +181,7 @@ interface CellSpec {
  * (K-95) yalnız onlarda hesaplanır. Her kaydırmada görünen bütün satırları yeniden çizmek, özellikle kurallar
  * varken ve geliştirme modunda tabloyu yavaşlatıyordu (1.6 ölçümü, docs/12).
  */
-const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText, cellRender, rowMenu }: {
+const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText, cellRender, rowMenu, measure }: {
   index: number;
   row: Row | undefined;
   cells: CellSpec[];
@@ -191,9 +191,11 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
   ruleText: Map<string, string>;
   cellRender?: CellRender;
   rowMenu?: RowMenuSpec;
+  /** Pencere kipinde satır yüksekliği ölçülür (alt satıra kayan metin, sanal kaydırma kaymasın). */
+  measure?: (el: HTMLTableRowElement | null) => void;
 }) {
   return (
-    <tr aria-rowindex={index + 2} aria-current={selected || undefined}
+    <tr ref={measure} data-index={index} aria-rowindex={index + 2} aria-current={selected || undefined}
         className={row ? `sc-table-row${selected ? " is-selected" : ""}` : "is-placeholder"}
         onClick={row ? () => onSelect(row.Id) : undefined}>
       {cells.map(({ col, className, style, numeric }) => {
@@ -229,7 +231,7 @@ function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec })
   );
 }
 
-export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilters }: {
+export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilters, toolbarActions, fit = false, wrapFields }: {
   list: string;
   /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
   cellRender?: CellRender;
@@ -239,6 +241,12 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   reloadKey?: number;
   /** Sabit filtre (ör. tek parti, K-129): her sorguya eklenir, etiketlerde görünmez, kaldırılamaz; Excel de yalnız bu satırları alır. */
   baseFilters?: ListFilter[];
+  /** Araç çubuğunun başında (ör. tablo içi düzenlemenin Kaydet ve Vazgeç'i, K-132). */
+  toolbarActions?: ReactNode;
+  /** Pencere kipi (docs/12): tablo pencereye sığar, kolon genişliği içerikten; sabitleme ve genişlik ayarı yok. */
+  fit?: boolean;
+  /** Pencere kipinde kalan genişliği alıp alt satıra kayan uzun metin kolonları (ör. Sorun). */
+  wrapFields?: readonly string[];
 }) {
   const { fontSize, userId, trackExport } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
@@ -309,6 +317,8 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   const visible = useMemo(() => s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c)),
     [s.order, byField]);
   const width = (f: string) => s.widths[f] ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
+  const pinnedCount = fit ? 0 : s.pinned;
+  const wrapKey = (wrapFields ?? []).join(",");
   const pinStart = (i: number) => visible.slice(0, i).reduce((sum, c) => sum + width(c.field), 0);
 
   const ready = Boolean(columns && state && views.ready && chunkSize);
@@ -326,14 +336,15 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
     const indent = groupDepth ? `calc(var(--space-2) + ${(groupDepth - 1) * GROUP_INDENT_REM + GROUP_ARROW_REM}rem)` : undefined;
     let left = 0;
     return cols.map((col, i) => {
-      const pinned = i < s.pinned;
+      const pinned = i < pinnedCount;
       const style: CSSProperties | undefined = pinned ? { left: `${left}rem` } : undefined;
       left += widthOf(col.field);
       const className = [isNumeric(col) ? "is-num sc-num" : "",
-                         pinned ? `is-pinned${i === s.pinned - 1 ? " is-pinned-last" : ""}` : ""].filter(Boolean).join(" ") || undefined;
+                         pinned ? `is-pinned${i === pinnedCount - 1 ? " is-pinned-last" : ""}` : "",
+                         wrapKey.split(",").includes(col.field) ? "is-wrap" : ""].filter(Boolean).join(" ") || undefined;
       return { col, numeric: isNumeric(col), className, style: i === 0 && indent ? { ...style, paddingLeft: indent } : style };
     });
-  }, [s.order, s.widths, s.pinned, groupDepth, byField]);
+  }, [s.order, s.widths, pinnedCount, wrapKey, groupDepth, byField]);
   const baseKey = JSON.stringify(baseFilters ?? []);
   const fixed = useMemo(() => JSON.parse(baseKey) as ListFilter[], [baseKey]);
   const requestKey = JSON.stringify([s.order, s.sort, s.filters, fixed, active.map(toRequestRule)]);
@@ -367,6 +378,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   const rowPx = Math.round(fontSize * ROW_REM);
   const virtualizer = useVirtualizer({
     count, getScrollElement: () => scrollRef.current, estimateSize: () => rowPx, overscan: OVERSCAN,
+    ...(fit ? { measureElement: (el: Element) => el.getBoundingClientRect().height || rowPx } : {}),
   });
   useEffect(() => virtualizer.measure(), [rowPx, virtualizer]);
   const items = virtualizer.getVirtualItems();
@@ -519,14 +531,15 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   const popColumn = pop ? byField.get(pop.field) : undefined;
   const multi = s.sort.length > 1;
   const pinnedCell = (i: number): { className: string; style?: CSSProperties } =>
-    i < s.pinned ? { className: `is-pinned${i === s.pinned - 1 ? " is-pinned-last" : ""}`, style: { left: `${pinStart(i)}rem` } }
+    i < pinnedCount ? { className: `is-pinned${i === pinnedCount - 1 ? " is-pinned-last" : ""}`, style: { left: `${pinStart(i)}rem` } }
                  : { className: "" };
   const cellClass = (c: ListColumn, i: number) =>
     [isNumeric(c) ? "is-num sc-num" : "", pinnedCell(i).className].filter(Boolean).join(" ") || undefined;
 
   const renderRow = (key: string | number | bigint, index: number, row: Row | undefined) => (
     <DataRow key={String(key)} index={index} row={row} cells={cellSpecs} selected={Boolean(row) && row!.Id === selectedId}
-             onSelect={setSelectedId} active={active} ruleText={ruleText} cellRender={cellRender} rowMenu={rowMenu} />
+             onSelect={setSelectedId} active={active} ruleText={ruleText} cellRender={cellRender} rowMenu={rowMenu}
+             measure={fit ? virtualizer.measureElement : undefined} />
   );
   // Grup adı, ara toplamı olmayan baştaki kolonları kaplar (kesilmesin); sabit kolon varsa sabit bölgeyi aşmaz.
   const firstAgg = visible.findIndex((c) => aggregateOf(c, s).fn !== "none");
@@ -541,7 +554,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
     const value = formatAggregate(c, spec, node);
     return value && <span title={label}><span className="sc-agg-fn">{T.aggShort[spec.fn]}</span>{value}</span>;
   };
-  const labelSpan = s.pinned > 0 ? Math.min(leading, s.pinned) : leading;
+  const labelSpan = pinnedCount > 0 ? Math.min(leading, pinnedCount) : leading;
   const renderGroup = (key: string | number | bigint, index: number, it: DisplayItem & { kind: "group" }) => {
     const open = !collapsed.has(it.id);
     const field = s.groupBy[it.depth];
@@ -556,7 +569,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
               else toggleGroup(it.id);
             }
           }}>
-        <td colSpan={labelSpan} className={labelSpan === s.pinned ? "is-pinned is-pinned-last" : pinnedCell(0).className || undefined}
+        <td colSpan={labelSpan} className={labelSpan === pinnedCount ? "is-pinned is-pinned-last" : pinnedCell(0).className || undefined}
             style={pinnedCell(0).style}>
           <span className="sc-tgroup-head" style={{ paddingLeft: `${it.depth * GROUP_INDENT_REM}rem` }}>
             {open ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
@@ -595,6 +608,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
           </output>
         </div>
         <div className="sc-table-tools" ref={panelRef}>
+          {toolbarActions}
           <Button size="sm" icon={Rows3} ref={groupBtnRef} aria-expanded={panel === "group"}
                   onClick={() => setPanel((p) => (p === "group" ? null : "group"))}>
             {T.group(s.groupBy.length)}
@@ -651,12 +665,14 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
       )}
 
       <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll">
-        <table className="sc-table-grid" aria-rowcount={count + 1} aria-colcount={visible.length + (rowMenu ? 1 : 0)}
-               style={{ width: `${visible.reduce((sum, c) => sum + width(c.field), rowMenu ? ROW_MENU_REM : 0)}rem` }}>
-          <colgroup>
-            {visible.map((c) => <col key={c.field} style={{ width: `${width(c.field)}rem` }} />)}
-            {rowMenu && <col style={{ width: `${ROW_MENU_REM}rem` }} />}
-          </colgroup>
+        <table className={`sc-table-grid${fit ? " sc-table-grid--fit" : ""}`} aria-rowcount={count + 1} aria-colcount={visible.length + (rowMenu ? 1 : 0)}
+               style={fit ? undefined : { width: `${visible.reduce((sum, c) => sum + width(c.field), rowMenu ? ROW_MENU_REM : 0)}rem` }}>
+          {!fit && (
+            <colgroup>
+              {visible.map((c) => <col key={c.field} style={{ width: `${width(c.field)}rem` }} />)}
+              {rowMenu && <col style={{ width: `${ROW_MENU_REM}rem` }} />}
+            </colgroup>
+          )}
           <thead>
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id} aria-rowindex={1}>
@@ -698,8 +714,10 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
                           </button>
                         </span>
                       </div>
-                      <ResizeHandle label={col.label} width={width(col.field)} remPx={fontSize}
-                                    onWidth={(rem) => update((st) => ({ ...st, widths: { ...st.widths, [col.field]: rem } }))} />
+                      {!fit && (
+                        <ResizeHandle label={col.label} width={width(col.field)} remPx={fontSize}
+                                      onWidth={(rem) => update((st) => ({ ...st, widths: { ...st.widths, [col.field]: rem } }))} />
+                      )}
                     </th>
                   );
                 })}

@@ -51,7 +51,7 @@ describe("kontrast (WCAG AA)", () => {
     ["info-text", "info-bg"], ["neutral-text", "neutral-bg"],
     ["status-ok-text", "status-ok-bg-soft"], ["status-risk-text", "status-risk-bg-soft"],
     ["status-over-text-strong", "status-over-bg-soft"],
-    ["sidebar-active-text", "indigo-500"], ["status-over-on", "status-over"], ["text", "surface"],
+    ["sidebar-active-text", "indigo-500"], ["violet-700", "violet-100"], ["violet-700", "violet-200"], ["status-over-on", "status-over"], ["text", "surface"],
     ["status-over-text-strong", "surface"], ["status-over-text", "surface"], ["cell-frozen-text", "cell-frozen-bg"],
     ["text-muted", "surface"], ["text-muted", "bg"],
   ])("%s / %s ≥ 4,5:1", (fg, bg) => {
@@ -74,10 +74,33 @@ describe("kontrast (WCAG AA)", () => {
   });
 });
 
+describe("sayı kartı ve pencere tablosu (3.3 kontrol demosu)", () => {
+  const body = (selector: string) => rules(sheets["components.css"]).find((r) => r.selector === selector)?.body ?? "";
+
+  it("sayı kartı yarı yükseklik, her yerde aynı: ekrana özel büyütme yok", () => {
+    expect(body(".sc-card.sc-kpi")).toMatch(/padding:\s*var\(--space-2\)/);
+    expect(body(".sc-kpi-value")).toMatch(/font-size:\s*var\(--fs-xl\)/);
+    expect(rules(sheets["components.css"]).filter((r) => /\.sc-kpi/.test(r.selector) && r.selector.includes(" ")).map((r) => r.selector)).toEqual([]);
+  });
+
+  it("pencere tablosu pencereye sığar", () => {
+    expect(body(".sc-table-grid--fit")).toMatch(/table-layout:\s*auto/);
+    expect(body(".sc-table-grid--fit")).toMatch(/width:\s*100%/);
+    expect(body(".sc-table-grid tbody td.is-wrap")).toMatch(/white-space:\s*normal/);
+  });
+});
+
+describe("aç/kapa anahtarı (3.3 demosu)", () => {
+  it("tıklanan kutu görünen şeridin altında kalmaz", () => {
+    const rule = rules(sheets["components.css"]).find((r) => r.selector === ".sc-toggle input")!;
+    expect(rule.body).toMatch(/z-index:\s*1/);
+  });
+});
+
 describe("U-2: durum renkleri yalnız durum bileşenlerinde", () => {
   // İzin verilen seçiciler: rozet, uyarı, doluluk, hücre işaretleri, form hatası, KPI durumu,
   // geri alınamaz işlem butonu (K-85 istisnası), bağlantı noktası, şifre politikası kuralı (sağlanıyor / sağlanmıyor; 2.1).
-  const ALLOWED = /\.sc-tag--(ok|risk|critical)|\.sc-alert--(ok|risk|error)|\.sc-occ--|\.sc-cell--shortage|\.sc-field(\.is-invalid|-error)|\.sc-kpi--(ok|risk|over)|\.sc-btn--danger|\.sc-dot|\.sc-policy-item\.is-(ok|fail)/;
+  const ALLOWED = /\.sc-warn-icon|\.sc-tag--(ok|risk|critical)|\.sc-alert--(ok|risk|error)|\.sc-occ--|\.sc-cell--shortage|\.sc-field(\.is-invalid|-error)|\.sc-kpi--(ok|risk|over)|\.sc-btn--danger|\.sc-dot|\.sc-policy-item\.is-(ok|fail)/;
 
   it.each(Object.entries(sheets))("%s", (_, css) => {
     const misuse = rules(css)

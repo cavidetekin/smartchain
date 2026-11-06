@@ -43,6 +43,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 - **Geri alınan iş:** Kalp atışı yazılamıyorsa (iş başka denemeye geçti) servis süreci sonlandırır.
 - Log: servis `logs/engine.log`, iş süreçleri servisin konsoluna.
 - **İş tipine göre yönlendirme (K-93):** servis işi tipine göre kendi sürecinde çalıştırır: "Dışa aktarım" işleri Excel dosyasını üretir (`app/api/export`), diğerleri plan hesabıdır. Kanallar ayrı sınırlıdır: Hesaplama (`JobLimitInteractive`), Gece (`JobLimitNight`), Dışa aktarım (`JobLimitExport`, 2); büyük indirmeler yeniden hesabı bekletmez. Dışa aktarımın süre bütçesi etkileşim bütçesinin on katıdır (500.000 satır sığsın). "Excel ön kontrol" işleri yüklenen dosyayı kontrol edip ham veriye yazar (K-129).
+- **Veri çekme (K-130):** "Veri çekme" tipi ve kanalı (sınır `JobLimitPull` 1, süre bütçesi gece kanalıyla aynı). Elle ve gece çekim bu kanalı kullanır. Süreç `app/engine/pull_job.py`, gövde `app/api/services/pull.py`. Sonuç iş kaydına yazılır; süreç düşerse parti Tamamlanmadı olur, yeniden denemede tablo baştan okunur.
 - **Dosya temizliği:** servis `SMARTCHAIN_EXPORT_DIR`'deki süresi geçmiş (`ExportFileHours`) dosyaları açılışta ve saatte bir siler.
 
 ## Çözücü (K-35, K-76)
@@ -80,6 +81,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 | Model ve çözüm dosyalarının klasöre yazılması (K-77) | 10.5 |
 | Windows servisi olarak kurulum | 0.6 |
 | İş tipine göre yönlendirme, dışa aktarım kanalı ve dosya temizliği | uygulandı (1.5) |
+| Veri çekme işi ve kanalı (K-130) | uygulandı (3.3) |
 | Gerçek motor (29–39), aktif hesaplama belleği | Aşama 10 |
 
 Demo: API açıkken `python scripts/engine_demo.py`; plan hesapları gönderir, servisi çalıştırır, WebSocket'ten ilerlemeyi ve sonuç satır sayılarını yazdırır.

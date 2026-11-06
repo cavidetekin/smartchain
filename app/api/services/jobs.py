@@ -49,6 +49,7 @@ def to_public(job: dict) -> dict:
         "import_batch_id": _import_batch(job),
         "attempt": job["Attempt"],
         "error_text": job["ErrorText"],
+        "dismissed": job.get("DismissedAt") is not None,
         "queue_position": job["QueuePosition"],
         "duration_seconds": job["DurationSeconds"],
         "is_stale": bool(job["IsStale"]),
@@ -97,6 +98,17 @@ def _not_protected(job: dict, user: CurrentUser, access: Access = Access.WRITE) 
     if job["RequestedByRole"] == SYSTEM_OWNER and user.role != SYSTEM_OWNER:
         authz.record_denial(user, 93, access, {"job_id": job["Id"], "reason": "System owner işi"})
         raise AppError("forbidden", role_message(SYSTEM_OWNER), 403)
+
+
+def dismiss(session: Session | None, job_id: int, user: CurrentUser) -> None:
+    """Bildirim yalnız işin sahibine çıkar, yalnız sahibi kapatır (K-132)."""
+    session = _require(session)
+    job = queue.get_job(session, job_id, read_settings(session))
+    if job is None:
+        raise AppError("job_not_found", "İş bulunamadı.", 404)
+    if job["RequestedBy"] != user.id:
+        raise AppError("job_not_owner", "Bu bildirimi yalnız işin sahibi kapatabilir.", 403)
+    queue.dismiss(session, job_id)
 
 
 def cancel(session: Session | None, job_id: int, user: CurrentUser, reason: str | None = None) -> dict:

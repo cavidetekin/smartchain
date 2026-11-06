@@ -1,12 +1,13 @@
 // Excel'den yükle penceresi (ekran 02, fonksiyon 03, K-129): Dosya → Ön kontrol → Doğrulama (3.4). Küçük dosya istek içinde biter,
 // büyük dosya iş olur; pencere iş bitene kadar özeti yoklar, kapatılırsa iş sürer ve yeniden açınca kaldığı yerden döner.
+import { Upload } from "lucide-react";
 import { type DragEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { formatNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { type CellRender, DataTable } from "../table/DataTable";
-import { Alert, Badge, type BadgeTone, Button, Dialog, KpiCard, RadioGroup } from "../ui";
+import { Alert, Badge, type BadgeTone, Button, ChoiceCards, Dialog, KpiCard } from "../ui";
 import { dataLoadApi, type ImportSummary, MODE_CHANGED, MODE_FULL } from "./dataLoadApi";
 
 const T = tr.dataLoad.import;
@@ -17,7 +18,10 @@ const CANCELLED = "Vazgeçildi";
 const RECEIVED = new Set(["Alındı", "Doğrulandı", "Yüklendi"]);
 const JOB_QUEUED = "Sırada";
 const SEVERITY_TONE: Record<string, BadgeTone> = { Hata: "critical", Uyarı: "risk", Bilgi: "info" };
-const CELLS: CellRender = {
+/** Bulgu tablosunda kalan genişliği alan ve alt satıra kayan kolon (docs/12 pencere kipi). */
+export const FINDING_WRAP = ["Message"] as const;
+
+export const FINDING_CELLS: CellRender = {
   Severity: (value: unknown): ReactNode => (value ? <Badge tone={SEVERITY_TONE[String(value)] ?? "neutral"}>{String(value)}</Badge> : null),
 };
 
@@ -72,7 +76,12 @@ function Dropzone({ file, onFile, onReject }: { file: File | null; onFile(f: Fil
           <strong>{file.name}</strong>
           <span className="sc-dropzone-note sc-num">{sizeText(file.size)}</span>
         </>
-      ) : <span>{T.dropHere}</span>}
+      ) : (
+        <>
+          <Upload className="sc-dropzone-icon" aria-hidden="true" />
+          <span>{T.dropHere}</span>
+        </>
+      )}
       <Button size="sm" variant="secondary" onClick={() => input.current?.click()}>{T.choose}</Button>
       <input ref={input} type="file" accept=".xlsx" hidden aria-label={T.choose}
              onChange={(e) => { take(e.target.files?.[0]); e.target.value = ""; }} />
@@ -226,22 +235,24 @@ export function ImportDialog({ entity, name, batchId: opened, onClose, onReceive
           <Alert key={f.message} tone={f.severity === "Hata" ? "error" : f.severity === "Uyarı" ? "risk" : "info"}>{f.message}</Alert>
         ))}
         <div className="sc-import-findings">
-          <DataTable list="import-findings" cellRender={CELLS} baseFilters={filters} />
+          <DataTable list="import-findings" cellRender={FINDING_CELLS} baseFilters={filters} fit wrapFields={FINDING_WRAP} />
         </div>
-        {errors > 0 && <Alert tone="risk">{valid > 0 ? T.errorsNote(formatNumber(valid, 0)) : T.allBad}</Alert>}
+        {errors > 0 && <Alert tone="risk">{valid > 0 ? T.errorsNote(formatNumber(errors, 0)) : T.allBad}</Alert>}
       </Dialog>
     );
   }
 
   return (
-    <Dialog title={T.title} subtitle={shownName} wide busy={busy} onClose={onClose} onSubmit={start}
+    <Dialog title={T.title} subtitle={shownName} className="sc-dialog--upload" busy={busy} onClose={onClose} onSubmit={start}
             submitLabel={T.start} submitDisabled={!file || !!error}>
-      <Steps step={1} />
-      {error && <Alert tone="error">{error}</Alert>}
-      <Dropzone file={file} onFile={(f) => { setFile(f); setError(null); }} onReject={() => setError(T.onlyXlsx)} />
-      <RadioGroup label={T.mode} value={mode} onChange={setMode}
-                  options={[{ value: MODE_CHANGED, label: <><strong>{T.modeChangedName}</strong> {T.modeChanged}</> },
-                            { value: MODE_FULL, label: <><strong>{T.modeFullName}</strong> {T.modeFull}</> }]} />
+      <div className="sc-upload-body">
+        <Steps step={1} />
+        {error && <Alert tone="error">{error}</Alert>}
+        <Dropzone file={file} onFile={(f) => { setFile(f); setError(null); }} onReject={() => setError(T.onlyXlsx)} />
+        <ChoiceCards label={T.mode} value={mode} onChange={setMode}
+                     options={[{ value: MODE_CHANGED, title: T.modeChangedName, text: T.modeChanged },
+                               { value: MODE_FULL, title: T.modeFullName, text: T.modeFull }]} />
+      </div>
     </Dialog>
   );
 }

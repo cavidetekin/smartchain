@@ -46,7 +46,7 @@ export function AuthProvider({ children, initialMe }: { children: ReactNode; ini
   const [me, setMe] = useState<Me | null>(initialMe ?? null);
   const [status, setStatus] = useState<AuthStatus>(initialMe === undefined ? "loading" : initialMe ? "ready" : "anon");
   const [notice, setNotice] = useState<string | null>(null);
-  const [channel] = useState(openChannel);
+  const [channel, setChannel] = useState<BroadcastChannel | null>(null);
   const statusRef = useRef(status);
   const roleRef = useRef(me?.role ?? null);
   useEffect(() => setKnownRole(me?.role ?? null), [me]);  // rol değişikliği X-Smartchain-Role ile fark edilir
@@ -103,7 +103,11 @@ export function AuthProvider({ children, initialMe }: { children: ReactNode; ini
     };
   }, [channel, drop, refresh]);
 
-  useEffect(() => () => channel?.close(), [channel]);
+  useEffect(() => {  // StrictMode etkileri iki kez çalıştırır: kanal etkide açılır, kapalı kanala yazılmaz
+    const opened = openChannel();
+    setChannel(opened);
+    return () => opened?.close();
+  }, []);
 
   const signIn = useCallback((next: Me) => {
     setMe(next);

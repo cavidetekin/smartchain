@@ -95,7 +95,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Sürüm:** Başlangıçta en güncel SQL Server sürümü.
 - **Lisans:** Müşteride. Ücretsiz Express sürümünün sınırları planlama verisine yetmez.
 - **Collation:** Veritabanı collation'ını biz belirleriz; Türkçe collation'daki I / ı dönüşümü kodda hataya yol açabilir.
-- **Yetkiler:** Kendi veritabanımızda tam yetki; arayüz tablolarına yazan kullanıcıya ayrı, kısıtlı rol.
+- **Yetkiler:** Kendi veritabanımızda tam yetki; entegrasyon veritabanına yazan müşteri hesabına yalnız o veritabanında yetki (K-130).
 - **Yedekleme:** Yedekleme ve kurtarma prosedürünü biz veririz; müşterinin bakım planına girer.
 - Karar: MS SQL Server, ürüne ayrılmış ayrı bir sunucuda, en güncel sürümle. Müşteriye minimum gereksinim listesi verilir.
 
@@ -108,7 +108,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|
 | API | Müşterinin sistemi veriyi REST servisleriyle gönderir. | Entegratörler; ileride bulut | Servisten okunur |
 | Excel yükleme | Kullanıcı şablonla ekrandan yükler; doğrulama raporu. | İlk kurulum, küçük müşteri, eksik veri | Excel'e indirilir |
-| SQL arayüz tabloları | Müşteri ya da ETL işi arayüz tablolarına yazar, biz okuruz; durum alanları ve hata tablosu. | SQL'e yazabilen her ERP ve ETL aracı | Giden arayüz tablolarına yazılır |
+| SQL ham tablo + view (K-130) | Müşteri ya da ETL işi ham tablolara yazar, kurulumda yazılan view'lar sözleşmeye çevirir, biz view'ı okuruz; `ERP_LoadLog` bitti sinyali. | SQL'e yazabilen her ERP ve ETL aracı | Faz 1'de yalnız okuma |
 | Ortak kurallar | Her yükleme parti numarası, zamanı ve kaynağıyla kaydedilir · tam ya da değişen kayıt, tablo bazında · yöntemler karışabilir · hatalı kayıtlar uyarı ekranına düşer. |  |  |
 | Veri sözleşmesi | Tablo ve alan sözlüğü; üç yöntem için tek. Adım 21'de. |  |  |
 
@@ -179,7 +179,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Veri yükleme (ETL) ve veri versiyonları
 <sub>19. Mimari kararlar · Veri yükleme</sub>
 
-- **Çekim:** ERP'den, API'den, Excel'den ya da SQL arayüz tablolarından gelen veri ham veri katmanına düşer. Planlama ekranları değişmez.
+- **Çekim:** API'den, Excel'den ya da SQL view'larından (K-130) gelen veri ham veri katmanına düşer. Planlama ekranları değişmez.
 - **Doğrulama:** Veri kuralları çalışır, uyarılar çıkar; kullanıcı ne geldiğini ve farkları görür.
 - **Yükleme:** Kullanıcı ya da gece akışı yüklemeyi başlatır; yeni bir veri versiyonu oluşur.
 - **Kısmi yükleme:** Sadece seçilen varlıklar yüklenebilir (ör. siparişler ve stok, ya da bir proje). Yeni versiyon yüklenmeyenleri öncekinden alır; sadece değişen kısım yazılır.

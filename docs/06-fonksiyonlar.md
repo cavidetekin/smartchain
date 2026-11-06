@@ -19,46 +19,51 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 01 · Veri çekme
 <sub>24. Ekranlar ve fonksiyonlar · F01 · A Veri alma · Çalışma prensibi 1/2</sub>
 
-- ERP'deki güncel veriyi entegrasyon tanımlarına göre ham veri tablolarına (Staging) almak ve yüklemeye hazır bir ham veri partisi oluşturmak. Çekim veri versiyonu açmaz; yükleme ayrı bir adımdır.
+- Yöntemi SQL olan tablolarda müşterinin view'larını okuyup ham veri tablolarına (Staging) almak ve yüklemeye hazır ham veri partileri oluşturmak (K-130). Çekim veri versiyonu açmaz; yükleme ayrı bir adımdır.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (gece 22:00, zamanlanmış) · elle: Key user ve üstü
-  - Nereden: Zamanlanmış iş · Veri yükleme ekranı 'Yeniden çek' · Entegrasyon ekranı 'Bağlantıyı test et' (yalnız test)
-- **01:** İş kuyruğuna 'Veri çekme' işi yazılır (Job, gece kanalı). Aynı anda ikinci bir çekim başlatılamaz; gece akışı sırasında elle çekim kapalıdır.
-- **02:** Varlıklar tanımlı sırayla okunur: API sayfa sayfa, SQL arayüz tablosu toplu. Kaynağı Excel olan varlıklar atlanır.
+  - Kim: Sistem (gece, zamanlanmış; 5.6) · elle: Key user ve üstü
+  - Nereden: Zamanlanmış iş (5.6) · Veri yükleme ekranı 'Veri çek', satır menüsünde tek tablo · Entegrasyon ekranı 'Bağlantıyı test et' (yalnız okur)
+- **01:** İş kuyruğuna 'Veri çekme' işi yazılır (Job, 'Veri çekme' kanalı; elle ve gece çekim aynı kanal). Aynı anda ikinci bir çekim başlatılamaz (409).
+- **02:** Tablolar tanımlı sırayla işlenir. Atlananlar nedeniyle yazılır: yöntemi SQL değil, çekim kapalı, view tanımsız. Sonra sinyal (`ERP_LoadLog`), uyum denetimi ve view tanımının görüntüsü.
 - **GIRDI**
-  - Entegrasyon tanımları: varlık başına yöntem (API / SQL arayüz tablosu), uç nokta ya da tablo, alan eşlemesi
-  - Servis hesabı ve bağlantı bilgileri
+  - `adm.IntegrationEntity`: yöntem, çekim anahtarı, view
+  - `IntegrationDatabase` ayarı (aynı instance, Windows kimliği)
+  - `ERP_LoadLog` sinyali
   - Varlık sırası: referans verisi (birim, takvim, kaynak, malzeme) → ağaç ve rota → işlem verisi (stok, sipariş, iş emri)
-  - Son başarılı çekim zamanı (artımlı çekim destekleyen varlıklar için)
-- **03:** Okunan satırlar dönüştürülmeden ham veri tablolarına (stg.*) yazılır; parti numarası, zaman, yöntem ve satır sayısı ImportBatch'e kaydedilir.
-- **04:** Her varlık bitince ilerleme ekrana anlık düşer (WebSocket). Hata alan varlık işaretlenir, sıradaki varlıkla devam edilir.
+  - Son okunan sinyal (`ImportBatch.SignalId`)
+- **03:** View her zaman tam okunur; satırlar Excel'le aynı kontrol kodundan geçer (K-129), geçerliler ham veri tablolarına (stg.*), sorunlar bulgu listesine yazılır. Tablo başına bir parti: yöntem SQL, kaynak view, sinyal, zaman, satır sayısı. Tekrar eden anahtarda iki satır da düşer.
+- **04:** İlerleme iş panelinde anlık görünür. Hata alan tablo işaretlenir, sıradaki tabloyla devam edilir.
 - **05:** Geçici hatada (zaman aşımı, bağlantı kopması) aralıklı 3 deneme yapılır; kalıcı hatada varlık 'hata' ile kapanır, önceki ham veri korunur.
 - **ÇIKTI**
-  - Dolu ham veri tabloları (stg.*) ve ImportBatch kaydı: varlık bazında durum, satır ve hata sayısı
-  - Çekim logu (deneme, süre, hata metni) · Entegrasyon ekranında 'son çağrı' bilgisi
-  - Ana sayfada gece akışı satırı; elle çekimde ekranda sonuç özeti
-- **06:** Parti tamamlanınca doğrulama (04) otomatik başlar. Gece akışında doğrulama sonrası tam yükleme (05) devam eder.
+  - Dolu ham veri tabloları (stg.*) ve ImportBatch kaydı: tablo bazında durum, satır ve hata sayısı
+  - İş sonucu (tablo, durum, denemeler, hata metni) · Entegrasyon ekranında 'son okuma'
+  - Elle çekimde sonuç penceresi; ana sayfada gece akışı satırı 5.6'da
+- **06:** Parti 'Alındı' olur; doğrulama (04) 3.4'te bağlanır. Gece akışında doğrulama sonrası tam yükleme (05) devam eder (5.6).
+- **Sinyal (K-130):** Bir tablo için kendi satırı ile toplu satırlara birlikte bakılır. En son başlayan bitmemişse 'Veri güncellemesi devam ediyor'; değilse en son biten geçerlidir, son okunanla aynıysa 'Yeni veri yok' (elle çekimde o satırda 'Yine de oku'). Okuma sırasında yenileme başladıysa parti 'Tamamlanmadı'.
 
 ### 01 · Veri çekme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F01 · A Veri alma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
   - Çekim geçerli veriyi değiştirmez; ekranlar ve açık çalışmalar mevcut veri versiyonunu görmeye devam eder.
-  - Aynı anda tek çekim; gece akışı sırasında elle çekim engellenir.
-  - Alan eşlemesi eksik olan varlık çekilmez, uyarı verilir (Entegrasyon ekranı).
+  - Aynı anda tek çekim.
+  - View'ı tanımsız tablo çekilmez, satırda uyarı (ekran 02 ve 23).
+  - Smartchain entegrasyon veritabanına yazmaz, DDL çalıştırmaz.
   - Ham veri 1 hafta saklanır (09).
-  - Çekim yöntemi varlık bazında tektir: API, SQL ya da Excel; bir varlık iki kaynaktan beslenmez.
+  - Çekim yöntemi tablo bazında tektir. Excel'den yükleme yöntemden bağımsız her zaman açıktır (K-130); yükleme en yeni partiyi alır (5.2).
+  - Çekim anahtarı yalnız SQL çekimini durdurur.
 - **HATA VE ISTISNA**
-  - Bağlantı ya da kimlik hatası: 3 deneme, sonra varlık 'hata'; diğer varlıklar devam eder.
-  - Kısmi başarı: çekilen varlıklar doğrulamaya girer; çekilemeyenler bir önceki partide kalır, kullanıcı 'Rota için yeniden dene' ile tek varlığı tekrar çeker.
+  - Bağlantı ya da kimlik hatası: 3 deneme, sonra tablo 'hata'; diğer tablolar devam eder.
+  - Kısmi başarı: çekilemeyenler bir önceki partide kalır, kullanıcı 'Bu tablo için yeniden dene' ile tek tabloyu tekrar çeker.
+  - 'Veri güncellemesi devam ediyor' ve 'Yeni veri yok' hata değildir; önceki ham veri korunur.
   - Hiçbir varlık çekilemezse gece akışı 'veri yok' ile durur; senaryolar son veri versiyonuyla çalışır ve 'eski veri' etiketi taşır (parametre, öneri).
-  - Şema uyumsuzluğu (ERP'de alan değişmiş): varlık hata, Entegrasyon ekranında 'eşlenmemiş alan' uyarısı.
+  - Uyum denetimi: eksik zorunlu kolon ya da okunamayan view tablo hatasıdır, önceki ham veri korunur; eksik isteğe bağlı kolon, fazla kolon ve tip farkı uyarıdır; dönüşmeyen satır satır hatasıdır.
 - **ETKISI VE TETIKLENENLER**
-  - Doğrulama (04) otomatik başlar.
-  - Ana sayfa 'gece akışı' ve Entegrasyon ekranı 'son çağrı' güncellenir.
+  - Doğrulama (04) 3.4'te bağlanır.
+  - Entegrasyon ekranı 'son okuma' güncellenir; ana sayfa 'gece akışı' 5.6'da.
   - Elle tetikleme denetim izine (AuditLog) yazılır.
   - Sistem sağlığı: iş kuyruğu ve süre kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez. Çekim yalnız ham veriyi doldurur; geçerli tablolar, kurallar ve planlar yüklemeyle (05 / 06) etkilenir.
@@ -72,6 +77,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Onay penceresi:** Hangi varlıklar hangi yöntemle çekilecek, tahmini süre ve atlanan varlıklar önceden görünür.
 - **Etki uyarısı:** Çekimin açık çalışmaları ve ekranları etkilemediği açıkça yazılır.
+- **Uygulama (3.3, K-130):** Yalnız SQL tabloları: tablo, kaynak (view), durum; neden çipin ipucunda, 'Yeni veri yok' satırında 'Yine de oku', düğmede sayı ('3 tabloyu çek'). Mockup'tan farklar: API satırları, bilgi bantları ve tahmini süre yok (geçmiş ölçüm yok), gece akışı uyarısı 5.6'da.
 - **Tek birincil buton:** Vazgeç ve Çekimi başlat; birincil aksiyon indigo.
 - **Son çekim bilgisi:** Pencerenin altında son çekim zamanı ve kim yaptığı.
 
@@ -84,6 +90,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Canlı akış:** Sağda zaman damgalı adımlar; WebSocket ile güncellenir.
 - **Butonlar kilitli:** Çekim sırasında yükleme butonları pasif; iş durumu üstteki şeritte.
 - **Ekranlar etkilenmez:** Alt başlıkta parti numarası; veri versiyonu değişmez.
+- **Uygulama (3.3, K-130):** Bu pencere ayrı yapılmaz: ilerleme iş panelinde ve bildirimde.
 
 ### 01 · Veri çekme · Sonuç ve hata
 <sub>24. Ekranlar ve fonksiyonlar · F01 · A Veri alma · Mockup 3/3</sub>
@@ -94,6 +101,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Hata detayı:** Deneme zamanları ve neden; önceki ham verinin korunduğu belirtilir.
 - **Tek varlık tekrar:** Rota için yeniden dene: tüm çekimi baştan başlatmak gerekmez.
 - **Bildirim:** Sağ altta uyarı tonunda bildirim; üstte doğrulamanın başladığı görünür.
+- **Uygulama (3.3, K-130):** Sonuç penceresi: tablo, kaynak, okunan, geçerli, hatalı, durum, neden; okunmayan tabloda '—'. Yalnız gerektiğinde küçük düğme: bulgusu olan satırda 'Bulgular', hatalı satırda 'Yeniden dene'. Doğrulama 3.4'te bağlanır.
 
 ### 02 · Excel şablonu indirme
 <sub>24. Ekranlar ve fonksiyonlar · F02 · A Veri alma · Çalışma prensibi 1/2</sub>
@@ -186,7 +194,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F03 · A Veri alma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Excel ile yükleme yalnız yöntemi Excel olan varlıklar için; ERP'den gelen varlığı düzeltmek için elle değer / toplu düzeltme (12, 15) kullanılır.
+  - Excel'den yükleme yöntem ve çekim anahtarından bağımsız her zaman açıktır (K-130); partide yöntem kayıtlı kalır, yükleme en yeni partiyi alır (5.2). Yöntem değişince açık ön kontrol etkilenmez.
   - Tek dosya tek varlık; en fazla 200.000 satır ve 100 MB (parametre). Dosya başka varlığın şablonuysa reddedilir.
   - Aynı anahtarın tekrarı hata: iki satır da ham veriye alınmaz, hangisinin doğru olduğunu sistem seçmez (K-129).
   - 'Boşsa satır yüklenmez' alanlar burada reddedilir; veri kuralıyla dolan alanlar (`Resource.CapacityUnit`) reddedilmez, kontrolü kurallardan sonradır.
@@ -211,7 +219,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yanlış tablonun dosyası: "Bu dosya Malzeme tablosu içermemektedir." (seçilen tablonun adı); hata görünürken "Ön kontrole geç" pasif, yeni dosya seçilince açılır.
   - Bilgi düzeyi dosya bulguları (tanınmayan kolon) bant olarak değil, tabloda satır olarak görünür; uyarılar (eski şablon) bant olarak kalır.
   - Büyük dosya: bekleme metni "Pencereyi kapatabilirsiniz. İş tamamlanınca tekrar açabilirsiniz.", üstünde durum (sırada, dosya açılıyor, n satır). İş bitince "Ön kontrol bitti" bildirimi; bildirimdeki ve iş listesindeki "Sonucu aç" o işin penceresini açar; "⋯ → Excel'den yükle" de aynı yere döner.
-  - Denetim izinde mod pencerede görünen adla yazılır ("Ekle / güncelle", "Tam"); vazgeç denetim izine yazılmaz. Yöntem kısıtı 3.3'te, 'Excel · bekliyor' 5.5'te, dosya ve terk edilen parti temizliği 5.4'te.
+  - Denetim izinde mod pencerede görünen adla yazılır ("Ekle / güncelle", "Tam"); vazgeç denetim izine yazılmaz. 'Excel · bekliyor' 5.5'te, dosya ve terk edilen parti temizliği 5.4'te.
 - **ÖRNEK:** smartchain_kaynak_v1.xlsx · 46 satır: 3 hata (boş kod, çok uzun ad, sayı alanında metin), 1 bilgi (değer listesi dışı tip). Kullanıcı 43 satırla devam eder, hata raporunu indirir.
 
 ### 03 · Excel ile yükleme · Dosya ve mod
@@ -6668,54 +6676,48 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 91 · Entegrasyon tanımı
 <sub>24. Ekranlar ve fonksiyonlar · F91 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
 
-- ERP ile veri alışverişini varlık bazında tanımlamak: yöntem (API, SQL arayüz tabloları, Excel), bağlantı, servis hesabı ve alan eşlemesi; hepsi tek veri sözleşmesine bağlıdır.
+- Tablo başına çekim yöntemini tanımlamak (Excel ya da SQL), entegrasyon veritabanına bağlanmak, view'ı atamak ve sözleşmeye uyduğunu denetlemek (K-130). Alan eşlemesi yoktur: view sözleşme kolonlarıyla birebirdir.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Admin ve üstü · veri sözleşmesi (alan listesi) System owner'ın veri sözlüğünden gelir
-  - Nereden: Menü 'Entegrasyon' · varlık satırı 'Eşleme' · 'Bağlantıyı test et'
-- **01:** Bağlantı tanımlanır: yöntem, adres, servis hesabı; 'Bağlantıyı test et' kimlik, erişim, şema ve örnek okuma (5 satır) adımlarını çalıştırır; test yalnız okur.
-- **02:** Varlık eşlemesi: her varlık için kaynak (uç nokta, tablo ya da Excel) ve alan listesi; zorunlu alan eşlenmeden varlık 'eksik' kalır ve çekimde atlanır.
+  - Yöntem, veritabanı ve view adı: System owner · çekim anahtarı, test ve önizleme: Admin ve üstü · Key user yöntem ve çekimi ekran 02'de salt okunur görür · End user görmez
+  - Nereden: Menü 'Entegrasyon' (ekran 23) · Veri yükleme ekranı (ekran 02): Yöntem ve Çekim kolonları
+- **01:** Bağlantı tek ayardır: entegrasyon veritabanının adı (aynı instance, Windows kimliği, şifre saklanmaz). 'Bağlantıyı test et' erişim, kimlik, bitti sinyali ve bütün view'ların uyumu adımlarını çalıştırır; test yalnız okur.
+- **02:** Tablo satırında yöntem seçilir, yöntemi SQL ise view adı girilir; view gerçekten var olmalıdır. Değişiklikler tablonun Kaydet düğmesiyle toplu ve tek işlemde kaydedilir (K-132), denetim izine yazılır. Kullanıcıdan SQL alınmaz.
 - **GIRDI**
-  - Bağlantı: API taban adresi ya da SQL arayüz veritabanı; servis hesabı (şifreli saklanır)
-  - Varlık → uç nokta / tablo / Excel; alan eşlemesi (ERP alanı → veri sözlüğü alanı) ve dönüşümler (kod listesi, birim, tarih)
-  - Çekim sırası ve artımlı çekim alanı (isteğe bağlı)
-  - Veri sözlüğü (FieldDefinition): zorunlu alanlar
-- **03:** Dönüşümler eşlemenin parçasıdır: kod listesi (ERP 'MAK' → Makine), birim (dk → saat), tarih biçimi. Kural değil, çeviri.
-- **04:** Önizleme: 20 satır çekilir, eşlenmiş haliyle gösterilir; doğrulama (04) örnek üzerinde çalışır, sorunlar kaydetmeden görünür.
-- **05:** Kaydet: tanım versiyonlanır (değişiklik geçmişi, kim, ne zaman); bir sonraki çekimde geçerli olur.
-- **06:** Servis hesapları ayrı listede: anahtar değiştirme, son kullanım, yetki kapsamı (yalnız okuma).
+  - `IntegrationDatabase` ayarı
+  - `adm.IntegrationEntity`: yöntem, çekim anahtarı, view
+  - Sözleşme: docs/03 `stg.*` tabloları
+- **03:** Uyum denetimi: kolon adı birebir. Eksik zorunlu kolon ya da okunamayan view hata; eksik isteğe bağlı kolon, fazla kolon ve tip farkı uyarı. Sonuç 'Alan uyumu 14 / 15' olarak görünür: tam uyumda yeşil, yalnız isteğe bağlı kolon eksikse sarı, zorunlu kolon eksikse kırmızı. Tekrar eden anahtar alan uyumunu etkilemez, testte not olarak yazılır.
+- **04:** Önizleme: 20 satır okunur, Excel'le aynı kontrol kodundan geçer; sorunlar satırda görünür, hiçbir şey yazılmaz.
+- **05:** View sürümleri: her denetim ve okumada tanım okunur, değiştiyse yeni sürüm kaydedilir; uyum denetimi başarısız olsa da. Smartchain view oluşturmaz ve geri yüklemez; geri dönüş kurulumcunundur.
 - **ÇIKTI**
-  - Entegrasyon tanımı (varlık, yöntem, eşleme, dönüşüm, sıra) ve değişiklik geçmişi
+  - Tablo başına yöntem, çekim ve view; kolon uyumu ve son durum
   - Test sonucu ve önizleme
-  - Denetim izi
+  - View sürüm geçmişi · denetim izi
 
 ### 91 · Entegrasyon tanımı · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F91 · K Yönetim ve sistem · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Bir varlık tek yöntemle beslenir.
-  - Zorunlu alanlar eşlenmeden tanım 'eksik' olarak kaydedilebilir ama varlık çekilmez; ekranda uyarı.
-  - Şifre ve anahtar ekranda gösterilmez; yalnız değiştirilir.
+  - Çekim yöntemi tablo başına tektir; `IntegrationEntity` satırı yoksa ya da yöntem boşsa tablo Excel sayılır. Excel'den yükleme her zaman açıktır.
+  - Faz 1 yöntemleri Excel ve SQL; API Faz 1'de hiç görünmez, 11.5'te eklenir.
+  - Çekim anahtarı bütün tablolarda kullanılabilir, yalnız SQL çekimini durdurur. Kapatırken sebep zorunlu; sebep, kişi ve tarih ipucunda; açarken uyarı.
+  - Entegrasyon veritabanı Smartchain'in instance'ındadır; ERP tablolarına doğrudan bağlanılmaz, müşteri ETL'i ham tabloları doldurur. Smartchain yalnız okur.
   - Faz 1'de ERP'ye yazma yok; öneriler Excel ile çıkar (69).
-  - SQL arayüz tabloları ara veritabanındadır; ERP tablolarına doğrudan bağlanılmaz, ERP tarafı tabloları doldurur (öneri).
+  - View ile veri kuralı sınırı docs/03'te: Smartchain'in hiçbir zaman görmemesi gereken satır view'da, bugün dışarıda kalıp yarın girebilecek satır aktarım filtresinde.
 - **HATA VE ISTISNA**
-  - Test başarısız: hangi adımda (kimlik, ağ, yetki, şema) ve ne yapılacağı; tanım yine de kaydedilebilir.
-  - Şema değişikliği (ERP alanı kalkmış): varlık 'eşleme bozuk', çekimde atlanır, ana sayfaya düşer.
-  - Dönüşüm tablosunda olmayan kod (yeni kaynak tipi): çekimde satır uyarıyla gelir, kod 'eşlenmemiş' listesine düşer.
-  - Servis hesabı süresi dolmuş: test ve çekim hata; Sistem sağlığında.
+  - Test başarısız: hangi adımda (erişim, kimlik, sinyal, view) ve ne yapılacağı; ayar yine de kaydedilir.
+  - View kalkmış ya da zorunlu kolon eksik: tablo çekimde hata, önceki ham veri korunur.
+  - Sözleşme değiştiyse (ürün sürümü): satırda 'yeniden denetle'. Yeni sürüm zorunlu alan eklerse sürüm notunda 'view güncellemesi gerekir'.
+  - Şifrelenmiş view: tanım okunamaz, sürüm tutulamaz, uyarı.
 - **ETKISI VE TETIKLENENLER**
-  - Veri çekme (01) kapsamı ve sırası.
-  - Doğrulama (04) kod listesi kontrolleri.
-  - Entegrasyon ekranı durum çipleri; denetim izi.
-- **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Varlık eşleme durumu:** Entegrasyon ekranı Eşleme ya da veri sözlüğü değişince (eşlenmemiş alan sayısı)
-- **Çekim sırası ve kapsamı:** Job · Veri çekme Yöntem değişince (Excel'e alınan varlık çekimden çıkar)
-- **Doğrulama kontrolleri**
-- **04:** Kod listesi ve dönüşüm değişince
-- **Servis hesabı son kullanım:** Entegrasyon ekranı Her çekim ve testte
-- **ÖRNEK:** Rota: SQL arayüz tablosu SC_ROUTING, 15 alandan 14'ü eşli; OverlapQty isteğe bağlı, varsayılan 0. Önizlemede 1 referans hatası (FRZ-04) görülür; tanım kaydedilir, hata ERP'de düzeltilir.
+  - Veri çekme (01) kapsamı.
+  - Ekran 02 ve 23 durumları; denetim izi.
+- **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez. Ayar bir sonraki çekimde geçerli olur.
+- **ÖRNEK:** Rota: yöntem SQL, view `View_Routing`, 15 kolondan 14'ü uyuyor; `OverlapQty` isteğe bağlı, uyarı. Önizlemede bir satırda süre metin, satır hatası; view düzeltilir.
+- **Mockup'tan farklar (3.3, K-130):** Aşağıdaki görseller eski tasarımdandır. Alan eşlemesi, dönüşüm listesi, 'Faz 1 dışı alan' etiketi, servis hesabı anahtar değiştirme, tanımı kaydetmeden önizleme ve tanım geri alma kalktı; `SC_*` adları yerine view; artımlı alan adımı yerine bitti sinyali; tablo içi düzenleme tablonun Kaydet düğmesiyle (K-132).
 
 ### 91 · Entegrasyon tanımı · Alan eşlemesi
 <sub>24. Ekranlar ve fonksiyonlar · F91 · K Yönetim ve sistem · Mockup 1/3</sub>

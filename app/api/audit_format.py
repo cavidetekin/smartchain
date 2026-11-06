@@ -33,6 +33,8 @@ FIELD_LABELS = {
     "field": "Alan", "dir": "Yön",
     # Şablon indirme
     "entity_name": "Tablo", "version": "Sürüm", "field_count": "Alan sayısı",
+    # Entegrasyon ve veri çekme (K-130)
+    "pull_method": "Yöntem", "view": "View", "database": "SQL kaynağı", "entities": "Tablolar", "read_anyway": "Yine de oku",
     # Excel yükleme (K-129)
     "mode": "Mod", "valid": "Geçerli satır", "errors": "Hatalı satır", "template_version": "Şablon sürümü", "file_name": "Dosya adı",
 }

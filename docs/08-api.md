@@ -363,6 +363,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `GET /api/jobs` | Oturumdaki kullanıcının çalışan, sıradaki ve son 24 saatte biten işleri (önce çalışan, sonra sıra); kanal sayaçları (çalışan, sırada, sınır). `?scope=all` herkesin işleri (Admin ve System owner, 93). Her işte `requested_by` ve `requested_by_name`. Bağlantı kopunca istemcinin son durumu sorguladığı yer (fonksiyon 48). | uygulandı (0.4; yetki 2.2) |
 | `GET /api/jobs/{id}` | İşin durumu, ilerlemesi, sıra numarası, süresi, `is_stale` (kalp atışı eşiği aşıldı). Yoksa 404 `job_not_found`. Başkasının işi 93 ister. | uygulandı (0.4; yetki 2.2) |
 | `POST /api/jobs/{id}/cancel` | Sıradaki işi iptal eder; gövde `{"reason"}`, başkasının işinde zorunlu (422 `reason_required`). Çalışan iş ve Yükleme işi 409 `job_not_cancellable`. Kendi işi herkes, başkasının işi Admin ve System owner (93); System owner'ın işine Admin dokunamaz (403). İz "İş iptali". | uygulandı (0.4; yetki 2.2; neden 2.5) |
+| `POST /api/jobs/{id}/dismiss` | Kendi işinin bildirimini kapatır (`Job.DismissedAt`, K-132); kapatılan bildirim yeniden çıkmaz. Başkasının işi 403. | uygulandı (3.3) |
 | `POST /api/jobs/{id}/prioritize` | Sıradaki işi kanalında öne alır. Çalışan iş ve Gece kanalı 409 `job_not_prioritizable`. İz "İş öne alma". | uygulandı (2.5) |
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
@@ -379,7 +380,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 ## İş kuyruğu (fonksiyon 47, 93)
 
 - Durumlar: Sırada → Çalışıyor → Bitti | Hata; Sırada → İptal (K-67).
-- Kanal sınırı: hesaplama 3, gece 2 (`adm.SystemSetting`: `JobLimitInteractive`, `JobLimitNight`). İş alma uygulama kilidiyle sıraya konur; sıra önce öncelik, sonra istek sırası (K-68).
+- Kanal sınırı: hesaplama 3, gece 2, Veri çekme 1 (`adm.SystemSetting`: `JobLimitInteractive`, `JobLimitNight`, `JobLimitPull`). İş alma uygulama kilidiyle sıraya konur; sıra önce öncelik, sonra istek sırası (K-68).
 - Çalışan iş kalp atışı yazar. `JobHeartbeatTimeoutSeconds` (120) boyunca gelmezse takılmış sayılır; `JobMaxAttempts` (2) dolana kadar yeniden sıraya döner, sonra Hata. Eski deneme işi artık yazamaz (her yazma deneme numarasıyla).
 
 ## Sistem sağlığı (ekran 24, K-106)
@@ -423,9 +424,31 @@ Fonksiyon 03: System owner, Admin, Key user; End user 403. Devam ve vazgeç yaln
 | `POST /api/imports/{id}/cancel` | Satırlar ve dosya silinir, "Vazgeçildi"; sıradaki iş iptal edilir, çalışan iş sonraki parçada durur |
 | `GET /api/imports/{id}/error-report` | Hatalı satırlar, özgün değerler, sonda "Hata" kolonu; iz "Hata raporu indirme". 410 `import_file_gone` |
 
-**Ölçüm (Malzeme, 33 alan; `python -m pytest -m perf`):** 40.000 satır (5,0 MB) API dahil ortanca 12,9 sn, hedef 15 sn; 200.000 satır (25,2 MB) işte ortanca 59,1 sn. Geliştirme dizüstüsü hibrit işlemcili: süreç verimlilik çekirdeğine düşerse eşikteki dosya 26–28 sn sürer, performans çekirdeğine bağlıyken 16–17 sn ölçüldü; sunucuda ilk kurulumda ölçülür, gerekirse `ImportSyncMaxMb` düşürülür. Bu yüzden eşik 5 MB. Dosyayı açmak metin tablosunu belleğe okur: küçük dosya tek açılışla işlenir, büyük dosya istekte açılmaz (yalnız paket denetimi); yanlış tablo ve eksik kolon büyük dosyada işte anlaşılır, parti "Hatalı" olur, nedeni özette yazar. Liste dışı değer bilgisi alan ve değer başına tektir (en çok 1000): ERP'nin kendi değerleri her satırda bilgi yazdırmaz.
+**Ölçüm (Malzeme, 33 alan; `python -m pytest -m perf`):** 40.000 satır (5,0 MB) API dahil ortanca 12,1 sn, hedef 15 sn; 200.000 satır (25,2 MB) işte ortanca 52,6 sn. Geliştirme dizüstüsü hibrit işlemcili: süreç verimlilik çekirdeğine düşerse eşikteki dosya 26–28 sn sürer, performans çekirdeğine bağlıyken 16–17 sn ölçüldü; sunucuda ilk kurulumda ölçülür, gerekirse `ImportSyncMaxMb` düşürülür. Bu yüzden eşik 5 MB. Dosyayı açmak metin tablosunu belleğe okur: küçük dosya tek açılışla işlenir, büyük dosya istekte açılmaz (yalnız paket denetimi); yanlış tablo ve eksik kolon büyük dosyada işte anlaşılır, parti "Hatalı" olur, nedeni özette yazar. Liste dışı değer bilgisi alan ve değer başına tektir (en çok 1000): ERP'nin kendi değerleri her satırda bilgi yazdırmaz.
 
 **Liste ek alanı:** kolon tanımında `note` başlığın ipucudur: liste tanımının notu, yoksa alanın veri sözlüğündeki açıklaması; etiketle aynıysa ya da yoksa boş. **İş cevabı:** "Excel ön kontrol" işinde `import_batch_id` ("Sonucu aç"). **İz:** `mode` pencerede görünen adla: "Ekle / güncelle", "Tam".
+
+## SQL çekimi ve entegrasyon tanımı (ekran 02 ve 23, fonksiyon 01 ve 91, K-130)
+
+Excel yükleme yöntemden bağımsızdır: yöntem ne olursa olsun, çekim açık ya da kapalı, `POST /api/imports/{entity}` çalışır.
+
+| Uç nokta | Yetki | Cevap |
+|---|---|---|
+| `PUT /api/integration/entities` · `{changes: [{entity, method?, view?, pull_enabled?, reason?}]}` | Admin ve üstü; `method` ve `view` System owner | Tablo içi düzenlemelerin toplu kaydı (K-132), tek işlem: biri geçersizse hiçbiri yazılmaz. 422 `integration_bad_method`, `integration_reason_required`, `integration_view_not_found`. Açık ön kontrol etkilenmez. İz "Yöntem değişikliği", "Çekim kapatma", "Çekim açma", "Entegrasyon tanımı" |
+| `GET /api/integration/connection` | Admin ve üstü | Veritabanı adı, hesap, son kullanım, kart sayıları |
+| `PUT /api/integration/connection` · `{database}` | System owner | Ad kuralı: harf, rakam, alt çizgi. İz "Entegrasyon tanımı" |
+| `POST /api/integration/test` | Admin ve üstü | Adım adım sonuç: erişim, kimlik, sinyal tablosu, view'lar. Yalnız okur |
+| `POST /api/integration/entities/{entity}/preview` | Admin ve üstü | 20 satır ve her satırın bulguları; 409 `integration_view_missing` |
+| `GET /api/integration/entities/{entity}/view-versions` | Admin ve üstü | View sürümleri, en yenisi önce |
+| `GET /api/pulls/plan` | Key user ve üstü | Tablo, yöntem, kaynak, durum, neden; son çekim |
+| `POST /api/pulls` · `{entities, read_anyway: [tablo]}` | Key user ve üstü | **202** `{job_id}`; 409 `pull_running`; 409 `integration_not_configured`. İz "Veri çekme" |
+| `GET /api/pulls/{job}` | Key user ve üstü | İş durumu; tablo, yöntem, kaynak, durum, okunan, geçerli, hatalı, parti, denemeler, hata |
+
+**Ölçüm (Malzeme, 33 alan; `python -m pytest -m perf`):** 200.000 satırlık view işte ortanca 34,5 sn; aynı satır Excel'den 52,6 sn.
+
+**Tablo durumları:** Alındı, Hatalı, Tamamlanmadı (partisi vardır); Yeni veri yok, Veri güncellemesi devam ediyor, Atlandı, Hata (parti yok, önceki ham veri korunur).
+
+**Liste:** `data-entities`'e Yöntem, Çekim, uyarı (satır alanı); `integration-entities`: Yöntem, Kaynak, Alan uyumu, Son durum, Son okuma; `import-findings` SQL partilerini de gösterir.
 
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 

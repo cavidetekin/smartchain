@@ -79,9 +79,6 @@ export function ExportDialog({ info, filtered, total, visibleColumns, allColumns
           {exportFileName(info.file_slug, version, new Date())}
         </output>
       </div>
-      {background && (
-        <Alert tone="info">{T.exportBackground(info.file_hours)}</Alert>
-      )}
       {tooLarge && <Alert tone="risk">{T.exportTooLarge(formatNumber(rows), formatNumber(info.max_rows))}</Alert>}
       {error && <Alert tone="error" title={T.exportError}>{error}</Alert>}
     </Dialog>

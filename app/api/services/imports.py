@@ -7,7 +7,7 @@ Dosya bir kez okunur: geçerli satırlar kontrol sırasında stg'ye yazılır, p
 import io
 import logging
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -127,9 +127,9 @@ def start(session: Session | None, user: CurrentUser, table: str, mode: str, fil
                 batch_id = repo.create_batch(session, entity.table, mode, file_name, user.id, version)
                 repo.insert_findings(session, batch_id, notes)
                 session.commit()
-                read, too_many = _read_rows(session, batch_id, entity, labels, settings, wb, None)
+                read, too_many = read_rows(session, batch_id, entity, labels, wb.rows(entity, wb.identity().first_row), None, settings["ImportMaxRows"])
             _keep_file(session, batch_id, temp)
-            _finish(session, batch_id, entity, read, too_many, settings)
+            finish_batch(session, batch_id, entity, read, too_many, settings)
         except BadFile as exc:
             raise AppError("import_bad_file", str(exc), 422) from exc
         except AppError:
@@ -138,7 +138,7 @@ def start(session: Session | None, user: CurrentUser, table: str, mode: str, fil
             session.rollback()
             log.exception("Ön kontrol %s düştü", batch_id)
             if batch_id is not None:
-                _mark_incomplete(session, batch_id)
+                mark_incomplete(session, batch_id)
             raise AppError("import_failed", "Ön kontrol tamamlanamadı; dosyayı yeniden yükleyin.", 500) from None
         return summary_of(session, batch_id), 200
 
@@ -197,7 +197,7 @@ def run_precheck(session: Session, batch_id: int, progress: Callable[[str], None
             repo.set_batch(session, batch_id, TemplateVersion=version)
             repo.insert_findings(session, batch_id, notes)
             session.commit()
-            read, too_many = _read_rows(session, batch_id, entity, labels, settings, wb, progress)
+            read, too_many = read_rows(session, batch_id, entity, labels, wb.rows(entity, wb.identity().first_row), progress, settings["ImportMaxRows"])
     except (BadFile, AppError) as exc:  # küçük dosyada 422 olan durumlar: işte parti Hatalı olur, nedeni pencerede yazar
         message = exc.message if isinstance(exc, AppError) else str(exc)
         details = exc.details if isinstance(exc, AppError) else []
@@ -207,12 +207,12 @@ def run_precheck(session: Session, batch_id: int, progress: Callable[[str], None
         repo.set_batch(session, batch_id, RowCount=0, ErrorCount=0, Status=repo.FAILED)
         session.commit()
         return True
-    return _finish(session, batch_id, entity, read, too_many, settings)
+    return finish_batch(session, batch_id, entity, read, too_many, settings)
 
 
-def _read_rows(session: Session, batch_id: int, entity: contract.Entity, labels, settings: dict, wb: Workbook,
-               progress: Callable[[str], None] | None) -> tuple[int, bool]:
-    """Satırları akıtır: geçerliler ham veriye, sorunlar bulguya, 5.000'lik parçalarla. (okunan, sınır aşıldı mı)."""
+def read_rows(session: Session, batch_id: int, entity: contract.Entity, labels, rows: Iterable[tuple[int, dict]],
+              progress: Callable[[str], None] | None, max_rows: int | None) -> tuple[int, bool]:
+    """Satırları akıtır: geçerliler ham veriye, sorunlar bulguya, 5.000'lik parçalarla. Excel ve SQL aynı gövde (K-130). (okunan, sınır aşıldı mı)."""
     checker = structural.RowChecker(entity.table, labels)
     read = 0
     valid: list[tuple[int, dict]] = []
@@ -241,8 +241,8 @@ def _read_rows(session: Session, batch_id: int, entity: contract.Entity, labels,
         return repo.status_of(session, batch_id) == repo.PENDING
 
     too_many = False
-    for number, raw in wb.rows(entity, wb.identity().first_row):
-        if read >= settings["ImportMaxRows"]:
+    for number, raw in rows:
+        if max_rows is not None and read >= max_rows:
             too_many = True
             break
         read += 1
@@ -256,8 +256,8 @@ def _read_rows(session: Session, batch_id: int, entity: contract.Entity, labels,
     return read, too_many
 
 
-def _finish(session: Session, batch_id: int, entity: contract.Entity, read: int, too_many: bool, settings: dict) -> bool:
-    """Dosya kapandıktan sonra: vazgeçildiyse temizlik, sınır, tekrar eden anahtar, sayılar."""
+def finish_batch(session: Session, batch_id: int, entity: contract.Entity, read: int, too_many: bool, settings: dict) -> bool:
+    """Okuma bittikten sonra: vazgeçildiyse temizlik, sınır, tekrar eden anahtar, sayılar."""
     if repo.status_of(session, batch_id) != repo.PENDING:  # çalışırken vazgeçildi
         _clean(session, batch_id)
         session.commit()
@@ -299,7 +299,7 @@ def _discard(session: Session, batch: dict, status: str) -> None:
         _clean(session, batch["Id"])
 
 
-def _mark_incomplete(session: Session, batch_id: int) -> None:
+def mark_incomplete(session: Session, batch_id: int) -> None:
     batch = repo.get_batch(session, batch_id)
     if batch is None or batch["Status"] != repo.PENDING:
         return
@@ -317,7 +317,7 @@ def run_job(session: Session, job_id: int, attempt: int, payload: dict, progress
 
 def fail_job(session: Session, payload: dict) -> None:
     session.rollback()
-    _mark_incomplete(session, payload["batch_id"])
+    mark_incomplete(session, payload["batch_id"])
 
 
 def summary_of(session: Session, batch_id: int) -> dict:
@@ -325,7 +325,7 @@ def summary_of(session: Session, batch_id: int) -> dict:
     entity = _entity(batch["EntityName"])
     job = queue.get_job(session, batch["JobId"], JobSettings()) if batch["JobId"] else None
     if job is not None and batch["Status"] == repo.PENDING and batch["RowCount"] is None and job["Status"] not in ACTIVE_STATUSES and job["Status"] != STATUS_DONE:
-        _mark_incomplete(session, batch_id)  # süreç düştü, iş Hata ya da İptal oldu
+        mark_incomplete(session, batch_id)  # süreç düştü, iş Hata ya da İptal oldu
         batch = _batch(session, batch_id)
     counted = repo.counts(session, batch_id)
     read = batch["RowCount"]

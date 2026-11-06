@@ -218,6 +218,25 @@ export function RadioGroup({ label, options, value, onChange }: {
   );
 }
 
+/** Yan yana seçim kartları: kalın başlık, altında açıklama, seçili kart indigo çerçeve. Radyo gibi davranır, klavyeyle gezilir. */
+export function ChoiceCards({ label, options, value, onChange }: {
+  label: string; options: { value: string; title: string; text: string }[]; value: string; onChange(v: string): void;
+}) {
+  const name = useId();
+  return (
+    <fieldset className="sc-choice-cards">
+      <legend className="sc-field-label">{label}</legend>
+      {options.map((o) => (
+        <label key={o.value} className={`sc-choice-card${value === o.value ? " is-selected" : ""}`}>
+          <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} />
+          <strong>{o.title}</strong>{" "}
+          <span>{o.text}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 /** Segment (ör. Günlük / Haftalık / Aylık): tek seçim; ok tuşlarıyla gezilir. Etiket üstte görünür;
  *  başlığı zaten yazan yerde (kullanıcı menüsü) hideLabel ile yalnız erişilebilir ad kalır. */
 export function Segment<T extends string | number>({ label, options, value, onChange, hideLabel }: {
