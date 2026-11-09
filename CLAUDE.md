@@ -24,7 +24,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 ## Veri
 
 - **İki katman (K-58).** Entegrasyon tabloları (`stg.*`) ERP'nin dilidir: Id yok, ilişkiler kodla (MaterialCode, LocationCode…). Ana tablolar Id + Code taşır; motor, ekranlar ve raporlar yalnız ana tabloları okur.
-- **ETL sırası:** Staging'e çekme (SQL view, Excel; API Faz 2) → yapısal doğrulama → veri kuralları (işlenmiş katmanda, `prc`; ham `stg` değişmez, K-140) → aktarım filtresi (A-34) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle; varsayılan yok, K-138; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
+- **ETL sırası:** Staging'e çekme (SQL view, Excel; API Faz 2) → yapısal doğrulama → veri kuralları (işlenmiş katmanda, `prc`; ham `stg` değişmez, K-140) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle; varsayılan yok, K-138; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
 - **Ek alanlar (K-59):** ana veride AdditionalText1–7 ve AdditionalNumber1–3, yapı ve işlem verisinde AdditionalText1–3 ve AdditionalNumber1–2; etiketleri FieldDefinition'da.
 - Tablo ve alan adları `docs/02-veri-modeli.md` ve `docs/03-entegrasyon.md` ile birebir; sözleşme alan adlarını değiştirme.
 - **Şemalar (K-62, K-140):** `stg` entegrasyon (ham), `prc` işlenmiş staging, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem. Aynı ad katmanlarda: `stg.Material` → `prc.Material` → `core.Material`.
