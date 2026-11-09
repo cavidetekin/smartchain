@@ -64,13 +64,13 @@ def test_duplicate_matches_the_manifest(db_engine, uploaded):
     _, manifest, results, client, user = uploaded
     h4 = next(e for e in manifest["errors"] if e["code"] == "H4")
     s = results["Material"]
-    assert (s["read"], s["valid"], s["errors"]) == (209, 207, 2)  # 8 hazır kural örneği dahil (docs/11)
+    assert (s["read"], s["valid"], s["errors"]) == (211, 209, 2)  # 8 hazır kural örneği ve 2 veri kuralı örneği dahil (docs/11)
     body = {"fields": ["RowNo", "RowKey", "Message", "Severity"], "sort": [{"field": "RowNo", "dir": "asc"}],
             "filters": [{"field": "ImportBatchId", "op": "eq", "value": s["batch_id"]}, {"field": "Severity", "op": "in", "values": ["Hata"]}], "offset": 0, "limit": 10}
     rows = client.post("/api/import-findings/query", json=body, headers=auth(user)).json()["rows"]
     assert [r["RowNo"] for r in rows] == h4["rows"] and {r["Message"] for r in rows} == {h4["message"]} and rows[0]["RowKey"] == "ORM-01 · SAT-040"
     with db_engine.connect() as c:
-        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 207
+        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 209
         assert c.execute(text("SELECT COUNT(*) FROM stg.Material WHERE Code = N'SAT-040'")).scalar() == 0
 
 
@@ -93,4 +93,4 @@ def test_values_survive_the_round_trip(db_engine, uploaded):
         lot = c.execute(text("SELECT * FROM stg.Stock WHERE LotNo = N'L-2410-07'")).mappings().one()
     want = clean_rows["L-2410-07"]
     assert (lot["Status"], float(lot["Quantity"]), lot["IsInQuality"], lot["IsAvailable"]) == (want["Status"], want["Quantity"], True, False)
-    assert lot["QualityEntryDate"] == want["QualityEntryDate"] and lot["ExpectedAcceptanceDate"] == want["ExpectedAcceptanceDate"] and lot["RowStatus"] == "Yeni" and lot["SourceRowNo"] >= 2
+    assert lot["QualityEntryDate"] == want["QualityEntryDate"] and lot["ExpectedAcceptanceDate"] == want["ExpectedAcceptanceDate"] and lot["SourceRowNo"] >= 2

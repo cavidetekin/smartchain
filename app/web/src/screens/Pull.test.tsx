@@ -239,13 +239,35 @@ describe("Veri çek", () => {
     await user.click(screen.getByRole("button", { name: "Veri çek" }));
     const dialog = await screen.findByRole("dialog", { name: "Veri çek" });
     await within(dialog).findByText("View_Material");
-    const boxes = within(dialog).getAllByRole("checkbox", { name: "Yine de oku" });
+    const boxes = within(dialog).getAllByRole("checkbox", { name: /: yine de oku$/ });  // yalnız kutu, etiket ekran okuyucuda (K-143)
+    expect(within(dialog).queryAllByText("Yine de oku").length).toBe(1);  // yalnız kolon başlığı
     expect(boxes).toHaveLength(1);
     await user.click(boxes[0]);
     await user.click(within(dialog).getByRole("button", { name: "3 tabloyu çek" }));
     await waitFor(() => expect(calls(fetchMock, "POST", "/api/pulls")).toHaveLength(1));
     expect(bodyOf(calls(fetchMock, "POST", "/api/pulls")[0])).toEqual({ entities: ["Material", "BOM", "Stock"], read_anyway: ["Stock"] });
     expect(await screen.findByRole("dialog", { name: "Çekim sonucu" })).toBeInTheDocument();
+  });
+
+  it("Yine de oku başlık kutusu: hepsini seçer ve kaldırır; bir kısmı seçiliyse kısmen seçili (K-145)", async () => {
+    const { user } = await open("Key user", { "/api/pulls/plan": { body: { ...PLAN, tables: [
+      ...PLAN.tables, { ...PLAN.tables[2], entity: "Stock2", name: "Stok 2", source: "View_Stock2" },
+    ] } } });
+    await user.click(screen.getByRole("button", { name: "Veri çek" }));
+    const dialog = await screen.findByRole("dialog", { name: "Veri çek" });
+    await within(dialog).findByText("View_Material");
+    const all = within(dialog).getByRole("checkbox", { name: "Yeni veri olmayan bütün tabloları yine de oku" }) as HTMLInputElement;
+    const rows = () => within(dialog).getAllByRole("checkbox", { name: /: yine de oku$/ }) as HTMLInputElement[];
+    expect(rows().length).toBeGreaterThan(1);
+    await user.click(all);
+    expect(rows().every((b) => b.checked)).toBe(true);
+    await user.click(rows()[0]);
+    expect(all.indeterminate).toBe(true);
+    expect(all).toHaveAttribute("aria-checked", "mixed");
+    await user.click(all);
+    expect(rows().every((b) => b.checked)).toBe(true);
+    await user.click(all);
+    expect(rows().every((b) => !b.checked)).toBe(true);
   });
 
   it("okunacak tablo yoksa başlatılamaz", async () => {

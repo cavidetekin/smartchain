@@ -29,14 +29,16 @@ class Examples:
     def empty(self, table: str) -> dict:
         return {c.name: None for c in stg_columns(table)}
 
-    def add(self, table: str, base: dict, rules: list[str] | None, **values) -> dict:
+    def add(self, table: str, base: dict, rules: list[str] | None, with_rules: list[str] | None = None, **values) -> dict:
+        """with_rules: demo veri kuralları uygulandıktan sonra beklenen kurallar (K-141); verilmezse kurallar yokkenki gibi."""
         row = {**base, **values}
         self.stg.setdefault(table, []).append(row)
-        self.expect(table, row, rules or [], example=True)  # kural tetiklemeyen yardımcı satır da (ör. karşı tablodaki kaynak)
+        self.expect(table, row, rules or [], example=True, with_rules=with_rules)  # kural tetiklemeyen yardımcı satır da (ör. karşı tablodaki kaynak)
         return row
 
-    def expect(self, table: str, row: dict, rules: list[str], example: bool = False) -> None:
-        self.expected.append({"table": table, "key": {k: row.get(k) for k in key_fields(table)}, "rules": sorted(rules), "example": example})
+    def expect(self, table: str, row: dict, rules: list[str], example: bool = False, with_rules: list[str] | None = None) -> None:
+        self.expected.append({"table": table, "key": {k: row.get(k) for k in key_fields(table)}, "rules": sorted(rules), "example": example,
+                              "rules_with_demo": sorted(rules if with_rules is None else with_rules)})
 
 
 def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
@@ -197,4 +199,6 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     pc = x.base("ProductionConfirmation", WorkOrderNo="WO-5002")
     x.add("ProductionConfirmation", pc, ["PC.QTY"], ConfirmationNo="V-T-1", ConfirmedQuantity=0.0)
     x.add("ProductionConfirmation", pc, ["PC.MATERIAL"], ConfirmationNo="V-T-2", MaterialCode="MAM-001")
+    from .rules import add_rule_examples  # veri kuralı örnekleri (K-141)
+    add_rule_examples(x, LOC)
     return x.expected

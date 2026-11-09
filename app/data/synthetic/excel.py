@@ -14,6 +14,7 @@ from app.integration.template import write_template
 from db import models
 from . import dataset as d
 from .examples import add_examples
+from .rules import DEMO_RULES
 from .dataset import Dataset
 
 EMPTY_ENTITIES = {"Forecast", "MaterialReference"}  # docs/11: tahmin üretilmez; her üretilen malzemenin kendi versiyonu var
@@ -148,7 +149,7 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
     ]
     # Hazır validasyon kurallarının örnekleri (K-137): sona eklenir, yukarıdaki satır numaraları değişmez.
     errors += [dict(code="V", type="Hazır kural", file=f"{e['table']}.xlsx", table=e["table"], key=e["key"], rules=e["rules"], example=e["example"],
-                    step="Fonksiyon 04 doğrulama (geliştirme 3.4)") for e in add_examples(stg)]
+                    rules_with_demo=e["rules_with_demo"], step="Fonksiyon 04 doğrulama (geliştirme 3.4); demo kurallarıyla 4.1") for e in add_examples(stg)]
     return stg, errors
 
 
@@ -187,6 +188,7 @@ def write_excel(ds: Dataset, out: Path) -> dict:
                           "rules": ["MS.QUOTA_SUM"]},
         "week1": ds.start.isoformat(), "first_data_row": FIRST_DATA_ROW,
         "files": {f"{e}.xlsx": len(r) for e, r in stg.items()}, "errors": errors,
+        "demo_rules": [f"{r['entity']} · {r['name']}" for r in DEMO_RULES],  # python -m app.data.synthetic rules (K-141)
     }
     (out / "beklenen-hatalar.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2, default=_json_default), encoding="utf-8")

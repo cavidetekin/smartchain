@@ -1,5 +1,5 @@
 // Veri çek pencereleri (ekran 02, fonksiyon 01; K-130, K-132): onay, sonuç, çekim anahtarı. Durum çipi renkleri K-132; "Okunacak" durum değildir, çip olmaz.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError, JOB_DONE, JOB_FAILED } from "../api/client";
 import { formatDateTime, formatNumber, serverDate } from "../format";
@@ -27,6 +27,16 @@ const TONES: Record<string, BadgeTone> = {
 export function StateChip({ state, reason }: { state: string | null; reason?: string | null }) {
   if (!state || state === READ_STATE) return null;
   return <Tooltip content={reason} focusable={Boolean(reason)}><Badge tone={TONES[state] ?? "neutral"}>{state}</Badge></Tooltip>;
+}
+
+/** Başlıktaki toplu seçim kutusu (K-145): hepsi, hiçbiri ya da kısmen seçili. */
+function AllBox({ checked, mixed, label, onChange }: { checked: boolean; mixed: boolean; label: string; onChange(on: boolean): void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = mixed;
+  }, [mixed]);
+  return <input ref={ref} type="checkbox" className="sc-head-check" aria-label={label} checked={checked} aria-checked={mixed ? "mixed" : checked}
+                onChange={(e) => onChange(e.target.checked)} onClick={(e) => e.stopPropagation()} />;
 }
 
 export function PullStartDialog({ entity, onClose, onStarted }: { entity?: string; onClose(): void; onStarted(jobId: number): void }) {
@@ -63,16 +73,22 @@ export function PullStartDialog({ entity, onClose, onStarted }: { entity?: strin
     }
   };
 
+  const stale = rows.filter((t) => t.state === NO_NEW).map((t) => t.entity);
+  const picked = stale.filter((name) => anyway.has(name)).length;
   const columns: LocalColumn<PullPlanRow>[] = [
     { key: "name", label: T.table, value: (t) => t.name },
     { key: "source", label: T.source, value: (t) => t.source },
     { key: "state", label: T.state, value: (t) => t.state, render: (t) => <StateChip state={t.state} reason={t.reason} /> },
-    { key: "anyway", label: T.readAnyway, render: (t) => (t.state === NO_NEW ? <Checkbox label={T.readAnyway} checked={anyway.has(t.entity)} onChange={(on) => toggle(t.entity, on)} /> : null) },
+    { key: "anyway", label: T.readAnyway,
+      header: stale.length > 0 && <AllBox checked={picked === stale.length} mixed={picked > 0 && picked < stale.length} label={T.readAnyAll}
+                                          onChange={(on) => setAnyway(on ? new Set(stale) : new Set())} />,
+      render: (t) => (t.state === NO_NEW
+      ? <Checkbox label={T.readAnyKey(t.name)} hideLabel checked={anyway.has(t.entity)} onChange={(on) => toggle(t.entity, on)} /> : null) },
   ];
 
   return (
     <Dialog title={T.startTitle} subtitle={entity ? rows[0]?.name : undefined} onClose={onClose} onSubmit={() => void start()} submitLabel={T.startCount(chosen.length)}
-            submitDisabled={!plan || chosen.length === 0} busy={busy} wide>
+            submitDisabled={!plan || chosen.length === 0} busy={busy} xwide className="sc-dialog--pull">
       {error && <Alert tone="error">{error}</Alert>}
       {plan && <LocalTable label={T.startTitle} columns={columns} rows={rows} rowKey={(t) => t.entity} />}
       {plan?.last && <p className="sc-muted">{T.last(formatDateTime(serverDate(plan.last.at)), plan.last.by)}</p>}

@@ -4,7 +4,7 @@
 // "Yeni kural" seçili tablonun şeridinde, tek satırda.
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ApiError } from "../api/client";
+import { ApiError, JOB_VALIDATION } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { tr } from "../i18n/tr";
@@ -14,6 +14,7 @@ import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import { listApi, type ListFilter, type Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
 import { Alert, Badge, type BadgeTone, Button, ConfirmDialog, Dialog, SelectField, TextField, TopStrip } from "../ui";
+import { useJobRefresh } from "../shell/useJobRefresh";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 import { SEVERITY_CLASS, SeverityTag } from "./ValidationDrawer";
 import { KIND_BUILTIN, KIND_USER, type RuleChange, SEVERITIES, validationApi } from "./validationApi";
@@ -23,6 +24,7 @@ const ALL = "";
 const KIND_TONE: Record<string, BadgeTone> = { [KIND_BUILTIN]: "info", [KIND_USER]: "risk" };
 const THRESHOLD = "threshold";
 const ALLOWED = { allowed: true };
+const VALIDATION_JOBS = [JOB_VALIDATION];
 
 interface Entity { table: string; name: string }
 interface Editing {
@@ -137,6 +139,7 @@ export function ValidationRules() {
   const [resetting, setResetting] = useState<{ id: number; name: string } | null>(null);
   const [ask, setAsk] = useState<string[] | null>(null);
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
+  useJobRefresh(VALIDATION_JOBS, refresh);  // yeniden validasyon bitince liste güncellenir (K-143)
 
   useEffect(() => {
     const ctrl = new AbortController();

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.integration import contract
 from app.jobs.constants import ACTIVE_STATUSES
-from app.validation import catalog as cat, conditions, engine
+from app.validation import catalog as cat, conditions, engine, texts
 from app.validation.current import current_rows
 from db.models import metadata
 
@@ -96,12 +96,17 @@ def revalidate(session: Session | None, user: CurrentUser, table: str) -> dict:
 
 # ------------------------------------------------------------------ kurallar (fonksiyon 100)
 
-def fields(table: str) -> list[dict]:
+def fields(session: Session | None, table: str) -> list[dict]:
+    """Koşul editörünün alanları: güncel etiketle; etiketsiz ek alan listelenmez (K-143)."""
+    session = auth._require(session)
     entity = entity_of(table)
-    out = []
-    for name, col in conditions.columns(entity.table).items():
-        out.append({"name": name, "label": engine.label(entity.table, name), "kind": conditions.kind_of(col), "values": list(col.info.get("values") or [])})
-    return out
+
+    def work():
+        names, cols = texts.field_labels(session, entity.table), conditions.columns(entity.table)
+        return [{"name": n, "label": names[n], "kind": conditions.kind_of(cols[n]), "values": list(cols[n].info.get("values") or [])}
+                for n in texts.editor_fields(session, entity.table)]
+
+    return auth._db(work)
 
 
 def _groups_payload(groups: list[list[conditions.Condition]]) -> list[list[dict]]:
@@ -143,7 +148,7 @@ def groups_of(session: Session, rule: dict) -> list[list[conditions.Condition]]:
 def condition_text(session: Session, rule: dict) -> str:
     groups = groups_of(session, rule)
     if groups:
-        return conditions.sentence(rule["EntityName"], groups)
+        return conditions.sentence(rule["EntityName"], groups, texts.field_labels(session, rule["EntityName"]))
     found = cat.by_key().get((rule["EntityName"], rule["Code"]))
     return found.condition if found else (rule.get("ConditionText") or "")
 
@@ -220,12 +225,12 @@ def save_rules(session: Session | None, user: CurrentUser, changes: list[dict], 
                 new_id = session.execute(sa.insert(RULE).values(
                     EntityName=entity, Code=_next_code(session, entity), Name=name[:MAX_NAME], Kind=cat.USER_KIND, CheckType=cat.LOGICAL,
                     Severity=severity, Message=message[:MAX_MESSAGE], IsActive=bool(change.get("active", True)), IsCustomized=False, UpdatedBy=user.id, UpdatedAt=now,
-                    ConditionText=conditions.sentence(entity, groups)[:400])
+                    ConditionText=conditions.sentence(entity, groups, texts.field_labels(session, entity))[:400])
                     .returning(RULE.c.Id)).scalar_one()
                 _write_conditions(session, new_id, groups)
                 audit.write_audit(session, ACTION_RULE, user.id, OBJECT_RULE, f"{entity_of(entity).name} · {name}",
                                   {"entity_name": entity_of(entity).name, "rule_name": name, "severity": severity, "message": message,
-                                   "condition": conditions.sentence(entity, groups), "active": bool(change.get("active", True))})
+                                   "condition": conditions.sentence(entity, groups, texts.field_labels(session, entity)), "active": bool(change.get("active", True))})
                 changed.add(entity)
                 continue
             row = session.execute(sa.select(RULE).where(RULE.c.Id == int(rule_id))).mappings().first()
@@ -285,7 +290,7 @@ def save_rules(session: Session | None, user: CurrentUser, changes: list[dict], 
                     groups = _parse_groups(entity, change["groups"])
                     before = condition_text(session, rule)
                     _write_conditions(session, rule["Id"], groups)
-                    after = conditions.sentence(entity, groups)
+                    after = conditions.sentence(entity, groups, texts.field_labels(session, entity))
                     values["ConditionText"] = after[:400]
                     if after != before:
                         old["condition"], new["condition"] = before, after

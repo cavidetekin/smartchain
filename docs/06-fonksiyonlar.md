@@ -250,13 +250,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (her batch staging'e alınınca otomatik) · elle 'Yeniden valide et': Key user ve üstü
+  - Kim: Sistem (her batch staging'e alınınca otomatik) · elle 'Yeniden valide et': Key user ve üstü; işlenmiş katmanı ham veriden kurar, veri kurallarını da baştan uygular (19, K-142)
   - Nereden: Excel yüklemesinde 'Devam' (03), çekimde tablonun okunması (01) · Veri yükleme ekranı, "Validasyon" çipinin çekmecesi
 - **01:** Parti "Alındı" olunca güncel hâle işlenir (K-133) ve "Veri işleme" kanalına "Validasyon" işi yazılır; çip "Sırada" olur. Kullanıcı beklemez.
-- **02:** Rules: tablonun aktif veri kuralları güncel hâl üzerinde çalışır (19; 4.1'e kadar boş geçer). Çip "Kurallar çalışıyor".
-- **03:** Tablo içi validasyon: "hata (kurallardan sonra)" alanları (K-138), ardından tablonun hazır kuralları ve kullanıcı kuralları güncel hâl üzerinde çalışır. Çip "Valide ediliyor". Yapısal kontroller de burada, arka planda çalışır; kural listesinde görünmez (K-139).
+- **02:** Rules: işlenmiş katman ham katmanın güncel hâlinden kurulur ve tablonun aktif veri kuralları onun üzerinde çalışır (19, K-140). Çip "Kurallar çalışıyor".
+- **03:** Tablo içi validasyon: "hata (kurallardan sonra)" alanları (K-138), ardından tablonun hazır kuralları ve kullanıcı kuralları işlenmiş katman üzerinde çalışır (K-140). Çip "Valide ediliyor". Yapısal kontroller de burada, arka planda çalışır; kural listesinde görünmez (K-139).
 - **GIRDI**
-  - Staging'in güncel hâli (`IsCurrent`); core'a bakılmaz
+  - Staging'in işlenmiş katmanı (`prc.<Tablo>`: ham katmanın güncel hâli, kurallar uygulanmış; K-140); core'a bakılmaz. `IsActive` = Hayır olan satır hiçbir validasyon kuralına girmez (tablo içi, tablolar arası, yapısal); `IsActive` boşsa zorunlu alan bulgusu yazılır (K-145)
   - Validasyon kuralları (`adm.ValidationRule`, koşulları): sınıf, aktiflik
   - Sözleşme: BOŞSA, değer listeleri, anahtar
   - Hata eşiği (`IntegrationEntity.ErrorThresholdPct`)
@@ -273,10 +273,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Validasyon yalnız okur; değer değiştirmez (değeri rules değiştirir). Yazdığı yalnız bulgu ve `RowStatus`'tur.
-  - Validasyon staging'in güncel hâline aittir, data quality load edilmiş veriye (20, Aşama 6). Ön kontrol bulguları partiye aittir (03); çekmece güncel hâlin validasyonunu gösterir.
+  - Validasyon staging'in işlenmiş katmanına aittir, data quality load edilmiş veriye (20, Aşama 6). Ön kontrol bulguları partiye aittir (03); çekmece güncel hâlin validasyonunu gösterir.
   - Sınıf: Hata satırı load edilmez; Uyarı load edilir; Bilgi yalnız bilgidir. Sınıf Validasyon kuralları ekranında (27) değiştirilir.
   - Hata oranı = Hata bulunan güncel kayıt / güncel kayıt (ön kontrol hesaba girmez). Eşik tablo başınadır, varsayılanı yoktur, boşsa kontrol edilmez (K-135); 3.4'te yalnız gösterilir, load'a etkisi 5.2'de.
-  - Küme kuralları (döngü, toplam, çakışma) tablonun güncel hâline bakar.
+  - Küme kuralları (döngü, toplam, çakışma) tablonun işlenmiş katmanına bakar.
   - Tutarlılık sayıları (yeni, değişen, silinen kayıt) yükleme ekranında gösterilir (5.5); "satır sayısı dünden %30 az" uyarısı 5.5'tedir.
 - **HATA VE ISTISNA**
   - İş düşerse çip "Valide edilemedi"; önceki bulgular kalır, "Yeniden valide et" ile tekrarlanır.
@@ -412,7 +412,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yükleme davranışı:** Eşik ve bu tablodaki oran yazılır.
 - **Mockup'tan farklar (3.4, K-134, K-139):**
   - Çekmece çipe tıklayınca açılır, başlığı "Validasyon · Malzeme". Üstte son partinin zamanı, yöntemi ve kişisi, güncel kayıt sayısı; altında dört kart: Hatalı satır, Uyarılı satır, Bilgilendirme satırı, Hata oranı (büyük oran, altında küçük "eşik yok" ya da "eşik %0,50"). Kontrol türü kırılımı yok.
-  - İki görünüm: "Bulgular" kural bazındadır (Kural, Sınıf çipi, Satır sayısı; ağırdan hafife, çoktan aza); kurala tıklayınca "Kayıtlar" o kurala takılan satırlarla süzülmüş açılır. "Kayıtlar": bulgusu olan güncel satırlar; ilk iki kolon Sorun ve Sınıf, sonra kaydın alanları.
+  - İki görünüm: "Bulgular" kural bazındadır (Kural, Sınıf çipi, Satır sayısı; ağırdan hafife, çoktan aza); kurala tıklayınca "Kayıtlar" o kurala takılan satırlarla süzülmüş açılır. "Kayıtlar": işlenmiş katmanın satırları, üç seçenekle: Bulgulu satırlar / Kuralla değişenler / Tüm satırlar (K-143); ilk iki kolon Sorun ve Sınıf, sonra kaydın alanları; kuralla değişen hücrede mor köşe ve ipucu. Veri yükleme satır menüsünde "Veriyi gör" çekmeceyi Kayıtlar · Tüm satırlar ile açar.
   - "Hatalı kayıtları indir": Kayıtlar görünümünün Excel'i, Sınıf kolonuyla süzülebilir. "Yeniden valide et": Key user ve üstü.
   - Öneri kolonu ve "Kaynağa git" yok; atla ya da dışarıda bırak seçimi yok (load davranışı 5.2'de eşiğe bağlı).
 
@@ -772,10 +772,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **13 · Elle değeri kaldırma:** Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural ya da ERP) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
 - **14 · Değişiklik geçmişi:** Bir kaydın alanlarının zaman içinde nasıl değiştiğini tek zaman çizgisinde göstermek: elle girişler, kural sonuçları ve ERP yüklemeleri; kim, ne zaman, eski ve yeni değer.
 - **15 · Excel ile toplu düzeltme (öneri):** Çok sayıda kaydı tek tek düzeltmek yerine filtrelenmiş listeyi Excel'e alıp düzeltmek ve değişen hücreleri elle değer olarak geri yüklemek; aynı izlenebilirlik ve geri alma ile.
-- **16 · Veri kuralı tanımlama:** ERP'den gelmeyen ya da hatalı alanları, kod bilmeden yazılan koşul–sonuç kurallarıyla tamamlamak; aynı kural her yüklemede tekrar çalışsın, değer kaynağı 'kural' olarak izlensin.
-- **17 · Kural önizleme:** Bir kuralı kaydetmeden önce geçerli veri üzerinde deneyip hangi kayıtların nasıl değişeceğini, hangilerinin ERP ya da elle değer nedeniyle atlanacağını göstermek; yanlış kuralın veriyi bozmasını önlemek.
-- **18 · Kural sıralama ve aç / kapa:** Kuralların çalışma sırasını belirlemek ve bir kuralı silmeden geçici olarak devre dışı bırakmak; aynı alana yazan kurallarda hangisinin kazanacağını görünür kılmak.
-- **19 · Kural uygulama:** Aktif kuralları sırayla geçerli veri üzerinde çalıştırıp alanları doldurmak; alan önceliğine saygı göstererek, her değişikliğin kaynağını 'kural' olarak işaretleyerek.
+- **16 · Veri kuralı tanımlama:** ERP'den gelmeyen ya da ham değerden türeyen alanları kod bilmeden yazılan koşul–sonuç kurallarıyla tamamlamak; kurallar her partide staging'in işlenmiş katmanında çalışır (K-140, K-141).
+- **17 · Kural önizleme:** Faz 1 dışı (K-142). Bir kuralı kaydetmeden önce geçerli veri üzerinde deneyip hangi kayıtların nasıl değişeceğini, hangilerinin ERP ya da elle değer nedeniyle atlanacağını göstermek; yanlış kuralın veriyi bozmasını önlemek.
+- **18 · Kural sıralama ve aç / kapa:** Tablonun kurallarının çalışma sırasını belirlemek ve bir kuralı silmeden kapatmak; sonraki kural öncekinin sonucunu görür, aynı alanda sonuncu kazanır (K-141).
+- **19 · Kural uygulama:** Tablonun aktif kurallarını sırayla staging'in işlenmiş katmanında çalıştırmak; ham veri değişmez, her çalıştırma ham veriden başlar (K-140).
 - **20 · Veri kalitesi kontrolü:** Ana veri ve işlem verisini plan için gerekli tutarlılık kontrollerinden geçirip önem sırasıyla uyarı listesi üretmek; önceki listeyle karşılaştırıp neyin yeni, neyin kapandığını göstermek.
 - **21 · Kalite düzeltme aksiyonu:** Veri kalitesi uyarısından doğrudan düzeltmeye geçmek: kayda gidip elle düzeltmek, önerilen kuralı uygulamak, uyarıyı gerekçeyle 'bilerek böyle' kapatmak ya da kişiye atamak; tek tek ya da toplu.
 - **99 · Malzeme blokajı:** Belli bir dönem için malzemenin üretimini, satın almasını ya da satışını durdurmak.
@@ -1202,75 +1202,70 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Tek seferde geri:** Toplu işlemin tüm elle değerleri birlikte kapatılabilir.
 
 ### 16 · Veri kuralı tanımlama
-<sub>24. Ekranlar ve fonksiyonlar · F16 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
+<sub>24. Ekranlar ve fonksiyonlar · F16 · B Ana veri ve kurallar · Çalışma prensibi 1/2 (Geliştirme 4.1, K-140, K-141, K-142)</sub>
 
-- ERP'den gelmeyen ya da hatalı alanları, kod bilmeden yazılan koşul–sonuç kurallarıyla tamamlamak; aynı kural her yüklemede tekrar çalışsın, değer kaynağı 'kural' olarak izlensin.
+- ERP'den gelmeyen ya da ham değerden türeyen alanları (bayraklar, eksik değerler) kod bilmeden yazılan koşul–sonuç kurallarıyla tamamlamak. Kurallar her partide staging'in işlenmiş katmanında kendiliğinden çalışır, ham veri değişmez (K-140).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü
-  - Nereden: Veri kuralları ekranı '+ Yeni kural' · Veri kalitesi satırından 'kural öner' · hücre ipucunda kural bağlantısı
-- **01:** '+ Yeni kural': ad, hedef tablo ve alan seçilir; alan listesinde yalnız kuralla doldurulabilir alanlar vardır, diğerleri nedeniyle pasif.
-- **02:** Koşullar satır satır eklenir: alan, operatör, değer; değer alanı hedef tipine göre liste, sayı ya da metin. VE / VEYA grupları iç içe (en fazla 2 seviye).
+  - Kim: System owner ve Admin ekler, değiştirir, siler · Key user görür · End user ekranı görmez
+  - Nereden: Veri kuralları ekranı (04), Veri menüsü
+- **01:** Liste tablo seçimiyle açılır ("Tümü" ya da bir tablo): Tablo, Sıra, Kural, Koşul (okunur cümle), Sonuç (okunur: "Tesis = Evet", "Temin süresi + 2", "İstenen tarih = Sipariş tarihi + Temin süresi gün", "boşalt"), Seçenek (Yalnız boşsa / Her zaman), Aktif, Durum (her zaman dolu: soluk yeşil "Çalıştı" ve ipucunda son çalışma, kırmızı "Çalışmadı" ve ipucunda neden, gri "Pasif", gri "Uygulanmadı"; K-145). "Tümü"de Tablo kolonu da görünür.
+- **02:** "Yeni kural" (üst şerit; tablo seçiliyken) pencereyi açar: başlığın sağında Aktif anahtarı; Kural adı ve Hedef alan yan yana (hedef listesinde anahtar ve sistem alanları yok); altında koşul editörü (validasyon kurallarıyla ortak, K-139): "Koşullar", "Koşul Grubu n" kartları, aralarında "VEYA", sembol operatörler. Koşulsuz kural tablonun bütün satırlarına uygulanır.
 - **GIRDI**
-  - Hedef tablo ve alan (veri sözlüğünde 'kuralla doldurulabilir' olanlar)
-  - Koşullar: alan, operatör (=, ≠, başlar, içerir, >, <, boş, listede), değer; VE / VEYA grupları
-  - Sonuç: sabit değer ya da başka alandan kopya
-  - Çakışma ayarları (alan sözlüğünden varsayılan), geçerlilik tarihleri, açıklama
-- **03:** Sonuç: sabit değer ya da başka bir alandan kopya (AssignFromField); tip uyumu anında kontrol edilir.
-- **04:** Çakışma ayarları alan sözlüğünden gelir (ERP ile çakışırsa, elle değer varsa) ve kuralda görünür; gerekirse bu kural için değiştirilir.
-- **05:** Önizleme (17) zorunludur: kaç kayıt eşleşir, kaçı değişir, kaçı ERP ya da elle nedeniyle atlanır; 'Kaydet' önizleme olmadan pasiftir.
-- **06:** 'Kaydet ve uygula' kuralı listenin sonuna (Seq) ekler, DataRule + koşulları yazar ve kuralı hemen uygular (19); 'Yalnız kaydet' pasif bırakır.
+  - Tablonun sözleşme alanları, tipleri ve değer listeleri (docs/03)
+  - Kural adı, hedef alan, koşullar, sonuç, seçenek
+- **03:** Sonuç bölümü dört parçalı seçimdir: **Değer** (hedef tipine göre giriş: sayı Türkçe, tarih gg.aa.yyyy, bayrak Evet / Hayır, değer listesinde seçim), **Alan** (başka bir alanın değeri; aynı tür, metin hedef her türü alır), **Formül** (kaynak alan, operatör ve "Değer / Alan" anahtarıyla operand: sayıda + − × ÷, tarihte + gün ve − gün), **Boşalt** (hedefi bilerek boşaltır).
+- **04:** Seçenek iki parçalıdır: "Yalnız boşsa" (hedef doluysa dokunulmaz) ya da "Her zaman"; Boşalt'ta Her zaman.
 - **ÇIKTI**
-  - DataRule ve DataRuleCondition kayıtları; sıra numarası
-  - Önizleme sonucu; uygulandıysa değişen kayıtlar ve FieldValueSource.Source = kural
-  - Denetim izi
-- **07:** Denetim izine kural metni (okunur biçimde) ve kim/ne zaman yazılır; kural pasif yapılabilir ama silinmez.
+  - DataRule ve DataRuleCondition kayıtları; tablonun sonuna sıra numarası
+  - Denetim izi (kural başına eski ve yeni değer)
+  - "Kurallar yeniden uygulansın mı?" sorusu
+- **05:** Pencere kuralı tek kayıtla yazar; listedeki Aktif ve sıra toplu kaydedilir (Kaydet / Vazgeç, K-132). Kayıttan sonra değişen tablolar için "Kurallar yeniden uygulansın mı?" onayı çıkar; kabul edilirse o tablolarda zincir çalışır (19, ardından 04), iş panelinde görünür (onay bandı yok).
+- **06:** Satır menüsünde "Düzenle" ve "Sil" (onay penceresi). Silinen kuralın koşulları ve izi de silinir; etkisi bir sonraki uygulamada kalkar.
 
 ### 16 · Veri kuralı tanımlama · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F16 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Bir kuralın tek hedef alanı vardır; aynı alana birden fazla kural olabilir, sıra belirler (18).
-  - Döngü yasak: A alanını B'den, B'yi A'dan dolduran kural çifti kaydedilmez.
-  - Kural yalnız geçerli veri versiyonu üzerinde çalışır; geçmiş versiyonlara dokunmaz.
-  - Kural silinmez; pasif yapılır ve geçmişi kalır (hücre ipuçları kural numarasına bağlıdır).
-  - Koşullarda işlem verisi alanları (ör. açık sipariş miktarı) kullanılmaz; kurallar ana veri içindir.
+  - Kural tek tablo içindedir; ana veri ve işlem verisi tablolarında yazılır. Tablolar arası veri kuralı yoktur.
+  - Bir kuralın tek hedef alanı vardır; aynı alana birden fazla kural olabilir, sonra çalışan kazanır (18).
+  - Kapsam kuralla belirlenir: kapsam dışı satıra `IsActive` = Hayır yazılır; o satır validasyona girmez, load almaz (K-145; ayrı aktarım filtresi yok).
+  - Anahtar alanlar (`Code`, `LocationCode` ve tablonun öteki anahtar alanları) ve sistem alanları hedef olamaz.
+  - Kural adı tabloda tekildir.
+  - Editörde yalnız etiketi tanımlı ek alanlar listelenir; Koşul ve Sonuç metinleri güncel etiketle yazılır, etiket değişince yeniden üretilir (K-144).
+  - Varsayılan kural yoktur; kurallar kurulumda projeye göre eklenir. Kural eklenir, silinir, pasif yapılır.
+  - Kural ham veriyi değiştirmez; işlenmiş katmanda çalışır (K-140).
+  - Staging'de ERP–kural önceliği yoktur; elle değerin korunması load'un işidir (5.1).
+  - Değer, Alan ya da Formül boş çıkarsa hücre değişmez; bölen sıfırsa o satırda sonuç boş sayılır.
 - **HATA VE ISTISNA**
-  - Boş değer, tip uyumsuzluğu: satır altında kırmızı mesaj, kaydet pasif.
-  - Önizleme 0 kayıt eşleştiriyorsa uyarı: 'Kural hiçbir kayda uymuyor; yine de kaydedilsin mi?'
-  - Döngü ya da aynı alanda çelişen kural: kaydetmeden önce açıklamalı engel.
-  - Uygulama sırasında hata: kural kaydedilir, 'uygulanamadı' durumu ve Sistem sağlığı kaydı.
+  - Tip uyuşmazlığı (sabit hedefe uymuyor, alan türleri uyumsuz, formül tipe uymuyor): pencerede alanın altında mesaj, Kaydet pasif; sunucu da reddeder.
+  - Aynı adlı kural ya da hedefi anahtar alan olan kural kaydedilmez.
 - **ETKISI VE TETIKLENENLER**
-  - Uygulandıysa 19'un etkileri: değer kaynağı, türetilmiş alanlar, veri kalitesi.
-  - Kural listesi ve etki sayıları güncellenir.
-  - Hücre ipuçlarında yeni kural numarası görünür.
-- **YENİDEN HESAPLANACAK ALANLAR:** Tanımlama tek başına yeniden hesap gerektirmez; 'Kaydet ve uygula' seçilirse 19 Kural uygulama ile aynı alanlar yeniden hesaplanır (FieldValueSource, türetilmiş alanlar, veri kalitesi).
-- **ÖRNEK:** EĞER Malzeme grubu = Rulman VE Temin süresi boş O HALDE Temin süresi = 14 gün. Önizleme: 26 eşleşen, 21 değişir, 3'ünde ERP değeri korunur, 2'sinde elle değer kalır.
+  - Kayıt kendiliğinden uygulanmaz; "Kurallar yeniden uygulansın mı?" sorusu (19). Bir sonraki parti kuralı zaten uygular.
+  - Kural listesi güncellenir.
+- **YENİDEN HESAPLANACAK ALANLAR:** Tanımlama yeniden hesap gerektirmez; etkisi bir sonraki uygulamadadır (19).
+- **ÖRNEK:** Admin, Lokasyon için "Tesis bayrağı" kuralını ekler: Tip = PLANT (ERP'nin lokasyon tipi, K-143) ise Tesis = Evet, Yalnız boşsa. Kaydeder ve "Kurallar yeniden uygulansın mı?" sorusunu kabul eder; Lokasyon'daki "bayrak yok" bulgusu kalkar.
 
 ### 16 · Veri kuralı tanımlama · Kural editörü
 <sub>24. Ekranlar ve fonksiyonlar · F16 · B Ana veri ve kurallar · Mockup 1/2</sub>
 
 ![16 · Veri kuralı tanımlama · Kural editörü](mockups/m24f-0406-16-veri-kurali-tanimlama-kural-editoru.png)
 
-- **Koşul satırları:** Alan, operatör, değer; VE / VEYA ile gruplanır. Kod yok.
-- **Anında validasyon:** Boş değer satır altında kırmızı; Önizle ve Kaydet pasif.
-- **Sonuç seçenekleri:** Sabit değer ya da başka alandan kopya; tip uyumu kontrol edilir.
-- **Çakışma ayarları:** Alan sözlüğünden gelir, kuralda görünür; önizleme olmadan kaydedilmez.
+- **Mockup'tan farklar (K-141, K-142):** Pencere 3.4'ün D13 düzenindedir (Aktif anahtarı başlıkta, Koşullar, Koşul Grubu, VEYA ayracı, sembol operatörler); iç içe parantez yok. Sonuç Değer / Alan / Formül / Boşalt; altında Seçenek. Çakışma ayarları, geçerlilik tarihi ve açıklama yok.
 
 ### 16 · Veri kuralı tanımlama · Önizleme ve kaydet
 <sub>24. Ekranlar ve fonksiyonlar · F16 · B Ana veri ve kurallar · Mockup 2/2</sub>
 
 ![16 · Veri kuralı tanımlama · Önizleme ve kaydet](mockups/m24f-0407-16-veri-kurali-tanimlama-onizleme-ve-kaydet.png)
 
-- **Sayılarla özet:** Eşleşen, değişecek, ERP ezer, elle kalır; kullanıcı etkiyi anlar.
-- **Satır örnekleri:** Şu an → kural sonrası; atlananların nedeni çipte.
-- **Sıra bilgisi:** Kaçıncı sırada çalışacağı ve çakışan kural olmadığı yazar.
-- **Üç çıkış:** Yalnız kaydet (pasif), vazgeç, kaydet ve uygula.
+- **Mockup'tan farklar (K-142):** Önizleme ve etki sayıları yok (17 Faz 1 dışı). Tek çıkış "Kaydet"; ardından "Kurallar yeniden uygulansın mı?" sorusu.
 
 ### 17 · Kural önizleme
 <sub>24. Ekranlar ve fonksiyonlar · F17 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
+
+- **Faz 1 dışı (K-142):** Önizleme Faz 1'de yoktur; kural kaydedilir ve "Kuralları yeniden uygula" ile uygulanır, sonuç validasyonda ve Kayıtlar görünümündeki hücre izinde görünür. Aşağıdaki metin ve mockup ileriki faz için kayıttır; yetki matrisinde 17 kalır, hiçbir uç noktada kullanılmaz.
 
 - Bir kuralı kaydetmeden önce geçerli veri üzerinde deneyip hangi kayıtların nasıl değişeceğini, hangilerinin ERP ya da elle değer nedeniyle atlanacağını göstermek; yanlış kuralın veriyi bozmasını önlemek.
 
@@ -1320,144 +1315,114 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Buradan kaydet:** Önizlemeden doğrudan kaydet ve uygula ya da Excel'e al.
 
 ### 18 · Kural sıralama ve aç / kapa
-<sub>24. Ekranlar ve fonksiyonlar · F18 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
+<sub>24. Ekranlar ve fonksiyonlar · F18 · B Ana veri ve kurallar · Çalışma prensibi 1/2 (Geliştirme 4.1, K-141, K-142)</sub>
 
-- Kuralların çalışma sırasını belirlemek ve bir kuralı silmeden geçici olarak devre dışı bırakmak; aynı alana yazan kurallarda hangisinin kazanacağını görünür kılmak.
+- Tablonun kurallarının çalışma sırasını belirlemek ve bir kuralı silmeden kapatmak; sonraki kuralın öncekinin sonucunu gördüğünü ve aynı alanda sonuncunun kazandığını yönetmek.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü
-  - Nereden: Veri kuralları ekranı · liste (sürükle-bırak, Alt + ok) · satırdaki aç / kapa anahtarı
-- **01:** Liste sıra numarasıyla gelir; kural tutulup sürüklenir ya da Alt + ok tuşlarıyla taşınır; hedef konum kesik çizgiyle görünür.
-- **02:** Taşıma sırasında aynı hedef alana yazan kurallar vurgulanır ve uyarı yazılır: 'sonra çalışan kazanır, N kayıt etkilenir'.
+  - Kim: System owner ve Admin · Key user görür · End user ekranı görmez
+  - Nereden: Veri kuralları ekranı (04), tablo seçiliyken
+- **01:** Liste Sıra ile gelir; kural satırdan sürüklenir (tutamak işarettir), hedef konum çizgiyle görünür; sıra yalnız sürükle-bırakla değişir (K-145). "Tümü" seçiliyken sıra değişmez (ipucu "Sırayı değiştirmek için tablo seçin").
+- **02:** Aktif anahtarı satırdadır; pasif kural çalışmaz, listede kalır.
 - **GIRDI**
-  - DataRule listesi (Seq, IsActive, hedef alan)
-  - Mevcut etki sayıları (son uygulamadan)
-  - Aynı hedef alana yazan kurallar
-- **03:** Aç / kapa anahtarı: kapatma onay ister; onayda kuralın şu an etkilediği kayıtlar ve kapatınca geri dönecek değerler (ERP ya da boş) gösterilir, gerekçe istenir.
-- **04:** 'Sırayı kaydet ve uygula': Seq ve IsActive yazılır, kurallar yeniden uygulanır (19); vazgeçilirse sıra eski haline döner.
+  - DataRule listesi (Seq, IsActive)
+- **03:** Sıra ve aktiflik taslaktır; Kaydet ile toplu ve tek işlemde yazılır, Vazgeç eski hâline döndürür (K-132); kaydedilmemiş değişiklikle çıkışta uyarı.
 - **ÇIKTI**
   - Güncel Seq ve IsActive
-  - Yeniden uygulama sonucu (değişen kayıtlar)
-  - Denetim izi
-- **05:** Denetim izine eski ve yeni sıra, kapatılan kural ve gerekçe yazılır.
+  - Denetim izi (eski ve yeni sıra, aktiflik)
+- **04:** Kayıttan sonra "Kurallar yeniden uygulansın mı?" sorusu (19).
 
 ### 18 · Kural sıralama ve aç / kapa · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F18 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Pasif kural uygulanmaz ama listede ve geçmişte kalır; hücre ipuçlarında 'kural 3 (pasif)' görünür.
-  - Aynı alana yazan kurallarda sonuncu kazanır; sistem bunu uyarır, engellemez.
-  - Sıra değişikliği kaydedilmeden uygulanmaz; taslak sıra yalnız ekranda.
-  - Kapatılan kuralın yazdığı değerler sonraki uygulamada öncelik sırasındaki kaynağa döner (elle değerler kalır).
+  - Kurallar sırayla çalışır; sonraki kural öncekinin sonucunu görür (X → Y → Z).
+  - Aynı alana yazan kurallarda sonuncu kazanır; engellenmez.
+  - Sıra tablo başınadır; her zaman 1, 2, 3…: yeni kural, silme, sıra kaydı ve demo kuralı yüklemesinden sonra yeniden numaralanır (K-144).
+  - Pasif ya da silinen kuralın etkisi bir sonraki uygulamada kendiliğinden kalkar, çünkü işlenmiş katman her çalıştırmada ham veriden kurulur (K-140).
 - **HATA VE ISTISNA**
-  - Kapatma sonrası zorunlu alan boş kalacaksa onayda 'kritik veri kalitesi uyarısı doğar' bilgisi.
-  - Aynı anda başka kullanıcı sırayı değiştirdiyse kaydetmede çakışma; liste yenilenir.
+  - Sıra tablonun bütün kurallarıyla gelir; bu arada başka biri kural eklediyse ya da sildiyse kayıt reddedilir ve liste yenilenir.
 - **ETKISI VE TETIKLENENLER**
-  - 19 Kural uygulama çalışır: değer kaynakları, türetilmiş alanlar, veri kalitesi.
-  - Kritik kaynak, kapasite birimi gibi alanlar değişirse plan için yeniden hesap gerekir.
-  - Hücre ipuçları ve kural listesi etki sayıları.
-- **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Kural sonuçları:** DataRule → hedef alanlar Tüm aktif kurallar yeni sırayla yeniden uygulanır
-- **Geçerli değer ve kaynağı:** FieldValueSource Kapatılan kuralın kayıtları öncelik sırasındaki kaynağa döner
-- **Türetilmiş kapasite:** Dönem kapasitesi Kapasite alanları etkilendiyse
-- **Veri kalitesi uyarıları:** Veri kalitesi listesi Etkilenen kayıtlar için kontrol yeniden
-- **Plan:** Senaryolar · çalışmalar Otomatik değil; kritik kaynak ve kapasite alanları değiştiyse yeniden hesap
-- **ÖRNEK:** Kural 4 (Montaj işçileri kritik) 3. sıraya taşınır. 5 ve 7 numaralı kurallar aynı alana (Temin süresi) yazıyor; sistem 'sonuncu kazanır: 7' uyarısı verir. Kural 3 kapatılınca kritik kaynak 7 → 2.
+  - Kendiliğinden uygulanmaz; "Kurallar yeniden uygulansın mı?" (19).
+- **YENİDEN HESAPLANACAK ALANLAR:** Sıra ve aktiflik tek başına yeniden hesap gerektirmez; etkisi bir sonraki uygulamadadır (19).
+- **ÖRNEK:** Stok'ta 1. kural "Durum = Serbest ise Kullanılabilir = Evet", 2. kural "Bloke = Evet ise Kullanılabilir = Hayır". 2. kural sonra çalıştığı için bloke stokta Hayır kazanır; sıra değişirse Evet kalır.
 
 ### 18 · Kural sıralama ve aç / kapa · Sürükle-bırak sıra
 <sub>24. Ekranlar ve fonksiyonlar · F18 · B Ana veri ve kurallar · Mockup 1/2</sub>
 
 ![18 · Kural sıralama ve aç / kapa · Sürükle-bırak sıra](mockups/m24f-0413-18-kural-siralama-ve-ac-kapa-surukle-birak-sira.png)
 
-- **Sürükleme durumu:** Taşınan satır gölgeli, hedef konum kesik çizgi; klavye alternatifi yazılı.
-- **Çakışma uyarısı:** Aynı alana yazan kurallar ve kimin kazanacağı anında görünür.
-- **Kaydetmeden uygulanmaz:** Sıra taslaktır; 'Sırayı kaydet ve uygula' ile kurallar yeniden çalışır.
-- **Kurallar kısa özet:** Sağda üç cümle: sırayla, sonuncu kazanır, pasif çalışmaz.
+- **Mockup'tan farklar (K-142):** Sıra ortak tabloda, satır tutamağıyla ya da Alt + ok ile; "Sırayı kaydet ve uygula" yerine toplu Kaydet ve ardından "Kurallar yeniden uygulansın mı?". Çakışma uyarısı ve etki sayısı yok; sağdaki özet yok.
 
 ### 18 · Kural sıralama ve aç / kapa · Kapatma onayı
 <sub>24. Ekranlar ve fonksiyonlar · F18 · B Ana veri ve kurallar · Mockup 2/2</sub>
 
 ![18 · Kural sıralama ve aç / kapa · Kapatma onayı](mockups/m24f-0414-18-kural-siralama-ve-ac-kapa-kapatma-onayi.png)
 
-- **Ne olacak:** Etkilenen kayıt sayısı ve geri dönecek değerler; elle değerlerin korunduğu.
-- **Etki uyarısı:** Kritik kaynak sayısı düşer; plan etkisi kırmızı kutuda.
-- **Gerekçe:** Kapatma gerekçesi denetim izine yazılır.
-- **Silme yok:** Kural pasif olur; numarası ve geçmişi kalır.
+- **Mockup'tan farklar (K-141, K-142):** Kapatma onayı ve gerekçe yok; Aktif anahtarı toplu kayıtla. Kural silinebilir (onay penceresiyle).
 
 ### 19 · Kural uygulama
-<sub>24. Ekranlar ve fonksiyonlar · F19 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
+<sub>24. Ekranlar ve fonksiyonlar · F19 · B Ana veri ve kurallar · Çalışma prensibi 1/2 (Geliştirme 4.1, K-134, K-140, K-141, K-142)</sub>
 
-- Aktif kuralları sırayla geçerli veri üzerinde çalıştırıp alanları doldurmak; alan önceliğine saygı göstererek, her değişikliğin kaynağını 'kural' olarak işaretleyerek.
+- Tablonun aktif kurallarını sırayla staging'in işlenmiş katmanında çalıştırıp alanları doldurmak; ham veriyi değiştirmeden, her çalıştırmada ham veriden başlayarak.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (yükleme sonunda otomatik) · elle: Key user ve üstü ('Kaydet ve uygula', 'Tümünü yeniden uygula')
-  - Nereden: Tam ve kısmi yükleme (05 / 06) sonunda · Veri kuralları ekranı · kural kaydetme, sıralama ve kapatma işlemleri
-- **01:** Tetik gelir (yükleme sonu, kural kaydı, sıra değişikliği, 'Tümünü yeniden uygula'); iş kuyruğuna 'kural uygulama' yazılır; aynı anda ikinci uygulama ve yükleme bekletilir.
-- **02:** Kurallar Seq sırasıyla çalışır; her kural için koşullara uyan kayıtlar bulunur, hedef alan için öncelik kontrol edilir: 'ERP ezer' ve ERP değeri varsa atla; elle değer varsa ve 'elle kalır' ise atla.
+  - Kim: Sistem (her parti staging'e yazılınca, zincirin ilk adımı) · elle: System owner ve Admin ("Kuralları yeniden uygula", kayıttan sonraki onay) · "Yeniden valide et" (04, Key user ve üstü) aynı zinciri başlatır
+  - Nereden: Excel yüklemesi ve SQL çekimi · Veri kuralları ekranı (04) · Veri yükleme çekmecesi
+- **01:** Tetik gelir; "Validasyon" işi (kanal "Veri işleme") kuyruğa girer; Veri yükleme çipi "Kurallar çalışıyor".
+- **02:** İşlenmiş katman kurulur: `prc.<Tablo>` boşaltılır, `stg.<Tablo>`'nun güncel satırları kopyalanır; tablonun kural izi silinir.
 - **GIRDI**
-  - Aktif DataRule listesi (Seq sırasıyla) ve koşulları
-  - Geçerli veri versiyonu (kısmi yüklemede yalnız yüklenen varlıklar)
-  - FieldDefinition ve FieldValueSource: alan önceliği, ERP değeri, elle değerler
-- **03:** Yazılan her alan için FieldValueSource.Source = kural, DataRuleId; önceki kaynak ve ERP değeri saklanır. Kural artık uymayan kayıtlarda önceki kaynağa dönülür.
-- **04:** Tek işlem olarak çalışır; hata olursa tamamı geri alınır, veri son tutarlı durumda kalır. Ekranlar bu sırada son durumu gösterir, ilerleme şeritte.
-- **05:** Bitince türetilmiş alanlar (kapasite, LLC gerekiyorsa) hesaplanır ve veri kalitesi kontrolü (20) etkilenen kayıtlar için çalışır.
+  - Ham katmanın güncel satırları (`IsCurrent = 1`)
+  - Tablonun aktif kuralları (Seq sırasıyla) ve koşulları
+- **03:** Kurallar Seq sırasıyla çalışır: koşula uyan satırlarda (Yalnız boşsa'da hedefi boş olanlarda) sonuç hesaplanır ve yazılır; sonuç boşsa ya da değer aynıysa hücre değişmez. Değişen her hücre için kural izi (`DataRuleEffect`): son kural ve ham değer.
+- **04:** Kuralın tamamını etkileyen hatada kural geri alınır, "Çalışmadı" ve nedeni yazılır, sonraki kurala geçilir. Başarılı kuralda "Çalıştı" ve zaman.
 - **ÇIKTI**
-  - Güncel alan değerleri ve FieldValueSource (kaynak = kural, kural numarası)
-  - Kural uygulama raporu (kural bazında sayılar, değişen kayıt listesi Excel)
-  - Türetilmiş alanlar, veri kalitesi güncellemesi, denetim izi
-- **06:** Kural bazında rapor yazılır: taranan, değişen, ERP nedeniyle atlanan, elle nedeniyle atlanan; etki sayıları listeye yansır; denetim izine toplu kayıt.
+  - İşlenmiş katman (`prc.<Tablo>`)
+  - Kural izi (`DataRuleEffect`)
+  - Kural durumu (Çalıştı / Çalışmadı, neden, zaman)
+- **05:** Ardından tablo içi validasyon ve bu tabloyu okuyan tablolar arası validasyon çalışır (04, K-134); toplu çekimde tablolar arası validasyon bütün tablolar bitince.
 
 ### 19 · Kural uygulama · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F19 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Kurallar her zaman tam sırayla çalışır; tek kural tek başına uygulanmaz (sıra etkileşimi için).
-  - Elle değer hiçbir zaman silinmez; alan ayarı 'kural ezer' olsa bile elle kayıt kapatılmaz, yalnız geçerli değer olarak kural kazanır ve ipucunda görünür.
-  - Kısmi yüklemede yalnız yüklenen varlıkların alanları yeniden değerlendirilir.
-  - Uygulama geçerli veri versiyonu içinde yapılır; yeni versiyon açmaz.
-  - Süre sınırı (parametre, öneri 10 dk); aşılırsa geri alınır ve Sistem sağlığına düşer.
+  - Ham katman hiç değişmez; her çalıştırma ham veriden başlar, formül birikmez (K-140).
+  - Tek kural tek başına uygulanmaz; her zaman tablonun bütün aktif kuralları sırayla.
+  - "Kuralları yeniden uygula": tablo seçiliyse o tablo (bu tabloyu okuyan tablolar arası validasyon dahil); "Tümü"de kuralı olan bütün tablolar, tablolar arası validasyon sonda.
+  - Kural değişikliği kendiliğinden uygulanmaz (K-142).
+  - Önizleme ve etki sayısı yoktur.
 - **HATA VE ISTISNA**
-  - Kural çalışma hatası (ör. tip dönüşümü): o kural atlanır, 'uygulanamadı' işareti; diğerleri devam eder; ana sayfada uyarı.
-  - Kilit çakışması (yükleme sürüyor): uygulama kuyruğa alınır, yükleme bitince çalışır.
-  - Geri alma gerekirse tüm işlem geri alınır; rapor 'başarısız' olarak kalır.
+  - Çalışmayan kural atlanır; öteki kurallar ve validasyon devam eder. Bölen sıfırsa o satırda hücre değişmez, kural öteki satırlarda çalışır.
+  - İş düşerse işlenmiş katman önceki hâlinde kalır, çip "Valide edilemedi" (04).
 - **ETKISI VE TETIKLENENLER**
-  - Değer kaynakları ve hücre etiketleri.
-  - Türetilmiş kapasite, LLC.
-  - Veri kalitesi listesi (kapanan ve yeni uyarılar).
-  - Plan: kritik kaynak, kapasite birimi, temin süresi gibi alanlar değiştiyse çalışmada yeniden hesap gerekir.
+  - Validasyon bulguları (04).
+  - Çekmecenin Kayıtlar görünümünde kuralla değişen hücrede işaret ve ipucu: "Kural 3 · Lokasyon bayrakları · ham değer: boş".
+  - Load (5.2) işlenmiş katmanı okur.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Geçerli değer ve kaynağı:** FieldValueSource Kuralın yazdığı ve artık uymayan tüm kayıtlar
-- **Türetilmiş kapasite:** Dönem kapasitesi Günlük kapasite, adet, verim, kapasite birimi değiştiyse
-- **En alt seviye kodu (LLC):** Material Ürün ağacı alanlarına yazan kural varsa
-- **Veri kalitesi uyarıları:** Veri kalitesi listesi Etkilenen kayıtlar için kontrol yeniden
-- **Kural etki sayıları:** Veri kuralları listesi Her uygulamada güncellenir
-- **Plan:** Senaryolar · çalışmalar Otomatik değil; gece senaryoları yeni değerlerle çalışır
-- **ÖRNEK:** 7 kural, 45 sn: 266 değişiklik, 11 atlanan (6 ERP ezer, 5 elle kalır). Kural 5 ve 7 aynı alana yazar; 7 sonra çalıştığı için rulmanlarda 14 gün kazanır. 21 uyarı kapandı, 2 yeni.
-- **Uygulama (3.4, K-134):** Rules otomatik validasyon zincirinin ilk adımıdır: her batch staging'e alınınca tablonun aktif kuralları staging'in güncel hâli üzerinde çalışır, ardından validasyon başlar. 3.4'te adım boş geçer; uygulama 4.1'de.
+- **İşlenmiş katman:** `prc.<Tablo>` Her çalıştırmada ham veriden baştan
+- **Kural izi:** `adm.DataRuleEffect` Her çalıştırmada yeniden
+- **Validasyon bulguları:** Veri yükleme çekmecesi Kurallardan hemen sonra (04)
+- **Değer kaynağı ve türetilmiş alanlar:** Ana tablolar Load'da (5.x)
+- **ÖRNEK:** Gece çekiminde Lokasyon bayrakları Tip'ten, Stok bayrakları Durum'dan, Teklif bayrağı Sipariş tipinden dolar; "bayrak yok" ve stok durum bulguları çıkmaz. Bölen sıfır olan iki satırda formül kuralı hücreyi değiştirmez, öteki satırlarda çalışır.
+- **Uygulama (4.1, K-140…K-142):** uygulandı. İşlenmiş katman `app/validation/processed.py`, kurallar `app/validation/rules_step.py` (kural başına savepoint, değişen satırlar geçici tabloda, bölen `NULLIF`), sonuç denetimi ve SQL ifadesi `app/validation/data_rule.py`. Kayıt `PUT /api/data-rules` (16, sıra 18), uygulama `POST /api/data-rules/apply` (19); çok tablolu uygulamada işler tek işlemde yazılır, grup ilk işin Id'sidir, tablolar arası validasyon sonda. Ekran 04 `screens/DataRules.tsx`.
 
 ### 19 · Kural uygulama · Uygulama sürüyor
 <sub>24. Ekranlar ve fonksiyonlar · F19 · B Ana veri ve kurallar · Mockup 1/2</sub>
 
 ![19 · Kural uygulama · Uygulama sürüyor](mockups/m24f-0417-19-kural-uygulama-uygulama-suruyor.png)
 
-- **Kural bazında ilerleme:** Taranan ve değişen kayıt sayısı kural kural; çalışan satır vurgulu.
-- **Tek işlem:** Hata olursa tamamı geri alınır; ekranlar son tutarlı durumu gösterir.
-- **Kilitleme:** Uygulama sırasında yükleme ve yeni kural kaydı bekletilir; butonlar pasif.
-- **Tetik bilgisi:** Akışta neyin tetiklediği (sıra değişikliği, kim) görünür.
+- **Mockup'tan farklar (K-142):** İlerleme Veri yükleme çipinde ("Kurallar çalışıyor") ve iş panelinde; kural bazında sayı yok. Uygulama sürerken ekran kullanılabilir.
 
 ### 19 · Kural uygulama · Uygulama raporu
 <sub>24. Ekranlar ve fonksiyonlar · F19 · B Ana veri ve kurallar · Mockup 2/2</sub>
 
 ![19 · Kural uygulama · Uygulama raporu](mockups/m24f-0418-19-kural-uygulama-uygulama-raporu.png)
 
-- **Değişen ve atlanan:** Her kural için değişen, ERP nedeniyle atlanan, elle nedeniyle atlanan.
-- **Yan etkiler:** Türetilmiş alanlar ve veri kalitesi sonucu özetle; kapanan ve yeni uyarılar.
-- **Değişen kayıtlar:** Kural satırından 'Gör' ile liste; Excel'e tam çıktı.
-- **Yeniden uygula:** Şüphe varsa tüm kurallar baştan çalıştırılır.
+- **Mockup'tan farklar (K-142):** Rapor yok; sonuç validasyon çekmecesinde ve hücre izinde, kural durumu (Çalışmadı ve nedeni) Veri kuralları listesinde.
 
 ### 20 · Veri kalitesi kontrolü
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
@@ -6752,7 +6717,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Grup | Fonksiyonlar | System owner | Admin | Key user | End user |
 |---|---|---|---|---|---|
 | A · Veri alma | 01–09 | tam | tam | tam | yok |
-| B · Ana veri ve kurallar | 10–21 | tam | tam | tam | salt okunur |
+| B · Ana veri | 10–15 | tam | tam | tam | salt okunur |
+| B · Veri kuralları | 16–19 | tam | tam | salt okunur | yok |
+| B · Veri kalitesi | 20–21 | tam | tam | tam | salt okunur |
 | C · Parametre | 22–28 | tam | tam | tam | yok |
 | D · Planlama motoru | 29–39 | tam | tam | tam | yok |
 | E · Senaryo ve çalışma | 40–49 | tam | tam | tam | yok |
@@ -6846,7 +6813,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çekim anahtarı bütün tablolarda kullanılabilir, yalnız SQL çekimini durdurur. Kapatırken sebep zorunlu; sebep, kişi ve tarih ipucunda; açarken uyarı.
   - Entegrasyon veritabanı Smartchain'in instance'ındadır; ERP tablolarına doğrudan bağlanılmaz, müşteri ETL'i ham tabloları doldurur. Smartchain yalnız okur.
   - Faz 1'de ERP'ye yazma yok; öneriler Excel ile çıkar (69).
-  - View ile veri kuralı sınırı docs/03'te: Smartchain'in hiçbir zaman görmemesi gereken satır view'da, bugün dışarıda kalıp yarın girebilecek satır aktarım filtresinde.
+  - View ile veri kuralı sınırı docs/03'te: Smartchain'in hiçbir zaman görmemesi gereken satır view'da, bugün dışarıda kalıp yarın girebilecek satır veri kuralıyla `IsActive` = Hayır (K-145).
 - **HATA VE ISTISNA**
   - Test başarısız: hangi adımda (erişim, kimlik, sinyal, view) ve ne yapılacağı; ayar yine de kaydedilir.
   - View kalkmış ya da zorunlu kolon eksik: tablo çekimde hata, önceki ham veri korunur.

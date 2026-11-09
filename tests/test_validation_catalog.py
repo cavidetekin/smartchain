@@ -91,7 +91,7 @@ def test_every_check_compiles_against_the_contract():
 
 def test_after_rules_fields_come_from_boşsa():
     required = {(r.table, c.field) for r in cat.catalog() if r.code == "STR.REQUIRED" for c in r.checks}
-    assert ("Location", "Type") in required and ("Routing", "ResourceNumber") in required and ("Resource", "CapacityUnit") in required
+    assert ("Location", "Type") not in required and ("Location", "IsActive") in required and ("Routing", "ResourceNumber") in required  # K-143 and ("Resource", "CapacityUnit") in required
     assert ("MaterialSupplier", "LeadTimeBasis") not in required  # yalnız tedarik süresi doluysa (MS.NO_BASIS)
     assert all(t != "MaterialSupplier" or f != "LeadTimeBasis" for t, f in required)
 

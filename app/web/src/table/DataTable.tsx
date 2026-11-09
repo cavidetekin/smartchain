@@ -14,7 +14,7 @@ import {
   ListCollapse, type LucideIcon, Rows3, UnfoldVertical,
 } from "lucide-react";
 import {
-  type CSSProperties, type DragEvent, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject,
+  type CSSProperties, type DragEvent, type HTMLAttributes, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject,
   useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 
@@ -61,6 +61,14 @@ export const GROUP_ARROW_REM = 1.3077;
 export const WIDTH_STEP_REM = 0.5;
 
 export type CellRender = Record<string, (value: unknown, row: Row) => ReactNode>;
+/** Bütün kolonlarda hücre içeriğini saran işlev (ör. kuralla değişen hücrenin izi, K-140); Excel düz metin kalır. */
+export type CellWrap = (field: string, row: Row, content: ReactNode) => ReactNode;
+/** Kolon ipucu (ör. veri kurallarının Sıra kolonu, K-145): varsayılan genişlik (rem; kullanıcı değiştirince onunki) ve sola hizalama. */
+export type FieldHints = Record<string, { width?: number; left?: boolean }>;
+/** Hücrenin ek sınıfı (ör. kuralla değişen hücrenin lila zemini, K-143). */
+export type CellClass = (field: string, row: Row) => string | undefined;
+/** Satırın ek özellikleri (ör. sürükle-bırak, K-143): olay işleyicileri ve ek sınıf. */
+export type RowProps = (row: Row) => HTMLAttributes<HTMLTableRowElement>;
 export interface RowMenuSpec {
   label(row: Row): string;
   onOpen(row: Row, anchor: HTMLElement): void;
@@ -181,7 +189,7 @@ interface CellSpec {
  * (K-95) yalnız onlarda hesaplanır. Her kaydırmada görünen bütün satırları yeniden çizmek, özellikle kurallar
  * varken ve geliştirme modunda tabloyu yavaşlatıyordu (1.6 ölçümü, docs/12).
  */
-const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText, cellRender, rowMenu, measure }: {
+const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText, cellRender, cellWrap, cellClass, rowProps, rowMenu, measure }: {
   index: number;
   row: Row | undefined;
   cells: CellSpec[];
@@ -190,22 +198,27 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
   active: FormatRule[];
   ruleText: Map<string, string>;
   cellRender?: CellRender;
+  cellWrap?: CellWrap;
+  cellClass?: CellClass;
+  rowProps?: RowProps;
   rowMenu?: RowMenuSpec;
   /** Pencere kipinde satır yüksekliği ölçülür (alt satıra kayan metin, sanal kaydırma kaymasın). */
   measure?: (el: HTMLTableRowElement | null) => void;
 }) {
+  const extra = row && rowProps ? rowProps(row) : {};
   return (
-    <tr ref={measure} data-index={index} aria-rowindex={index + 2} aria-current={selected || undefined}
-        className={row ? `sc-table-row${selected ? " is-selected" : ""}` : "is-placeholder"}
+    <tr ref={measure} data-index={index} aria-rowindex={index + 2} aria-current={selected || undefined} {...extra}
+        className={row ? [`sc-table-row${selected ? " is-selected" : ""}`, extra.className].filter(Boolean).join(" ") : "is-placeholder"}
         onClick={row ? () => onSelect(row.Id) : undefined}>
       {cells.map(({ col, className, style, numeric }) => {
         const cf = row ? cellFormat(active, row, col.field) : null;
+        const content = row ? (cellRender?.[col.field] ? cellRender[col.field](row[col.field], row) : formatCell(col, row[col.field], row)) : null;
         return (
-          <td key={col.field} className={className} style={cf ? { ...style, ...formatStyle(cf.format) } : style}
+          <td key={col.field} className={[className, row && cellClass?.(col.field, row)].filter(Boolean).join(" ") || undefined} style={cf ? { ...style, ...formatStyle(cf.format) } : style}
               title={cf ? T.ruleCellHint(cf.rules.map((r) => ruleText.get(r.id)).join("; ")) : undefined}>
             {row ? (
               <RuledValue format={cf?.format} numeric={numeric}>
-                {cellRender?.[col.field] ? cellRender[col.field](row[col.field], row) : formatCell(col, row[col.field], row)}
+                {cellWrap ? cellWrap(col.field, row, content) : content}
               </RuledValue>
             ) : ""}
           </td>
@@ -215,6 +228,20 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
     </tr>
   );
 });
+
+/** Taslak sıra (K-142): yüklü satırlar Id'ye göre verilen sırayla; sırada olmayan satır sona. Sıra yoksa null. */
+function orderedRows(order: readonly string[] | null, count: number, rowAt: (i: number) => Row | undefined): (Row | undefined)[] | null {
+  if (!order) return null;
+  const byId = new Map<string, Row>();
+  const rest: Row[] = [];
+  for (let i = 0; i < count; i++) {
+    const r = rowAt(i);
+    if (r) byId.set(String(r.Id), r);
+  }
+  const out: (Row | undefined)[] = order.map((id) => byId.get(id));
+  for (const [id, r] of byId) if (!order.includes(id)) rest.push(r);
+  return [...out, ...rest];
+}
 
 /** Sağda sabit "⋯" hücresi (2.3): alan paneline, görünüme ve Excel'e girmez. */
 function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec }) {
@@ -231,10 +258,14 @@ function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec })
   );
 }
 
-export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilters, toolbarActions, fit = false, wrapFields }: {
+export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarActions, fit = false, wrapFields, rowOrder }: {
   list: string;
   /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
   cellRender?: CellRender;
+  cellWrap?: CellWrap;
+  cellClass?: CellClass;
+  rowProps?: RowProps;
+  fieldHints?: FieldHints;
   /** Satır işlemleri: sağda sabit "⋯" kolonu. */
   rowMenu?: RowMenuSpec;
   /** Artınca (işlemden sonra) satırlar yeniden okunur. */
@@ -247,6 +278,9 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   fit?: boolean;
   /** Pencere kipinde kalan genişliği alıp alt satıra kayan uzun metin kolonları (ör. Sorun). */
   wrapFields?: readonly string[];
+  /** Taslak satır sırası (Id listesi; ör. veri kurallarının sırası, K-142): verilirse ve gruplama yoksa satırlar bu sırayla çizilir.
+   *  Bütün satırların yüklü olduğu küçük listeler içindir. */
+  rowOrder?: readonly string[] | null;
 }) {
   const { fontSize, userId, trackExport } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
@@ -296,7 +330,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   // TanStack durumu TableState'ten türetilir (genişlikler rem).
   const sorting: SortingState = useMemo(() => s.sort.map((x) => ({ id: x.field, desc: x.dir === "desc" })), [s.sort]);
   const defs = useMemo(() => (columns ?? []).map((c) => helper.accessor((r) => r[c.field], {
-    id: c.field, header: c.label, size: DEFAULT_WIDTH_REM[c.type], minSize: MIN_WIDTH_REM, maxSize: MAX_WIDTH_REM,
+    id: c.field, header: c.label, size: fieldHints?.[c.field]?.width ?? DEFAULT_WIDTH_REM[c.type], minSize: MIN_WIDTH_REM, maxSize: MAX_WIDTH_REM,
   })), [columns]);
   const table = useTable({
     features, columns: defs, data: NO_DATA,
@@ -305,7 +339,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
       columnVisibility: Object.fromEntries((columns ?? []).map((c) => [c.field, s.order.includes(c.field)])),
       columnOrder: [...s.order, ...(columns ?? []).map((c) => c.field).filter((f) => !s.order.includes(f))],
       columnPinning: { start: s.order.slice(0, s.pinned), end: [] },
-      columnSizing: Object.fromEntries(s.order.map((f) => [f, s.widths[f] ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"]])),
+      columnSizing: Object.fromEntries(s.order.map((f) => [f, s.widths[f] ?? fieldHints?.[f]?.width ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"]])),
     },
     onSortingChange: (u) => update((st) => {
       const next = typeof u === "function" ? u(st.sort.map((x) => ({ id: x.field, desc: x.dir === "desc" }))) : u;
@@ -316,7 +350,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   });
   const visible = useMemo(() => s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c)),
     [s.order, byField]);
-  const width = (f: string) => s.widths[f] ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
+  const width = (f: string) => s.widths[f] ?? fieldHints?.[f]?.width ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
   const pinnedCount = fit ? 0 : s.pinned;
   const wrapKey = (wrapFields ?? []).join(",");
   const pinStart = (i: number) => visible.slice(0, i).reduce((sum, c) => sum + width(c.field), 0);
@@ -331,7 +365,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   // Gruplu görünümde veri satırının ilk hücresi, en alt grubun adıyla aynı hizada başlar (girinti + ok + boşluk).
   const groupDepth = s.groupBy.length;
   const cellSpecs: CellSpec[] = useMemo(() => {
-    const widthOf = (f: string) => s.widths[f] ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
+    const widthOf = (f: string) => s.widths[f] ?? fieldHints?.[f]?.width ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
     const cols = s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c));
     const indent = groupDepth ? `calc(var(--space-2) + ${(groupDepth - 1) * GROUP_INDENT_REM + GROUP_ARROW_REM}rem)` : undefined;
     let left = 0;
@@ -339,7 +373,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
       const pinned = i < pinnedCount;
       const style: CSSProperties | undefined = pinned ? { left: `${left}rem` } : undefined;
       left += widthOf(col.field);
-      const className = [isNumeric(col) ? "is-num sc-num" : "",
+      const className = [isNumeric(col) ? (fieldHints?.[col.field]?.left ? "sc-num" : "is-num sc-num") : "",
                          pinned ? `is-pinned${i === pinnedCount - 1 ? " is-pinned-last" : ""}` : "",
                          wrapKey.split(",").includes(col.field) ? "is-wrap" : ""].filter(Boolean).join(" ") || undefined;
       return { col, numeric: isNumeric(col), className, style: i === 0 && indent ? { ...style, paddingLeft: indent } : style };
@@ -370,6 +404,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
     [grouped, g.tree, s.groupBy, collapsed]);
 
   const count = grouped ? display?.length ?? 0 : flat.filtered;
+  const ordered = orderedRows(grouped ? null : rowOrder ?? null, count, flat.row);
   const status = grouped ? g.status : flat.status;
   const error = grouped ? g.error : flat.error;
   const filtered = grouped ? g.tree?.filtered ?? 0 : flat.filtered;
@@ -533,12 +568,12 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
   const pinnedCell = (i: number): { className: string; style?: CSSProperties } =>
     i < pinnedCount ? { className: `is-pinned${i === pinnedCount - 1 ? " is-pinned-last" : ""}`, style: { left: `${pinStart(i)}rem` } }
                  : { className: "" };
-  const cellClass = (c: ListColumn, i: number) =>
-    [isNumeric(c) ? "is-num sc-num" : "", pinnedCell(i).className].filter(Boolean).join(" ") || undefined;
+  const colClass = (c: ListColumn, i: number) =>
+    [isNumeric(c) ? (fieldHints?.[c.field]?.left ? "sc-num" : "is-num sc-num") : "", pinnedCell(i).className].filter(Boolean).join(" ") || undefined;
 
   const renderRow = (key: string | number | bigint, index: number, row: Row | undefined) => (
     <DataRow key={String(key)} index={index} row={row} cells={cellSpecs} selected={Boolean(row) && row!.Id === selectedId}
-             onSelect={setSelectedId} active={active} ruleText={ruleText} cellRender={cellRender} rowMenu={rowMenu}
+             onSelect={setSelectedId} active={active} ruleText={ruleText} cellRender={cellRender} cellWrap={cellWrap} cellClass={cellClass} rowProps={rowProps} rowMenu={rowMenu}
              measure={fit ? virtualizer.measureElement : undefined} />
   );
   // Grup adı, ara toplamı olmayan baştaki kolonları kaplar (kesilmesin); sabit kolon varsa sabit bölgeyi aşmaz.
@@ -578,7 +613,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
           </span>
         </td>
         {visible.slice(labelSpan).map((c, j) => (
-          <td key={c.field} className={cellClass(c, j + labelSpan)} style={pinnedCell(j + labelSpan).style}>
+          <td key={c.field} className={colClass(c, j + labelSpan)} style={pinnedCell(j + labelSpan).style}>
             {aggCell(c, it.node)}
           </td>
         ))}
@@ -685,7 +720,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
                   const dropClass = drag?.over === col.field ? ` is-drop-${drag.side}` : "";
                   return (
                     <th key={h.id} scope="col" style={pin.style} draggable
-                        className={[isNumeric(col) ? "is-num" : "", pin.className, dropClass.trim()].filter(Boolean).join(" ") || undefined}
+                        className={[isNumeric(col) && !fieldHints?.[col.field]?.left ? "is-num" : "", pin.className, dropClass.trim()].filter(Boolean).join(" ") || undefined}
                         aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : undefined}
                         onDragStart={(e) => { e.dataTransfer?.setData("text/plain", col.field); setDrag({ field: col.field }); }}
                         onDragOver={(e) => dragOver(col.field, e)} onDrop={(e) => drop(col.field, e)}
@@ -741,7 +776,7 @@ export function DataTable({ list, cellRender, rowMenu, reloadKey = 0, baseFilter
             )}
             {status !== "loading" && paddingTop > 0 && <tr aria-hidden="true" className="sc-table-spacer" style={{ height: paddingTop }} />}
             {status !== "loading" && items.map((it) => {
-              if (!grouped) return renderRow(it.key, it.index, flat.row(it.index));
+              if (!grouped) return renderRow(it.key, it.index, ordered ? ordered[it.index] : flat.row(it.index));
               const d = display?.[it.index];
               if (!d) return null;
               return d.kind === "group" ? renderGroup(it.key, it.index, d) : renderRow(it.key, it.index, g.row(d.leaf, d.index));

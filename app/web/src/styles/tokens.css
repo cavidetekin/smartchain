@@ -181,6 +181,7 @@
   --table-border: #c5cbf2;                    /* tablonun dış çerçevesi */
   --table-toolbar-gap: 0.5rem;                /* araç çubuğu, filtre satırı ve tablo arası (docs/12) */
   --top-strip-gap: var(--space-3);            /* üst şerit ile tablo araç çubuğu arası, her ekranda aynı (docs/12 · Üst şerit) */
+  --rule-trace-bg: #f3eeff;                   /* kuralla değişen hücre: açık lila (K-143) */
   --table-group-1-bg: #eceef7;
   --table-group-1-border: #e1e4ee;
   --table-group-2-bg: #f7f8fc;

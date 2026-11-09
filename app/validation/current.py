@@ -1,4 +1,4 @@
-"""Staging'in güncel hâli (K-133): parti "Alındı" olduğu anda, çağıranın işleminde güncel hâle işlenir.
+"""Staging'in güncel hâli (K-133): parti "Alındı" olduğu anda, çağıranın işleminde güncel hâle işlenir. Ham katmana aittir (K-140).
 
 Tam: güncel hâlin yerine geçer; partide olmayan kayıt güncel hâlden çıkar. Ekle / güncelle: aynı anahtarlı kayıt değişir,
 öteki kayıtlar kalır. Ön kontrolde düşen satırın anahtarı okunabiliyorsa (bulgudaki kayıt) o anahtarın önceki güncel
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.integration.structural import _text, key_fields
 from db.models import metadata
 
-from .sqlkit import ROW_KEY_SEPARATOR, current, same, table
+from .sqlkit import ROW_KEY_SEPARATOR, current, raw_table as table, same
 
 FULL, CHANGED = "Tam", "Değişen"
 FINDING = metadata.tables["adm.ImportFinding"]

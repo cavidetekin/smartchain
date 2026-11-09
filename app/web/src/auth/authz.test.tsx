@@ -22,8 +22,8 @@ describe("menü role göre (K-100)", () => {
     ["System owner", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Veri yükleme", "Kullanıcılar", "Sistem ayarları"], []],
     ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı"], ["Sistem ayarları"]],
     ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Senaryolar", "Veri yükleme", "Gece senaryoları", "Denetim izi"], ["Kullanıcılar"]],
-    ["End user", ["Takip", "Veri"], ["Uyarılar", "Ana veri", "Veri kuralları"],
-     ["Senaryolar", "Çalışma", "Veri yükleme", "Parametre setleri", "Gece senaryoları", "Kullanıcılar", "Denetim izi"]],
+    ["End user", ["Takip", "Veri"], ["Uyarılar", "Ana veri", "Veri kalitesi"],
+     ["Senaryolar", "Çalışma", "Veri yükleme", "Veri kuralları", "Validasyon kuralları", "Parametre setleri", "Gece senaryoları", "Kullanıcılar", "Denetim izi"]],  // K-142
   ])("%s", (role, expectedGroups, shown, hidden) => {
     mockApi();
     renderApp("/ana-sayfa", meAs(role));
@@ -37,7 +37,7 @@ describe("menü role göre (K-100)", () => {
     mockApi();
     renderApp("/ana-sayfa", meAs("End user"));
     await user.type(within(menu()).getByRole("searchbox", { name: "Ekran ara" }), "veri");
-    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ana veri", "Veri kuralları", "Veri kalitesi"]);
+    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ana veri", "Veri kalitesi"]);  // Veri kuralları End user'a kapalı (K-142)
   });
 });
 

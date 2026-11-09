@@ -49,7 +49,9 @@ F, R, O, S, N = Level.FULL, Level.READ, Level.OWNER, Level.SELF, Level.NONE
 
 GROUP_ROWS: tuple[GroupRow, ...] = (
     GroupRow("A", "A", "Veri alma", 1, 9, (F, F, F, N)),
-    GroupRow("B", "B", "Ana veri ve kurallar", 10, 21, (F, F, F, R)),
+    GroupRow("B", "B", "Ana veri", 10, 15, (F, F, F, R)),
+    GroupRow("B4", "B", "Veri kuralları", 16, 19, (F, F, R, N)),  # K-142: Key user görür, End user görmez
+    GroupRow("B5", "B", "Veri kalitesi", 20, 21, (F, F, F, R)),
     GroupRow("C", "C", "Parametre", 22, 28, (F, F, F, N)),
     GroupRow("D", "D", "Planlama motoru", 29, 39, (F, F, F, N)),
     GroupRow("E", "E", "Senaryo ve çalışma", 40, 49, (F, F, F, N)),

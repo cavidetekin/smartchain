@@ -19,10 +19,14 @@ from auth_helpers import auth
 
 
 def clean(engine) -> None:
-    """stg, partiler, bulgular, doğrulama tabloları ve işleri; kural tanımları kalır (kullanıcı kuralları silinir)."""
+    """stg ve prc, partiler, bulgular, validasyon tabloları, veri kuralları ve işleri; hazır kural tanımları katalogdan yeniden kurulur."""
     with engine.begin() as c:
         for e in ENTITIES:
             c.execute(sa.text(f"DELETE FROM stg.[{e.table}]"))
+            c.execute(sa.text(f"DELETE FROM prc.[{e.table}]"))
+        c.execute(sa.text("DELETE FROM adm.DataRuleEffect"))
+        c.execute(sa.text("DELETE FROM adm.DataRuleCondition"))
+        c.execute(sa.text("DELETE FROM adm.DataRule"))
         c.execute(sa.text("DELETE FROM adm.ValidationFinding"))
         c.execute(sa.text("DELETE FROM adm.ValidationRun"))
         c.execute(sa.text("DELETE FROM adm.ValidationRuleCondition"))

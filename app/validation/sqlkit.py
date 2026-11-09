@@ -1,16 +1,25 @@
-"""Kuralların ortak SQL parçaları: güncel satırlar, değer biçimi, kayıt anahtarı, alan etiketi (K-133, K-134)."""
+"""Kuralların ortak SQL parçaları: katmanlar, güncel satırlar, değer biçimi, kayıt anahtarı, alan etiketi (K-133, K-134, K-140).
+
+Validasyon ve veri kuralları işlenmiş katmanı (`prc`) okur; ham katman (`stg`) yalnız güncel hâle işleme ve kopya içindir."""
 from functools import lru_cache
 
 import sqlalchemy as sa
 
 from app.integration.contract import fields as contract_fields, stg_columns
 from app.integration.structural import key_fields
+from db.dictionary import standard_label
 from db.models import metadata
 
 ROW_KEY_SEPARATOR = " · "
 
 
 def table(name: str) -> sa.Table:
+    """İşlenmiş katman (K-140): validasyon ve veri kuralları bunu okur."""
+    return metadata.tables[f"prc.{name}"]
+
+
+def raw_table(name: str) -> sa.Table:
+    """Ham katman: hiç değişmez; güncel hâli IsCurrent (K-133)."""
     return metadata.tables[f"stg.{name}"]
 
 
@@ -19,7 +28,13 @@ def alias(name: str, suffix: str = "") -> sa.Alias:
 
 
 def current(t) -> sa.ColumnElement:
-    return t.c.IsCurrent == sa.true()
+    """Validasyona giren satırlar. Ham katmanda güncel hâl (IsCurrent, K-133). İşlenmiş katmanda her satır günceldir (K-140);
+    IsActive = Hayır olan satır kapsam dışıdır, hiçbir validasyon kuralına girmez; IsActive boşsa girer, zorunlu alan bulgusu alır (K-145)."""
+    if "IsCurrent" in t.c:
+        return t.c.IsCurrent == sa.true()
+    if "IsActive" in t.c:
+        return sa.or_(t.c.IsActive.is_(None), t.c.IsActive == sa.true())
+    return sa.true()
 
 
 def nz(col) -> sa.ColumnElement:
@@ -70,9 +85,9 @@ def row_key(t, entity: str) -> sa.ColumnElement:
 
 @lru_cache(maxsize=None)
 def labels(entity: str) -> dict[str, str]:
-    """Alanın standart etiketi (sözleşme); etiketsiz alanda ad."""
+    """Alanın standart etiketi (sözleşme); ek alanda "Ek sayı alanı 1" (etiketi veri sözlüğünde, K-59), etiketsiz alanda ad."""
     found = {f.name: f.label for f in contract_fields(entity)}
-    return {c.name: found.get(c.name, c.name) for c in stg_columns(entity)}
+    return {c.name: found.get(c.name) or standard_label(c.name, None) or c.name for c in stg_columns(entity)}
 
 
 def label(entity: str, field: str | None) -> str | None:

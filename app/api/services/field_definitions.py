@@ -7,6 +7,7 @@ import json
 
 from sqlalchemy.orm import Session
 
+from app.validation import texts
 from db.dictionary import is_additional
 
 from ..errors import AppError
@@ -74,6 +75,7 @@ def set_label(session: Session | None, actor: CurrentUser, table: str, field: st
         if value and repo.label_taken(session, table, field, value):
             raise AppError("label_taken", "Bu tabloda aynı etiketli bir alan var.", 409, [{"field": "label", "problem": "Bu tabloda aynı etiketli bir alan var."}])
         repo.set_label(session, table, field, value)
+        texts.refresh(session, table)  # kural metinleri güncel etiketle (K-143)
         audit.write_audit(session, ACTION, actor.id, OBJECT, f"{table}.{field}", {"Label": value}, {"Label": row["Label"]})
         session.commit()
         return None

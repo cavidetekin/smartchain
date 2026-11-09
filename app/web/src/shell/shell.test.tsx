@@ -162,7 +162,7 @@ describe("daraltılmış menü", () => {
     const item = (name: string) => within(panel).getByRole("menuitem", { name });
     expect(item("Veri yükleme")).toHaveFocus();
     await user.keyboard("{ArrowDown}");
-    expect(item("Ana veri")).toHaveFocus();
+    expect(item("Veri kuralları")).toHaveFocus();
     await user.keyboard("{End}");
     expect(item("Veri kalitesi")).toHaveFocus();
     await user.keyboard("{ArrowDown}");
@@ -170,7 +170,7 @@ describe("daraltılmış menü", () => {
     await user.keyboard("{ArrowUp}");
     expect(item("Veri kalitesi")).toHaveFocus();
     await user.keyboard("{Home}{ArrowDown}{Enter}");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana veri");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Veri kuralları");
     expect(within(menu()).queryByRole("menu")).toBeNull();
     expect(within(menu()).getByRole("button", { name: "Veri" })).toHaveFocus();
   });

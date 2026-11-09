@@ -86,6 +86,13 @@ export interface RuleChange {
 }
 
 export const recordsList = (entity: string) => `validation-records-${entity}`;
+/** Kuralla değişenler ve Tüm satırlar: aynı satırlar, Sorun ve Sınıf en sonda (K-143). */
+export const dataList = (entity: string) => `validation-data-${entity}`;
+/** Kayıtlar görünümünün üç seçeneği (K-143): işlenmiş katmanın bulgulu satırları, kuralla değişenleri ya da tamamı. */
+export type RecordScope = "findings" | "effects" | "all";
+export const scopeFilter = (scope: RecordScope): ListFilter[] =>
+  scope === "findings" ? [{ field: "HasFindings", op: "in", values: [true] }] : scope === "effects" ? [{ field: "HasEffects", op: "in", values: [true] }] : [];
+
 /** Kayıtlar'ı bir kurala takılan satırlarla süzer (Bulgular'da kurala tıklayınca, K-139). */
 export const ruleFilter = (ruleId: number): ListFilter => ({ field: "RuleIds", op: "contains", value: `,${ruleId},` });
 
@@ -101,7 +108,7 @@ export const validationApi = {
     const api = listApi(recordsList(entity));
     const { columns } = await api.columns();
     const result = await api.export({
-      fields: columns.map((c) => c.field).filter((f) => f !== "RuleIds"), widths: {}, sort: [], filters: [], group_by: [], aggregates: {}, rules: [],
+      fields: columns.map((c) => c.field), widths: {}, sort: [], filters: scopeFilter("findings"), group_by: [], aggregates: {}, rules: [],
       scope: { rows: "all", columns: "all" },
     });
     if (result.kind === "file") saveBlob(result.blob, result.fileName);

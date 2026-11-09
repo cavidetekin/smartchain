@@ -90,7 +90,7 @@ def test_excel_and_sql_give_identical_results(integration_db, tmp_path: Path):  
             assert rows_of(engine, table, excel[table]) == rows_of(engine, table, sql), table
             assert findings_of(engine, excel[table]) == findings_of(engine, sql), table
         material = result["Material"]
-        assert (material["read"], material["valid"], material["errors"]) == (209, 207, 2)  # H4; 8 hazır kural örneği dahil (docs/11)
+        assert (material["read"], material["valid"], material["errors"]) == (211, 209, 2)  # H4; 8 hazır kural örneği ve 2 veri kuralı örneği dahil (docs/11)
         with engine.connect() as c:
             assert c.execute(sa.text("SELECT COUNT(*) FROM stg.SalesOrderLine WHERE MaterialCode = N'MAM-099' AND ImportBatchId = :b"),
                              {"b": result["SalesOrderLine"]["batch_id"]}).scalar() > 0  # H2 referans kontrolü 4.4'te

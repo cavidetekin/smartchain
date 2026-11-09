@@ -7,10 +7,11 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 import { ApiError } from "../api/client";
 import { formatDateTime, formatNumber, serverDate } from "../format";
 import { tr } from "../i18n/tr";
-import { type CellRender, DataTable } from "../table/DataTable";
+import { type CellClass, type CellRender, type CellWrap, DataTable } from "../table/DataTable";
 import { type LocalColumn, LocalTable } from "../table/LocalTable";
-import { Alert, Badge, type BadgeTone, Button, Drawer, KpiCard, Segment } from "../ui";
-import { recordsList, type RuleCount, ruleFilter, RUNNING_STATES, STATE_DONE, STATE_FAILED, validationApi, type ValidationSummary } from "./validationApi";
+import { Alert, Badge, type BadgeTone, Button, Drawer, KpiCard, Segment, Tooltip } from "../ui";
+import { parseEffects } from "./dataRulesApi";
+import { dataList, type RecordScope, recordsList, type RuleCount, ruleFilter, RUNNING_STATES, scopeFilter, STATE_DONE, STATE_FAILED, validationApi, type ValidationSummary } from "./validationApi";
 
 const T = tr.validation;
 const POLL_MS = 2000;
@@ -22,6 +23,18 @@ export function SeverityTag({ severity }: { severity: string }) {
   return <span className={`sc-tag sc-tag--soft ${SEVERITY_CLASS[severity] ?? ""}`}>{severity}</span>;
 }
 export const SEVERITY_CLASS: Record<string, string> = { Hata: "sc-tag--critical", Uyarı: "sc-tag--risk", Bilgi: "sc-tag--info" };
+
+/** Hücre izi (K-140, K-143): kuralla değişen hücrenin zemini açık lila, metin aynı; ipucu "Tesis bayrağı · Ham değer: boş". */
+export const RULE_TRACE: CellWrap = (field, row, content) => {
+  const effect = parseEffects(row.RuleEffects).get(field);
+  if (!effect) return content;
+  return (
+    <Tooltip content={tr.dataRules.trace(effect.rule, effect.raw)} focusable>
+      <span className="sc-rule-trace" data-trace={field}>{content}</span>
+    </Tooltip>
+  );
+};
+export const RULE_TRACE_CELL: CellClass = (field, row) => (parseEffects(row.RuleEffects).has(field) ? "is-rule-changed" : undefined);
 
 const SEVERITY_CELLS: CellRender = {
   Severity: (value: unknown): ReactNode => (value ? <SeverityTag severity={String(value)} /> : null),
@@ -52,12 +65,15 @@ export function ValidationChip({ name, state, errors, warnings, onOpen }: {
 
 const percent = (v: number | null) => (v === null ? null : formatNumber(v, 2));
 
-export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason, onClose, onChanged }: {
+/** initial: "Veriyi gör" çekmeceyi Kayıtlar · Tüm satırlar ile açar (K-143). refreshKey: ekranın yenilemesi çekmeceye de geçer. */
+export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason, onClose, onChanged, initial, refreshKey = 0 }: {
   entity: string; name: string; canRevalidate: boolean; revalidateReason?: string | null; onClose(): void; onChanged?(): void;
+  initial?: { view: "findings" | "records"; scope: RecordScope }; refreshKey?: number;
 }) {
   const [summary, setSummary] = useState<ValidationSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"findings" | "records">("findings");
+  const [view, setView] = useState<"findings" | "records">(initial?.view ?? "findings");
+  const [scope, setScope] = useState<RecordScope>(initial?.scope ?? "findings");
   const [rule, setRule] = useState<RuleCount | null>(null);  // Kayıtlar bu kurala süzülü
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -73,8 +89,9 @@ export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason
   useEffect(() => {
     const ctrl = new AbortController();
     void load(ctrl.signal);
+    if (refreshKey) setReloadKey((k) => k + 1);
     return () => ctrl.abort();
-  }, [load]);
+  }, [load, refreshKey]);
 
   const running = summary?.state ? RUNNING_STATES.includes(summary.state) : false;
   useEffect(() => {  // sürerken yoklanır; bitince tablolar yenilenir
@@ -116,6 +133,7 @@ export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason
 
   const showRule = (r: RuleCount) => {
     setRule(r);
+    setScope("findings");
     setView("records");
   };
   const ruleColumns: LocalColumn<RuleCount>[] = useMemo(() => [
@@ -128,7 +146,7 @@ export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason
     { key: "severity", label: T.severity, value: (r) => r.severity, render: (r) => <SeverityTag severity={r.severity} /> },
     { key: "rows", label: T.rowCount, numeric: true, value: (r) => r.rows, render: (r) => (r.message ? "—" : formatNumber(r.rows, 0)) },
   ], []);
-  const recordFilters = useMemo(() => (rule ? [ruleFilter(rule.id)] : []), [rule]);
+  const recordFilters = useMemo(() => [...scopeFilter(scope), ...(rule ? [ruleFilter(rule.id)] : [])], [rule, scope]);
 
   const state = summary?.state === STATE_DONE ? summary.outcome : summary?.state ?? null;
   const chip = summary ? chipOf(state, summary.error_rows, summary.warning_rows) : null;
@@ -172,6 +190,8 @@ export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason
               : <p className="sc-muted">{T.noFindings}</p>
           ) : (
             <>
+              <Segment<RecordScope> label={T.scope} hideLabel value={scope} onChange={(v) => { setScope(v); if (v !== "findings") setRule(null); }}
+                                    options={[{ value: "findings", label: T.scopeFindings }, { value: "effects", label: T.scopeEffects }, { value: "all", label: T.scopeAll }]} />
               {rule && (
                 <ul className="sc-chips">
                   <li className="sc-chip-filter">
@@ -180,7 +200,7 @@ export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason
                   </li>
                 </ul>
               )}
-              <DataTable key={`records:${rule?.id ?? ""}`} list={recordsList(entity)} baseFilters={recordFilters} cellRender={SEVERITY_CELLS} reloadKey={reloadKey} />
+              <DataTable key={`records:${scope}:${rule?.id ?? ""}`} list={scope === "findings" ? recordsList(entity) : dataList(entity)} baseFilters={recordFilters} cellRender={SEVERITY_CELLS} cellWrap={RULE_TRACE} cellClass={RULE_TRACE_CELL} reloadKey={reloadKey} />
             </>
           )}
         </>

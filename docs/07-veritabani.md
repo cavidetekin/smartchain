@@ -4,14 +4,14 @@
 
 ## Kurallar
 
-- **Beş şema:** `stg` entegrasyon, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem.
-- **Aynı ad, iki katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla), `core.Material` Smartchain'in tablosu (Id ile). Aktarım `stg`'den `core`'a yapılır (K-58).
+- **Altı şema:** `stg` entegrasyon (ham), `prc` işlenmiş staging, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem (K-62, K-140).
+- **Aynı ad, üç katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla, hiç değişmez), `prc.Material` güncel hâli veri kuralları uygulanmış, `core.Material` Smartchain'in tablosu (Id ile). Kurallar `prc`'de çalışır, aktarım `prc`'den `core`'a yapılır (K-58, K-140).
 - **Versiyonlu tablolar:** `VersionFrom`, `VersionTo`, `ImportBatchId`, `BusinessKey`, `UpdatedAt` alanlarını taşır. Birincil anahtar `Id + VersionFrom`; `Id` bir kaydın bütün versiyonlarında aynıdır. Güncel kayıtta `VersionTo` boştur; tekillik (UK) yalnız güncel kayıtlarda aranır.
 - **İlişkiler:** Versiyonsuz tabloya giden ilişkiler veritabanında yabancı anahtarla (FK) korunur. Versiyonlu tabloya giden ilişkilerde FK yoktur, yalnız indeks vardır; bütünlüğü aktarım adımı (kod→Id) sağlar.
-- **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`, `SourceRowNo`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
+- **Entegrasyon tablolarının standart alanları:** `stg`'de `StagingRowId`, `ImportBatchId`, `ErrorText`, `SourceRowNo`, `IsCurrent` (K-133); `prc`'de `StagingRowId` (ham satırdan), `ImportBatchId`, `SourceRowNo`, `RowStatus` (Yeni, Hatalı, Aktarıldı). Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
 - **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.
 
-## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58) (25 tablo)
+## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58); ham katman, hiç değişmez (K-140) (25 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -40,6 +40,36 @@
 | `stg.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 25 |
 | `stg.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 29 |
 | `stg.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
+
+## `prc` · İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış; validasyon ve load bunu okur (K-140) (25 tablo)
+
+| Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
+|---|---|---|---|---|
+| `prc.Material` | Malzeme ve planlama ana verisi. | Entegrasyon |  | 43 |
+| `prc.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Entegrasyon |  | 23 |
+| `prc.UomConversion` | Malzeme bazında birim dönüşümü. | Entegrasyon |  | 6 |
+| `prc.ProductionVersion` | Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı; rotaya RouteCode, ürün ağacına BOMCode ile bağlanır. Versiyon seçimi motorun kararıdır; aynı malzeme aynı dönemde birden fazla versiyonla üretilebilir. | Entegrasyon |  | 17 |
+| `prc.BOM` | Ürün ağacı satırı. | Entegrasyon |  | 18 |
+| `prc.Routing` | Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile. | Entegrasyon |  | 24 |
+| `prc.MaterialReference` | Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır. | Entegrasyon |  | 7 |
+| `prc.Resource` | Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur. | Entegrasyon |  | 27 |
+| `prc.ResourceGroup` | Kaynak ve yetkinlik grubu. Kapasite havuzu değil, uygun kaynaklar listesidir; kapasite yalnız kaynakta tutulur. | Entegrasyon |  | 17 |
+| `prc.ResourceGroupAssignment` | Kaynağın gruba ataması; bir kaynak birden fazla gruba atanabilir, yetkinlik matrisi bu tablodur. Geçerlilik tarihleri yalnız girdi. | Entegrasyon |  | 5 |
+| `prc.EmployeeAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 6 |
+| `prc.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 16 |
+| `prc.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Entegrasyon |  | 19 |
+| `prc.Customer` | Müşteri. | Entegrasyon |  | 20 |
+| `prc.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Entegrasyon |  | 5 |
+| `prc.Project` | Proje. | Entegrasyon |  | 16 |
+| `prc.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur. Vade: teyit tarihi, yoksa istek tarihi. | Entegrasyon |  | 26 |
+| `prc.Forecast` | Talep tahmini (netleme ön hesapta). | Entegrasyon |  | 15 |
+| `prc.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | Entegrasyon |  | 8 |
+| `prc.Stock` | Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak. | Entegrasyon |  | 25 |
+| `prc.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 34 |
+| `prc.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
+| `prc.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 25 |
+| `prc.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 29 |
+| `prc.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
 
 ## `core` · Ana veri ve işlem verisi (33 tablo)
 
@@ -112,13 +142,14 @@
 | `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan |  | 8 |
 | `planning.PlanMetric` | Senaryo karşılaştırma metrikleri; senaryo silinse de özet kısa süre kalır. | Plan |  | 3 |
 
-## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (28 tablo)
+## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (29 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
 | `adm.FieldDefinition` | Veri sözlüğü: her alanın sınıfı ve değer davranışı. Yapısını System owner yönetir. | Veri yönetimi |  | 11 |
-| `adm.DataRule` | Veri kuralı: 'X = … ise Alan = …'. | Veri yönetimi |  | 11 |
+| `adm.DataRule` | Veri kuralı (K-141, ekran 04): tek tablo içinde "koşul ise hedef alan = sonuç". Staging'in işlenmiş katmanında tablo başına sırayla çalışır (K-140); varsayılan kural yoktur, kurulumda eklenir. | Veri yönetimi |  | 20 |
 | `adm.DataRuleCondition` | Kural koşulları: aynı GroupNo'daki koşullar VE, gruplar arası VEYA (K-136); koşul editörü validasyon kurallarıyla ortaktır. | Veri yönetimi |  | 7 |
+| `adm.DataRuleEffect` | Kural izi (K-140): işlenmiş katmanda hangi hücreyi hangi kuralın son değiştirdiği ve ham değer; her çalıştırmada tablo için yeniden yazılır. İpucu: "Kural 3 · Lokasyon bayrakları · ham değer: boş". | Veri yönetimi |  | 5 |
 | `adm.ManualValue` | Kayıt bazında elle girilen değer. | Veri yönetimi |  | 8 |
 | `adm.FieldValueSource` | Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır). | Veri yönetimi |  | 6 |
 | `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129). | Veri yönetimi |  | 15 |

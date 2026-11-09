@@ -12,6 +12,8 @@ export interface LocalColumn<R> {
   /** Sıralama değeri; verilmezse value ya da hücre sıralanmaz. */
   value?(row: R): string | number | null;
   render?(row: R): ReactNode;
+  /** Başlıkta etiketle birlikte gösterilen öğe (ör. toplu seçim kutusu, K-145). */
+  header?: ReactNode;
 }
 
 export function LocalTable<R>({ label, columns, rows, rowKey }: {
@@ -54,7 +56,7 @@ export function LocalTable<R>({ label, columns, rows, rowKey }: {
                         {dir === 1 && <ArrowUp aria-hidden="true" />}
                         {dir === -1 && <ArrowDown aria-hidden="true" />}
                       </button>
-                    ) : <span className="sc-table-sort sc-table-label">{c.label}</span>}
+                    ) : <span className="sc-table-sort sc-table-label">{c.header}{c.label}</span>}
                   </div>
                 </th>
               );

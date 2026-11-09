@@ -23,8 +23,34 @@
     {
       "key": "B",
       "letter": "B",
-      "name": "Ana veri ve kurallar",
+      "name": "Ana veri",
       "first": 10,
+      "last": 15,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "key": "B4",
+      "letter": "B",
+      "name": "Veri kuralları",
+      "first": 16,
+      "last": 19,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "read",
+        "End user": "none"
+      }
+    },
+    {
+      "key": "B5",
+      "letter": "B",
+      "name": "Veri kalitesi",
+      "first": 20,
       "last": 21,
       "levels": {
         "System owner": "full",
@@ -376,8 +402,8 @@
       "levels": {
         "System owner": "full",
         "Admin": "full",
-        "Key user": "full",
-        "End user": "read"
+        "Key user": "read",
+        "End user": "none"
       }
     },
     {
@@ -387,8 +413,8 @@
       "levels": {
         "System owner": "full",
         "Admin": "full",
-        "Key user": "full",
-        "End user": "read"
+        "Key user": "read",
+        "End user": "none"
       }
     },
     {
@@ -398,8 +424,8 @@
       "levels": {
         "System owner": "full",
         "Admin": "full",
-        "Key user": "full",
-        "End user": "read"
+        "Key user": "read",
+        "End user": "none"
       }
     },
     {
@@ -409,8 +435,8 @@
       "levels": {
         "System owner": "full",
         "Admin": "full",
-        "Key user": "full",
-        "End user": "read"
+        "Key user": "read",
+        "End user": "none"
       }
     },
     {

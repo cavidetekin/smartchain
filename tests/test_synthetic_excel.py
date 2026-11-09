@@ -212,7 +212,7 @@ def test_location_flags_in_the_file(written):
     """K-111: ORM-01 hem tesis hem depo; Type yanında durur."""
     _, out, _ = written
     header, data = read(out, "Location")
-    assert "Type" in header and len(data) == 1 and data[0]["Type"] == "Tesis"
+    assert "Type" in header and len(data) == 1 and data[0]["Type"] == "PLANT"
     assert [data[0][n] for n in ("IsFactory", "IsDepot", "IsSubcontractor", "IsActive")] == [1, 1, 0, 1]
 
 

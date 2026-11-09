@@ -82,15 +82,15 @@ def test_blank_column_is_concrete():
     assert route["IsSubcontracted"]["Boş bırakılırsa"] == "Yok sayılır"
 
 
-def test_location_template_v2():
+def test_location_template_v3():
     wb = build("Location")
-    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 2
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 3  # K-143: Type ham ERP değeri
     ws = wb["Lokasyon"]
     assert "Type" in [c.value for c in ws[1]]
     assert [c.value for c in ws[1] if c.fill.fgColor.rgb == rgb(formats.color("indigo-900"))] == ["Code"]
     found = notes(wb)
     assert found["IsDepot"]["Etiket"] == "Depo" and found["IsDepot"]["Tip"] == "1 = Evet, 0 = Hayır" and found["IsDepot"]["Örnek"] == 1
-    assert found["IsDepot"]["Açıklama"] == "Depo mu" and found["Type"]["Boş bırakılırsa"] == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez"
+    assert found["IsDepot"]["Açıklama"] == "Depo mu" and found["Type"]["Boş bırakılırsa"] == "Bilinmiyor; planda kullanılmaz"
     assert found["IsSubcontractor"]["Boş bırakılırsa"] == "Yok sayılır"
     assert found["IsActive"]["Boş bırakılırsa"] == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez"
     assert found["Name"]["Boş bırakılırsa"] == "Bilinmiyor; planda kullanılmaz"

@@ -6,6 +6,7 @@
   python -m app.data.synthetic sql    [--database SmartchainIntegration] kirli hâl: entegrasyon veritabanına ham tablolar, view'lar, ERP_LoadLog (K-130)
   python -m app.data.synthetic check                                     sayılar ve bilerek konmuş durumlar
   python -m app.data.synthetic users                                     kullanıcılar: geçici şifreler (docs/11, 2.1)
+  python -m app.data.synthetic rules                                     demo veri kuralları (docs/11, K-141; kurulumda varsayılan kural yok)
 """
 import argparse
 import sys
@@ -32,7 +33,7 @@ def _print_check(ds) -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m app.data.synthetic", description="Sentetik veri seti v0 (docs/11)")
-    p.add_argument("command", choices=["load", "unload", "excel", "sql", "check", "users"])
+    p.add_argument("command", choices=["load", "unload", "excel", "sql", "check", "users", "rules"])
     p.add_argument("--date", type=date.fromisoformat, default=None, help="üretim günü (varsayılan bugün)")
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--out", type=Path, default=ROOT / "data" / "synthetic" / "v0" / "kirli")
@@ -51,6 +52,16 @@ def main(argv: list[str] | None = None) -> int:
         for name, role, password in users:
             print(f"  {name:<10} {role:<14} {password}")
         print(f"Şifreler ayrıca: {path} (git dışı; yalnız geliştirme)")
+        return 0
+
+    if a.command == "rules":
+        from sqlalchemy.orm import Session
+        from app.api.db import get_engine
+        from .rules import DEMO_RULES, install
+        with Session(get_engine()) as session:
+            install(session)
+        print(f"Demo veri kuralları yazıldı ({len(DEMO_RULES)}): " + ", ".join(f"{r['entity']} · {r['name']}" for r in DEMO_RULES))
+        print("Uygulamak için Veri kuralları ekranında \"Kuralları yeniden uygula\" (ya da bir sonraki yükleme).")
         return 0
 
     ds = generate(a.date, a.seed) if a.command != "unload" else None

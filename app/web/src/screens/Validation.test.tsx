@@ -48,6 +48,7 @@ function backend(routes: Record<string, Reply> = {}) {
     "/api/validation/Resource": { body: SUMMARY as unknown as Reply["body"] },
     ...listRoutes("validation-records-Resource", RECORD_COLUMNS,
                   [{ Id: 9, Code: "V-RES-2", Problems: "Makine: Kaynağın tek bir tipi olmalı.", Severity: "Uyarı", RuleIds: ",12," }]),
+    ...listRoutes("validation-data-Resource", RECORD_COLUMNS, [{ Id: 9, Code: "V-RES-2", Problems: null, Severity: null }]),
     ...routes,
   });
 }
@@ -127,6 +128,46 @@ describe("Validasyon çipi (K-134, K-139)", () => {
   const job = (status: string, trigger = "Yükleme") => ({ id: 8, job_type: "Validasyon", summary: "Validasyon · Kaynak", channel: "Veri işleme", status,
     progress: status === "Bitti" ? "Kaynak · Uyarılı · 3" : "Valide ediliyor", queue_position: null, updated_at: "2026-11-06T10:00:00+00:00",
     requested_by: 1, validation: { entity: "Resource", trigger } });
+
+  it("Kayıtlar üç seçenek: Bulgulu satırlar varsayılan, Kuralla değişenler, Tüm satırlar (K-143)", async () => {
+    const user = userEvent.setup();
+    backend();
+    renderApp("/veri/veri-yukleme", meAs("Key user"));
+    await user.click(await screen.findByRole("button", { name: /^Kaynak validasyonu/ }, { timeout: 5000 }));
+    const drawer = await screen.findByRole("dialog", { name: /Validasyon · Kaynak/ });
+    await user.click(within(drawer).getByRole("radio", { name: "Kayıtlar" }));
+    expect(within(drawer).getByRole("radio", { name: "Bulgulu satırlar" })).toHaveAttribute("aria-checked", "true");
+    const last = () => queryBodies("validation-records-Resource").at(-1)!.filters as { field: string; values?: unknown[] }[];
+    await waitFor(() => expect(last()).toEqual([{ field: "HasFindings", op: "in", values: [true] }]));
+    const lastData = () => queryBodies("validation-data-Resource").at(-1)!.filters as { field: string; values?: unknown[] }[];
+    await user.click(within(drawer).getByRole("radio", { name: "Kuralla değişenler" }));  // Sorun ve Sınıf sonda olan liste (K-143)
+    await waitFor(() => expect(lastData()).toEqual([{ field: "HasEffects", op: "in", values: [true] }]));
+    await user.click(within(drawer).getByRole("radio", { name: "Tüm satırlar" }));
+    await waitFor(() => expect(lastData()).toEqual([]));
+  });
+
+  it("satır menüsünde Veriyi gör: çekmece Kayıtlar · Tüm satırlar ile açılır, validasyonu olmayan tabloda da", async () => {
+    const user = userEvent.setup();
+    backend({ "/api/validation/Stock": { body: { ...SUMMARY, entity: "Stock", name: "Stok", state: null, outcome: null, rules: [] } as unknown as Reply["body"] },
+              ...listRoutes("validation-data-Stock", RECORD_COLUMNS, [{ Id: 3, Code: "L-1", Problems: null, Severity: null, RuleIds: null }]) });
+    renderApp("/veri/veri-yukleme", meAs("Key user"));
+    await user.click(await screen.findByRole("button", { name: "Stok işlemleri" }, { timeout: 5000 }));
+    await user.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Veriyi gör" }));
+    const drawer = await screen.findByRole("dialog", { name: /Validasyon · Stok/ });
+    expect(within(drawer).getByRole("radio", { name: "Kayıtlar" })).toHaveAttribute("aria-checked", "true");
+    expect(within(drawer).getByRole("radio", { name: "Tüm satırlar" })).toHaveAttribute("aria-checked", "true");
+    expect(await within(drawer).findByText("L-1", {}, { timeout: 5000 })).toBeInTheDocument();
+  });
+
+  it("çekim ya da validasyon işi değişince tablo kendiliğinden yenilenir (K-143)", async () => {
+    backend({ "/api/jobs": { body: { jobs: [], counters: {} } as unknown as Reply["body"] } });
+    renderApp("/veri/veri-yukleme", { ...meAs("Key user"), id: 1 });
+    await screen.findByText("Kaynak", {}, { timeout: 5000 });
+    await waitFor(() => expect(FakeWebSocket.instances.some((s) => s.url.includes("/api/ws"))).toBe(true));
+    const before = queryBodies("data-entities").length;
+    act(() => FakeWebSocket.instances.find((s) => s.url.includes("/api/ws"))!.send({ type: "job", job: { ...job("Bitti"), job_type: "Veri çekme", result: null, validation: null } }));
+    await waitFor(() => expect(queryBodies("data-entities").length).toBeGreaterThan(before), { timeout: 3000 });
+  });
 
   it("bitince bildirim; \"Sonucu aç\" çekmeceyi açar (tek tablo yolu)", async () => {
     const user = userEvent.setup();

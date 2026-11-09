@@ -39,6 +39,8 @@ FIELD_LABELS = {
     "mode": "Mod", "valid": "Geçerli satır", "errors": "Hatalı satır", "template_version": "Şablon sürümü", "file_name": "Dosya adı",
     # Validasyon ve validasyon kuralları (K-134, K-136)
     "rule_name": "Kural", "severity": "Sınıf", "active": "Aktif", "message": "Mesaj", "condition": "Koşul", "deleted": "Silindi", "reset": "İlk hâline döndü", "error_threshold": "Hata eşiği (%)",
+    # Veri kuralları (K-141, K-142)
+    "target_field": "Hedef alan", "result": "Sonuç", "apply_mode": "Seçenek", "order": "Sıra",
 }
 
 # Kodlu değerler; anahtara göre. Burada olmayan değer (ad, adres, serbest metin) olduğu gibi görünür.

@@ -49,6 +49,8 @@ class ListDefinition:
     row_scope: Callable[[str | None, int | None], sa.ColumnElement | None] | None = None
     # Satır işlemi için her satırda dönen alanlar (ör. bileşik anahtar; K-104), görünmeseler de.
     key_fields: tuple[str, ...] = ()
+    # Yalnız süzmede kullanılan teknik alanlar (ör. çekmecenin üç seçeneği, K-143): kolon listesinde ve Alanlar panelinde yoktur.
+    filter_only: tuple[str, ...] = ()
     # Hücrenin okunur biçimi (K-108): liste cevabı ve Excel aynı işlevden; süzme ve sıralama saklanan değerde.
     value_format: Mapping[str, Callable] = field(default_factory=dict)
 
@@ -104,11 +106,12 @@ def _note(defn: ListDefinition, name: str, col: sa.ColumnElement, label: str) ->
     return text if text and text != label else None
 
 
-def columns(defn: ListDefinition, labels: dict[str, str]) -> list[dict]:
-    """Kolonlar; labels: FieldDefinition.Label (alan → etiket). Etiketsiz ek alan listelenmez (K-88)."""
+def columns(defn: ListDefinition, labels: dict[str, str], with_filter_only: bool = False) -> list[dict]:
+    """Kolonlar; labels: FieldDefinition.Label (alan → etiket). Etiketsiz ek alan listelenmez (K-88).
+    with_filter_only: sorgu kurucusu için yalnız süzmede kullanılan alanlar da (kolon listesinde yoklar)."""
     table = defn.sa_table
     out = []
-    for name in defn.fields:
+    for name in (*defn.fields, *(defn.filter_only if with_filter_only else ())):
         col = table.c[name]
         label = labels.get(name) or defn.labels.get(name) or _info(col).get("label")
         if not label or (ADDITIONAL.match(name) and name not in labels):

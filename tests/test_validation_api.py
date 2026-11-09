@@ -146,8 +146,13 @@ def test_rule_counts_records_rule_filter_and_download(env):
     only = {"filters": [{"field": "RuleIds", "op": "contains", "value": f",{type_flags['id']},"}], "offset": 0, "limit": 50}
     assert [r["Code"] for r in client.post("/api/validation-records-Resource/query", json=only, headers=auth(user)).json()["rows"]] == ["B"]
     assert client.post("/api/validation-findings-Resource/query", json={"filters": [], "offset": 0, "limit": 5}, headers=auth(user)).status_code == 404
-    recs = client.post("/api/validation-records-Resource/query", json={"filters": [], "offset": 0, "limit": 50}, headers=auth(user)).json()["rows"]
-    assert sorted((r["Code"], r["Severity"]) for r in recs) == [("B", "Uyarı"), ("C", "Hata")]
+    every = client.post("/api/validation-records-Resource/query", json={"filters": [], "offset": 0, "limit": 50}, headers=auth(user)).json()["rows"]
+    assert sorted((r["Code"], r["Severity"]) for r in every) == [("A", None), ("B", "Uyarı"), ("C", "Hata")]  # Tüm satırlar (K-143)
+    flagged = {"filters": [{"field": "HasFindings", "op": "in", "values": [True]}], "offset": 0, "limit": 50}
+    recs = client.post("/api/validation-records-Resource/query", json=flagged, headers=auth(user)).json()["rows"]
+    assert sorted((r["Code"], r["Severity"]) for r in recs) == [("B", "Uyarı"), ("C", "Hata")]  # Bulgulu satırlar
+    changed = {"filters": [{"field": "HasEffects", "op": "in", "values": [True]}], "offset": 0, "limit": 50}
+    assert client.post("/api/validation-records-Resource/query", json=changed, headers=auth(user)).json()["rows"] == []  # kural yok
     assert next(r for r in recs if r["Code"] == "C")["Problems"] == "Kapasite birimi: Zorunlu alan boş."
     columns = [c["field"] for c in client.get("/api/validation-records-Resource/columns", headers=auth(user)).json()["columns"]]
     assert columns[:3] == ["Problems", "Severity", "RowNo"]  # ilk kolonlar Sorun ve Sınıf (K-139)

@@ -452,13 +452,14 @@ Excel yükleme yöntemden bağımsızdır: yöntem ne olursa olsun, çekim açı
 
 ## Validasyon ve validasyon kuralları (ekran 02 ve 27, fonksiyon 04 ve 100, K-133…K-139)
 
-Validasyon tablonun staging'deki güncel hâline aittir, partiye değil. Kuyruğa yazan uç nokta yoktur: Excel'de "Devam" (`POST /api/imports/{id}/continue`) ve çekimde tablonun okunması işi kendisi ekler; elle yol "Yeniden valide et"tir.
+Validasyon tablonun staging'deki işlenmiş katmanına aittir (ham katmanın güncel hâli, veri kuralları uygulanmış; K-140), partiye değil. Kuyruğa yazan uç nokta yoktur: Excel'de "Devam" (`POST /api/imports/{id}/continue`) ve çekimde tablonun okunması işi kendisi ekler; elle yol "Yeniden valide et"tir.
 
 | Uç nokta | Yetki | Cevap |
 |---|---|---|
 | `GET /api/validation/{entity}` | Key user ve üstü (04 okuma) | Çekmece özeti: `state` (Sırada, Kurallar çalışıyor, Valide ediliyor, Bitti, Valide edilemedi), `outcome` (Geçti, Uyarılı, Hatalı), son parti (`received_at`, `method`, `uploaded_by_name`), `current_rows`, `error_rows`, `warning_rows`, `info_rows`, `error_rate`, `threshold` (boşsa `null`), `rules` (Bulgular görünümü, K-139: `[{id, name, severity, rows, message}]`; ağırdan hafife, çoktan aza; `message` yalnız tablo düzeyi bulguda, ör. "Karşılaştırılacak veri yok"). 404 `entity_not_found` |
-| `POST /api/validation/{entity}/revalidate` | Key user ve üstü (04 yazma) | **202** `{job_id}`; tablonun zinciri sıraya girer. Aynı tabloda sırada ya da çalışan validasyon varsa 409 `validation_running`. Güncel verisi yoksa 409 `validation_no_data`. İz "Yeniden validasyon" |
-| Ortak liste `validation-records-<entity>` | Key user ve üstü | Bulgusu olan güncel satırlar: ilk kolonlar Sorun (satırın bulguları) ve Sınıf (en ağır), sonra Satır ve sözleşmedeki bütün alanlar (etiketli ek alanlar dahil). Gizli `RuleIds` (",12,15,") kurala göre süzmek içindir: `contains` ",12," (Bulgular'da kurala tıklayınca, K-139). Excel'e aktarımı "Hatalı kayıtları indir"dir (K-91, K-93) |
+| `POST /api/validation/{entity}/revalidate` | Key user ve üstü (04 yazma) | **202** `{job_id}`; tablonun zinciri sıraya girer (işlenmiş katman ham veriden kurulur, kurallar baştan uygulanır; K-142). Aynı tabloda sırada ya da çalışan validasyon varsa 409 `validation_running`. Güncel verisi yoksa 409 `validation_no_data`. İz "Yeniden validasyon" |
+| Ortak liste `validation-data-<entity>` | Key user ve üstü | Aynı satırlar, Kuralla değişenler ve Tüm satırlar için: Satır, kaydın alanları, "Değiştiren kural" (`RuleNames`), en sonda Sorun ve Sınıf (K-144) |
+| Ortak liste `validation-records-<entity>` | Key user ve üstü | İşlenmiş katmanın bütün satırları (K-140, K-143): ilk kolonlar Sorun (satırın bulguları) ve Sınıf (en ağır; bulgusuz satırda boş), sonra Satır ve sözleşmedeki bütün alanlar (etiketli ek alanlar dahil). Yalnız süzmede kullanılan (`filter_only`, kolon listesinde yok, K-144) `HasFindings`, `HasEffects` ve `RuleIds` üç seçeneğin ve kurala göre süzmenin sabit filtresidir: Bulgulu satırlar `HasFindings = 1`, Kuralla değişenler `HasEffects = 1`, Tüm satırlar filtresiz. Gizli `RuleIds` (",12,15,") kurala göre süzmek içindir: `contains` ",12," (Bulgular'da kurala tıklayınca, K-139). Excel'e aktarımı "Hatalı kayıtları indir"dir (K-91, K-93) |
 | Ortak liste `validation-rules` | Admin ve üstü yazar, Key user okur (100) | Tablo, Kural (kullanıcı dilinde ad), Koşul (`ConditionText`), Sınıf, Mesaj, Tür, Aktif; gizli Kod. Yapısal kontroller listede yoktur (K-139). Satırda `Editable` (pencerede düzenlenir) ve `IsCustomized` |
 | `GET /api/validation-rules/{id}` | Key user ve üstü (100 okuma) | Kural ve koşulları (`groups: [[{field, operator, value, compare_field}]]`); `editable`, `customized` (düzenlenmiş hazır kural) |
 | `GET /api/validation-rules/fields/{entity}` | Key user ve üstü (100 okuma) | Koşul editörünün alanları: ad, etiket, tip, değer listesi |
@@ -469,6 +470,24 @@ Validasyon tablonun staging'deki güncel hâline aittir, partiye değil. Kuyruğ
 **Kural kataloğu:** `app/validation/catalog.py`, docs/06 fonksiyon 04 tablosuyla birebir (test); veritabanıyla çalışma anında eşitlenir (validasyon işi, kural listesi, kayıt); düzenlenmiş hazır kuralın adı, mesajı ve koşulu ezilmez (K-139).
 
 **Ölçüm (`python -m pytest -m perf`, `tests/test_validation_perf.py`; satırların yarısı bulgulu, zor durum):** 200.000 satırlık Malzeme'nin tablo içi doğrulaması ortanca 39,4 sn (33,7–44,8). Sekiz tablo × 50.000 satır, paralel iş sayısına göre ortanca: 1 → 70,2 sn, 2 → 60,5 sn, 4 → 58,3 sn, 8 → 55,5 sn. Darboğaz SQL Server: 4'ten sonra kazanç %5 ve ölçümün kendi dağılımından küçük; `JobLimitProcessing` varsayılanı 4. Sunucuda ilk kurulumda yeniden ölçülür. Değerlendirme kümesel SQL'dir (`INSERT … SELECT`, kural başına); döngü kuralları Python'da, kenarlar tek sorguyla okunur. Geçiş ve kurulum eksik kuralı ekler; sınıfı ve aktifliği kullanıcıda kalır. Koşuldan SQL üretilir: alan adı sözleşmeden doğrulanır, değer parametreyle geçer.
+
+## Veri kuralları (ekran 04, fonksiyon 16, 18, 19, K-140…K-142)
+
+Kurallar staging'in işlenmiş katmanında çalışır (K-140); uygulama validasyon işinin ilk adımıdır (K-134), ayrı iş tipi yoktur. Kural kaydı kendiliğinden uygulanmaz; elle yol "Kuralları yeniden uygula"dır.
+
+| Uç nokta | Yetki | Cevap |
+|---|---|---|
+| Ortak liste `data-rules` | Admin ve üstü yazar, Key user okur (16) | Tablo (ilk kolon), Sıra (tablo içinde satır numarası, 1'den boşluksuz; K-144), Kural, Koşul (`ConditionText`), Sonuç (`ResultText`), Seçenek, Aktif, Durum (`RunState`: Pasif, Uygulanmadı, Çalıştı, Çalışmadı; neden `LastRunMessage`, zaman `LastRunAt`; K-145), Tablo; varsayılan sıralama Tablo, Sıra |
+| `GET /api/data-rules/{id}` | Key user ve üstü (16 okuma) | Kural: `entity`, `name`, `target`, `result: {kind, value, source_field, operator, operand_value, operand_field}`, `mode`, `active`, `groups: [[{field, operator, value, compare_field}]]` |
+| `GET /api/data-rules/fields/{entity}` | Key user ve üstü (16 okuma) | Alanlar: ad, güncel etiket (veri sözlüğü), tip, değer listesi, `target` (hedef olabilir mi) ve olamıyorsa `reason` (anahtar alan); etiketsiz ek alan yok (K-144) |
+| `PUT /api/data-rules` · `{changes: [{id?, entity, name?, target?, result?, mode?, active?, groups?, delete?}], orders: [{entity, ids}]}` | Admin ve üstü (16 yazma; sıra 18) | Toplu kayıt (K-132), tek işlem: biri geçersizse hiçbiri yazılmaz. Yeni kural tablonun sonuna eklenir; `orders` tablonun bütün kural Id'lerini yeni sırayla taşır, eksik ya da fazlaysa 409 `data_rule_order_stale`. Ad tabloda tekil (422 `data_rule_name_taken`); hedef anahtar ya da sistem alanıysa 422 `data_rule_bad_target`; sonuç tipe uymuyorsa 422 `data_rule_bad_result`; koşul geçersizse 422 `data_rule_bad_condition`. Cevap `{saved, changed_entities}`. İz "Veri kuralı" (kural başına eski ve yeni değer) ve "Kural sırası" |
+| `POST /api/data-rules/apply` · `{entity?}` | Admin ve üstü (19 yazma) | **202** `{job_ids}`; `entity` doluysa o tablonun zinciri (tetik "Kural değişikliği"), boşsa kuralı olan bütün tabloların toplu yolu, tablolar arası validasyon sonda. Aynı tabloda sırada ya da çalışan validasyon varsa 409 `validation_running`. İz "Kuralları yeniden uygula" |
+
+**Uygulama** (`app/validation/rules_step.py`): işlenmiş katman tek işlemde kurulur (`prc.<Tablo>` boşaltılır, `stg.<Tablo>`'nun güncel satırları kopyalanır, kural izi silinir); kurallar `Seq` sırasıyla, her biri kendi savepoint'inde çalışır. Koşul `conditions.where` ile SQL'e çevrilir, değerler parametreli gider; bölen `NULLIF(bölen, 0)`. Kuralın tamamını etkileyen veritabanı hatasında savepoint geri alınır, `LastRunStatus` "Çalışmadı". İş düşerse işlem geri alınır, işlenmiş katman önceki hâlinde kalır.
+
+**Kayıtlar listesi** (`validation-records-<entity>`) işlenmiş katmanı okur; gizli `RuleEffects` alanı (`key_fields`, kolon değil) satırın kuralla değişen hücrelerini taşır: hücre başına alan, kural sırası, kural adı, ham değer (ayraç U+001F), hücreler arası U+001E; hücre izinin ipucu buradan gelir.
+
+**Ölçüm (`python -m pytest -m perf`, `tests/test_data_rules_perf.py`):** 200.000 satırlık Malzeme'de işlenmiş katmanın kopyası ortanca 15,3 sn (dolu tabloda; ilk kopya 4,8 sn), kopya ve beş kural (sabit, alan kopyası, iki formül, koşullu bayrak) ortanca 32,2 sn (31,8–32,5). Süreyi çoğunlukla eski satırların silinmesi alır; uygulama hesabı `db_datareader` / `db_datawriter` olduğu için `TRUNCATE` kullanılmaz (K-109).
 
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 

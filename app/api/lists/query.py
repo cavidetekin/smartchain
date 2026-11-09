@@ -87,7 +87,7 @@ class Builder:
                  role: str | None = None, user_id: int | None = None):
         self.defn = defn
         self.table = defn.sa_table
-        self.columns = {c["field"]: c for c in columns(defn, labels)}
+        self.columns = {c["field"]: c for c in columns(defn, labels, with_filter_only=True)}
         self.version = version
         self.today = today
         self.scope = defn.row_scope(role, user_id) if defn.row_scope else None

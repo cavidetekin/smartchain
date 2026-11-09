@@ -29,7 +29,7 @@ def test_groups_cover_functions_once_and_match_mockup_ranges():
     covered = [no for g in perm.GROUP_ROWS for no in range(g.first, g.last + 1)]
     assert covered == list(range(1, 101))
     assert [(g.letter, g.first, g.last) for g in perm.GROUP_ROWS] == [
-        ("A", 1, 9), ("B", 10, 21), ("C", 22, 28), ("D", 29, 39), ("E", 40, 49), ("F", 50, 63), ("G", 64, 69),
+        ("A", 1, 9), ("B", 10, 15), ("B", 16, 19), ("B", 20, 21), ("C", 22, 28), ("D", 29, 39), ("E", 40, 49), ("F", 50, 63), ("G", 64, 69),
         ("H", 70, 75), ("I", 76, 81), ("J", 82, 87), ("K", 88, 95), ("K", 96, 97), ("K", 98, 98), ("B", 99, 99), ("B", 100, 100)]
 
 

@@ -52,8 +52,8 @@ def revalidate(entity: str, user: CurrentUser = Depends(write_04), session: Sess
 
 
 @router.get("/validation-rules/fields/{entity}", summary="Koşul editörünün alanları: ad, etiket, tip, değer listesi")
-def fields(entity: str, user: CurrentUser = Depends(read_100)) -> list[dict]:
-    return service.fields(entity)
+def fields(entity: str, user: CurrentUser = Depends(read_100), session: Session = Depends(get_session)) -> list[dict]:
+    return service.fields(session, entity)
 
 
 @router.get("/validation-rules/{rule_id:int}", summary="Kural ve koşulları")

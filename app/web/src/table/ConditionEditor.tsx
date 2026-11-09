@@ -1,8 +1,8 @@
-// Koşul editörü (ortak bileşen; K-136, K-139, docs/12): validasyon kuralları kullanır, 4.2'de veri kuralları da.
+// Koşul editörü (ortak bileşen; K-136, K-139, docs/12): validasyon kuralları ve veri kuralları (4.1, K-141) kullanır.
 // "Koşullar" bölümü; her grup "Koşul Grubu n" kartı, gruplar arası belirgin "VEYA". Her koşul tek satır: alan, operatör,
 // "Değer / Alan" anahtarı ve değer ya da öteki alan; ikinci satırdan itibaren solda "ve". Boş ve Boş değil'de değer yok.
 import { Plus, X } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useId } from "react";
 
 import { tr } from "../i18n/tr";
 import { Button, DateField, SelectField, TextField } from "../ui";
@@ -52,23 +52,35 @@ export function groupsComplete(groups: ConditionRow[][]): boolean {
   return groups.length > 0 && groups.every((g) => g.length > 0 && g.every(rowComplete));
 }
 
-function ValueInput({ field, row, onChange, disabled }: { field: ConditionField | undefined; row: ConditionRow; onChange(v: string | null): void; disabled?: boolean }) {
+/** Alan tipine göre değer girişi; veri kuralının Sonuç bölümü de kullanır (K-141).
+ *  Koşulda değer serbest yazıdır, değer listesi öneri olarak çıkar: staging ERP'nin dilindedir (K-143). strict: Sonuç bölümünde
+ *  Smartchain değeri yazılır, değer listesinden seçilir. */
+export function ValueInput({ field, row, onChange, disabled, label = T.value, strict = false }: {
+  field: ConditionField | undefined; row: ConditionRow; onChange(v: string | null): void; disabled?: boolean; label?: string; strict?: boolean;
+}) {
+  const listId = useId();
   const value = row.value ?? "";
   if (field?.kind === "bool") {
-    return <SelectField label={T.value} value={value} disabled={disabled} onChange={(v) => onChange(v || null)}
+    return <SelectField label={label} value={value} disabled={disabled} onChange={(v) => onChange(v || null)}
                         options={[{ value: "", label: "—" }, { value: "1", label: T.yes }, { value: "0", label: T.no }]} />;
   }
   if (field?.kind === "date" && row.operator !== "Listede") {
     const parsed = value ? new Date(`${value}T00:00:00`) : null;
-    return <DateField label={T.value} value={parsed && !Number.isNaN(parsed.getTime()) ? parsed : null} disabled={disabled}
+    return <DateField label={label} value={parsed && !Number.isNaN(parsed.getTime()) ? parsed : null} disabled={disabled}
                       onChange={(d) => onChange(d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : null)} />;
   }
-  if (field?.values.length && EQUALITY.includes(row.operator)) {
-    return <SelectField label={T.value} value={value} disabled={disabled} onChange={(v) => onChange(v || null)}
+  if (strict && field?.values.length && EQUALITY.includes(row.operator)) {
+    return <SelectField label={label} value={value} disabled={disabled} onChange={(v) => onChange(v || null)}
                         options={[{ value: "", label: "—" }, ...field.values.map((v) => ({ value: v, label: v }))]} />;
   }
-  return <TextField label={T.value} value={value} disabled={disabled} placeholder={row.operator === "Listede" ? T.listHint : undefined}
-                    inputMode={field?.kind === "number" || field?.kind === "integer" ? "decimal" : undefined} onChange={(v) => onChange(v || null)} />;
+  const suggest = !strict && field?.kind === "text" && field.values.length > 0;
+  return (
+    <>
+      <TextField label={label} value={value} disabled={disabled} placeholder={row.operator === "Listede" ? T.listHint : undefined} list={suggest ? listId : undefined}
+                 inputMode={field?.kind === "number" || field?.kind === "integer" ? "decimal" : undefined} onChange={(v) => onChange(v || null)} />
+      {suggest && <datalist id={listId}>{field.values.map((v) => <option key={v} value={v} />)}</datalist>}
+    </>
+  );
 }
 
 /** "Değer / Alan" anahtarı: değer kutusunun solunda, küçük. */

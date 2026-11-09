@@ -127,6 +127,13 @@ python -m app.data.synthetic check                                     # sayıla
 - **Ekle / güncelle partisi:** Demo için ikinci bir küçük dosya (`kirli/ekle-guncelle/`): güncel hâlde bir kaydı değiştirir ve bir küme kuralını tetikler (ör. MaterialSupplier kota toplamı); güncel hâlin işlenişini gösterir (K-133).
 - **Mesajlar:** H1–H4 mesajları 3.4'te kesinleşir; hazır kuralların mesajları kataloğun mesajıdır.
 
+### Veri kuralı örnekleri (geliştirme 4.1, K-141)
+
+- **Kapsam:** Kirli hâlde kurallarla çözülen satırlar bulunur; kurallar yokken validasyon bulgusu verirler, demo kurallarıyla bulgu kalkar. Excel ve SQL aynı kaynaktan yazılır.
+- **Örnekler:** Lokasyon bayrakları boş, `Type` dolu; `Type` ERP'nin dilindedir (PLANT, K-143): Tip = PLANT ise Tesis = Evet, Yalnız boşsa; ERP'nin `IsActive` göndermediği bir tablo (Her zaman → Evet); Stok bayrakları (`IsAvailable`, `IsInQuality`, `IsBlocked`) boş, `Status` dolu; Satış siparişinde `IsQuote` boş, `Type` Teklif; bir tarih + gün örneği (satın alma siparişinde `ConfirmedDate` boşsa `RequestedDate` + gün). Sıfıra bölme örneği: R-MAT-1 kutu içi miktar 0, palet 40 ("Paletteki kutu sayısı" hücreyi değiştirmez, MAT.ZERO_PACK bulgusu kalır); R-MAT-2 kutu 4, palet 40 (sonuç 10) (K-141, K-144).
+- **Demo kuralları:** `python -m app.data.synthetic rules` geliştirme ve demo veritabanına bu örneklerin kurallarını yazar; kurulumda varsayılan kural yoktur (K-141). Komut var olan aynı adlı kuralı yeniden yazar, ötekilere dokunmaz.
+- **Beklenen:** `beklenen-hatalar.json`'daki her örnek satır iki hâli taşır: kurallar yokken (`rules`) ve demo kurallarıyla (`rules_with_demo`); `demo_rules` kuralların listesidir. Test (`tests/test_validation_dirty.py`) ikisini de denetler.
+
 ### Kullanıcılar (geliştirme 2.1, K-98)
 
 Örnek Makina A.Ş.'nin dört hesabı, her rol için bir tane:
@@ -163,4 +170,5 @@ Faz 1 dışı konular (set-up, kalıp, fırın, raf ömrü kuralları, çoklu lo
 | Kirli hâl (entegrasyon Excel'i) | üretildi (0.8); ETL ile denenmesi Aşama 3–5 |
 | Birim ondalıkları (ADET 0, KG 3, M 2, SAAT 2) | uygulandı (1.3) |
 | Kullanıcılar ve geçici şifre komutu | uygulandı (2.1) |
+| Veri kuralı örnekleri ve demo kuralları komutu (`rules`) | uygulandı (4.1) |
 | Kilogramlı malzemelere miktar (güvenlik stoğu, lot) | açık: sonraya bırakıldı (1.3 demosu); KG'de 3 ondalık şimdilik yalnız testte görülür |

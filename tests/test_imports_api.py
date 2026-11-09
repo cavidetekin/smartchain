@@ -116,7 +116,8 @@ def test_small_file_returns_the_summary(db_engine, client, people):
     assert (s["status"], s["checked"], s["read"], s["valid"], s["errors"], s["name"], s["file_name"], s["mode"]) == ("Ön kontrol", True, 5, 3, 2, "Kaynak", "kaynak v3.xlsx", "Değişen")
     assert s["template_version"] == s["current_version"] == contract.entity(ENTITY).version and s["job"] is None
     rows = stg_rows(db_engine)
-    assert [(r["SourceRowNo"], r["Code"], r["RowStatus"], r["ImportBatchId"]) for r in rows] == [(i + 2, f"A-{i}", "Yeni", s["batch_id"]) for i in range(3)]
+    assert [(r["SourceRowNo"], r["Code"], r["ImportBatchId"]) for r in rows] == [(i + 2, f"A-{i}", s["batch_id"]) for i in range(3)]
+    assert all("RowStatus" not in r for r in rows)  # satır durumu işlenmiş katmanda (K-140)
     b = batch_row(db_engine, s["batch_id"])
     assert (b["Method"], b["EntityName"], b["LoadType"], b["FileName"], b["UploadedBy"], b["TemplateVersion"], b["RowCount"], b["ErrorCount"]) == ("Excel", ENTITY, "Değişen", "kaynak v3.xlsx", people[KEY_USER], s["template_version"], 5, 2)
     assert Path(b["FilePath"]).name == f"{s['batch_id']}.xlsx" and Path(b["FilePath"]).exists()

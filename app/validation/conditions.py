@@ -78,6 +78,9 @@ def _parse(kind: str, raw: str):
     return text
 
 
+parse = _parse  # veri kuralının sabit değeri de aynı çözümle (K-141)
+
+
 def _escape_like(text: str) -> str:
     return text.replace("[", "[[]").replace("%", "[%]").replace("_", "[_]")
 
@@ -160,13 +163,15 @@ def first_field(groups: list[list[Condition]]) -> str | None:
     return next((c.field for g in groups for c in g), None)
 
 
-def sentence(entity: str, groups: list[list[Condition]]) -> str:
-    """Okunur cümle: "Minimum lot boş değil ve Maksimum lot boş veya Lot katı > Maksimum lot"."""
+def sentence(entity: str, groups: list[list[Condition]], labels: dict[str, str] | None = None) -> str:
+    """Okunur cümle: "Minimum lot boş değil ve Maksimum lot boş veya Lot katı > Maksimum lot". labels: güncel etiketler (texts.field_labels)."""
+    name_of = (lambda f: labels.get(f, label(entity, f))) if labels else (lambda f: label(entity, f))
+
     def one(c: Condition) -> str:
-        name = label(entity, c.field)
+        name = name_of(c.field)
         if c.operator in NO_VALUE:
             return f"{name} {SYMBOL[c.operator]}"
-        right = label(entity, c.compare_field) if c.compare_field else str(c.value).strip()
+        right = name_of(c.compare_field) if c.compare_field else str(c.value).strip()
         if c.operator in TEXT_ONLY:
             return f"{name} {right} {SYMBOL[c.operator]}"
         if c.operator == IN_LIST:

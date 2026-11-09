@@ -596,3 +596,24 @@
 .sc-top-strip .sc-input { width: 16rem; }
 .sc-top-strip .sc-input[inputmode="decimal"] { width: 7rem; text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .sc-top-strip p { margin: 0; }
+
+/* Veri kuralları (K-141, K-142): Sıra hücresinde tutamak; bırakma yeri çizgiyle. Sonuç bölümü tek satır. */
+.sc-seq-cell { display: inline-flex; align-items: center; gap: var(--space-1); width: 100%; height: 100%; }
+.sc-table-row.is-drop-before td { box-shadow: inset 0 2px 0 var(--indigo-500); }
+.sc-table-row.is-drop-after td { box-shadow: inset 0 -2px 0 var(--indigo-500); }
+.sc-table-row.is-dragging td { opacity: 0.5; }
+.sc-table-row[draggable="true"] { cursor: grab; }
+.sc-seq-grip { flex: none; width: 1rem; height: 1rem; color: var(--text-muted); }
+.sc-seq-cell.is-locked .sc-seq-grip { opacity: 0.4; }
+.sc-tag--ok.sc-tag--soft { background: var(--status-ok-bg-soft); color: var(--status-ok-text); }
+.sc-rule-result { display: flex; flex-direction: column; gap: var(--space-2); }
+.sc-rule-result-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2) var(--space-3); }
+.sc-rule-result-row > .sc-field { min-width: 12rem; }
+/* Hücre izi (K-140, K-143): kuralla değişen hücrenin zemini açık lila, metin aynı */
+.sc-table-grid td.is-rule-changed { background: var(--rule-trace-bg); }
+.sc-rule-trace { display: block; }
+/* Veri çek penceresi (K-143): tablo yatay kaydırmasız, daha yüksek; kolon genişlikleri içeriğe göre, "Yine de oku" yalnız kutu */
+.sc-dialog--pull { width: min(72rem, calc(100vw - 2rem)); }
+.sc-dialog--pull .sc-local-table-wrap { max-height: 62vh; }
+.sc-dialog--pull .sc-local-table td { max-width: none; }
+.sc-dialog--pull .sc-local-table td:last-child, .sc-dialog--pull .sc-local-table th:last-child { width: 1%; text-align: center; white-space: nowrap; }

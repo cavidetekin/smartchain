@@ -33,7 +33,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yalnız okuma (Faz 1):** Smartchain ERP'den okur, ERP'ye yazmaz. Plan çıktıları Excel listesi olarak çıkar ve ERP'ye elle girilir. Geri yazma Faz 2 (API).
 - **Yöntemler (K-130):** Faz 1'de SQL view ve Excel; API Faz 2 (11.5). Çekim yöntemi tablo başına tektir, müşteriye göre seçilir, karışık kurulum normaldir (ör. siparişler SQL, kaynaklar Excel). Excel'den yükleme yöntemden bağımsız her zaman açıktır; partide yöntem kayıtlı kalır, yükleme en yeni partiyi alır (5.2).
 - **Ham veri önce, dönüşüm sonra:** Gelen veri önce olduğu gibi ham tablolara (Staging) yazılır; doğrulama ve dönüşüm sonra. Sorunlu yükleme geriye dönük incelenebilir, ham veri 1 hafta saklanır.
-- **Staging'in güncel hâli (K-133):** Her `stg` tablosu, ham partilerin yanında tablonun güncel ve tam hâlini taşır (`IsCurrent`). Tam parti güncel hâlin yerine geçer (partide olmayan kayıt silinmiş sayılır); Ekle / güncelle aynı anahtarlı kaydı değiştirir, ötekiler kalır; SQL çekimi her zaman Tam'dır. Ön kontrolde düşen satır güncel hâle girmez, o anahtarın önceki güncel satırı kalır. Rules, validasyon ve load yalnız güncel hâli okur; core'a bakılmaz. Ham veri temizliği güncel satırı silmez.
+- **Staging iki katman (K-140):** Ham katman (`stg.<Tablo>`) gelen veridir, hiç değişmez. İşlenmiş katman (`prc.<Tablo>`) ham katmanın güncel satırlarının kopyasıdır; her çalıştırmada ham veriden baştan kurulur, veri kuralları sırayla bu kopyada çalışır (K-141). Formül birikmez, kapatılan kuralın etkisi kendiliğinden kalkar. Validasyon ve load yalnız işlenmiş katmanı okur; hangi hücreyi hangi kuralın değiştirdiği kural izinde (`adm.DataRuleEffect`) tutulur.
+- **Staging'in güncel hâli (K-133):** Her `stg` tablosu, ham partilerin yanında tablonun güncel ve tam hâlini taşır (`IsCurrent`). Tam parti güncel hâlin yerine geçer (partide olmayan kayıt silinmiş sayılır); Ekle / güncelle aynı anahtarlı kaydı değiştirir, ötekiler kalır; SQL çekimi her zaman Tam'dır. Ön kontrolde düşen satır güncel hâle girmez, o anahtarın önceki güncel satırı kalır. Güncel hâl ham katmana aittir; rules, validasyon ve load onun işlenmiş kopyasını okur (K-140); core'a bakılmaz. Ham veri temizliği güncel satırı silmez.
 - **Ham değer kurala girdidir (K-121):** ERP'den gelen ham değerler (Status, Type gibi) yalnız veri kurallarına girdidir; motor ve ekranlar bayrakları okur (IsActive, IsOnHold, IsReleased…). Bayraklar kurallarla ham değerden doldurulur. Ham değer ile bayrak çelişirse bayrak geçerlidir. Bütün tablolar için geçerlidir.
 - **ERP ana veri sahibidir:** Ana veri ve işlem verisinde ERP master'dır. Smartchain'e özgü alanlar (verim, kritik kaynak, parametreler) Smartchain'de tutulur; ERP'de yoksa kural ya da elle değerle tamamlanır.
 - **Hata izole edilir:** Bir varlığın hatası diğerlerini durdurmaz; satır hatası satırı atlatır, eşik aşımı varlığı dışarıda bırakır. Gece akışı bu kurallarla kendi kendine ilerler.
@@ -66,10 +67,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - View_* okur, her zaman tam
   - Önce sinyal ve uyum denetimi
   - Eşleme yok: kolon adı = sözleşme
-- **Validasyon → yükleme**
+- **Veri kuralları → validasyon → yükleme**
+  - Veri kuralları işlenmiş katmanda (K-140, K-141)
   - Yapısal, referans, mantıksal, tutarlılık
-  - Alan önceliği: ERP / kural / elle (varsayılan yok, K-138)
-  - Veri kuralları, türetilmiş alanlar (LLC)
+  - Alan önceliği: ERP / kural / elle (varsayılan yok, K-138; elle değerin korunması yüklemede)
+  - Türetilmiş alanlar (LLC)
   - Veri versiyonu (tam / kısmi)
 - **Çıkış (Faz 1: Excel)**
   - Satın alma talebi listesi
@@ -133,7 +135,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | VARLIK | AD | SINIF | AÇIKLAMA | DOSYA ADI | SÜRÜM |
 |---|---|---|---|---|---|
-| Location | Lokasyon | Ana veri | Tesisler, depolar ve fason depoları | lokasyon | 2 |
+| Location | Lokasyon | Ana veri | Tesisler, depolar ve fason depoları | lokasyon | 3 |
 | UomConversion | Birim dönüşümü | Ana veri | Malzeme bazında birimler arası çevrim oranları | birim-donusumu | 2 |
 | Material | Malzeme | Ana veri | Hammadde, yarı mamul ve nihai ürünler ile planlama bilgileri | malzeme | 4 |
 | ProductionVersion | Üretim versiyonu | Ana veri | Bir malzemenin ürün ağacı ve rotasını belirleyen üretim versiyonları | uretim-versiyonu | 2 |
@@ -219,7 +221,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|
 | Code | nvarchar(30) | UK | E | Lokasyon kodu | ERP | hata (satır atlanır) |
 | Name | nvarchar(100) |  | H | Lokasyon adı | ERP | bilinmiyor |
-| Type | nvarchar(15) |  | E | Tesis \| Depo \| Fason deposu | ERP, yoksa kural | hata (kurallardan sonra) |
+| Type | nvarchar(50) |  | H | ERP'den ham lokasyon tipi; veri kurallarında kullanılır (bayraklar bundan dolar), değer listesi yok (K-143) | ERP | bilinmiyor |
 | IsFactory | bit |  | H | Tesis mi | Kural, ERP ya da Excel | yok |
 | IsDepot | bit |  | H | Depo mu | Kural, ERP ya da Excel | yok |
 | IsSubcontractor | bit |  | H | Fason deposu mu | Kural, ERP ya da Excel | yok |
@@ -789,13 +791,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### View ile veri kuralı sınırı (K-130)
 <sub>26. Entegrasyon tasarımı · View ve kural sınırı</sub>
 
-- **Ölçüt:** Smartchain'in hiçbir zaman görmemesi gereken satır (başka şirket, test kaydı) view'da elenir; bugün dışarıda kalıp yarın girebilecek satır (pasif malzeme, kapalı sipariş) aktarım filtresindedir.
+- **Ölçüt:** Smartchain'in hiçbir zaman görmemesi gereken satır (başka şirket, test kaydı) view'da elenir; bugün dışarıda kalıp yarın girebilecek satır (pasif malzeme, kapalı sipariş) bir veri kuralıyla `IsActive` = Hayır olur (K-145; ayrı aktarım filtresi yok). Pasif satır validasyona girmez, load almaz.
 
 | NEREDE | NE | ÖRNEK |
 |---|---|---|
 | View | Join, kolon adı, tip, birim dönüşümü, türetme, kesin kapsam | Rota süresi dk → saat; açık miktar = sipariş − teslim; başka şirket kodu elenir |
 | Veri kuralı | Değer listeleri ve bayraklar; ham değer view'dan çevrilmeden gelir (K-110, K-121) | `Status` → `IsOnHold`; tedarik türü 'S' → `DefaultSupplyType` = Satın alma |
-| Aktarım filtresi | Planlamacının görmesi ve değiştirmesi gereken iş kapsamı (A-34) | Pasif malzeme, kapalı sipariş |
+| Veri kuralı ile kapsam | Planlamacının görmesi gereken iş kapsamı: kural `IsActive` = Hayır yazar (K-145) | Pasif malzeme, kapalı sipariş |
 
 - Kod bu sınırı zorlayamaz; kurulumda bu tabloya göre yazılır.
 

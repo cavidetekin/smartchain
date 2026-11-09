@@ -1,12 +1,16 @@
-"""Kirli veri (docs/11, K-137): her hazır kural en az bir bulgu verir; hiçbir bulgu beklenmeyen satırda çıkmaz."""
+"""Kirli veri (docs/11, K-137, K-141): her hazır kural en az bir bulgu verir; hiçbir bulgu beklenmeyen satırda çıkmaz;
+demo veri kurallarıyla kuralla çözülen satırların bulguları kalkar."""
 import json
 from datetime import date, datetime
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.orm import Session
 
 from app.api.permissions import KEY_USER
+from app.data.synthetic.rules import DEMO_RULES, install
 from app.validation import catalog as cat
+from app.validation import engine as validation_engine
 
 from auth_helpers import ensure_user
 from auth_helpers import auth
@@ -57,10 +61,11 @@ def test_every_builtin_rule_has_a_finding(validated):
     assert sorted(builtin - codes) == []
 
 
-def test_no_finding_on_unexpected_row(validated):
+def _compare(manifest: dict, found, field: str = "rules") -> None:
+    """Bulgular beklenenle birebir: beklenmeyen satırda bulgu yok, beklenen her kural bulgu verir. field: rules ya da rules_with_demo."""
     expected: list[tuple[str, set[str], set[str]]] = []  # tablo, anahtarın parçaları, kurallar
-    for e in validated["manifest"]["errors"]:
-        rules = e.get("rules") or H_RULES.get(e["code"], [])
+    for e in manifest["errors"]:
+        rules = e.get(field, e.get("rules")) if e["code"] == "V" else (e.get("rules") or H_RULES.get(e["code"], []))
         if not rules:
             continue
         parts = row_key(e["key"]).split(SEP) if e["code"] == "V" else [p for p in e["key"].split("|") if p]
@@ -70,11 +75,15 @@ def test_no_finding_on_unexpected_row(validated):
         have = set((key or "").split(SEP))
         return any(t == table and parts <= have and code in rules for t, parts, rules in expected)
 
-    unexpected = [(t, code, key, msg) for t, code, key, _s, msg in validated["found"] if not wanted(t, key, code)]
+    unexpected = [(t, code, key, msg) for t, code, key, _s, msg in found if not wanted(t, key, code)]
     assert unexpected == [], "\n".join(map(str, unexpected))
     missing = [(t, sorted(parts), r) for t, parts, rules in expected for r in rules
-               if not any(tt == t and parts <= set((key or "").split(SEP)) and code == r for tt, code, key, *_ in validated["found"])]
+               if not any(tt == t and parts <= set((key or "").split(SEP)) and code == r for tt, code, key, *_ in found)]
     assert missing == [], "\n".join(map(str, missing))
+
+
+def test_no_finding_on_unexpected_row(validated):
+    _compare(validated["manifest"], validated["found"])
 
 
 def test_changed_batch_is_applied_to_the_current_state(validated):
@@ -93,3 +102,26 @@ def test_changed_batch_is_applied_to_the_current_state(validated):
                                  "WHERE r.Code = N'MS.QUOTA_SUM' AND f.RowKey LIKE :k"), {"k": f"%{key['MaterialCode']}%"}).scalars().all()
     assert sorted((s, float(q)) for s, q in quotas if q is not None) == sorted([(key["SupplierCode"], 0.5), (next(s for s, q in quotas if s != key["SupplierCode"]), 0.7)])
     assert len(hits) == 2
+
+
+def test_demo_rules_clear_their_findings(validated):
+    """Demo veri kuralları (docs/11, K-141): kuralla çözülen satırların bulguları kalkar; ham katman değişmez; bölen sıfırsa hücre değişmez."""
+    eng = validated["engine"]
+    with Session(eng) as s:
+        assert install(s) == len(DEMO_RULES)
+        validation_engine.enqueue_group(s, sorted({r["entity"] for r in DEMO_RULES}), validation_engine.TRIGGER_RULES, None)
+    run_validations(eng)
+    with eng.connect() as c:
+        found = c.execute(sa.text("SELECT f.EntityName, r.Code, f.RowKey, f.Severity, f.Message FROM adm.ValidationFinding f "
+                                  "JOIN adm.ValidationRule r ON r.Id = f.ValidationRuleId")).all()
+        failed = c.execute(sa.text("SELECT Name FROM adm.DataRule WHERE LastRunStatus <> N'Çalıştı' OR LastRunStatus IS NULL")).scalars().all()
+        po = c.execute(sa.text("SELECT p.ConfirmedDate, s.ConfirmedDate, p.RequestedDate FROM prc.PurchaseOrderLine p "
+                               "JOIN stg.PurchaseOrderLine s ON s.StagingRowId = p.StagingRowId WHERE p.PurchaseOrderNo = N'R-PO-1'")).one()
+        pack = dict(c.execute(sa.text("SELECT Code, AdditionalNumber1 FROM prc.Material WHERE Code IN (N'R-MAT-1', N'R-MAT-2')")).all())
+        traced = c.execute(sa.text("SELECT COUNT(*) FROM adm.DataRuleEffect")).scalar()
+    assert failed == []
+    batch = validated["manifest"]["changed_batch"]  # önceki testin Ekle / güncelle partisi: iki tedarikçide kota toplamı (K-133)
+    changed = {"code": "V", "table": "MaterialSupplier", "key": {k: batch["key"][k] for k in ("LocationCode", "MaterialCode")}, "rules_with_demo": batch["rules"]}
+    _compare({**validated["manifest"], "errors": [*validated["manifest"]["errors"], changed]}, found, "rules_with_demo")
+    assert po[1] is None and (po[0] - po[2]).days == 3  # ham katman boş kalır, işlenmiş katmanda istenen + 3 gün
+    assert pack == {"R-MAT-1": None, "R-MAT-2": 10} and traced > 0  # bölen sıfırsa hücre değişmez (K-141)

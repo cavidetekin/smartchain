@@ -33,7 +33,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - K-36  Kullanıcı seviyeleri: System owner, Admin, Key user, End user.
   - K-37  Onaylı plan sadece çalışmadan yayınlanır. Faz 1'de tek lokasyon.
 - **Açık konular**
-  - A-15  Çakışma kuralları taslak; sonra değerlendirilecek.
+  - A-15  Kapandı (K-141): staging'de ERP–kural çakışması yok, aynı alanda sonuncu kural kazanır; elle değer yüklemede.
   - A-16  Çözücü seçimi geliştirme aşamasında yapılacak.
 
 ### Kurulum modeli
@@ -191,8 +191,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | KATMAN | İÇERIK | SAKLAMA |
 |---|---|---|
-| Ham veri | Gelen veri; parti numarası, zaman ve kaynakla | Bir hafta |
-| Geçerli veri | Veri kuralları ve elle değerler uygulanmış hali; her alanın kaynağı izlenir | Sürekli (güncel hali) |
+| Ham veri | Gelen veri; parti numarası, zaman ve kaynakla; hiç değişmez (`stg`, K-140) | Bir hafta (güncel hâli sürekli) |
+| İşlenmiş staging | Ham verinin güncel hâli, veri kuralları uygulanmış; validasyon ve yükleme bunu okur (`prc`, K-140) | Her çalıştırmada yeniden kurulur |
+| Geçerli veri | Yüklenmiş hâli: veri kuralları staging'de, elle değerler yüklemede uygulanır; her alanın kaynağı izlenir | Sürekli (güncel hali) |
 | Veri versiyonu | Yükleme ile oluşan dondurulmuş hali; tam ya da kısmi | Onaylı plana bağlıysa hep; değilse senaryosuyla silinir |
 | Senaryolar ve çalışmalar | Bir veri versiyonuna bağlı planlar ve üzerlerindeki değişiklikler | Bir sonraki gece akışına kadar |
 | Onaylı plan versiyonları | Yayınlanan planlar ve tarihçesi | Hep |

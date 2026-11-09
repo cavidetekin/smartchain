@@ -224,7 +224,7 @@ describe("yetki matrisi (ekran 22)", () => {
     "/api/permissions/matrix/export": { body: {}, headers: { "Content-Disposition": "attachment; filename*=UTF-8''smartchain_yetki-matrisi_x.xlsx" } },
   });
 
-  it.each(["System owner", "Admin"])("%s açar: 15 grup (başlık dahil 16 satır), 4 rol, Excel; istisna bölümü yok", async (role) => {
+  it.each(["System owner", "Admin"])("%s açar: 17 grup (başlık dahil 18 satır), 4 rol, Excel; istisna bölümü yok", async (role) => {
     const user = userEvent.setup();
     const m = usersBackend();
     renderApp("/yonetim/kullanicilar", meAs(role));
@@ -233,11 +233,11 @@ describe("yetki matrisi (ekran 22)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Yetki matrisi" });
     expect(dialog).toHaveClass("sc-dialog--xwide");
     const table = await within(dialog).findByRole("table", { name: "Yetki matrisi" });
-    expect(within(table).getAllByRole("row")).toHaveLength(16);
+    expect(within(table).getAllByRole("row")).toHaveLength(18);
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Fonksiyon grubu", "System owner", "Admin", "Key user", "End user"]);
     const parameter = within(table).getByRole("row", { name: /^Parametre / });
     expect(within(parameter).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Tam", "Tam", "Tam", "Yok"]);
-    expect(within(table).getAllByRole("rowheader")[1]).toHaveTextContent(/^Ana veri ve kurallar$/);
+    expect(within(table).getAllByRole("rowheader")[1]).toHaveTextContent(/^Ana veri$/);
     expect(dialog.textContent).not.toMatch(/\d+–\d+/);
     expect(within(dialog).getAllByRole("table")).toHaveLength(1);
     expect(dialog).not.toHaveTextContent("İstisnalar");

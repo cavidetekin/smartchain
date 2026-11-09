@@ -154,7 +154,7 @@ def generate(on: date | None = None, seed: int = SEED) -> Dataset:
 
 def _organisation(b: _Builder, rng: random.Random) -> None:
     ds = b.ds
-    b.add("Location", Code=LOCATION_CODE, Name="Örnek Makina A.Ş. · Merkez fabrika", Type="Tesis",
+    b.add("Location", Code=LOCATION_CODE, Name="Örnek Makina A.Ş. · Merkez fabrika", Type="PLANT",  # ERP ham tipi (K-143)
           IsFactory=True, IsDepot=True, IsSubcontractor=False, IsActive=True,
           Country="Türkiye", CountryCode="TR", City="Kocaeli")
     # Decimals: miktar ondalığı (K-88); ERP'den gelmez, Smartchain'de tutulur.

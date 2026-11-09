@@ -95,7 +95,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Alan grupları ve veri akışı
 <sub>21. Veri modeli · Genel görünüm</sub>
 
-- **Veri yönetimi  12 tablo:** ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging · DataRule · FieldDefinition · ManualValue · DataVersion
+- **Veri yönetimi  13 tablo:** ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · DataVersion
 - **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** ParameterSet · PlanningSetting · PriorityRule · AllocationRule
@@ -206,13 +206,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **FieldDefinition:** Veri sözlüğü: her alanın sınıfı ve değer davranışı
 - **DataRule:** Veri kuralı: 'X = … ise Alan = …'
 - **DataRuleCondition:** Kural koşulları (VE / VEYA)
+- **DataRuleEffect:** Kural izi: hücreyi son değiştiren kural ve ham değer (K-140)
 - **ManualValue:** Kayıt bazında elle girilen değer
 - **FieldValueSource:** Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır)
 - **ImportBatch:** Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla
 - **ImportFinding:** Partinin bulguları (ön kontrol ve doğrulama)
 - **IntegrationEntity:** Tablo başına çekim ayarı: yöntem, çekim anahtarı, view (K-130)
 - **IntegrationViewVersion:** View'ın sürüm geçmişi (K-130)
-- **stg.*:** Entegrasyon tabloları: her varlık için bir tane (stg.Material…); ilişkiler kodla
+- **stg.*:** Entegrasyon tabloları: her varlık için bir tane (stg.Material…); ilişkiler kodla; ham katman
+- **prc.*:** İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış (K-140)
 - **DataVersion:** Yükleme ile oluşan dondurulmuş veri versiyonu
 - **DataVersionEntity:** Kısmi yüklemede hangi varlıkların yüklendiği
 
@@ -246,7 +248,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Id | int | PK | Lokasyon kimliği |  | Sistem | H | E |  |
 | Code | nvarchar(30) | UK | Lokasyon kodu |  | ERP | H | E | hata (satır atlanır) |
 | Name | nvarchar(100) |  | Lokasyon adı |  | ERP | H | H | bilinmiyor |
-| Type | nvarchar(15) |  | Tesis \| Depo \| Fason deposu | Lokasyon tipi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| Type | nvarchar(50) |  | ERP'den ham lokasyon tipi; veri kurallarında kullanılır (bayraklar bundan dolar), değer listesi yok (K-143) | Lokasyon tipi | ERP | H | H | bilinmiyor |
 | IsFactory | bit |  | Tesis mi | Tesis | Kural, ERP ya da Excel | H | H | yok |
 | IsDepot | bit |  | Depo mu | Depo | Kural, ERP ya da Excel | H | H | yok |
 | IsSubcontractor | bit |  | Fason deposu mu | Fason deposu | Kural, ERP ya da Excel | H | H | yok |
@@ -1223,21 +1225,30 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Veri kuralı: 'X = … ise Alan = …'.
+- Veri kuralı (K-141, ekran 04): tek tablo içinde "koşul ise hedef alan = sonuç". Staging'in işlenmiş katmanında tablo başına sırayla çalışır (K-140); varsayılan kural yoktur, kurulumda eklenir.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| TableName | nvarchar(60) |  | Hedef tablo | Kullanıcı | H | E |  |
-| FieldName | nvarchar(60) |  | Hedef alan | Kullanıcı | H | E |  |
-| Seq | int |  | Sıra (ilk eşleşen kazanır) | Kullanıcı | H | E |  |
-| AssignValue | nvarchar(200) |  | Atanacak değer | Kullanıcı | H | H |  |
-| AssignFromField | nvarchar(60) |  | Ya da başka bir alandan | Kullanıcı | H | H |  |
-| Owner | nvarchar(10) |  | Kurulum \| Kullanıcı | Sistem | H | E |  |
-| IsActive | bit |  | Aktif | Kullanıcı | H | H | 1 |
-| ValidFrom | date |  | Geçerlilik | Kullanıcı | H | H |  |
-| ValidTo | date |  | Geçerlilik | Kullanıcı | H | H |  |
-| Description | nvarchar(400) |  | Açıklama | Kullanıcı | H | H |  |
+| EntityName | nvarchar(60) | UK | Tablo (`stg` adı) | Kullanıcı | H | E |  |
+| Name | nvarchar(200) | UK | Kural; tabloda tekil | Kullanıcı | H | E |  |
+| Seq | int |  | Sıra: tablo başına 1'den, sonra çalışan önceki kuralın sonucunu görür, aynı alanda sonuncu kazanır | Kullanıcı | H | E |  |
+| TargetField | nvarchar(60) |  | Hedef alan; anahtar alan ve sistem alanı olamaz | Kullanıcı | H | E |  |
+| ResultKind | nvarchar(10) |  | Değer \| Alan \| Formül \| Boşalt | Kullanıcı | H | E |  |
+| Value | nvarchar(200) |  | Değer sonucunda sabit; hedef tipine göre çözülür (sayı, tarih, bayrak 1 / 0) | Kullanıcı | H | H |  |
+| SourceField | nvarchar(60) |  | Alan ve Formül sonucunda kaynak alan | Kullanıcı | H | H |  |
+| FormulaOperator | nvarchar(5) |  | + \| − \| × \| ÷ (tarihte + ve − gün) | Kullanıcı | H | H |  |
+| OperandValue | nvarchar(200) |  | Formülde sabit operand | Kullanıcı | H | H |  |
+| OperandField | nvarchar(60) |  | Formülde alan operand | Kullanıcı | H | H |  |
+| ApplyMode | nvarchar(15) |  | Yalnız boşsa \| Her zaman (Boşalt'ta Her zaman) | Kullanıcı | H | E |  |
+| ConditionText | nvarchar(400) |  | Koşulun okunur cümlesi; kayıtta yazılır, koşulsuzsa boş | Sistem | H | H |  |
+| ResultText | nvarchar(400) |  | Sonucun okunur cümlesi ("Tesis = Evet", "Temin süresi + 2"); kayıtta yazılır | Sistem | H | H |  |
+| IsActive | bit |  | Aktif; pasif kural çalışmaz | Kullanıcı | H | E |  |
+| LastRunStatus | nvarchar(15) |  | Çalıştı \| Çalışmadı | Sistem | H | H |  |
+| LastRunMessage | nvarchar(400) |  | Çalışmadıysa neden | Sistem | H | H |  |
+| LastRunAt | datetime2 |  | Son çalışma | Sistem | H | H |  |
+| UpdatedBy | int | FK | Son değiştiren | Sistem | H | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik | Sistem | H | H |  |
 
 ### DataRuleCondition
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1254,6 +1265,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Operator | nvarchar(15) |  | = \| ≠ \| > \| < \| ≥ \| ≤ \| İçerir \| İle başlar \| Listede \| Boş \| Boş değil (K-139; ≠ boşu da kapsar) | Kullanıcı | H | E |  |
 | Value | nvarchar(200) |  | Değer | Kullanıcı | H | H |  |
 | CompareField | nvarchar(60) |  | Alan–alan karşılaştırmasında öteki alan (K-136) | Kullanıcı | H | H |  |
+
+### DataRuleEffect
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Kural izi (K-140): işlenmiş katmanda hangi hücreyi hangi kuralın son değiştirdiği ve ham değer; her çalıştırmada tablo için yeniden yazılır. İpucu: "Kural 3 · Lokasyon bayrakları · ham değer: boş".
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| EntityName | nvarchar(60) | PK | Tablo (`stg` adı) | Sistem | H | E |  |
+| StagingRowId | bigint | PK | Satır; ham ve işlenmiş katmanda aynı | Sistem | H | E |  |
+| FieldName | nvarchar(60) | PK | Alan | Sistem | H | E |  |
+| DataRuleId | bigint |  | Hücreyi son değiştiren kural | Sistem | H | E |  |
+| RawValue | nvarchar(200) |  | Ham katmandaki değer, okunur biçimde; boşsa boş | Sistem | H | H |  |
 
 ### ManualValue
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1423,7 +1448,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | EntityName | nvarchar(60) | IX | Tablo; tablolar arası toplu çalışmada boş | Sistem | H | H |  |
 | Scope | nvarchar(15) |  | Tablo içi \| Tablolar arası | Sistem | H | E |  |
-| TriggerType | nvarchar(20) |  | Yükleme \| Çekim \| Toplu çekim \| Yeniden valide et | Sistem | H | E |  |
+| TriggerType | nvarchar(20) |  | Yükleme \| Çekim \| Toplu çekim \| Yeniden valide et \| Kural değişikliği (K-142) | Sistem | H | E |  |
 | BatchId | bigint |  | Çalışmayı başlatan parti (`ImportBatch.Id`); FK yok, ham veri temizliğinde parti silinse de çalışma kalır | Sistem | H | H |  |
 | JobId | bigint |  | Çalışmanın işi | Sistem | H | H |  |
 | GroupId | bigint | IX | Toplu çekimde çekim işinin Id'si; tablolar arası çalışma grubun çekimi ve bütün tablo içi çalışmaları bitince başlar (K-134) | Sistem | H | H |  |
@@ -1460,17 +1485,30 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Entegrasyon · versiyonsuz · Faz 1
-- Entegrasyon tabloları: her varlık için bir tane (stg.Material…). ERP'nin dili: Id yok, ilişkiler kodla. API, SQL ve Excel buraya iner.
+- Entegrasyon tabloları: her varlık için bir tane (stg.Material…). ERP'nin dili: Id yok, ilişkiler kodla. API, SQL ve Excel buraya iner. Ham katmandır, hiç değişmez (K-140).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | StagingRowId | bigint | PK | Satır kimliği | Sistem | H | E |  |
 | ImportBatchId | bigint | FK | Yükleme partisi | Sistem | H | E |  |
-| RowStatus | nvarchar(15) |  | Yeni \| Hatalı \| Aktarıldı; güncel satırda Hata bulgusu varsa Hatalı, load almaz (K-134) | Sistem | H | E | Yeni |
 | IsCurrent | bit |  | Tablonun güncel hâlinde mi (K-133); güncel hâlde anahtar bir kez bulunur | Sistem | H | E |  |
 | ErrorText | nvarchar(400) |  | Hata açıklaması (ör. bilinmeyen MaterialCode) | Sistem | H | H |  |
 | …Code | nvarchar(50) | REF | İlişkiler kodla (LocationCode, MaterialCode…); aktarımda Id'ye eşlenir | ERP | H | E |  |
 | … |  |  | Varlığın sözleşme alanları ve ek alanları (26. adım) | ERP | H |  |  |
+
+### prc.*
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Entegrasyon · versiyonsuz · Faz 1
+- İşlenmiş staging (K-140): her `stg` tablosunun aynı alanlı kopyası (prc.Material…). Her çalıştırmada boşaltılır, ham katmanın güncel satırları (`IsCurrent = 1`) kopyalanır, veri kuralları sırayla bu kopyada çalışır (K-141). Validasyon ve load yalnız bu katmanı okur. Bu katmandaki her satır günceldir; `IsCurrent` yoktur.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| StagingRowId | bigint | PK | Ham satırın kimliği (kopyalanır, kimlik değil) | Sistem | H | E |  |
+| ImportBatchId | bigint | FK | Satırın geldiği parti | Sistem | H | E |  |
+| SourceRowNo | int |  | Kaynaktaki satır no | Sistem | H | H |  |
+| RowStatus | nvarchar(15) |  | Yeni \| Hatalı \| Aktarıldı; Hata bulgusu varsa Hatalı, load almaz (K-134) | Sistem | H | E | Yeni |
+| … |  |  | `stg` tablosunun sözleşme alanları ve ek alanları; kurallar bunları değiştirir | Kural | H |  |  |
 
 ### DataVersion
 <sub>21. Veri modeli · Veri yönetimi</sub>

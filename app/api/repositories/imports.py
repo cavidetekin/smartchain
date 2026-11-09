@@ -16,7 +16,6 @@ FINDING = metadata.tables["adm.ImportFinding"]
 
 METHOD_EXCEL = "Excel"
 PENDING, RECEIVED, FAILED, INCOMPLETE, CANCELLED = "Ön kontrol", "Alındı", "Hatalı", "Tamamlanmadı", "Vazgeçildi"
-ROW_NEW = "Yeni"
 
 _NO_LENGTH = 255
 
@@ -84,14 +83,14 @@ def _bulk(session: Session, statement: str, sizes: Sequence, rows: Sequence[Sequ
 
 
 def insert_rows(session: Session, table: str, found: Sequence[TemplateField], batch_id: int, rows: Iterable[tuple[int, dict]]) -> None:
-    """Geçerli satırlar; RowStatus Yeni, SourceRowNo Excel satırı."""
+    """Geçerli satırlar ham katmana; SourceRowNo Excel satırı. Satır durumu (RowStatus) işlenmiş katmandadır (K-140)."""
     t = metadata.tables[f"stg.{table}"]
     names = [f.name for f in found]
-    columns = ", ".join(f"[{n}]" for n in ["ImportBatchId", "RowStatus", "SourceRowNo", *names])
-    marks = ", ".join("?" * (3 + len(names)))
-    sizes = [(pyodbc.SQL_BIGINT, 0, 0), (pyodbc.SQL_WVARCHAR, 15, 0), (pyodbc.SQL_INTEGER, 0, 0),
+    columns = ", ".join(f"[{n}]" for n in ["ImportBatchId", "SourceRowNo", *names])
+    marks = ", ".join("?" * (2 + len(names)))
+    sizes = [(pyodbc.SQL_BIGINT, 0, 0), (pyodbc.SQL_INTEGER, 0, 0),
              *[_size(f, getattr(t.c[f.name].type, "length", None)) for f in found]]
-    data = [(batch_id, ROW_NEW, number, *[row.get(n) for n in names]) for number, row in rows]
+    data = [(batch_id, number, *[row.get(n) for n in names]) for number, row in rows]
     _bulk(session, f"INSERT INTO stg.[{table}] ({columns}) VALUES ({marks})", sizes, data)
 
 

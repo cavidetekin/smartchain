@@ -119,7 +119,7 @@ def test_entity_list_sorts_filters_and_exports(client, people):
 
     # satır menüsü gizli kolonları da okur
     only = client.post("/api/data-entities/query", headers=h, json={"fields": ["EntityClass"], "limit": 1}).json()["rows"][0]
-    assert only["Entity"] == "Location" and only["Name"] == "Lokasyon" and only["Version"] == 2
+    assert only["Entity"] == "Location" and only["Name"] == "Lokasyon" and only["Version"] == 3
 
     fields = ["Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount"]
     body = client.post("/api/data-entities/query", headers=h, json={"fields": fields, "limit": 100}).json()

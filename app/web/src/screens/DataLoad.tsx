@@ -4,7 +4,7 @@ import { TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
-import { ApiError } from "../api/client";
+import { ApiError, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { formatDateTime, serverDate } from "../format";
@@ -18,6 +18,7 @@ import { dataLoadApi, type TemplateInfo } from "./dataLoadApi";
 import { ImportDialog } from "./ImportDialog";
 import { type EntityChange, integrationApi, METHOD_SQL, METHODS } from "./integrationApi";
 import { PullResultDialog, PullStartDialog, PullSwitchDialog } from "./PullDialogs";
+import { useJobRefresh } from "../shell/useJobRefresh";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 import { ValidationChip, ValidationDrawer } from "./ValidationDrawer";
 import { RUNNING_STATES } from "./validationApi";
@@ -26,6 +27,7 @@ const T = tr.dataLoad;
 const ALLOWED = { allowed: true };
 const later = (step: string) => ({ allowed: false, reason: T.comingIn(step) });
 const RELOAD_MS = 3000;
+const DATA_JOBS = [JOB_PULL, JOB_VALIDATION, JOB_PRECHECK];
 
 const errorText = (e: unknown) => (e instanceof ApiError ? e.message : T.failed);
 const fileFallback = (row: Row) => `smartchain_${String(row.Entity)}.xlsx`;
@@ -63,7 +65,7 @@ export function DataLoad() {
   const canSwitch = can(me, 91, "write");
   const canPull = can(me, 1, "write");
   const canRevalidate = can(me, 4, "write");
-  const [drawer, setDrawer] = useState<{ entity: string; name: string } | null>(null);
+  const [drawer, setDrawer] = useState<{ entity: string; name: string; all?: boolean } | null>(null);
   const running = useRef(false);  // bir çip sürüyorsa tablo kendini yeniler
   const [pullStart, setPullStart] = useState<{ entity?: string } | null>(null);
   const [pullJob, setPullJob] = useState<number | null>(null);
@@ -92,6 +94,7 @@ export function DataLoad() {
     }, RELOAD_MS);
     return () => window.clearInterval(timer);
   }, []);
+  useJobRefresh(DATA_JOBS, refresh);  // kullanıcının çekim, ön kontrol ve validasyon işleri değişince satırlar yenilenir (tablolar arası dahil, K-143)
   useEffect(() => {
     if (resultValidation) setDrawer({ entity: resultValidation, name: resultValidation });
   }, [resultValidation]);
@@ -195,6 +198,8 @@ export function DataLoad() {
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.Name))} anchor={menu.anchor} onClose={() => setMenu(null)}>
           <MenuItem label={T.download(menu.row.Version)} state={ALLOWED} onClick={() => download(menu.row)} />
+          <MenuItem label={T.viewData} state={ALLOWED}
+                    onClick={() => { setDrawer({ entity: String(menu.row.Entity), name: String(menu.row.Name), all: true }); setMenu(null); }} />
           <MenuItem label={T.info} state={ALLOWED} onClick={() => { setInfoRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.upload} state={ALLOWED} onClick={() => { setUploadRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.lastUpload} state={later("5.4")} onClick={() => undefined} />
@@ -207,7 +212,8 @@ export function DataLoad() {
       {pullStart && <PullStartDialog entity={pullStart.entity} onClose={() => setPullStart(null)} onStarted={(job) => { setPullStart(null); setPullJob(job); }} />}
       {shownPull && <PullResultDialog key={shownPull} jobId={shownPull} onRetry={setPullJob} onChanged={refresh}
                                       onClose={() => { setPullJob(null); if (resultPull) navigate(pathname, { replace: true }); }} />}
-      {drawer && <ValidationDrawer key={drawer.entity} entity={drawer.entity} name={drawer.name} canRevalidate={canRevalidate}
+      {drawer && <ValidationDrawer key={`${drawer.entity}:${drawer.all ? "all" : ""}`} entity={drawer.entity} name={drawer.name} canRevalidate={canRevalidate}
+                                   initial={drawer.all ? { view: "records", scope: "all" } : undefined} refreshKey={reloadKey}
                                    revalidateReason={canRevalidate ? null : forbiddenReason(4, "write")} onChanged={refresh}
                                    onClose={() => { setDrawer(null); if (resultValidation) navigate(pathname, { replace: true }); }} />}
       {switching && <PullSwitchDialog name={String(switching.Name)} enabling={!switching.IsPullEnabled} onClose={() => setSwitching(null)} onConfirm={confirmSwitch} />}

@@ -97,7 +97,7 @@ def test_chain_writes_findings_marks_rows_and_counts(env):
     assert ("Resource", "RES.TYPE_FLAGS", "ORM-01 · B", "Uyarı", "Kaynağın tek bir tipi olmalı.") in found
     assert ("Resource", "STR.REQUIRED", "ORM-01 · C", "Hata", "Zorunlu alan boş.") in found  # kapasite birimi kurallardan sonra boş (K-117)
     with engine.connect() as c:
-        status = dict(c.execute(sa.text("SELECT Code, RowStatus FROM stg.Resource WHERE IsCurrent = 1")).all())
+        status = dict(c.execute(sa.text("SELECT Code, RowStatus FROM prc.Resource")).all())  # işlenmiş katman (K-140)
     assert status == {"A": "Yeni", "B": "Yeni", "C": "Hatalı"}
     s = client.get("/api/validation/Resource", headers=auth(user)).json()
     assert (s["state"], s["outcome"], s["current_rows"], s["error_rows"], s["warning_rows"]) == ("Bitti", "Hatalı", 3, 1, 1)

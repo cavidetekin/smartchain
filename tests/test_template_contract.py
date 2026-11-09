@@ -67,7 +67,7 @@ def test_required_and_blank_rules():
     """Boşsa satır yüklenmeyen 88 alan zorunludur; her YOKSA kuralının somut karşılığı var."""
     every = [f for t in TABLES for f in fields(t)]
     assert sum(f.required for f in every) == 88 and all(f.blank == contract.BLANK_ROW_REJECTED for f in every if f.required)
-    assert sum(1 for f in every if f.values) == 9
+    assert sum(1 for f in every if f.values) == 8  # Location.Type ham ERP değeri, listesi yok (K-143)
     assert contract.blank_text("hata (satır atlanır)") == "Satır yüklenmez" and contract.blank_text("tam gün") == "Tam gün kabul edilir"
     assert contract.blank_text("hata (kurallardan sonra)") == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez" and contract.blank_text("yok") == "Yok sayılır"
     assert contract.blank_text("alternatif Kaynak grubu") == "Kaynak grubu da boşsa satır yüklenmez"
@@ -382,9 +382,9 @@ def test_resource_group_v2_and_new_tables():
 
 
 def test_location_flags_and_type():
-    """K-111: Type kalır, yanına dört bayrak gelir; yalnız Code zorunlu, boş bayrak önce kurala gider."""
+    """K-111, K-143: Type ham ERP değeri (listesiz, boşsa bilinmiyor), yanına dört bayrak gelir; yalnız Code zorunlu, boş bayrak önce kurala gider."""
     found = {f.name: f for f in fields("Location")}
-    assert found["Type"].values == ("Tesis", "Depo", "Fason deposu") and found["Type"].blank == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez"
+    assert found["Type"].values == () and found["Type"].blank == "Bilinmiyor; planda kullanılmaz" and not found["Type"].required
     assert [f.name for f in found.values() if f.required] == ["Code"] and found["Name"].blank == "Bilinmiyor; planda kullanılmaz"
     assert [c.name for c in stg_columns("Location") if c.info.get("key")] == ["Code"]
     assert {n: found[n].label for n in ("IsFactory", "IsDepot", "IsSubcontractor", "IsActive")} == {
@@ -392,7 +392,7 @@ def test_location_flags_and_type():
     assert all(found[n].kind == "bool" for n in ("IsFactory", "IsDepot", "IsSubcontractor", "IsActive"))
     assert all(found[n].blank == "Yok sayılır" for n in ("IsFactory", "IsDepot", "IsSubcontractor"))  # K-138: varsayılan yok
     assert found["IsActive"].blank == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez"
-    assert contract.entity("Location").file_name == "smartchain_lokasyon_v2.xlsx" and contract.base_counts("Location") == (13, 1)
+    assert contract.entity("Location").file_name == "smartchain_lokasyon_v3.xlsx" and contract.base_counts("Location") == (13, 1)
 
 
 def test_unit_has_no_template_only_core():

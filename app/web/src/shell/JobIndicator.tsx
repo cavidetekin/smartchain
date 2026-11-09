@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useNavigate } from "react-router";
 
-import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_DONE, JOB_EXPORT, JOB_FAILED, JOB_LOAD, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job,
+import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_EVENT, JOB_DONE, JOB_EXPORT, JOB_FAILED, JOB_LOAD, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job,
   validationResultPath } from "../api/client";
 import { connect, type ConnectionState, socketUrl } from "../api/socket";
 import { useAuth } from "../auth/AuthContext";
@@ -132,6 +132,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
           const job = msg.job as Job;
           setJobs((prev) => new Map(prev).set(job.id, job));
           onJobRef.current?.(job);
+          window.dispatchEvent(new CustomEvent<Job>(JOB_EVENT, { detail: job }));  // ekranlar yenilenir (K-143)
           // Başkası iptal etti (mesaj yalnız sahibine gelir; kendi iptalinde neden yok, K-107)
           if (job.status === CANCELLED && job.cancel_reason && !toldCancelled.current.has(job.id)) {
             toldCancelled.current.add(job.id);

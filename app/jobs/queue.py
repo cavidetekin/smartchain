@@ -90,8 +90,9 @@ def db_now(session: Session) -> datetime:
 
 
 def enqueue(session: Session, job_type: str, channel: str, requested_by: int | None = None,
-            payload: dict | None = None, priority: int | None = None, summary: str | None = None) -> int:
-    """İşi 'Sırada' olarak yazar, Id döndürür. summary: iş türünün yazdığı kısa özet (K-107)."""
+            payload: dict | None = None, priority: int | None = None, summary: str | None = None, commit: bool = True) -> int:
+    """İşi 'Sırada' olarak yazar, Id döndürür. summary: iş türünün yazdığı kısa özet (K-107).
+    commit=False: çağıran birden çok işi tek işlemde yazar (motor yarım grubu almaz)."""
     if job_type not in JOB_TYPES:
         raise ValueError(f"Bilinmeyen iş türü: {job_type}")
     if channel not in CHANNELS:
@@ -102,7 +103,8 @@ def enqueue(session: Session, job_type: str, channel: str, requested_by: int | N
         "VALUES (:type, :summary, :ch, :prio, :queued, :by, :payload, 0, SYSUTCDATETIME(), SYSUTCDATETIME())"),
         {"type": job_type, "summary": summary[:200] if summary else None, "ch": channel, "prio": priority, "queued": STATUS_QUEUED, "by": requested_by,
          "payload": json.dumps(payload, ensure_ascii=False) if payload is not None else None}).scalar_one()
-    session.commit()
+    if commit:
+        session.commit()
     log.info("İş %s sıraya girdi: %s / %s", job_id, job_type, channel)
     return job_id
 

@@ -52,8 +52,8 @@ def fill(eng, table: str, rows: int) -> None:
                                   "VALUES (N'SQL', :t, N'Tam', SYSUTCDATETIME(), N'Alındı', :n, 0)"), {"t": table, "n": rows}).scalar_one()
         names = ", ".join(f"[{f.name}]" for f in fields)
         values = ", ".join(_expression(f, lengths[f.name]) for f in fields)
-        c.execute(sa.text(f"INSERT INTO stg.[{table}] (ImportBatchId, RowStatus, SourceRowNo, IsCurrent, {names}) "
-                          f"SELECT {batch}, N'Yeni', n, 1, {values} FROM (SELECT TOP ({rows}) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n "
+        c.execute(sa.text(f"INSERT INTO stg.[{table}] (ImportBatchId, SourceRowNo, IsCurrent, {names}) "
+                          f"SELECT {batch}, n, 1, {values} FROM (SELECT TOP ({rows}) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n "
                           "FROM sys.all_objects a CROSS JOIN sys.all_objects b CROSS JOIN sys.all_objects c) x"))
 
 

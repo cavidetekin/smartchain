@@ -188,13 +188,14 @@ export function TextareaField({ label, help, error, required, value, onChange, .
   );
 }
 
-export function Checkbox({ label, checked, onChange, disabled }: {
-  label: string; checked: boolean; onChange(v: boolean): void; disabled?: boolean;
+/** hideLabel: tabloda yalnız kutu görünür, etiket ekran okuyucuda kalır (ör. Veri çek penceresinde "Yine de oku", K-143). */
+export function Checkbox({ label, checked, onChange, disabled, hideLabel }: {
+  label: string; checked: boolean; onChange(v: boolean): void; disabled?: boolean; hideLabel?: boolean;
 }) {
   return (
     <label className={`sc-check${disabled ? " is-disabled" : ""}`}>
       <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-      <span>{label}</span>
+      <span className={hideLabel ? "sc-visually-hidden" : undefined}>{label}</span>
     </label>
   );
 }

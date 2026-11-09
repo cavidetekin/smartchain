@@ -209,10 +209,14 @@ describe("koşul editörü (ortak bileşen, K-139)", () => {
     expect(state()[0][0]).toEqual({ field: "MinLot", operator: "Boş değil", value: null, compare_field: null });
   });
 
-  it("değer listeli alanda = listeden seçilir", async () => {
+  it("değer listeli alanda değer serbest yazılır, liste öneri olarak çıkar (ERP'nin dili, K-143)", async () => {
     const user = userEvent.setup();
     render(<Harness initial={[[{ field: "MaterialLevel", operator: "=", value: null, compare_field: null }]]} />);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Değer" }), "Hammadde");
-    expect(state()[0][0].value).toBe("Hammadde");
+    const box = screen.getByRole("combobox", { name: "Değer" });  // datalist bağlı metin kutusu
+    expect(box.tagName).toBe("INPUT");
+    const list = document.getElementById(box.getAttribute("list")!)!;
+    expect([...list.querySelectorAll("option")].map((o) => o.getAttribute("value"))).toEqual(["Hammadde", "Yarı mamul", "Nihai ürün"]);
+    await user.type(box, "RAW");
+    expect(state()[0][0].value).toBe("RAW");
   });
 });

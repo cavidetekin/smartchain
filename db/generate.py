@@ -27,7 +27,8 @@ SCHEMA_OF_CLASS = {
     "Sistem": "adm",
 }
 SCHEMA_TITLE = {
-    "stg": "Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58)",
+    "stg": "Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58); ham katman, hiç değişmez (K-140)",
+    "prc": "İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış; validasyon ve load bunu okur (K-140)",
     "core": "Ana veri ve işlem verisi",
     "param": "Planlama parametreleri ve senaryo tanımları",
     "planning": "Senaryo, çalışma ve plan çıktıları",
@@ -46,14 +47,22 @@ VERSION_COLS = [
 STAGING_COLS = [
     ("StagingRowId", "bigint", "Satır kimliği", True),
     ("ImportBatchId", "bigint", "Yükleme partisi", True),
-    ("RowStatus", "nvarchar(15)", "Yeni | Hatalı | Aktarıldı", True),
     ("ErrorText", "nvarchar(400)", "Hata açıklaması", False),
     ("SourceRowNo", "int", "Kaynaktaki satır no", False),
     ("IsCurrent", "bit", "Tablonun güncel hâlinde mi (K-133)", True),
 ]
-STAGING_DEFAULTS = {"IsCurrent": "0"}  # sistem alanı (K-138 veri alanı değil)
+# İşlenmiş katman (K-140): ham katmanın güncel satırlarının kopyası; StagingRowId ham satırdan gelir, kimlik değil
+PROCESSED_COLS = [
+    ("StagingRowId", "bigint", "Ham satırın kimliği (kopyalanır)", True),
+    ("ImportBatchId", "bigint", "Satırın geldiği parti", True),
+    ("SourceRowNo", "int", "Kaynaktaki satır no", False),
+    ("RowStatus", "nvarchar(15)", "Yeni | Hatalı | Aktarıldı; Hata bulgusu varsa Hatalı, load almaz (K-134)", True),
+]
+STAGING_DEFAULTS = {"IsCurrent": "0", "RowStatus": "Yeni"}  # sistem alanı (K-138 veri alanı değil)
+LAYERS = ("stg", "prc")  # aynı sözleşmeli iki staging katmanı (K-140)
 SYSTEM_DEFAULTS = {"IsSynthetic": "0"}  # veri tablosundaki sistem alanı: BOŞSA kolonunda değil, burada (K-138)
 CURRENT_INDEX = "UX_{table}_Current"  # güncel hâlde anahtar bir kez (K-133)
+PROCESSED_INDEX = "UX_{table}_Key"  # işlenmiş katmanda anahtar bir kez (K-140)
 
 # Alan adı -> hedef tablo (ve kolon)
 REF_TARGET = {
@@ -151,7 +160,7 @@ def build_spec():
     core = read_tables(DOCS / "02-veri-modeli.md", "ANA KAYNAK")
     merged = {}
     for t in core:
-        if t["name"].startswith("stg."):
+        if t["name"].startswith(("stg.", "prc.")):  # staging katmanları docs/03 sözleşmesinden üretilir
             continue
         if t["name"] in merged:
             merged[t["name"]]["rows"] += t["rows"]
@@ -176,11 +185,12 @@ def build_spec():
             smerged[name]["rows"] += t["rows"]
         else:
             smerged[name] = dict(name=name, desc=desc, rows=t["rows"])
-    for t in smerged.values():
-        spec.append(dict(
-            name=t["name"], schema="stg", cls="Entegrasyon", versioned=False, desc=t["desc"],
-            fields=expand(t["rows"], {"req": "ZOR.", "src": "KAYNAK"}),
-        ))
+    for layer in LAYERS:
+        for t in smerged.values():
+            spec.append(dict(
+                name=t["name"], schema=layer, cls="Entegrasyon", versioned=False, desc=t["desc"],
+                fields=expand(t["rows"], {"req": "ZOR.", "src": "KAYNAK"}),
+            ))
     return spec
 
 
@@ -226,7 +236,7 @@ def q(s: str) -> str:
 
 def render_models(spec) -> str:
     by_name = {(t["schema"], t["name"]): t for t in spec}
-    core_names = {t["name"]: t for t in spec if t["schema"] != "stg"}
+    core_names = {t["name"]: t for t in spec if t["schema"] not in LAYERS}
     out = [
         '"""Üretilmiş dosya: db/generate.py. Elle değiştirmeyin; önce docs, sonra generate (K-54)."""',
         "import sqlalchemy as sa",
@@ -252,16 +262,17 @@ def render_models(spec) -> str:
         schema, name = t["schema"], t["name"]
         fields = list(t["fields"])
         cols, extra = [], []
-        if schema == "stg":
+        if schema in LAYERS:
+            system = STAGING_COLS if schema == "stg" else PROCESSED_COLS
             fields = [dict(name=n, type=ty, key="", desc=d, required=r, default=STAGING_DEFAULTS.get(n, ""), source="Sistem")
-                      for n, ty, d, r in STAGING_COLS] + [dict(f, required=False, contract_required=f["required"]) for f in fields
-                                                          if f["name"] not in ("ImportBatchId",)]
+                      for n, ty, d, r in system] + [dict(f, required=False, contract_required=f["required"]) for f in fields
+                                                    if f["name"] not in ("ImportBatchId",)]
         elif t["versioned"]:
             have = {f["name"] for f in fields}
             fields += [dict(name=n, type=ty, key="", desc=d, required=r, default="", source="Sistem")
                        for n, ty, d, r in VERSION_COLS if n not in have]
         pk = [f["name"] for f in fields if "PK" in f["key"]]
-        if schema == "stg":
+        if schema in LAYERS:
             pk = ["StagingRowId"]
         if t["versioned"] and "VersionFrom" not in pk:
             pk = pk + ["VersionFrom"]
@@ -269,7 +280,7 @@ def render_models(spec) -> str:
         for f in fields:
             args = [q(f["name"]), sa_type(f["type"])]
             kw = []
-            target = REF_TARGET.get(f["name"]) if schema != "stg" else None
+            target = REF_TARGET.get(f["name"]) if schema not in LAYERS else None
             if f["name"] == "ImportBatchId" and schema == "stg":
                 target = "ImportBatch"
             if target and ("FK" in f["key"] or f["name"] in ("ImportBatchId",) or schema == "stg"):
@@ -288,7 +299,7 @@ def render_models(spec) -> str:
             if f["name"] in pk:
                 kw.append("primary_key=True")
                 ident = (len(pk) == 1 and f["type"].lower() in ("int", "bigint") and not t["versioned"]
-                         and f["name"] in ("Id", "StagingRowId"))
+                         and f["name"] in ("Id", "StagingRowId") and schema != "prc")
                 kw.append(f"autoincrement={ident}")
             else:
                 kw.append(f"nullable={not f['required']}")
@@ -298,7 +309,7 @@ def render_models(spec) -> str:
             if f["desc"]:
                 kw.append(f"comment={q(f['desc'])}")
             label, values = field_label(f), value_list(f["desc"])
-            if schema != "stg" and (label or values or schema in ("core", "param")):
+            if schema not in LAYERS and (label or values or schema in ("core", "param")):
                 info = ([f"'label': {q(label)}"] if label else []) + ([f"'values': {json.dumps(values, ensure_ascii=False)}"] if values else [])
                 if schema in ("core", "param"):  # veri sözlüğü (K-104, db/dictionary.py); DDL'e girmez
                     info += [f"'source': {q(f.get('source', ''))}", f"'workspace': {bool(f.get('workspace'))}"]
@@ -310,12 +321,14 @@ def render_models(spec) -> str:
                 info += [f"'required': {f['contract_required']}", f"'key': {q(f['key'])}", f"'missing': {q(f['missing'])}"]
                 kw.append(f"info={{{', '.join(info)}}}")
             cols.append(f"    sa.Column({', '.join(args + kw)}),")
-        if uk and schema != "stg":  # stg ham veridir: anahtar sözleşmede kalır, tekrar kontrolü onu okur (K-129)
+        if uk and schema not in LAYERS:  # stg ham veridir: anahtar sözleşmede kalır, tekrar kontrolü onu okur (K-129)
             where = ', mssql_where=sa.text("VersionTo IS NULL")' if t["versioned"] else ""
             extra.append(f'    sa.Index("UX_{name}_{"_".join(uk)}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
         if uk and schema == "stg":  # güncel hâlde anahtar bir kez (K-133)
             extra.append(f'    sa.Index("{CURRENT_INDEX.format(table=name)}", {", ".join(q(u) for u in uk)}, unique=True, mssql_where=sa.text("IsCurrent = 1")),')
-        out.append(f"{name if schema != 'stg' else 'stg_' + name} = sa.Table(")
+        if uk and schema == "prc":  # işlenmiş katman güncel hâlin kopyasıdır: anahtar bir kez (K-140)
+            extra.append(f'    sa.Index("{PROCESSED_INDEX.format(table=name)}", {", ".join(q(u) for u in uk)}, unique=True),')
+        out.append(f"{name if schema not in LAYERS else schema + '_' + name} = sa.Table(")
         out.append(f"    {q(name)}, metadata,")
         out += cols + extra
         out.append(f"    schema={q(schema)},")
@@ -338,11 +351,11 @@ def render_map(spec) -> str:
         "",
         "## Kurallar",
         "",
-        "- **Beş şema:** `stg` entegrasyon, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem.",
-        "- **Aynı ad, iki katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla), `core.Material` Smartchain'in tablosu (Id ile). Aktarım `stg`'den `core`'a yapılır (K-58).",
+        "- **Altı şema:** `stg` entegrasyon (ham), `prc` işlenmiş staging, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem (K-62, K-140).",
+        "- **Aynı ad, üç katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla, hiç değişmez), `prc.Material` güncel hâli veri kuralları uygulanmış, `core.Material` Smartchain'in tablosu (Id ile). Kurallar `prc`'de çalışır, aktarım `prc`'den `core`'a yapılır (K-58, K-140).",
         "- **Versiyonlu tablolar:** `VersionFrom`, `VersionTo`, `ImportBatchId`, `BusinessKey`, `UpdatedAt` alanlarını taşır. Birincil anahtar `Id + VersionFrom`; `Id` bir kaydın bütün versiyonlarında aynıdır. Güncel kayıtta `VersionTo` boştur; tekillik (UK) yalnız güncel kayıtlarda aranır.",
         "- **İlişkiler:** Versiyonsuz tabloya giden ilişkiler veritabanında yabancı anahtarla (FK) korunur. Versiyonlu tabloya giden ilişkilerde FK yoktur, yalnız indeks vardır; bütünlüğü aktarım adımı (kod→Id) sağlar.",
-        "- **Entegrasyon tablolarının standart alanları:** `StagingRowId`, `ImportBatchId`, `RowStatus` (Yeni, Hatalı, Aktarıldı), `ErrorText`, `SourceRowNo`. Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.",
+        "- **Entegrasyon tablolarının standart alanları:** `stg`'de `StagingRowId`, `ImportBatchId`, `ErrorText`, `SourceRowNo`, `IsCurrent` (K-133); `prc`'de `StagingRowId` (ham satırdan), `ImportBatchId`, `SourceRowNo`, `RowStatus` (Yeni, Hatalı, Aktarıldı). Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.",
         "- **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.",
         "",
     ]

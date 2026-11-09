@@ -78,12 +78,12 @@ export const SCREENS: Screen[] = [
 
   { no: "02", fn: 3, name: "Veri yükleme", path: "/veri/veri-yukleme", group: "veri", step: "3.1", icon: Upload,
     description: "Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi yükleme, yükleme geçmişi." },
-  { no: "03", fn: 10, name: "Ana veri", path: "/veri/ana-veri", group: "veri", step: "6.1", icon: Table2,
-    description: "Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya." },
-  { no: "04", fn: 16, name: "Veri kuralları", path: "/veri/veri-kurallari", group: "veri", step: "4.2", icon: WandSparkles,
-    description: "Kural listesi, kural editörü, önizleme (kaç kayıt değişir)." },
+  { no: "04", fn: 16, name: "Veri kuralları", path: "/veri/veri-kurallari", group: "veri", step: "4.1", icon: WandSparkles,
+    description: "Tablo başına sıralı veri kuralları: koşul, sonuç, seçenek; sıra, aç / kapa, kuralları yeniden uygula." },
   { no: "27", fn: 100, name: "Validasyon kuralları", path: "/veri/validasyon-kurallari", group: "veri", step: "3.4", icon: ListChecks,
     description: "Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu; hazır ve kullanıcı kuralları, hata eşiği." },
+  { no: "03", fn: 10, name: "Ana veri", path: "/veri/ana-veri", group: "veri", step: "6.1", icon: Table2,
+    description: "Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya." },
   { no: "05", fn: 20, name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
     description: "Ana veri ve işlem verisi uyarıları; düzeltme listesi." },
 

@@ -34,6 +34,8 @@ export const FORBIDDEN_EVENT = "smartchain:forbidden";
 export const NOTICE_EVENT = "smartchain:notice";
 /** WebSocket "health" mesajı: iş ya da olay değişti (K-106); Sistem sağlığı ekranı yeniler. */
 export const HEALTH_EVENT = "smartchain:health";
+/** WebSocket "job" mesajı ekranlara (K-143): kullanıcının işi değişti; Veri yükleme çekim ve validasyon işleri bitince kendini yeniler. */
+export const JOB_EVENT = "smartchain:job";
 export function emitNotice(message: string): void {
   window.dispatchEvent(new CustomEvent<string>(NOTICE_EVENT, { detail: message }));
 }

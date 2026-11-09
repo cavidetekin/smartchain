@@ -44,7 +44,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 - Log: servis `logs/engine.log`, iş süreçleri servisin konsoluna.
 - **İş tipine göre yönlendirme (K-93):** servis işi tipine göre kendi sürecinde çalıştırır: "Dışa aktarım" işleri Excel dosyasını üretir (`app/api/export`), diğerleri plan hesabıdır. Kanallar ayrı sınırlıdır: Hesaplama (`JobLimitInteractive`), Gece (`JobLimitNight`), Dışa aktarım (`JobLimitExport`, 2); büyük indirmeler yeniden hesabı bekletmez. Dışa aktarımın süre bütçesi etkileşim bütçesinin on katıdır (500.000 satır sığsın). "Excel ön kontrol" işleri yüklenen dosyayı kontrol edip ham veriye yazar (K-129).
 - **Veri çekme (K-130):** "Veri çekme" tipi ve kanalı (sınır `JobLimitPull` 1, süre bütçesi gece kanalıyla aynı). Elle ve gece çekim bu kanalı kullanır. Süreç `app/engine/pull_job.py`, gövde `app/api/services/pull.py`. Sonuç iş kaydına yazılır; süreç düşerse parti Tamamlanmadı olur, yeniden denemede tablo baştan okunur.
-- **Validasyon (K-134, K-139):** "Validasyon" tipi, "Veri işleme" kanalı (sınır `JobLimitProcessing` 4; ölçüm docs/08). Rules (4.1'e kadar boş), tablo içi ve tablolar arası validasyon bu kanalda; yük `{entity, scope, trigger, batch_id}`. Toplu çekimde tablolar arası iş, tablo içi işlerin hepsi bitince sıraya girer. Süreç `app/engine/validation_job.py`, gövde `app/api/services/validation.py`. İş düşerse çalışma "Valide edilemedi", önceki bulgular kalır.
+- **Validasyon (K-134, K-139):** "Validasyon" tipi, "Veri işleme" kanalı (sınır `JobLimitProcessing` 4; ölçüm docs/08). Rules (işlenmiş katman ham veriden kurulur, tablonun veri kuralları sırayla çalışır; K-140, K-141), tablo içi ve tablolar arası validasyon bu kanalda; yük `{entity, scope, trigger, batch_id}`. Tetikler: Yükleme, Çekim, Toplu çekim, Yeniden valide et, İlişkili tablo, Kural değişikliği ("Kuralları yeniden uygula", K-142). Toplu çekimde tablolar arası iş, tablo içi işlerin hepsi bitince sıraya girer. Süreç `app/engine/validation_job.py`, gövde `app/api/services/validation.py`. İş düşerse çalışma "Valide edilemedi", önceki bulgular kalır.
 - **Dosya temizliği:** servis `SMARTCHAIN_EXPORT_DIR`'deki süresi geçmiş (`ExportFileHours`) dosyaları açılışta ve saatte bir siler.
 
 ## Çözücü (K-35, K-76)
@@ -84,6 +84,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 | İş tipine göre yönlendirme, dışa aktarım kanalı ve dosya temizliği | uygulandı (1.5) |
 | Veri çekme işi ve kanalı (K-130) | uygulandı (3.3) |
 | Validasyon işi ve "Veri işleme" kanalı (K-134, K-139) | uygulandı (3.4) |
+| Rules adımı: işlenmiş katman ve veri kuralları, tetik "Kural değişikliği", çok tablolu uygulamada grup (ilk işin Id'si, tablolar arası sonda) (K-140…K-142) | uygulandı (4.1) |
 | Gerçek motor (29–39), aktif hesaplama belleği | Aşama 10 |
 
 Demo: API açıkken `python scripts/engine_demo.py`; plan hesapları gönderir, servisi çalıştırır, WebSocket'ten ilerlemeyi ve sonuç satır sayılarını yazdırır.

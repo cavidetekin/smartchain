@@ -1,8 +1,8 @@
-"""Validasyon zinciri (K-134, K-139): rules (4.1'e kadar boş) → tablo içi validasyon → tablolar arası validasyon.
+"""Validasyon zinciri (K-134, K-139, K-140): rules (işlenmiş katman ve veri kuralları) → tablo içi validasyon → tablolar arası validasyon.
 
-Her kural kendi işleminde çalışır: önce kuralın bulguları silinir, sonra güncel hâlden yeniden yazılır. Tablolar arası
+Her kural kendi işleminde çalışır: önce kuralın bulguları silinir, sonra işlenmiş katmandan yeniden yazılır. Tablolar arası
 kuralı aynı anda iki iş çalıştırmasın diye kural başına uygulama kilidi alınır. Tablo içi işler aynı tabloda sıraya
-girer (tablo kilidi). Kuyruğa yazan: Excel'de "Devam", çekimde tablonun okunması, "Yeniden valide et".
+girer (tablo kilidi). Kuyruğa yazan: Excel'de "Devam", çekimde tablonun okunması, "Yeniden valide et", "Kuralları yeniden uygula" (K-142).
 """
 import json
 import logging
@@ -34,6 +34,7 @@ QUEUED, RULES, VALIDATING, DONE, FAILED = "Sırada", "Kurallar çalışıyor", "
 ACTIVE_STATES = (QUEUED, RULES, VALIDATING)
 SCOPE_TABLE, SCOPE_CROSS = "Tablo içi", "Tablolar arası"
 TRIGGER_UPLOAD, TRIGGER_PULL, TRIGGER_BULK, TRIGGER_REVALIDATE = "Yükleme", "Çekim", "Toplu çekim", "Yeniden valide et"
+TRIGGER_RULES = "Kural değişikliği"  # "Kuralları yeniden uygula" (K-142)
 PASSED, WARNED, FAILED_OUTCOME = "Geçti", "Uyarılı", "Hatalı"
 ROW_NEW, ROW_ERROR = "Yeni", "Hatalı"
 NAMES = {e.table: e.name for e in ENTITIES}
@@ -199,7 +200,7 @@ def run_rule(session: Session, rule: dict, run_id: int) -> None:
 
 
 def update_row_status(session: Session, entity: str) -> None:
-    """Güncel satırda Hata bulgusu varsa Hatalı (load almaz, K-134); yoksa Yeni. Aktarılmış satıra dokunulmaz."""
+    """İşlenmiş katmanda Hata bulgusu olan satır Hatalı (load almaz, K-134, K-140); yoksa Yeni. Aktarılmış satıra dokunulmaz."""
     t = table(entity)
     has_error = sa.exists().where(FINDING.c.EntityName == entity, FINDING.c.StagingRowId == t.c.StagingRowId, FINDING.c.Severity == cat.ERROR)
     session.execute(sa.update(t).where(is_current(t), t.c.RowStatus == ROW_NEW, has_error).values(RowStatus=ROW_ERROR))
@@ -245,17 +246,38 @@ def _new_run(session: Session, entity: str | None, scope: str, trigger: str, bat
                                                  State=QUEUED, RequestedBy=user_id, CreatedAt=utcnow()).returning(RUN.c.Id)).scalar_one()
 
 
-def enqueue(session: Session, entity: str | None, scope: str, trigger: str, batch_id: int | None = None, user_id: int | None = None,
-            group: int | None = None) -> int:
-    """Çalışmayı ve işini yazar; commit eder (queue.enqueue). İş Id'si döner."""
+def _enqueue(session: Session, entity: str | None, scope: str, trigger: str, batch_id: int | None, user_id: int | None,
+             group: int | None) -> tuple[int, int]:
+    """Çalışmayı ve işini yazar, commit etmez: (çalışma, iş)."""
     run_id = _new_run(session, entity, scope, trigger, batch_id, user_id, group)
     name = NAMES.get(entity, entity) if entity else "Bütün tablolar"
     summary = f"Validasyon · {name}" + (" · tablolar arası" if scope == SCOPE_CROSS else "")
     job_id = queue.enqueue(session, TYPE_VALIDATION, CHANNEL_PROCESSING, user_id,
-                           {"run_id": run_id, "entity": entity, "scope": scope, "trigger": trigger, "batch_id": batch_id, "group": group}, summary=summary)
+                           {"run_id": run_id, "entity": entity, "scope": scope, "trigger": trigger, "batch_id": batch_id, "group": group},
+                           summary=summary, commit=False)
     session.execute(sa.update(RUN).where(RUN.c.Id == run_id).values(JobId=job_id))
+    return run_id, job_id
+
+
+def enqueue(session: Session, entity: str | None, scope: str, trigger: str, batch_id: int | None = None, user_id: int | None = None,
+            group: int | None = None) -> int:
+    """Çalışmayı ve işini yazar; commit eder. İş Id'si döner."""
+    _, job_id = _enqueue(session, entity, scope, trigger, batch_id, user_id, group)
     session.commit()
     return job_id
+
+
+def enqueue_group(session: Session, entities: list[str], trigger: str, user_id: int | None) -> list[int]:
+    """Birden çok tablonun zinciri (Kuralları yeniden uygula · Tümü, K-142): her tablo kendi işinde, hepsi bitince tablolar arası
+    validasyon. Grup anahtarı ilk tablonun işidir; bütün işler tek işlemde yazılır."""
+    made = [_enqueue(session, e, SCOPE_TABLE, trigger, None, user_id, None) for e in entities]
+    group = made[0][1]
+    for run_id, job_id in made:
+        session.execute(sa.update(RUN).where(RUN.c.Id == run_id).values(GroupId=group))
+        payload = json.loads(session.execute(sa.select(JOB.c.Payload).where(JOB.c.Id == job_id)).scalar_one())
+        session.execute(sa.update(JOB).where(JOB.c.Id == job_id).values(Payload=json.dumps({**payload, "group": group}, ensure_ascii=False)))
+    session.commit()
+    return [job_id for _, job_id in made]
 
 
 def on_received(session: Session, entity: str, batch_id: int, mode: str, trigger: str, user_id: int | None, group: int | None = None) -> int:
@@ -356,7 +378,8 @@ def run_job(session: Session, job_id: int, attempt: int, payload: dict, progress
         run_cross(session, run_id, progress)
         result = {"entity": None, "outcome": None, "tables": group_outcomes(session, payload.get("group"))}
     else:
-        c = run_table(session, run_id, entity, related=payload.get("trigger") != TRIGGER_BULK, progress=progress)
+        related = payload.get("trigger") != TRIGGER_BULK and not payload.get("group")  # grupta tablolar arası sonda (K-134, K-142)
+        c = run_table(session, run_id, entity, related=related, progress=progress)
         result = {"entity": entity, "name": NAMES.get(entity, entity), "outcome": c["outcome"], "error_rows": c["error_rows"], "warning_rows": c["warning_rows"]}
     session.execute(sa.update(JOB).where(JOB.c.Id == job_id).values(Result=json.dumps(result, ensure_ascii=False)))
     text = f"{result.get('name') or 'Tablolar arası'} · {result['outcome'] or 'bitti'}"
