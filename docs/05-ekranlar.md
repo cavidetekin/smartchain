@@ -38,6 +38,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### VERI
 
 - **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, veri aktarım geçmişi.
+- **28 · Dünden bugüne:** Ham veride tablo başına dünden bugüne satır sayısı değişimi; yeni gelen, gelmeyen ve güncellenen kayıtlar (5.5b, K-159).
 - **03 · Ana veri ekranları:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya… Her değerin kaynağı (ERP, kural, elle) görünür; elle düzeltme yapılır.
 - **04 · Veri kuralları:** Tablo başına sıralı veri kuralları; kural penceresi (koşul, sonuç, seçenek), sıra, aç / kapa, kuralları yeniden uygula (K-141, K-142).
 - **27 · Validasyon kuralları:** Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu: yapısal kontroller, hazır kurallar, kullanıcı kuralları; tablo başına hata eşiği (K-136).
@@ -281,6 +282,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Uygulama (5.3, K-155):** üst şeritte "Tam aktar"ın yanında ikincil "Kısmi aktar" (Key user ve üstü). Pencerede gruplar onay kutusuyla, yanında tabloları; açılınca hiçbiri seçili değil, seçim yokken başlat pasif. Seçilen grupların tabloları güncel satır, Hatalı, durum ve notla; süren iş ya da seçilen gruplarda validasyonu bitmemiş tablo varsa nedeni yazar, başlat pasif. Bitince "Veri aktarım raporu".
 - **Uygulama (5.4, K-156):** üst şeritte "Veri aktarım geçmişi" düğmesi: sağdan çekmece, geçmiş aktarımların ortak tablosu; satıra tıklayınca Veri aktarım raporu (Excel'e aktarılır). Çekmecenin üstünde son ham veri temizliğinin sonucu ve "Ham veri temizliği" (yalnız System owner).
 - **Uygulama (5.4 demo, K-157):** üst şeritte iki düğme: "Veri çek" (ana) ve "Veri aktarımı ▾" (ikincil); menüde "Tam veri aktarımı", "Kısmi veri aktarımı", ayırıcı, "Veri aktarım geçmişi" (yukarıdaki ayrı düğmelerin yerine). Ham veri temizliği penceresinde tek uyarı cümlesi ve "Silinecek: n yükleme · n eski satır · n dosya (boyut)".
+- **Uygulama (5.5, K-158):** üst şeritte "Veri çek", "Veri yükle" (birden çok Excel dosyası; tek listede ön kontrol, mod dosya başına) ve "Veri aktarma ▾". Tabloda "Son aktarım" kolonu ve "Yeni veri" çipi; şablon bilgisi kolonları varsayılan olarak gizli. Yukarıdaki "Önce doğrula" (yeni, değişen, silinen ön izlemesi), "Kısmi aktarım" (hatalı varlık seçimi) ve sağ paneller yapılmaz; hata detayı validasyon çekmecesinde, geçmiş Veri aktarım geçmişi çekmecesinde.
 
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>

@@ -51,7 +51,7 @@ TRANSFER_HISTORY = ListDefinition(
     fields=FIELDS,
     default_visible=FIELDS[:-2],
     default_sort=(("StartedAt", "desc"),),
-    labels={"StartedAt": "Tarih", "TransferType": "Tür", "Groups": "Gruplar", "RequesterName": "Başlatan", "DataVersionId": "Veri versiyonu",
+    labels={"StartedAt": "Tarih", "TransferType": "Tür", "Groups": "Gruplar", "RequesterName": "Başlatan", "DataVersionId": "Veri",
             "DurationSeconds": "Süre (sn)", "Status": "Durum", "NewCount": "Yeni", "ChangedCount": "Güncellenen", "ClosedCount": "Silinen",
             "NotTransferredCount": "Aktarılmayan", "ErrorText": "Hata", "Id": "İş no"},
     values={"TransferType": [FULL, PARTIAL], "Status": list(STATUSES)},

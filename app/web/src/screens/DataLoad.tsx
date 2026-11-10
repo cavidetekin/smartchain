@@ -13,9 +13,10 @@ import { SelectCell, SwitchCell } from "../table/CellEditors";
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import type { Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
-import { Alert, Button, Dialog, Tooltip } from "../ui";
+import { Alert, Badge, Button, Dialog, Tooltip } from "../ui";
 import { dataLoadApi, type TemplateInfo } from "./dataLoadApi";
 import { ImportDialog } from "./ImportDialog";
+import { MultiImportDialog } from "./MultiImportDialog";
 import { type EntityChange, integrationApi, METHOD_SQL, METHODS } from "./integrationApi";
 import { PullResultDialog, PullStartDialog, PullSwitchDialog } from "./PullDialogs";
 import { PartialTransferDialog, TransferResultDialog, TransferStartDialog } from "./TransferDialogs";
@@ -27,7 +28,6 @@ import { RUNNING_STATES } from "./validationApi";
 
 const T = tr.dataLoad;
 const ALLOWED = { allowed: true };
-const later = (step: string) => ({ allowed: false, reason: T.comingIn(step) });
 const RELOAD_MS = 3000;
 const DATA_JOBS = [JOB_PULL, JOB_VALIDATION, JOB_PRECHECK, JOB_TRANSFER];
 
@@ -70,6 +70,9 @@ export function DataLoad() {
   const canTransfer = can(me, 5, "write");
   const canPartial = can(me, 6, "write");
   const canHistory = can(me, 8, "read");
+  const canUpload = can(me, 3, "write");
+  const [manyFiles, setManyFiles] = useState<File[] | null>(null);  // Veri yükle (K-158)
+  const fileInput = useRef<HTMLInputElement>(null);
   const [transferStart, setTransferStart] = useState(false);
   const [partialStart, setPartialStart] = useState(false);
   const [transferMenu, setTransferMenu] = useState<HTMLElement | null>(null);  // "Veri aktarımı ▾" (K-157)
@@ -173,6 +176,8 @@ export function DataLoad() {
       return <SelectCell label={T.method(String(row.Name))} value={edits.get(key, "Method", String(value))} options={METHODS} editable={canMethod} changed={edits.changed(key, "Method")}
                          onChange={(next) => edits.set(key, "Method", next, String(value))} />;
     },
+    LastTransferAt: (value: unknown, row: Row) => (value ? T.lastTransfer(formatDateTime(serverDate(String(value))), String(row.LastTransferType ?? "")) : "—"),
+    HasNewData: (value: unknown) => (value ? <Badge tone="info">{T.newData}</Badge> : ""),
     IsPullEnabled: (value: unknown, row: Row) => {
       const key = String(row.Entity);
       const on = edits.get(key, "IsPullEnabled", Boolean(value));
@@ -205,6 +210,9 @@ export function DataLoad() {
         <h1>{T.title}</h1>
         <div className="sc-page-head-actions">
           <Button variant="primary" disabledReason={canPull ? null : forbiddenReason(1, "write")} onClick={() => setPullStart({})}>{T.pullNow}</Button>
+          <Button variant="primary" disabledReason={canUpload ? null : forbiddenReason(3, "write")} onClick={() => fileInput.current?.click()}>{T.uploadMany}</Button>
+          <input ref={fileInput} type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-hidden="true"
+                 data-testid="veri-yukle-dosya" onChange={(e) => { const chosen = [...(e.target.files ?? [])]; e.target.value = ""; if (chosen.length) setManyFiles(chosen); }} />
           <Button variant="secondary" aria-haspopup="menu" aria-expanded={Boolean(transferMenu)}
                   onClick={(e) => { const at = e.currentTarget; setTransferMenu((open) => (open ? null : at)); }}>
             {tr.transfer.menu}<ChevronDown aria-hidden="true" className="sc-btn-caret" />
@@ -222,7 +230,6 @@ export function DataLoad() {
                     onClick={() => { setDrawer({ entity: String(menu.row.Entity), name: String(menu.row.Name), all: true }); setMenu(null); }} />
           <MenuItem label={T.info} state={ALLOWED} onClick={() => { setInfoRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.upload} state={ALLOWED} onClick={() => { setUploadRow(menu.row); setMenu(null); }} />
-          <MenuItem label={T.lastUpload} state={later("5.5")} onClick={() => undefined} />
           {menu.row.Method === METHOD_SQL && (
             <MenuItem label={T.pullNow} state={canPull ? ALLOWED : { allowed: false, reason: forbiddenReason(1, "write") }}
                       onClick={() => { setPullStart({ entity: String(menu.row.Entity) }); setMenu(null); }} />
@@ -257,6 +264,7 @@ export function DataLoad() {
       {infoRow && <InfoDialog row={infoRow} onClose={() => setInfoRow(null)} onDownload={() => download(infoRow)} />}
       {uploadRow && <ImportDialog entity={String(uploadRow.Entity)} name={String(uploadRow.Name)} onClose={() => setUploadRow(null)}
                                   onReceived={() => setReloadKey((k) => k + 1)} />}
+      {manyFiles && <MultiImportDialog files={manyFiles} onClose={() => setManyFiles(null)} onReceived={() => setReloadKey((k) => k + 1)} />}
       {resultBatch && !uploadRow && <ImportDialog key={resultBatch} batchId={resultBatch} onClose={() => navigate(pathname, { replace: true })}
                                                   onReceived={() => setReloadKey((k) => k + 1)} />}
     </section>

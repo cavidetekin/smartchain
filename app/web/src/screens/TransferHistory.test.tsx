@@ -61,7 +61,7 @@ const calls = (m: ReturnType<typeof vi.fn>, url: string, method = "GET") =>
 describe("Veri aktarım geçmişi", () => {
   it("düğmeden çekmece açılır: saklama süresi ve son temizlik, geçmiş tablosu; satıra tıklayınca rapor üst bilgisi ve Excel", async () => {
     const { user, fetchMock } = await open("Key user");
-    await user.click(screen.getByRole("button", { name: "Veri aktarımı" }));
+    await user.click(screen.getByRole("button", { name: "Veri aktarma" }));
     await user.click(await screen.findByRole("menuitem", { name: "Veri aktarım geçmişi" }));
     const drawer = await screen.findByRole("dialog", { name: "Veri aktarım geçmişi" });
     expect(await within(drawer).findByText(/Saklama süresi 7 gün · Son temizlik .*: 12 yükleme · 3\.400 eski satır · 2 dosya \(1,2 MB\)/)).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe("Veri aktarım geçmişi", () => {
 
   it("saklama süresi yoksa çekmece söyler", async () => {
     const { user } = await open("Admin", { "/api/cleanup": { body: { retention_days: null, last: null } } });
-    await user.click(screen.getByRole("button", { name: "Veri aktarımı" }));
+    await user.click(screen.getByRole("button", { name: "Veri aktarma" }));
     await user.click(await screen.findByRole("menuitem", { name: "Veri aktarım geçmişi" }));
     const drawer = await screen.findByRole("dialog", { name: "Veri aktarım geçmişi" });
     expect(await within(drawer).findByText("Saklama süresi tanımlı değil; temizlik çalışmaz. · henüz temizlik yapılmadı")).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("Ham veri temizliği", () => {
   it("System owner: onay penceresi silinecekleri gösterir, başlatınca iş kuyruğuna gider", async () => {
     const { user, fetchMock } = await open("System owner", { "/api/cleanup": (_u: string, init?: RequestInit) =>
       (init?.method === "POST" ? { status: 202, body: { job_id: 901 } } : { body: STATE }) });
-    await user.click(screen.getByRole("button", { name: "Veri aktarımı" }));
+    await user.click(screen.getByRole("button", { name: "Veri aktarma" }));
     await user.click(await screen.findByRole("menuitem", { name: "Veri aktarım geçmişi" }));
     const drawer = await screen.findByRole("dialog", { name: "Veri aktarım geçmişi" });
     await user.click(within(drawer).getByRole("button", { name: "Ham veri temizliği" }));
@@ -109,7 +109,7 @@ describe("Ham veri temizliği", () => {
   it("başlatılamıyorsa neden yazar, başlat pasif", async () => {
     const { user } = await open("System owner", { "/api/cleanup/plan": { body: { retention_days: null, preview: null,
       blocked: "Saklama süresi tanımlı değil; temizlik çalışmaz. Sistem ayarları'nda girin." } } });
-    await user.click(screen.getByRole("button", { name: "Veri aktarımı" }));
+    await user.click(screen.getByRole("button", { name: "Veri aktarma" }));
     await user.click(await screen.findByRole("menuitem", { name: "Veri aktarım geçmişi" }));
     await user.click(within(await screen.findByRole("dialog", { name: "Veri aktarım geçmişi" })).getByRole("button", { name: "Ham veri temizliği" }));
     const dialog = await screen.findByRole("dialog", { name: "Ham veri temizliği" });

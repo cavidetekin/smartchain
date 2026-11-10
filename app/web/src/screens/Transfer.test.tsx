@@ -46,9 +46,9 @@ async function open(role: string, routes: Routes = {}, path = "/veri/veri-yuklem
   return { user: userEvent.setup(), fetchMock };
 }
 
-/** "Veri aktarımı ▾" menüsünden seçenek (K-157). */
+/** "Veri aktarma ▾" menüsünden seçenek (K-157, K-158). */
 async function choose(user: ReturnType<typeof userEvent.setup>, item: string) {
-  await user.click(screen.getByRole("button", { name: "Veri aktarımı" }));
+  await user.click(screen.getByRole("button", { name: "Veri aktarma" }));
   await user.click(await screen.findByRole("menuitem", { name: item }));
 }
 
@@ -80,14 +80,15 @@ describe("Tam veri aktarımı", () => {
     expect(within(dialog).getByRole("button", { name: "Aktarımı başlat" })).toBeDisabled();
   });
 
-  it.each(["Key user", "Admin", "System owner"])("%s: Veri çek ana, Veri aktarımı ikincil; menüde üç seçenek ve ayırıcı (End user ekranı açamaz)", async (role) => {
+  it.each(["Key user", "Admin", "System owner"])("%s: Veri çek ve Veri yükle ana, Veri aktarma ikincil; menüde üç seçenek ve ayırıcı (End user ekranı açamaz)", async (role) => {
     const { user } = await open(role);
     expect(screen.getByRole("button", { name: "Veri çek" }).className).toContain("sc-btn--primary");
-    const button = screen.getByRole("button", { name: "Veri aktarımı" });
+    expect(screen.getByRole("button", { name: "Veri yükle" }).className).toContain("sc-btn--primary");
+    const button = screen.getByRole("button", { name: "Veri aktarma" });
     expect(button.className).toContain("sc-btn--secondary");
     expect(screen.queryByRole("button", { name: "Tam aktar" })).toBeNull();
     await user.click(button);
-    const menu = await screen.findByRole("menu", { name: "Veri aktarımı" });
+    const menu = await screen.findByRole("menu", { name: "Veri aktarma" });
     expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Tam veri aktarımı", "Kısmi veri aktarımı", "Veri aktarım geçmişi"]);
     expect(within(menu).getAllByRole("menuitem").every((m) => !(m as HTMLButtonElement).disabled)).toBe(true);
     expect(within(menu).getByRole("separator")).toBeInTheDocument();

@@ -16,6 +16,8 @@ USER = metadata.tables["adm.AppUser"]
 RUN = metadata.tables["adm.ValidationRun"]
 FINDING = metadata.tables["adm.ValidationFinding"]
 JOB = metadata.tables["adm.Job"]
+VERSION = metadata.tables["adm.DataVersion"]
+VERSION_ENTITY = metadata.tables["adm.DataVersionEntity"]
 SQL, EXCEL = "SQL", "Excel"
 NO_VIEW, RECHECK = "View tanımlı değil", "Yeniden denetle"
 LOADED_STATUSES = ("Alındı", "Doğrulandı", "Yüklendi")  # ham veriye alınmış partiler (K-129)
@@ -59,6 +61,16 @@ def _rows(severity: str) -> sa.ScalarSelect:
 
 
 _errors, _warnings, _infos = _rows("Hata"), _rows("Uyarı"), _rows("Bilgi")
+# Son aktarım (K-151, K-158): tablonun yazıldığı son aktarım (eşik ya da veri gelmedi notuyla yazılmayan sayılmaz; sentetik yükleme aktarım değildir)
+_last_version = (sa.select(VERSION_ENTITY.c.DataVersionId)
+                 .select_from(VERSION_ENTITY.join(VERSION, VERSION.c.Id == VERSION_ENTITY.c.DataVersionId))
+                 .where(VERSION_ENTITY.c.EntityName == _catalog.c.Entity, VERSION_ENTITY.c.NewCount.is_not(None),
+                        sa.func.coalesce(VERSION.c.IsSynthetic, sa.false()) == sa.false())
+                 .order_by(VERSION_ENTITY.c.DataVersionId.desc()).limit(1).correlate(_catalog).scalar_subquery())
+_last_transfer = sa.select(VERSION.c.CreatedAt).where(VERSION.c.Id == _last_version).scalar_subquery()
+_last_transfer_type = sa.select(VERSION.c.LoadType).where(VERSION.c.Id == _last_version).scalar_subquery()
+# Yeni veri: son aktarımdan sonra gelen veriye alınmış yükleme (hiç aktarılmadıysa herhangi bir yükleme)
+_new_data = sa.cast(sa.case((sa.and_(_last_load.is_not(None), sa.or_(_last_transfer.is_(None), _last_load > _last_transfer)), 1), else_=0), sa.Boolean)
 # Gelen verinin özeti (K-154; 5.5'ten öne alındı): güncel satır sayısı tablo başına
 _total = sa.case(*[(_catalog.c.Entity == _text(e.table),
                     sa.select(sa.func.count()).select_from(metadata.tables[f"stg.{e.table}"])
@@ -79,13 +91,16 @@ SOURCE = (sa.select(_catalog.c.Id, _catalog.c.Id.label("CatalogOrder"), _catalog
                     (_catalog.c.BaseFieldCount + _labelled).label("FieldCount"), _catalog.c.RequiredCount, _last_load.label("LastLoadAt"),
                     _validation, _errors.label("ValidationErrors"), _warnings.label("ValidationWarnings"),
                     _total.label("TotalRows"), _errors.label("ErrorRows"), _warnings.label("WarningRows"), _infos.label("InfoRows"),
+                    _last_transfer.label("LastTransferAt"), _last_transfer_type.label("LastTransferType"), _new_data.label("HasNewData"),
                     _method, sa.cast(sa.func.coalesce(CONFIG.c.IsPullEnabled, sa.literal_column("1")), sa.Boolean).label("IsPullEnabled"), CONFIG.c.ViewName, _warning, _match,
                     CONFIG.c.LastCheckStatus, CONFIG.c.LastCheckMessage, CONFIG.c.LastPullStatus, CONFIG.c.LastPullMessage, CONFIG.c.LastPullAt,
                     CONFIG.c.DisabledReason, CONFIG.c.DisabledAt, sa.func.coalesce(USER.c.FullName, USER.c.UserName).label("DisabledByName"))
           .select_from(_catalog.outerjoin(CONFIG, CONFIG.c.EntityName == _catalog.c.Entity).outerjoin(USER, USER.c.Id == CONFIG.c.DisabledBy)).subquery("data_entities"))
 
-FIELDS = ("Name", "Method", "IsPullEnabled", "Validation", "TotalRows", "ErrorRows", "WarningRows", "InfoRows", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity", "ViewName")
-HIDDEN_FIELDS = ("Entity", "ViewName")
+FIELDS = ("Name", "Method", "IsPullEnabled", "Validation", "TotalRows", "ErrorRows", "WarningRows", "InfoRows", "LastLoadAt", "LastTransferAt", "HasNewData",
+          "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "CatalogOrder", "LastTransferType", "Entity", "ViewName")
+# Varsayılan görünümde gizli: teknik alanlar ve şablon bilgisi (ekran genişliğe sığsın; Alanlar panelinden açılır, K-158)
+HIDDEN_FIELDS = ("Entity", "ViewName", "LastTransferType", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount")
 PULL_KEYS = ("Method", "IsPullEnabled", "ViewName", "Warning", "DisabledReason", "DisabledByName", "DisabledAt")
 
 DATA_ENTITIES = ListDefinition(
@@ -96,21 +111,24 @@ DATA_ENTITIES = ListDefinition(
     function=2,  # Excel şablonu indirme (K-100)
     versioned=False,
     source=SOURCE,
-    key_fields=("Entity", "Name", "Version", *PULL_KEYS, "ValidationErrors", "ValidationWarnings"),  # satır menüsü ve ipucu bunları okur, kolon gizli olsa da
+    key_fields=("Entity", "Name", "Version", *PULL_KEYS, "ValidationErrors", "ValidationWarnings", "LastTransferType"),  # satır menüsü ve ipucu bunları okur, kolon gizli olsa da
     fields=FIELDS,
     default_visible=tuple(f for f in FIELDS if f not in HIDDEN_FIELDS),
     default_sort=(("CatalogOrder", "asc"),),  # referans verisinden işlem verisine (docs/03)
     labels={"Method": "Yöntem", "IsPullEnabled": "Çekim", "ViewName": "View", "Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "LastLoadAt": "Son yükleme zamanı", "RequiredCount": "Zorunlu alan",
             "Entity": "Teknik tablo adı", "CatalogOrder": "Yükleme sırası", "Validation": "Validasyon",
-            "TotalRows": "Toplam satır", "ErrorRows": "Hatalı", "WarningRows": "Uyarılı", "InfoRows": "Bilgi"},
-    values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA], "Method": [EXCEL, SQL],
+            "TotalRows": "Toplam satır", "ErrorRows": "Hatalı", "WarningRows": "Uyarılı", "InfoRows": "Bilgi",
+            "LastTransferAt": "Son aktarım", "LastTransferType": "Son aktarım türü", "HasNewData": "Yeni veri"},
+    values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA], "Method": [EXCEL, SQL], "LastTransferType": ["Tam", "Kısmi"],
             "Validation": ["Sırada", "Kurallar çalışıyor", "Valide ediliyor", "Geçti", "Uyarılı", "Hatalı", "Valide edilemedi"]},
     notes={"LastLoadAt": "Satırların gelen veriye alındığı zaman; aktarım ayrı adımdır.",
            "TotalRows": "Gelen verinin güncel satır sayısı.", "ErrorRows": "Validasyonda Hata bulunan satır sayısı; bu satırlar aktarılmaz.",
            "WarningRows": "Validasyonda Uyarı bulunan satır sayısı.", "InfoRows": "Validasyonda Bilgi bulunan satır sayısı.",
            "Method": "Çekim yöntemi. Excel'den yükleme yöntemden bağımsız her zaman açıktır.",
            "IsPullEnabled": "Yalnız SQL çekimini durdurur; Excel'den yükleme açık kalır.",
-           "Validation": "Gelen verinin validasyonu; çipe tıklayınca bulgular açılır."},
+           "Validation": "Gelen verinin validasyonu; çipe tıklayınca bulgular açılır.",
+           "LastTransferAt": "Tablonun kullanılan veriye son yazıldığı aktarım (tam ya da kısmi).",
+           "HasNewData": "Son aktarımdan sonra veri geldi; aktarılınca kullanılan veriye geçer."},
 )
 
 INTEGRATION_FIELDS = ("Name", "Method", "ViewName", "ColumnMatch", "LastPullStatus", "LastPullAt", "CatalogOrder", "Entity")

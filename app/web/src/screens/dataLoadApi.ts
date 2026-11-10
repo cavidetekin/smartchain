@@ -38,7 +38,11 @@ export const dataLoadApi = {
     uploadFile<ImportSummary | { batch_id: number; job_id: number }>(`${imports}/${encodeURIComponent(entity)}?mode=${encodeURIComponent(mode)}`, file),
   pending: (entity: string, signal?: AbortSignal) => getJson<ImportSummary | null>(`${imports}/pending/${encodeURIComponent(entity)}`, signal),
   summary: (batchId: number, signal?: AbortSignal) => getJson<ImportSummary>(`${imports}/${batchId}`, signal),
-  continueBatch: (batchId: number) => postJson<ImportSummary>(`${imports}/${batchId}/continue`, {}),
+  /** Veri yükle (K-158): tablo dosyanın şablon bilgisinden; skip: seçimde kabul edilmiş tablolar (aynı tabloya ikinci dosya reddedilir). */
+  uploadAny: (file: File, mode: string, skip: string[]) =>
+    uploadFile<(ImportSummary | { batch_id: number; job_id: number }) & { entity: string; name: string }>(
+      `${imports}?mode=${encodeURIComponent(mode)}&skip=${encodeURIComponent(skip.join(","))}`, file),
+  continueBatch: (batchId: number, mode?: string) => postJson<ImportSummary>(`${imports}/${batchId}/continue`, mode ? { mode } : {}),
   cancel: (batchId: number) => postJson<ImportSummary>(`${imports}/${batchId}/cancel`, {}),
   errorReport: (batchId: number) => downloadFile(`${imports}/${batchId}/error-report`, `hata-raporu_${batchId}.xlsx`),
   info: (entity: string, signal?: AbortSignal) => getJson<TemplateInfo>(`/api/templates/${encodeURIComponent(entity)}/info`, signal),

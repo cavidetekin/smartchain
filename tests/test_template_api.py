@@ -112,11 +112,14 @@ def test_info_lists_required_fields(client, people):
 def test_entity_list_sorts_filters_and_exports(client, people):
     h = auth(people[KEY_USER])
     cols = {c["field"]: c for c in client.get("/api/data-entities/columns", headers=h).json()["columns"]}
-    assert list(cols) == ["Name", "Method", "IsPullEnabled", "Validation", "TotalRows", "ErrorRows", "WarningRows", "InfoRows", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity", "ViewName"]
+    assert list(cols) == ["Name", "Method", "IsPullEnabled", "Validation", "TotalRows", "ErrorRows", "WarningRows", "InfoRows", "LastLoadAt", "LastTransferAt", "HasNewData",
+                          "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "CatalogOrder", "LastTransferType", "Entity", "ViewName"]
     assert {f: c["label"] for f, c in cols.items()} == {"Name": "Tablo", "Method": "Yöntem", "IsPullEnabled": "Çekim", "Validation": "Validasyon", "ViewName": "View", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "RequiredCount": "Zorunlu alan",
                                                         "LastLoadAt": "Son yükleme zamanı", "CatalogOrder": "Yükleme sırası", "Entity": "Teknik tablo adı",
-                                                        "TotalRows": "Toplam satır", "ErrorRows": "Hatalı", "WarningRows": "Uyarılı", "InfoRows": "Bilgi"}
-    assert [f for f, c in cols.items() if not c["default_visible"]] == ["Entity", "ViewName"] and cols["EntityClass"]["values"] == ["Ana veri", "İşlem verisi"]
+                                                        "TotalRows": "Toplam satır", "ErrorRows": "Hatalı", "WarningRows": "Uyarılı", "InfoRows": "Bilgi",
+                                                        "LastTransferAt": "Son aktarım", "LastTransferType": "Son aktarım türü", "HasNewData": "Yeni veri"}
+    assert [f for f, c in cols.items() if not c["default_visible"]] == ["EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastTransferType", "Entity", "ViewName"]
+    assert cols["EntityClass"]["values"] == ["Ana veri", "İşlem verisi"]  # şablon bilgisi varsayılan gizli (K-158)
 
     # satır menüsü gizli kolonları da okur
     only = client.post("/api/data-entities/query", headers=h, json={"fields": ["EntityClass"], "limit": 1}).json()["rows"][0]

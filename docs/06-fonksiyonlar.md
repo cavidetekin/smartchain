@@ -277,7 +277,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Sınıf: Hata satırı aktarılmaz; Uyarı aktarılır; Bilgi yalnız bilgidir. Sınıf Validasyon kuralları ekranında (27) değiştirilir.
   - Hata oranı = Hata bulunan güncel kayıt / güncel kayıt (ön kontrol hesaba girmez). Eşik tablo başınadır, varsayılanı yoktur, boşsa kontrol edilmez (K-135); 3.4'te yalnız gösterilir, load'a etkisi 5.2'de.
   - Küme kuralları (döngü, toplam, çakışma) tablonun işlenmiş katmanına bakar.
-  - Tutarlılık sayıları (yeni, değişen, silinen kayıt) yükleme ekranında gösterilir (5.5); "satır sayısı dünden %30 az" uyarısı 5.5'tedir.
+  - Aktarılırsa yeni, değişen, silinen ön izlemesi ve "satır sayısı az" uyarısı yoktur; satır sayısı değişimi ve yeni gelen, gelmeyen, güncellenen kayıtlar Dünden bugüne ekranında raporlanır (5.5b, K-158, K-159).
 - **HATA VE ISTISNA**
   - İş düşerse çip "Valide edilemedi"; önceki bulgular kalır, "Yeniden valide et" ile tekrarlanır.
   - Motor servisi kapalıysa iş sırada bekler, çip "Sırada".

@@ -13,7 +13,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.integration import contract, structural
-from app.integration.reader import BadFile, Workbook, check_package, template_entity
+from app.integration.reader import BadFile, Workbook, check_package, quick_identity, template_entity
 from app.integration.template import write_template
 from app.jobs import queue
 from app.jobs.constants import ACTIVE_STATUSES, CHANNEL_EXCEL, STATUS_DONE, STATUS_QUEUED, TYPE_PRECHECK
@@ -74,6 +74,35 @@ def limits(session: Session | None, table: str, mode: str) -> dict[str, int]:
     if mode not in MODES:
         raise AppError("validation", "Girilen bilgiler geçersiz.", 422, [{"field": "mode", "problem": "Tam ya da Değişen olmalı."}])
     return auth._db(lambda: repo.read_settings(session))
+
+
+def check_mode(mode: str) -> None:
+    if mode not in MODES:
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, [{"field": "mode", "problem": "Tam ya da Değişen olmalı."}])
+
+
+def max_mb(session: Session | None) -> int:
+    session = auth._require(session)
+    return auth._db(lambda: repo.read_settings(session))["ImportMaxMb"]
+
+
+def detect(temp: Path, skip: Iterable[str]) -> contract.Entity:
+    """Birden çok dosyalı yükleme (K-158): tablo şablondaki teknik addan; dosya açılmaz (büyük dosya, K-129). Tanınmayan şablon, eski sürüm ve
+    seçimde aynı tabloya ikinci dosya reddedilir (parti oluşmaz)."""
+    try:
+        identity = quick_identity(temp)
+    except BadFile as exc:
+        raise AppError("import_bad_file", str(exc), 422) from exc
+    found = template_entity(identity)
+    if found is None:
+        raise AppError("import_unknown_template", "Dosyanın tablosu anlaşılamadı: şablon bilgisi yok. Şablonu indirip doldurun.", 422)
+    if identity.version != found.version:
+        raise AppError("import_old_template", f"Dosya {found.name} şablonunun v{identity.version} sürümüyle hazırlanmış, güncel sürüm v{found.version}. "
+                                              "Şablonu yeniden indirin.", 422, [{"entity": found.table, "name": found.name}])
+    if found.table in set(skip):
+        raise AppError("import_duplicate", f"Aynı tabloya ikinci dosya ({found.name}); bir tabloya tek dosya yüklenir.", 409,
+                       [{"entity": found.table, "name": found.name}])
+    return found
 
 
 def too_large(max_mb: int) -> AppError:
@@ -358,14 +387,20 @@ def pending(session: Session | None, user: CurrentUser, table: str) -> dict | No
     return auth._db(work)
 
 
-def continue_batch(session: Session | None, user: CurrentUser, batch_id: int) -> dict:
-    """Parti "Alındı"; iz aynı işlemde, yazılamazsa geri alınır (K-108). Güncel hâle işlenir, doğrulama sıraya girer (K-133, K-134)."""
+def continue_batch(session: Session | None, user: CurrentUser, batch_id: int, mode: str | None = None) -> dict:
+    """Parti "Alındı"; iz aynı işlemde, yazılamazsa geri alınır (K-108). Güncel hâle işlenir, doğrulama sıraya girer (K-133, K-134).
+    mode: birden çok dosyalı yüklemede dosya başına seçilen mod (K-158); verilirse partinin modu bununla yazılır."""
     session = auth._require(session)
+    if mode is not None:
+        check_mode(mode)
 
     def work():
         batch = _owned(session, batch_id, user)
         if batch["Status"] != repo.PENDING or batch["RowCount"] is None or batch["RowCount"] - (batch["ErrorCount"] or 0) <= 0:
             raise AppError("import_not_pending", "Bu yükleme sürdürülemez.", 409)
+        if mode is not None and mode != batch["LoadType"]:
+            repo.set_batch(session, batch_id, LoadType=mode)
+            batch = {**batch, "LoadType": mode}
         entity = _entity(batch["EntityName"])
         repo.set_batch(session, batch_id, Status=repo.RECEIVED)
         audit.write_audit(session, ACTION_UPLOAD, user.id, OBJECT, batch["FileName"],

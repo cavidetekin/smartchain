@@ -1,4 +1,6 @@
 """Sistem sağlığı sorguları (ekran 24, fonksiyon 94; K-106)."""
+from datetime import datetime
+
 import sqlalchemy as sa
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -19,10 +21,11 @@ def engine_status(session: Session) -> dict | None:
     return dict(row) if row else None
 
 
-def oldest_wait_minutes(session: Session) -> int | None:
+def oldest_wait_minutes(session: Session, now: datetime | None = None) -> int | None:
+    """Sıradaki en eski işin tam geçen dakikası (saniye / 60; dakika sınırı sayılmaz). now: referans zaman (UTC), yoksa veritabanı saati."""
     return session.execute(text(
-        "SELECT DATEDIFF(minute, MIN(CreatedAt), SYSUTCDATETIME()) FROM adm.Job WHERE Status = :queued"),
-        {"queued": STATUS_QUEUED}).scalar()
+        "SELECT DATEDIFF(second, MIN(CreatedAt), COALESCE(:now, SYSUTCDATETIME())) / 60 FROM adm.Job WHERE Status = :queued"),
+        {"queued": STATUS_QUEUED, "now": now}).scalar()
 
 
 def error_counts(session: Session, days: int = 7) -> tuple[int, int]:

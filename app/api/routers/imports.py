@@ -1,9 +1,11 @@
-"""Excel yükleme (ekran 02, fonksiyon 03, K-129). Dosya ham gövdeyle gelir, akışla diske yazılır; python-multipart gerekmez."""
+"""Excel yükleme (ekran 02, fonksiyon 03, K-129, K-158). Dosya ham gövdeyle gelir, akışla diske yazılır; python-multipart gerekmez."""
+from pathlib import Path
 from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..db import get_session
@@ -18,14 +20,16 @@ write = require(3, Access.WRITE)
 MB = 1024 * 1024
 
 
-@router.post("/imports/{entity}", summary="Excel dosyasını yükle, ön kontrol; küçük dosya sonucu döner, büyük dosya iş olur")
-async def upload(entity: str, request: Request, mode: str = Query(service.MODE_CHANGED), user: CurrentUser = Depends(write),
-                 session: Session = Depends(get_session, scope="function")) -> JSONResponse:
-    settings = await run_in_threadpool(service.limits, session, entity, mode)
-    max_bytes = settings["ImportMaxMb"] * MB
+class ContinueRequest(BaseModel):
+    mode: str | None = None  # birden çok dosyalı yüklemede dosya başına mod (K-158)
+
+
+async def _receive(request: Request, max_mb: int) -> Path:
+    """Gövdeyi sınırla diske akıtır; geçici dosyanın silinmesi çağıranındır."""
+    max_bytes = max_mb * MB
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > max_bytes:
-        raise service.too_large(settings["ImportMaxMb"])
+        raise service.too_large(max_mb)
     temp = service.temp_path()
     size = 0
     try:
@@ -33,8 +37,34 @@ async def upload(entity: str, request: Request, mode: str = Query(service.MODE_C
             async for chunk in request.stream():
                 size += len(chunk)
                 if size > max_bytes:
-                    raise service.too_large(settings["ImportMaxMb"])
+                    raise service.too_large(max_mb)
                 out.write(chunk)
+    except BaseException:
+        temp.unlink(missing_ok=True)
+        raise
+    return temp
+
+
+@router.post("/imports", summary="Veri yükle (birden çok dosya, K-158): tablo dosyanın şablon bilgisinden; tanınmayan, eski sürüm, seçimde ikinci dosya reddedilir")
+async def upload_any(request: Request, mode: str = Query(service.MODE_CHANGED), skip: str = Query(""), user: CurrentUser = Depends(write),
+                     session: Session = Depends(get_session, scope="function")) -> JSONResponse:
+    service.check_mode(mode)
+    temp = await _receive(request, await run_in_threadpool(service.max_mb, session))
+    try:
+        entity = await run_in_threadpool(service.detect, temp, [s for s in skip.split(",") if s])
+        name = unquote(request.headers.get("x-file-name", "")) or f"{entity.table}.xlsx"
+        body, status = await run_in_threadpool(service.start, session, user, entity.table, mode, name, temp)
+    finally:
+        temp.unlink(missing_ok=True)
+    return JSONResponse({**body, "entity": entity.table, "name": entity.name}, status_code=status)
+
+
+@router.post("/imports/{entity}", summary="Excel dosyasını yükle, ön kontrol; küçük dosya sonucu döner, büyük dosya iş olur")
+async def upload(entity: str, request: Request, mode: str = Query(service.MODE_CHANGED), user: CurrentUser = Depends(write),
+                 session: Session = Depends(get_session, scope="function")) -> JSONResponse:
+    settings = await run_in_threadpool(service.limits, session, entity, mode)
+    temp = await _receive(request, settings["ImportMaxMb"])
+    try:
         name = unquote(request.headers.get("x-file-name", "")) or f"{entity}.xlsx"
         body, status = await run_in_threadpool(service.start, session, user, entity, mode, name, temp)
     finally:
@@ -53,8 +83,8 @@ def summary(batch_id: int, user: CurrentUser = Depends(read), session: Session =
 
 
 @router.post("/imports/{batch_id}/continue", summary="Geçerli satırlarla devam: parti Alındı; iz")
-def continue_batch(batch_id: int, user: CurrentUser = Depends(write), session: Session = Depends(get_session)) -> dict:
-    return service.continue_batch(session, user, batch_id)
+def continue_batch(batch_id: int, body: ContinueRequest | None = None, user: CurrentUser = Depends(write), session: Session = Depends(get_session)) -> dict:
+    return service.continue_batch(session, user, batch_id, body.mode if body else None)
 
 
 @router.post("/imports/{batch_id}/cancel", summary="Vazgeç: satırlar ve dosya silinir")

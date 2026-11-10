@@ -929,7 +929,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Satır | Zorunlu alan boş, zorunlu referans yok, negatif süre, döngü | Ön kontrolde satır atlanır; validasyonda Hata bulunan satır aktarılmaz; bulgu listesine yazılır; eşik altındaysa varlık aktarılır. İsteğe bağlı bağlantı yoksa Uyarı, satır yüklenir, bağlantı boş (K-146) | Doğrulama detayı, hata raporu (xlsx) |
 | Alan | Boş malzeme seviyesi, boş tedarik türü | Veri kuralıyla tamamlanır; dolmazsa BOŞSA kolonu geçerlidir: "hata (kurallardan sonra)" ise satır Hata, değilse alan boş kalır (K-138) | Doğrulama, Veri kalitesi, Ana veri (kaynak etiketi) |
 | Aktarım | Veritabanı hatası, süre aşımı (30 dk) | Ya hep ya hiç: geri alınır, önceki versiyon geçerli; parti yeniden kullanılabilir | Veri yükleme, Sistem sağlığı, destek paketi |
-| Sessiz hata | Satır sayısı dünden %30 az, sipariş sayısı sıfır | Tutarlılık uyarısı: aktarım durmaz ama 'şüpheli parti' etiketi, ana sayfada (öneri) | Ana sayfa, Veri yükleme |
+| Sessiz hata | Satır sayısı dünden %30 az, sipariş sayısı sıfır | Uyarı ve eşik yok, aktarım durmaz; satır sayısı değişimi ve gelmeyen kayıtlar Dünden bugüne ekranında raporlanır, ana sayfa özet sayıları oradan alır (5.5b, K-158, K-159) | Dünden bugüne, Ana sayfa |
 
 ### Smartchain'den ERP'ye · Faz 1 Excel, Faz 2 API
 <sub>26. Entegrasyon tasarımı · Smartchain'den ERP'ye</sub>
@@ -994,7 +994,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Artımlı çekim ve silinenler:** SQL her zaman tam okur (K-130). API'de: haftada bir tam çekim önerilir (A-23, 11.5).
 - **ERP belge numarası eşlemesi:** Faz 1'de ERP'de açılan siparişin Smartchain önerisine bağı: ERP'de dış referans alanı var mı, yoksa aksiyon listesinde elle mi? Kurulumda müşteriye göre.
-- **Sessiz hata eşiği:** Satır sayısı dünden %30 az ise 'şüpheli parti' uyarısı: eşik parametre mi, sabit mi? (öneri: parametre, varsayılan %30).
+- **Sessiz hata eşiği:** Kapandı (K-158): eşik ve uyarı yok; satır sayısı değişimi Dünden bugüne ekranında raporlanır (5.5b, K-159).
 - **Kişisel veri:** İşçi adı yerine anonim kod kullanımı: müşteri tercihi; parametre olarak öneriyoruz.
 - **Rota tüketim birimi:** Kapandı (K-130): dönüşüm view'da; kural istisna için.
 - **Faz 2 geri yazma kapsamı:** Yalnız satın alma talebi mi, planlı iş emri de mi? Müşteri ERP'sinin planlı sipariş kavramına bağlı; keşifte netleşir.

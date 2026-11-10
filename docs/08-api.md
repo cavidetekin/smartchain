@@ -419,10 +419,11 @@ Fonksiyon 03: System owner, Admin, Key user; End user 403. Devam ve vazgeç yaln
 | Uç nokta | Cevap |
 |---|---|
 | `POST /api/imports/{entity}?mode=Değişen\|Tam` · gövde xlsx, başlık `X-File-Name` (URL kodlu) | `ImportSyncMaxMb` ve altı **200** özet; üstü **202** `{batch_id, job_id}`. 404 `entity_not_found`, 413 `import_too_large`, 422 `import_bad_file`, `import_wrong_entity`, `import_missing_columns`; bunlarda parti oluşmaz (büyük dosyada son ikisi işte: parti Hatalı) |
+| `POST /api/imports?mode=Değişen\|Tam&skip=Material,Customer` · gövde xlsx, başlık `X-File-Name` | Veri yükle, birden çok dosya (K-158): tablo dosyanın şablon bilgisinden, dosya açılmadan okunur; cevap tek tablolu yüklemeyle aynı, ayrıca `entity` ve `name`. Parti açmadan ret: 422 `import_unknown_template` (şablon bilgisi yok), 422 `import_old_template` (eski sürüm), 409 `import_duplicate` (`skip`'teki tabloya ikinci dosya; arayüz kabul edilen tabloları sırayla gönderir), 422 `import_bad_file` |
 | `GET /api/imports/{id}` | Özet: tablo, dosya, sürüm durumu, mod, durum, okunan, geçerli, hatalı, uyarı ve bilgi, dosya düzeyi bulgular, iş |
 | `GET /api/imports/pending/{entity}` | Kullanıcının bu tablodaki açık ön kontrolü ya da `null` |
 | Ortak liste `import-findings` | Satır, kod, alan, değer, sorun, önem; arayüz partiyi sabit filtreyle verir |
-| `POST /api/imports/{id}/continue` | Parti "Alındı" ve staging'in güncel hâline işlenir (K-133), iz "Excel yükleme" ve "Validasyon" işi aynı işlemde; 409 `import_not_pending` |
+| `POST /api/imports/{id}/continue` · isteğe bağlı `{mode}` | Parti "Alındı" ve staging'in güncel hâline işlenir (K-133); `mode` verilirse partinin modu bununla yazılır (birden çok dosyada dosya başına mod, K-158); iz "Excel yükleme" ve "Validasyon" işi aynı işlemde; 409 `import_not_pending` |
 | `POST /api/imports/{id}/cancel` | Satırlar ve dosya silinir, "Vazgeçildi"; sıradaki iş iptal edilir, çalışan iş sonraki parçada durur |
 | `GET /api/imports/{id}/error-report` | Hatalı satırlar, özgün değerler, sonda "Hata" kolonu; iz "Hata raporu indirme". 410 `import_file_gone` |
 
@@ -503,7 +504,7 @@ Staging'in işlenmiş katmanını core'a yeni bir veri versiyonunda yazar; iş t
 | `POST /api/transfers/partial` · `{groups}` | Key user ve üstü (06 yazma) | **202** `{job_id}`. 422 `transfer_groups` (grup yok ya da bilinmiyor); 409 `transfer_blocked` (süren iş, seçilen gruplarda validasyonu bitmemiş tablo). İz "Kısmi aktarım" |
 | `GET /api/transfers/{job_id}` | Key user ve üstü (08 okuma) | Veri aktarım raporu (K-156): iş durumu, tür (`transfer_type`) ve gruplar, başlatan, başlama, süre (`duration_seconds`), veri versiyonu; tablo başına yeni, değişen, kapatılan, aktarılmayan, not. Tablo satırları `DataVersionEntity`'den (iş sonucuna bağlı değil), iş `DataVersion.JobId` ile |
 | `GET /api/transfers/{job_id}/excel` | Key user ve üstü (08 okuma) | Raporun Excel'i: Veri sayfasında tablo satırları, Bilgi sayfasında tür, gruplar, başlatan, başlama, süre, veri versiyonu, durum; iz "Dışa aktarım" (liste adı `transfer-report`) |
-| Ortak liste `transfer-history` | Key user ve üstü (08 okuma) | Veri aktarım geçmişi (K-156): aktarım işleri, en yeni üstte; Tarih, Tür, Gruplar, Başlatan, Veri versiyonu, Süre (sn), Durum, Yeni, Güncellenen, Silinen, Aktarılmayan (toplam), Hata, İş no. Versiyonu geri alınmış biten iş (sentetik sıfırlama) görünmez |
+| Ortak liste `transfer-history` | Key user ve üstü (08 okuma) | Veri aktarım geçmişi (K-156): aktarım işleri, en yeni üstte; Tarih, Tür, Gruplar, Başlatan, Veri, Süre (sn), Durum, Yeni, Güncellenen, Silinen, Aktarılmayan (toplam), Hata, İş no. Versiyonu geri alınmış biten iş (sentetik sıfırlama) görünmez |
 
 **İş:** yükü `{}` (tam) ya da `{mode: "Kısmi", groups}` (özet "Tam veri aktarımı" ya da "Kısmi veri aktarımı · Talep, Stok", K-157); ilerleme tablo adıyla ("Malzeme · 3 / 25"). İş cevabında `transfer: {data_version, tables}`; bildirimde "Tam veri aktarımı bitti · v12" (ya da "Kısmi veri aktarımı bitti · v13") ve "Sonucu aç"; iz işlem adı "Tam aktarım" / "Kısmi aktarım" kalır. İş düşerse işlem geri alınır, önceki versiyon geçerli kalır. Özet denetim kaydı (K-108): veri versiyonu ve tablo başına sayılar; kısmide gruplar.
 
@@ -534,7 +535,7 @@ Temizlik sıradayken ya da sürerken aktarım da başlamaz.
 
 | Uç nokta | Cevap |
 |---|---|
-| Ortak liste `data-entities` | `Name`, `EntityClass`, `Description`, `Version`, `FieldCount`, `RequiredCount`, `LastLoadAt` (Alındı, Doğrulandı ya da Yüklendi partinin en yeni zamanı), `CatalogOrder`, `Entity` (varsayılan gizli). 25 tablo; kaynak docs/03 kataloğu, etiketli ek alanlar `FieldDefinition`'dan sayılır |
+| Ortak liste `data-entities` | `Name`, `EntityClass`, `Description`, `Version`, `FieldCount`, `RequiredCount`, `LastLoadAt` (Alındı, Doğrulandı ya da Yüklendi partinin en yeni zamanı), `CatalogOrder`, `Entity` (varsayılan gizli); `LastTransferAt` ve `LastTransferType` (tablonun yazıldığı son aktarım; yazılmadığı aktarım ve sentetik yükleme sayılmaz), `HasNewData` (son aktarımdan sonra veriye alınmış yükleme; K-158). Şablon bilgisi alanları varsayılan gizli. 25 tablo; kaynak docs/03 kataloğu, etiketli ek alanlar `FieldDefinition`'dan sayılır |
 | `GET /api/templates/{entity}/info` | `entity`, `name`, `version`, `file_name`, `field_count`, `required` (etiketler). Bilinmiyorsa 404 `entity_not_found` |
 | `GET /api/templates/{entity}` | xlsx; `smartchain_<kısa ad>_v<sürüm>.xlsx`. İz "Şablon indirme" aynı işlemde; yazılamazsa dosya yok, 503 `audit_failed` |
 

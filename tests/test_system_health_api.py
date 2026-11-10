@@ -123,11 +123,14 @@ def test_engine_down_warns_queue(db_engine, client, people):
     assert {s["key"]: s["status"] for s in body["services"]}["engine"] == "Yavaş" and body["cards"]["queue"]["warn"] is False
 
 
-def test_thresholds_take_effect(db_engine, client, people, session):
+def test_thresholds_take_effect(db_engine, client, people, session, monkeypatch):
     beat(db_engine)
     owner = auth(people[SYSTEM_OWNER])
     job = enqueue(session, people[ADMIN])
-    execute(db_engine, "UPDATE adm.Job SET CreatedAt = DATEADD(minute, -15, SYSUTCDATETIME()) WHERE Id = :i", i=job)
+    ref = queue.db_now(session)   # sabit referans zaman: bekleme dakika sınırına düşse de 15 (koşu süresinden bağımsız)
+    execute(db_engine, "UPDATE adm.Job SET CreatedAt = DATEADD(minute, -15, :r) WHERE Id = :i", r=ref, i=job)
+    wait = repo.oldest_wait_minutes
+    monkeypatch.setattr(repo, "oldest_wait_minutes", lambda s: wait(s, now=ref))
     queue_card = summary(client, people)["cards"]["queue"]
     assert (queue_card["queued"], queue_card["oldest_wait_minutes"], queue_card["warn"]) == (1, 15, True)
     assert client.put(SETTINGS, headers=owner, json={"QueueWaitWarnMinutes": 20}).status_code == 200
@@ -135,6 +138,15 @@ def test_thresholds_take_effect(db_engine, client, people, session):
 
     assert client.put(SETTINGS, headers=owner, json={"DiskWarnPercent": 1}).status_code == 200
     assert summary(client, people)["cards"]["disk"]["warn"] is True
+
+
+def test_wait_counts_full_minutes_not_boundaries(db_engine, people, session):
+    """Bekleme tam geçen dakika: 14 dk 59 sn → 14, 15 dk 1 sn → 15 (dakika sınırı sayılmaz)."""
+    job = enqueue(session, people[ADMIN])
+    ref = queue.db_now(session)
+    for seconds, minutes in ((14 * 60 + 59, 14), (15 * 60 + 1, 15)):
+        execute(db_engine, "UPDATE adm.Job SET CreatedAt = DATEADD(second, -1 * :s, :r) WHERE Id = :i", s=seconds, r=ref, i=job)
+        assert repo.oldest_wait_minutes(session, now=ref) == minutes
 
 
 def test_disk_works_without_volume_permission(db_engine, client, people, monkeypatch):
