@@ -1,4 +1,4 @@
-// Tam aktarım (docs/08; K-149…K-153): onay penceresi, başlatma, sonuç.
+// Tam ve kısmi aktarım (docs/08; K-149…K-153, K-155): onay penceresi, başlatma, sonuç.
 import { getJson, postJson } from "../api/client";
 
 export const STATUS_READY = "Aktarılır";
@@ -15,6 +15,17 @@ export interface TransferPlanRow {
 export interface TransferPlan {
   tables: TransferPlanRow[];
   blocked: { reason: string; tables: string[] } | null;
+}
+
+export interface PartialGroup {
+  name: string;
+  tables: TransferPlanRow[];
+}
+
+export interface PartialPlan {
+  groups: PartialGroup[];
+  busy: string | null;
+  pending: string[];
 }
 
 export interface TransferTable {
@@ -39,5 +50,7 @@ export interface TransferResult {
 export const transferApi = {
   plan: (signal?: AbortSignal) => getJson<TransferPlan>("/api/transfers/plan", signal),
   start: () => postJson<{ job_id: number }>("/api/transfers", {}),
+  partialPlan: (signal?: AbortSignal) => getJson<PartialPlan>("/api/transfers/partial/plan", signal),
+  startPartial: (groups: string[]) => postJson<{ job_id: number }>("/api/transfers/partial", { groups }),
   result: (jobId: number, signal?: AbortSignal) => getJson<TransferResult>(`/api/transfers/${jobId}`, signal),
 };

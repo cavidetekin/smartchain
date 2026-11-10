@@ -309,7 +309,7 @@
     },
     {
       "no": 8,
-      "name": "Aktarım geçmişi",
+      "name": "Veri aktarım geçmişi",
       "group": "A",
       "levels": {
         "System owner": "full",

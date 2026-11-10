@@ -1,7 +1,7 @@
-"""Tam aktarım performansı (K-153): 25 tablo × 50.000 satır; ilk aktarım (hepsi yeni) ve hemen ardından ikinci aktarım (hepsi değişmeyen).
+"""Tam ve kısmi aktarım performansı (K-153, K-155): 25 tablo × 50.000 satır; ilk aktarım (hepsi yeni) ve hemen ardından ikinci aktarım (hepsi değişmeyen); kısmi aktarım (Talep, Stok).
 
 Satırlar doğrudan ham katmana yazılır (validasyon ölçülmez), işlenmiş katman kurulur. Her ölçüm aynı işlemde yapılıp geri alınır; ortanca.
-Ayrıca: pytest -m perf -k transfer.
+Ayrıca: pytest -m perf -k transfer (kısmi: -k partial).
 """
 import statistics
 import time
@@ -55,3 +55,23 @@ def test_transfer_50k(big):
           f"ikincide değişen {counts['changed2']:,}, yeni {counts['new2']:,}")
     assert counts["new"] > 0 and counts["changed2"] == 0 and counts["new2"] == 0
     assert m1 < LIMIT_SECONDS
+
+
+def test_partial_transfer_50k(big):
+    """Kısmi aktarım (K-155), Talep ve Stok grupları: önce bir tam aktarım (ölçülmez), sonra aynı oturumda kısmi aktarım üç kez; ortanca."""
+    groups = ["Talep", "Stok"]
+    times, counts = [], {}
+    with Session(big) as s:
+        transfer.run_transfer(s, None)
+        for _ in range(RUNS):
+            start = time.perf_counter()
+            r = transfer.run_transfer(s, None, groups=groups)
+            times.append(time.perf_counter() - start)
+            counts = {"tables": len(r["tables"]), "changed": sum(t["changed"] or 0 for t in r["tables"]),
+                      "not": sum(t["not_transferred"] or 0 for t in r["tables"])}
+        s.rollback()
+    m = statistics.median(times)
+    print(f"\nKısmi aktarım ({', '.join(groups)}; {counts['tables']} tablo × {PARALLEL_ROWS:,} satır): ortanca {m:.1f} sn "
+          f"({', '.join(f'{t:.1f}' for t in times)}); değişen {counts['changed']:,}, aktarılmayan {counts['not']:,}")
+    assert counts["tables"] == 6 and counts["changed"] == 0
+    assert m < LIMIT_SECONDS

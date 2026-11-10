@@ -85,7 +85,7 @@ _NAMES = """
 05 Tam aktarım
 06 Kısmi aktarım
 07 Veri versiyonlama
-08 Aktarım geçmişi
+08 Veri aktarım geçmişi
 09 Ham veri temizliği
 10 Ana veri görüntüleme
 11 Değerin kaynağını gösterme

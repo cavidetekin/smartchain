@@ -194,7 +194,7 @@ export const tr = {
     ready: "Aktarılır",
     skipped: "Aktarılmaz",
     blockedTables: (names: string) => `Tablolar: ${names}.`,
-    resultTitle: "Aktarım sonucu",
+    resultTitle: "Veri aktarım raporu",
     resultSubtitle: (status: string, version: number) => `${status} · Veri v${version}`,
     running: "Aktarım sürüyor. Pencereyi kapatabilirsiniz; bitince bildirim gelir.",
     newRows: "Yeni",
@@ -202,6 +202,14 @@ export const tr = {
     closedRows: "Silinen",
     notTransferred: "Aktarılmayan",
     failed: "Aktarım başlatılamadı.",
+    // Kısmi aktarım (fonksiyon 06; K-150, K-155)
+    partialButton: "Kısmi aktar",
+    partialTitle: "Kısmi aktarım",
+    partialSubtitle: (n: number) => (n === 0 ? "Grup seçin; ana veri aktarılmaz" : `${n} tablo aktarılacak; ana veri aktarılmaz`),
+    groups: "Gruplar",
+    group: "Grup",
+    noGroup: "En az bir grup seçin.",
+    pendingReason: "Seçilen gruplarda validasyonu bitmemiş tablo var; önce valide edin.",
   },
   // Entegrasyon (ekran 23, fonksiyon 91; K-130)
   integration: {

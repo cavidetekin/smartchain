@@ -489,19 +489,21 @@ Kurallar staging'in işlenmiş katmanında çalışır (K-140); uygulama validas
 
 **Ölçüm (`python -m pytest -m perf`, `tests/test_data_rules_perf.py`):** 200.000 satırlık Malzeme'de işlenmiş katmanın kopyası ortanca 15,3 sn (dolu tabloda; ilk kopya 4,8 sn), kopya ve beş kural (sabit, alan kopyası, iki formül, koşullu bayrak) ortanca 32,2 sn (31,8–32,5). Süreyi çoğunlukla eski satırların silinmesi alır; uygulama hesabı `db_datareader` / `db_datawriter` olduğu için `TRUNCATE` kullanılmaz (K-109).
 
-## Tam aktarım (ekran 02, fonksiyon 05 ve 07, K-149…K-153)
+## Tam ve kısmi aktarım (ekran 02, fonksiyon 05, 06 ve 07, K-149…K-155)
 
-Staging'in işlenmiş katmanını core'a yeni bir veri versiyonunda yazar; iş tipi "Aktarım", kanal "Veri işleme", aynı anda tek aktarım. Kural ve kimlik ayrıntısı K-153'te.
+Staging'in işlenmiş katmanını core'a yeni bir veri versiyonunda yazar; iş tipi "Aktarım", kanal "Veri işleme", aynı anda tek aktarım. Kural ve kimlik ayrıntısı K-153'te, kısmi aktarım K-155'te (yalnız seçilen grupların tabloları; veri versiyonu "Kısmi").
 
 | Uç nokta | Yetki | Açıklama |
 |---|---|---|
 | `GET /api/transfers/plan` | Key user ve üstü (05 okuma) | Onay penceresi: tablo başına güncel satır, Hatalı, durum (Aktarılır / Eşik aşıldı / Staging'de veri yok), hata oranı ve eşik; `blocked` (başlatılamıyorsa nedeni ve tablolar) |
 | `POST /api/transfers` | Key user ve üstü (05 yazma) | **202** `{job_id}`. 409 `transfer_blocked` (çekim, ön kontrol, validasyon ya da aktarım sırada ya da sürüyor; validasyonu bitmemiş tablo). İz "Tam aktarım" |
+| `GET /api/transfers/partial/plan` | Key user ve üstü (06 okuma) | Kısmi aktarım penceresi (K-155): gruplar ve tabloları, tablo başına güncel satır, Hatalı, durum ve not; süren iş (`busy`), validasyonu bitmemiş tablolar (`pending`) |
+| `POST /api/transfers/partial` · `{groups}` | Key user ve üstü (06 yazma) | **202** `{job_id}`. 422 `transfer_groups` (grup yok ya da bilinmiyor); 409 `transfer_blocked` (süren iş, seçilen gruplarda validasyonu bitmemiş tablo). İz "Kısmi aktarım" |
 | `GET /api/transfers/{job_id}` | Key user ve üstü (05 okuma) | İşin durumu ve sonucu: veri versiyonu, tablo başına yeni, değişen, kapatılan, aktarılmayan, not |
 
-**İş:** yükü `{}`; ilerleme tablo adıyla ("Malzeme · 3 / 25"). İş cevabında `transfer: {data_version, tables}`; bildirimde "Tam aktarım bitti · v12" ve "Sonucu aç". İş düşerse işlem geri alınır, önceki versiyon geçerli kalır. Özet denetim kaydı (K-108): veri versiyonu ve tablo başına sayılar.
+**İş:** yükü `{}` (tam) ya da `{mode: "Kısmi", groups}` (kısmi; özet "Kısmi aktarım · Talep, Stok"); ilerleme tablo adıyla ("Malzeme · 3 / 25"). İş cevabında `transfer: {data_version, tables}`; bildirimde "Tam aktarım bitti · v12" (ya da "Kısmi aktarım bitti · v13") ve "Sonucu aç". İş düşerse işlem geri alınır, önceki versiyon geçerli kalır. Özet denetim kaydı (K-108): veri versiyonu ve tablo başına sayılar; kısmide gruplar.
 
-**Ölçüm (`python -m pytest -m perf -k transfer`, `tests/test_transfer_perf.py`):** 25 tablo × 50.000 satır, her 97. satırın kodu tanımsız: ilk aktarım (hepsi yeni) ortanca 270,5 sn (241,0–283,6), ardından ikinci aktarım (hepsi değişmeyen) ortanca 220,4 sn (217,0–223,1). Sürenin çoğu kod→Id çözümlemesi ve karşılaştırmadır; sınır 30 dk. Sunucuda ilk kurulumda yeniden ölçülür.
+**Ölçüm (`python -m pytest -m perf -k transfer`, `tests/test_transfer_perf.py`):** 25 tablo × 50.000 satır, her 97. satırın kodu tanımsız: ilk aktarım (hepsi yeni) ortanca 270,5 sn (241,0–283,6), ardından ikinci aktarım (hepsi değişmeyen) ortanca 220,4 sn (217,0–223,1). Kısmi aktarım (`-k partial`, K-155), Talep ve Stok grupları (6 tablo × 50.000 satır, tam aktarımın ardından, hepsi değişmeyen): ortanca 63,2 sn (62,9–79,3). Sürenin çoğu kod→Id çözümlemesi ve karşılaştırmadır; sınır 30 dk. Sunucuda ilk kurulumda yeniden ölçülür.
 
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 

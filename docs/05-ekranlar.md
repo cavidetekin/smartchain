@@ -37,7 +37,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### VERI
 
-- **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, aktarım geçmişi.
+- **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, veri aktarım geçmişi.
 - **03 · Ana veri ekranları:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya… Her değerin kaynağı (ERP, kural, elle) görünür; elle düzeltme yapılır.
 - **04 · Veri kuralları:** Tablo başına sıralı veri kuralları; kural penceresi (koşul, sonuç, seçenek), sıra, aç / kapa, kuralları yeniden uygula (K-141, K-142).
 - **27 · Validasyon kuralları:** Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu: yapısal kontroller, hazır kurallar, kullanıcı kuralları; tablo başına hata eşiği (K-136).
@@ -100,7 +100,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05 · Tam aktarım:** Ana veri ve işlem verisinin hepsi yeni veri versiyonu olarak aktarılır (K-149).
 - **06 · Kısmi aktarım:** Seçilen işlem verisi grupları aktarılır; ana veri ve seçilmeyen gruplar önceki versiyonda kalır (K-150).
 - **07 · Veri versiyonlama:** Her aktarım bir veri versiyonu açar (VersionFrom / VersionTo).
-- **08 · Aktarım geçmişi:** Kim, ne zaman, hangi varlıkları yükledi; sonuç ne oldu.
+- **08 · Veri aktarım geçmişi:** Kim, ne zaman, hangi varlıkları yükledi; sonuç ne oldu.
 - **09 · Ham veri temizliği:** Ham veri 1 hafta sonra otomatik silinir.
 
 #### ANA VERI VE VERI KURALLARI
@@ -272,12 +272,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kısmi aktarım:** Hatalı varlık seçilmeden diğerleri aktarılır; yeni veri versiyonu oluşur.
 - **Hata detayı:** Hatalı satır ve nedeni sağda; düzeltme kaynakta ya da elle yapılır.
 - **Geçmiş:** Gece ve elle aktarımlar kullanıcı ve sonuçla birlikte saklanır.
-- **Aşama 5 (K-150, K-151, K-154):** her tablo için gelen verinin özeti: Toplam satır, Hatalı, Uyarılı, Bilgi (5.2'de geldi). Kısmi aktarım işlem verisi grubu seçimiyle (Talep, Stok, Üretim, Satın alma, İzin); ana veri yalnız tam aktarımda gelir (yukarıdaki "hatalı varlık seçilmeden diğerleri yüklenir" maddesinin yerine geçer). Aktarım raporu tablo başına özet sayılar (yeni, değişen, kapatılan, aktarılmayan).
+- **Aşama 5 (K-150, K-151, K-154):** her tablo için gelen verinin özeti: Toplam satır, Hatalı, Uyarılı, Bilgi (5.2'de geldi). Kısmi aktarım işlem verisi grubu seçimiyle (Talep, Stok, Üretim, Satın alma, İzin); ana veri yalnız tam aktarımda gelir (yukarıdaki "hatalı varlık seçilmeden diğerleri yüklenir" maddesinin yerine geçer). Veri aktarım raporu tablo başına özet sayılar (yeni, değişen, kapatılan, aktarılmayan).
 - **Uygulama (3.1, K-110):** iskelet: 25 tablo ortak tabloda, satır menüsünde şablon indirme ve şablon bilgisi. Yöntem 3.3'te; sayılar, üst düğmeler, sağ paneller 5.5'te.
 - **Uygulama (3.2, K-129):** satır menüsünde "Excel'den yükle" açılır: Dosya ve Ön kontrol adımları (3.4'te doğrulama adımı kalktı, arka planda çalışır). "Son yükleme zamanı" kolonu, ipucunda ham veriye alınma zamanı olduğu yazılır.
 - **Uygulama (3.3, K-130, K-132):** Yöntem (Excel, SQL; yalnız System owner) ve Çekim (bütün satırlarda aç/kapa anahtarı; Admin ve üstü) kolonları hücre içi düzenlenir, tablonun sağ üstündeki Kaydet ile toplu kaydedilir; Key user salt okunur görür. Çekim kapatılırken sebep zorunlu; ipucunda sebep, kişi ve tarih; açarken uyarı. Yöntem SQL, view tanımsızsa tablo adının yanında sarı üçgen. Üstte "Veri çek": onay ve sonuç penceresi; satır menüsünde tek tablo. "Excel'den yükle" her zaman açık. "Seçilenleri yükle" ve "Tam aktar" 5.5'te.
 - **Uygulama (4.1, K-143):** tablo, kullanıcının çekim ve validasyon işleri bitince kendiliğinden yenilenir; satır menüsünde "Veriyi gör" (çekmece, Kayıtlar · Tüm satırlar); çekmecenin Kayıtlar görünümünde Bulgulu satırlar / Kuralla değişenler / Tüm satırlar.
 - **Uygulama (3.4, K-133, K-134, K-139):** "Validasyon" kolonunda tablo başına çip: gri Sırada → Kurallar çalışıyor → Valide ediliyor → yeşil Geçti / sarı Uyarılı · n / kırmızı Hatalı · n; iş düşerse Valide edilemedi. Çipe tıklayınca sağdan çekmece ("Validasyon · Malzeme"): son parti (zaman, yöntem, kişi), güncel kayıt sayısı; dört kart: Hatalı satır, Uyarılı satır, Bilgilendirme satırı, Hata oranı (altında "eşik yok" ya da "eşik %0,50"); "Bulgular" kural bazında (Kural, Sınıf, Satır sayısı; kurala tıklayınca Kayıtlar o kurala süzülür) ve "Kayıtlar" (ilk kolonlar Sorun ve Sınıf); "Hatalı kayıtları indir" ve "Yeniden valide et" (Key user ve üstü). Excel'den yükle penceresinde "Devam" pencereyi kapatır, validasyon bitince bildirim gelir.
+- **Uygulama (5.3, K-155):** üst şeritte "Tam aktar"ın yanında ikincil "Kısmi aktar" (Key user ve üstü). Pencerede gruplar onay kutusuyla, yanında tabloları; açılınca hiçbiri seçili değil, seçim yokken başlat pasif. Seçilen grupların tabloları güncel satır, Hatalı, durum ve notla; süren iş ya da seçilen gruplarda validasyonu bitmemiş tablo varsa nedeni yazar, başlat pasif. Bitince "Veri aktarım raporu".
 
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>

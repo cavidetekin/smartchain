@@ -1,4 +1,6 @@
-"""Tam aktarım motoru (fonksiyon 05, 07; K-133, K-135, K-140, K-145, K-146, K-149, K-151, K-153).
+"""Aktarım motoru: tam (fonksiyon 05, 07) ve kısmi (fonksiyon 06) (K-133, K-135, K-140, K-145, K-146, K-149…K-151, K-153, K-155).
+
+Kısmide yalnız seçilen grupların tabloları yazılır; seçilmeyen tablolar yazılmamış sayılır, bağlı ana verisi mevcut veride olmayan satır bekler.
 
 Tek işlem, ya hep ya hiç: yeni veri versiyonu açılır, tablolar katalog sırasıyla (ebeveyn önce) yazılır. Tablo başına küme SQL:
 1. Çözümle: prc satırları core kolon adlarıyla geçici tabloya; kodlar core'un güncel satırlarından Id'ye çevrilir; satırın durumu
@@ -21,16 +23,17 @@ from app.validation import catalog as cat, engine as validation
 from app.validation.sqlkit import _key_part, present
 from db.models import metadata
 
+from .groups import group_tables
 from .mapping import UNVERSIONED, RefColumn, TableMap, id_name, order, table_map
 
 log = logging.getLogger("smartchain.transfer")
 
 OK, KEEP, CLOSE = 1, 2, 3
-GUARD_NULL, GUARD_KEY, GUARD_PARENT = 1, 2, 3  # validasyonda görünmeyen aktarılmayan: zorunlu kolon boş · aynı anahtar · ebeveyni aktarılmadı
+GUARD_NULL, GUARD_KEY, GUARD_PARENT, GUARD_WAIT = 1, 2, 3, 4  # validasyonda görünmeyen aktarılmayan: zorunlu kolon boş · aynı anahtar · ebeveyni aktarılmadı · kısmide ebeveyn tablo seçilmedi
 TRANSFERRED, ERROR_ROW = "Aktarıldı", "Hatalı"
-FULL = "Tam"
+FULL, PARTIAL = "Tam", "Kısmi"
 NOTE_EMPTY = "Veri gelmedi; mevcut veri korunur."
-NOTE_WAITING = "{n} satır, bağlı ana veri henüz aktarılmadığı için bekliyor (kısmi aktarım)."  # 5.3'te kullanılır (K-151, K-154)
+NOTE_WAITING = "{n} satır, bağlı ana veri henüz aktarılmadığı için bekliyor (kısmi aktarım)."  # K-151, K-155
 DATA_VERSION = metadata.tables["adm.DataVersion"]
 VERSION_ENTITY = metadata.tables["adm.DataVersionEntity"]
 SOURCE = metadata.tables["adm.FieldValueSource"]
@@ -69,7 +72,8 @@ class TableResult:
 class Run:
     version: int
     now: datetime
-    skipped: set[str] = field(default_factory=set)   # bu aktarımda yazılmayan tablolar (eşik, veri yok)
+    skipped: set[str] = field(default_factory=set)   # bu aktarımda yazılmayan tablolar (eşik, veri yok, kısmide seçilmeyen)
+    waiting: set[str] = field(default_factory=set)   # kısmide seçilmeyen tablolar: onlara bağlı eksik satır bekler (K-155)
 
 
 # ------------------------------------------------------------------ ön koşul ve plan
@@ -96,14 +100,17 @@ def staged_batch(session: Session, entity: str) -> int | None:
 
 # ------------------------------------------------------------------ birim (K-112)
 
-def ensure_units(session: Session) -> int:
-    """Diğer tablolarda geçen birim kodlarından eksik birimler; ad dönüşüm satırından, ondalık yazılmaz."""
+def ensure_units(session: Session, entities: set[str] | None = None) -> int:
+    """Diğer tablolarda geçen birim kodlarından eksik birimler; ad dönüşüm satırından, ondalık yazılmaz. Kısmide yalnız seçilen tablolardan (K-155)."""
     added = 0
     conv = metadata.tables["prc.UomConversion"]
     for code_col, name_col in ((conv.c.FromUom, conv.c.FromUomName), (conv.c.ToUom, conv.c.ToUomName)):
         sel = (sa.select(code_col, sa.func.max(name_col)).where(code_col.is_not(None), ~sa.exists().where(UNIT.c.Code == code_col)).group_by(code_col))
-        added += session.execute(sa.insert(UNIT).from_select(["Code", "Name"], sel)).rowcount
+        if entities is None or "UomConversion" in entities:
+            added += session.execute(sa.insert(UNIT).from_select(["Code", "Name"], sel)).rowcount
     for entity, column in UNIT_FIELDS:
+        if entities is not None and entity not in entities:
+            continue
         t = metadata.tables[f"prc.{entity}"]
         sel = sa.select(t.c[column]).where(t.c[column].is_not(None), ~sa.exists().where(UNIT.c.Code == t.c[column])).distinct()
         added += session.execute(sa.insert(UNIT).from_select(["Code"], sel)).rowcount
@@ -183,7 +190,7 @@ def _resolve(session: Session, m: TableMap, run: Run, tmp: sa.Table) -> None:
     loc = LOCATION.alias("loc") if m.location else None
     rs = Resolver(m, p, loc)
     values: dict[str, sa.ColumnElement] = {n: p.c[n] for n in m.plain}
-    close_conds, keep_conds = [], []
+    close_conds, keep_conds, wait_conds = [], [], []
     if m.location:
         values["LocationId"] = loc.c.Id
         keep_conds.append(sa.and_(p.c.LocationCode.is_not(None), loc.c.Id.is_(None)))
@@ -207,7 +214,9 @@ def _resolve(session: Session, m: TableMap, run: Run, tmp: sa.Table) -> None:
             excluded = _prc_parent_exists(r, p, lambda a: sa.func.coalesce(a.c.RowStatus, "") != ERROR_ROW) if parent_written else sa.false()
             close_conds.append(sa.and_(missing, excluded))
             keep_conds.append(missing)
-        elif r.inactive:
+            if r.parent in run.waiting:
+                wait_conds.append(missing)
+        elif r.inactive and parent_written:   # ebeveyn yazılmadıysa mevcut verideki hâli geçerli (K-155)
             close_conds.append(sa.and_(missing, _prc_parent_exists(r, p, lambda a: a.c.IsActive == sa.false())))
     # Savunma: core'da zorunlu kolon boşsa satır aktarılmaz (validasyon bitmemiş ya da kural boşaltmış olabilir; işlem düşmesin); raporda notu
     null_conds = [values[n].is_(None) for n in values if not m.core.c[n].nullable]
@@ -226,6 +235,8 @@ def _resolve(session: Session, m: TableMap, run: Run, tmp: sa.Table) -> None:
     business = sa.func.left(sa.func.concat_ws("|", *keys), 200) if len(keys) > 1 else sa.func.left(keys[0], 200)
     scoped = [p.c.IsActive == sa.false()] if "IsActive" in p.c else []
     whens = [(sa.or_(*scoped, sa.func.coalesce(p.c.RowStatus, "") == ERROR_ROW), 0)]
+    if wait_conds:
+        whens.append((sa.or_(*wait_conds), GUARD_WAIT))   # kısmi: bağlı ana veri seçilmeyen tabloda ve mevcut veride yok (K-155)
     if ref_keep:
         whens.append((sa.or_(*ref_keep), GUARD_PARENT))   # satır geçerli, ebeveyni core'da yok (ebeveyn Hatalı ya da aktarılmadı)
     if null_conds:
@@ -346,18 +357,21 @@ def _counts(session: Session, tmp: sa.Table) -> dict:
 
 
 def _guard_note(session: Session, m: TableMap, tmp: sa.Table) -> str | None:
-    """Savunmayla aktarılmayan satırların tablo notu (aktarım raporu, K-151): validasyonda Hata görünmeyen durumlar."""
+    """Savunmayla aktarılmayan satırların tablo notu (veri aktarım raporu, K-151): validasyonda Hata görünmeyen durumlar."""
     nulls = [n for n in m.compare if not m.core.c[n].nullable]
     row = session.execute(sa.select(sa.func.count(sa.distinct(sa.case((tmp.c.Gd == GUARD_NULL, tmp.c.StagingRowId)))),
                                     sa.func.count(sa.distinct(sa.case((tmp.c.Gd == GUARD_KEY, tmp.c.StagingRowId)))),
                                     sa.func.count(sa.distinct(sa.case((sa.and_(tmp.c.Gd == GUARD_PARENT, tmp.c.St == KEEP), tmp.c.StagingRowId)))),
+                                    sa.func.count(sa.distinct(sa.case((sa.and_(tmp.c.Gd == GUARD_WAIT, tmp.c.St == KEEP), tmp.c.StagingRowId)))),
                                     *[sa.func.sum(sa.case((sa.and_(tmp.c.Gd == GUARD_NULL, tmp.c[n].is_(None)), 1), else_=0)) for n in nulls])
                           .select_from(tmp)).one()
     parts = []
+    if row[3]:
+        parts.append(NOTE_WAITING.format(n=row[3]))
     if row[2]:
         parts.append(f"{row[2]} satır, bağlı olduğu ana veri aktarılmadığı için aktarılmadı.")
     if row[0]:
-        fields = [m.core.c[n].info.get("label", n) for n, c in zip(nulls, row[3:]) if c]
+        fields = [m.core.c[n].info.get("label", n) for n, c in zip(nulls, row[4:]) if c]
         parts.append(f"{row[0]} satır, zorunlu alanı boş olduğu için aktarılmadı ({', '.join(fields)}).")
     if row[1]:
         parts.append(f"{row[1]} satır, aynı kayda düştüğü için aktarılmadı.")
@@ -419,16 +433,22 @@ def lock(session: Session) -> None:
         validation._applock(session, f"validation:table:{e.table}")
 
 
-def run_transfer(session: Session, user_id: int | None, progress: Callable[[str], None] | None = None) -> dict:
-    """Bütün tablolar; commit çağıranındır (iş kaydıyla aynı işlemde)."""
+def run_transfer(session: Session, user_id: int | None, progress: Callable[[str], None] | None = None,
+                 groups: list[str] | None = None) -> dict:
+    """Grup yoksa bütün tablolar (tam), varsa yalnız seçilen grupların tabloları (kısmi, K-155); commit çağıranındır (iş kaydıyla aynı işlemde)."""
+    selected = group_tables(groups) if groups else None
     lock(session)
     now = utcnow()
-    version = session.execute(sa.insert(DATA_VERSION).values(LocationId=None, CreatedAt=now, LoadType=FULL, CreatedBy=user_id, IsPinned=False,
-                                                             IsSynthetic=False).returning(DATA_VERSION.c.Id)).scalar_one()
+    version = session.execute(sa.insert(DATA_VERSION).values(LocationId=None, CreatedAt=now, LoadType=PARTIAL if selected else FULL, CreatedBy=user_id,
+                                                             IsPinned=False, IsSynthetic=False).returning(DATA_VERSION.c.Id)).scalar_one()
     run = Run(int(version), now)
-    ensure_units(session)
-    results: list[TableResult] = []
     names = order()
+    if selected:
+        run.waiting = {e for e in names if e not in selected}
+        run.skipped |= run.waiting
+        names = tuple(e for e in names if e in selected)
+    ensure_units(session, set(names) if selected else None)
+    results: list[TableResult] = []
     for i, entity in enumerate(names, 1):
         info = contract_entity(entity)
         res = TableResult(entity, info.name if info else entity, batch_id=staged_batch(session, entity))

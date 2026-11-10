@@ -18,7 +18,7 @@ import { dataLoadApi, type TemplateInfo } from "./dataLoadApi";
 import { ImportDialog } from "./ImportDialog";
 import { type EntityChange, integrationApi, METHOD_SQL, METHODS } from "./integrationApi";
 import { PullResultDialog, PullStartDialog, PullSwitchDialog } from "./PullDialogs";
-import { TransferResultDialog, TransferStartDialog } from "./TransferDialogs";
+import { PartialTransferDialog, TransferResultDialog, TransferStartDialog } from "./TransferDialogs";
 import { useJobRefresh } from "../shell/useJobRefresh";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 import { ValidationChip, ValidationDrawer } from "./ValidationDrawer";
@@ -67,7 +67,9 @@ export function DataLoad() {
   const canPull = can(me, 1, "write");
   const canRevalidate = can(me, 4, "write");
   const canTransfer = can(me, 5, "write");
+  const canPartial = can(me, 6, "write");
   const [transferStart, setTransferStart] = useState(false);
+  const [partialStart, setPartialStart] = useState(false);
   const [transferJob, setTransferJob] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<{ entity: string; name: string; all?: boolean } | null>(null);
   const running = useRef(false);  // bir çip sürüyorsa tablo kendini yeniler
@@ -195,6 +197,7 @@ export function DataLoad() {
         <h1>{T.title}</h1>
         <div className="sc-page-head-actions">
           <Button variant="secondary" disabledReason={canTransfer ? null : forbiddenReason(5, "write")} onClick={() => setTransferStart(true)}>{tr.transfer.button}</Button>
+          <Button variant="secondary" disabledReason={canPartial ? null : forbiddenReason(6, "write")} onClick={() => setPartialStart(true)}>{tr.transfer.partialButton}</Button>
           <Button variant="primary" disabledReason={canPull ? null : forbiddenReason(1, "write")} onClick={() => setPullStart({})}>{T.pullNow}</Button>
         </div>
       </header>
@@ -220,6 +223,7 @@ export function DataLoad() {
       {shownPull && <PullResultDialog key={shownPull} jobId={shownPull} onRetry={setPullJob} onChanged={refresh}
                                       onClose={() => { setPullJob(null); if (resultPull) navigate(pathname, { replace: true }); }} />}
       {transferStart && <TransferStartDialog onClose={() => setTransferStart(false)} onStarted={(job) => { setTransferStart(false); setTransferJob(job); }} />}
+      {partialStart && <PartialTransferDialog onClose={() => setPartialStart(false)} onStarted={(job) => { setPartialStart(false); setTransferJob(job); }} />}
       {shownTransfer && <TransferResultDialog key={shownTransfer} jobId={shownTransfer} onChanged={refresh}
                                               onClose={() => { setTransferJob(null); if (resultTransfer) navigate(pathname, { replace: true }); }} />}
       {drawer && <ValidationDrawer key={`${drawer.entity}:${drawer.all ? "all" : ""}`} entity={drawer.entity} name={drawer.name} canRevalidate={canRevalidate}

@@ -77,7 +77,7 @@ export const SCREENS: Screen[] = [
     description: "Onaylı plan ve senaryo raporları; Excel'e aktarım. Raporlar 9.4'te bu başlığın altına gelir." },
 
   { no: "02", fn: 3, name: "Veri yükleme", path: "/veri/veri-yukleme", group: "veri", step: "3.1", icon: Upload,
-    description: "Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, aktarım geçmişi." },
+    description: "Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, veri aktarım geçmişi." },
   { no: "04", fn: 16, name: "Veri kuralları", path: "/veri/veri-kurallari", group: "veri", step: "4.1", icon: WandSparkles,
     description: "Tablo başına sıralı veri kuralları: koşul, sonuç, seçenek; sıra, aç / kapa, kuralları yeniden uygula." },
   { no: "27", fn: 100, name: "Validasyon kuralları", path: "/veri/validasyon-kurallari", group: "veri", step: "3.4", icon: ListChecks,

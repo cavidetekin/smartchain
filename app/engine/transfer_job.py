@@ -1,4 +1,4 @@
-"""Tam aktarım işi (K-149, K-153): motor servisinin başlattığı ayrı süreç (validation_job deseni).
+"""Aktarım işi, tam ya da kısmi (K-149, K-153, K-155): motor servisinin başlattığı ayrı süreç (validation_job deseni).
 
 Aktarım ve iş kaydı tek işlemde commit edilir; düşerse işlem geri alınır, önceki veri versiyonu geçerli kalır, iş Hata olur.
 """
@@ -14,7 +14,11 @@ from db.models import metadata
 from .job import FORMAT
 
 log = logging.getLogger("smartchain.engine.transfer")
-ACTION = "Tam aktarım"
+PARTIAL = "Kısmi"
+
+
+def action(payload: dict) -> str:
+    return "Kısmi aktarım" if payload.get("mode") == PARTIAL else "Tam aktarım"
 
 
 def summary_lines(tables: list[dict]) -> list[str]:
@@ -44,12 +48,15 @@ def run_transfer_job(job_id: int, attempt: int) -> None:
                 queue.set_progress(s, job_id, attempt, stage[:100])
 
         try:
-            result = engine.run_transfer(session, payload.get("user_id"), progress)
-            audit.write_audit(session, ACTION, payload.get("user_id"), "DataVersion", str(result["data_version"]),
-                              {"data_version": result["data_version"], "transfer_tables": summary_lines(result["tables"])})
+            groups = payload.get("groups") if payload.get("mode") == PARTIAL else None
+            result = engine.run_transfer(session, payload.get("user_id"), progress, groups=groups)
+            details = {"data_version": result["data_version"], "transfer_tables": summary_lines(result["tables"])}
+            if groups:
+                details["groups"] = ", ".join(groups)
+            audit.write_audit(session, action(payload), payload.get("user_id"), "DataVersion", str(result["data_version"]), details)
             job = metadata.tables["adm.Job"]  # tipli yazım: 4000 karakterden uzun sonuç nvarchar(max) olarak gider
             session.execute(sa.update(job).where(job.c.Id == job_id).values(Result=json.dumps(result, ensure_ascii=False)))
-            if queue.finish(session, job_id, attempt, progress=f"Tam aktarım bitti · v{result['data_version']}", commit=False):
+            if queue.finish(session, job_id, attempt, progress=f"{action(payload)} bitti · v{result['data_version']}", commit=False):
                 session.commit()
                 log.info("Aktarım işi %s bitti · v%s", job_id, result["data_version"])
             else:
@@ -59,7 +66,7 @@ def run_transfer_job(job_id: int, attempt: int) -> None:
             log.exception("Aktarım işi %s hata", job_id)
             session.rollback()
             with Session(db) as s:
-                queue.fail(s, job_id, attempt, f"Tam aktarım tamamlanamadı; önceki veri versiyonu geçerli. Destek için iş numarası: {job_id}")
+                queue.fail(s, job_id, attempt, f"{action(payload)} tamamlanamadı; önceki veri versiyonu geçerli. Destek için iş numarası: {job_id}")
 
 
 def transfer_process_main(job_id: int, attempt: int, _time_budget_seconds: int) -> None:

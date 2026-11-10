@@ -13,7 +13,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05 · Tam aktarım:** Staging'in işlenmiş katmanını (veri kuralları uygulanmış, valide edilmiş) bütün tablolarıyla yeni bir veri versiyonuna aktarmak; ana veri ve işlem verisinin hepsi (K-149). Gece akışının standart yolu.
 - **06 · Kısmi aktarım:** Yalnız seçilen işlem verisi gruplarını (Talep, Stok, Üretim, Satın alma, İzin) yeni veri versiyonuna aktarmak; ana veri ve seçilmeyen gruplar önceki versiyonda kalır (K-150). Gün içi tazelemenin yolu.
 - **07 · Veri versiyonlama:** Her yüklemenin dondurulmuş, karşılaştırılabilir bir veri kesiti oluşturması; her plan hesabının hangi veriyle yapıldığının bilinmesi ve onaylı planların verisinin hep saklanması.
-- **08 · Aktarım geçmişi:** Çekim, Excel yüklemesi, validasyon, tam ve kısmi aktarımların kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
+- **08 · Veri aktarım geçmişi:** Çekim, Excel yüklemesi, validasyon, tam ve kısmi aktarımların kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
 - **09 · Ham veri temizliği:** Ham veri tablolarındaki eski partileri düzenli silerek disk alanını korumak; geçmiş kaydını ve versiyonlanmış veriyi etkilemeden.
 
 ### 01 · Veri çekme
@@ -186,7 +186,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ÇIKTI**
   - ImportBatch (Excel) ve ham veri satırları
   - Hata raporu xlsx (isteğe bağlı)
-  - Aktarım geçmişi kaydı; dosya bir hafta ham veriyle birlikte saklanır
+  - Veri aktarım geçmişi kaydı; dosya bir hafta ham veriyle birlikte saklanır
 - **05:** Dosya bir kez okunur: geçerli satırlar kontrol sırasında ham veriye yazılır, parti 'Ön kontrol'de olduğu için kimse okumaz. 'Devam' partiyi 'Alındı' yapar, 'vazgeç' satırları ve dosyayı siler. ImportBatch (yöntem = Excel) dosya adı, kullanıcı ve şablon sürümünü taşır. Büyük dosyada ön kontrol iş kuyruğunda çalışır (K-129).
 - **06:** 'Devam' pencereyi kapatır; parti staging'in güncel hâline işlenir (K-133), validasyon (04) arka planda başlar, bitince bildirim gelir. Ardından tam ya da kısmi aktarım (05 / 06).
 
@@ -518,7 +518,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ÇIKTI**
   - Yeni veri versiyonu (DataVersion + tüm varlıklar için DataVersionEntity)
   - Güncel ana veri ve işlem verisi; FieldValueSource (değer kaynağı)
-  - Veri kalitesi uyarıları; aktarım geçmişi ve denetim izi kaydı
+  - Veri kalitesi uyarıları; veri aktarım geçmişi ve denetim izi kaydı
 - **06:** Veri kalitesi kontrolü (20) yeni versiyon üzerinde çalışır; uyarılar listeye düşer.
 - **07:** Versiyon kapatılır (önceki versiyonun geçerliliği biter); gece akışında senaryolar bu versiyonla başlar. Elle yüklemede sonuç bildirimi ve geçmiş kaydı.
 
@@ -529,7 +529,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Ya hep ya hiç: yükleme ortasında hata olursa geri alınır, önceki versiyon geçerli kalır.
   - Elle değerin aktarımda korunması 6.2'de elle değer girme ekranıyla birlikte gelir (K-148); hangi alanların elle değiştirilebileceği orada konuşulur.
   - Açık çalışmalar açıldıkları veri versiyonuna bağlı kalır; yayında (76) 'daha yeni veri var' uyarısı alırlar.
-  - Hata eşiğini aşan tablo aktarılmaz, önceki versiyon kalır (K-135); aktarım raporunda oran ve eşikle tek satır not (K-151).
+  - Hata eşiğini aşan tablo aktarılmaz, önceki versiyon kalır (K-135); veri aktarım raporunda oran ve eşikle tek satır not (K-151).
   - Yükleme sırasında ikinci yükleme ve çekim başlatılamaz.
 - **HATA VE ISTISNA**
   - Veritabanı hatası: işlem geri alınır, ana sayfa ve Sistem sağlığı kaydı; ham veri partisi yeniden kullanılabilir.
@@ -540,7 +540,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Gece akışında senaryolar (40) başlar.
   - Açık çalışmalarda 'yeni veri var' bildirimi.
   - Veri kalitesi listesi ve ana sayfa 'dünden bugüne' güncellenir.
-  - Ana veri ekranları yeni versiyonu gösterir; aktarım geçmişi ve denetim izi.
+  - Ana veri ekranları yeni versiyonu gösterir; veri aktarım geçmişi ve denetim izi.
 - **ÖRNEK:** Parti #1187 → v232: 9 varlık, 90 yeni, 1.158 değişen, 15 silinen; Rota'da 3 satır aktarılmadı (Hata; önceki hâlleri açık). Kuralla değişen 14 kaydın kaynağı "kural" yazıldı, veri kalitesi 3 yeni uyarı üretti. Süre 2 dk 48 sn.
 
 - **Uygulama (5.2, K-149, K-153):** iş "Aktarım" (kanal Veri işleme), Veri yükleme ekranında "Tam aktar": onay penceresi ("n tablo aktarılacak") tablo başına güncel satır, Hatalı ve aktarılmayacak tabloları (veri gelmedi, eşik) notuyla gösterir. Sonuç penceresi tablo başına Yeni, Güncellenen, Silinen, Aktarılmayan ve not (K-154). Veri yükleme tablosunda tablo başına Toplam satır, Hatalı, Uyarılı, Bilgi. Kimlik, kapatma, Smartchain'de tanımlanan kolonlar, Lokasyon, Birim ve değerin kaynağı K-153'te. 5.5'e kalanlar: son aktarım zamanı, aktarılmamış yeni veri, sağ paneller.
@@ -585,7 +585,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Bildirim:** Yeşil bildirim: versiyon, varlık sayısı, süre; yan etki tek satırda.
 - **Bağlam güncellendi:** Alt başlıkta geçerli versiyon v232 oldu.
 - **Sonraki adım:** Veri kalitesine git ve v231 ile farkı gör bağlantıları.
-- **Geçmiş kaydı:** Aktarım geçmişine elle aktarım satırı eklendi.
+- **Geçmiş kaydı:** Veri aktarım geçmişine elle aktarım satırı eklendi.
 
 ### 06 · Kısmi aktarım
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Çalışma prensibi 1/3</sub>
@@ -597,7 +597,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü · sistem (zamanlanmış akış adımı; akışları kurulumda System owner tanımlar, hangi grupların aktarılacağı akış tanımında seçilir, 5.6)
   - Nereden: Veri yükleme ekranı · grup seçimi + 'Seçilenleri yükle' · zamanlanmış akış (ör. öğlen Talep ve Stok)
-- **01:** Kullanıcı ya da akış tanımı grupları seçer. Bağımlılık önerisi yoktur: bağlı olduğu ana veri core'da olmayan satır aktarılmaz, aktarım raporunda "ana verisi aktarılmadı" olarak sayılır, bir sonraki tam aktarımda girer (K-150).
+- **01:** Kullanıcı ya da akış tanımı grupları seçer. Bağımlılık önerisi yoktur: bağlı olduğu ana veri core'da olmayan satır aktarılmaz, veri aktarım raporunda "ana verisi aktarılmadı" olarak sayılır, bir sonraki tam aktarımda girer (K-150).
 - **02:** Onay penceresinde seçilen grupların tabloları ve sayıları, 'seçilmeyen gruplar ve ana veri v231 değerlerini korur' bilgisi gösterilir.
 - **GIRDI**
   - Staging'in işlenmiş katmanı ve grup seçimi
@@ -609,7 +609,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ÇIKTI**
   - Kısmi veri versiyonu (DataVersion.LoadType = kısmi, DataVersionEntity)
   - Seçilen gruplarda güncel veri ve değer kaynağı; ana verisi aktarılmadığı için bekleyen satır sayısı (K-151)
-  - Kapsam dahilinde veri kalitesi uyarıları; aktarım geçmişi kaydı
+  - Kapsam dahilinde veri kalitesi uyarıları; veri aktarım geçmişi kaydı
 - **06:** Versiyon kapatılır; seçilmeyen gruplar ve ana veri önceki satırları taşır. Sonuç bildirimi, geçmiş ve denetim izi kaydı.
 
 ### 06 · Kısmi aktarım · kurallar ve etkiler
@@ -629,6 +629,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veri kalitesi listesi kapsam dahilinde güncellenir.
   - Ana sayfa 'dünden bugüne' ve ana veri ekranları.
 - **ÖRNEK:** Öğlen akışı Talep ve Stok gruplarını aktarır: Satış siparişi, Tahmin, Proje, Proje grubu, Stok, Ödünç ve geri ödeme. Yeni bir malzeme koduna bakan 2 sipariş satırı aktarılmaz (malzeme gece tam aktarımda gelecek), raporda "ana verisi aktarılmadı · 2". v232 kısmi: 6 tablo yeni, öteki tablolar v231'den. 38 sn.
+
+- **Uygulama (5.3, K-155):** Veri yükleme ekranında "Kısmi aktar": pencerede grup seçimi (hiçbiri seçili açılır), seçilen grupların tabloları güncel satır, Hatalı ve notuyla; başlatılamıyorsa nedeni. Sonuç "Veri aktarım raporu" (tam aktarımla aynı pencere). Bağlı ana verisi mevcut veride olmayan satırın mevcut hâli kalır, notu "bekliyor". Gelen veride pasif ama mevcut veride aktif ana veriye bakan satır aktarılır.
 
 ### 06 · Kısmi aktarım · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Çalışma prensibi 3/3</sub>
@@ -736,17 +738,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Plan etkisi:** Farkın plana olası etkisi tahmini olarak; hesap için çalışma gerekir.
 - **Excel'e aktar:** Fark raporu indirilebilir; End user da görebilir.
 
-### 08 · Aktarım geçmişi
+### 08 · Veri aktarım geçmişi
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Çalışma prensibi 1/2</sub>
 
 - Çekim, Excel yüklemesi, validasyon, tam ve kısmi aktarımların kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
-- **Aktarım raporu (5.4, K-151):** tablo başına yalnız özet sayılar: yeni, değişen, kapatılan, aktarılmayan; satır satır liste ve neden listesi yok (ayrıntı validasyon çekmecesinde). İki tek satır not: eşik aşıldığı için tablo aktarılmadı (oran ve eşikle); kısmi aktarımda ana verisi aktarılmadığı için bekleyen satır sayısı. Her tablonun son aktarım zamanı (tam / kısmi) ve staging'de aktarılmamış yeni veri olup olmadığı. Özet kayıtlar temizlikte silinmez (09).
+- **Veri aktarım raporu (5.4, K-151):** tablo başına yalnız özet sayılar: yeni, değişen, kapatılan, aktarılmayan; satır satır liste ve neden listesi yok (ayrıntı validasyon çekmecesinde). İki tek satır not: eşik aşıldığı için tablo aktarılmadı (oran ve eşikle); kısmi aktarımda ana verisi aktarılmadığı için bekleyen satır sayısı. Her tablonun son aktarım zamanı (tam / kısmi) ve staging'de aktarılmamış yeni veri olup olmadığı. Özet kayıtlar temizlikte silinmez (09).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Görüntüleme: Key user ve üstü (End user görmez) · dışa aktarma: aynı
-  - Nereden: Veri yükleme ekranı 'Aktarım geçmişi' kartı → tam liste · Sistem sağlığı bağlantısı
+  - Nereden: Veri yükleme ekranı 'Veri aktarım geçmişi' kartı → tam liste · Sistem sağlığı bağlantısı
 - **01:** Liste zaman sırasına göre açılır; her satırda tür (çekim, Excel, tam, kısmi), kullanıcı, varlıklar, satır ve hata sayısı, süre, oluşan versiyon ve sonuç.
 - **02:** Filtreler satırları daraltır; varsayılan son 7 gün.
 - **03:** Satır seçilince detay çekmecesi: varlık bazında sayılar, süreler, çalışan kurallar, hata raporu bağlantısı.
@@ -761,7 +763,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hata raporu (xlsx) ve ham veri görünümü bağlantıları
   - Excel dışa aktarımı
 
-### 08 · Aktarım geçmişi · kurallar ve etkiler
+### 08 · Veri aktarım geçmişi · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
@@ -776,20 +778,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Denetim izi: dışa aktarma kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez.
 
-### 08 · Aktarım geçmişi · Liste ve filtre
+### 08 · Veri aktarım geçmişi · Liste ve filtre
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Mockup 1/2</sub>
 
-![08 · Aktarım geçmişi · Liste ve filtre](mockups/m24f-0371-08-yukleme-gecmisi-liste-ve-filtre.png)
+![08 · Veri aktarım geçmişi · Liste ve filtre](mockups/m24f-0371-08-yukleme-gecmisi-liste-ve-filtre.png)
 
 - **Tek liste:** Çekim, Excel ön kontrolü, tam ve kısmi aktarım aynı akışta; tür etiketi ayırır.
 - **Sonuç çipi:** Tamam, uyarılı, hata; uyarının nedeni çipte kısa yazar.
 - **Filtreler:** Tarih, tür, kullanıcı, sonuç; varsayılan son 7 gün.
 - **Versiyon bağlantısı:** Yüklemenin oluşturduğu versiyon sütunda; tıklayınca versiyon listesi.
 
-### 08 · Aktarım geçmişi · Yükleme detayı
+### 08 · Veri aktarım geçmişi · Yükleme detayı
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Mockup 2/2</sub>
 
-![08 · Aktarım geçmişi · Yükleme detayı](mockups/m24f-0372-08-yukleme-gecmisi-yukleme-detayi.png)
+![08 · Veri aktarım geçmişi · Yükleme detayı](mockups/m24f-0372-08-yukleme-gecmisi-yukleme-detayi.png)
 
 - **Çekmece:** Varlık bazında satır, yeni, değişen, silinen, hata ve süre.
 - **Zaman çizgisi:** Çekim, doğrulama ve yükleme saatleri tek satırda.
@@ -812,7 +814,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Saklama süresi (SystemSetting, varsayılan 7 gün)
   - ImportBatch kayıtları (parti yaşı, varlık, durum)
   - Zamanlama
-- **03:** Seçilen partilerin stg.* satırları ve ekli Excel dosyaları silinir; ImportBatch kaydı 'ham veri silindi' işaretlenir, sayıları kalır. Aktarım raporunun özet kayıtları silinmez, yalnız ayrıntı verisi silinir (K-151); staging'in güncel satırı silinmez (K-133).
+- **03:** Seçilen partilerin stg.* satırları ve ekli Excel dosyaları silinir; ImportBatch kaydı 'ham veri silindi' işaretlenir, sayıları kalır. Veri aktarım raporunun özet kayıtları silinmez, yalnız ayrıntı verisi silinir (K-151); staging'in güncel satırı silinmez (K-133).
 - **04:** Silinen boyut ve parti sayısı Sistem sağlığına yazılır.
 - **05:** Hata olursa iş sonraki hafta yeniden dener; log tutulur.
 - **ÇIKTI**
@@ -830,7 +832,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Silme sırasında kilit çakışması: iş bekler ve tekrar dener; 3 denemede olmazsa Sistem sağlığına hata.
   - Disk doluysa temizlik yine de çalışır; yükleme ve çekim için eşik uyarısı ayrı (94).
 - **ETKISI VE TETIKLENENLER**
-  - Aktarım geçmişinde 'Ham veriyi gör' pasifleşir.
+  - Veri aktarım geçmişinde 'Ham veriyi gör' pasifleşir.
   - Sistem sağlığı disk metriği güncellenir.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez.
 

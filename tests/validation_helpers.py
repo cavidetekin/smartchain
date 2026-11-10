@@ -33,7 +33,7 @@ def clean(engine) -> None:
         c.execute(sa.text("DELETE FROM adm.ValidationRule"))  # katalog varsayılanlarıyla yeniden kurulur (sınıf, aktiflik)
         c.execute(sa.text("DELETE FROM adm.ImportFinding"))
         c.execute(sa.text("DELETE FROM adm.ImportBatch"))
-        c.execute(sa.text("DELETE FROM adm.Job WHERE JobType IN (N'Veri çekme', N'Excel ön kontrol', N'Validasyon')"))
+        c.execute(sa.text("DELETE FROM adm.Job WHERE JobType IN (N'Veri çekme', N'Excel ön kontrol', N'Validasyon', N'Aktarım')"))
         c.execute(sa.text("UPDATE adm.IntegrationEntity SET ErrorThresholdPct = NULL"))
     validation_engine._synced = False
 
