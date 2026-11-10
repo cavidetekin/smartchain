@@ -10,6 +10,8 @@ from app.validation import catalog as cat
 DOCS03 = (Path(__file__).resolve().parents[1] / "docs" / "03-entegrasyon.md").read_text(encoding="utf-8")
 HEADER = "| TABLO | ALAN | EBEVEYN | EBEVEYN ANAHTARI | İLİŞKİ | PASİF EBEVEYN | KOD |"
 UNIT_FIELDS = {"BaseUom", "FromUom", "ToUom", "ComponentUom", "Uom", "CapacityUnit"}  # referans kontrolüne girmez (K-112)
+IN_KEY = {("UomConversion", "MaterialCode"), ("Forecast", "CustomerCode"), ("Forecast", "ProjectCode"), ("Stock", "ProjectCode"),
+          ("Stock", "CustomerCode"), ("Stock", "SalesOrderNo")}  # anahtarın parçası olan isteğe bağlı bağlantı (K-153)
 EITHER_ONE = {("Routing", "ResourceCode"), ("Routing", "ResourceGroupCode"), ("WorkOrderOperation", "ResourceCode"), ("WorkOrderOperation", "ResourceGroupCode")}
 
 
@@ -47,22 +49,25 @@ def test_fields_exist_and_parent_key_is_part_of_the_parent_key():
 
 
 def test_required_follows_the_contract():
-    """Zorunlu: sözleşmede alan zorunlu (ZOR. E). Zorunlu (doluysa): yalnız rota ve iş emri operasyonunda kaynak ve kaynak grubu (sözleşmede
-    isteğe bağlı, biri dolu olmalı; doluysa ve yoksa Hata). Öteki isteğe bağlı."""
+    """Zorunlu: sözleşmede alan zorunlu (ZOR. E). Zorunlu (doluysa): rota ve iş emri operasyonunda kaynak ve kaynak grubu (biri dolu olmalı) ve
+    kaydın anahtarının parçası olan bağlantı (boş yazılsaydı anahtar değişirdi, K-153); doluysa ve yoksa Hata. Öteki isteğe bağlı."""
     for r in refs.REFERENCES:
         required = {f.name: f.required for f in contract_fields(r.child)}[r.fields[0]]
-        expected = refs.REQUIRED if required else refs.REQUIRED_IF_FILLED if (r.child, r.fields[0]) in EITHER_ONE else refs.OPTIONAL
+        in_key = r.fields[0] in key_fields(r.child)
+        expected = refs.REQUIRED if required else refs.REQUIRED_IF_FILLED if (r.child, r.fields[0]) in EITHER_ONE or in_key else refs.OPTIONAL
         assert r.kind == expected, (r.child, r.fields[0], r.kind)
-    assert {(r.child, r.fields[0]) for r in refs.REFERENCES if r.kind == refs.REQUIRED_IF_FILLED} == EITHER_ONE
+    assert {(r.child, r.fields[0]) for r in refs.REFERENCES if r.kind == refs.REQUIRED_IF_FILLED} == EITHER_ONE | IN_KEY
 
 
 def test_required_if_filled_is_an_error_only_when_filled():
     """Kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez: doluysa ve yoksa Hata; boşsa referans kuralı çalışmaz (K-116 kuralı ayrı)."""
     by_key = cat.by_key()
-    for child, prefix in (("Routing", "RTG"), ("WorkOrderOperation", "WOO")):
-        for key in ("RESOURCE", "RESOURCE_GROUP"):
-            rule = by_key[(child, f"{prefix}.REF_{key}")]
-            assert rule.severity == cat.ERROR and " dolu ve " in rule.condition, rule.code
+    codes = [(child, f"{prefix}.REF_{key}") for child, prefix in (("Routing", "RTG"), ("WorkOrderOperation", "WOO")) for key in ("RESOURCE", "RESOURCE_GROUP")]
+    codes += [("UomConversion", "UOM.REF_MATERIAL"), ("Forecast", "FC.REF_CUSTOMER"), ("Forecast", "FC.REF_PROJECT"), ("Stock", "STK.REF_PROJECT"),
+              ("Stock", "STK.REF_CUSTOMER"), ("Stock", "STK.REF_SALES_ORDER")]  # anahtarın parçası: boş yazılsaydı anahtar değişirdi (K-153)
+    for key in codes:
+        rule = by_key[key]
+        assert rule.severity == cat.ERROR and " dolu ve " in rule.condition, rule.code
 
 
 def test_every_contract_reference_is_mapped():

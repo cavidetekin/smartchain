@@ -1,12 +1,13 @@
 // Bağlam çubuğu (U-17, docs/12): senaryo / plan versiyonu / dönem (8.1), veri versiyonu, iş göstergesi, kullanıcı.
 import { Database } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { api, ApiError, type DataVersion, type Job } from "../api/client";
+import { api, ApiError, type DataVersion, JOB_TRANSFER, type Job } from "../api/client";
 import { formatDateTime } from "../format";
 import { tr } from "../i18n/tr";
 import type { FontSize } from "../prefs";
 import { JobIndicator } from "./JobIndicator";
+import { useJobRefresh } from "./useJobRefresh";
 import { UserMenu } from "./UserMenu";
 
 const REFRESH_MS = 60_000;
@@ -41,8 +42,13 @@ export function ContextBar({ fontSize, onFontSize, onJob }: Props) {
 type DvState =
   | { kind: "loading" } | { kind: "ok"; dv: DataVersion } | { kind: "none" } | { kind: "dbDown" } | { kind: "apiDown" };
 
+const TRANSFER_JOBS = [JOB_TRANSFER];
+
 export function DataVersionBadge() {
   const [state, setState] = useState<DvState>({ kind: "loading" });
+  const [tick, setTick] = useState(0);
+  const bump = useCallback(() => setTick((n) => n + 1), []);
+  useJobRefresh(TRANSFER_JOBS, bump);  // aktarım bitince yeni veri versiyonu hemen görünür (K-153)
 
   useEffect(() => {
     let alive = true;
@@ -63,7 +69,7 @@ export function DataVersionBadge() {
       alive = false;
       clearInterval(t);
     };
-  }, []);
+  }, [tick]);
 
   const text =
     state.kind === "ok" ? tr.context.dataVersion(state.dv.id, formatDateTime(new Date(state.dv.created_at)))

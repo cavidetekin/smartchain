@@ -132,7 +132,7 @@ def test_optional_link_is_warning_only_when_filled(hits):
     assert of(hits, "SO.REF_PROJECT") == [(f"{LOC} · SO-PRJ · 10 · 0", "Uyarı", "Proje bulunamadı: P-YOK")]
     assert [(s, m) for _, s, m in of(hits, "WO.REF_PARENT_WORK_ORDER")] == [("Uyarı", "Orijinal iş emri bulunamadı: WO-YOK")]
     assert [(s, m) for _, s, m in of(hits, "RES.REF_SUBCONTRACTOR")] == [("Uyarı", "Fasoncu bulunamadı: S-YOK")]
-    assert [(s, m) for _, s, m in of(hits, "UOM.REF_MATERIAL")] == [("Uyarı", "Malzeme bulunamadı: M-YOK")]  # lokasyondan bağımsız
+    assert [(s, m) for _, s, m in of(hits, "UOM.REF_MATERIAL")] == [("Hata", "Malzeme bulunamadı: M-YOK")]  # anahtarın parçası: Zorunlu (doluysa), K-153
 
 
 def test_resource_is_required_if_filled(hits):
@@ -188,7 +188,7 @@ def test_integrity_findings_are_on_the_parent(hits):
 def test_missing_parent_table_is_no_data(hits):
     """Proje grubu yüklenmedi: kural satır satır bulgu yazmaz, "Karşılaştırılacak veri yok"; boş olabilecek tablo kuralı durdurmaz."""
     assert of(hits, "PRJ.REF_PROJECT_GROUP") == [(None, "Bilgi", "Karşılaştırılacak veri yok: Proje grubu.")]
-    assert of(hits, "FC.REF_PROJECT") == [(f"{LOC} · M-OK · P-YOK · 01.12.2026 · T", "Uyarı", "Proje bulunamadı: P-YOK")]
+    assert of(hits, "FC.REF_PROJECT") == [(f"{LOC} · M-OK · P-YOK · 01.12.2026 · T", "Hata", "Proje bulunamadı: P-YOK")]  # anahtarın parçası (K-153)
     assert of(hits, "FC.REF_MATERIAL") == []
     assert not [h for h in hits if h[0] == "MAT.NO_VERSION" and h[2] is None]  # benzetilen ürün tablosu doluysa da boşsa da çalışır
 

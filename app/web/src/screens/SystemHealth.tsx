@@ -18,7 +18,7 @@ const T = tr.systemHealth;
 const POLL_MS = 30_000;
 const THROTTLE_MS = 2_000;
 const QUEUED = "Sırada";
-const LOAD = "Yükleme";
+const TRANSFER = "Aktarım";
 const NIGHT = "Gece";
 const SYSTEM_OWNER = "System owner";
 
@@ -87,7 +87,7 @@ function JobMenu({ row, anchor, onClose, onChanged, onCancelOther }: {
   const own = row.RequestedBy === me.id;
   const locked = Boolean(row.IsProtected) && me.role !== SYSTEM_OWNER;
   const state = (reason: string | null): MenuState => ({ allowed: !reason, reason });
-  const cancelState = state(!queued ? T.notQueuedCancel : row.JobType === LOAD ? T.loadCancel : locked ? T.protectedJob : null);
+  const cancelState = state(!queued ? T.notQueuedCancel : row.JobType === TRANSFER ? T.transferCancel : locked ? T.protectedJob : null);
   const moveState = state(!queued ? T.notQueuedMove : row.Channel === NIGHT ? T.nightMove : locked ? T.protectedJob : null);
 
   const run = async (work: () => Promise<unknown>, notice: string) => {

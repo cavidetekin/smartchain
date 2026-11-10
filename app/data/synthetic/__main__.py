@@ -2,6 +2,7 @@
 
   python -m app.data.synthetic load   [--date 2026-10-27] [--seed 22]   temiz hâli ana tablolara yükler (öncekini siler)
   python -m app.data.synthetic unload                                    sentetik veriyi siler
+  python -m app.data.synthetic reset                                     aktarımları geri alıp temiz sentetik hâle döner (K-153; onay ister)
   python -m app.data.synthetic excel  [--out data/synthetic/v0/kirli]    kirli hâl: entegrasyon Excel'i + beklenen hatalar
   python -m app.data.synthetic sql    [--database SmartchainIntegration] kirli hâl: entegrasyon veritabanına ham tablolar, view'lar, ERP_LoadLog (K-130)
   python -m app.data.synthetic check                                     sayılar ve bilerek konmuş durumlar
@@ -33,7 +34,7 @@ def _print_check(ds) -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m app.data.synthetic", description="Sentetik veri seti v0 (docs/11)")
-    p.add_argument("command", choices=["load", "unload", "excel", "sql", "check", "users", "rules"])
+    p.add_argument("command", choices=["load", "unload", "reset", "excel", "sql", "check", "users", "rules"])
     p.add_argument("--date", type=date.fromisoformat, default=None, help="üretim günü (varsayılan bugün)")
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--out", type=Path, default=ROOT / "data" / "synthetic" / "v0" / "kirli")
@@ -90,7 +91,27 @@ def main(argv: list[str] | None = None) -> int:
         print(f"SQL kaynağı: {m['database']} · {len(m['tables'])} tablo, {sum(m['tables'].values())} satır, {len(m['errors'])} kasıtlı hata")
         print("Demo: Ürün ağacı, Rota, Stok, Satış siparişi, İş emri SQL ve view'lı; Malzeme ekranda seçilir.")
         return 0
-    from .load import SyntheticLockError, load, unload
+    from .load import ResetRefused, SyntheticLockError, load, reset, unload
+    if a.command == "reset":
+        def confirm(preview: dict) -> bool:
+            print(f"Veritabanı: {preview['database']}")
+            print(f"  Geri alınacak aktarım versiyonları: {', '.join(map(str, preview['versions'])) or 'yok'}")
+            print(f"  Silinecek core satırı: {preview['rows']}, aktarımın eklediği lokasyon: {preview['locations']}")
+            print("  Aktarımın kapattığı sentetik satırlar açılır, sentetik veri yeniden yüklenir. Staging değişmez.")
+            answer = input("Onaylamak için veritabanının adını yazın: ").strip()
+            if answer != preview["database"]:
+                print("Ad tutmadı; hiçbir şey değişmedi.")
+                return False
+            return True
+        try:
+            r = reset(get_engine(), ds, confirm)
+        except (ResetRefused, SyntheticLockError) as exc:
+            print(f"DURDU: {exc}", file=sys.stderr)
+            return 2
+        if r is None:
+            return 1
+        print(f"Sıfırlandı: aktarım versiyonları {r['removed_transfers'] or 'yok'} silindi; sentetik v0 veri versiyonu {r['data_version_id']}")
+        return 0
     try:
         if a.command == "unload":
             removed = unload(get_engine())

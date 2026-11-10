@@ -153,7 +153,7 @@ Resource = sa.Table(
     sa.Column("IsCritical", sa.Boolean(), nullable=True, comment="1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır)", info={'label': "Kritik kaynak", 'source': "ERP, yoksa kural", 'workspace': False, 'if_empty': "hata (kurallardan sonra)"}),
     sa.Column("CapacityUnit", sa.Unicode(10), sa.ForeignKey("core.UnitOfMeasure.Code"), nullable=False, comment="Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir", info={'label': "Kapasite birimi", 'source': "ERP, yoksa kural", 'workspace': False, 'if_empty': "hata (kurallardan sonra)"}),
     sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=True, comment="Bir adet kaynağın bir çalışma günündeki kapasitesi", info={'label': "Günlük kapasite", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("Quantity", sa.Integer(), nullable=False, comment="Paralel kaynak adedi", info={'label': "Paralel kaynak adedi", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
+    sa.Column("Quantity", sa.Integer(), nullable=True, comment="Paralel kaynak adedi; Smartchain ekranında girilir, aktarımda önceki versiyondan gelir", info={'label': "Paralel kaynak adedi", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("CalendarId", sa.Integer(), index=True, nullable=True, comment="Çalışma takvimi (Smartchain ekranında atanır)", info={'label': "Çalışma takvimi", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("CapacitySource", sa.Unicode(10), nullable=True, comment="İşçi gruplarında: Vardiyadan | Doğrudan", info={'label': "Kapasite kaynağı", 'values': ["Vardiyadan", "Doğrudan"], 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("SubconPlanningType", sa.Unicode(15), nullable=True, comment="Fasonda: İş yeri | Tedarik süresi", info={'label': "Fason planlama tipi", 'values': ["İş yeri", "Tedarik süresi"], 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
@@ -1357,7 +1357,7 @@ ValidationFinding = sa.Table(
 DataVersion = sa.Table(
     "DataVersion", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
-    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), nullable=False, comment="Lokasyon", info={'label': "Lokasyon"}),
+    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), nullable=True, comment="Lokasyon; tam aktarım bütün lokasyonları kapsar, boş (K-153)", info={'label': "Lokasyon"}),
     sa.Column("CreatedAt", mssql.DATETIME2(), nullable=False, comment="Oluşma zamanı", info={'label': "Oluşma zamanı"}),
     sa.Column("LoadType", sa.Unicode(10), nullable=False, comment="Tam | Kısmi", info={'values': ["Tam", "Kısmi"]}),
     sa.Column("CreatedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Kullanıcı ya da sistem kullanıcısı", info={'label': "Kullanıcı ya da sistem kullanıcısı"}),
@@ -1372,6 +1372,11 @@ DataVersionEntity = sa.Table(
     sa.Column("DataVersionId", sa.BigInteger(), sa.ForeignKey("adm.DataVersion.Id"), primary_key=True, autoincrement=False, comment="Veri versiyonu", info={'label': "Veri versiyonu"}),
     sa.Column("EntityName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Varlık", info={'label': "Varlık"}),
     sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=True, comment="Kaynak parti", info={'label': "Kaynak parti"}),
+    sa.Column("NewCount", sa.Integer(), nullable=True, comment="Yeni kayıt sayısı (K-151)", info={'label': "Yeni kayıt sayısı (K-151)"}),
+    sa.Column("ChangedCount", sa.Integer(), nullable=True, comment="Güncellenen kayıt sayısı", info={'label': "Güncellenen kayıt sayısı"}),
+    sa.Column("ClosedCount", sa.Integer(), nullable=True, comment="Silinen (kapatılan) kayıt sayısı", info={'label': "Silinen (kapatılan) kayıt sayısı"}),
+    sa.Column("NotTransferredCount", sa.Integer(), nullable=True, comment="Aktarılmayan satır sayısı (Hatalı, zorunlu ilişkisi çevrilemeyen)", info={'label': "Aktarılmayan satır sayısı (Hatalı, zorunlu ilişkisi çevrilemeyen)"}),
+    sa.Column("Note", sa.Unicode(400), nullable=True, comment="Tek satır not: eşik aşıldı, veri gelmedi, ana verisi aktarılmadı (K-151)", info={'label': "Tek satır not: eşik aşıldı, veri gelmedi, ana verisi aktarılmadı (K-151)"}),
     schema="adm",
     comment="Aktarımda hangi tabloların aktarıldığı (kısmi aktarımda seçilen grupların tabloları).",
 )
@@ -1621,7 +1626,7 @@ LoginThrottle = sa.Table(
 Job = sa.Table(
     "Job", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
-    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Yükleme | Termin sorgusu | Dışa aktarım | Excel ön kontrol | Veri çekme | Validasyon …", info={'values': ["Gece senaryosu", "Çalışma", "Yükleme", "Termin sorgusu", "Dışa aktarım", "Excel ön kontrol", "Veri çekme", "Validasyon"]}),
+    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Aktarım | Termin sorgusu | Dışa aktarım | Excel ön kontrol | Veri çekme | Validasyon …", info={'values': ["Gece senaryosu", "Çalışma", "Aktarım", "Termin sorgusu", "Dışa aktarım", "Excel ön kontrol", "Veri çekme", "Validasyon"]}),
     sa.Column("Channel", sa.Unicode(15), nullable=False, comment="Gece | Hesaplama | Excel | Veri çekme | Veri işleme", info={'values': ["Gece", "Hesaplama", "Excel", "Veri çekme", "Veri işleme"]}),
     sa.Column("Priority", sa.Integer(), nullable=True, comment="Öncelik", info={'label': "Öncelik"}),
     sa.Column("Status", sa.Unicode(15), nullable=False, comment="Sırada | Çalışıyor | Bitti | Hata | İptal", info={'values': ["Sırada", "Çalışıyor", "Bitti", "Hata", "İptal"]}),
@@ -1641,7 +1646,7 @@ Job = sa.Table(
     sa.Column("CancelledBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="İptal eden", info={'label': "İptal eden"}),
     sa.Column("Summary", sa.Unicode(200), nullable=True, comment="İş özeti; kuyruğa girerken iş türü yazar (K-107)", info={'label': "İş özeti"}),
     schema="adm",
-    comment="İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler.",
+    comment="İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, aktarımlar.",
 )
 
 SolverLog = sa.Table(

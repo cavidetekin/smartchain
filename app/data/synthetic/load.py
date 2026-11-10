@@ -3,6 +3,10 @@
 Tek işlem: güvenlik kilidi → önceki sentetik verinin silinmesi → yükleme. Hata olursa hiçbir şey değişmez.
 Güvenlik kilidi: veritabanında sentetik olmayan (IsSynthetic ≠ 1) veri versiyonu, lokasyon ya da parametre seti
 varsa hiçbir şey silinmeden durulur; sentetik set yalnız geliştirme ve demo veritabanında kullanılır.
+
+Sıfırlama (`reset`, K-153): geliştirme ya da demo veritabanında yapılan aktarımları geri alıp temiz sentetik hâle döner. Yalnız sentetik
+veriyle kurulmuş veritabanında (sentetik veri versiyonu var), onaylı plana bağlı versiyon ve sentetik olmayan parametre seti yokken çalışır;
+komut satırı silinecekleri gösterip veritabanı adının yazılmasını ister. Staging'e dokunmaz.
 """
 import logging
 
@@ -113,57 +117,120 @@ def load(engine: Engine, ds: Dataset) -> dict:
     """Önceki sentetik veriyi silip temiz hâli yükler. Yeni veri versiyonu ve satır sayılarını döndürür."""
     with engine.begin() as conn:
         _lock(conn, "yüklenmedi")
-        removed = _delete(conn)
-        now = conn.execute(text("SELECT SYSUTCDATETIME()")).scalar_one()
+        return _load(conn, ds)
 
-        loc_row = {**ds.rows("Location")[0], "IsSynthetic": True}
-        loc_row.pop("Id")
-        location_id = conn.execute(sa.insert(_table("Location")).values(**loc_row)
-                                   .returning(_table("Location").c.Id)).scalar_one()
-        for u in ds.rows("UnitOfMeasure"):
-            conn.execute(text("IF NOT EXISTS (SELECT 1 FROM core.UnitOfMeasure WHERE Code = :c) "
-                              "INSERT INTO core.UnitOfMeasure (Code, Name, Decimals) VALUES (:c, :n, :d)"),
-                         {"c": u["Code"], "n": u["Name"], "d": u["Decimals"]})
-        # Ek alan etiketi (K-88, K-104): satır yoksa eklenir, etiket boşsa yazılır; System owner'ın etiketi korunur.
-        fd = _table("FieldDefinition", "adm")
-        for d in FIELD_DEFINITIONS:
-            exists = conn.execute(sa.select(fd.c.Label).where(fd.c.TableName == d["TableName"],
-                                                              fd.c.FieldName == d["FieldName"])).first()
-            if not exists:
-                conn.execute(sa.insert(fd).values(**d))
-            elif not exists[0]:
-                conn.execute(sa.update(fd).where(fd.c.TableName == d["TableName"], fd.c.FieldName == d["FieldName"])
-                             .values(Label=d["Label"]))
-        dv = _table("DataVersion", "adm")
-        version = conn.execute(sa.insert(dv).values(LocationId=location_id, CreatedAt=now, LoadType="Tam",
-                                                    IsPinned=False, IsSynthetic=True).returning(dv.c.Id)).scalar_one()
 
-        counts = {"Location": 1}
-        for name in LOAD_ORDER:
-            table = _table(name)
-            rows = []
-            for r in ds.rows(name):
-                row = {**r, "VersionFrom": version, "VersionTo": None, "ImportBatchId": None, "UpdatedAt": now}
-                if "LocationId" in table.c:
-                    row["LocationId"] = location_id
-                rows.append(row)
-            rows = _validate(table, rows)
-            if rows:
-                conn.execute(sa.insert(table), rows)
-            counts[name] = len(rows)
-            conn.execute(sa.insert(_table("DataVersionEntity", "adm")).values(
-                DataVersionId=version, EntityName=name, ImportBatchId=None))
+class ResetRefused(RuntimeError):
+    """Sıfırlama bu veritabanında yapılamaz; hiçbir şey değişmedi."""
 
-        ps = _table("ParameterSet", "param")
-        meta = ds.params["ParameterSet"][0]
-        set_id = conn.execute(sa.insert(ps).values(Name=meta["Name"], IsDefault=meta["IsDefault"], IsSynthetic=True)
-                              .returning(ps.c.Id)).scalar_one()
-        for name in PARAM_ORDER:
-            table = _table(name, "param")
-            rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ParameterSetId": set_id} for r in ds.params[name]]
-            rows = _validate(table, rows)
+
+def _versioned() -> list[sa.Table]:
+    return [t for t in models.metadata.sorted_tables if t.schema == "core" and "VersionFrom" in t.c]
+
+
+def reset_preview(conn: Connection) -> dict:
+    """Sıfırlamanın sileceği ve açacağı (sayılar); sıfırlama yapılamıyorsa neden."""
+    synthetic = [r[0] for r in conn.execute(text("SELECT Id FROM adm.DataVersion WHERE IsSynthetic = 1"))]
+    transfers = [r[0] for r in conn.execute(text("SELECT Id FROM adm.DataVersion WHERE ISNULL(IsSynthetic, 0) = 0"))]
+    refuse = None
+    if not synthetic:
+        refuse = "Bu veritabanında sentetik veri yok; sıfırlama yalnız sentetik veriyle kurulmuş geliştirme ve demo veritabanında çalışır."
+    elif conn.execute(text("SELECT COUNT(*) FROM adm.DataVersion WHERE IsPinned = 1 AND ISNULL(IsSynthetic, 0) = 0")).scalar():
+        refuse = "Onaylı plana bağlı (sabitlenmiş) veri versiyonu var; sıfırlanmaz."
+    elif conn.execute(text("SELECT COUNT(*) FROM param.ParameterSet WHERE ISNULL(IsSynthetic, 0) = 0")).scalar():
+        refuse = "Sentetik olmayan parametre seti var; sıfırlanmaz."
+    rows = 0
+    if transfers:
+        param = bindparam("v", expanding=True)
+        for t in _versioned():
+            rows += conn.execute(text(f"SELECT COUNT(*) FROM core.[{t.name}] WHERE VersionFrom IN :v").bindparams(param), {"v": transfers}).scalar()
+    locations = conn.execute(text("SELECT COUNT(*) FROM core.Location WHERE ISNULL(IsSynthetic, 0) = 0")).scalar()
+    return {"database": conn.execute(text("SELECT DB_NAME()")).scalar(), "versions": transfers, "rows": rows, "locations": locations, "refuse": refuse}
+
+
+def _remove_transfers(conn: Connection, versions: list[int]) -> None:
+    """Aktarımların yazdıklarını siler, kapattığı sentetik satırları açar (sentetik yükleme satır kapatmaz)."""
+    if versions:
+        delete_plan_data(conn, versions)
+        param = bindparam("v", expanding=True)
+        for t in reversed(_versioned()):
+            conn.execute(text(f"DELETE FROM core.[{t.name}] WHERE VersionFrom IN :v").bindparams(param), {"v": versions})
+        for t in _versioned():
+            conn.execute(text(f"UPDATE core.[{t.name}] SET VersionTo = NULL WHERE VersionTo IS NOT NULL"))
+        conn.execute(text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId IN :v").bindparams(param), {"v": versions})
+        conn.execute(text("DELETE FROM adm.DataVersion WHERE Id IN :v").bindparams(param), {"v": versions})
+    conn.execute(text("DELETE FROM adm.FieldValueSource WHERE Source = N'Kural'"))
+    conn.execute(text("DELETE FROM core.Location WHERE ISNULL(IsSynthetic, 0) = 0"))
+
+
+def reset(engine: Engine, ds: Dataset, confirm) -> dict | None:
+    """Aktarımları geri alıp temiz sentetik hâli yükler (tek işlem). confirm(preview) True dönmezse hiçbir şey yapılmaz."""
+    with engine.begin() as conn:
+        preview = reset_preview(conn)
+        if preview["refuse"]:
+            raise ResetRefused(preview["refuse"])
+        if not confirm(preview):
+            return None
+        _remove_transfers(conn, preview["versions"])
+        _lock(conn, "yüklenmedi")
+        result = _load(conn, ds)
+    log.info("Geliştirme veritabanı sıfırlandı: aktarım versiyonları %s silindi", preview["versions"])
+    return {**result, "removed_transfers": preview["versions"], "removed_rows": preview["rows"]}
+
+
+def _load(conn: Connection, ds: Dataset) -> dict:
+    """Yüklemenin gövdesi: önceki sentetik veriyi siler, temiz hâli yazar (çağıranın işleminde)."""
+    removed = _delete(conn)
+    now = conn.execute(text("SELECT SYSUTCDATETIME()")).scalar_one()
+
+    loc_row = {**ds.rows("Location")[0], "IsSynthetic": True}
+    loc_row.pop("Id")
+    location_id = conn.execute(sa.insert(_table("Location")).values(**loc_row)
+                               .returning(_table("Location").c.Id)).scalar_one()
+    for u in ds.rows("UnitOfMeasure"):
+        conn.execute(text("IF NOT EXISTS (SELECT 1 FROM core.UnitOfMeasure WHERE Code = :c) "
+                          "INSERT INTO core.UnitOfMeasure (Code, Name, Decimals) VALUES (:c, :n, :d)"),
+                     {"c": u["Code"], "n": u["Name"], "d": u["Decimals"]})
+    # Ek alan etiketi (K-88, K-104): satır yoksa eklenir, etiket boşsa yazılır; System owner'ın etiketi korunur.
+    fd = _table("FieldDefinition", "adm")
+    for d in FIELD_DEFINITIONS:
+        exists = conn.execute(sa.select(fd.c.Label).where(fd.c.TableName == d["TableName"],
+                                                          fd.c.FieldName == d["FieldName"])).first()
+        if not exists:
+            conn.execute(sa.insert(fd).values(**d))
+        elif not exists[0]:
+            conn.execute(sa.update(fd).where(fd.c.TableName == d["TableName"], fd.c.FieldName == d["FieldName"])
+                         .values(Label=d["Label"]))
+    dv = _table("DataVersion", "adm")
+    version = conn.execute(sa.insert(dv).values(LocationId=location_id, CreatedAt=now, LoadType="Tam",
+                                                IsPinned=False, IsSynthetic=True).returning(dv.c.Id)).scalar_one()
+
+    counts = {"Location": 1}
+    for name in LOAD_ORDER:
+        table = _table(name)
+        rows = []
+        for r in ds.rows(name):
+            row = {**r, "VersionFrom": version, "VersionTo": None, "ImportBatchId": None, "UpdatedAt": now}
+            if "LocationId" in table.c:
+                row["LocationId"] = location_id
+            rows.append(row)
+        rows = _validate(table, rows)
+        if rows:
             conn.execute(sa.insert(table), rows)
-            counts[f"param.{name}"] = len(rows)
+        counts[name] = len(rows)
+        conn.execute(sa.insert(_table("DataVersionEntity", "adm")).values(
+            DataVersionId=version, EntityName=name, ImportBatchId=None))
+
+    ps = _table("ParameterSet", "param")
+    meta = ds.params["ParameterSet"][0]
+    set_id = conn.execute(sa.insert(ps).values(Name=meta["Name"], IsDefault=meta["IsDefault"], IsSynthetic=True)
+                          .returning(ps.c.Id)).scalar_one()
+    for name in PARAM_ORDER:
+        table = _table(name, "param")
+        rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ParameterSetId": set_id} for r in ds.params[name]]
+        rows = _validate(table, rows)
+        conn.execute(sa.insert(table), rows)
+        counts[f"param.{name}"] = len(rows)
     log.info("Sentetik veri yüklendi: veri versiyonu %s, lokasyon %s, parametre seti %s", version, location_id, set_id)
     return {"data_version_id": version, "location_id": location_id, "parameter_set_id": set_id,
             "removed_versions": removed, "counts": counts}

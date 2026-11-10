@@ -833,14 +833,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>26. Entegrasyon tasarımı · Referans kontrolü ve kod→Id</sub>
 
 - Her ilişki alanının baktığı tablo ve anahtar. Validasyon (fonksiyon 04) referans ve pasif ebeveyn kurallarını buradan üretir; aktarım (fonksiyon 05, 5.2) kodu `core` Id'sine bu haritayla çevirir. Kodda `app/integration/references.py`; test ikisini karşılaştırır.
-- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. **Zorunlu (doluysa)** istisnadır: rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu olmalı, K-116), ama doluysa ve yoksa Hata, satır aktarılmaz: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur.
+- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. **Zorunlu (doluysa)** istisnadır: rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu olmalı, K-116), ama doluysa ve yoksa Hata, satır aktarılmaz: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur. Kaydın anahtarının parçası olan isteğe bağlı bağlantı da Zorunlu (doluysa)dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları; K-153): boş yazılsaydı anahtar değişirdi.
 - **PASİF EBEVEYN:** ebeveyn bulunur ama `IsActive` = Hayır ise satırdaki bulgunun sınıfı; satır aktarılmaz. "—": bulgu yazılmaz, aktarım ebeveyn yokmuş gibi davranır (zorunluysa satır aktarılmaz, isteğe bağlıysa bağlantı boş).
 - **Eşleşme:** ALAN ve EBEVEYN ANAHTARI aynı sırayla eşleşir. Birden çok alanlı ilişkide (bağlı sipariş satırı) ilk alan doluysa bakılır; öteki alanlar boşsa eşleşmeyi daraltmaz. Proje, müşteri, tedarikçi ve proje grubu lokasyondan bağımsızdır; birim dönüşümünün malzemesi herhangi bir lokasyonda bulunursa yeter (K-112).
 - **Ortak ve dışarıda:** `LocationCode` → Lokasyon (`Code`) her tabloda zorunludur (`ALL.REF_LOCATION`), tabloda ayrıca yazılmaz. Birim alanları (`BaseUom`, `FromUom`, `ToUom`, `ComponentUom`, `Uom`, `CapacityUnit`) referans kontrolüne girmez (K-112); dönüşümü `ALL.UOM_CONVERSION` denetler.
 
 | TABLO | ALAN | EBEVEYN | EBEVEYN ANAHTARI | İLİŞKİ | PASİF EBEVEYN | KOD |
 |---|---|---|---|---|---|---|
-| UomConversion | MaterialCode | Material | Code | İsteğe bağlı | — | UOM.REF_MATERIAL |
+| UomConversion | MaterialCode | Material | Code | Zorunlu (doluysa) | — | UOM.REF_MATERIAL |
 | ProductionVersion | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Bilgi | PV.REF_MATERIAL |
 | ProductionVersion | LocationCode + BOMCode + MaterialCode | BOM | LocationCode + Code + MaterialCode | Zorunlu | — | PV.REF_BOM |
 | ProductionVersion | LocationCode + RouteCode | Routing | LocationCode + RouteCode | Zorunlu | — | PV.REF_ROUTE |
@@ -862,12 +862,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | SalesOrderLine | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | SO.REF_MATERIAL |
 | SalesOrderLine | ProjectCode | Project | Code | İsteğe bağlı | — | SO.REF_PROJECT |
 | Forecast | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | FC.REF_MATERIAL |
-| Forecast | CustomerCode | Customer | Code | İsteğe bağlı | — | FC.REF_CUSTOMER |
-| Forecast | ProjectCode | Project | Code | İsteğe bağlı | — | FC.REF_PROJECT |
+| Forecast | CustomerCode | Customer | Code | Zorunlu (doluysa) | — | FC.REF_CUSTOMER |
+| Forecast | ProjectCode | Project | Code | Zorunlu (doluysa) | — | FC.REF_PROJECT |
 | Stock | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Bilgi | STK.REF_MATERIAL |
-| Stock | ProjectCode | Project | Code | İsteğe bağlı | — | STK.REF_PROJECT |
-| Stock | CustomerCode | Customer | Code | İsteğe bağlı | — | STK.REF_CUSTOMER |
-| Stock | LocationCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | SalesOrderLine | LocationCode + OrderNo + LineNo + LineItemNo | İsteğe bağlı | — | STK.REF_SALES_ORDER |
+| Stock | ProjectCode | Project | Code | Zorunlu (doluysa) | — | STK.REF_PROJECT |
+| Stock | CustomerCode | Customer | Code | Zorunlu (doluysa) | — | STK.REF_CUSTOMER |
+| Stock | LocationCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | SalesOrderLine | LocationCode + OrderNo + LineNo + LineItemNo | Zorunlu (doluysa) | — | STK.REF_SALES_ORDER |
 | BorrowPayback | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | BP.REF_MATERIAL |
 | BorrowPayback | LendingProjectCode | Project | Code | Zorunlu | — | BP.REF_LENDING_PROJECT |
 | BorrowPayback | BorrowingProjectCode | Project | Code | Zorunlu | — | BP.REF_BORROWING_PROJECT |

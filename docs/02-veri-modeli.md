@@ -355,7 +355,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
-| Quantity | int |  | Paralel kaynak adedi |  | Kural ya da elle | H | E | hata (satır atlanır) |
+| Quantity | int |  | Paralel kaynak adedi; Smartchain ekranında girilir, aktarımda önceki versiyondan gelir |  | Kural ya da elle | H | H | bilinmiyor |
 | CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır) | Çalışma takvimi | Kural ya da elle | H | H | bilinmiyor |
 | CapacitySource | nvarchar(10) |  | İşçi gruplarında: Vardiyadan \| Doğrudan | Kapasite kaynağı | Kural ya da elle | H | H | bilinmiyor |
 | SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Fason planlama tipi | Kural ya da elle | H | H | bilinmiyor |
@@ -1519,7 +1519,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| LocationId | int | FK | Lokasyon | ERP | H | E |  |
+| LocationId | int | FK | Lokasyon; tam aktarım bütün lokasyonları kapsar, boş (K-153) | ERP | H | H |  |
 | CreatedAt | datetime2 |  | Oluşma zamanı | Sistem | H | E |  |
 | LoadType | nvarchar(10) |  | Tam \| Kısmi | Sistem | H | E |  |
 | CreatedBy | int | FK | Kullanıcı ya da sistem kullanıcısı | Sistem | H | H |  |
@@ -1537,6 +1537,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | DataVersionId | bigint | PK,FK | Veri versiyonu | Sistem | H | E |  |
 | EntityName | nvarchar(60) | PK | Varlık | Sistem | H | E |  |
 | ImportBatchId | bigint | FK | Kaynak parti | Sistem | H | H |  |
+| NewCount | int |  | Yeni kayıt sayısı (K-151) | Sistem | H | H |  |
+| ChangedCount | int |  | Güncellenen kayıt sayısı | Sistem | H | H |  |
+| ClosedCount | int |  | Silinen (kapatılan) kayıt sayısı | Sistem | H | H |  |
+| NotTransferredCount | int |  | Aktarılmayan satır sayısı (Hatalı, zorunlu ilişkisi çevrilemeyen) | Sistem | H | H |  |
+| Note | nvarchar(400) |  | Tek satır not: eşik aşıldı, veri gelmedi, ana verisi aktarılmadı (K-151) | Sistem | H | H |  |
 
 ### ScenarioDefinition
 <sub>21. Veri modeli · Plan</sub>
@@ -1839,12 +1844,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Sistem</sub>
 
 - Sistem · versiyonsuz · Faz 1
-- İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, yüklemeler.
+- İş kuyruğu (SQL Server tablosu): gece senaryoları, çalışma hesapları, aktarımlar.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Yükleme \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme \| Validasyon … | Sistem | H | E |  |
+| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Aktarım \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme \| Validasyon … | Sistem | H | E |  |
 | Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel \| Veri çekme \| Veri işleme | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |

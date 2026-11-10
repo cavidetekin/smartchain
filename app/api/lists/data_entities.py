@@ -58,7 +58,11 @@ def _rows(severity: str) -> sa.ScalarSelect:
             .where(FINDING.c.EntityName == _catalog.c.Entity, FINDING.c.Severity == severity).correlate(_catalog).scalar_subquery())
 
 
-_errors, _warnings = _rows("Hata"), _rows("Uyarı")
+_errors, _warnings, _infos = _rows("Hata"), _rows("Uyarı"), _rows("Bilgi")
+# Gelen verinin özeti (K-154; 5.5'ten öne alındı): güncel satır sayısı tablo başına
+_total = sa.case(*[(_catalog.c.Entity == _text(e.table),
+                    sa.select(sa.func.count()).select_from(metadata.tables[f"stg.{e.table}"])
+                    .where(metadata.tables[f"stg.{e.table}"].c.IsCurrent == sa.true()).scalar_subquery()) for e in ENTITIES], else_=0)
 _validation = sa.case(
     (sa.and_(_run_state.in_(["Sırada", "Kurallar çalışıyor", "Valide ediliyor"]), _job_status.is_not(None), _job_status.not_in(["Sırada", "Çalışıyor"])), _text("Valide edilemedi")),
     (_run_state == "Bitti", sa.case((_errors > 0, _text("Hatalı")), (_warnings > 0, _text("Uyarılı")), else_=_text("Geçti"))),
@@ -74,12 +78,13 @@ _match = sa.case((CONFIG.c.MatchedColumns.is_not(None),
 SOURCE = (sa.select(_catalog.c.Id, _catalog.c.Id.label("CatalogOrder"), _catalog.c.Entity, _catalog.c.Name, _catalog.c.EntityClass, _catalog.c.Description, _catalog.c.Version,
                     (_catalog.c.BaseFieldCount + _labelled).label("FieldCount"), _catalog.c.RequiredCount, _last_load.label("LastLoadAt"),
                     _validation, _errors.label("ValidationErrors"), _warnings.label("ValidationWarnings"),
+                    _total.label("TotalRows"), _errors.label("ErrorRows"), _warnings.label("WarningRows"), _infos.label("InfoRows"),
                     _method, sa.cast(sa.func.coalesce(CONFIG.c.IsPullEnabled, sa.literal_column("1")), sa.Boolean).label("IsPullEnabled"), CONFIG.c.ViewName, _warning, _match,
                     CONFIG.c.LastCheckStatus, CONFIG.c.LastCheckMessage, CONFIG.c.LastPullStatus, CONFIG.c.LastPullMessage, CONFIG.c.LastPullAt,
                     CONFIG.c.DisabledReason, CONFIG.c.DisabledAt, sa.func.coalesce(USER.c.FullName, USER.c.UserName).label("DisabledByName"))
           .select_from(_catalog.outerjoin(CONFIG, CONFIG.c.EntityName == _catalog.c.Entity).outerjoin(USER, USER.c.Id == CONFIG.c.DisabledBy)).subquery("data_entities"))
 
-FIELDS = ("Name", "Method", "IsPullEnabled", "Validation", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity", "ViewName")
+FIELDS = ("Name", "Method", "IsPullEnabled", "Validation", "TotalRows", "ErrorRows", "WarningRows", "InfoRows", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount", "LastLoadAt", "CatalogOrder", "Entity", "ViewName")
 HIDDEN_FIELDS = ("Entity", "ViewName")
 PULL_KEYS = ("Method", "IsPullEnabled", "ViewName", "Warning", "DisabledReason", "DisabledByName", "DisabledAt")
 
@@ -96,13 +101,16 @@ DATA_ENTITIES = ListDefinition(
     default_visible=tuple(f for f in FIELDS if f not in HIDDEN_FIELDS),
     default_sort=(("CatalogOrder", "asc"),),  # referans verisinden işlem verisine (docs/03)
     labels={"Method": "Yöntem", "IsPullEnabled": "Çekim", "ViewName": "View", "Name": "Tablo", "EntityClass": "Kategori", "Description": "Açıklama", "Version": "Sürüm", "FieldCount": "Toplam alan", "LastLoadAt": "Son yükleme zamanı", "RequiredCount": "Zorunlu alan",
-            "Entity": "Teknik tablo adı", "CatalogOrder": "Yükleme sırası", "Validation": "Validasyon"},
+            "Entity": "Teknik tablo adı", "CatalogOrder": "Yükleme sırası", "Validation": "Validasyon",
+            "TotalRows": "Toplam satır", "ErrorRows": "Hatalı", "WarningRows": "Uyarılı", "InfoRows": "Bilgi"},
     values={"EntityClass": [MASTER_DATA, TRANSACTION_DATA], "Method": [EXCEL, SQL],
             "Validation": ["Sırada", "Kurallar çalışıyor", "Valide ediliyor", "Geçti", "Uyarılı", "Hatalı", "Valide edilemedi"]},
-    notes={"LastLoadAt": "Satırların ham veriye alındığı zaman; ana tablolara yükleme ayrı adımdır.",
+    notes={"LastLoadAt": "Satırların gelen veriye alındığı zaman; aktarım ayrı adımdır.",
+           "TotalRows": "Gelen verinin güncel satır sayısı.", "ErrorRows": "Validasyonda Hata bulunan satır sayısı; bu satırlar aktarılmaz.",
+           "WarningRows": "Validasyonda Uyarı bulunan satır sayısı.", "InfoRows": "Validasyonda Bilgi bulunan satır sayısı.",
            "Method": "Çekim yöntemi. Excel'den yükleme yöntemden bağımsız her zaman açıktır.",
            "IsPullEnabled": "Yalnız SQL çekimini durdurur; Excel'den yükleme açık kalır.",
-           "Validation": "Staging'deki güncel hâlin validasyonu; çipe tıklayınca bulgular açılır."},
+           "Validation": "Gelen verinin validasyonu; çipe tıklayınca bulgular açılır."},
 )
 
 INTEGRATION_FIELDS = ("Name", "Method", "ViewName", "ColumnMatch", "LastPullStatus", "LastPullAt", "CatalogOrder", "Entity")

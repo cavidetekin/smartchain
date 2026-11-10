@@ -17,10 +17,10 @@ CHANNELS = (CHANNEL_INTERACTIVE, CHANNEL_NIGHT, CHANNEL_EXCEL, CHANNEL_PULL, CHA
 
 TYPE_NIGHT_SCENARIO = "Gece senaryosu"
 TYPE_WORKSPACE = "Çalışma"
-TYPE_LOAD = "Yükleme"
+TYPE_TRANSFER = "Aktarım"  # staging → core (K-152, K-153)
 TYPE_DATE_QUERY = "Termin sorgusu"
 TYPE_EXPORT = "Dışa aktarım"  # K-91, K-93: motor servisi Excel dosyası üretir
 TYPE_PRECHECK = "Excel ön kontrol"  # K-129: motor servisi yüklenen dosyayı kontrol eder
 TYPE_PULL = "Veri çekme"  # K-130: motor servisi view'ları okur, stg'ye yazar
 TYPE_VALIDATION = "Validasyon"  # K-134: staging'in güncel hâlinde rules → validation
-JOB_TYPES = (TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE, TYPE_LOAD, TYPE_DATE_QUERY, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_VALIDATION)
+JOB_TYPES = (TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE, TYPE_TRANSFER, TYPE_DATE_QUERY, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_VALIDATION)

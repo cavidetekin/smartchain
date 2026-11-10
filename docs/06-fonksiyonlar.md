@@ -295,7 +295,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - Kod kataloğu bu tablodan yazılır (`app/validation/catalog.py`); test ikisini karşılaştırır. AD ekranda "Kural" kolonudur; KOD varsayılan görünümde gizlidir. SINIF katalogdaki sınıftır, Validasyon kuralları ekranında değişir. Tür: Yapısal (listede görünmez, arka planda çalışır), Mantıksal (tablo içi), Küme (tablo içi, tablonun bütün güncel hâline bakar), Tablolar arası (OKUNAN tabloya bakar).
 - **Birim dönüşümü alanları (ALL.UOM_CONVERSION):** BOM: ComponentUom · SalesOrderLine: Uom · Forecast: Uom · Stock: Uom · WorkOrder: Uom · WorkOrderComponent: Uom · PurchaseOrderLine: Uom. Malzeme alanı BOM'da ComponentMaterialCode, ötekilerde MaterialCode.
-- **Referans, pasif ebeveyn ve bütünlük (K-146):** REF ve INACTIVE kuralları docs/03 "İlişki haritası"ndan üretilir: zorunlu ilişki yoksa Hata, isteğe bağlı bağlantı doluysa ve yoksa Uyarı, "Zorunlu (doluysa)" (rota ve iş emri operasyonunda kaynak ve kaynak grubu) doluysa ve yoksa Hata, ebeveyn pasifse haritadaki sınıf. Ebeveyn aranırken işlenmiş katmanın bütün satırlarına bakılır (pasif ebeveyn de vardır); kontrol edilen satır pasifse hiçbir kurala girmez (K-145). Mesaj değerle: "Malzeme bulunamadı: MAM-099". OKUNAN'da "(boş olabilir)": o tablonun verisi yoksa kural atlanmaz.
+- **Referans, pasif ebeveyn ve bütünlük (K-146):** REF ve INACTIVE kuralları docs/03 "İlişki haritası"ndan üretilir: zorunlu ilişki yoksa Hata, isteğe bağlı bağlantı doluysa ve yoksa Uyarı, "Zorunlu (doluysa)" (rota ve iş emri operasyonunda kaynak ve kaynak grubu; anahtarın parçası olan bağlantı, K-153) doluysa ve yoksa Hata, ebeveyn pasifse haritadaki sınıf. Ebeveyn aranırken işlenmiş katmanın bütün satırlarına bakılır (pasif ebeveyn de vardır); kontrol edilen satır pasifse hiçbir kurala girmez (K-145). Mesaj değerle: "Malzeme bulunamadı: MAM-099". OKUNAN'da "(boş olabilir)": o tablonun verisi yoksa kural atlanmaz.
 - **DÜZENLENİR (K-139):** "Evet": koşul editörle ifade edilir; ad, mesaj, koşul, sınıf ve aktiflik pencerede değişir, "İlk hâline döndür" bu tablodaki hâline getirir. "Sınıf, aktiflik": döngü, toplam, çakışma, bayrak sayımı, bugünle karşılaştırma, hesaplı fark ya da tablolar arası; yalnız sınıf ve aktiflik tablodan değişir. "Kilitli": yapısal kontrol.
 - **Negatif değer alanları (ALL.NEGATIVE):** Material: GoodsReceiptDays, SafetyStock, StockCoverageDays, MaxStock, MinLot, MaxLot, LotMultiple, QtyPerBox, QtyPerPallet, ScrapRatio, ShelfLifeDays · UomConversion: Factor · ProductionVersion: BaseQuantity · BOM: Quantity, ScrapRatio · Routing: Consumption, ResourceNumber, TransferQuantity, WaitingTimeHours, TransferTimeHours · MaterialReference: TimeFactor · EmployeeAbsence: HoursPerDay · MaterialSupplier: QuotaRatio, FixedLeadTimeDays, VariableLeadTimeDays, MinimumOrderQuantity, OrderLotSize, MaximumOrderQuantity · SalesOrderLine: OpenQuantity, OrderedQuantity, DeliveredQuantity · Forecast: Quantity · BorrowPayback: BorrowedQuantity, PaidBackQuantity · Stock: Quantity · WorkOrder: OrderedQuantity, OpenQuantity, CompletedQuantity, ScrapQuantity · WorkOrderComponent: RequiredQuantity, IssuedQuantity, UnitUsage, ScrapRatio · WorkOrderOperation: ResourceNumber, PlannedConsumption, ConfirmedConsumption, TransferQuantity, WaitingTimeHours, TransferTimeHours · PurchaseOrderLine: OpenQuantity, OrderedQuantity, ReceivedQuantity · ProductionConfirmation: ConfirmedQuantity. Dışarıda: RemainingOverTimeYear, RemainingOverTimeMonth, öncelik alanları, satır ve sıra numaraları, ek alanlar.
 
@@ -391,7 +391,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PC.MATERIAL | ProductionConfirmation | Malzeme iş emrininkinden farklı | Malzeme, iş emrinin malzemesinden farklı | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | ALL.REF_LOCATION | Hepsi | Lokasyon bulunamadı | Lokasyon kodu Lokasyon tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Location |
 | ALL.UOM_CONVERSION | Hepsi | Birim dönüşümü yok | Birim dolu, malzemenin temel biriminden farklı ve dönüşüm yok (malzemeye özel ya da genel, iki yönden biri; K-112) | Hata | Tablolar arası | Sınıf, aktiflik | Material, UomConversion |
-| UOM.REF_MATERIAL | UomConversion | Malzeme bulunamadı | Malzeme kodu dolu ve Malzeme tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| UOM.REF_MATERIAL | UomConversion | Malzeme bulunamadı | Malzeme kodu dolu ve Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
 | PV.REF_MATERIAL | ProductionVersion | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
 | PV.INACTIVE_MATERIAL | ProductionVersion | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
 | PV.REF_BOM | ProductionVersion | Ürün ağacı bulunamadı | Ürün ağacı kodu Ürün ağacı tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | BOM |
@@ -420,13 +420,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | SO.REF_PROJECT | SalesOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
 | FC.REF_MATERIAL | Forecast | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
 | FC.INACTIVE_MATERIAL | Forecast | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| FC.REF_CUSTOMER | Forecast | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
-| FC.REF_PROJECT | Forecast | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
+| FC.REF_CUSTOMER | Forecast | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Customer |
+| FC.REF_PROJECT | Forecast | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
 | STK.REF_MATERIAL | Stock | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
 | STK.INACTIVE_MATERIAL | Stock | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
-| STK.REF_PROJECT | Stock | Sahip proje bulunamadı | Sahip proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
-| STK.REF_CUSTOMER | Stock | Sahip müşteri bulunamadı | Sahip müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
-| STK.REF_SALES_ORDER | Stock | Sahip sipariş satırı bulunamadı | Sahip sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| STK.REF_PROJECT | Stock | Sahip proje bulunamadı | Sahip proje kodu dolu ve Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
+| STK.REF_CUSTOMER | Stock | Sahip müşteri bulunamadı | Sahip müşteri kodu dolu ve Müşteri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Customer |
+| STK.REF_SALES_ORDER | Stock | Sahip sipariş satırı bulunamadı | Sahip sipariş satırı dolu ve Satış siparişi tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
 | BP.REF_MATERIAL | BorrowPayback | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
 | BP.REF_LENDING_PROJECT | BorrowPayback | Ödünç veren proje bulunamadı | Ödünç veren proje kodu Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
 | BP.REF_BORROWING_PROJECT | BorrowPayback | Ödünç alan proje bulunamadı | Ödünç alan proje kodu Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
@@ -542,6 +542,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veri kalitesi listesi ve ana sayfa 'dünden bugüne' güncellenir.
   - Ana veri ekranları yeni versiyonu gösterir; aktarım geçmişi ve denetim izi.
 - **ÖRNEK:** Parti #1187 → v232: 9 varlık, 90 yeni, 1.158 değişen, 15 silinen; Rota'da 3 satır aktarılmadı (Hata; önceki hâlleri açık). Kuralla değişen 14 kaydın kaynağı "kural" yazıldı, veri kalitesi 3 yeni uyarı üretti. Süre 2 dk 48 sn.
+
+- **Uygulama (5.2, K-149, K-153):** iş "Aktarım" (kanal Veri işleme), Veri yükleme ekranında "Tam aktar": onay penceresi ("n tablo aktarılacak") tablo başına güncel satır, Hatalı ve aktarılmayacak tabloları (veri gelmedi, eşik) notuyla gösterir. Sonuç penceresi tablo başına Yeni, Güncellenen, Silinen, Aktarılmayan ve not (K-154). Veri yükleme tablosunda tablo başına Toplam satır, Hatalı, Uyarılı, Bilgi. Kimlik, kapatma, Smartchain'de tanımlanan kolonlar, Lokasyon, Birim ve değerin kaynağı K-153'te. 5.5'e kalanlar: son aktarım zamanı, aktarılmamış yeni veri, sağ paneller.
 
 ### 05 · Tam aktarım · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Çalışma prensibi 3/3</sub>
@@ -671,15 +673,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 07 · Veri versiyonlama
 <sub>24. Ekranlar ve fonksiyonlar · F07 · A Veri alma · Çalışma prensibi 1/2</sub>
 
-- Her yüklemenin dondurulmuş, karşılaştırılabilir bir veri kesiti oluşturması; her plan hesabının hangi veriyle yapıldığının bilinmesi ve onaylı planların verisinin hep saklanması.
+- Her aktarımın dondurulmuş, karşılaştırılabilir bir veri kesiti oluşturması; her plan hesabının hangi veriyle yapıldığının bilinmesi ve onaylı planların verisinin hep saklanması.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (yükleme içinde otomatik) · görüntüleme ve fark: Key user ve üstü · sabitleme: Admin ve üstü
+  - Kim: Sistem (aktarım içinde otomatik) · görüntüleme ve fark: Key user ve üstü · sabitleme: Admin ve üstü
   - Nereden: Tam ve kısmi aktarım (05 / 06) içinde · Veri yükleme ekranı 'Versiyonlar' çekmecesi
-- **01:** Yüklemede DataVersion satırı açılır: tür (tam / kısmi), kim, zaman; kısmi ise DataVersionEntity ile varlıklar.
-- **02:** Geçerli tablolarda kayıtlar satır bazında versiyonlanır (VersionFrom / VersionTo): değişen kayıt yeni satır olur, eskisinin VersionTo kapanır; silinen kayıt kapanır, fiziksel silinmez.
+- **01:** Aktarımda DataVersion satırı açılır: tür (tam / kısmi), kim, zaman; DataVersionEntity ile aktarılan tablolar ve sayıları (K-151, K-153).
+- **02:** Geçerli tablolarda kayıtlar satır bazında versiyonlanır (VersionFrom / VersionTo): değişen kayıt aynı Id ile yeni satır olur, eskisinin VersionTo'su yeni versiyon − 1 olur (aralık kapsayıcı); değişmeyen kayda dokunulmaz; silinen kayıt kapanır, fiziksel silinmez (K-153).
 - **GIRDI**
   - Aktarım (tam / kısmi) ve aktarılan varlıklar
   - Saklama ayarı (SystemSetting: sıkıştırma süresi, öneri 90 gün)

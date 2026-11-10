@@ -2,7 +2,9 @@
 
 Tek kaynak docs/03 "İlişki haritası" tablosudur (test ikisini karşılaştırır). Zorunlu: sözleşmede alan zorunludur (ZOR. E). İsteğe bağlı: alan
 boş bırakılabilir. İstisna "Zorunlu (doluysa)": rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu
-olmalı, K-116) ama doluysa ve yoksa Hata: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur. İki yerde kullanılır:
+olmalı, K-116) ama doluysa ve yoksa Hata: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur. Kaydın anahtarının
+parçası olan isteğe bağlı bağlantı da "Zorunlu (doluysa)"dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları):
+boş yazılsaydı anahtar değişir, kayıt başka bir kayda dönüşür ya da onunla çakışırdı (K-153). İki yerde kullanılır:
 - Validasyon (4.4): referans kuralları (zorunlu → Hata, isteğe bağlı → Uyarı) ve pasif ebeveyn kuralları buradan üretilir.
 - Load (5.2): kod `core` Id'sine bu haritayla çevrilir; zorunlu ilişkisi çevrilemeyen satır yüklenmez, isteğe bağlı bağlantı boş yazılır,
   pasif ebeveyne bakan satır yüklenmez.
@@ -48,7 +50,7 @@ R = Reference
 SO_LINE = (("SalesOrderNo", "SalesOrderLineNo", "SalesOrderLineItemNo"), "SalesOrderLine", ("OrderNo", "LineNo", "LineItemNo"))
 
 REFERENCES: tuple[Reference, ...] = (
-    R("UOM", "MATERIAL", "Malzeme", "UomConversion", ("MaterialCode",), "Material", ("Code",), OPTIONAL, by_location=False),  # K-112: lokasyondan bağımsız
+    R("UOM", "MATERIAL", "Malzeme", "UomConversion", ("MaterialCode",), "Material", ("Code",), REQUIRED_IF_FILLED, by_location=False),  # K-112: lokasyondan bağımsız
     R("PV", "MATERIAL", "Malzeme", "ProductionVersion", ("MaterialCode",), "Material", ("Code",), inactive=INFO),
     R("PV", "BOM", "Ürün ağacı", "ProductionVersion", ("BOMCode", "MaterialCode"), "BOM", ("Code", "MaterialCode")),
     R("PV", "ROUTE", "Rota", "ProductionVersion", ("RouteCode",), "Routing", ("RouteCode",)),
@@ -71,12 +73,12 @@ REFERENCES: tuple[Reference, ...] = (
     R("SO", "MATERIAL", "Malzeme", "SalesOrderLine", ("MaterialCode",), "Material", ("Code",), inactive=WARNING),
     R("SO", "PROJECT", "Proje", "SalesOrderLine", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
     R("FC", "MATERIAL", "Malzeme", "Forecast", ("MaterialCode",), "Material", ("Code",), inactive=WARNING),
-    R("FC", "CUSTOMER", "Müşteri", "Forecast", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
-    R("FC", "PROJECT", "Proje", "Forecast", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
+    R("FC", "CUSTOMER", "Müşteri", "Forecast", ("CustomerCode",), "Customer", ("Code",), REQUIRED_IF_FILLED, by_location=False),
+    R("FC", "PROJECT", "Proje", "Forecast", ("ProjectCode",), "Project", ("Code",), REQUIRED_IF_FILLED, by_location=False),
     R("STK", "MATERIAL", "Malzeme", "Stock", ("MaterialCode",), "Material", ("Code",), inactive=INFO),
-    R("STK", "PROJECT", "Sahip proje", "Stock", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
-    R("STK", "CUSTOMER", "Sahip müşteri", "Stock", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
-    R("STK", "SALES_ORDER", "Sahip sipariş satırı", "Stock", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL),
+    R("STK", "PROJECT", "Sahip proje", "Stock", ("ProjectCode",), "Project", ("Code",), REQUIRED_IF_FILLED, by_location=False),
+    R("STK", "CUSTOMER", "Sahip müşteri", "Stock", ("CustomerCode",), "Customer", ("Code",), REQUIRED_IF_FILLED, by_location=False),
+    R("STK", "SALES_ORDER", "Sahip sipariş satırı", "Stock", SO_LINE[0], SO_LINE[1], SO_LINE[2], REQUIRED_IF_FILLED),
     R("BP", "MATERIAL", "Malzeme", "BorrowPayback", ("MaterialCode",), "Material", ("Code",)),
     R("BP", "LENDING_PROJECT", "Ödünç veren proje", "BorrowPayback", ("LendingProjectCode",), "Project", ("Code",), by_location=False),
     R("BP", "BORROWING_PROJECT", "Ödünç alan proje", "BorrowPayback", ("BorrowingProjectCode",), "Project", ("Code",), by_location=False),

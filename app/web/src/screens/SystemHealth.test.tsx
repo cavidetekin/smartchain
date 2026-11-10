@@ -213,7 +213,7 @@ describe("iş işlemleri", () => {
 
   it.each([
     ["çalışan iş", { Status: "Çalışıyor" }, "Yalnız sıradaki iş iptal edilebilir.", "Yalnız sıradaki iş öne alınabilir."],
-    ["yükleme", { JobType: "Yükleme" }, "Yükleme işi iptal edilemez.", null],
+    ["aktarım", { JobType: "Aktarım" }, "Aktarım işi iptal edilemez.", null],
     ["gece", { Channel: "Gece" }, null, "Gece işleri öne alınamaz."],
     ["System owner işi", { IsProtected: true, RequesterName: "Smartchain" },
      "Bu işlem için System owner yetkisi gerekir. Smartchain desteğine başvurun.", "Bu işlem için System owner yetkisi gerekir. Smartchain desteğine başvurun."],

@@ -4,7 +4,7 @@ import { TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
-import { ApiError, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION } from "../api/client";
+import { ApiError, JOB_PRECHECK, JOB_PULL, JOB_TRANSFER, JOB_VALIDATION } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { formatDateTime, serverDate } from "../format";
@@ -18,6 +18,7 @@ import { dataLoadApi, type TemplateInfo } from "./dataLoadApi";
 import { ImportDialog } from "./ImportDialog";
 import { type EntityChange, integrationApi, METHOD_SQL, METHODS } from "./integrationApi";
 import { PullResultDialog, PullStartDialog, PullSwitchDialog } from "./PullDialogs";
+import { TransferResultDialog, TransferStartDialog } from "./TransferDialogs";
 import { useJobRefresh } from "../shell/useJobRefresh";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 import { ValidationChip, ValidationDrawer } from "./ValidationDrawer";
@@ -27,7 +28,7 @@ const T = tr.dataLoad;
 const ALLOWED = { allowed: true };
 const later = (step: string) => ({ allowed: false, reason: T.comingIn(step) });
 const RELOAD_MS = 3000;
-const DATA_JOBS = [JOB_PULL, JOB_VALIDATION, JOB_PRECHECK];
+const DATA_JOBS = [JOB_PULL, JOB_VALIDATION, JOB_PRECHECK, JOB_TRANSFER];
 
 const errorText = (e: unknown) => (e instanceof ApiError ? e.message : T.failed);
 const fileFallback = (row: Row) => `smartchain_${String(row.Entity)}.xlsx`;
@@ -65,6 +66,9 @@ export function DataLoad() {
   const canSwitch = can(me, 91, "write");
   const canPull = can(me, 1, "write");
   const canRevalidate = can(me, 4, "write");
+  const canTransfer = can(me, 5, "write");
+  const [transferStart, setTransferStart] = useState(false);
+  const [transferJob, setTransferJob] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<{ entity: string; name: string; all?: boolean } | null>(null);
   const running = useRef(false);  // bir çip sürüyorsa tablo kendini yeniler
   const [pullStart, setPullStart] = useState<{ entity?: string } | null>(null);
@@ -82,6 +86,8 @@ export function DataLoad() {
   const resultPull = Number(new URLSearchParams(search).get("cekim")) || null;  // "Sonucu aç" (K-130)
   const shownPull = pullJob ?? resultPull;
   const resultValidation = new URLSearchParams(search).get("validasyon");  // "Sonucu aç" (K-134)
+  const resultTransfer = Number(new URLSearchParams(search).get("aktarim")) || null;  // "Sonucu aç" (K-153)
+  const shownTransfer = transferJob ?? resultTransfer;
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
   const [error, setError] = useState<string | null>(null);
 
@@ -188,6 +194,7 @@ export function DataLoad() {
       <header className="sc-page-head sc-page-head--row">
         <h1>{T.title}</h1>
         <div className="sc-page-head-actions">
+          <Button variant="secondary" disabledReason={canTransfer ? null : forbiddenReason(5, "write")} onClick={() => setTransferStart(true)}>{tr.transfer.button}</Button>
           <Button variant="primary" disabledReason={canPull ? null : forbiddenReason(1, "write")} onClick={() => setPullStart({})}>{T.pullNow}</Button>
         </div>
       </header>
@@ -212,6 +219,9 @@ export function DataLoad() {
       {pullStart && <PullStartDialog entity={pullStart.entity} onClose={() => setPullStart(null)} onStarted={(job) => { setPullStart(null); setPullJob(job); }} />}
       {shownPull && <PullResultDialog key={shownPull} jobId={shownPull} onRetry={setPullJob} onChanged={refresh}
                                       onClose={() => { setPullJob(null); if (resultPull) navigate(pathname, { replace: true }); }} />}
+      {transferStart && <TransferStartDialog onClose={() => setTransferStart(false)} onStarted={(job) => { setTransferStart(false); setTransferJob(job); }} />}
+      {shownTransfer && <TransferResultDialog key={shownTransfer} jobId={shownTransfer} onChanged={refresh}
+                                              onClose={() => { setTransferJob(null); if (resultTransfer) navigate(pathname, { replace: true }); }} />}
       {drawer && <ValidationDrawer key={`${drawer.entity}:${drawer.all ? "all" : ""}`} entity={drawer.entity} name={drawer.name} canRevalidate={canRevalidate}
                                    initial={drawer.all ? { view: "records", scope: "all" } : undefined} refreshKey={reloadKey}
                                    revalidateReason={canRevalidate ? null : forbiddenReason(4, "write")} onChanged={refresh}

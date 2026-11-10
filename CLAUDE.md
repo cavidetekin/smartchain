@@ -82,6 +82,7 @@ python -m app.data.synthetic load                  # sentetik veri v0'ı ana tab
 python -m app.data.synthetic excel                 # sentetik verinin kirli hâli (entegrasyon Excel'i)
 python -m app.data.synthetic sql                   # kirli hâl: entegrasyon veritabanına ham tablolar ve view'lar (K-130)
 python -m app.data.synthetic rules                 # demo veri kuralları (docs/11, K-141; kurulumda varsayılan kural yok)
+python -m app.data.synthetic reset   # aktarımları geri alıp temiz sentetik hâle döner (onay ister)
 python -m pytest                                   # testler (performans testleri hariç); Smartchain_test'te, başka veritabanı için SMARTCHAIN_TEST_DB_URL
 python -m pytest -m perf                           # performans testleri (ayrıca; ortanca ölçüm, docs/08)
 powershell -File installer\build.ps1               # internetsiz kurulum paketi (dist\), yalnız geliştirmede

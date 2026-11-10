@@ -15,7 +15,7 @@ from app.api.permissions import ADMIN, END_USER, KEY_USER, SYSTEM_OWNER
 from app.api.repositories import system_health as repo
 from app.api.services.system_health import NOT_RESPONDING, RUNNING, SLOW, STOPPED, engine_state
 from app.jobs import events, queue
-from app.jobs.constants import (CHANNEL_INTERACTIVE, CHANNEL_NIGHT, STATUS_CANCELLED, TYPE_LOAD, TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE)
+from app.jobs.constants import (CHANNEL_INTERACTIVE, CHANNEL_NIGHT, STATUS_CANCELLED, TYPE_TRANSFER, TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE)
 from app.jobs.settings import JobSettings
 
 from auth_helpers import auth, delete_users, ensure_user
@@ -308,9 +308,9 @@ def test_key_user_cannot_cancel_other(client, people, session):
 
 def test_load_job_cannot_be_cancelled(db_engine, client, people, session):
     admin = people[ADMIN]
-    job = enqueue(session, admin, TYPE_LOAD)
+    job = enqueue(session, admin, TYPE_TRANSFER)
     r = client.post(f"/api/jobs/{job}/cancel", headers=auth(admin))
-    assert r.status_code == 409 and r.json()["error"]["message"] == "Yükleme işi iptal edilemez."
+    assert r.status_code == 409 and r.json()["error"]["message"] == "Aktarım işi iptal edilemez."
     assert audit_rows(db_engine, "İş iptali") == []
 
 

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from . import events
 from .constants import (CHANNEL_NIGHT, CHANNELS, JOB_TYPES, STATUS_CANCELLED, STATUS_DONE,
-                        STATUS_FAILED, STATUS_QUEUED, STATUS_RUNNING, TYPE_EXPORT, TYPE_LOAD)
+                        STATUS_FAILED, STATUS_QUEUED, STATUS_RUNNING, TYPE_EXPORT, TYPE_TRANSFER)
 from .settings import JobSettings
 
 log = logging.getLogger("smartchain.jobs")
@@ -201,13 +201,13 @@ def dismiss(session: Session, job_id: int) -> None:
 
 
 def cancel(session: Session, job_id: int, reason: str | None = None, cancelled_by: int | None = None, commit: bool = True) -> None:
-    """Sıradaki işi iptal eder. Çalışan iş ve Yükleme işi iptal edilmez (K-107; durdurma motorda, fonksiyon 93/34)."""
+    """Sıradaki işi iptal eder. Çalışan iş ve Aktarım işi iptal edilmez (K-107; durdurma motorda, fonksiyon 93/34)."""
     try:
         row = session.execute(text(
             "UPDATE adm.Job SET Status = :cancelled, EndedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME(), "
             "CancelReason = :reason, CancelledBy = :by "
             "OUTPUT inserted.Channel WHERE Id = :id AND Status = :queued AND JobType <> :load"),
-            {"cancelled": STATUS_CANCELLED, "id": job_id, "queued": STATUS_QUEUED, "load": TYPE_LOAD,
+            {"cancelled": STATUS_CANCELLED, "id": job_id, "queued": STATUS_QUEUED, "load": TYPE_TRANSFER,
              "reason": reason, "by": cancelled_by}).first()
         if row is None:
             status = session.execute(text("SELECT Status FROM adm.Job WHERE Id = :id"), {"id": job_id}).scalar()

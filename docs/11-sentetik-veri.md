@@ -110,6 +110,8 @@ python -m app.data.synthetic check                                     # sayıla
 
 **Tazeleme (K-103):** testler artık geliştirme veritabanına dokunmaz; geliştirme verisi son `load`'daki hâliyle kalır, tarihler zamanla eskir. Gerektiğinde `python -m app.data.synthetic load` (ya da `veri_demo.bat`). Test veritabanının verisini testler kendisi kurar.
 
+**Sıfırlama (K-153):** geliştirme ya da demo veritabanında tam aktarım yapıldıktan sonra `load` durur (sentetik olmayan veri versiyonu var, K-79). `python -m app.data.synthetic reset` aktarımları geri alır (sentetik olmayan veri versiyonları, onların core satırları ve plan verisi, kural kaynağı satırları, aktarımın eklediği lokasyonlar), aktarımın kapattığı sentetik satırları açar ve sentetik veriyi yeniden yükler; tek işlemdir, staging değişmez. Yalnız sentetik veriyle kurulmuş veritabanında (sentetik veri versiyonu var), onaylı plana bağlı versiyon ve sentetik olmayan parametre seti yokken çalışır; silinecekleri gösterip veritabanının adının yazılmasını ister.
+
 ### SQL çekimi (geliştirme 3.3, K-130)
 
 `python -m app.data.synthetic sql` kirli hâli entegrasyon veritabanına yazar (varsayılan `SmartchainIntegration`; testte `_test` ile biter): `ERP_*` ham tablolar, `View_*` ve `ERP_LoadLog`'da biten bir toplu satır. Kaynak Excel'le aynı olduğu için H1–H4 aynıdır; `tests/test_pull_dirty.py` iki yolun sonucunu birebir karşılaştırır.

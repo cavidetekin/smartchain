@@ -35,6 +35,7 @@ FIELD_LABELS = {
     "entity_name": "Tablo", "version": "Sürüm", "field_count": "Alan sayısı",
     # Entegrasyon ve veri çekme (K-130)
     "pull_method": "Yöntem", "view": "View", "database": "SQL kaynağı", "entities": "Tablolar", "read_anyway": "Yine de oku",
+    "data_version": "Veri versiyonu", "transfer_tables": "Tablo başına sonuç", "transfer_type": "Aktarım türü",
     # Excel yükleme (K-129)
     "mode": "Mod", "valid": "Geçerli satır", "errors": "Hatalı satır", "template_version": "Şablon sürümü", "file_name": "Dosya adı",
     # Validasyon ve validasyon kuralları (K-134, K-136)

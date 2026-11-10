@@ -137,7 +137,7 @@ export async function uploadFile<T>(path: string, file: File): Promise<T> {
 
 export interface DataVersion {
   id: number;
-  location_code: string;
+  location_code: string | null;  // tam aktarımda boş (bütün lokasyonlar, K-153)
   created_at: string;
   load_type: string;
   is_synthetic: boolean;
@@ -210,6 +210,8 @@ export const validationResultPath = (entity: string) => `/veri/veri-yukleme?vali
 export const importResultPath = (batchId: number) => `/veri/veri-yukleme?parti=${batchId}`;
 /** "Sonucu aç": o çekimin sonuç penceresi (ekran 02, K-130). */
 export const pullResultPath = (jobId: number) => `/veri/veri-yukleme?cekim=${jobId}`;
-export const JOB_LOAD = "Yükleme";
+export const JOB_TRANSFER = "Aktarım";  // staging → core (K-153)
+/** "Sonucu aç": o aktarımın sonuç penceresi (ekran 02, K-153). */
+export const transferResultPath = (jobId: number) => `/veri/veri-yukleme?aktarim=${jobId}`;
 export const JOB_DONE = "Bitti";
 export const JOB_FAILED = "Hata";

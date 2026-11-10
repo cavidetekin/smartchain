@@ -473,7 +473,7 @@ def test_last_load_time_only_for_received_batches(client, people):
     assert last() is not None
     columns = client.get("/api/data-entities/columns", headers=h).json()["columns"]
     column = next(c for c in columns if c["field"] == "LastLoadAt")
-    assert column["label"] == "Son yükleme zamanı" and "ham veriye" in column["note"]
+    assert column["label"] == "Son yükleme zamanı" and "gelen veriye" in column["note"]  # arayüz terimi (K-154)
     assert next(c for c in columns if c["field"] == "Name")["note"] is None  # açıklama yoksa ipucu yok
 
 

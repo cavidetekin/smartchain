@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.jobs import queue
-from app.jobs.constants import CHANNEL_NIGHT, TYPE_LOAD, TYPE_PRECHECK, TYPE_VALIDATION
+from app.jobs.constants import CHANNEL_NIGHT, TYPE_TRANSFER, TYPE_PRECHECK, TYPE_VALIDATION
 from app.jobs.settings import read_settings
 from ..errors import DB_UNAVAILABLE, AppError
 from ..permissions import SYSTEM_OWNER, Access, role_message
@@ -139,7 +139,7 @@ def cancel(session: Session | None, job_id: int, user: CurrentUser, reason: str 
     except queue.JobNotFound:
         raise AppError("job_not_found", "İş bulunamadı.", 404)
     except queue.JobNotCancellable as exc:
-        message = "Yükleme işi iptal edilemez." if job["JobType"] == TYPE_LOAD else "Yalnız sıradaki iş iptal edilebilir."
+        message = "Aktarım işi iptal edilemez." if job["JobType"] == TYPE_TRANSFER else "Yalnız sıradaki iş iptal edilebilir."
         raise AppError("job_not_cancellable", message, 409) from exc
     return get_job(session, job_id, user)
 
