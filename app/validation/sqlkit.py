@@ -37,6 +37,14 @@ def current(t) -> sa.ColumnElement:
     return sa.true()
 
 
+def present(t) -> sa.ColumnElement:
+    """Ebeveyn aranırken bakılan satırlar (K-146): işlenmiş katmanın bütün satırları; pasif ebeveyn de vardır, pasifliğine ayrı kural bakar.
+    Ham katmanda güncel hâl."""
+    if "IsCurrent" in t.c:
+        return t.c.IsCurrent == sa.true()
+    return sa.true()
+
+
 def nz(col) -> sa.ColumnElement:
     """Boş bayrak "yok" demektir (BOŞSA, K-138)."""
     return sa.func.coalesce(col, 0)

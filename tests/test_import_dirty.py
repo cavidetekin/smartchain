@@ -1,4 +1,4 @@
-"""Kirli Excel gerçek girdi (docs/11, K-129): 23 dosya yüklenir; ön kontrol yalnız H4'ü yakalar; H2 referans 4.4, H3 mantıksal ve H1 veri kalitesi sonraki adımların işi."""
+"""Kirli Excel gerçek girdi (docs/11, K-129): 23 dosya yüklenir; ön kontrol yalnız H4'ü yakalar; H1 ve H2 referans (4.4), H3 mantıksal kontrol sonraki adımların işi."""
 from datetime import date
 
 import pytest
@@ -64,13 +64,13 @@ def test_duplicate_matches_the_manifest(db_engine, uploaded):
     _, manifest, results, client, user = uploaded
     h4 = next(e for e in manifest["errors"] if e["code"] == "H4")
     s = results["Material"]
-    assert (s["read"], s["valid"], s["errors"]) == (211, 209, 2)  # 8 hazır kural örneği ve 2 veri kuralı örneği dahil (docs/11)
+    assert (s["read"], s["valid"], s["errors"]) == (214, 212, 2)  # 10 hazır kural örneği, 1 pasif ebeveyn yardımcısı ve 2 veri kuralı örneği dahil (docs/11)
     body = {"fields": ["RowNo", "RowKey", "Message", "Severity"], "sort": [{"field": "RowNo", "dir": "asc"}],
             "filters": [{"field": "ImportBatchId", "op": "eq", "value": s["batch_id"]}, {"field": "Severity", "op": "in", "values": ["Hata"]}], "offset": 0, "limit": 10}
     rows = client.post("/api/import-findings/query", json=body, headers=auth(user)).json()["rows"]
     assert [r["RowNo"] for r in rows] == h4["rows"] and {r["Message"] for r in rows} == {h4["message"]} and rows[0]["RowKey"] == "ORM-01 · SAT-040"
     with db_engine.connect() as c:
-        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 209
+        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 212
         assert c.execute(text("SELECT COUNT(*) FROM stg.Material WHERE Code = N'SAT-040'")).scalar() == 0
 
 
@@ -79,7 +79,7 @@ def test_duplicate_matches_the_manifest(db_engine, uploaded):
     ("BOM", "ComponentMaterialCode = N'SAT-999'"),                  # H2
     ("PurchaseOrderLine", "OpenQuantity = -50"),                    # H3: mantıksal, 3.4
     ("BOM", "Quantity = -2"),                                       # H3
-    ("ProductionVersion", "RouteCode = N'R-PRC-033'"),              # H1: veri kalitesi
+    ("ProductionVersion", "RouteCode = N'R-PRC-033'"),              # H1: referans, 4.4 (PV.REF_ROUTE)
 ])
 def test_later_errors_pass_the_precheck(db_engine, uploaded, entity, where):
     with db_engine.connect() as c:

@@ -17,7 +17,7 @@ from .examples import add_examples
 from .rules import DEMO_RULES
 from .dataset import Dataset
 
-EMPTY_ENTITIES = {"Forecast", "MaterialReference"}  # docs/11: tahmin üretilmez; her üretilen malzemenin kendi versiyonu var
+EMPTY_ENTITIES = {"Forecast", "MaterialReference"}  # docs/11: temiz hâlde yok (tahmin üretilmez; her üretilen malzemenin kendi versiyonu var); kirli hâlde yalnız örnekler
 
 
 def stg_entities() -> list[str]:
@@ -114,21 +114,20 @@ def make_dirty(ds: Dataset) -> tuple[dict[str, list[dict]], list[dict]]:
     pv_row = row("ProductionVersion", MaterialCode=d.NO_ROUTE_PART)
     errors += [
         dict(code="H1", type="Eksik rota", file="ProductionVersion.xlsx", rows=[pv_row],
-             key=f"{d.NO_ROUTE_PART}|V1", field="RouteCode", value=route,
-             step="Fonksiyon 20 Veri kalitesi (geliştirme 6.5); ön hesapta da uyarı (fonksiyon 29, 10.1)",
-             severity="uyarı", behaviour="Satır yüklenir; malzeme kapasite tüketmeden planlanır",
-             message=f"Malzeme {d.NO_ROUTE_PART}'ün rotası yok ({route}); kapasite tüketmeden planlanır.",
-             core_difference=[f"Routing {route}: {len(removed)} satır dosyada yok"]),
+             key=f"{d.NO_ROUTE_PART}|V1", field="RouteCode", value=route, rules=["PV.REF_ROUTE"],
+             step="Fonksiyon 04 referans kontrolü (geliştirme 4.4, K-146): versiyonun rotası zorunlu ilişki", severity="hata",
+             behaviour="Satır yüklenmez; malzemenin aktif versiyonu kalmaz", message=f"Rota bulunamadı: {route}",
+             core_difference=[f"Routing {route}: {len(removed)} satır dosyada yok", f"ProductionVersion {d.NO_ROUTE_PART} V1 yok"]),
         dict(code="H2", type="Tanımsız malzeme kodu", file="SalesOrderLine.xlsx",
-             rows=[row("SalesOrderLine", OrderNo="SO-1099")], key="SO-1099|1|", field="MaterialCode", value="MAM-099",
-             step="Fonksiyon 04-02 referans kontrolü (geliştirme 4.4)", severity="hata",
-             behaviour="Satır yüklenmez", message="Malzeme bulunamadı: MAM-099 (partide ve geçerli veride yok).",
+             rows=[row("SalesOrderLine", OrderNo="SO-1099")], key="SO-1099|1|", field="MaterialCode", value="MAM-099", rules=["SO.REF_MATERIAL"],
+             step="Fonksiyon 04 referans kontrolü (geliştirme 4.4, K-146)", severity="hata",
+             behaviour="Satır yüklenmez", message="Malzeme bulunamadı: MAM-099",
              core_difference=["SalesOrderLine SO-1099 yok (temiz hâlde de yok)"]),
         dict(code="H2", type="Tanımsız malzeme kodu", file="BOM.xlsx",
              rows=[row("BOM", MaterialCode="ALT-005", ComponentMaterialCode="SAT-999")], key="ALT-005|B-ALT-005|SAT-999",
-             field="ComponentMaterialCode", value="SAT-999", step="Fonksiyon 04-02 referans kontrolü (geliştirme 4.4)",
+             field="ComponentMaterialCode", value="SAT-999", rules=["BOM.REF_COMPONENT"], step="Fonksiyon 04 referans kontrolü (geliştirme 4.4, K-146)",
              severity="hata", behaviour="Satır yüklenmez",
-             message="Malzeme bulunamadı: SAT-999 (partide ve geçerli veride yok).",
+             message="Bileşen bulunamadı: SAT-999",
              core_difference=["BOM ALT-005 → SAT-999 yok (temiz hâlde de yok)"]),
         dict(code="H3", type="Negatif miktar", file="PurchaseOrderLine.xlsx",
              rows=[row("PurchaseOrderLine", PurchaseOrderNo="PO-2060", LineNo=1)], key="PO-2060|1", field="OpenQuantity",

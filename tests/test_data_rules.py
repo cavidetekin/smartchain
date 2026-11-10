@@ -357,8 +357,8 @@ def test_inactive_rows_skip_validation(env):
     _, _, eng = env
     upload(env, "Resource", [resource("A"), resource("P", IsActive=0, CapacityUnit=None, IsMachine=None), resource("N", IsActive=None)])
     found = {(f[1], f[2]) for f in findings(eng, "Resource")}
-    assert not any(key.endswith(" · P") for _, key in found)  # pasif satır: zorunlu alan ve tip bulgusu yok
+    assert not any((key or "").endswith(" · P") for _, key in found)  # pasif satır: zorunlu alan ve tip bulgusu yok
     assert ("STR.REQUIRED", "ORM-01 · N") in found  # IsActive boş: zorunlu alan
     save(env, [rule("Pasif yap", "IsActive", {"kind": "Değer", "value": "0"}, groups=[[{"field": "Code", "operator": "=", "value": "N"}]], entity="Resource")])
     apply(env, "Resource")
-    assert not any(key.endswith(" · N") for _, key in {(f[1], f[2]) for f in findings(eng, "Resource")})  # kural kapsam dışı bıraktı
+    assert not any((key or "").endswith(" · N") for _, key in {(f[1], f[2]) for f in findings(eng, "Resource")})  # kural kapsam dışı bıraktı

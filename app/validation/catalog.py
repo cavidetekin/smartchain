@@ -12,12 +12,13 @@ from functools import lru_cache
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from app.integration.contract import AFTER_RULES, ENTITIES, stg_columns
+from app.integration import references as refs
+from app.integration.contract import AFTER_RULES, ENTITIES, entity as contract_entity, stg_columns
 from app.integration.structural import has_key
 
 from . import conditions as cond
 from .conditions import Condition
-from .sqlkit import alias, current, label, nz, one, same
+from .sqlkit import alias, current, label, nz, one, present, same, text
 
 STRUCTURAL_KIND, BUILTIN_KIND, USER_KIND = "Yapısal", "Hazır", "Kullanıcı"
 KINDS = (STRUCTURAL_KIND, BUILTIN_KIND, USER_KIND)
@@ -54,6 +55,7 @@ class RuleDef:
     python: Callable[[Session, str], list[Hit]] | None = None
     append_value: bool = False   # mesajın sonuna değer: "Yeni birim: KG"
     group: bool = False          # küme kuralı (docs TÜR "Küme"; veride Mantıksal)
+    may_be_empty: tuple[str, ...] = ()  # okunan ama boş olabilecek tablolar: verisi yoksa kural atlanmaz (docs OKUNAN "(boş olabilir)", K-146)
 
     @property
     def runs(self) -> bool:
@@ -325,10 +327,11 @@ def G(code, table, title, severity, message, *groups, **kw) -> RuleDef:
     return _grouped(code, table, title, severity, message, groups, **kw)
 
 
-def X(code, table, title, condition, severity, message, *checks, check_type=LOGICAL, reads=(), python=None, append_value=False, group=False) -> RuleDef:
+def X(code, table, title, condition, severity, message, *checks, check_type=LOGICAL, reads=(), python=None, append_value=False, group=False,
+      may_be_empty=()) -> RuleDef:
     """Editörle ifade edilemeyen hazır kural: yalnız sınıf ve aktiflik değişir."""
     return RuleDef(code, table, title, condition, severity, check_type, message, reads=tuple(reads), checks=tuple(checks), python=python,
-                   append_value=append_value, group=group)
+                   append_value=append_value, group=group, may_be_empty=tuple(may_be_empty))
 
 
 TABLE_RULES: tuple[RuleDef, ...] = (
@@ -464,6 +467,201 @@ TABLE_RULES: tuple[RuleDef, ...] = (
 )
 
 
+# ------------------------------------------------------------------ referans, pasif ebeveyn ve bütünlük (K-146)
+
+def _match(r: refs.Reference, t, p) -> list[sa.ColumnElement]:
+    """Çocuk satırın ebeveyn eşleşmesi: ilk alan birebir; öteki alanlar boşsa eşleşmeyi daraltmaz (bağlı sipariş satırı)."""
+    out = [p.c.LocationCode == t.c.LocationCode] if r.by_location else []
+    for i, (cf, pf) in enumerate(zip(r.fields, r.parent_fields)):
+        out.append(p.c[pf] == t.c[cf] if i == 0 else sa.or_(t.c[cf].is_(None), p.c[pf] == t.c[cf]))
+    return out
+
+
+def _missing(r: refs.Reference) -> Where:
+    def where(t):
+        p = alias(r.parent, "_p")
+        return sa.and_(t.c[r.fields[0]].is_not(None), ~sa.exists().where(present(p), *_match(r, t, p)))
+    return where
+
+
+def _inactive(r: refs.Reference) -> Where:
+    """Ebeveyn bulunuyor ve eşleşen bütün satırları pasif (IsActive = Hayır; boş pasif sayılmaz)."""
+    def where(t):
+        p, a = alias(r.parent, "_p"), alias(r.parent, "_a")
+        return sa.and_(t.c[r.fields[0]].is_not(None), sa.exists().where(present(p), *_match(r, t, p), p.c.IsActive == sa.false()),
+                       ~sa.exists().where(present(a), *_match(r, t, a), sa.or_(a.c.IsActive.is_(None), a.c.IsActive == sa.true())))
+    return where
+
+
+def _location_missing(t):
+    loc = alias("Location", "_l")
+    return sa.and_(t.c.LocationCode.is_not(None), ~sa.exists().where(present(loc), loc.c.Code == t.c.LocationCode))
+
+
+def _suffix(r: refs.Reference) -> str:
+    if r.label.endswith("satırı"):
+        return ""
+    return " numarası" if r.fields[0].endswith("No") else " kodu"
+
+
+def _parent_name(table: str) -> str:
+    found = contract_entity(table)
+    return found.name if found else table
+
+
+def _uom_conversion(uom: str, material: str) -> Where:
+    """Birim dolu, malzemenin temel biriminden farklı ve dönüşüm yok: malzemeye özel ya da genel (MaterialCode boş), iki yönden biri (K-112)."""
+    def where(t):
+        m, u = alias("Material", "_m"), alias("UomConversion", "_u")
+        pair = sa.or_(sa.and_(u.c.FromUom == t.c[uom], u.c.ToUom == m.c.BaseUom), sa.and_(u.c.FromUom == m.c.BaseUom, u.c.ToUom == t.c[uom]))
+        return sa.and_(t.c[uom].is_not(None), sa.exists().where(
+            present(m), m.c.LocationCode == t.c.LocationCode, m.c.Code == t.c[material], m.c.BaseUom.is_not(None), m.c.BaseUom != t.c[uom],
+            ~sa.exists().where(present(u), pair, sa.or_(u.c.MaterialCode.is_(None), u.c.MaterialCode == t.c[material])).correlate_except(u)))
+    return where
+
+
+def reference_rules(entity: str) -> list[RuleDef]:
+    """Ortak lokasyon ve birim dönüşümü kuralları; ilişki haritasından referans ve pasif ebeveyn kuralları (docs/03, K-146)."""
+    out = []
+    if "LocationCode" in _columns(entity):
+        out.append(X("ALL.REF_LOCATION", entity, "Lokasyon bulunamadı", "Lokasyon kodu Lokasyon tablosunda yok", ERROR, "Lokasyon bulunamadı:",
+                     C(_location_missing, "LocationCode"), check_type=CROSS, reads=("Location",), append_value=True))
+    if entity in refs.UOM_FIELDS:
+        uom, material = refs.UOM_FIELDS[entity]
+        out.append(X("ALL.UOM_CONVERSION", entity, "Birim dönüşümü yok",
+                     "Birim dolu, malzemenin temel biriminden farklı ve dönüşüm yok (malzemeye özel ya da genel, iki yönden biri; K-112)", ERROR,
+                     "Birim dönüşümü yok:", C(_uom_conversion(uom, material), uom), check_type=CROSS, reads=("Material", "UomConversion"),
+                     append_value=True))
+    for r in refs.of(entity):
+        parent = _parent_name(r.parent)
+        condition = f"{r.label}{_suffix(r)} {parent} tablosunda yok" if r.kind == refs.REQUIRED else f"{r.label}{_suffix(r)} dolu ve {parent} tablosunda yok"
+        out.append(X(f"{r.prefix}.REF_{r.key}", entity, f"{r.label} bulunamadı", condition, ERROR if r.is_error else WARNING, f"{r.label} bulunamadı:",
+                     C(_missing(r), r.fields[0]), check_type=CROSS, reads=(r.parent,), append_value=True))
+        if r.inactive:
+            out.append(X(f"{r.prefix}.INACTIVE_{r.key}", entity, f"{r.label} pasif", f"{r.label} bulunuyor ama pasif (Aktif = Hayır)", r.inactive,
+                         f"{r.label} pasif:", C(_inactive(r), r.fields[0]), check_type=CROSS, reads=(r.parent,), append_value=True))
+    return out
+
+
+def _has(name: str, suffix: str, *where) -> sa.ColumnElement:
+    o = alias(name, suffix)
+    return sa.exists().where(present(o), *[w(o) for w in where])
+
+
+def _same_location(t):
+    return lambda o: o.c.LocationCode == t.c.LocationCode
+
+
+def _supply(t, value: str) -> sa.ColumnElement:
+    return t.c.DefaultSupplyType == text(value)
+
+
+def _active_supplier(t, *extra) -> sa.ColumnElement:
+    """Kaydı aktif (IsActive ≠ Hayır) ve tedarikçisi pasif olmayan malzeme tedarikçisi."""
+    ms, s = alias("MaterialSupplier", "_s"), alias("Supplier", "_t")
+    return sa.exists().where(current(ms), ms.c.LocationCode == t.c.LocationCode, ms.c.MaterialCode == t.c.Code,
+                             ~sa.exists().where(present(s), s.c.Code == ms.c.SupplierCode, s.c.IsActive == sa.false()),
+                             *[e(ms) for e in extra])
+
+
+def _subcontractor(ms) -> sa.ColumnElement:
+    s = alias("Supplier", "_f")
+    return sa.exists().where(present(s), s.c.Code == ms.c.SupplierCode, one(s.c.IsSubcontractor))
+
+
+def _no_version(t):
+    loc = _same_location(t)
+    return sa.and_(_supply(t, "Üretim"),
+                   ~_has("ProductionVersion", "_v", loc, lambda v: v.c.MaterialCode == t.c.Code, lambda v: one(v.c.IsActive)),
+                   ~_has("MaterialReference", "_r", loc, lambda r: r.c.MaterialCode == t.c.Code))
+
+
+def _bom_operation(t):
+    v, r, o = alias("ProductionVersion", "_v"), alias("Routing", "_r"), alias("Routing", "_o")
+    return sa.and_(t.c.OperationNo.is_not(None), sa.exists().where(
+        present(v), v.c.LocationCode == t.c.LocationCode, v.c.MaterialCode == t.c.MaterialCode, v.c.BOMCode == t.c.Code,
+        sa.exists().where(present(r), r.c.LocationCode == v.c.LocationCode, r.c.RouteCode == v.c.RouteCode),
+        ~sa.exists().where(present(o), o.c.LocationCode == v.c.LocationCode, o.c.RouteCode == v.c.RouteCode,
+                           o.c.OperationNo == t.c.OperationNo).correlate_except(o)))
+
+
+def _wo_structure(t):
+    loc = _same_location(t)
+    wo = lambda o: o.c.WorkOrderNo == t.c.WorkOrderNo  # noqa: E731
+    version = sa.and_(t.c.ProductionVersionCode.is_not(None),
+                      _has("ProductionVersion", "_v", loc, lambda v: v.c.MaterialCode == t.c.MaterialCode, lambda v: v.c.Code == t.c.ProductionVersionCode))
+    return sa.and_(~version, ~_has("WorkOrderComponent", "_c", loc, wo), ~_has("WorkOrderOperation", "_o", loc, wo))
+
+
+def _woc_operation(t):
+    loc = _same_location(t)
+    wo = lambda o: o.c.WorkOrderNo == t.c.WorkOrderNo  # noqa: E731
+    return sa.and_(t.c.OperationNo.is_not(None), _has("WorkOrderOperation", "_o", loc, wo),
+                   ~_has("WorkOrderOperation", "_n", loc, wo, lambda o: o.c.OperationNo == t.c.OperationNo))
+
+
+def _po_supplier(t):
+    """Fason sipariş hariç: fasoncu malzemenin satın alma tedarikçileri arasında aranmaz."""
+    return sa.and_(t.c.SupplierCode.is_not(None), nz(t.c.IsSubcontract) == 0, _has("Supplier", "_t", lambda s: s.c.Code == t.c.SupplierCode),
+                   ~_has("MaterialSupplier", "_s", _same_location(t), lambda s: s.c.MaterialCode == t.c.MaterialCode,
+                         lambda s: s.c.SupplierCode == t.c.SupplierCode))
+
+
+def _cross(code, table, title, condition, severity, where, field, reads, may_be_empty=()) -> RuleDef:
+    return X(code, table, title, condition, severity, f"{title}.", C(where, field), check_type=CROSS, reads=reads, may_be_empty=may_be_empty)
+
+
+INTEGRITY_RULES: tuple[RuleDef, ...] = (
+    _cross("MAT.NO_VERSION", "Material", "Üretilen malzemenin aktif versiyonu yok",
+           "Tedarik türü = Üretim; aktif (Aktif = Evet) üretim versiyonu ve benzetilen ürün kaydı yok", WARNING, _no_version,
+           "DefaultSupplyType", ("ProductionVersion", "MaterialReference"), ("MaterialReference",)),
+    _cross("MAT.NO_SUPPLIER", "Material", "Satın alınan malzemenin aktif tedarikçisi yok",
+           "Tedarik türü = Satın alma; kaydı ve tedarikçisi aktif malzeme tedarikçisi yok", WARNING,
+           lambda t: sa.and_(_supply(t, "Satın alma"), ~_active_supplier(t)), "DefaultSupplyType", ("MaterialSupplier", "Supplier"), ("Supplier",)),
+    _cross("MAT.NO_SUBCONTRACTOR", "Material", "Fason malzemenin fason tedarikçisi yok",
+           "Tedarik türü = Fason; tedarikçisi fasoncu (Fasoncu mu = Evet) ve aktif olan aktif malzeme tedarikçisi yok", WARNING,
+           lambda t: sa.and_(_supply(t, "Fason"), ~_active_supplier(t, _subcontractor)), "DefaultSupplyType", ("MaterialSupplier", "Supplier")),
+    _cross("BOM.NO_VERSION", "BOM", "Ağaç hiçbir versiyonda kullanılmıyor", "Ürün ağacı kodu aynı malzemenin hiçbir üretim versiyonunda yok", WARNING,
+           lambda t: ~_has("ProductionVersion", "_v", _same_location(t), lambda v: v.c.MaterialCode == t.c.MaterialCode, lambda v: v.c.BOMCode == t.c.Code),
+           "Code", ("ProductionVersion",)),
+    _cross("BOM.OPERATION_NOT_IN_ROUTE", "BOM", "Bileşenin operasyonu rotada yok",
+           "Operasyon no dolu ve ağacı kullanan bir versiyonun rotasında bu operasyon yok", WARNING, _bom_operation, "OperationNo",
+           ("ProductionVersion", "Routing")),
+    _cross("RTG.NO_VERSION", "Routing", "Rota hiçbir versiyonda kullanılmıyor", "Rota kodu hiçbir üretim versiyonunda yok", WARNING,
+           lambda t: ~_has("ProductionVersion", "_v", _same_location(t), lambda v: v.c.RouteCode == t.c.RouteCode), "RouteCode", ("ProductionVersion",)),
+    _cross("REF.NO_VERSION", "MaterialReference", "Referans ürünün aktif versiyonu yok",
+           "Referans ürün bulunuyor ve aktif (Aktif = Evet) üretim versiyonu yok", WARNING,
+           lambda t: sa.and_(_has("Material", "_m", _same_location(t), lambda m: m.c.Code == t.c.ReferenceMaterialCode),
+                             ~_has("ProductionVersion", "_v", _same_location(t), lambda v: v.c.MaterialCode == t.c.ReferenceMaterialCode,
+                                   lambda v: one(v.c.IsActive))),
+           "ReferenceMaterialCode", ("Material", "ProductionVersion")),
+    _cross("RG.NO_RESOURCE", "ResourceGroup", "Kaynak grubunda kaynak yok", "Gruba atanmış kaynak yok", WARNING,
+           lambda t: ~_has("ResourceGroupAssignment", "_a", _same_location(t), lambda a: a.c.ResourceGroupCode == t.c.Code),
+           "Code", ("ResourceGroupAssignment",)),
+    _cross("RES.UNUSED", "Resource", "Kaynak hiçbir rotada ve grupta yok", "Kaynak hiçbir rota satırında ve kaynak grubu atamasında geçmiyor", INFO,
+           lambda t: sa.and_(~_has("Routing", "_r", _same_location(t), lambda r: r.c.ResourceCode == t.c.Code),
+                             ~_has("ResourceGroupAssignment", "_a", _same_location(t), lambda a: a.c.ResourceCode == t.c.Code)),
+           "Code", ("Routing", "ResourceGroupAssignment"), ("ResourceGroupAssignment",)),
+    _cross("SUP.NO_MATERIAL", "Supplier", "Tedarikçi hiçbir malzemeye bağlı değil",
+           "Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynağın fasoncusu değil", INFO,
+           lambda t: sa.and_(~_has("MaterialSupplier", "_s", lambda s: s.c.SupplierCode == t.c.Code),
+                             ~_has("Resource", "_r", lambda r: r.c.SubcontractorCode == t.c.Code)),
+           "Code", ("MaterialSupplier", "Resource"), ("Resource",)),
+    _cross("SO.NOT_SELLABLE", "SalesOrderLine", "Malzeme satılabilir değil", "Malzemenin Satılabilir alanı Evet değil", WARNING,
+           lambda t: _has("Material", "_m", _same_location(t), lambda m: m.c.Code == t.c.MaterialCode, lambda m: nz(m.c.IsSellable) == 0),
+           "MaterialCode", ("Material",)),
+    _cross("WO.NO_STRUCTURE", "WorkOrder", "İş emrinin versiyonu ve kendi yapısı yok",
+           "Üretim versiyonu boş ya da bulunamadı; iş emrinin bileşeni ve operasyonu yok", WARNING, _wo_structure, "ProductionVersionCode",
+           ("ProductionVersion", "WorkOrderComponent", "WorkOrderOperation"), ("ProductionVersion", "WorkOrderComponent", "WorkOrderOperation")),
+    _cross("WOC.OPERATION_NOT_IN_WO", "WorkOrderComponent", "Bileşenin operasyonu iş emrinde yok",
+           "Operasyon no dolu, iş emrinin operasyonları var ve bu operasyon aralarında yok", WARNING, _woc_operation, "OperationNo",
+           ("WorkOrderOperation",)),
+    _cross("PO.SUPPLIER_NOT_LISTED", "PurchaseOrderLine", "Tedarikçi malzemenin tedarikçilerinde yok",
+           "Fason olmayan siparişte tedarikçi bulunuyor ve bu malzemenin malzeme tedarikçisi kayıtlarında yok", INFO, _po_supplier, "SupplierCode",
+           ("Supplier", "MaterialSupplier")),
+)
+
+
 @lru_cache(maxsize=1)
 def catalog() -> tuple[RuleDef, ...]:
     """Bütün tabloların yapısal ve hazır kuralları, katalog sırasıyla."""
@@ -471,6 +669,8 @@ def catalog() -> tuple[RuleDef, ...]:
     for entity in ENTITIES:
         out += common_rules(entity.table)
         out += [r for r in TABLE_RULES if r.table == entity.table]
+        out += reference_rules(entity.table)
+        out += [r for r in INTEGRITY_RULES if r.table == entity.table]
     return tuple(out)
 
 

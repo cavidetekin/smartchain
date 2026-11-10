@@ -93,16 +93,16 @@ python -m app.data.synthetic check                                     # sayıla
 | 4 | İmkânsız termin | `SO-1040` (`MAM-010`, 20 adet) termini üretim günü + 2 iş günü; stok ve iş emri yok; üretim zinciri 10 iş günü | Termin < en erken tarih |
 | 5 | Bakım ve izin | `T-02` bakım hafta 2 Salı–Çarşamba · `W-007` izin hafta 3 · `W-015` rapor hafta 1 | Kayıtlar ufukta, var olan kaynak ve çalışanda |
 
-**Kirli hâl.** `data/synthetic/v0/kirli/` altında varlık başına bir Excel (24 dosya; benzetilen ürün yalnız hazır kural örnekleriyle) ve `beklenen-hatalar.json`; her gün yeniden üretilebildiği için git'e girmez.
+**Kirli hâl.** `data/synthetic/v0/kirli/` altında varlık başına bir Excel (25 dosya; benzetilen ürün ve tahmin yalnız hazır kural örnekleriyle) ve `beklenen-hatalar.json`; her gün yeniden üretilebildiği için git'e girmez.
 - **Sayfa düzeni (K-110):** şablon üreticisiyle yazılır (`app/integration/template.py`): 1. satır `stg` alan adı, veri 2. satırdan; Açıklama sayfası; gizli `_Surum` sayfasında tablo, sürüm, set, tohum ve üretim günü. Etiketsiz ek alan kolonu yoktur. Etiket veri setinden gelir, veritabanı gerekmez.
 - **Kapsam:** Takvim, vardiya ve duruş entegrasyonla gelmediği için yoktur (K-65). Sipariş, stok ve iş emri üretimde API veya SQL ile gelir; ETL testleri için aynı `stg` biçiminde Excel'e konur.
 - **Hataların yeri:** Başka satırı zincirleme etkilemez. ETL sonrası ana veri = temiz hâl − aşağıdaki fark. Satır numaraları `beklenen-hatalar.json`'dadır.
-- **Mesaj metni:** H1, H2 öneridir (6.5, 4.4'te kesinleşir); H3 ve H4'ün mesajı 3.4'te kesinleşti: kataloğun mesajı (H3 "Negatif olamaz.", alan ve değer bulgunun kolonlarında) ve ön kontrolün tekrar eden anahtar mesajı.
+- **Mesaj metni:** H1 ve H2'nin mesajı 4.4'te kesinleşti (K-146): kataloğun mesajı ve değer ("Rota bulunamadı: R-PRC-033", "Malzeme bulunamadı: MAM-099"); H3 ve H4'ün mesajı 3.4'te kesinleşti: kataloğun mesajı (H3 "Negatif olamaz.", alan ve değer bulgunun kolonlarında) ve ön kontrolün tekrar eden anahtar mesajı.
 
 | Kod | Hata | Nerede | Adım · sınıf · davranış | Mesaj (öneri) | Ana veride fark |
 |---|---|---|---|---|---|
-| H1 | Eksik rota | `ProductionVersion`: `PRC-033` → `R-PRC-033`; `Routing`'de bu rota yok | Fonksiyon 20 veri kalitesi (6.5), ön hesapta da (29) · uyarı · satır yüklenir | "Malzeme PRC-033'ün rotası yok (R-PRC-033); kapasite tüketmeden planlanır." | `R-PRC-033` rota satırları yok |
-| H2 | Tanımsız malzeme kodu | `SalesOrderLine`: `SO-1099` → `MAM-099` · `BOM`: `ALT-005` → `SAT-999` | 04-02 referans (4.4) · hata · satır yüklenmez | "Malzeme bulunamadı: MAM-099 (partide ve geçerli veride yok)." | Yok (fazladan satırlar) |
+| H1 | Eksik rota | `ProductionVersion`: `PRC-033` → `R-PRC-033`; `Routing`'de bu rota yok | `PV.REF_ROUTE` (4.4, K-146; versiyonun rotası zorunlu ilişki) · hata · satır yüklenmez | "Rota bulunamadı: R-PRC-033" | `R-PRC-033` rota satırları ve `PRC-033` V1 versiyonu yok |
+| H2 | Tanımsız malzeme kodu | `SalesOrderLine`: `SO-1099` → `MAM-099` · `BOM`: `ALT-005` → `SAT-999` | `SO.REF_MATERIAL` ve `BOM.REF_COMPONENT` (4.4, K-146) · hata · satır yüklenmez | "Malzeme bulunamadı: MAM-099" · "Bileşen bulunamadı: SAT-999" | Yok (fazladan satırlar) |
 | H3 | Negatif miktar | `PurchaseOrderLine`: `PO-2060/1` OpenQuantity −50 · `BOM`: `ALT-012` → `SAT-010` Quantity −2 | ALL.NEGATIVE (3.4) · hata · satır yüklenmez | "Negatif olamaz." (Alan: Açık miktar, Değer: -50) | `PO-2060/1` ve `ALT-012 → SAT-010` eksik |
 | H4 | Tekrar eden anahtar | `Material`: `SAT-040` iki satır, adları farklı | Fonksiyon 03 ön kontrol ve 04-01 yapısal (3.2, 3.4; aynı kod) · hata · iki satır da ham veriye alınmaz | "Aynı kayıt n ve n+1. satırlarda" | `SAT-040` eksik (başka dosyada geçmez) |
 
@@ -123,9 +123,16 @@ python -m app.data.synthetic check                                     # sayıla
 
 - **Kapsam:** Kirli hâlde her hazır validasyon kuralı için en az bir satır bulunur (docs/06 fonksiyon 04 tablosu; yapısal kontroller H1–H4 ve ön kontrol testleriyle zaten kapsanır). Excel ve SQL aynı kaynaktan yazılır; iki yol aynı bulguları verir.
 - **Yer:** Örnekler kendi satırlarındadır (`V-` ile başlayan kodlar ya da ayrı malzeme ve sipariş numaraları); bilerek konmuş durumlara (1–5) ve H1–H4'e dokunmaz, başka satırı zincirleme etkilemez. Tablolar arası kurallar için öteki tablodaki karşılığı da eklenir (ör. `IsNonStockable` malzemeye stok satırı).
-- **Beklenen:** `beklenen-hatalar.json`'da kural kodu, tablo, satır anahtarı, sınıf ve mesaj; test (`tests/test_validation_dirty.py`) her aktif hazır kuralın en az bir bulgu verdiğini ve beklenmeyen satırda bulgu çıkmadığını denetler. H3 negatif miktar `ALL.NEGATIVE`'dir; H2 referans kontrolü 4.4'te.
+- **Beklenen:** `beklenen-hatalar.json`'da kural kodu, tablo, satır anahtarı, sınıf ve mesaj; test (`tests/test_validation_dirty.py`) her aktif hazır kuralın en az bir bulgu verdiğini ve beklenmeyen satırda bulgu çıkmadığını denetler. H3 negatif miktar `ALL.NEGATIVE`'dir; H2 `SO.REF_MATERIAL` ve `BOM.REF_COMPONENT`'tir (4.4).
 - **Ekle / güncelle partisi:** Demo için ikinci bir küçük dosya (`kirli/ekle-guncelle/`): güncel hâlde bir kaydı değiştirir ve bir küme kuralını tetikler (ör. MaterialSupplier kota toplamı); güncel hâlin işlenişini gösterir (K-133).
 - **Mesajlar:** H1–H4 mesajları 3.4'te kesinleşir; hazır kuralların mesajları kataloğun mesajıdır.
+
+### Referans ve bütünlük örnekleri (geliştirme 4.4, K-146)
+
+- **Kapsam:** Kirli hâlde her referans, pasif ebeveyn ve bütünlük kuralı için en az bir satır bulunur (docs/06 fonksiyon 04; ilişki haritası docs/03). Zorunlu ilişkide tanımsız kod (Hata), isteğe bağlı bağlantıda tanımsız kod (Uyarı), pasif ebeveyne bakan satır (`L-` ile başlayan pasif malzeme, müşteri, tedarikçi ve kaynak; Uyarı ya da Bilgi), bağı eksik ebeveyn (aktif versiyonu olmayan üretilen malzeme, tedarikçisi olmayan satın alınan malzeme, kaynaksız grup…).
+- **Yer:** Örnekler kendi satırlarındadır (`V-` ve `L-` ile başlayan kodlar, ayrı sipariş ve iş emri numaraları); bilerek konmuş durumlara ve H1–H4'e dokunmaz. Temiz hâlde yeni kurallar bulgu vermez; önceki örneklerin yeni kurallara takılan satırları düzeltilir ya da beklenene eklenir.
+- **H2:** `SO.REF_MATERIAL` ("Malzeme bulunamadı: MAM-099") ve `BOM.REF_COMPONENT` ("Bileşen bulunamadı: SAT-999"); ikisi de Hata, satır yüklenmez.
+- **Beklenen:** `beklenen-hatalar.json`'da kural kodu, tablo, satır anahtarı, sınıf ve mesaj; test (`tests/test_validation_dirty.py`) her yeni kuralın en az bir bulgu verdiğini, beklenmeyen satırda bulgu çıkmadığını ve Excel ile SQL yolunun aynı sonucu verdiğini denetler.
 
 ### Veri kuralı örnekleri (geliştirme 4.1, K-141)
 

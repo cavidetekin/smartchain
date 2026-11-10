@@ -550,6 +550,8 @@
 .sc-drawer-close:hover, .sc-drawer-close:focus-visible { background: var(--table-row-hover-bg); color: var(--text); }
 .sc-drawer-close svg { width: 1.2308rem; height: 1.2308rem; }
 .sc-drawer-body { display: flex; flex-direction: column; gap: var(--space-3); flex: 1; min-height: 0; }
+/* Çekmecedeki pencere tablosu (Bulgular): 24rem ile kesilmez, çekmecenin boş alanını doldurur; yalnız gerçekten taşarsa kayar (4.4 demosu, G1–G2) */
+.sc-drawer-body .sc-local-table-wrap { flex: 0 1 auto; min-height: 0; max-height: none; }
 .sc-drawer-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 .sc-validation-chip { padding: 0; border: 0; background: none; cursor: pointer; }
 .sc-validation-chip:focus-visible { outline: 2px solid var(--field-border-focus); outline-offset: 2px; border-radius: 999rem; }

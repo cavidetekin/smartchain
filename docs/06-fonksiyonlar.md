@@ -294,6 +294,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Geliştirme 3.4 (K-137, K-139)</sub>
 
 - Kod kataloğu bu tablodan yazılır (`app/validation/catalog.py`); test ikisini karşılaştırır. AD ekranda "Kural" kolonudur; KOD varsayılan görünümde gizlidir. SINIF katalogdaki sınıftır, Validasyon kuralları ekranında değişir. Tür: Yapısal (listede görünmez, arka planda çalışır), Mantıksal (tablo içi), Küme (tablo içi, tablonun bütün güncel hâline bakar), Tablolar arası (OKUNAN tabloya bakar).
+- **Birim dönüşümü alanları (ALL.UOM_CONVERSION):** BOM: ComponentUom · SalesOrderLine: Uom · Forecast: Uom · Stock: Uom · WorkOrder: Uom · WorkOrderComponent: Uom · PurchaseOrderLine: Uom. Malzeme alanı BOM'da ComponentMaterialCode, ötekilerde MaterialCode.
+- **Referans, pasif ebeveyn ve bütünlük (K-146):** REF ve INACTIVE kuralları docs/03 "İlişki haritası"ndan üretilir: zorunlu ilişki yoksa Hata, isteğe bağlı bağlantı doluysa ve yoksa Uyarı, "Zorunlu (doluysa)" (rota ve iş emri operasyonunda kaynak ve kaynak grubu) doluysa ve yoksa Hata, ebeveyn pasifse haritadaki sınıf. Ebeveyn aranırken işlenmiş katmanın bütün satırlarına bakılır (pasif ebeveyn de vardır); kontrol edilen satır pasifse hiçbir kurala girmez (K-145). Mesaj değerle: "Malzeme bulunamadı: MAM-099". OKUNAN'da "(boş olabilir)": o tablonun verisi yoksa kural atlanmaz.
 - **DÜZENLENİR (K-139):** "Evet": koşul editörle ifade edilir; ad, mesaj, koşul, sınıf ve aktiflik pencerede değişir, "İlk hâline döndür" bu tablodaki hâline getirir. "Sınıf, aktiflik": döngü, toplam, çakışma, bayrak sayımı, bugünle karşılaştırma, hesaplı fark ya da tablolar arası; yalnız sınıf ve aktiflik tablodan değişir. "Kilitli": yapısal kontrol.
 - **Negatif değer alanları (ALL.NEGATIVE):** Material: GoodsReceiptDays, SafetyStock, StockCoverageDays, MaxStock, MinLot, MaxLot, LotMultiple, QtyPerBox, QtyPerPallet, ScrapRatio, ShelfLifeDays · UomConversion: Factor · ProductionVersion: BaseQuantity · BOM: Quantity, ScrapRatio · Routing: Consumption, ResourceNumber, TransferQuantity, WaitingTimeHours, TransferTimeHours · MaterialReference: TimeFactor · EmployeeAbsence: HoursPerDay · MaterialSupplier: QuotaRatio, FixedLeadTimeDays, VariableLeadTimeDays, MinimumOrderQuantity, OrderLotSize, MaximumOrderQuantity · SalesOrderLine: OpenQuantity, OrderedQuantity, DeliveredQuantity · Forecast: Quantity · BorrowPayback: BorrowedQuantity, PaidBackQuantity · Stock: Quantity · WorkOrder: OrderedQuantity, OpenQuantity, CompletedQuantity, ScrapQuantity · WorkOrderComponent: RequiredQuantity, IssuedQuantity, UnitUsage, ScrapRatio · WorkOrderOperation: ResourceNumber, PlannedConsumption, ConfirmedConsumption, TransferQuantity, WaitingTimeHours, TransferTimeHours · PurchaseOrderLine: OpenQuantity, OrderedQuantity, ReceivedQuantity · ProductionConfirmation: ConfirmedQuantity. Dışarıda: RemainingOverTimeYear, RemainingOverTimeMonth, öncelik alanları, satır ve sıra numaraları, ek alanlar.
 
@@ -387,9 +389,86 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PO.CUSTOM_NO_OWNER | PurchaseOrderLine | Özel takipli siparişin sahibi yok | Özel takip = Evet ve Proje boş ve Müşteri boş ve Bağlı sipariş no boş | Uyarı | Mantıksal | Evet |  |
 | PC.QTY | ProductionConfirmation | Teyit miktarı sıfır ya da negatif | Teyit miktarı ≤ 0 | Hata | Mantıksal | Evet |  |
 | PC.MATERIAL | ProductionConfirmation | Malzeme iş emrininkinden farklı | Malzeme, iş emrinin malzemesinden farklı | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| ALL.REF_LOCATION | Hepsi | Lokasyon bulunamadı | Lokasyon kodu Lokasyon tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Location |
+| ALL.UOM_CONVERSION | Hepsi | Birim dönüşümü yok | Birim dolu, malzemenin temel biriminden farklı ve dönüşüm yok (malzemeye özel ya da genel, iki yönden biri; K-112) | Hata | Tablolar arası | Sınıf, aktiflik | Material, UomConversion |
+| UOM.REF_MATERIAL | UomConversion | Malzeme bulunamadı | Malzeme kodu dolu ve Malzeme tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| PV.REF_MATERIAL | ProductionVersion | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| PV.INACTIVE_MATERIAL | ProductionVersion | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
+| PV.REF_BOM | ProductionVersion | Ürün ağacı bulunamadı | Ürün ağacı kodu Ürün ağacı tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | BOM |
+| PV.REF_ROUTE | ProductionVersion | Rota bulunamadı | Rota kodu Rota tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Routing |
+| BOM.REF_MATERIAL | BOM | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| BOM.REF_COMPONENT | BOM | Bileşen bulunamadı | Bileşen kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| BOM.INACTIVE_COMPONENT | BOM | Bileşen pasif | Bileşen bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| RTG.REF_RESOURCE | Routing | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
+| RTG.INACTIVE_RESOURCE | Routing | Kaynak pasif | Kaynak bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Resource |
+| RTG.REF_RESOURCE_GROUP | Routing | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| REF.REF_MATERIAL | MaterialReference | Benzetilen ürün bulunamadı | Benzetilen ürün kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| REF.REF_REFERENCE_MATERIAL | MaterialReference | Referans ürün bulunamadı | Referans ürün kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| REF.REF_REFERENCE_VERSION | MaterialReference | Referans versiyon bulunamadı | Referans versiyon kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| RES.REF_SUBCONTRACTOR | Resource | Fasoncu bulunamadı | Fasoncu kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
+| RGA.REF_RESOURCE_GROUP | ResourceGroupAssignment | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| RGA.REF_RESOURCE | ResourceGroupAssignment | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
+| ABS.REF_RESOURCE | EmployeeAbsence | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
+| MS.REF_MATERIAL | MaterialSupplier | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| MS.REF_SUPPLIER | MaterialSupplier | Tedarikçi bulunamadı | Tedarikçi kodu Tedarikçi tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Supplier |
+| MS.INACTIVE_SUPPLIER | MaterialSupplier | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
+| PRJ.REF_PROJECT_GROUP | Project | Proje grubu bulunamadı | Proje grubu kodu dolu ve Proje grubu tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProjectGroup |
+| SO.REF_CUSTOMER | SalesOrderLine | Müşteri bulunamadı | Müşteri kodu Müşteri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Customer |
+| SO.INACTIVE_CUSTOMER | SalesOrderLine | Müşteri pasif | Müşteri bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
+| SO.REF_MATERIAL | SalesOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| SO.INACTIVE_MATERIAL | SalesOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| SO.REF_PROJECT | SalesOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
+| FC.REF_MATERIAL | Forecast | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| FC.INACTIVE_MATERIAL | Forecast | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| FC.REF_CUSTOMER | Forecast | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
+| FC.REF_PROJECT | Forecast | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
+| STK.REF_MATERIAL | Stock | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| STK.INACTIVE_MATERIAL | Stock | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
+| STK.REF_PROJECT | Stock | Sahip proje bulunamadı | Sahip proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
+| STK.REF_CUSTOMER | Stock | Sahip müşteri bulunamadı | Sahip müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
+| STK.REF_SALES_ORDER | Stock | Sahip sipariş satırı bulunamadı | Sahip sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| BP.REF_MATERIAL | BorrowPayback | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| BP.REF_LENDING_PROJECT | BorrowPayback | Ödünç veren proje bulunamadı | Ödünç veren proje kodu Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
+| BP.REF_BORROWING_PROJECT | BorrowPayback | Ödünç alan proje bulunamadı | Ödünç alan proje kodu Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
+| WO.REF_MATERIAL | WorkOrder | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| WO.INACTIVE_MATERIAL | WorkOrder | Üretilen malzeme pasif | Üretilen malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| WO.REF_VERSION | WorkOrder | Üretim versiyonu bulunamadı | Üretim versiyonu kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| WO.REF_PROJECT | WorkOrder | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
+| WO.REF_CUSTOMER | WorkOrder | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
+| WO.REF_SALES_ORDER | WorkOrder | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| WO.REF_PARENT_WORK_ORDER | WorkOrder | Orijinal iş emri bulunamadı | Orijinal iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOC.REF_WORK_ORDER | WorkOrderComponent | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOC.REF_MATERIAL | WorkOrderComponent | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| WOO.REF_WORK_ORDER | WorkOrderOperation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOO.REF_RESOURCE | WorkOrderOperation | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
+| WOO.REF_RESOURCE_GROUP | WorkOrderOperation | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| PO.REF_MATERIAL | PurchaseOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| PO.INACTIVE_MATERIAL | PurchaseOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| PO.REF_SUPPLIER | PurchaseOrderLine | Tedarikçi bulunamadı | Tedarikçi kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
+| PO.INACTIVE_SUPPLIER | PurchaseOrderLine | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
+| PO.REF_PROJECT | PurchaseOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
+| PO.REF_CUSTOMER | PurchaseOrderLine | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
+| PO.REF_SALES_ORDER | PurchaseOrderLine | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| PO.REF_WORK_ORDER | PurchaseOrderLine | Bağlı iş emri bulunamadı | Bağlı iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| PC.REF_WORK_ORDER | ProductionConfirmation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| PC.REF_MATERIAL | ProductionConfirmation | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
+| MAT.NO_VERSION | Material | Üretilen malzemenin aktif versiyonu yok | Tedarik türü = Üretim; aktif (Aktif = Evet) üretim versiyonu ve benzetilen ürün kaydı yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion, MaterialReference (boş olabilir) |
+| MAT.NO_SUPPLIER | Material | Satın alınan malzemenin aktif tedarikçisi yok | Tedarik türü = Satın alma; kaydı ve tedarikçisi aktif malzeme tedarikçisi yok | Uyarı | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Supplier (boş olabilir) |
+| MAT.NO_SUBCONTRACTOR | Material | Fason malzemenin fason tedarikçisi yok | Tedarik türü = Fason; tedarikçisi fasoncu (Fasoncu mu = Evet) ve aktif olan aktif malzeme tedarikçisi yok | Uyarı | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Supplier |
+| BOM.NO_VERSION | BOM | Ağaç hiçbir versiyonda kullanılmıyor | Ürün ağacı kodu aynı malzemenin hiçbir üretim versiyonunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| BOM.OPERATION_NOT_IN_ROUTE | BOM | Bileşenin operasyonu rotada yok | Operasyon no dolu ve ağacı kullanan bir versiyonun rotasında bu operasyon yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion, Routing |
+| RTG.NO_VERSION | Routing | Rota hiçbir versiyonda kullanılmıyor | Rota kodu hiçbir üretim versiyonunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| REF.NO_VERSION | MaterialReference | Referans ürünün aktif versiyonu yok | Referans ürün bulunuyor ve aktif (Aktif = Evet) üretim versiyonu yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Material, ProductionVersion |
+| RG.NO_RESOURCE | ResourceGroup | Kaynak grubunda kaynak yok | Gruba atanmış kaynak yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
+| RES.UNUSED | Resource | Kaynak hiçbir rotada ve grupta yok | Kaynak hiçbir rota satırında ve kaynak grubu atamasında geçmiyor | Bilgi | Tablolar arası | Sınıf, aktiflik | Routing, ResourceGroupAssignment (boş olabilir) |
+| SUP.NO_MATERIAL | Supplier | Tedarikçi hiçbir malzemeye bağlı değil | Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynağın fasoncusu değil | Bilgi | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Resource (boş olabilir) |
+| SO.NOT_SELLABLE | SalesOrderLine | Malzeme satılabilir değil | Malzemenin Satılabilir alanı Evet değil | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
+| WO.NO_STRUCTURE | WorkOrder | İş emrinin versiyonu ve kendi yapısı yok | Üretim versiyonu boş ya da bulunamadı; iş emrinin bileşeni ve operasyonu yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion (boş olabilir), WorkOrderComponent (boş olabilir), WorkOrderOperation (boş olabilir) |
+| WOC.OPERATION_NOT_IN_WO | WorkOrderComponent | Bileşenin operasyonu iş emrinde yok | Operasyon no dolu, iş emrinin operasyonları var ve bu operasyon aralarında yok | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrderOperation |
+| PO.SUPPLIER_NOT_LISTED | PurchaseOrderLine | Tedarikçi malzemenin tedarikçilerinde yok | Fason olmayan siparişte tedarikçi bulunuyor ve bu malzemenin malzeme tedarikçisi kayıtlarında yok | Bilgi | Tablolar arası | Sınıf, aktiflik | Supplier, MaterialSupplier |
 
-- Tedarikçi, Müşteri, Proje grubu, Proje, Tahmin, Kaynak grubu ataması (yetkinlik dışında), İş emri bileşeni (çekilen dışında): yalnız ortak kurallar.
-- **Kapsam dışı:** referans kontrolü (çocuk → ebeveyn, Hata) ve ebeveyn → çocuk bütünlük kontrolleri (Uyarı) 4.4'te aynı çerçeveye, Tablolar arası olarak eklenir.
+- Müşteri ve Proje grubu: yalnız ortak kurallar (lokasyondan bağımsızdırlar; tablolar arası kural yoktur).
+- **Uygulama (4.4, K-146):** referans, pasif ebeveyn ve bütünlük kuralları Tablolar arası adımda çalışır; her biri tek `INSERT … SELECT … WHERE [NOT] EXISTS`.
 
 ### 04 · Validasyon · Sonuç özeti
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Mockup 1/2</sub>
@@ -397,7 +476,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![04 · Validasyon · Sonuç özeti](mockups/m24f-0351-04-dogrulama-sonuc-ozeti.png)
 
 - **Varlık bazında sayılar:** Yeni, değişen, silinen, hata ve uyarı tek tabloda; durum çipi renkli.
-- **Kontrol türü kırılımı:** Yapısal, mantıksal, tablolar arası (4.4'te referans ve bütünlük); sorunun kaynağı anlaşılır.
+- **Kontrol türü kırılımı:** Yapısal, mantıksal, tablolar arası (referans, pasif ebeveyn ve bütünlük dahil, K-146); sorunun kaynağı anlaşılır.
 - **Seviye açıklaması:** Altta tek cümle: hata yüklenmez, uyarı yüklenir.
 - **Yeniden valide et:** Kaynakta düzeltme ya da kural değişikliği sonrası tekrar; rapor indirilebilir.
 - **Uygulama (3.4):** Ayrı özet ekranı yoktur: sonuç Veri yükleme tablosunda "Validasyon" çipidir (K-134, K-139); kontrol türü kırılımı yok (K-139); yeni, değişen ve silinen sayıları 5.5'te.
@@ -428,6 +507,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Nereden: Gece akışı · Veri yükleme ekranı 'Tam yükle'
 - **01:** Yeni veri versiyonu açılır (DataVersion: tam, kim, ne zaman). Yükleme tek işlem olarak çalışır; ekranlar bitene kadar önceki versiyonu gösterir.
 - **02:** Her varlık için ham veri geçerli tablolara yazılır: yeni kayıt eklenir, değişen kayıt yeni satır olarak versiyonlanır, partide olmayan kayıt pasif (silindi) işaretlenir; fiziksel silme yok.
+- **Kod→Id (K-146):** ilişki kodları docs/03 "İlişki haritası"yla `core` Id'sine çevrilir; ebeveyn tablolar önce yüklenir, aynı veri versiyonunda. Zorunlu ilişkisi çevrilemeyen satır (referans Hatası, `RowStatus` Hatalı) yüklenmez. İsteğe bağlı bağlantı çevrilemezse satır yüklenir, bağlantı boş yazılır; uyarı veri kalitesinde kalır. `IsActive` = Hayır satırı ve pasif ebeveyne bakan satır yüklenmez (K-145); haritada pasif sınıfı olmayan isteğe bağlı bağlantıda ebeveyn pasifse bağlantı boş yazılır. `UomConversion` aynı koddaki her lokasyonun malzemesine bağlanır (K-112).
 - **GIRDI**
   - Doğrulanmış ham veri partisi
   - Hata eşiği ve yükleme davranışı (atla / dışarıda bırak)
@@ -1600,7 +1680,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: System owner ve Admin düzenler · Key user görür · End user ekranı görmez
   - Nereden: Validasyon kuralları ekranı (27), Veri menüsü
-- **01:** Liste tablo seçimiyle açılır ("Tümü" ya da bir tablo): Tablo, Kural (kullanıcı dilinde ad), Koşul (okunur cümle), Sınıf, Mesaj, Tür (Hazır / Kullanıcı), Aktif; Kod kolonu varsayılan görünümde gizli, Alanlar'dan açılır. Yapısal kontroller listede görünmez, arka planda çalışır (K-139).
+- **01:** Liste tablo seçimiyle açılır ("Tümü" ya da bir tablo): Tablo, Kural (kullanıcı dilinde ad), Koşul (okunur cümle), Sınıf, Mesaj, Tür (Hazır / Kullanıcı), Kontrol türü (Mantıksal / Tablolar arası; varsayılan görünümde açık, K-146), Aktif; Kod kolonu varsayılan görünümde gizli, Alanlar'dan açılır. Yapısal kontroller listede görünmez, arka planda çalışır (K-139).
 - **02:** Sınıf kolonu saydam pastel çiptir (Hata açık kırmızı, Uyarı açık sarı, Bilgi açık mavi-gri); tıklayınca seçim kutusu açılır. Aktif tablodan değişir. Koşulu editörle ifade edilen hazır kural (docs 04 tablosunda DÜZENLENİR "Evet") ve kullanıcı kuralı pencerede düzenlenir: ad, mesaj, koşul, sınıf, aktiflik. Hazır kuralda "İlk hâline döndür" katalogdaki hâline getirir; hazır kural silinmez. Öteki hazır kurallarda yalnız sınıf ve aktiflik değişir. Kullanıcı kuralı silinebilir.
 - **GIRDI**
   - `adm.ValidationRule` ve `ValidationRuleCondition`

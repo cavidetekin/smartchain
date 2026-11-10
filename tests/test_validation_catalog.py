@@ -15,6 +15,7 @@ from app.validation.sqlkit import alias, current
 
 DOCS06 = (Path(__file__).resolve().parents[1] / "docs" / "06-fonksiyonlar.md").read_text(encoding="utf-8")
 TYPE_OF = {"Yapısal": cat.STRUCTURAL, "Mantıksal": cat.LOGICAL, "Küme": cat.LOGICAL, "Tablolar arası": cat.CROSS}
+MAY_BE_EMPTY = " (boş olabilir)"
 
 
 def docs_rules() -> list[dict]:
@@ -24,8 +25,10 @@ def docs_rules() -> list[dict]:
         if not line.startswith("|"):
             break
         code, table, name, condition, severity, kind, editable, reads = [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", line.strip()[1:-1])]
+        read = [r.strip() for r in reads.split(",") if r.strip()]
         rows.append(dict(code=code, table=table, name=name, condition=condition, severity=severity, kind=kind, editable=editable,
-                         reads=tuple(r.strip() for r in reads.split(",") if r.strip())))
+                         reads=tuple(r.removesuffix(MAY_BE_EMPTY) for r in read),
+                         may_be_empty=tuple(r.removesuffix(MAY_BE_EMPTY) for r in read if r.endswith(MAY_BE_EMPTY))))
     return rows
 
 
@@ -43,11 +46,14 @@ def test_every_documented_rule_is_in_the_catalog():
         if d["table"] != "Hepsi":
             assert [r.table for r in found] == [d["table"]], d["code"]
             rule = by_key[(d["table"], d["code"])]
-            assert (rule.title, rule.condition, rule.severity, rule.check_type, rule.reads, rule.group, rule.editable) == \
-                   (d["name"], d["condition"], d["severity"], TYPE_OF[d["kind"]], d["reads"], d["kind"] == "Küme", EDITABLE[d["editable"]]), d["code"]
+            assert (rule.title, rule.condition, rule.severity, rule.check_type, rule.reads, rule.may_be_empty, rule.group, rule.editable) == \
+                   (d["name"], d["condition"], d["severity"], TYPE_OF[d["kind"]], d["reads"], d["may_be_empty"], d["kind"] == "Küme",
+                    EDITABLE[d["editable"]]), d["code"]
         else:
             assert {(r.title, r.severity, r.check_type, r.editable) for r in found} == \
                    {(d["name"], d["severity"], TYPE_OF[d["kind"]], EDITABLE[d["editable"]])}, d["code"]
+            if d["reads"]:  # tablolar arası ortak kural: koşul ve okunan her tabloda aynı
+                assert {(r.condition, r.reads, r.may_be_empty) for r in found} == {(d["condition"], d["reads"], d["may_be_empty"])}, d["code"]
             assert {r.kind for r in found} == {cat.STRUCTURAL_KIND if d["kind"] == "Yapısal" else cat.BUILTIN_KIND}, d["code"]
 
 
@@ -173,3 +179,11 @@ def test_builtin_names_and_messages_are_user_language():
 def test_condition_fields_exclude_system_columns():
     names = set(conditions.columns("Material"))
     assert not {"StagingRowId", "ImportBatchId", "IsCurrent", "RowStatus"} & names and names <= {c.name for c in stg_columns("Material")}
+
+
+def test_rules_list_shows_check_type_by_default():
+    """Validasyon kuralları listesinde Kontrol türü (Mantıksal / Tablolar arası) varsayılan görünümde, Tür'ün yanında (4.4 demosu, G3)."""
+    from app.api.lists.validation import VALIDATION_RULES
+    shown = list(VALIDATION_RULES.default_visible)
+    assert "CheckType" in shown and shown.index("CheckType") == shown.index("Kind") + 1
+    assert VALIDATION_RULES.labels["CheckType"] == "Kontrol türü" and "Code" not in shown

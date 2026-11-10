@@ -320,8 +320,8 @@ def test_definition_is_saved_even_if_check_fails(integration_db, people, client,
 
 def test_pull_reads_view_into_staging(setup, client, db_engine):
     table = pull_one(db_engine, client, setup)
-    assert (table["status"], table["read"], table["valid"], table["errors"]) == ("Alındı", 211, 209, 2)  # kirli Malzeme: hazır kural ve veri kuralı örnekleri dahil (docs/11)
-    assert stg_count(db_engine) == 209
+    assert (table["status"], table["read"], table["valid"], table["errors"]) == ("Alındı", 214, 212, 2)  # kirli Malzeme: hazır kural, pasif ebeveyn ve veri kuralı örnekleri dahil (docs/11)
+    assert stg_count(db_engine) == 212
     with db_engine.connect() as c:
         assert c.execute(sa.text("SELECT COUNT(*) FROM stg.Material WHERE Code = N'SAT-040'")).scalar() == 0  # H4
     batch = batches(db_engine)[-1]
@@ -395,7 +395,7 @@ def test_no_new_signal_is_skipped_not_an_error(setup, client, db_engine):
     pull_one(db_engine, client, setup)
     table = pull_one(db_engine, client, setup)
     assert table["status"] == "Yeni veri yok" and table["batch_id"] is None
-    assert stg_count(db_engine) == 209 and len(batches(db_engine)) == 1
+    assert stg_count(db_engine) == 212 and len(batches(db_engine)) == 1
 
 
 def test_read_anyway(setup, client, db_engine):
@@ -437,7 +437,7 @@ def test_refreshing_is_not_an_error_and_keeps_old_rows(setup, client, db_engine)
     run_sql("INSERT INTO dbo.ERP_LoadLog (EntityName, StartedAt) VALUES (N'Material', SYSUTCDATETIME())")
     table = pull_one(db_engine, client, setup, read_anyway=["Material"])  # yine de oku da güncellemeyi geçmez
     assert table["status"] == "Veri güncellemesi devam ediyor" and table["reason"] == "Veri güncellemesi devam ediyor."
-    assert stg_count(db_engine) == 209 and len(batches(db_engine)) == 1
+    assert stg_count(db_engine) == 212 and len(batches(db_engine)) == 1
     run_sql("UPDATE dbo.ERP_LoadLog SET FinishedAt = SYSUTCDATETIME() WHERE FinishedAt IS NULL")
     assert pull_one(db_engine, client, setup)["status"] == "Alındı"
 
@@ -465,7 +465,7 @@ def test_missing_required_column_keeps_old_rows(setup, client, db_engine):
     try:
         table = pull_one(db_engine, client, setup)
         assert table["status"] == "Hata" and "Zorunlu kolon yok: Code" in table["reason"]
-        assert stg_count(db_engine) == 209 and len(batches(db_engine)) == 1
+        assert stg_count(db_engine) == 212 and len(batches(db_engine)) == 1
         with db_engine.connect() as c:
             assert c.execute(sa.text("SELECT LastCheckStatus FROM adm.IntegrationEntity WHERE EntityName = N'Material'")).scalar() == "Hatalı"
     finally:
@@ -509,7 +509,7 @@ def test_transient_error_recovers(setup, client, db_engine, monkeypatch):
 
     monkeypatch.setattr(Source, "read_rows", once)
     table = pull_one(db_engine, client, setup)
-    assert table["status"] == "Alındı" and len(table["attempts"]) == 1 and stg_count(db_engine) == 209
+    assert table["status"] == "Alındı" and len(table["attempts"]) == 1 and stg_count(db_engine) == 212
 
 
 def test_empty_view_is_failed(setup, client, db_engine):
@@ -536,7 +536,7 @@ def test_crash_leaves_batch_incomplete_and_retry_is_clean(setup, client, db_engi
     with db_engine.connect() as c:
         assert c.execute(sa.text("SELECT COUNT(*) FROM stg.Material WHERE Code = N'YARIM'")).scalar() == 0
         assert c.execute(sa.text("SELECT Status FROM adm.ImportBatch WHERE Id = :b"), {"b": batch}).scalar() == "Tamamlanmadı"
-    assert stg_count(db_engine) == 209
+    assert stg_count(db_engine) == 212
 
 
 def test_dismissed_notification_stays_closed(setup, client, db_engine):

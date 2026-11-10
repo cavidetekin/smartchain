@@ -99,8 +99,8 @@ _rules_source = (sa.select(RULE.c.Id, RULE.c.EntityName, RULE.c.Code, RULE.c.Nam
 VALIDATION_RULES = ListDefinition(
     name="validation-rules", table="adm.ValidationRule", title="Validasyon kuralları", file_slug="validasyon-kurallari", function=100, versioned=False,
     source=_rules_source,
-    fields=("EntityLabel", "RuleName", "ConditionText", "Severity", "Message", "Kind", "IsActive", "CheckType", "EntityOrder", "EntityName", "Code"),
-    default_visible=("EntityLabel", "RuleName", "ConditionText", "Severity", "Message", "Kind", "IsActive"),
+    fields=("EntityLabel", "RuleName", "ConditionText", "Severity", "Message", "Kind", "CheckType", "IsActive", "EntityOrder", "EntityName", "Code"),
+    default_visible=("EntityLabel", "RuleName", "ConditionText", "Severity", "Message", "Kind", "CheckType", "IsActive"),  # Kontrol türü açık (K-146)
     default_sort=(("EntityOrder", "asc"), ("Code", "asc")),
     key_fields=("Id", "EntityName", "Kind", "Severity", "IsActive", "Code", "IsCustomized", "Editable"),
     labels={"EntityLabel": "Tablo", "RuleName": "Kural", "ConditionText": "Koşul", "Severity": "Sınıf", "Message": "Mesaj", "Kind": "Tür",

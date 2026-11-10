@@ -252,3 +252,13 @@ describe("tek kaynak ve ölçek (K-85, U-23)", () => {
     expect(Math.round(ROW_REM * 13)).toBe(28);
   });
 });
+
+describe("Çekmecedeki pencere tablosu (4.4 demosu, G1–G2)", () => {
+  it("Bulgular tablosu 24rem ile kesilmez: çekmecenin boş alanını doldurur, yalnız taşarsa kayar", () => {
+    const found = rules(sheets["components.css"]).filter((r) => r.selector === ".sc-drawer-body .sc-local-table-wrap");
+    expect(found).toHaveLength(1);
+    expect(found[0].body).toMatch(/max-height:\s*none/);
+    expect(found[0].body).toMatch(/min-height:\s*0/);
+    expect(rules(sheets["components.css"]).find((r) => r.selector === ".sc-drawer-body")?.body).toMatch(/min-height:\s*0/);
+  });
+});

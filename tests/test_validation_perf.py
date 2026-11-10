@@ -1,4 +1,5 @@
-"""Validasyon performansı (K-134): 200.000 satırlık Malzeme'nin tablo içi doğrulaması ve "Veri işleme" kanalında paralel iş sayısı.
+"""Validasyon performansı (K-134, K-146): 200.000 satırlık Malzeme'nin tablo içi doğrulaması, "Veri işleme" kanalında paralel iş sayısı
+ve bütün tablolar 50.000 satırken tablolar arası adım (referans, pasif ebeveyn ve bütünlük kuralları dahil).
 
 Satırlar doğrudan stg'ye, güncel hâlde yazılır (çekim ve ön kontrol ölçülmez; docs/08'de ayrı ölçüm). Her ölçüm ortancadır.
 Paralel ölçüm: sekiz büyük tablonun tablo içi işleri N ayrı süreçte (motor servisi gibi); toplam duvar saati. Ayrıca: pytest -m perf.
@@ -16,7 +17,8 @@ from app.integration.contract import stg_columns
 from app.jobs import queue
 from app.jobs.constants import CHANNEL_PROCESSING
 from app.jobs.settings import JobSettings
-from app.validation import engine
+from app.integration.contract import ENTITIES
+from app.validation import catalog as cat, engine, processed
 
 from validation_helpers import clean
 
@@ -28,9 +30,16 @@ PARALLEL_TABLES = ("Material", "BOM", "Routing", "Stock", "SalesOrderLine", "Wor
 WORKERS = (1, 2, 4, 8)
 RUNS = 3
 SINGLE_LIMIT_SECONDS = 120
+CROSS_LIMIT_SECONDS = 600
 
 
-def _expression(field, length) -> str:
+def _code(field) -> bool:
+    return field.kind == "text" and (field.name.endswith(("Code", "No")) or field.name == "Code")
+
+
+def _expression(field, length, linked: bool = False) -> str:
+    if linked and _code(field):  # tablolar arası: kodlar birbirini bulur, her 97. satır bulamaz
+        return "CASE WHEN n % 97 = 0 THEN N'X-' + CONVERT(nvarchar(10), n) ELSE N'K-' + CONVERT(nvarchar(10), n) END"
     if field.values:
         return f"N'{field.values[0]}'"
     if field.kind == "text":
@@ -44,14 +53,14 @@ def _expression(field, length) -> str:
     return "DATEADD(day, n % 300, CAST('2026-01-01' AS date))"
 
 
-def fill(eng, table: str, rows: int) -> None:
+def fill(eng, table: str, rows: int, linked: bool = False) -> None:
     lengths = {c.name: getattr(c.type, "length", None) for c in stg_columns(table)}
     fields = contract.fields(table)
     with eng.begin() as c:
         batch = c.execute(sa.text("INSERT INTO adm.ImportBatch (Method, EntityName, LoadType, ReceivedAt, Status, [RowCount], ErrorCount) OUTPUT inserted.Id "
                                   "VALUES (N'SQL', :t, N'Tam', SYSUTCDATETIME(), N'Alındı', :n, 0)"), {"t": table, "n": rows}).scalar_one()
         names = ", ".join(f"[{f.name}]" for f in fields)
-        values = ", ".join(_expression(f, lengths[f.name]) for f in fields)
+        values = ", ".join(_expression(f, lengths[f.name], linked) for f in fields)
         c.execute(sa.text(f"INSERT INTO stg.[{table}] (ImportBatchId, SourceRowNo, IsCurrent, {names}) "
                           f"SELECT {batch}, n, 1, {values} FROM (SELECT TOP ({rows}) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n "
                           "FROM sys.all_objects a CROSS JOIN sys.all_objects b CROSS JOIN sys.all_objects c) x"))
@@ -102,6 +111,36 @@ def test_single_table_200k(big):
     assert median < SINGLE_LIMIT_SECONDS
     with big.begin() as c:
         c.execute(sa.text("DELETE FROM stg.Material"))
+
+
+def test_cross_tables_50k(big):
+    """Bütün tablolar 50.000 satır: tablolar arası adımın bütün kuralları (K-146 ile ~110 kural), işlenmiş katman üzerinde."""
+    for e in ENTITIES:
+        fill(big, e.table, PARALLEL_ROWS, linked=True)
+    with Session(big) as s:
+        for e in ENTITIES:
+            processed.rebuild(s, e.table)
+        s.commit()
+    rules = sum(1 for r in cat.catalog() if r.check_type == cat.CROSS)
+    times = []
+    for _ in range(RUNS):
+        reset_findings(big)
+        with Session(big) as s:
+            run_id = engine._new_run(s, None, engine.SCOPE_CROSS, engine.TRIGGER_BULK, None, None, None)
+            s.commit()
+            start = time.perf_counter()
+            engine.run_cross(s, run_id, lambda _t: None)
+            times.append(time.perf_counter() - start)
+    with big.connect() as c:
+        found = c.execute(sa.text("SELECT COUNT(*) FROM adm.ValidationFinding")).scalar()
+    median = statistics.median(times)
+    print(f"\nTablolar arası adım, {len(ENTITIES)} tablo × {PARALLEL_ROWS:,} satır, {rules} kural: ortanca {median:.1f} sn "
+          f"({', '.join(f'{t:.1f}' for t in times)}); bulgu {found:,}")
+    assert found > 0 and median < CROSS_LIMIT_SECONDS
+    with big.begin() as c:
+        for e in ENTITIES:
+            c.execute(sa.text(f"DELETE FROM stg.[{e.table}]"))
+            c.execute(sa.text(f"DELETE FROM prc.[{e.table}]"))
 
 
 def test_parallel_jobs(big):

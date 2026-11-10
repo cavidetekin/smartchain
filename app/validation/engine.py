@@ -187,7 +187,7 @@ def run_rule(session: Session, rule: dict, run_id: int) -> None:
         _applock(session, f"validation:rule:{rule['Id']}")
     session.execute(sa.delete(FINDING).where(FINDING.c.ValidationRuleId == rule["Id"]))
     if rule["IsActive"] and rdef is not None and rdef.runs and current.current_rows(session, rule["EntityName"]):
-        missing = [r for r in rdef.reads if not current.current_rows(session, r)]
+        missing = [r for r in rdef.reads if r not in rdef.may_be_empty and not current.current_rows(session, r)]
         if missing:
             session.execute(sa.insert(FINDING).values(
                 EntityName=rule["EntityName"], StagingRowId=None, ValidationRuleId=rule["Id"], Severity=cat.INFO, FieldName=None, Value=None,

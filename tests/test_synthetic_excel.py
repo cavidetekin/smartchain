@@ -55,7 +55,7 @@ def norm(v):
 def test_one_file_per_integration_entity_with_stg_headers(written):
     ds, out, manifest = written
     files = sorted(p.name for p in out.glob("*.xlsx"))
-    assert files == sorted([f"{e}.xlsx" for e in stg_entities()] + ["MaterialReference.xlsx"]) and len(files) == 24  # benzetilen ürün: yalnız örnekler (K-137)
+    assert files == sorted([f"{e}.xlsx" for e in stg_entities()] + ["MaterialReference.xlsx", "Forecast.xlsx"]) and len(files) == 25  # yalnız örnekler (K-137, K-146)
     for entity in stg_entities():
         header, data = read(out, entity, examples=True)
         assert header == [f.name for f in contract.fields(entity, labels_of(entity))]  # şablonla aynı (K-110)
@@ -279,7 +279,7 @@ def test_other_rows_equal_clean_state(written):
     clean = to_staging(ds)
     error_rows = {}
     for e in manifest["errors"]:
-        if e.get("severity") == "hata":  # uyarılı satır (H1) yüklenir, temiz hâlde de vardır; V örnekleri read'de ayıklanır
+        if e.get("severity") == "hata":  # H1 de Hata (K-146): versiyon satırı yüklenmez; V örnekleri read'de ayıklanır
             error_rows.setdefault(e["file"].removesuffix(".xlsx"), set()).update(e["rows"])
     for entity in stg_entities():
         header, data = read(out, entity)
@@ -288,6 +288,8 @@ def test_other_rows_equal_clean_state(written):
         expected = [{k: norm(v) for k, v in r.items() if k in header} for r in clean[entity]]  # etiketsiz ek alan dosyada yok
         if entity == "Routing":
             expected = [r for r in expected if r["RouteCode"] != f"R-{d.NO_ROUTE_PART}"]
+        if entity == "ProductionVersion":
+            expected = [r for r in expected if r["MaterialCode"] != d.NO_ROUTE_PART]
         if entity in ("PurchaseOrderLine", "BOM", "Material"):  # değiştirilen satırlar temizden düşer
             dropped = {("PurchaseOrderLine", "PO-2060"), ("BOM", "ALT-012|SAT-010"), ("Material", d.ISOLATED_MATERIAL)}
             keyf = {"PurchaseOrderLine": lambda r: r["PurchaseOrderNo"],

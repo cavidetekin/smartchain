@@ -829,6 +829,68 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Birleştirme | Stok: depo + lot + durum + proje → tek satır | Anahtar sözleşmede; ERP daha ayrıntılıysa toplanır, daha kabasa alanlar boş kalır (anlamı BOŞSA kolonunda). |
 | Smartchain alanı | Resource.DailyCapacity, verim | Entegre edilmez (K-117); Smartchain ekranında tanımlanır. |
 
+### İlişki haritası (K-146)
+<sub>26. Entegrasyon tasarımı · Referans kontrolü ve kod→Id</sub>
+
+- Her ilişki alanının baktığı tablo ve anahtar. Validasyon (fonksiyon 04) referans ve pasif ebeveyn kurallarını buradan üretir; load (fonksiyon 05, 5.2) kodu `core` Id'sine bu haritayla çevirir. Kodda `app/integration/references.py`; test ikisini karşılaştırır.
+- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır load edilmez. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır load edilir, bağlantı boş yazılır. **Zorunlu (doluysa)** istisnadır: rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu olmalı, K-116), ama doluysa ve yoksa Hata, satır load edilmez: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur.
+- **PASİF EBEVEYN:** ebeveyn bulunur ama `IsActive` = Hayır ise satırdaki bulgunun sınıfı; satır load edilmez. "—": bulgu yazılmaz, load ebeveyn yokmuş gibi davranır (zorunluysa satır yüklenmez, isteğe bağlıysa bağlantı boş).
+- **Eşleşme:** ALAN ve EBEVEYN ANAHTARI aynı sırayla eşleşir. Birden çok alanlı ilişkide (bağlı sipariş satırı) ilk alan doluysa bakılır; öteki alanlar boşsa eşleşmeyi daraltmaz. Proje, müşteri, tedarikçi ve proje grubu lokasyondan bağımsızdır; birim dönüşümünün malzemesi herhangi bir lokasyonda bulunursa yeter (K-112).
+- **Ortak ve dışarıda:** `LocationCode` → Lokasyon (`Code`) her tabloda zorunludur (`ALL.REF_LOCATION`), tabloda ayrıca yazılmaz. Birim alanları (`BaseUom`, `FromUom`, `ToUom`, `ComponentUom`, `Uom`, `CapacityUnit`) referans kontrolüne girmez (K-112); dönüşümü `ALL.UOM_CONVERSION` denetler.
+
+| TABLO | ALAN | EBEVEYN | EBEVEYN ANAHTARI | İLİŞKİ | PASİF EBEVEYN | KOD |
+|---|---|---|---|---|---|---|
+| UomConversion | MaterialCode | Material | Code | İsteğe bağlı | — | UOM.REF_MATERIAL |
+| ProductionVersion | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Bilgi | PV.REF_MATERIAL |
+| ProductionVersion | LocationCode + BOMCode + MaterialCode | BOM | LocationCode + Code + MaterialCode | Zorunlu | — | PV.REF_BOM |
+| ProductionVersion | LocationCode + RouteCode | Routing | LocationCode + RouteCode | Zorunlu | — | PV.REF_ROUTE |
+| BOM | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | BOM.REF_MATERIAL |
+| BOM | LocationCode + ComponentMaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | BOM.REF_COMPONENT |
+| Routing | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu (doluysa) | Uyarı | RTG.REF_RESOURCE |
+| Routing | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu (doluysa) | — | RTG.REF_RESOURCE_GROUP |
+| MaterialReference | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | REF.REF_MATERIAL |
+| MaterialReference | LocationCode + ReferenceMaterialCode | Material | LocationCode + Code | Zorunlu | — | REF.REF_REFERENCE_MATERIAL |
+| MaterialReference | LocationCode + ReferenceProductionVersionCode + ReferenceMaterialCode | ProductionVersion | LocationCode + Code + MaterialCode | İsteğe bağlı | — | REF.REF_REFERENCE_VERSION |
+| Resource | SubcontractorCode | Supplier | Code | İsteğe bağlı | — | RES.REF_SUBCONTRACTOR |
+| ResourceGroupAssignment | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu | — | RGA.REF_RESOURCE_GROUP |
+| ResourceGroupAssignment | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu | — | RGA.REF_RESOURCE |
+| EmployeeAbsence | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu | — | ABS.REF_RESOURCE |
+| MaterialSupplier | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | MS.REF_MATERIAL |
+| MaterialSupplier | SupplierCode | Supplier | Code | Zorunlu | Uyarı | MS.REF_SUPPLIER |
+| Project | ProjectGroupCode | ProjectGroup | Code | İsteğe bağlı | — | PRJ.REF_PROJECT_GROUP |
+| SalesOrderLine | CustomerCode | Customer | Code | Zorunlu | Uyarı | SO.REF_CUSTOMER |
+| SalesOrderLine | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | SO.REF_MATERIAL |
+| SalesOrderLine | ProjectCode | Project | Code | İsteğe bağlı | — | SO.REF_PROJECT |
+| Forecast | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | FC.REF_MATERIAL |
+| Forecast | CustomerCode | Customer | Code | İsteğe bağlı | — | FC.REF_CUSTOMER |
+| Forecast | ProjectCode | Project | Code | İsteğe bağlı | — | FC.REF_PROJECT |
+| Stock | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Bilgi | STK.REF_MATERIAL |
+| Stock | ProjectCode | Project | Code | İsteğe bağlı | — | STK.REF_PROJECT |
+| Stock | CustomerCode | Customer | Code | İsteğe bağlı | — | STK.REF_CUSTOMER |
+| Stock | LocationCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | SalesOrderLine | LocationCode + OrderNo + LineNo + LineItemNo | İsteğe bağlı | — | STK.REF_SALES_ORDER |
+| BorrowPayback | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | BP.REF_MATERIAL |
+| BorrowPayback | LendingProjectCode | Project | Code | Zorunlu | — | BP.REF_LENDING_PROJECT |
+| BorrowPayback | BorrowingProjectCode | Project | Code | Zorunlu | — | BP.REF_BORROWING_PROJECT |
+| WorkOrder | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | WO.REF_MATERIAL |
+| WorkOrder | LocationCode + ProductionVersionCode + MaterialCode | ProductionVersion | LocationCode + Code + MaterialCode | İsteğe bağlı | — | WO.REF_VERSION |
+| WorkOrder | ProjectCode | Project | Code | İsteğe bağlı | — | WO.REF_PROJECT |
+| WorkOrder | CustomerCode | Customer | Code | İsteğe bağlı | — | WO.REF_CUSTOMER |
+| WorkOrder | LocationCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | SalesOrderLine | LocationCode + OrderNo + LineNo + LineItemNo | İsteğe bağlı | — | WO.REF_SALES_ORDER |
+| WorkOrder | LocationCode + ParentWorkOrderNo | WorkOrder | LocationCode + WorkOrderNo | İsteğe bağlı | — | WO.REF_PARENT_WORK_ORDER |
+| WorkOrderComponent | LocationCode + WorkOrderNo | WorkOrder | LocationCode + WorkOrderNo | Zorunlu | — | WOC.REF_WORK_ORDER |
+| WorkOrderComponent | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | WOC.REF_MATERIAL |
+| WorkOrderOperation | LocationCode + WorkOrderNo | WorkOrder | LocationCode + WorkOrderNo | Zorunlu | — | WOO.REF_WORK_ORDER |
+| WorkOrderOperation | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu (doluysa) | — | WOO.REF_RESOURCE |
+| WorkOrderOperation | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu (doluysa) | — | WOO.REF_RESOURCE_GROUP |
+| PurchaseOrderLine | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | PO.REF_MATERIAL |
+| PurchaseOrderLine | SupplierCode | Supplier | Code | İsteğe bağlı | Uyarı | PO.REF_SUPPLIER |
+| PurchaseOrderLine | ProjectCode | Project | Code | İsteğe bağlı | — | PO.REF_PROJECT |
+| PurchaseOrderLine | CustomerCode | Customer | Code | İsteğe bağlı | — | PO.REF_CUSTOMER |
+| PurchaseOrderLine | LocationCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | SalesOrderLine | LocationCode + OrderNo + LineNo + LineItemNo | İsteğe bağlı | — | PO.REF_SALES_ORDER |
+| PurchaseOrderLine | LocationCode + WorkOrderNo | WorkOrder | LocationCode + WorkOrderNo | İsteğe bağlı | — | PO.REF_WORK_ORDER |
+| ProductionConfirmation | LocationCode + WorkOrderNo | WorkOrder | LocationCode + WorkOrderNo | Zorunlu | — | PC.REF_WORK_ORDER |
+| ProductionConfirmation | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | PC.REF_MATERIAL |
+
 ### Hangi veri nerede master
 <sub>26. Entegrasyon tasarımı · Veri sahipliği</sub>
 
@@ -864,7 +926,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|
 | Bağlantı | API ulaşılamıyor, SQL kimlik hatası, zaman aşımı | 3 deneme artan aralıkla; sonra varlık 'hata', önceki ham veri korunur; diğer varlıklar devam | Veri yükleme ekranı, Entegrasyon 'son çağrı', Sistem sağlığı |
 | Varlık | Şema uyumsuzluğu, eşlenmemiş alan, hata eşiği aşımı (tablo başına, varsayılansız, K-135) | Varlık yüklenmez, önceki versiyonun satırları taşınır (kısmi); ana sayfada kırmızı | Veri yükleme, Entegrasyon 'eşlenmemiş alan', Ana sayfa |
-| Satır | Zorunlu alan boş, referans yok, negatif süre, döngü | Ön kontrolde satır atlanır; validasyonda Hata bulunan satır load edilmez; bulgu listesine yazılır; eşik altındaysa varlık yüklenir | Doğrulama detayı, hata raporu (xlsx) |
+| Satır | Zorunlu alan boş, zorunlu referans yok, negatif süre, döngü | Ön kontrolde satır atlanır; validasyonda Hata bulunan satır load edilmez; bulgu listesine yazılır; eşik altındaysa varlık yüklenir. İsteğe bağlı bağlantı yoksa Uyarı, satır yüklenir, bağlantı boş (K-146) | Doğrulama detayı, hata raporu (xlsx) |
 | Alan | Boş malzeme seviyesi, boş tedarik türü | Veri kuralıyla tamamlanır; dolmazsa BOŞSA kolonu geçerlidir: "hata (kurallardan sonra)" ise satır Hata, değilse alan boş kalır (K-138) | Doğrulama, Veri kalitesi, Ana veri (kaynak etiketi) |
 | Yükleme | Veritabanı hatası, süre aşımı (30 dk) | Ya hep ya hiç: geri alınır, önceki versiyon geçerli; parti yeniden kullanılabilir | Veri yükleme, Sistem sağlığı, destek paketi |
 | Sessiz hata | Satır sayısı dünden %30 az, sipariş sayısı sıfır | Tutarlılık uyarısı: yükleme durmaz ama 'şüpheli parti' etiketi, ana sayfada (öneri) | Ana sayfa, Veri yükleme |
