@@ -82,10 +82,10 @@ _NAMES = """
 02 Excel şablonu indirme
 03 Excel ile yükleme
 04 Validasyon
-05 Tam yükleme
-06 Kısmi yükleme
+05 Tam aktarım
+06 Kısmi aktarım
 07 Veri versiyonlama
-08 Yükleme geçmişi
+08 Aktarım geçmişi
 09 Ham veri temizliği
 10 Ana veri görüntüleme
 11 Değerin kaynağını gösterme

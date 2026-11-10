@@ -33,12 +33,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yalnız okuma (Faz 1):** Smartchain ERP'den okur, ERP'ye yazmaz. Plan çıktıları Excel listesi olarak çıkar ve ERP'ye elle girilir. Geri yazma Faz 2 (API).
 - **Yöntemler (K-130):** Faz 1'de SQL view ve Excel; API Faz 2 (11.5). Çekim yöntemi tablo başına tektir, müşteriye göre seçilir, karışık kurulum normaldir (ör. siparişler SQL, kaynaklar Excel). Excel'den yükleme yöntemden bağımsız her zaman açıktır; partide yöntem kayıtlı kalır, yükleme en yeni partiyi alır (5.2).
 - **Ham veri önce, dönüşüm sonra:** Gelen veri önce olduğu gibi ham tablolara (Staging) yazılır; doğrulama ve dönüşüm sonra. Sorunlu yükleme geriye dönük incelenebilir, ham veri 1 hafta saklanır.
-- **Staging iki katman (K-140):** Ham katman (`stg.<Tablo>`) gelen veridir, hiç değişmez. İşlenmiş katman (`prc.<Tablo>`) ham katmanın güncel satırlarının kopyasıdır; her çalıştırmada ham veriden baştan kurulur, veri kuralları sırayla bu kopyada çalışır (K-141). Formül birikmez, kapatılan kuralın etkisi kendiliğinden kalkar. Validasyon ve load yalnız işlenmiş katmanı okur; hangi hücreyi hangi kuralın değiştirdiği kural izinde (`adm.DataRuleEffect`) tutulur.
-- **Staging'in güncel hâli (K-133):** Her `stg` tablosu, ham partilerin yanında tablonun güncel ve tam hâlini taşır (`IsCurrent`). Tam parti güncel hâlin yerine geçer (partide olmayan kayıt silinmiş sayılır); Ekle / güncelle aynı anahtarlı kaydı değiştirir, ötekiler kalır; SQL çekimi her zaman Tam'dır. Ön kontrolde düşen satır güncel hâle girmez, o anahtarın önceki güncel satırı kalır. Güncel hâl ham katmana aittir; rules, validasyon ve load onun işlenmiş kopyasını okur (K-140); core'a bakılmaz. Ham veri temizliği güncel satırı silmez.
+- **Staging iki katman (K-140):** Ham katman (`stg.<Tablo>`) gelen veridir, hiç değişmez. İşlenmiş katman (`prc.<Tablo>`) ham katmanın güncel satırlarının kopyasıdır; her çalıştırmada ham veriden baştan kurulur, veri kuralları sırayla bu kopyada çalışır (K-141). Formül birikmez, kapatılan kuralın etkisi kendiliğinden kalkar. Validasyon ve aktarım yalnız işlenmiş katmanı okur; hangi hücreyi hangi kuralın değiştirdiği kural izinde (`adm.DataRuleEffect`) tutulur.
+- **Staging'in güncel hâli (K-133):** Her `stg` tablosu, ham partilerin yanında tablonun güncel ve tam hâlini taşır (`IsCurrent`). Tam parti güncel hâlin yerine geçer (partide olmayan kayıt silinmiş sayılır); Ekle / güncelle aynı anahtarlı kaydı değiştirir, ötekiler kalır; SQL çekimi her zaman Tam'dır. Ön kontrolde düşen satır güncel hâle girmez, o anahtarın önceki güncel satırı kalır. Güncel hâl ham katmana aittir; rules, validasyon ve aktarım onun işlenmiş kopyasını okur (K-140); core'a bakılmaz. Ham veri temizliği güncel satırı silmez.
 - **Ham değer kurala girdidir (K-121):** ERP'den gelen ham değerler (Status, Type gibi) yalnız veri kurallarına girdidir; motor ve ekranlar bayrakları okur (IsActive, IsOnHold, IsReleased…). Bayraklar kurallarla ham değerden doldurulur. Ham değer ile bayrak çelişirse bayrak geçerlidir. Bütün tablolar için geçerlidir.
 - **ERP ana veri sahibidir:** Ana veri ve işlem verisinde ERP master'dır. Smartchain'e özgü alanlar (verim, kritik kaynak, parametreler) Smartchain'de tutulur; ERP'de yoksa kural ya da elle değerle tamamlanır.
 - **Hata izole edilir:** Bir varlığın hatası diğerlerini durdurmaz; satır hatası satırı atlatır, eşik aşımı varlığı dışarıda bırakır. Gece akışı bu kurallarla kendi kendine ilerler.
-- **Versiyonlu ve ya hep ya hiç:** Her yükleme yeni veri versiyonu açar; ortada kalan yükleme geri alınır. Açık çalışmalar kendi versiyonunda kalır.
+- **Versiyonlu ve ya hep ya hiç:** Her aktarım yeni veri versiyonu açar; ortada kalan aktarım geri alınır. Açık çalışmalar kendi versiyonunda kalır.
 - **İzlenebilir:** Her çağrı, parti, satır sayısı ve hata loglanır; Entegrasyon ekranında 'son çağrı', Sistem sağlığında süreler. Müşteriyle konuşma dili: varlık, parti numarası, hata sınıfı.
 - **Kapalı ağ:** Entegrasyon müşteri ağı içinde kalır: ham tablolar Smartchain'in SQL Server instance'ında ayrı veritabanında, API ERP sunucusuna (Faz 2). İnternet yok, servis hesapları salt okunur.
 
@@ -67,10 +67,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - View_* okur, her zaman tam
   - Önce sinyal ve uyum denetimi
   - Eşleme yok: kolon adı = sözleşme
-- **Veri kuralları → validasyon → yükleme**
+- **Veri kuralları → validasyon → aktarım**
   - Veri kuralları işlenmiş katmanda (K-140, K-141)
   - Yapısal, referans, mantıksal, tutarlılık
-  - Alan önceliği: ERP / kural / elle (varsayılan yok, K-138; elle değerin korunması yüklemede)
+  - Alan önceliği: ERP / kural / elle (varsayılan yok, K-138; elle değerin korunması aktarımda, 6.2)
   - Türetilmiş alanlar (LLC)
   - Veri versiyonu (tam / kısmi)
 - **Çıkış (Faz 1: Excel)**
@@ -131,7 +131,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>26. Entegrasyon tasarımı · Veri sözleşmesi · Geliştirme 3.1 (K-110)</sub>
 
 - Şablonu ve ekran 02'yi besler; sıra referans verisinden işlem verisine. Kod bu tablodan üretilir (`python db/generate.py`, K-64). Sürüm, sözleşme değişince burada artar: alan, tip, anahtar, değer listesi ya da ön kontrolde zorunluluk; BOŞSA'nın anlam metni sürüm artırmaz, şablonun Açıklama sayfası yeni metni gösterir (K-138). Transfer (TransferOrder) çok lokasyonda geldiği için `stg` tablosu ve şablonu yoktur (Faz 2).
-- **Entegrasyon tablolarının kolonları:** ZOR. E ise kolon dosyada ya da view'da bulunmak zorundadır. KAYNAK değerin nereden geldiğini yazar (ERP, kural, elle; varsayılan yoktur, K-138). BOŞSA, kurallardan sonra alan boş kalırsa ne olacağını yazar: **hata (satır atlanır)** ön kontrolde satır ham veriye alınmaz; **hata (kurallardan sonra)** alan veri kuralıyla dolabilir, dolmazsa validasyonda Hata, satır load edilmez; **tedarik süresi doluysa hata (kurallardan sonra)** yalnız FixedLeadTimeDays ya da VariableLeadTimeDays doluyken (MS.NO_BASIS); **yok** özellik ya da miktar yoktur (fire yok, bayrak taşımıyor); **sınırsız** sınır yoktur; **bilinmiyor** bilgi yoktur, motor ve raporlar kullanmaz; **temel birim** miktar malzemenin (bileşende bileşenin) temel birimindedir (K-112); **alternatif X** X de boşsa satır atlanır; alana özgü anlamlar (tam gün, ilk operasyon, motor seçer, gruptan, müşteriden, bütün malzemeler) satırında yazar.
+- **Entegrasyon tablolarının kolonları:** ZOR. E ise kolon dosyada ya da view'da bulunmak zorundadır. KAYNAK değerin nereden geldiğini yazar (ERP, kural, elle; varsayılan yoktur, K-138). BOŞSA, kurallardan sonra alan boş kalırsa ne olacağını yazar: **hata (satır atlanır)** ön kontrolde satır ham veriye alınmaz; **hata (kurallardan sonra)** alan veri kuralıyla dolabilir, dolmazsa validasyonda Hata, satır aktarılmaz; **tedarik süresi doluysa hata (kurallardan sonra)** yalnız FixedLeadTimeDays ya da VariableLeadTimeDays doluyken (MS.NO_BASIS); **yok** özellik ya da miktar yoktur (fire yok, bayrak taşımıyor); **sınırsız** sınır yoktur; **bilinmiyor** bilgi yoktur, motor ve raporlar kullanmaz; **temel birim** miktar malzemenin (bileşende bileşenin) temel birimindedir (K-112); **alternatif X** X de boşsa satır atlanır; alana özgü anlamlar (tam gün, ilk operasyon, motor seçer, gruptan, müşteriden, bütün malzemeler) satırında yazar.
 
 | VARLIK | AD | SINIF | AÇIKLAMA | DOSYA ADI | SÜRÜM |
 |---|---|---|---|---|---|
@@ -791,7 +791,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### View ile veri kuralı sınırı (K-130)
 <sub>26. Entegrasyon tasarımı · View ve kural sınırı</sub>
 
-- **Ölçüt:** Smartchain'in hiçbir zaman görmemesi gereken satır (başka şirket, test kaydı) view'da elenir; bugün dışarıda kalıp yarın girebilecek satır (pasif malzeme, kapalı sipariş) bir veri kuralıyla `IsActive` = Hayır olur (K-145; ayrı aktarım filtresi yok). Pasif satır validasyona girmez, load almaz.
+- **Ölçüt:** Smartchain'in hiçbir zaman görmemesi gereken satır (başka şirket, test kaydı) view'da elenir; bugün dışarıda kalıp yarın girebilecek satır (pasif malzeme, kapalı sipariş) bir veri kuralıyla `IsActive` = Hayır olur (K-145; ayrı aktarım filtresi yok). Pasif satır validasyona girmez, aktarıma girmez.
 
 | NEREDE | NE | ÖRNEK |
 |---|---|---|
@@ -832,9 +832,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### İlişki haritası (K-146)
 <sub>26. Entegrasyon tasarımı · Referans kontrolü ve kod→Id</sub>
 
-- Her ilişki alanının baktığı tablo ve anahtar. Validasyon (fonksiyon 04) referans ve pasif ebeveyn kurallarını buradan üretir; load (fonksiyon 05, 5.2) kodu `core` Id'sine bu haritayla çevirir. Kodda `app/integration/references.py`; test ikisini karşılaştırır.
-- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır load edilmez. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır load edilir, bağlantı boş yazılır. **Zorunlu (doluysa)** istisnadır: rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu olmalı, K-116), ama doluysa ve yoksa Hata, satır load edilmez: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur.
-- **PASİF EBEVEYN:** ebeveyn bulunur ama `IsActive` = Hayır ise satırdaki bulgunun sınıfı; satır load edilmez. "—": bulgu yazılmaz, load ebeveyn yokmuş gibi davranır (zorunluysa satır yüklenmez, isteğe bağlıysa bağlantı boş).
+- Her ilişki alanının baktığı tablo ve anahtar. Validasyon (fonksiyon 04) referans ve pasif ebeveyn kurallarını buradan üretir; aktarım (fonksiyon 05, 5.2) kodu `core` Id'sine bu haritayla çevirir. Kodda `app/integration/references.py`; test ikisini karşılaştırır.
+- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. **Zorunlu (doluysa)** istisnadır: rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu olmalı, K-116), ama doluysa ve yoksa Hata, satır aktarılmaz: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur.
+- **PASİF EBEVEYN:** ebeveyn bulunur ama `IsActive` = Hayır ise satırdaki bulgunun sınıfı; satır aktarılmaz. "—": bulgu yazılmaz, aktarım ebeveyn yokmuş gibi davranır (zorunluysa satır aktarılmaz, isteğe bağlıysa bağlantı boş).
 - **Eşleşme:** ALAN ve EBEVEYN ANAHTARI aynı sırayla eşleşir. Birden çok alanlı ilişkide (bağlı sipariş satırı) ilk alan doluysa bakılır; öteki alanlar boşsa eşleşmeyi daraltmaz. Proje, müşteri, tedarikçi ve proje grubu lokasyondan bağımsızdır; birim dönüşümünün malzemesi herhangi bir lokasyonda bulunursa yeter (K-112).
 - **Ortak ve dışarıda:** `LocationCode` → Lokasyon (`Code`) her tabloda zorunludur (`ALL.REF_LOCATION`), tabloda ayrıca yazılmaz. Birim alanları (`BaseUom`, `FromUom`, `ToUom`, `ComponentUom`, `Uom`, `CapacityUnit`) referans kontrolüne girmez (K-112); dönüşümü `ALL.UOM_CONVERSION` denetler.
 
@@ -894,15 +894,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Hangi veri nerede master
 <sub>26. Entegrasyon tasarımı · Veri sahipliği</sub>
 
-- Çift yönlü senkron yok. Her alanın tek bir sahibi var; sahibi dışındaki yerde yapılan değişiklik bir sonraki yüklemede alan ayarına göre ezilir ya da korunur.
+- Çift yönlü senkron yok. Her alanın tek bir sahibi var; sahibi dışındaki yerde yapılan değişiklik bir sonraki aktarımda alan ayarına göre ezilir ya da korunur.
 
 | VERI | MASTER | SMARTCHAIN'DE | ÇAKIŞMA KURALI |
 |---|---|---|---|
 | Ana veri (malzeme, ağaç, rota, tedarikçi, müşteri, proje) | ERP | Salt okunur; elle değer alan bazında | ERP ezer; elle değer alan ayarına göre kalır (FieldDefinition.ManualOverrides) |
 | Kaynak temel bilgisi (kod, ad, grup) | ERP ya da Excel | Salt okunur | Kaynağa göre |
-| Kaynak planlama alanları (günlük kapasite, paralel adet, kapasite kaynağı, verim, hedef doluluk, fason parametreleri) | Smartchain | Ekranda tanımlanır, entegre edilmez (K-117) | Yüklemede ezilmez |
+| Kaynak planlama alanları (günlük kapasite, paralel adet, kapasite kaynağı, verim, hedef doluluk, fason parametreleri) | Smartchain | Ekranda tanımlanır, entegre edilmez (K-117) | Aktarımda ezilmez |
 | Takvim, vardiya, duruş | Smartchain (K-65) | Ekrandan girilir | Smartchain değeri kalır |
-| Siparişler, stok, iş emirleri, gerçekleşmeler | ERP | Salt okunur | Her yüklemede ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
+| Siparişler, stok, iş emirleri, gerçekleşmeler | ERP | Salt okunur | Her aktarımda ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
 | Tahmin | ERP ya da Excel | Excel ile yüklenir | Son yükleme geçerli; versiyonlu |
 | Parametreler, senaryo tanımları, kurallar, elle değerler | Smartchain | Ekrandan | ERP'ye gitmez |
 | Plan çıktıları (planlı sipariş, öneri) | Smartchain | Onaylı plan | Faz 1: Excel ile ERP'ye elle; Faz 2: API geri yazma, ERP belge no geri okunur |
@@ -910,12 +910,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Senkron sıklığı ve zamanlama
 <sub>26. Entegrasyon tasarımı · Senkron sıklığı</sub>
 
-- **Gece tam çekim · 22:00:** Tüm ERP varlıkları tam çekim, doğrulama, tam yükleme (v+1), ardından senaryolar. Bitiş sınırı 06:00. Excel varlıkları son yüklenen haliyle kalır.
-- **Gün içi kısmi · elle ya da zamanlanmış:** İşlem verisi grupları (Talep, Stok, Üretim, Satın alma, İzin) Key user tarafından ya da System owner'ın kurulumda tanımladığı ikinci bir akışla (ör. öğlen Talep ve Stok) kısmi yüklenir; ana veri yalnız tam yüklemede gelir (K-150). Hedef 5 dk altı.
+- **Gece tam çekim · 22:00:** Tüm ERP varlıkları tam çekim, doğrulama, tam aktarım (v+1), ardından senaryolar. Bitiş sınırı 06:00. Excel varlıkları son yüklenen haliyle kalır.
+- **Gün içi kısmi · elle ya da zamanlanmış:** İşlem verisi grupları (Talep, Stok, Üretim, Satın alma, İzin) Key user tarafından ya da System owner'ın kurulumda tanımladığı ikinci bir akışla (ör. öğlen Talep ve Stok) kısmi aktarılır; ana veri yalnız tam aktarımda gelir (K-150). Hedef 5 dk altı.
 - **Haftalık ve elle:** Tahmin ve kaynak: haftalık ya da değişince Excel ile; takvim ve vardiya ekrandan (K-65). Ham veri temizliği Pazar 03:00.
 - **Artımlı çekim:** SQL her zaman tam okur (K-130). API'de (Faz 2) LastModified varsa yalnız değişenler; silinenler için tam liste gerekir (A-23). Artımlı destek yoksa tam çekim (varsayılan).
 - **Zamanlama ayarı:** Saatler ve paralellik Entegrasyon ekranında (Admin); bitiş sınırı ve işçi sayısı System owner ayarı. Müşterinin ERP gece işleriyle çakışmaması için saat devreye almada belirlenir.
-- **Çakışma yönetimi:** Gece akışı sırasında elle çekim kapalı; gün içi kısmi yükleme sırasında ikinci yükleme kuyrukta bekler. Yükleme açık çalışmaları etkilemez.
+- **Çakışma yönetimi:** Gece akışı sırasında elle çekim kapalı; gün içi kısmi aktarım sırasında ikinci aktarım kuyrukta bekler. Aktarım açık çalışmaları etkilemez.
 
 ### Hata yönetimi
 <sub>26. Entegrasyon tasarımı · Hata yönetimi</sub>
@@ -925,11 +925,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | DÜZEY | ÖRNEK | DAVRANIŞ | NEREDE GÖRÜNÜR |
 |---|---|---|---|
 | Bağlantı | API ulaşılamıyor, SQL kimlik hatası, zaman aşımı | 3 deneme artan aralıkla; sonra varlık 'hata', önceki ham veri korunur; diğer varlıklar devam | Veri yükleme ekranı, Entegrasyon 'son çağrı', Sistem sağlığı |
-| Varlık | Şema uyumsuzluğu, eşlenmemiş alan, hata eşiği aşımı (tablo başına, varsayılansız, K-135) | Varlık yüklenmez, önceki versiyonun satırları taşınır (kısmi); ana sayfada kırmızı | Veri yükleme, Entegrasyon 'eşlenmemiş alan', Ana sayfa |
-| Satır | Zorunlu alan boş, zorunlu referans yok, negatif süre, döngü | Ön kontrolde satır atlanır; validasyonda Hata bulunan satır load edilmez; bulgu listesine yazılır; eşik altındaysa varlık yüklenir. İsteğe bağlı bağlantı yoksa Uyarı, satır yüklenir, bağlantı boş (K-146) | Doğrulama detayı, hata raporu (xlsx) |
+| Varlık | Şema uyumsuzluğu, eşlenmemiş alan, hata eşiği aşımı (tablo başına, varsayılansız, K-135) | Varlık aktarılmaz, önceki versiyonun satırları taşınır; ana sayfada kırmızı | Veri yükleme, Entegrasyon 'eşlenmemiş alan', Ana sayfa |
+| Satır | Zorunlu alan boş, zorunlu referans yok, negatif süre, döngü | Ön kontrolde satır atlanır; validasyonda Hata bulunan satır aktarılmaz; bulgu listesine yazılır; eşik altındaysa varlık aktarılır. İsteğe bağlı bağlantı yoksa Uyarı, satır yüklenir, bağlantı boş (K-146) | Doğrulama detayı, hata raporu (xlsx) |
 | Alan | Boş malzeme seviyesi, boş tedarik türü | Veri kuralıyla tamamlanır; dolmazsa BOŞSA kolonu geçerlidir: "hata (kurallardan sonra)" ise satır Hata, değilse alan boş kalır (K-138) | Doğrulama, Veri kalitesi, Ana veri (kaynak etiketi) |
-| Yükleme | Veritabanı hatası, süre aşımı (30 dk) | Ya hep ya hiç: geri alınır, önceki versiyon geçerli; parti yeniden kullanılabilir | Veri yükleme, Sistem sağlığı, destek paketi |
-| Sessiz hata | Satır sayısı dünden %30 az, sipariş sayısı sıfır | Tutarlılık uyarısı: yükleme durmaz ama 'şüpheli parti' etiketi, ana sayfada (öneri) | Ana sayfa, Veri yükleme |
+| Aktarım | Veritabanı hatası, süre aşımı (30 dk) | Ya hep ya hiç: geri alınır, önceki versiyon geçerli; parti yeniden kullanılabilir | Veri yükleme, Sistem sağlığı, destek paketi |
+| Sessiz hata | Satır sayısı dünden %30 az, sipariş sayısı sıfır | Tutarlılık uyarısı: aktarım durmaz ama 'şüpheli parti' etiketi, ana sayfada (öneri) | Ana sayfa, Veri yükleme |
 
 ### Smartchain'den ERP'ye · Faz 1 Excel, Faz 2 API
 <sub>26. Entegrasyon tasarımı · Smartchain'den ERP'ye</sub>
@@ -955,7 +955,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **1 · Keşif:** ERP ve sürüm, servis var mı, veritabanı erişimi, hangi varlık nerede tutuluyor, hangi alanlar boş. Çıktı: yöntem kararı varlık başına.
 - **2 · View'lar:** Tablo başına view, uyum denetimi ve önizleme; değer listeleri için veri kuralları; Smartchain'e özgü alanlar için kural taslakları. Çıktı: entegrasyon tanımı ve şablonlar.
 - **3 · Test çekimi:** Her varlık için örnek çekim (ilk 200 satır), doğrulama raporu, eşlenmemiş alan ve hata listesi. Çıktı: düzeltme listesi (müşteri BT + biz).
-- **4 · Tam yükleme ve kalite:** İlk tam yükleme, veri kalitesi raporu, kurallarla tamamlama; sentetik yerine gerçek veriyle ilk plan. Çıktı: v1 veri versiyonu.
+- **4 · Tam aktarım ve kalite:** İlk tam aktarım, veri kalitesi raporu, kurallarla tamamlama; sentetik yerine gerçek veriyle ilk plan. Çıktı: v1 veri versiyonu.
 - **5 · Paralel çalışma:** 2–4 hafta gece akışı; ana sayfa ve dünden bugüne ile izleme; ERP'ye Excel listesiyle giriş denemesi. Çıktı: hata eşiği ve zamanlama kararı.
 - **6 · Canlı:** Onaylı plan yayını; aksiyon listesi ile ERP girişi; destek paketi ve geri bildirim düzeni.
 

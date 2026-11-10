@@ -37,7 +37,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### VERI
 
-- **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi yükleme, yükleme geçmişi.
+- **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, aktarım geçmişi.
 - **03 · Ana veri ekranları:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya… Her değerin kaynağı (ERP, kural, elle) görünür; elle düzeltme yapılır.
 - **04 · Veri kuralları:** Tablo başına sıralı veri kuralları; kural penceresi (koşul, sonuç, seçenek), sıra, aç / kapa, kuralları yeniden uygula (K-141, K-142).
 - **27 · Validasyon kuralları:** Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu: yapısal kontroller, hazır kurallar, kullanıcı kuralları; tablo başına hata eşiği (K-136).
@@ -97,10 +97,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02 · Excel şablonu indirme:** Her varlık için veri sözleşmesine uygun boş şablon.
 - **03 · Excel ile yükleme:** Kullanıcı şablonu doldurup yükler.
 - **04 · Validasyon:** Zorunlu alan, tip, birim, referans (olmayan kaynak ya da malzeme), ağaç döngüsü, negatif değer; staging'in güncel hâli üzerinde, otomatik zincirle (K-133, K-134).
-- **05 · Tam yükleme:** Tüm varlıklar yeni veri versiyonu olarak yüklenir.
-- **06 · Kısmi yükleme:** Seçilen varlıklar yüklenir; hatalı varlıkta önceki versiyon kullanılmaya devam eder.
-- **07 · Veri versiyonlama:** Her yükleme bir veri versiyonu açar (VersionFrom / VersionTo).
-- **08 · Yükleme geçmişi:** Kim, ne zaman, hangi varlıkları yükledi; sonuç ne oldu.
+- **05 · Tam aktarım:** Ana veri ve işlem verisinin hepsi yeni veri versiyonu olarak aktarılır (K-149).
+- **06 · Kısmi aktarım:** Seçilen işlem verisi grupları aktarılır; ana veri ve seçilmeyen gruplar önceki versiyonda kalır (K-150).
+- **07 · Veri versiyonlama:** Her aktarım bir veri versiyonu açar (VersionFrom / VersionTo).
+- **08 · Aktarım geçmişi:** Kim, ne zaman, hangi varlıkları yükledi; sonuç ne oldu.
 - **09 · Ham veri temizliği:** Ham veri 1 hafta sonra otomatik silinir.
 
 #### ANA VERI VE VERI KURALLARI
@@ -120,7 +120,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **16 · Veri kuralı tanımlama:** EĞER … O HALDE … kalıbıyla kural yazılır.
 - **17 · Kural önizleme:** Kaydetmeden önce hangi kayıtların nasıl değişeceği görülür.
 - **18 · Kural sıralama ve aç / kapa:** Kurallar sırayla uygulanır; tek tek devre dışı bırakılabilir.
-- **19 · Kural uygulama:** Her yüklemede otomatik çalışır; elle de tetiklenebilir.
+- **19 · Kural uygulama:** Her parti staging'e alınınca (çekim ya da Excel yükleme) otomatik çalışır; elle de tetiklenebilir (K-142).
 - **20 · Veri kalitesi kontrolü:** Ana veri ve işlem verisi uyarıları önem sırasıyla üretilir.
 - **21 · Kalite düzeltme aksiyonu:** Satırdan düzeltme ekranına gidilir ya da önerilen kural uygulanır.
 - **99 · Malzeme blokajı:** Malzemenin üretimi, satın alması ya da satışı belli bir dönem için durdurulur.
@@ -163,7 +163,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### SENARYO VE ÇALIŞMA
 
-- **40 · Gece akışı:** Veri çekme, doğrulama, yükleme ve senaryolar sırayla ya da paralel çalışır.
+- **40 · Gece akışı:** Veri çekme, doğrulama, aktarım ve senaryolar sırayla ya da paralel çalışır.
 - **41 · Senaryoyu yeniden çalıştırma:** Hata veren ya da süre aşan senaryo gündüz yeniden başlatılır. (öneri)
 - **42 · Senaryo karşılaştırma:** Metrikler yan yana; en iyi değer işaretlenir.
 - **43 · Çalışma açma:** Bir gece senaryosundan çalışma açılır.
@@ -268,14 +268,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Veri yükleme](mockups/m24e-0311-veri-yukleme.png)
 
-- **Önce doğrula:** Her varlık için yeni, değişen, silinen ve hatalı kayıt sayısı yüklemeden önce görünür.
-- **Kısmi yükleme:** Hatalı varlık seçilmeden diğerleri yüklenir; yeni veri versiyonu oluşur.
+- **Önce doğrula:** Her varlık için yeni, değişen, silinen ve hatalı kayıt sayısı aktarımdan önce görünür.
+- **Kısmi aktarım:** Hatalı varlık seçilmeden diğerleri aktarılır; yeni veri versiyonu oluşur.
 - **Hata detayı:** Hatalı satır ve nedeni sağda; düzeltme kaynakta ya da elle yapılır.
-- **Geçmiş:** Gece ve elle yüklemeler kullanıcı ve sonuçla birlikte saklanır.
-- **Aşama 5 (K-150, K-151):** her tablo için staging özeti: toplam satır, hatalı, uyarılı, bilgi (5.5). Kısmi yükleme işlem verisi grubu seçimiyle (Talep, Stok, Üretim, Satın alma, İzin); ana veri yalnız tam yüklemede gelir (yukarıdaki "hatalı varlık seçilmeden diğerleri yüklenir" maddesinin yerine geçer). Yükleme raporu tablo başına özet sayılar (yeni, değişen, kapatılan, load edilmeyen).
+- **Geçmiş:** Gece ve elle aktarımlar kullanıcı ve sonuçla birlikte saklanır.
+- **Aşama 5 (K-150, K-151):** her tablo için staging özeti: toplam satır, hatalı, uyarılı, bilgi (5.5). Kısmi aktarım işlem verisi grubu seçimiyle (Talep, Stok, Üretim, Satın alma, İzin); ana veri yalnız tam aktarımda gelir (yukarıdaki "hatalı varlık seçilmeden diğerleri yüklenir" maddesinin yerine geçer). Aktarım raporu tablo başına özet sayılar (yeni, değişen, kapatılan, aktarılmayan).
 - **Uygulama (3.1, K-110):** iskelet: 25 tablo ortak tabloda, satır menüsünde şablon indirme ve şablon bilgisi. Yöntem 3.3'te; sayılar, üst düğmeler, sağ paneller 5.5'te.
 - **Uygulama (3.2, K-129):** satır menüsünde "Excel'den yükle" açılır: Dosya ve Ön kontrol adımları (3.4'te doğrulama adımı kalktı, arka planda çalışır). "Son yükleme zamanı" kolonu, ipucunda ham veriye alınma zamanı olduğu yazılır.
-- **Uygulama (3.3, K-130, K-132):** Yöntem (Excel, SQL; yalnız System owner) ve Çekim (bütün satırlarda aç/kapa anahtarı; Admin ve üstü) kolonları hücre içi düzenlenir, tablonun sağ üstündeki Kaydet ile toplu kaydedilir; Key user salt okunur görür. Çekim kapatılırken sebep zorunlu; ipucunda sebep, kişi ve tarih; açarken uyarı. Yöntem SQL, view tanımsızsa tablo adının yanında sarı üçgen. Üstte "Veri çek": onay ve sonuç penceresi; satır menüsünde tek tablo. "Excel'den yükle" her zaman açık. "Seçilenleri yükle" ve "Tam yükle" 5.5'te.
+- **Uygulama (3.3, K-130, K-132):** Yöntem (Excel, SQL; yalnız System owner) ve Çekim (bütün satırlarda aç/kapa anahtarı; Admin ve üstü) kolonları hücre içi düzenlenir, tablonun sağ üstündeki Kaydet ile toplu kaydedilir; Key user salt okunur görür. Çekim kapatılırken sebep zorunlu; ipucunda sebep, kişi ve tarih; açarken uyarı. Yöntem SQL, view tanımsızsa tablo adının yanında sarı üçgen. Üstte "Veri çek": onay ve sonuç penceresi; satır menüsünde tek tablo. "Excel'den yükle" her zaman açık. "Seçilenleri yükle" ve "Tam aktar" 5.5'te.
 - **Uygulama (4.1, K-143):** tablo, kullanıcının çekim ve validasyon işleri bitince kendiliğinden yenilenir; satır menüsünde "Veriyi gör" (çekmece, Kayıtlar · Tüm satırlar); çekmecenin Kayıtlar görünümünde Bulgulu satırlar / Kuralla değişenler / Tüm satırlar.
 - **Uygulama (3.4, K-133, K-134, K-139):** "Validasyon" kolonunda tablo başına çip: gri Sırada → Kurallar çalışıyor → Valide ediliyor → yeşil Geçti / sarı Uyarılı · n / kırmızı Hatalı · n; iş düşerse Valide edilemedi. Çipe tıklayınca sağdan çekmece ("Validasyon · Malzeme"): son parti (zaman, yöntem, kişi), güncel kayıt sayısı; dört kart: Hatalı satır, Uyarılı satır, Bilgilendirme satırı, Hata oranı (altında "eşik yok" ya da "eşik %0,50"); "Bulgular" kural bazında (Kural, Sınıf, Satır sayısı; kurala tıklayınca Kayıtlar o kurala süzülür) ve "Kayıtlar" (ilk kolonlar Sorun ve Sınıf); "Hatalı kayıtları indir" ve "Yeniden valide et" (Key user ve üstü). Excel'den yükle penceresinde "Devam" pencereyi kapatır, validasyon bitince bildirim gelir.
 

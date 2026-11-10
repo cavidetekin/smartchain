@@ -10,10 +10,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02 · Excel şablonu indirme:** Her varlık için veri sözleşmesine birebir uyan, açıklamalı ve örnek satırlı boş Excel şablonu vermek; Excel yolunun hatasız olmasını sağlamak.
 - **03 · Excel ile yükleme:** Entegrasyonu olmayan ya da ERP'de tutulmayan varlıkları (kaynak, takvim, vardiya gibi) Excel şablonuyla ham veriye almak; sonrası ERP'den çekilen veriyle aynı yoldan ilerler.
 - **04 · Validasyon:** Staging'in güncel hâlini yüklemeden önce yapısal, mantıksal ve tablolar arası kontrollerden geçirmek (referans ve bütünlük 4.4); hatalı satırın versiyona girmesini engellemek, uyarılı veriyi görünür kılmak.
-- **05 · Tam yükleme:** Doğrulanmış partiyi bütün varlıklarıyla yeni bir veri versiyonuna almak; alan önceliklerini, veri kurallarını ve türetilmiş alanları uygulayıp veriyi plana hazır hale getirmek. Gece akışının standart yolu.
-- **06 · Kısmi yükleme:** Partideki yalnız seçilen varlıkları yeni veri versiyonuna almak; hatalı ya da gereksiz varlıkları dışarıda bırakırken diğer varlıklarda önceki versiyonun değerlerini korumak. Gün içi stok ve sipariş tazelemesinin yolu.
+- **05 · Tam aktarım:** Staging'in işlenmiş katmanını (veri kuralları uygulanmış, valide edilmiş) bütün tablolarıyla yeni bir veri versiyonuna aktarmak; ana veri ve işlem verisinin hepsi (K-149). Gece akışının standart yolu.
+- **06 · Kısmi aktarım:** Yalnız seçilen işlem verisi gruplarını (Talep, Stok, Üretim, Satın alma, İzin) yeni veri versiyonuna aktarmak; ana veri ve seçilmeyen gruplar önceki versiyonda kalır (K-150). Gün içi tazelemenin yolu.
 - **07 · Veri versiyonlama:** Her yüklemenin dondurulmuş, karşılaştırılabilir bir veri kesiti oluşturması; her plan hesabının hangi veriyle yapıldığının bilinmesi ve onaylı planların verisinin hep saklanması.
-- **08 · Yükleme geçmişi:** Çekim, Excel yüklemesi, validasyon, tam ve kısmi yüklemelerin kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
+- **08 · Aktarım geçmişi:** Çekim, Excel yüklemesi, validasyon, tam ve kısmi aktarımların kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
 - **09 · Ham veri temizliği:** Ham veri tablolarındaki eski partileri düzenli silerek disk alanını korumak; geçmiş kaydını ve versiyonlanmış veriyi etkilemeden.
 
 ### 01 · Veri çekme
@@ -41,7 +41,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Dolu ham veri tabloları (stg.*) ve ImportBatch kaydı: tablo bazında durum, satır ve hata sayısı
   - İş sonucu (tablo, durum, denemeler, hata metni) · Entegrasyon ekranında 'son okuma'
   - Elle çekimde sonuç penceresi; ana sayfada gece akışı satırı 5.6'da
-- **06:** Parti 'Alındı' olur ve staging'in güncel hâline işlenir (K-133); tablonun validasyonu (04) arka planda başlar. Toplu çekimde tablolar arası validasyon bütün tablolar bitince çalışır (K-134). Gece akışında validasyon sonrası tam yükleme (05) devam eder (5.6).
+- **06:** Parti 'Alındı' olur ve staging'in güncel hâline işlenir (K-133); tablonun validasyonu (04) arka planda başlar. Toplu çekimde tablolar arası validasyon bütün tablolar bitince çalışır (K-134). Gece akışında validasyon sonrası tam aktarım (05) devam eder (5.6).
 - **Sinyal (K-130):** Bir tablo için kendi satırı ile toplu satırlara birlikte bakılır. En son başlayan bitmemişse 'Veri güncellemesi devam ediyor'; değilse en son biten geçerlidir, son okunanla aynıysa 'Yeni veri yok' (elle çekimde o satırda 'Yine de oku'). Okuma sırasında yenileme başladıysa parti 'Tamamlanmadı'.
 
 ### 01 · Veri çekme · kurallar ve etkiler
@@ -186,9 +186,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ÇIKTI**
   - ImportBatch (Excel) ve ham veri satırları
   - Hata raporu xlsx (isteğe bağlı)
-  - Yükleme geçmişi kaydı; dosya bir hafta ham veriyle birlikte saklanır
+  - Aktarım geçmişi kaydı; dosya bir hafta ham veriyle birlikte saklanır
 - **05:** Dosya bir kez okunur: geçerli satırlar kontrol sırasında ham veriye yazılır, parti 'Ön kontrol'de olduğu için kimse okumaz. 'Devam' partiyi 'Alındı' yapar, 'vazgeç' satırları ve dosyayı siler. ImportBatch (yöntem = Excel) dosya adı, kullanıcı ve şablon sürümünü taşır. Büyük dosyada ön kontrol iş kuyruğunda çalışır (K-129).
-- **06:** 'Devam' pencereyi kapatır; parti staging'in güncel hâline işlenir (K-133), validasyon (04) arka planda başlar, bitince bildirim gelir. Ardından tam ya da kısmi yükleme (05 / 06).
+- **06:** 'Devam' pencereyi kapatır; parti staging'in güncel hâline işlenir (K-133), validasyon (04) arka planda başlar, bitince bildirim gelir. Ardından tam ya da kısmi aktarım (05 / 06).
 
 ### 03 · Excel ile yükleme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F03 · A Veri alma · Çalışma prensibi 2/2</sub>
@@ -266,28 +266,28 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Tablo başına çip: Geçti / Uyarılı · n / Hatalı · n
   - Kural bazında bulgular (Kural, Sınıf, Satır sayısı) ve hatalı kayıtlar (Excel)
   - Hata oranı ve eşik; bildirim
-- **06:** Bitince bildirim gelir ("Validasyon bitti · Malzeme · Uyarılı · 3", "Sonucu aç" çekmeceyi açar). İş panelinde iş kart olarak görünür (K-139). Gece akışında tam yükleme (05) devam eder (5.6).
+- **06:** Bitince bildirim gelir ("Validasyon bitti · Malzeme · Uyarılı · 3", "Sonucu aç" çekmeceyi açar). İş panelinde iş kart olarak görünür (K-139). Gece akışında tam aktarım (05) devam eder (5.6).
 
 ### 04 · Validasyon · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
   - Validasyon yalnız okur; değer değiştirmez (değeri rules değiştirir). Yazdığı yalnız bulgu ve `RowStatus`'tur.
-  - Validasyon staging'in işlenmiş katmanına aittir, data quality load edilmiş veriye (20, Aşama 6). Ön kontrol bulguları partiye aittir (03); çekmece güncel hâlin validasyonunu gösterir.
-  - Sınıf: Hata satırı load edilmez; Uyarı load edilir; Bilgi yalnız bilgidir. Sınıf Validasyon kuralları ekranında (27) değiştirilir.
+  - Validasyon staging'in işlenmiş katmanına aittir, data quality aktarılmış veriye (20, Aşama 6). Ön kontrol bulguları partiye aittir (03); çekmece güncel hâlin validasyonunu gösterir.
+  - Sınıf: Hata satırı aktarılmaz; Uyarı aktarılır; Bilgi yalnız bilgidir. Sınıf Validasyon kuralları ekranında (27) değiştirilir.
   - Hata oranı = Hata bulunan güncel kayıt / güncel kayıt (ön kontrol hesaba girmez). Eşik tablo başınadır, varsayılanı yoktur, boşsa kontrol edilmez (K-135); 3.4'te yalnız gösterilir, load'a etkisi 5.2'de.
   - Küme kuralları (döngü, toplam, çakışma) tablonun işlenmiş katmanına bakar.
   - Tutarlılık sayıları (yeni, değişen, silinen kayıt) yükleme ekranında gösterilir (5.5); "satır sayısı dünden %30 az" uyarısı 5.5'tedir.
 - **HATA VE ISTISNA**
   - İş düşerse çip "Valide edilemedi"; önceki bulgular kalır, "Yeniden valide et" ile tekrarlanır.
   - Motor servisi kapalıysa iş sırada bekler, çip "Sırada".
-  - Hata eşiği aşılan tablo gece akışında load edilmez, önceki versiyon kalır (5.2).
+  - Hata eşiği aşılan tablo gece akışında aktarılmaz, önceki versiyon kalır (5.2).
 - **ETKISI VE TETIKLENENLER**
   - Veri yükleme ekranında çip ve çekmece; bildirim.
-  - Load (05 / 06) Hatalı satırı almaz.
-  - Gece akışında tam yükleme (05) devam eder.
+  - Aktarım (05 / 06) Hatalı satırı almaz.
+  - Gece akışında tam aktarım (05) devam eder.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; validasyon değer yazmaz.
-- **ÖRNEK:** Rota 6.230 güncel kayıt, 3 Hata (iki satırda kaynak ve kaynak grubu boş, bir negatif süre), 5 Uyarı. Eşik %5, oran %0,05: çip "Hatalı · 3"; load hatalı satırları atlar.
+- **ÖRNEK:** Rota 6.230 güncel kayıt, 3 Hata (iki satırda kaynak ve kaynak grubu boş, bir negatif süre), 5 Uyarı. Eşik %5, oran %0,05: çip "Hatalı · 3"; aktarım hatalı satırları atlar.
 - **Uygulama (3.4, K-133…K-139):** İş tipi "Validasyon", kanal "Veri işleme" (sınır `JobLimitProcessing`, performans ölçümüyle). Rota ve iş emri operasyonunda "kaynak ve kaynak grubu ikisi boş" kontrolü ön kontrolden validasyona taşındı (hazır kural, Hata). Değer listesi dışı değer ön kontrol penceresinde de görünür (partiye ait).
 
 ### 04 · Validasyon · hazır kurallar
@@ -493,9 +493,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Çekmece çipe tıklayınca açılır, başlığı "Validasyon · Malzeme". Üstte son partinin zamanı, yöntemi ve kişisi, güncel kayıt sayısı; altında dört kart: Hatalı satır, Uyarılı satır, Bilgilendirme satırı, Hata oranı (büyük oran, altında küçük "eşik yok" ya da "eşik %0,50"). Kontrol türü kırılımı yok.
   - İki görünüm: "Bulgular" kural bazındadır (Kural, Sınıf çipi, Satır sayısı; ağırdan hafife, çoktan aza); kurala tıklayınca "Kayıtlar" o kurala takılan satırlarla süzülmüş açılır. "Kayıtlar": işlenmiş katmanın satırları, üç seçenekle: Bulgulu satırlar / Kuralla değişenler / Tüm satırlar (K-143); ilk iki kolon Sorun ve Sınıf, sonra kaydın alanları; kuralla değişen hücrede mor köşe ve ipucu. Veri yükleme satır menüsünde "Veriyi gör" çekmeceyi Kayıtlar · Tüm satırlar ile açar.
   - "Hatalı kayıtları indir": Kayıtlar görünümünün Excel'i, Sınıf kolonuyla süzülebilir. "Yeniden valide et": Key user ve üstü.
-  - Öneri kolonu ve "Kaynağa git" yok; atla ya da dışarıda bırak seçimi yok (load davranışı 5.2'de eşiğe bağlı).
+  - Öneri kolonu ve "Kaynağa git" yok; atla ya da dışarıda bırak seçimi yok (aktarım davranışı 5.2'de eşiğe bağlı).
 
-### 05 · Tam yükleme
+### 05 · Tam aktarım
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Çalışma prensibi 1/3</sub>
 
 - Staging'in işlenmiş katmanını (veri kuralları uygulanmış, valide edilmiş; K-140) bütün tablolarıyla yeni bir veri versiyonuna almak; değerin kaynağını yazıp türetilmiş alanları hesaplayarak veriyi plana hazır hale getirmek. Ana veri ve işlem verisinin hepsi (K-149). Gece akışının standart yolu.
@@ -504,164 +504,164 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (gece, doğrulama sonrası) · elle: Key user ve üstü
-  - Nereden: Gece akışı · Veri yükleme ekranı 'Tam yükle'
+  - Nereden: Gece akışı · Veri yükleme ekranı 'Tam aktar'
 - **01:** Yeni veri versiyonu açılır (DataVersion: tam, kim, ne zaman). Yükleme tek işlem olarak çalışır; ekranlar bitene kadar önceki versiyonu gösterir.
-- **02:** Her tablo için işlenmiş katman geçerli tablolara yazılır: yeni kayıt eklenir, değişen kayıt yeni satır olarak versiyonlanır; staging'in güncel hâlinde olmayan kayıt ve `IsActive` = Hayır kayıt core'da kapatılır (silinmiş sayılır, `VersionTo`); fiziksel silme yok. Hata bulunan satır yüklenmez, core'daki önceki hâli açık kalır (K-149).
-- **Kod→Id (K-146):** ilişki kodları docs/03 "İlişki haritası"yla `core` Id'sine çevrilir; ebeveyn tablolar önce yüklenir, aynı veri versiyonunda. Zorunlu ilişkisi çevrilemeyen satır (referans Hatası, `RowStatus` Hatalı) yüklenmez. İsteğe bağlı bağlantı çevrilemezse satır yüklenir, bağlantı boş yazılır; uyarı veri kalitesinde kalır. `IsActive` = Hayır satırı ve pasif ebeveyne bakan satır yüklenmez (K-145); haritada pasif sınıfı olmayan isteğe bağlı bağlantıda ebeveyn pasifse bağlantı boş yazılır. `UomConversion` aynı koddaki her lokasyonun malzemesine bağlanır (K-112).
+- **02:** Her tablo için işlenmiş katman geçerli tablolara yazılır: yeni kayıt eklenir, değişen kayıt yeni satır olarak versiyonlanır; staging'in güncel hâlinde olmayan kayıt ve `IsActive` = Hayır kayıt core'da kapatılır (silinmiş sayılır, `VersionTo`); fiziksel silme yok. Hata bulunan satır aktarılmaz, core'daki önceki hâli açık kalır (K-149).
+- **Kod→Id (K-146):** ilişki kodları docs/03 "İlişki haritası"yla `core` Id'sine çevrilir; ebeveyn tablolar önce aktarılır, aynı veri versiyonunda. Zorunlu ilişkisi çevrilemeyen satır (referans Hatası, `RowStatus` Hatalı) aktarılmaz. İsteğe bağlı bağlantı çevrilemezse satır aktarılır, bağlantı boş yazılır; uyarı veri kalitesinde kalır. `IsActive` = Hayır satırı ve pasif ebeveyne bakan satır aktarılmaz (K-145); haritada pasif sınıfı olmayan isteğe bağlı bağlantıda ebeveyn pasifse bağlantı boş yazılır. `UomConversion` aynı koddaki her lokasyonun malzemesine bağlanır (K-112).
 - **GIRDI**
   - Staging'in işlenmiş katmanı (`prc.*`; veri kuralları uygulanmış, `RowStatus`; K-140)
   - Hata eşiği (K-135)
   - Kural izi (`adm.DataRuleEffect`): hangi alanı hangi kural değiştirdi
-- **03:** Değerin kaynağı yazılır (K-148): ERP değeri `FieldValueSource.ErpValue`'ya, kaynağı ERP ya da kural (hangi kural, kural izinden). Elle değerin load'da korunması 6.2'de (fonksiyon 12, 13) elle değer girme ekranıyla birlikte gelir.
-- **04:** Veri kuralları load'da çalışmaz: staging'de uygulanmıştır (fonksiyon 19, K-140); load işlenmiş katmanı okur.
+- **03:** Değerin kaynağı yazılır (K-148): ERP değeri `FieldValueSource.ErpValue`'ya, kaynağı ERP ya da kural (hangi kural, kural izinden). Elle değerin aktarımda korunması 6.2'de (fonksiyon 12, 13) elle değer girme ekranıyla birlikte gelir.
+- **04:** Veri kuralları aktarımda çalışmaz: staging'de uygulanmıştır (fonksiyon 19, K-140); aktarım işlenmiş katmanı okur.
 - **05:** Türetilmiş alanlar hesaplanır: LLC, birim dönüşümleri. Boş alan boş kalır, anlamı BOŞSA kolonundadır (K-138).
 - **ÇIKTI**
   - Yeni veri versiyonu (DataVersion + tüm varlıklar için DataVersionEntity)
   - Güncel ana veri ve işlem verisi; FieldValueSource (değer kaynağı)
-  - Veri kalitesi uyarıları; yükleme geçmişi ve denetim izi kaydı
+  - Veri kalitesi uyarıları; aktarım geçmişi ve denetim izi kaydı
 - **06:** Veri kalitesi kontrolü (20) yeni versiyon üzerinde çalışır; uyarılar listeye düşer.
 - **07:** Versiyon kapatılır (önceki versiyonun geçerliliği biter); gece akışında senaryolar bu versiyonla başlar. Elle yüklemede sonuç bildirimi ve geçmiş kaydı.
 
-### 05 · Tam yükleme · kurallar ve etkiler
+### 05 · Tam aktarım · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Çalışma prensibi 2/3</sub>
 
 - **KURALLAR VE SINIRLAR**
   - Ya hep ya hiç: yükleme ortasında hata olursa geri alınır, önceki versiyon geçerli kalır.
-  - Elle değerin load'da korunması 6.2'de elle değer girme ekranıyla birlikte gelir (K-148); hangi alanların elle değiştirilebileceği orada konuşulur.
+  - Elle değerin aktarımda korunması 6.2'de elle değer girme ekranıyla birlikte gelir (K-148); hangi alanların elle değiştirilebileceği orada konuşulur.
   - Açık çalışmalar açıldıkları veri versiyonuna bağlı kalır; yayında (76) 'daha yeni veri var' uyarısı alırlar.
-  - Hata eşiğini aşan tablo yüklenmez, önceki versiyon kalır (K-135); yükleme raporunda oran ve eşikle tek satır not (K-151).
+  - Hata eşiğini aşan tablo aktarılmaz, önceki versiyon kalır (K-135); aktarım raporunda oran ve eşikle tek satır not (K-151).
   - Yükleme sırasında ikinci yükleme ve çekim başlatılamaz.
 - **HATA VE ISTISNA**
   - Veritabanı hatası: işlem geri alınır, ana sayfa ve Sistem sağlığı kaydı; ham veri partisi yeniden kullanılabilir.
-  - Kural hatası load'u etkilemez: kurallar staging'de çalışır, çalışamayan kural "Çalışmadı" olur (K-141).
+  - Kural hatası aktarımı etkilemez: kurallar staging'de çalışır, çalışamayan kural "Çalışmadı" olur (K-141).
   - Süre aşımı (parametre, öneri 30 dk): işlem geri alınır, destek paketi için log.
   - Yükleme sonrası veri kalitesi kontrolü çökerse yükleme geçerli kalır, kontrol 'tamamlanmadı' işaretlenir.
 - **ETKISI VE TETIKLENENLER**
   - Gece akışında senaryolar (40) başlar.
   - Açık çalışmalarda 'yeni veri var' bildirimi.
   - Veri kalitesi listesi ve ana sayfa 'dünden bugüne' güncellenir.
-  - Ana veri ekranları yeni versiyonu gösterir; yükleme geçmişi ve denetim izi.
-- **ÖRNEK:** Parti #1187 → v232: 9 varlık, 90 yeni, 1.158 değişen, 15 silinen; Rota'da 3 satır load edilmedi (Hata; önceki hâlleri açık). Kuralla değişen 14 kaydın kaynağı "kural" yazıldı, veri kalitesi 3 yeni uyarı üretti. Süre 2 dk 48 sn.
+  - Ana veri ekranları yeni versiyonu gösterir; aktarım geçmişi ve denetim izi.
+- **ÖRNEK:** Parti #1187 → v232: 9 varlık, 90 yeni, 1.158 değişen, 15 silinen; Rota'da 3 satır aktarılmadı (Hata; önceki hâlleri açık). Kuralla değişen 14 kaydın kaynağı "kural" yazıldı, veri kalitesi 3 yeni uyarı üretti. Süre 2 dk 48 sn.
 
-### 05 · Tam yükleme · yeniden hesaplanacak alanlar
+### 05 · Tam aktarım · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Çalışma prensibi 3/3</sub>
 
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Geçerli değer ve kaynağı:** FieldValueSource Her alan için kaynak (ERP ya da hangi kural) yazılır, K-148; elle değer 6.2
-- **Kural sonuçları:** DataRuleEffect Kurallar staging'de çalışır (K-140); load kural izini okur
+- **Kural sonuçları:** DataRuleEffect Kurallar staging'de çalışır (K-140); aktarım kural izini okur
 - **En alt seviye kodu (LLC):** Material Ürün ağacı değiştiyse yeniden hesaplanır
 - **Türetilmiş alanlar:** Birim dönüşümü Yeni ve değişen kayıtlar için
 - **Veri kalitesi uyarıları:** Veri kalitesi listesi Yeni versiyon üzerinde baştan üretilir; kapatılanlar kapalı kalır
 - **Dünden bugüne farkı:** Ana sayfa Önceki versiyonla karşılaştırma
 - **Plan:** Senaryolar · çalışmalar Otomatik değil: gece senaryoları yeni versiyonla çalışır, açık çalışma eski versiyonda kalır
 
-### 05 · Tam yükleme · Onay
+### 05 · Tam aktarım · Onay
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Mockup 1/3</sub>
 
-![05 · Tam yükleme · Onay](mockups/m24f-0356-05-tam-yukleme-onay.png)
+![05 · Tam aktarım · Onay](mockups/m24f-0356-05-tam-yukleme-onay.png)
 
 - **Ne olacak:** Varlık bazında yeni, değişen, silinen ve atlanan sayıları onaydan önce görünür.
 - **Hatalı satır kararı:** Doğrulamadan gelen davranış seçimi burada da değiştirilebilir.
 - **Yan etki uyarısı:** Açık çalışmaların eski versiyonda kalacağı kırmızı kutuda yazar.
 - **Otomatik adımlar:** Kalite kontrolünün yükleme sonunda çalışacağı belirtilir; kurallar staging'de uygulanmıştır (K-140).
 
-### 05 · Tam yükleme · Yükleniyor
+### 05 · Tam aktarım · Aktarılıyor
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Mockup 2/3</sub>
 
-![05 · Tam yükleme · Yükleniyor](mockups/m24f-0357-05-tam-yukleme-yukleniyor.png)
+![05 · Tam aktarım · Aktarılıyor](mockups/m24f-0357-05-tam-yukleme-yukleniyor.png)
 
 - **Adım adım ilerleme:** Versiyon açma, tablolar, değerin kaynağı, türetilmiş alanlar, kalite, kapatma.
 - **Arka planda devam:** Pencere kapatılsa da iş sürer; üstteki şerit durumu gösterir.
 - **Güvence:** Hata olursa v231'in geçerli kalacağı yazılır.
 - **Süre tahmini:** Önceki yüklemelerden tahmin; kullanıcı beklemeyi planlar.
 
-### 05 · Tam yükleme · Sonuç
+### 05 · Tam aktarım · Sonuç
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Mockup 3/3</sub>
 
-![05 · Tam yükleme · Sonuç](mockups/m24f-0358-05-tam-yukleme-sonuc.png)
+![05 · Tam aktarım · Sonuç](mockups/m24f-0358-05-tam-yukleme-sonuc.png)
 
 - **Bildirim:** Yeşil bildirim: versiyon, varlık sayısı, süre; yan etki tek satırda.
 - **Bağlam güncellendi:** Alt başlıkta geçerli versiyon v232 oldu.
 - **Sonraki adım:** Veri kalitesine git ve v231 ile farkı gör bağlantıları.
-- **Geçmiş kaydı:** Yükleme geçmişine elle yükleme satırı eklendi.
+- **Geçmiş kaydı:** Aktarım geçmişine elle aktarım satırı eklendi.
 
-### 06 · Kısmi yükleme
+### 06 · Kısmi aktarım
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Çalışma prensibi 1/3</sub>
 
-- Yalnız seçilen işlem verisi gruplarını yeni veri versiyonuna almak; ana veri yüklenmez, seçilmeyen gruplar core'da olduğu gibi kalır (K-150). Gruplar: **Talep** (Satış siparişi, Tahmin, Proje, Proje grubu), **Stok** (Stok, Ödünç ve geri ödeme), **Üretim** (İş emri, İş emri bileşeni, İş emri operasyonu, Üretim gerçekleşmesi), **Satın alma** (Satın alma siparişi), **İzin** (Çalışan izni). Proje ve Proje grubu katalogda Ana veridir, kısmi load'da istisna olarak Talep grubuyla gelir. Gün içi talep, stok ve üretim tazelemesinin yolu.
+- Yalnız seçilen işlem verisi gruplarını yeni veri versiyonuna almak; ana veri aktarılmaz, seçilmeyen gruplar core'da olduğu gibi kalır (K-150). Gruplar: **Talep** (Satış siparişi, Tahmin, Proje, Proje grubu), **Stok** (Stok, Ödünç ve geri ödeme), **Üretim** (İş emri, İş emri bileşeni, İş emri operasyonu, Üretim gerçekleşmesi), **Satın alma** (Satın alma siparişi), **İzin** (Çalışan izni). Proje ve Proje grubu katalogda Ana veridir, kısmi aktarımda istisna olarak Talep grubuyla gelir. Gün içi talep, stok ve üretim tazelemesinin yolu.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · sistem (zamanlanmış akış adımı; akışları kurulumda System owner tanımlar, hangi grupların yükleneceği akış tanımında seçilir, 5.6)
+  - Kim: Key user ve üstü · sistem (zamanlanmış akış adımı; akışları kurulumda System owner tanımlar, hangi grupların aktarılacağı akış tanımında seçilir, 5.6)
   - Nereden: Veri yükleme ekranı · grup seçimi + 'Seçilenleri yükle' · zamanlanmış akış (ör. öğlen Talep ve Stok)
-- **01:** Kullanıcı ya da akış tanımı grupları seçer. Bağımlılık önerisi yoktur: bağlı olduğu ana veri core'da olmayan satır yüklenmez, yükleme raporunda "ana verisi yüklenmedi" olarak sayılır, bir sonraki tam load'da girer (K-150).
+- **01:** Kullanıcı ya da akış tanımı grupları seçer. Bağımlılık önerisi yoktur: bağlı olduğu ana veri core'da olmayan satır aktarılmaz, aktarım raporunda "ana verisi aktarılmadı" olarak sayılır, bir sonraki tam aktarımda girer (K-150).
 - **02:** Onay penceresinde seçilen grupların tabloları ve sayıları, 'seçilmeyen gruplar ve ana veri v231 değerlerini korur' bilgisi gösterilir.
 - **GIRDI**
   - Staging'in işlenmiş katmanı ve grup seçimi
   - İlişki haritası (docs/03, K-146): satırın baktığı ana veri core'da var mı
   - Hata eşiği, kural izi (05 ile aynı)
-- **03:** Yeni veri versiyonu 'kısmi' olarak açılır; DataVersionEntity'ye yüklenen varlıklar yazılır.
+- **03:** Yeni veri versiyonu 'kısmi' olarak açılır; DataVersionEntity'ye aktarılan varlıklar yazılır.
 - **04:** Seçilen grupların tabloları 05'teki adımlarla yazılır (yeni, değişen; güncel hâlde olmayan ve `IsActive` = Hayır kayıt kapatılır; değerin kaynağı).
-- **05:** Türetilmiş alanlar yalnız yüklenen tablolarda ve onlara bağlı alanlarda hesaplanır; veri kalitesi kontrolü aynı kapsamda. Veri kuralları staging'de uygulanmıştır (K-140).
+- **05:** Türetilmiş alanlar yalnız aktarılan tablolarda ve onlara bağlı alanlarda hesaplanır; veri kalitesi kontrolü aynı kapsamda. Veri kuralları staging'de uygulanmıştır (K-140).
 - **ÇIKTI**
   - Kısmi veri versiyonu (DataVersion.LoadType = kısmi, DataVersionEntity)
-  - Seçilen gruplarda güncel veri ve değer kaynağı; ana verisi yüklenmediği için bekleyen satır sayısı (K-151)
-  - Kapsam dahilinde veri kalitesi uyarıları; yükleme geçmişi kaydı
+  - Seçilen gruplarda güncel veri ve değer kaynağı; ana verisi aktarılmadığı için bekleyen satır sayısı (K-151)
+  - Kapsam dahilinde veri kalitesi uyarıları; aktarım geçmişi kaydı
 - **06:** Versiyon kapatılır; seçilmeyen gruplar ve ana veri önceki satırları taşır. Sonuç bildirimi, geçmiş ve denetim izi kaydı.
 
-### 06 · Kısmi yükleme · kurallar ve etkiler
+### 06 · Kısmi aktarım · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Çalışma prensibi 2/3</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Yalnız işlem verisi grupları yüklenir; ana veri (malzeme, ağaç, rota, kaynak, tedarikçi, müşteri…) yalnız tam load'da gelir (K-149, K-150). Satırın baktığı ana veri core'da yoksa satır yüklenmez, raporda bekleyen satır sayısı olarak görünür.
-  - Kısmi yükleme de tam yükleme gibi ya hep ya hiç çalışır.
-  - Seçilmeyen grupların verisi staging'de kalır; sonraki kısmi ya da tam load'da girer.
-  - Kısmi load zamanlanmış bir akış adımı olabilir (ör. öğlen Talep ve Stok); gruplar akış tanımında seçilir (5.6). Hata eşiği aşılan tablo kısmi load'da da yüklenmez (K-135).
+  - Yalnız işlem verisi grupları aktarılır; ana veri (malzeme, ağaç, rota, kaynak, tedarikçi, müşteri…) yalnız tam aktarımda gelir (K-149, K-150). Satırın baktığı ana veri core'da yoksa satır aktarılmaz, raporda bekleyen satır sayısı olarak görünür.
+  - Kısmi aktarım da tam aktarım gibi ya hep ya hiç çalışır.
+  - Seçilmeyen grupların verisi staging'de kalır; sonraki kısmi ya da tam aktarımda girer.
+  - Kısmi aktarım zamanlanmış bir akış adımı olabilir (ör. öğlen Talep ve Stok); gruplar akış tanımında seçilir (5.6). Hata eşiği aşılan tablo kısmi aktarımda da aktarılmaz (K-135).
 - **HATA VE ISTISNA**
-  - Ana verisi core'da olmayan satır: yüklenmez, raporda "ana verisi yüklenmedi" sayısı (K-151).
+  - Ana verisi core'da olmayan satır: aktarılmaz, raporda "ana verisi aktarılmadı" sayısı (K-151).
   - Yükleme hatası: geri alınır, önceki versiyon geçerli.
   - Seçilen grubun staging'de yüklenmemiş yeni verisi yoksa onayda yazılır ("yeni veri yok").
 - **ETKISI VE TETIKLENENLER**
   - Açık çalışmalara 'yeni veri var' bildirimi (seçime bağlı).
   - Veri kalitesi listesi kapsam dahilinde güncellenir.
   - Ana sayfa 'dünden bugüne' ve ana veri ekranları.
-- **ÖRNEK:** Öğlen akışı Talep ve Stok gruplarını yükler: Satış siparişi, Tahmin, Proje, Proje grubu, Stok, Ödünç ve geri ödeme. Yeni bir malzeme koduna bakan 2 sipariş satırı yüklenmez (malzeme gece tam load'da gelecek), raporda "ana verisi yüklenmedi · 2". v232 kısmi: 6 tablo yeni, öteki tablolar v231'den. 38 sn.
+- **ÖRNEK:** Öğlen akışı Talep ve Stok gruplarını aktarır: Satış siparişi, Tahmin, Proje, Proje grubu, Stok, Ödünç ve geri ödeme. Yeni bir malzeme koduna bakan 2 sipariş satırı aktarılmaz (malzeme gece tam aktarımda gelecek), raporda "ana verisi aktarılmadı · 2". v232 kısmi: 6 tablo yeni, öteki tablolar v231'den. 38 sn.
 
-### 06 · Kısmi yükleme · yeniden hesaplanacak alanlar
+### 06 · Kısmi aktarım · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Çalışma prensibi 3/3</sub>
 
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Geçerli değer ve kaynağı:** FieldValueSource Yalnız yüklenen varlıkların alanları
-- **Kural sonuçları:** DataRuleEffect Kurallar staging'de çalışır (K-140); yüklenen tablolarda kural izi okunur
+- **Geçerli değer ve kaynağı:** FieldValueSource Yalnız aktarılan varlıkların alanları
+- **Kural sonuçları:** DataRuleEffect Kurallar staging'de çalışır (K-140); aktarılan tablolarda kural izi okunur
 - **Çapraz referanslar:** Stok → Malzeme, Sipariş → Müşteri / Proje Yüklenen satırın ana verisi core'da aranır (ilişki haritası, K-146); yoksa satır bekler
-- **LLC:** Material Kısmi load'da hesaplanmaz (ana veri yüklenmez)
+- **LLC:** Material Kısmi aktarımda hesaplanmaz (ana veri aktarılmaz)
 - **Veri kalitesi uyarıları:** Veri kalitesi listesi Yüklenen varlıklar için; diğerleri olduğu gibi kalır
 - **Plan:** Çalışmalar Otomatik değil; kullanıcı çalışmada 'yeniden hesapla' der
 
-### 06 · Kısmi yükleme · Seçim ve bağımlılık
+### 06 · Kısmi aktarım · Seçim ve bağımlılık
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Mockup 1/3</sub>
 
-![06 · Kısmi yükleme · Seçim ve bağımlılık](mockups/m24f-0362-06-kismi-yukleme-secim-ve-bagimlilik.png)
+![06 · Kısmi aktarım · Seçim ve bağımlılık](mockups/m24f-0362-06-kismi-yukleme-secim-ve-bagimlilik.png)
 
 - **Mockup eski hâl:** varlık seçimi ve bağımlılık önerisi gösterir; geçerli kural K-150'dir (grup seçimi, öneri yok).
 - **Grup seçimi:** Talep, Stok, Üretim, Satın alma, İzin; buton etiketi seçilen grup sayısını gösterir.
 - **Korunanlar:** Seçilmeyen grupların ve ana verinin önceki versiyondan geleceği açıkça yazar.
 
-### 06 · Kısmi yükleme · Onay
+### 06 · Kısmi aktarım · Onay
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Mockup 2/3</sub>
 
-![06 · Kısmi yükleme · Onay](mockups/m24f-0363-06-kismi-yukleme-onay.png)
+![06 · Kısmi aktarım · Onay](mockups/m24f-0363-06-kismi-yukleme-onay.png)
 
 - **Kapsam:** Yüklenecek gruplar, tabloları ve sayıları; kısmi versiyonun ne olduğu bir cümleyle (K-150).
-- **Kalite kapsamı:** Yalnız yüklenen gruplarda çalışacağı belirtilir.
+- **Kalite kapsamı:** Yalnız aktarılan gruplarda çalışacağı belirtilir.
 - **Bildirim seçeneği:** Açık çalışmalara haber verme kullanıcının elinde.
-- **Süre:** Kısmi yükleme kısa sürer; tahmin yazılır.
+- **Süre:** Kısmi aktarım kısa sürer; tahmin yazılır.
 
-### 06 · Kısmi yükleme · Sonuç
+### 06 · Kısmi aktarım · Sonuç
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Mockup 3/3</sub>
 
-![06 · Kısmi yükleme · Sonuç](mockups/m24f-0364-06-kismi-yukleme-sonuc.png)
+![06 · Kısmi aktarım · Sonuç](mockups/m24f-0364-06-kismi-yukleme-sonuc.png)
 
 - **Versiyon listesi:** v232 kısmi, hangi gruplar, kim; önceki versiyonlar altında.
 - **Bağlam:** Alt başlıkta 'v232 (kısmi)'; kullanıcı kısmi olduğunu hep görür.
@@ -677,11 +677,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (yükleme içinde otomatik) · görüntüleme ve fark: Key user ve üstü · sabitleme: Admin ve üstü
-  - Nereden: Tam ve kısmi yükleme (05 / 06) içinde · Veri yükleme ekranı 'Versiyonlar' çekmecesi
+  - Nereden: Tam ve kısmi aktarım (05 / 06) içinde · Veri yükleme ekranı 'Versiyonlar' çekmecesi
 - **01:** Yüklemede DataVersion satırı açılır: tür (tam / kısmi), kim, zaman; kısmi ise DataVersionEntity ile varlıklar.
 - **02:** Geçerli tablolarda kayıtlar satır bazında versiyonlanır (VersionFrom / VersionTo): değişen kayıt yeni satır olur, eskisinin VersionTo kapanır; silinen kayıt kapanır, fiziksel silinmez.
 - **GIRDI**
-  - Yükleme (tam / kısmi) ve yüklenen varlıklar
+  - Aktarım (tam / kısmi) ve aktarılan varlıklar
   - Saklama ayarı (SystemSetting: sıkıştırma süresi, öneri 90 gün)
   - Onaylı plan bağları (PlanVersion → PlanRun → DataVersion)
 - **03:** Plan hesapları (PlanRun) DataVersionId ile bağlanır; onaylı plan yayınlanınca bağlı versiyon otomatik 'sabit' olur.
@@ -699,7 +699,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Versiyon değiştirilemez; yalnız yeni yükleme yeni versiyon açar.
   - Onaylı plana bağlı versiyon silinmez ve sıkıştırılmaz.
-  - Kısmi versiyonda yüklenmeyen varlıklar önceki versiyonun satırlarını işaret eder; kopyalanmaz.
+  - Kısmi versiyonda aktarılmayan varlıklar önceki versiyonun satırlarını işaret eder; kopyalanmaz.
   - Çalışma açıldığı versiyonda kalır; versiyon değiştirmek için çalışma yeniden açılır (öneri: 'çalışmayı yeni veriyle yenile' sonraki faz).
   - Elle sabitleme Admin ve üstü; sabit versiyon elle çözülebilir (onaylıya bağlı değilse).
 - **HATA VE ISTISNA**
@@ -734,17 +734,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Plan etkisi:** Farkın plana olası etkisi tahmini olarak; hesap için çalışma gerekir.
 - **Excel'e aktar:** Fark raporu indirilebilir; End user da görebilir.
 
-### 08 · Yükleme geçmişi
+### 08 · Aktarım geçmişi
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Çalışma prensibi 1/2</sub>
 
-- Çekim, Excel yüklemesi, validasyon, tam ve kısmi yüklemelerin kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
-- **Yükleme raporu (5.4, K-151):** tablo başına yalnız özet sayılar: yeni, değişen, kapatılan, load edilmeyen; satır satır liste ve neden listesi yok (ayrıntı validasyon çekmecesinde). İki tek satır not: eşik aşıldığı için tablo yüklenmedi (oran ve eşikle); kısmi load'da ana verisi yüklenmediği için bekleyen satır sayısı. Her tablonun son load zamanı (tam / kısmi) ve staging'de load edilmemiş yeni veri olup olmadığı. Özet kayıtlar temizlikte silinmez (09).
+- Çekim, Excel yüklemesi, validasyon, tam ve kısmi aktarımların kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
+- **Aktarım raporu (5.4, K-151):** tablo başına yalnız özet sayılar: yeni, değişen, kapatılan, aktarılmayan; satır satır liste ve neden listesi yok (ayrıntı validasyon çekmecesinde). İki tek satır not: eşik aşıldığı için tablo aktarılmadı (oran ve eşikle); kısmi aktarımda ana verisi aktarılmadığı için bekleyen satır sayısı. Her tablonun son aktarım zamanı (tam / kısmi) ve staging'de aktarılmamış yeni veri olup olmadığı. Özet kayıtlar temizlikte silinmez (09).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Görüntüleme: Key user ve üstü (End user görmez) · dışa aktarma: aynı
-  - Nereden: Veri yükleme ekranı 'Yükleme geçmişi' kartı → tam liste · Sistem sağlığı bağlantısı
+  - Nereden: Veri yükleme ekranı 'Aktarım geçmişi' kartı → tam liste · Sistem sağlığı bağlantısı
 - **01:** Liste zaman sırasına göre açılır; her satırda tür (çekim, Excel, tam, kısmi), kullanıcı, varlıklar, satır ve hata sayısı, süre, oluşan versiyon ve sonuç.
 - **02:** Filtreler satırları daraltır; varsayılan son 7 gün.
 - **03:** Satır seçilince detay çekmecesi: varlık bazında sayılar, süreler, çalışan kurallar, hata raporu bağlantısı.
@@ -759,7 +759,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hata raporu (xlsx) ve ham veri görünümü bağlantıları
   - Excel dışa aktarımı
 
-### 08 · Yükleme geçmişi · kurallar ve etkiler
+### 08 · Aktarım geçmişi · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
@@ -774,20 +774,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Denetim izi: dışa aktarma kaydı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez.
 
-### 08 · Yükleme geçmişi · Liste ve filtre
+### 08 · Aktarım geçmişi · Liste ve filtre
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Mockup 1/2</sub>
 
-![08 · Yükleme geçmişi · Liste ve filtre](mockups/m24f-0371-08-yukleme-gecmisi-liste-ve-filtre.png)
+![08 · Aktarım geçmişi · Liste ve filtre](mockups/m24f-0371-08-yukleme-gecmisi-liste-ve-filtre.png)
 
-- **Tek liste:** Çekim, Excel ön kontrolü, tam ve kısmi yükleme aynı akışta; tür etiketi ayırır.
+- **Tek liste:** Çekim, Excel ön kontrolü, tam ve kısmi aktarım aynı akışta; tür etiketi ayırır.
 - **Sonuç çipi:** Tamam, uyarılı, hata; uyarının nedeni çipte kısa yazar.
 - **Filtreler:** Tarih, tür, kullanıcı, sonuç; varsayılan son 7 gün.
 - **Versiyon bağlantısı:** Yüklemenin oluşturduğu versiyon sütunda; tıklayınca versiyon listesi.
 
-### 08 · Yükleme geçmişi · Yükleme detayı
+### 08 · Aktarım geçmişi · Yükleme detayı
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Mockup 2/2</sub>
 
-![08 · Yükleme geçmişi · Yükleme detayı](mockups/m24f-0372-08-yukleme-gecmisi-yukleme-detayi.png)
+![08 · Aktarım geçmişi · Yükleme detayı](mockups/m24f-0372-08-yukleme-gecmisi-yukleme-detayi.png)
 
 - **Çekmece:** Varlık bazında satır, yeni, değişen, silinen, hata ve süre.
 - **Zaman çizgisi:** Çekim, doğrulama ve yükleme saatleri tek satırda.
@@ -810,7 +810,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Saklama süresi (SystemSetting, varsayılan 7 gün)
   - ImportBatch kayıtları (parti yaşı, varlık, durum)
   - Zamanlama
-- **03:** Seçilen partilerin stg.* satırları ve ekli Excel dosyaları silinir; ImportBatch kaydı 'ham veri silindi' işaretlenir, sayıları kalır. Yükleme raporunun özet kayıtları silinmez, yalnız ayrıntı verisi silinir (K-151); staging'in güncel satırı silinmez (K-133).
+- **03:** Seçilen partilerin stg.* satırları ve ekli Excel dosyaları silinir; ImportBatch kaydı 'ham veri silindi' işaretlenir, sayıları kalır. Aktarım raporunun özet kayıtları silinmez, yalnız ayrıntı verisi silinir (K-151); staging'in güncel satırı silinmez (K-133).
 - **04:** Silinen boyut ve parti sayısı Sistem sağlığına yazılır.
 - **05:** Hata olursa iş sonraki hafta yeniden dener; log tutulur.
 - **ÇIKTI**
@@ -828,7 +828,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Silme sırasında kilit çakışması: iş bekler ve tekrar dener; 3 denemede olmazsa Sistem sağlığına hata.
   - Disk doluysa temizlik yine de çalışır; yükleme ve çekim için eşik uyarısı ayrı (94).
 - **ETKISI VE TETIKLENENLER**
-  - Yükleme geçmişinde 'Ham veriyi gör' pasifleşir.
+  - Aktarım geçmişinde 'Ham veriyi gör' pasifleşir.
   - Sistem sağlığı disk metriği güncellenir.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez.
 
@@ -1310,13 +1310,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Kural tek tablo içindedir; ana veri ve işlem verisi tablolarında yazılır. Tablolar arası veri kuralı yoktur.
   - Bir kuralın tek hedef alanı vardır; aynı alana birden fazla kural olabilir, sonra çalışan kazanır (18).
-  - Kapsam kuralla belirlenir: kapsam dışı satıra `IsActive` = Hayır yazılır; o satır validasyona girmez, load almaz (K-145; ayrı aktarım filtresi yok).
+  - Kapsam kuralla belirlenir: kapsam dışı satıra `IsActive` = Hayır yazılır; o satır validasyona girmez, aktarıma girmez (K-145; ayrı aktarım filtresi yok).
   - Anahtar alanlar (`Code`, `LocationCode` ve tablonun öteki anahtar alanları) ve sistem alanları hedef olamaz.
   - Kural adı tabloda tekildir.
   - Editörde yalnız etiketi tanımlı ek alanlar listelenir; Koşul ve Sonuç metinleri güncel etiketle yazılır, etiket değişince yeniden üretilir (K-144).
   - Varsayılan kural yoktur; kurallar kurulumda projeye göre eklenir. Kural eklenir, silinir, pasif yapılır.
   - Kural ham veriyi değiştirmez; işlenmiş katmanda çalışır (K-140).
-  - Staging'de ERP–kural önceliği yoktur; elle değerin korunması load'un işidir (5.1).
+  - Staging'de ERP–kural önceliği yoktur; elle değerin korunması aktarımın işidir (5.1).
   - Değer, Alan ya da Formül boş çıkarsa hücre değişmez; bölen sıfırsa o satırda sonuç boş sayılır.
 - **HATA VE ISTISNA**
   - Tip uyuşmazlığı (sabit hedefe uymuyor, alan türleri uyumsuz, formül tipe uymuyor): pencerede alanın altında mesaj, Kaydet pasif; sunucu da reddeder.
@@ -1480,12 +1480,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Validasyon bulguları (04).
   - Çekmecenin Kayıtlar görünümünde kuralla değişen hücrede işaret ve ipucu: "Kural 3 · Lokasyon bayrakları · ham değer: boş".
-  - Load (5.2) işlenmiş katmanı okur.
+  - Aktarım (5.2) işlenmiş katmanı okur.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **İşlenmiş katman:** `prc.<Tablo>` Her çalıştırmada ham veriden baştan
 - **Kural izi:** `adm.DataRuleEffect` Her çalıştırmada yeniden
 - **Validasyon bulguları:** Veri yükleme çekmecesi Kurallardan hemen sonra (04)
-- **Değer kaynağı ve türetilmiş alanlar:** Ana tablolar Load'da (5.x)
+- **Değer kaynağı ve türetilmiş alanlar:** Ana tablolar Aktarımda (5.x)
 - **ÖRNEK:** Gece çekiminde Lokasyon bayrakları Tip'ten, Stok bayrakları Durum'dan, Teklif bayrağı Sipariş tipinden dolar; "bayrak yok" ve stok durum bulguları çıkmaz. Bölen sıfır olan iki satırda formül kuralı hücreyi değiştirmez, öteki satırlarda çalışır.
 - **Uygulama (4.1, K-140…K-142):** uygulandı. İşlenmiş katman `app/validation/processed.py`, kurallar `app/validation/rules_step.py` (kural başına savepoint, değişen satırlar geçici tabloda, bölen `NULLIF`), sonuç denetimi ve SQL ifadesi `app/validation/data_rule.py`. Kayıt `PUT /api/data-rules` (16, sıra 18), uygulama `POST /api/data-rules/apply` (19); çok tablolu uygulamada işler tek işlemde yazılır, grup ilk işin Id'sidir, tablolar arası validasyon sonda. Ekran 04 `screens/DataRules.tsx`.
 
@@ -1512,7 +1512,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (yükleme ve kural uygulaması sonunda, gece) · elle 'Şimdi kontrol et': Key user ve üstü
-  - Nereden: Tam ve kısmi yükleme (05 / 06), kural uygulama (19), elle değer (12, kayıt bazında) sonunda · Veri kalitesi ekranı
+  - Nereden: Tam ve kısmi aktarım (05 / 06), kural uygulama (19), elle değer (12, kayıt bazında) sonunda · Veri kalitesi ekranı
 - **01:** Tetik gelir; kapsam belirlenir: tam kontrol (yükleme, gece) ya da etkilenen kayıtlar (kural, elle değer).
 - **02:** Ana veri kontrolleri çalışır: kaynak (takvimsiz, sıfır kapasite, birim uyumsuzluğu), malzeme (temin süresi, min parti, birim dönüşümü), ürün ağacı (döngü, pasif bileşen), rota (kaynak yok, süre 0, kapasite birimi ≠ tüketim birimi).
 - **GIRDI**
@@ -3000,7 +3000,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
 
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
-- **40 · Gece akışı:** Her gece aynı sırayla: senaryo temizliği, veri çekme, validasyon, tam yükleme, senaryoların sırayla ve paralel çalışması.
+- **40 · Gece akışı:** Her gece aynı sırayla: senaryo temizliği, veri çekme, validasyon, tam aktarım, senaryoların sırayla ve paralel çalışması.
 - **41 · Senaryoyu yeniden çalıştırma (öneri):** Hata veren ya da süre bütçesini aşan gece senaryosunu gündüz yeniden başlatmak; ya da tanım değişikliğinden sonra bir senaryoyu yeniden üretmek.
 - **42 · Senaryo karşılaştırma:** Gece senaryolarını aynı metriklerle yan yana görmek, en iyi değeri işaretlemek ve farkın hangi siparişlerden, kaynaklardan geldiğine inmek; çalışma açma kararı buradan verilir.
 - **43 · Çalışma açma:** Bir gece senaryosu üzerinde kullanıcının kendi çalışma alanını açmak; değişiklikler bu alana yazılır, yeniden hesap ve yayın buradan yapılır.
@@ -3014,7 +3014,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 40 · Gece akışı
 <sub>24. Ekranlar ve fonksiyonlar · F40 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
 
-- Her gece aynı sırayla: senaryo temizliği, veri çekme, validasyon, tam yükleme, senaryoların sırayla ve paralel çalışması. Sabaha karşılaştırılabilir senaryolar hazır olur.
+- Her gece aynı sırayla: senaryo temizliği, veri çekme, validasyon, tam aktarım, senaryoların sırayla ve paralel çalışması. Sabaha karşılaştırılabilir senaryolar hazır olur.
 
 #### NASIL ÇALIŞIR
 
@@ -3022,7 +3022,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Sistem (zamanlanmış) · zamanlama ve senaryo tanımları: Admin ve üstü
   - Nereden: Zamanlanmış iş (21:30 silme, 22:00 çekim) · görünüm: Ana sayfa, Gece senaryoları, Sistem sağlığı
 - **01:** 21:30 temizlik: önceki gecenin senaryoları ve yayınlanmamış çalışmalar silinir; onaylı planlar ve bağlı veri versiyonları kalır (49).
-- **02:** 22:00 veri çekme (01) → validasyon (04) → tam yükleme (05): yeni veri versiyonu. Hata eşiği aşan varlık dışarıda kalır (kısmiye döner).
+- **02:** 22:00 veri çekme (01) → validasyon (04) → tam aktarım (05): yeni veri versiyonu. Hata eşiği aşan varlık dışarıda kalır (kısmiye döner).
 - **GIRDI**
   - Zamanlanmış iş tanımları (saatler), aktif senaryo tanımları ve öncelik sırası
   - Sistem ayarları: paralel senaryo sayısı (2), gece bitiş sınırı (06:00), 'yükleme başarısızsa' davranışı
@@ -3055,7 +3055,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veri kalitesi listesi ve uyarılar (yayınla).
   - Sistem sağlığı: süreler, hatalar, kuyruk.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Veri versiyonu ve türetilmiş alanlar:** DataVersion, FieldValueSource, LLC Tam yükleme ile (05)
+- **Veri versiyonu ve türetilmiş alanlar:** DataVersion, FieldValueSource, LLC Tam aktarım ile (05)
 - **Senaryo plan çıktıları:** PlanRun → CapacityLoad, PlannedOrder, Pegging, DemandFulfillment Her senaryoda baştan
 - **Uyarı ve metrik:** PlanWarning, PlanMetric Her senaryoda
 - **Dünden bugüne:** Ana sayfa Dünkü senaryo özetiyle
@@ -6192,7 +6192,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F82 · J Takip ve rapor · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Karşılaştırma referansı önceki sabahın tam yüklemesi ve o anki onaylı plandır; gün içi kısmi yüklemeler 'bugün' tarafını tazeler.
+  - Karşılaştırma referansı önceki sabahın tam aktarımı ve o anki onaylı plandır; gün içi kısmi aktarımlar 'bugün' tarafını tazeler.
   - End user çalışma açamaz, senaryo metriklerini görmez; yalnız onaylı plan kartları ve uyarıları.
   - Uyarı sayaçları kapatılmış ve 'izleniyor' uyarıları içermez.
   - Ana senaryo parametre setinde seçilir; özet kartlar o senaryoyu referans alır.
@@ -6951,7 +6951,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - İş tanımları: tür, saat ve günler, bağımlılık, kanal, öncelik, aktif
   - SystemSetting: bitiş sınırı (06:00), gece paralel senaryo (2)
   - Sunucu saati (kapalı ağda zaman sunucusu yok; sunucu saati referans)
-- **03:** Gece akışı zinciri sabittir: 22:00 çekim → validasyon ve tam yükleme → senaryolar (sıra ve paralellik Gece senaryoları ekranında) → 06:00 bitiş sınırı.
+- **03:** Gece akışı zinciri sabittir: 22:00 çekim → validasyon ve tam aktarım → senaryolar (sıra ve paralellik Gece senaryoları ekranında) → 06:00 bitiş sınırı.
 - **04:** Zincir davranışı: çekim ya da yükleme hata verirse senaryolar son veri versiyonuyla 'eski veri' etiketiyle çalışır (parametre, 01); bir senaryo hata verirse diğerleri sürer.
 - **05:** 'Şimdi çalıştır': iş gece kanalına anında girer; gece akışıyla çakışırsa sıraya alınır. Kapsam seçilir (yalnız çekim ya da tüm zincir).
 - **ÇIKTI**
@@ -6968,7 +6968,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Zamanlar çakışamaz; sistem kaydetmeden kontrol eder.
   - Aktif / pasif tanımı silmez.
   - Hafta sonu çalışması parametredir (varsayılan açık).
-  - Gece akışı saatinde (22:00–06:00) sürüm güncelleme (97) ve elle tam yükleme yapılamaz.
+  - Gece akışı saatinde (22:00–06:00) sürüm güncelleme (97) ve elle tam aktarım yapılamaz.
 - **HATA VE ISTISNA**
   - İş başlatılamadı (işçi servisi kapalı): bir sonraki döngüde yeniden; Sistem sağlığı ve ana sayfaya uyarı.
   - Zincir ortasında hata: kalan adımların davranışı parametreyle (devam / dur).

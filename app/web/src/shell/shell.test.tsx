@@ -226,7 +226,7 @@ describe("bağlam çubuğu", () => {
   it("veri yoksa, API cevap vermiyorsa, veritabanına ulaşılamıyorsa", async () => {
     mockApi({ "/api/data-versions/current": { status: 404, body: { error: { code: "no_data_version", message: "", trace_id: "" } } } });
     const { unmount } = renderApp();
-    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veri yüklenmedi"));
+    await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veri aktarılmadı"));
     unmount();
     mockApi({ "/api/data-versions/current": "offline" });
     const second = renderApp();
