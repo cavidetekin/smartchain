@@ -911,7 +911,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>26. Entegrasyon tasarımı · Senkron sıklığı</sub>
 
 - **Gece tam çekim · 22:00:** Tüm ERP varlıkları tam çekim, doğrulama, tam yükleme (v+1), ardından senaryolar. Bitiş sınırı 06:00. Excel varlıkları son yüklenen haliyle kalır.
-- **Gün içi kısmi · elle:** Stok ve siparişler (satış, satın alma, iş emri) Key user tarafından çekilip kısmi yüklenir; 'yeni veri var' bildirimi. Hedef 5 dk altı.
+- **Gün içi kısmi · elle ya da zamanlanmış:** İşlem verisi grupları (Talep, Stok, Üretim, Satın alma, İzin) Key user tarafından ya da System owner'ın kurulumda tanımladığı ikinci bir akışla (ör. öğlen Talep ve Stok) kısmi yüklenir; ana veri yalnız tam yüklemede gelir (K-150). Hedef 5 dk altı.
 - **Haftalık ve elle:** Tahmin ve kaynak: haftalık ya da değişince Excel ile; takvim ve vardiya ekrandan (K-65). Ham veri temizliği Pazar 03:00.
 - **Artımlı çekim:** SQL her zaman tam okur (K-130). API'de (Faz 2) LastModified varsa yalnız değişenler; silinenler için tam liste gerekir (A-23). Artımlı destek yoksa tam çekim (varsayılan).
 - **Zamanlama ayarı:** Saatler ve paralellik Entegrasyon ekranında (Admin); bitiş sınırı ve işçi sayısı System owner ayarı. Müşterinin ERP gece işleriyle çakışmaması için saat devreye almada belirlenir.

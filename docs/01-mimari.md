@@ -184,7 +184,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yükleme:** Kullanıcı ya da gece akışı yüklemeyi başlatır; yeni bir veri versiyonu oluşur.
 - **Kısmi yükleme:** Sadece seçilen varlıklar yüklenebilir (ör. siparişler ve stok, ya da bir proje). Yeni versiyon yüklenmeyenleri öncekinden alır; sadece değişen kısım yazılır.
 - **Tutarlılık:** Kısmi yüklemede eksik ilişki varsa uyarı ve öneri: ör. yeni siparişin malzemesi ana veride yoksa ilgili ana veriyi de yüklemesi önerilir.
-- **Dondurma:** Her senaryo ve çalışma bir veri versiyonuna bağlıdır; yeni yükleme açık çalışmaları bozmaz.
+- **Dondurma:** Her senaryo ve çalışma bir veri versiyonuna bağlıdır; yeni yükleme açık çalışmaları bozmaz. Açık çalışmanın yeni veri versiyonundaki davranışı A-45'te açık (Aşama 8'den önce).
 
 ### Veri katmanları ve saklama
 <sub>19. Mimari kararlar · Veri katmanları</sub>
@@ -238,7 +238,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Aynı senaryoda birden fazla kullanıcı:** Serbest; her kullanıcı kendi çalışmasını açar, çalışmalar yalıtılmış ve sadece sahibine görünür.
 - **İki kişinin yayın yapması:** Yayın tek seferde bir kişiyle sınırlı. Kullanıcı çalışmasını açtığından bu yana başka biri yayın yaptıysa uyarı ve fark gösterilir; onaylarsa yayınlar.
 - **Gece akışı ve açık çalışmalar:** Gün içinde 'bu gece silinecek' uyarısı; gece akışında açık çalışmalar önce salt okunur olur, sonra silinir.
-- **Gün içinde yeni veri yükleme:** Açık çalışmaları etkilemez; yayında eski veri uyarısı.
+- **Gün içinde yeni veri yükleme:** Açık çalışmaları etkilemez; yayında eski veri uyarısı (davranış A-45'te açık).
 - **Aynı kaydı iki kişinin değiştirmesi:** İlk kaydeden kazanır; ikinci kişi 'kayıt sen açtıktan sonra değişti' uyarısı alır ve güncel hali görür. Kilitleme yok.
 - **Parametreyi varsayılan yapma:** Aynı kural; her değişiklik kim ve ne zamanla kaydedilir.
 - Durum: Taslak; sonra değerlendirilecek.
