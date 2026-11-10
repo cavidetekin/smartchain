@@ -181,10 +181,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Çekim:** API'den, Excel'den ya da SQL view'larından (K-130) gelen veri ham veri katmanına düşer. Planlama ekranları değişmez.
 - **Doğrulama:** Veri kuralları çalışır, uyarılar çıkar; kullanıcı ne geldiğini ve farkları görür.
-- **Yükleme:** Kullanıcı ya da gece akışı yüklemeyi başlatır; yeni bir veri versiyonu oluşur.
-- **Kısmi yükleme:** Sadece seçilen varlıklar yüklenebilir (ör. siparişler ve stok, ya da bir proje). Yeni versiyon yüklenmeyenleri öncekinden alır; sadece değişen kısım yazılır.
-- **Tutarlılık:** Kısmi yüklemede eksik ilişki varsa uyarı ve öneri: ör. yeni siparişin malzemesi ana veride yoksa ilgili ana veriyi de yüklemesi önerilir.
-- **Dondurma:** Her senaryo ve çalışma bir veri versiyonuna bağlıdır; yeni yükleme açık çalışmaları bozmaz. Açık çalışmanın yeni veri versiyonundaki davranışı A-45'te açık (Aşama 8'den önce).
+- **Aktarım (K-152):** Kullanıcı ya da akış staging'in işlenmiş katmanını core'a aktarır; yeni bir veri versiyonu oluşur. Tam aktarım ana veri ve işlem verisinin hepsidir (K-149).
+- **Kısmi aktarım (K-150):** Yalnız seçilen işlem verisi grupları aktarılır (Talep, Stok, Üretim, Satın alma, İzin); ana veri aktarılmaz. Yeni versiyon seçilmeyen grupları ve ana veriyi öncekinden alır; yalnız değişen kısım yazılır.
+- **Tutarlılık:** Kısmi aktarımda bağlı olduğu ana veri core'da olmayan satır aktarılmaz, aktarım raporunda bekleyen satır sayısı olarak görünür ve bir sonraki tam aktarımda girer; bağımlılık önerisi yoktur (K-150, K-151).
+- **Dondurma:** Her senaryo ve çalışma bir veri versiyonuna bağlıdır; yeni aktarım açık çalışmaları bozmaz. Açık çalışmanın yeni veri versiyonundaki davranışı A-45'te açık (Aşama 8'den önce).
 
 ### Veri katmanları ve saklama
 <sub>19. Mimari kararlar · Veri katmanları</sub>

@@ -40,7 +40,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri sınıfları:** Ana veri genel ve bütün senaryolarda aynı; parametre Smartchain'de, parametre setine bağlı ve senaryoya özel olabilir; işlem verisi ERP'den gelen hareketler.
 - **Değer kaynağı:** Her alanın değeri ERP, kural ya da elle gelir; varsayılan değer yoktur (K-138). Öncelik veri sözlüğünde (FieldDefinition) alan bazında tanımlıdır. ERP değeri ezilse bile saklanır.
 - **Boşsa (K-138):** Veri tablolarının BOŞSA kolonu, kurallardan sonra boş kalan alanın anlamını yazar: hata (satır atlanır), hata (kurallardan sonra), yok, sınırsız, bilinmiyor, temel birim ya da alana özgü anlam. Anlamlar docs/03'teki entegrasyon tablolarıyla aynıdır; Id alanı kod alanının anlamını taşır. Parametre, plan ve sistem tablolarında VARSAYILAN kalır: bunlar veri değildir.
-- **Veri versiyonları:** Versiyonlu tablolarda her kayıt hangi veri versiyonundan hangisine kadar geçerli olduğunu taşır (VersionFrom, VersionTo). Kısmi yüklemede sadece değişen kayıtlar yazılır; veri kopyalanmaz.
+- **Veri versiyonları:** Versiyonlu tablolarda her kayıt hangi veri versiyonundan hangisine kadar geçerli olduğunu taşır (VersionFrom, VersionTo). Kısmi aktarımda sadece değişen kayıtlar yazılır; veri kopyalanmaz (K-152).
 - **Çalışmalar:** Çalışmadaki geçici değişiklikler tek bir tabloda tutulur (WorkspaceOverride); ana veri değişmez.
 - **Plan çıktıları:** Bütün plan çıktıları bir plan hesabına (PlanRun) bağlıdır; onaylı plan yayınlanan hesabı gösterir.
 - **Proje:** Stok, iş emri, satın alma ve siparişte sahip alanı (ProjectId); envanter proje sayısıyla çoğaltılmaz.
@@ -215,8 +215,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **IntegrationViewVersion:** View'ın sürüm geçmişi (K-130)
 - **stg.*:** Entegrasyon tabloları: her varlık için bir tane (stg.Material…); ilişkiler kodla; ham katman
 - **prc.*:** İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış (K-140)
-- **DataVersion:** Yükleme ile oluşan dondurulmuş veri versiyonu
-- **DataVersionEntity:** Kısmi yüklemede hangi varlıkların yüklendiği
+- **DataVersion:** Aktarım ile oluşan dondurulmuş veri versiyonu
+- **DataVersionEntity:** Aktarımda hangi tabloların aktarıldığı
 
 ### Tablo listesi
 <sub>21. Veri modeli · Tablo listesi · 6/6</sub>
@@ -1514,7 +1514,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Yükleme ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi.
+- Aktarım ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi (K-152).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -1530,7 +1530,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Kısmi yüklemede hangi varlıkların yüklendiği.
+- Aktarımda hangi tabloların aktarıldığı (kısmi aktarımda seçilen grupların tabloları).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|

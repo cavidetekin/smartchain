@@ -1364,7 +1364,7 @@ DataVersion = sa.Table(
     sa.Column("IsPinned", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Onaylı plana bağlı; silinmez", info={'label': "Onaylı plana bağlı"}),
     sa.Column("IsSynthetic", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79)", info={'label': "Sentetik veri (geliştirme ve demo)"}),
     schema="adm",
-    comment="Yükleme ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi.",
+    comment="Aktarım ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi (K-152).",
 )
 
 DataVersionEntity = sa.Table(
@@ -1373,7 +1373,7 @@ DataVersionEntity = sa.Table(
     sa.Column("EntityName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Varlık", info={'label': "Varlık"}),
     sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=True, comment="Kaynak parti", info={'label': "Kaynak parti"}),
     schema="adm",
-    comment="Kısmi yüklemede hangi varlıkların yüklendiği.",
+    comment="Aktarımda hangi tabloların aktarıldığı (kısmi aktarımda seçilen grupların tabloları).",
 )
 
 ScenarioDefinition = sa.Table(
