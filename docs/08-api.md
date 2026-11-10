@@ -346,7 +346,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 
 ## Testler
 
-- **Sıra (commit zinciri):** `npm run build` → `python -m pytest` → `npm test` → `npx tsc --noEmit`. Build önce: internetsizlik testi (`tests/test_offline.py`) taze derlemeyi tarar.
+- **Sıra (commit zinciri):** `npm run build` → `SMARTCHAIN_SKIP_WEB_TESTS=1 python -m pytest` → `npm test` → `npx tsc --noEmit`. Build önce: internetsizlik testi (`tests/test_offline.py`) taze derlemeyi tarar. Zincirde pytest değişkenle çalışır: arayüz testleri pytest içinden (`tests/test_web.py`) koşmaz, yalnız `npm test` adımında koşar; aynı testler iki kez koşmaz, zincir kısalır. Değişken yokken `python -m pytest` tek başına arayüz testlerini de kapsar.
 - `python -m pytest`: bütün testler, **performans testleri hariç** (`pyproject.toml`: `-m 'not perf'`). Veritabanı testleri (`db` işareti) atlanırsa (SQL Server'a bağlanılamadı, yetki yok, sentetik veri yok) koşu başarısız olur; zincir yanlışlıkla geçmiş görünmez. SQL Server olmadan bilerek çalıştırmak için `python -m pytest -m "not db"`.
 - `python -m pytest -m perf`: performans testleri ayrıca çalıştırılır. Büyük veriyi bir işlem içinde üretir, ölçer ve geri alır; her ölçüm birkaç denemenin ortancasıdır (makine yükündeki tek seferlik sıçramalar sonucu bozmasın).
 - Ön yüz: `cd app/web; npm run build; npm test; npx tsc --noEmit`. Test süresi sınırı 15 sn (`vite.config.ts`): dosyalar paralel çalıştığı için yük altında jsdom testleri varsayılan 5 sn'yi aşabilir; tek başına bir test 2 sn'nin altındadır. `findBy` / `waitFor` beklemesi 5 sn (`src/test/setup.ts`; varsayılan 1 sn yük altında girişten sonra ekran açılışını yakalayamıyordu, 4.4).
