@@ -46,14 +46,20 @@ async function open(role: string, routes: Routes = {}, path = "/veri/veri-yuklem
   return { user: userEvent.setup(), fetchMock };
 }
 
+/** "Veri aktarımı ▾" menüsünden seçenek (K-157). */
+async function choose(user: ReturnType<typeof userEvent.setup>, item: string) {
+  await user.click(screen.getByRole("button", { name: "Veri aktarımı" }));
+  await user.click(await screen.findByRole("menuitem", { name: item }));
+}
+
 const posts = (fetchMock: ReturnType<typeof vi.fn>, url: string) =>
   fetchMock.mock.calls.filter(([u, init]) => String(u) === url && (init as RequestInit | undefined)?.method === "POST");
 
-describe("Tam aktar", () => {
+describe("Tam veri aktarımı", () => {
   it("Key user onaylar: tablolar, aktarılmayanlar ve not; başlatınca sonuç penceresi sayıları ve veri versiyonunu gösterir", async () => {
     const { user, fetchMock } = await open("Key user");
-    await user.click(screen.getByRole("button", { name: "Tam aktar" }));
-    const dialog = await screen.findByRole("dialog", { name: "Tam aktarım" });
+    await choose(user, "Tam veri aktarımı");
+    const dialog = await screen.findByRole("dialog", { name: "Tam veri aktarımı" });
     expect(await within(dialog).findByText("1 tablo aktarılacak")).toBeInTheDocument();
     expect(within(dialog).getAllByText("Aktarılmaz")).toHaveLength(2);
     expect(within(dialog).getByText("Hatalı satır oranı %22,5, eşik %5; tablo aktarılmadı, mevcut veri korunur.")).toBeInTheDocument();
@@ -68,17 +74,23 @@ describe("Tam aktar", () => {
 
   it("başlatılamıyorsa neden ve tablolar yazar, başlat pasif", async () => {
     const { user } = await open("Admin", { "/api/transfers/plan": { body: { ...PLAN, blocked: { reason: "Validasyonu bitmemiş tablo var; önce valide edin.", tables: ["Malzeme"] } } } });
-    await user.click(screen.getByRole("button", { name: "Tam aktar" }));
-    const dialog = await screen.findByRole("dialog", { name: "Tam aktarım" });
+    await choose(user, "Tam veri aktarımı");
+    const dialog = await screen.findByRole("dialog", { name: "Tam veri aktarımı" });
     expect(await within(dialog).findByText(/Validasyonu bitmemiş tablo var; önce valide edin\. Tablolar: Malzeme\./)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Aktarımı başlat" })).toBeDisabled();
   });
 
-  it.each(["Key user", "Admin", "System owner"])("%s için düğme etkin, Veri çek'in yanında ikincil (End user ekranı açamaz)", async (role) => {
-    await open(role);
-    const button = screen.getByRole("button", { name: "Tam aktar" });
-    expect(button).toBeEnabled();
+  it.each(["Key user", "Admin", "System owner"])("%s: Veri çek ana, Veri aktarımı ikincil; menüde üç seçenek ve ayırıcı (End user ekranı açamaz)", async (role) => {
+    const { user } = await open(role);
+    expect(screen.getByRole("button", { name: "Veri çek" }).className).toContain("sc-btn--primary");
+    const button = screen.getByRole("button", { name: "Veri aktarımı" });
     expect(button.className).toContain("sc-btn--secondary");
+    expect(screen.queryByRole("button", { name: "Tam aktar" })).toBeNull();
+    await user.click(button);
+    const menu = await screen.findByRole("menu", { name: "Veri aktarımı" });
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Tam veri aktarımı", "Kısmi veri aktarımı", "Veri aktarım geçmişi"]);
+    expect(within(menu).getAllByRole("menuitem").every((m) => !(m as HTMLButtonElement).disabled)).toBe(true);
+    expect(within(menu).getByRole("separator")).toBeInTheDocument();
   });
 
   it("\"Sonucu aç\" adresi sonuç penceresini açar", async () => {
@@ -88,7 +100,7 @@ describe("Tam aktar", () => {
   });
 });
 
-// Kısmi aktarım (fonksiyon 06; K-150, K-155): ayrı düğme, grup seçimi (hiçbiri seçili açılır), engel seçime göre.
+// Kısmi aktarım (fonksiyon 06; K-150, K-155, K-157): menüden, grup seçimi (hiçbiri seçili açılır), engel seçime göre.
 const row = (entity: string, name: string, status = "Aktarılır", current = 10) =>
   ({ entity, name, current_rows: current, error_rows: 0, status, note: status === "Aktarılır" ? null : "Veri gelmedi; mevcut veri korunur." });
 const PARTIAL = {
@@ -103,13 +115,13 @@ const PARTIAL = {
   ],
 };
 
-describe("Kısmi aktar", () => {
+describe("Kısmi veri aktarımı", () => {
   const partialRoutes = { "/api/transfers/partial/plan": { body: PARTIAL }, "/api/transfers/partial": { status: 202, body: { job_id: 91 } } };
 
   it("hiçbir grup seçili açılır; seçince tabloları gelir, başlatınca seçilen gruplar gider ve rapor açılır", async () => {
     const { user, fetchMock } = await open("Key user", partialRoutes);
-    await user.click(screen.getByRole("button", { name: "Kısmi aktar" }));
-    const dialog = await screen.findByRole("dialog", { name: "Kısmi aktarım" });
+    await choose(user, "Kısmi veri aktarımı");
+    const dialog = await screen.findByRole("dialog", { name: "Kısmi veri aktarımı" });
     expect(await within(dialog).findByText("En az bir grup seçin.")).toBeInTheDocument();
     expect(within(dialog).getAllByRole("checkbox").filter((c) => (c as HTMLInputElement).checked)).toHaveLength(0);
     expect(within(dialog).getByRole("button", { name: "Aktarımı başlat" })).toBeDisabled();
@@ -125,8 +137,8 @@ describe("Kısmi aktar", () => {
 
   it("seçilen grupta validasyonu bitmemiş tablo varsa neden yazar, başlat pasif; süren iş her seçimde engeller", async () => {
     const { user } = await open("Admin", partialRoutes);
-    await user.click(screen.getByRole("button", { name: "Kısmi aktar" }));
-    const dialog = await screen.findByRole("dialog", { name: "Kısmi aktarım" });
+    await choose(user, "Kısmi veri aktarımı");
+    const dialog = await screen.findByRole("dialog", { name: "Kısmi veri aktarımı" });
     await user.click(await within(dialog).findByRole("checkbox", { name: /^Stok/ }));
     expect(within(dialog).getByText(/Seçilen gruplarda validasyonu bitmemiş tablo var; önce valide edin\. Tablolar: Stok\./)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Aktarımı başlat" })).toBeDisabled();
@@ -138,17 +150,11 @@ describe("Kısmi aktar", () => {
 
   it("süren iş varsa neden yazar", async () => {
     const { user } = await open("Key user", { ...partialRoutes, "/api/transfers/partial/plan": { body: { ...PARTIAL, busy: "Validasyon sürüyor. Bitince aktarımı başlatabilirsiniz." } } });
-    await user.click(screen.getByRole("button", { name: "Kısmi aktar" }));
-    const dialog = await screen.findByRole("dialog", { name: "Kısmi aktarım" });
+    await choose(user, "Kısmi veri aktarımı");
+    const dialog = await screen.findByRole("dialog", { name: "Kısmi veri aktarımı" });
     expect(await within(dialog).findByText("Validasyon sürüyor. Bitince aktarımı başlatabilirsiniz.")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("checkbox", { name: /^Üretim/ }));
     expect(within(dialog).getByRole("button", { name: "Aktarımı başlat" })).toBeDisabled();
   });
 
-  it.each(["Key user", "Admin", "System owner"])("%s için düğme etkin ve ikincil", async (role) => {
-    await open(role, partialRoutes);
-    const button = screen.getByRole("button", { name: "Kısmi aktar" });
-    expect(button).toBeEnabled();
-    expect(button.className).toContain("sc-btn--secondary");
-  });
 });

@@ -183,7 +183,7 @@ def test_partial_api_plan_start_and_permissions(db_engine):
         with db_engine.connect() as c:
             job = c.execute(sa.text("SELECT Payload, Summary FROM adm.Job WHERE Id = :i"), {"i": r.json()["job_id"]}).one()
             audit_row = c.execute(sa.text("SELECT TOP 1 NewValue FROM adm.AuditLog WHERE Action = N'Kısmi aktarım' AND ObjectType = N'Job' ORDER BY Id DESC")).scalar()
-        assert json.loads(job[0]) == {"user_id": key, "mode": "Kısmi", "groups": ["Talep", "İzin"]} and job[1] == "Kısmi aktarım · Talep, İzin"
+        assert json.loads(job[0]) == {"user_id": key, "mode": "Kısmi", "groups": ["Talep", "İzin"]} and job[1] == "Kısmi veri aktarımı · Talep, İzin"
         assert json.loads(audit_row) == {"transfer_type": "Kısmi", "groups": "Talep, İzin"}
     finally:
         clean(db_engine)
@@ -207,7 +207,7 @@ def test_partial_job_writes_kismi_version_and_audit(db_engine):
         status, progress, result = c.execute(sa.text("SELECT Status, Progress, Result FROM adm.Job WHERE Id = :i"), {"i": job_id}).one()
         version = json.loads(result)["data_version"]
         try:
-            assert status == "Bitti" and progress == f"Kısmi aktarım bitti · v{version}"
+            assert status == "Bitti" and progress == f"Kısmi veri aktarımı bitti · v{version}"
             assert c.execute(sa.text("SELECT LoadType FROM adm.DataVersion WHERE Id = :v"), {"v": version}).scalar() == "Kısmi"
             assert [e for e, in c.execute(sa.text("SELECT EntityName FROM adm.DataVersionEntity WHERE DataVersionId = :v"), {"v": version})] == ["EmployeeAbsence"]
             assert not c.execute(sa.text("SELECT COUNT(*) FROM core.Customer WHERE Code = N'PJ-1'")).scalar()

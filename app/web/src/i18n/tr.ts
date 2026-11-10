@@ -182,8 +182,8 @@ export const tr = {
   },
   // Tam aktarım (ekran 02, fonksiyon 05; K-149…K-153)
   transfer: {
-    button: "Tam aktar",
-    startTitle: "Tam aktarım",
+    menu: "Veri aktarımı",
+    startTitle: "Tam veri aktarımı",
     startSubtitle: (n: number) => `${n} tablo aktarılacak`,
     start: "Aktarımı başlat",
     table: "Tablo",
@@ -203,13 +203,39 @@ export const tr = {
     notTransferred: "Aktarılmayan",
     failed: "Aktarım başlatılamadı.",
     // Kısmi aktarım (fonksiyon 06; K-150, K-155)
-    partialButton: "Kısmi aktar",
-    partialTitle: "Kısmi aktarım",
+    partialTitle: "Kısmi veri aktarımı",
     partialSubtitle: (n: number) => (n === 0 ? "Grup seçin; ana veri aktarılmaz" : `${n} tablo aktarılacak; ana veri aktarılmaz`),
     groups: "Gruplar",
     group: "Grup",
     noGroup: "En az bir grup seçin.",
     pendingReason: "Seçilen gruplarda validasyonu bitmemiş tablo var; önce valide edin.",
+    // Veri aktarım raporu üst bilgisi ve Excel (K-156)
+    reportMeta: (kind: string, who: string | null, when: string, seconds: number | null) =>
+      [kind, who, when, seconds === null ? null : `${seconds} sn`].filter(Boolean).join(" · "),
+    excel: "Excel'e aktar",
+    excelFailed: "Excel dosyası hazırlanamadı.",
+  },
+  // Veri aktarım geçmişi ve ham veri temizliği (fonksiyon 08, 09; K-156)
+  history: {
+    button: "Veri aktarım geçmişi",
+    title: "Veri aktarım geçmişi",
+    subtitle: "Satıra tıklayınca o aktarımın raporu açılır",
+    cleanup: "Ham veri temizliği",
+    cleanupTitle: "Ham veri temizliği",
+    cleanupStart: "Temizliği başlat",
+    noRetention: "Saklama süresi tanımlı değil; temizlik çalışmaz.",
+    retention: (days: number) => `Saklama süresi ${days} gün`,
+    neverCleaned: "henüz temizlik yapılmadı",
+    lastCleanup: (when: string, text: string) => `Son temizlik ${when}: ${text}`,
+    cleanupCounts: (uploads: string, rows: string, files: string, size: string) => `${uploads} yükleme · ${rows} eski satır · ${files} dosya (${size})`,
+    cleanupRunning: "sürüyor",
+    cleanupFailed: "tamamlanamadı",
+    warning: (days: number) => `${days} günden eski yükleme kayıtları ve dosyaları silinir. Kullanılan veri ve aktarım geçmişi etkilenmez. Bu işlem geri alınamaz.`,
+    previewCounts: (uploads: string, rows: string, files: string, size: string) => `Silinecek: ${uploads} yükleme · ${rows} eski satır · ${files} dosya (${size})`,
+    nothing: "Silinecek eski yükleme yok.",
+    table: "Tablo",
+    rows: "Silinecek eski satır",
+    failed: "Temizlik başlatılamadı.",
   },
   // Entegrasyon (ekran 23, fonksiyon 91; K-130)
   integration: {
@@ -410,6 +436,8 @@ export const tr = {
     healthTitle: "Sistem sağlığı",
     healthGroup: "Sistem sağlığı",
     importGroup: "Excel yükleme",
+    cleanupGroup: "Ham veri temizliği",
+    optionalEmpty: "Boşsa temizlik çalışmaz.",
     health: {
       DiskWarnPercent: "Disk uyarı eşiği (%)",
       QueueWaitWarnMinutes: "Kuyruk bekleme eşiği (dk)",
@@ -417,6 +445,7 @@ export const tr = {
       ImportSyncMaxMb: "Beklemeden kontrol edilen en büyük dosya (MB)",
       ImportMaxMb: "En büyük dosya (MB)",
       ImportMaxRows: "Dosyada en çok satır",
+      RawDataRetentionDays: "Ham verinin saklama süresi (gün)",
     } as Record<string, string>,
   },
   // Giriş ve oturum (fonksiyon 89; K-97, K-98)

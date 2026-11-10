@@ -434,13 +434,13 @@ def lock(session: Session) -> None:
 
 
 def run_transfer(session: Session, user_id: int | None, progress: Callable[[str], None] | None = None,
-                 groups: list[str] | None = None) -> dict:
+                 groups: list[str] | None = None, job_id: int | None = None) -> dict:
     """Grup yoksa bütün tablolar (tam), varsa yalnız seçilen grupların tabloları (kısmi, K-155); commit çağıranındır (iş kaydıyla aynı işlemde)."""
     selected = group_tables(groups) if groups else None
     lock(session)
     now = utcnow()
     version = session.execute(sa.insert(DATA_VERSION).values(LocationId=None, CreatedAt=now, LoadType=PARTIAL if selected else FULL, CreatedBy=user_id,
-                                                             IsPinned=False, IsSynthetic=False).returning(DATA_VERSION.c.Id)).scalar_one()
+                                                             IsPinned=False, IsSynthetic=False, JobId=job_id).returning(DATA_VERSION.c.Id)).scalar_one()
     run = Run(int(version), now)
     names = order()
     if selected:

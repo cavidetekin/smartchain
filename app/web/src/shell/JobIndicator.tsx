@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useNavigate } from "react-router";
 
-import { api, emitNotice, HEALTH_EVENT, importResultPath, JOB_EVENT, JOB_DONE, JOB_EXPORT, JOB_FAILED, JOB_TRANSFER, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, transferResultPath, type Job,
+import { api, emitNotice, HEALTH_EVENT, historyPath, importResultPath, JOB_CLEANUP, JOB_EVENT, JOB_DONE, JOB_EXPORT, JOB_FAILED, JOB_TRANSFER, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, transferResultPath, type Job,
   validationResultPath } from "../api/client";
 import { connect, type ConnectionState, socketUrl } from "../api/socket";
 import { useAuth } from "../auth/AuthContext";
@@ -223,7 +223,8 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
     const path = j.job_type === JOB_PRECHECK && j.status === JOB_DONE && j.import_batch_id && mine(j) ? importResultPath(j.import_batch_id)
       : j.job_type === JOB_VALIDATION && j.validation?.entity && ended(j) ? validationResultPath(j.validation.entity)
         : j.job_type === JOB_PULL && ended(j) && mine(j) ? pullResultPath(j.id)
-          : j.job_type === JOB_TRANSFER && ended(j) && mine(j) ? transferResultPath(j.id) : null;
+          : j.job_type === JOB_TRANSFER && ended(j) && mine(j) ? transferResultPath(j.id)
+            : j.job_type === JOB_CLEANUP && ended(j) && mine(j) ? historyPath : null;
     return path ? <button type="button" className="sc-link-btn" aria-label={tr.jobs.openOf(title)} onClick={() => go(path)}>{tr.jobs.open}</button> : null;
   };
   const meta = (j: Job) => (

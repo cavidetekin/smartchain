@@ -25,7 +25,7 @@ pytestmark = pytest.mark.db
 PREFIX = "pytest.saglik."
 SETTINGS = "/api/settings/health"
 ROLES = (SYSTEM_OWNER, ADMIN, KEY_USER, END_USER)
-KEYS = ("DiskWarnPercent", "QueueWaitWarnMinutes", "SystemEventRetentionDays")
+KEYS = ("DiskWarnPercent", "QueueWaitWarnMinutes", "SystemEventRetentionDays", "ImportSyncMaxMb", "ImportMaxMb", "ImportMaxRows")
 
 
 def clean(engine):
@@ -35,7 +35,7 @@ def clean(engine):
         c.execute(text("DELETE FROM adm.ServiceStatus"))
         c.execute(text("DELETE FROM adm.SystemSetting WHERE SettingKey IN :keys").bindparams(bindparam("keys", expanding=True)),
                   {"keys": list(KEYS)})
-        c.execute(text("DELETE FROM adm.AuditLog WHERE ObjectType = N'Job' OR ObjectKey IN (N'DiskWarnPercent', N'QueueWaitWarnMinutes', N'SystemEventRetentionDays')"))
+        c.execute(text("DELETE FROM adm.AuditLog WHERE ObjectType = N'Job' OR ObjectKey IN :keys").bindparams(bindparam("keys", expanding=True)), {"keys": list(KEYS)})
         delete_users(c, [r[0] for r in c.execute(text("SELECT Id FROM adm.AppUser WHERE UserName LIKE :p"), {"p": PREFIX + "%"})])
 
 
@@ -180,7 +180,8 @@ def test_settings_only_system_owner(client, people, role):
 def test_settings_defaults_limits_and_audit(db_engine, client, people):
     owner = people[SYSTEM_OWNER]
     body = client.get(SETTINGS, headers=auth(owner)).json()
-    assert body["values"] == body["defaults"] == {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90, "ImportSyncMaxMb": 5, "ImportMaxMb": 100, "ImportMaxRows": 200000}
+    assert body["values"] == body["defaults"] == {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90, "ImportSyncMaxMb": 5, "ImportMaxMb": 100, "ImportMaxRows": 200000,
+                                                  "RawDataRetentionDays": None}  # K-156: varsayılanı yok
     assert body["limits"]["ImportMaxRows"] == {"min": 1000, "max": 1000000}
     assert body["limits"]["SystemEventRetentionDays"] == {"min": 7, "max": 3650}
     for bad in ({"DiskWarnPercent": 0}, {"DiskWarnPercent": 100}, {"QueueWaitWarnMinutes": 0}, {"SystemEventRetentionDays": 6}):
@@ -195,6 +196,18 @@ def test_settings_defaults_limits_and_audit(db_engine, client, people):
                               "AND ObjectKey IN (N'DiskWarnPercent', N'QueueWaitWarnMinutes') AND UserId = :u"), {"u": owner}).all()
     assert [(r[0], r[1]) for r in rows] == [("Ayar değişikliği", "DiskWarnPercent")]  # değişmeyen yazılmaz
     assert json.loads(rows[0][2]) == {"Value": 85} and json.loads(rows[0][3]) == {"Value": 70}
+
+
+def test_import_settings_are_saved(db_engine, client, people):
+    """Excel yükleme ayarları (K-129) aynı formdan kaydedilir; sınır dışı 422 (K-157: önceden kaydetme isteği bu alanları kabul etmiyordu)."""
+    owner = people[SYSTEM_OWNER]
+    r = client.put(SETTINGS, headers=auth(owner), json={"ImportSyncMaxMb": 10, "ImportMaxMb": 50, "ImportMaxRows": 300000})
+    assert r.status_code == 200, r.text
+    assert {k: r.json()["values"][k] for k in ("ImportSyncMaxMb", "ImportMaxMb", "ImportMaxRows")} == {"ImportSyncMaxMb": 10, "ImportMaxMb": 50, "ImportMaxRows": 300000}
+    assert client.put(SETTINGS, headers=auth(owner), json={"ImportMaxRows": 10}).status_code == 422
+    with db_engine.connect() as c:
+        keys = {r[0] for r in c.execute(text("SELECT ObjectKey FROM adm.AuditLog WHERE ObjectType = N'SystemSetting' AND UserId = :u"), {"u": owner})}
+    assert {"ImportSyncMaxMb", "ImportMaxMb", "ImportMaxRows"} <= keys
 
 
 # --- listeler ---

@@ -128,6 +128,8 @@ Matris kodda (`app/api/permissions.py`): 4 rol × 99 fonksiyon; grup tablosu doc
 | `POST /api/jobs/{id}/prioritize` | 93 · yazma |
 | `GET /api/system-health` · `GET /api/system-events/{id}` · ortak liste `system-events` | 94 · okuma (`detail` yalnız 96 · okuma) |
 | Ortak listeler `job-queue`, `job-runs` | 93 · okuma |
+| Ortak liste `transfer-history` · `GET /api/transfers/{job_id}` · `GET /api/transfers/{job_id}/excel` | 08 · okuma (K-156) |
+| `GET /api/cleanup` | 09 · okuma (Admin ve Key user sonucu görür) · `GET /api/cleanup/plan` · `POST /api/cleanup` 09 · yazma (yalnız System owner; K-156) |
 | `GET /api/settings/health` · `PUT /api/settings/health` | 96 · okuma · yazma |
 | Ortak liste `audit-log` · `GET /api/audit-log/{id}` · `GET /api/audit-log/{id}/history` | 98 · okuma (Key user yalnız kendi kayıtları) |
 | `WS /api/ws` | 48 · okuma (el sıkışmada) |
@@ -392,7 +394,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | Ortak liste `job-runs` | Son 7 günde biten işler |
 | Ortak liste `system-events` | Hatalar; `Detail` listede yok |
 | `GET /api/system-events/{id}` | Olay; `detail` yalnız System owner'a dolu. Yoksa 404 `event_not_found` |
-| `GET` · `PUT /api/settings/health` | `DiskWarnPercent` 1–99, `QueueWaitWarnMinutes` 1–1440, `SystemEventRetentionDays` 7–3650; cevap login-policy gibi `values`, `defaults`, `limits`. Yalnız değişen yazılır, iz "Ayar değişikliği" |
+| `GET` · `PUT /api/settings/health` | `DiskWarnPercent` 1–99, `QueueWaitWarnMinutes` 1–1440, `SystemEventRetentionDays` 7–3650; Excel yükleme `ImportSyncMaxMb`, `ImportMaxMb`, `ImportMaxRows` (K-129, K-157); `RawDataRetentionDays` 1–30 ya da boş (K-156); cevap login-policy gibi `values`, `defaults`, `limits`. Yalnız değişen yazılır, iz "Ayar değişikliği" |
 
 `GET /api/jobs`'ta `requested_by_name` System owner'ın işinde "Smartchain"tir; `summary`, `is_protected`, `cancel_reason`, `cancelled_by_name` eklendi.
 
@@ -499,11 +501,34 @@ Staging'in işlenmiş katmanını core'a yeni bir veri versiyonunda yazar; iş t
 | `POST /api/transfers` | Key user ve üstü (05 yazma) | **202** `{job_id}`. 409 `transfer_blocked` (çekim, ön kontrol, validasyon ya da aktarım sırada ya da sürüyor; validasyonu bitmemiş tablo). İz "Tam aktarım" |
 | `GET /api/transfers/partial/plan` | Key user ve üstü (06 okuma) | Kısmi aktarım penceresi (K-155): gruplar ve tabloları, tablo başına güncel satır, Hatalı, durum ve not; süren iş (`busy`), validasyonu bitmemiş tablolar (`pending`) |
 | `POST /api/transfers/partial` · `{groups}` | Key user ve üstü (06 yazma) | **202** `{job_id}`. 422 `transfer_groups` (grup yok ya da bilinmiyor); 409 `transfer_blocked` (süren iş, seçilen gruplarda validasyonu bitmemiş tablo). İz "Kısmi aktarım" |
-| `GET /api/transfers/{job_id}` | Key user ve üstü (05 okuma) | İşin durumu ve sonucu: veri versiyonu, tablo başına yeni, değişen, kapatılan, aktarılmayan, not |
+| `GET /api/transfers/{job_id}` | Key user ve üstü (08 okuma) | Veri aktarım raporu (K-156): iş durumu, tür (`transfer_type`) ve gruplar, başlatan, başlama, süre (`duration_seconds`), veri versiyonu; tablo başına yeni, değişen, kapatılan, aktarılmayan, not. Tablo satırları `DataVersionEntity`'den (iş sonucuna bağlı değil), iş `DataVersion.JobId` ile |
+| `GET /api/transfers/{job_id}/excel` | Key user ve üstü (08 okuma) | Raporun Excel'i: Veri sayfasında tablo satırları, Bilgi sayfasında tür, gruplar, başlatan, başlama, süre, veri versiyonu, durum; iz "Dışa aktarım" (liste adı `transfer-report`) |
+| Ortak liste `transfer-history` | Key user ve üstü (08 okuma) | Veri aktarım geçmişi (K-156): aktarım işleri, en yeni üstte; Tarih, Tür, Gruplar, Başlatan, Veri versiyonu, Süre (sn), Durum, Yeni, Güncellenen, Silinen, Aktarılmayan (toplam), Hata, İş no. Versiyonu geri alınmış biten iş (sentetik sıfırlama) görünmez |
 
-**İş:** yükü `{}` (tam) ya da `{mode: "Kısmi", groups}` (kısmi; özet "Kısmi aktarım · Talep, Stok"); ilerleme tablo adıyla ("Malzeme · 3 / 25"). İş cevabında `transfer: {data_version, tables}`; bildirimde "Tam aktarım bitti · v12" (ya da "Kısmi aktarım bitti · v13") ve "Sonucu aç". İş düşerse işlem geri alınır, önceki versiyon geçerli kalır. Özet denetim kaydı (K-108): veri versiyonu ve tablo başına sayılar; kısmide gruplar.
+**İş:** yükü `{}` (tam) ya da `{mode: "Kısmi", groups}` (özet "Tam veri aktarımı" ya da "Kısmi veri aktarımı · Talep, Stok", K-157); ilerleme tablo adıyla ("Malzeme · 3 / 25"). İş cevabında `transfer: {data_version, tables}`; bildirimde "Tam veri aktarımı bitti · v12" (ya da "Kısmi veri aktarımı bitti · v13") ve "Sonucu aç"; iz işlem adı "Tam aktarım" / "Kısmi aktarım" kalır. İş düşerse işlem geri alınır, önceki versiyon geçerli kalır. Özet denetim kaydı (K-108): veri versiyonu ve tablo başına sayılar; kısmide gruplar.
 
 **Ölçüm (`python -m pytest -m perf -k transfer`, `tests/test_transfer_perf.py`):** 25 tablo × 50.000 satır, her 97. satırın kodu tanımsız: ilk aktarım (hepsi yeni) ortanca 270,5 sn (241,0–283,6), ardından ikinci aktarım (hepsi değişmeyen) ortanca 220,4 sn (217,0–223,1). Kısmi aktarım (`-k partial`, K-155), Talep ve Stok grupları (6 tablo × 50.000 satır, tam aktarımın ardından, hepsi değişmeyen): ortanca 63,2 sn (62,9–79,3). Sürenin çoğu kod→Id çözümlemesi ve karşılaştırmadır; sınır 30 dk. Sunucuda ilk kurulumda yeniden ölçülür.
+
+## Ham veri temizliği (ekran 02, fonksiyon 09, K-156)
+
+Saklama süresini (`RawDataRetentionDays`, 1–30 gün; varsayılan yok) geçen partilerde güncel olmayan ham satırları, ön kontrol bulgularını ve yüklenen
+Excel dosyalarını siler; terk edilen ön kontrol partisi "Vazgeçildi" olur. İş tipi "Temizlik", kanal "Veri işleme"; veritabanı değişiklikleri tek işlemde,
+dosyalar commit'ten sonra silinir.
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| `GET /api/cleanup` | 09 okuma (Key user ve üstü) | `retention_days` (boşsa `null`) ve `last` (son temizlik işi: durum, zaman, başlatan, sonuç) |
+| `GET /api/cleanup/plan` | 09 yazma (System owner) | Onay penceresi: `preview` (parti, terk edilen ön kontrol, satır, dosya, boyut, tablo başına satır) ve `blocked` (süre yok ya da süren iş) |
+| `POST /api/cleanup` | 09 yazma (System owner) | **202** `{job_id}`. 409 `cleanup_no_retention` ("Saklama süresi tanımlı değil; temizlik çalışmaz."), 409 `cleanup_blocked` (çekim, ön kontrol, validasyon, aktarım ya da temizlik sırada veya sürüyor). İz "Ham veri temizliği" |
+
+**İş:** ilerleme tablo adıyla; sonuç `{retention_days, cutoff, batches, abandoned, rows, files, size, tables}`, süre boşsa `{note}`; bildirimde "Ham veri
+temizliği bitti · 12 yükleme · 3.400 eski satır · 2 dosya" (K-157) ve "Sonucu aç" (Veri aktarım geçmişi çekmecesi). Özet iz: süre, parti, terk edilen, satır, dosya.
+Temizlik sıradayken ya da sürerken aktarım da başlamaz.
+
+**Ayar:** `GET` · `PUT /api/settings/health` `RawDataRetentionDays` taşır; `optional` listesinde, `null` gönderilirse ayar silinir (temizlik çalışmaz).
+Öteki ayarlarda `null` 422.
+
+**Ölçüm (`python -m pytest -m perf -k cleanup`, `tests/test_cleanup_perf.py`):** 25 tablo × 50.000 güncel olmayan satır (1.250.000 satır), partiler süreden eski: ortanca 40,3 sn (39,3–40,5); sınır 30 dk. Sunucuda ilk kurulumda yeniden ölçülür.
 
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 

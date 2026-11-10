@@ -1225,8 +1225,9 @@ ImportBatch = sa.Table(
     sa.Column("JobId", sa.BigInteger(), nullable=True, comment="Büyük dosyada ön kontrol işi; SQL partisinde çekim işi", info={'label': "Büyük dosyada ön kontrol işi"}),
     sa.Column("SourceObject", sa.Unicode(128), nullable=True, comment="SQL partisinde okunan view", info={'label': "SQL partisinde okunan view"}),
     sa.Column("SignalId", sa.BigInteger(), nullable=True, comment="SQL partisinde okunan `ERP_LoadLog` satırı", info={'label': "SQL partisinde okunan `ERP_LoadLog` satırı"}),
+    sa.Column("RawDeletedAt", mssql.DATETIME2(), nullable=True, comment="Ham verinin silindiği zaman; temizlik partinin güncel olmayan satırlarını, bulgularını ve dosyasını siler (UTC)", info={'label': "Ham verinin silindiği zaman"}),
     schema="adm",
-    comment="Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. LoadType Değişen: arayüzde \"Ekle / güncelle\" (K-129).",
+    comment="Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri saklama süresi kadar saklanır (`RawDataRetentionDays`; boşsa temizlik çalışmaz, K-156); parti kaydı ve sayıları silinmez. LoadType Değişen: arayüzde \"Ekle / güncelle\" (K-129).",
 )
 
 ImportFinding = sa.Table(
@@ -1363,6 +1364,7 @@ DataVersion = sa.Table(
     sa.Column("CreatedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Kullanıcı ya da sistem kullanıcısı", info={'label': "Kullanıcı ya da sistem kullanıcısı"}),
     sa.Column("IsPinned", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Onaylı plana bağlı; silinmez", info={'label': "Onaylı plana bağlı"}),
     sa.Column("IsSynthetic", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79)", info={'label': "Sentetik veri (geliştirme ve demo)"}),
+    sa.Column("JobId", sa.BigInteger(), nullable=True, comment="Aktarım işi; versiyonu açan iş (`Job.Id`), veri aktarım geçmişi ve raporu buradan bağlanır", info={'label': "Aktarım işi"}),
     schema="adm",
     comment="Aktarım ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi (K-152).",
 )
@@ -1626,7 +1628,7 @@ LoginThrottle = sa.Table(
 Job = sa.Table(
     "Job", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
-    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Aktarım | Termin sorgusu | Dışa aktarım | Excel ön kontrol | Veri çekme | Validasyon …", info={'values': ["Gece senaryosu", "Çalışma", "Aktarım", "Termin sorgusu", "Dışa aktarım", "Excel ön kontrol", "Veri çekme", "Validasyon"]}),
+    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Aktarım | Termin sorgusu | Dışa aktarım | Excel ön kontrol | Veri çekme | Validasyon | Temizlik …", info={'values': ["Gece senaryosu", "Çalışma", "Aktarım", "Termin sorgusu", "Dışa aktarım", "Excel ön kontrol", "Veri çekme", "Validasyon", "Temizlik"]}),
     sa.Column("Channel", sa.Unicode(15), nullable=False, comment="Gece | Hesaplama | Excel | Veri çekme | Veri işleme", info={'values': ["Gece", "Hesaplama", "Excel", "Veri çekme", "Veri işleme"]}),
     sa.Column("Priority", sa.Integer(), nullable=True, comment="Öncelik", info={'label': "Öncelik"}),
     sa.Column("Status", sa.Unicode(15), nullable=False, comment="Sırada | Çalışıyor | Bitti | Hata | İptal", info={'values': ["Sırada", "Çalışıyor", "Bitti", "Hata", "İptal"]}),

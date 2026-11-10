@@ -215,6 +215,40 @@ describe("giriş ve oturum formu", () => {
   });
 });
 
+// Ham verinin saklama süresi (K-156): varsayılanı yok, boş bırakılabilir; boşsa temizlik çalışmaz.
+describe("ham veri temizliği ayarı", () => {
+  const HEALTH = {
+    values: { DiskWarnPercent: 85, QueueWaitWarnMinutes: 10, SystemEventRetentionDays: 90, ImportSyncMaxMb: 5, ImportMaxMb: 100, ImportMaxRows: 200000,
+              RawDataRetentionDays: 7 },
+    defaults: { DiskWarnPercent: 85, QueueWaitWarnMinutes: 10, SystemEventRetentionDays: 90, ImportSyncMaxMb: 5, ImportMaxMb: 100, ImportMaxRows: 200000,
+                RawDataRetentionDays: null },
+    limits: { DiskWarnPercent: { min: 1, max: 99 }, QueueWaitWarnMinutes: { min: 1, max: 1440 }, SystemEventRetentionDays: { min: 7, max: 3650 },
+              ImportSyncMaxMb: { min: 1, max: 100 }, ImportMaxMb: { min: 1, max: 100 }, ImportMaxRows: { min: 1000, max: 1000000 },
+              RawDataRetentionDays: { min: 1, max: 30 } },
+    optional: ["RawDataRetentionDays"],
+  };
+
+  it("boşaltılınca hata yok, boş değer gider; sınır dışı Kaydet'i kapatır", async () => {
+    const user = userEvent.setup();
+    const m = await openScreen({ "/api/settings/health": (_url: string, init?: RequestInit) =>
+      ({ body: init?.method === "PUT" ? { ...HEALTH, values: { ...HEALTH.values, RawDataRetentionDays: null } } : HEALTH }) });
+    await user.click(screen.getByRole("radio", { name: "Sistem sağlığı" }));
+    const input = await screen.findByLabelText("Ham verinin saklama süresi (gün)");
+    expect(input).toHaveValue("7");
+    expect(screen.getByText("Boşsa temizlik çalışmaz.")).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "45" } });
+    fireEvent.blur(input);
+    expect(screen.getByText("En az 1, en çok 30.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kaydet" })).toBeDisabled();
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    expect(screen.queryByText("En az 1, en çok 30.")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(called(m, "/api/settings/health")).toBeTruthy());
+    expect(JSON.parse(String(called(m, "/api/settings/health")?.[1]?.body))).toEqual({ RawDataRetentionDays: null });
+  });
+});
+
 describe("yetki matrisi (ekran 22)", () => {
   const usersBackend = () => backend({
     "/api/users/columns": { body: { chunk_size: 100, columns: [col("UserName", "Kullanıcı adı", "text", "text")], export: { title: "Kullanıcı listesi", file_slug: "kullanici", sync_max_rows: 10000, max_rows: 500000, file_hours: 24 } } },

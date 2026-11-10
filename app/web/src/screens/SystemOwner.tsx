@@ -109,8 +109,10 @@ interface FormGroup {
 type FormValues = Record<string, number | boolean | null>;
 
 interface FormData {
-  values: Record<string, number | boolean>;
+  values: Record<string, number | boolean | null>;
   limits: Partial<Record<string, { min: number; max: number }>>;
+  /** Varsayılanı olmayan, boş bırakılabilen ayarlar (ör. ham verinin saklama süresi, K-156). */
+  optional?: string[];
 }
 
 /** Ayar formu (K-105, K-106): kayıtlı olmayan ayar varsayılanıyla gelir; yalnız değişenler gönderilir. */
@@ -140,6 +142,7 @@ function SettingsForm({ groups, labels, read, write, crossCheck }: {
 
   const problem = (key: string): string | undefined => {
     const v = values[key];
+    if (v === null && data?.optional?.includes(key)) return undefined;
     const limit = data?.limits[key];
     if (limit && (typeof v !== "number" || v < limit.min || v > limit.max)) return T.limit(limit.min, limit.max);
     return crossCheck?.(key, values);
@@ -169,6 +172,7 @@ function SettingsForm({ groups, labels, read, write, crossCheck }: {
           <div className="sc-field-rows">
             {group.keys.map((key) => (
               <NumberField key={key} label={labels[key]} value={values[key] as number | null} error={problem(key)}
+                           help={data.optional?.includes(key) ? T.optionalEmpty : undefined}
                            onChange={(v) => setValues((s) => ({ ...s, [key]: v }))} />
             ))}
             {group.checkbox && (
@@ -193,6 +197,7 @@ const POLICY_GROUPS: FormGroup[] = [
 const HEALTH_GROUPS: FormGroup[] = [
   { title: T.healthGroup, keys: ["DiskWarnPercent", "QueueWaitWarnMinutes", "SystemEventRetentionDays"] },
   { title: T.importGroup, keys: ["ImportSyncMaxMb", "ImportMaxMb", "ImportMaxRows"] },
+  { title: T.cleanupGroup, keys: ["RawDataRetentionDays"] },
 ];
 
 const warningShorter = (key: string, values: FormValues) => {

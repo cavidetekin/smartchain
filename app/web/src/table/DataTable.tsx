@@ -205,11 +205,11 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
   /** Pencere kipinde satır yüksekliği ölçülür (alt satıra kayan metin, sanal kaydırma kaymasın). */
   measure?: (el: HTMLTableRowElement | null) => void;
 }) {
-  const extra = row && rowProps ? rowProps(row) : {};
+  const extra = row && rowProps ? rowProps(row) : {};  // satırın onClick'i seçimden sonra çalışır (ör. Veri aktarım raporu, K-156)
   return (
     <tr ref={measure} data-index={index} aria-rowindex={index + 2} aria-current={selected || undefined} {...extra}
         className={row ? [`sc-table-row${selected ? " is-selected" : ""}`, extra.className].filter(Boolean).join(" ") : "is-placeholder"}
-        onClick={row ? () => onSelect(row.Id) : undefined}>
+        onClick={row ? (e) => { onSelect(row.Id); extra.onClick?.(e); } : undefined}>
       {cells.map(({ col, className, style, numeric }) => {
         const cf = row ? cellFormat(active, row, col.field) : null;
         const content = row ? (cellRender?.[col.field] ? cellRender[col.field](row[col.field], row) : formatCell(col, row[col.field], row)) : null;

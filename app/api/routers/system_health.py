@@ -20,6 +20,10 @@ class HealthSettingsChange(BaseModel):
     DiskWarnPercent: int | None = None
     QueueWaitWarnMinutes: int | None = None
     SystemEventRetentionDays: int | None = None
+    ImportSyncMaxMb: int | None = None  # K-129: Excel yükleme
+    ImportMaxMb: int | None = None
+    ImportMaxRows: int | None = None
+    RawDataRetentionDays: int | None = None  # K-156: boş gönderilirse silinir (temizlik çalışmaz)
 
 
 @router.get("/system-health", summary="Kartlar, servis durumu, eşik aşımları")
@@ -40,4 +44,4 @@ def settings(user: CurrentUser = Depends(owner_read), session: Session = Depends
 @router.put("/settings/health", summary="Sistem sağlığı eşikleri: yalnız değişenler yazılır, denetim izine")
 def settings_update(body: HealthSettingsChange, user: CurrentUser = Depends(owner_write),
                     session: Session = Depends(get_session)) -> dict:
-    return health_settings.update(session, user, body.model_dump(exclude_none=True))
+    return health_settings.update(session, user, body.model_dump(exclude_unset=True))

@@ -36,6 +36,8 @@ FIELD_LABELS = {
     # Entegrasyon ve veri çekme (K-130)
     "pull_method": "Yöntem", "view": "View", "database": "SQL kaynağı", "entities": "Tablolar", "read_anyway": "Yine de oku",
     "data_version": "Veri versiyonu", "transfer_tables": "Tablo başına sonuç", "transfer_type": "Aktarım türü", "groups": "Gruplar",
+    # Ham veri temizliği (K-156)
+    "retention_days": "Saklama süresi (gün)", "batches": "Parti", "abandoned": "Vazgeçilen ön kontrol", "files": "Dosya",
     # Excel yükleme (K-129)
     "mode": "Mod", "valid": "Geçerli satır", "errors": "Hatalı satır", "template_version": "Şablon sürümü", "file_name": "Dosya adı",
     # Validasyon ve validasyon kuralları (K-134, K-136)
@@ -71,8 +73,9 @@ SETTING_LABELS = {
     "PasswordMaxAgeDays": "Geçerlilik süresi (gün)", "LoginMaxFailedAttempts": "Kilit için hatalı giriş sayısı", "LoginLockMinutes": "Kilit süresi (dk)",
     "SessionIdleMinutes": "Oturumun kapandığı süre (dk)", "SessionWarningMinutes": "Kapanmadan önce uyarı (dk)",
     "DiskWarnPercent": "Disk uyarı eşiği (%)", "QueueWaitWarnMinutes": "Kuyruk bekleme eşiği (dk)", "ImportSyncMaxMb": "Beklemeden kontrol edilen en büyük dosya (MB)", "ImportMaxMb": "En büyük dosya (MB)", "ImportMaxRows": "Dosyada en çok satır", "SystemEventRetentionDays": "Hataların saklanma süresi (gün)",
+    "RawDataRetentionDays": "Ham verinin saklama süresi (gün)",
 }
-OTHER_LISTS = {"permissions": "Yetki matrisi"}  # ortak liste olmayan dışa aktarımlar
+OTHER_LISTS = {"permissions": "Yetki matrisi", "transfer-report": "Veri aktarım raporu"}  # ortak liste olmayan dışa aktarımlar (K-156)
 RETIRED_FIELDS = {"IsPermanent": "Silinemez"}  # listeden kalkan alanlar: eski aktarım kayıtlarında geçer
 
 

@@ -69,6 +69,7 @@ GROUP_ROWS: tuple[GroupRow, ...] = (
 
 # Fonksiyon istisnaları: grup düzeyinden ayrılan hücreler (rol → düzey) ve gerekçesi.
 EXCEPTIONS: dict[int, tuple[dict[str, Level], str]] = {
+    9: ({ADMIN: R, KEY_USER: R}, "Ham veri temizliğini yalnız System owner başlatır; Admin ve Key user sonucu görür (K-156)"),
     48: ({END_USER: S}, "End user kendi işlerini görür: arka planda hazırlanan Excel'in bildirimi ve indirmesi (K-99)"),
     86: ({END_USER: F}, "Excel'e aktarma End user'ın hakkı (K-99)"),
     87: ({END_USER: S}, "End user yalnız kendi dışa aktarım kayıtlarını görür"),

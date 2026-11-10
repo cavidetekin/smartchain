@@ -23,4 +23,5 @@ TYPE_EXPORT = "Dışa aktarım"  # K-91, K-93: motor servisi Excel dosyası üre
 TYPE_PRECHECK = "Excel ön kontrol"  # K-129: motor servisi yüklenen dosyayı kontrol eder
 TYPE_PULL = "Veri çekme"  # K-130: motor servisi view'ları okur, stg'ye yazar
 TYPE_VALIDATION = "Validasyon"  # K-134: staging'in güncel hâlinde rules → validation
-JOB_TYPES = (TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE, TYPE_TRANSFER, TYPE_DATE_QUERY, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_VALIDATION)
+TYPE_CLEANUP = "Temizlik"  # K-156: ham veri temizliği
+JOB_TYPES = (TYPE_NIGHT_SCENARIO, TYPE_WORKSPACE, TYPE_TRANSFER, TYPE_DATE_QUERY, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_VALIDATION, TYPE_CLEANUP)

@@ -20,11 +20,12 @@ from sqlalchemy.orm import Session
 
 from app import __version__
 from app.jobs import events, queue
-from app.jobs.constants import CHANNELS, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_TRANSFER, TYPE_VALIDATION
+from app.jobs.constants import CHANNELS, TYPE_CLEANUP, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_TRANSFER, TYPE_VALIDATION
 from app.jobs.settings import HEALTH_DEFAULTS, JobSettings, read_int_settings, read_settings
 from .export_job import export_process_main
 from .import_job import import_process_main
 from .pull_job import pull_process_main
+from .cleanup_job import cleanup_process_main
 from .transfer_job import transfer_process_main
 from .validation_job import validation_process_main
 from .job import plan_run_id_of, process_main
@@ -119,7 +120,8 @@ class EngineService:
 
     def _spawn(self, session: Session, job: dict, channel: str) -> None:
         target = {TYPE_EXPORT: export_process_main, TYPE_PRECHECK: import_process_main, TYPE_PULL: pull_process_main,
-                  TYPE_VALIDATION: validation_process_main, TYPE_TRANSFER: transfer_process_main}.get(job["JobType"], process_main)
+                  TYPE_VALIDATION: validation_process_main, TYPE_TRANSFER: transfer_process_main,
+                  TYPE_CLEANUP: cleanup_process_main}.get(job["JobType"], process_main)
         plan_run_id = plan_run_id_of(job["Payload"]) if target is process_main else None
         budget = self.engine_settings.time_budget(channel)
         process = self._ctx.Process(target=target, args=(job["Id"], job["Attempt"], int(budget)),

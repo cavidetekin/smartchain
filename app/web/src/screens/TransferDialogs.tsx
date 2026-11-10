@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 
 import { ApiError, JOB_DONE, JOB_FAILED } from "../api/client";
-import { formatNumber } from "../format";
+import { formatDateTime, formatNumber, serverDate } from "../format";
 import { tr } from "../i18n/tr";
 import { type LocalColumn, LocalTable } from "../table/LocalTable";
-import { Alert, Badge, Checkbox, Dialog } from "../ui";
+import { Alert, Badge, Button, Checkbox, Dialog } from "../ui";
 import { type PartialPlan, STATUS_READY, transferApi, type TransferPlan, type TransferPlanRow, type TransferResult, type TransferTable } from "./transferApi";
 
 const T = tr.transfer;
@@ -148,10 +148,23 @@ export function TransferResultDialog({ jobId, onClose, onChanged }: { jobId: num
     { key: "not", label: T.notTransferred, numeric: true, value: (t) => t.not_transferred, render: (t) => count(t.not_transferred) },
     { key: "note", label: T.note, wrap: true, value: (t) => t.note },
   ];
-  const subtitle = result ? (result.data_version ? T.resultSubtitle(result.status, result.data_version) : `${result.status}${result.progress ? ` · ${result.progress}` : ""}`) : undefined;
+  const status = result ? (result.data_version ? T.resultSubtitle(result.status, result.data_version) : `${result.status}${result.progress ? ` · ${result.progress}` : ""}`) : null;
+  const kind = result?.transfer_type ? `${result.transfer_type}${result.groups?.length ? ` · ${result.groups.join(", ")}` : ""}` : null;
+  const meta = result && kind ? T.reportMeta(kind, result.requested_by_name ?? null, result.started_at ? formatDateTime(serverDate(result.started_at)) : "",
+                                            result.duration_seconds ?? null) : null;
+  const excel = async () => {
+    setError(null);
+    try {
+      await transferApi.excel(jobId);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : T.excelFailed);
+    }
+  };
 
   return (
-    <Dialog title={T.resultTitle} subtitle={subtitle} onClose={onClose} onSubmit={onClose} submitLabel={tr.ui.close} noCancel xwide>
+    <Dialog title={T.resultTitle} subtitle={status && <>{status}{meta && <><br />{meta}</>}</>} onClose={onClose} onSubmit={onClose}
+            submitLabel={tr.ui.close} noCancel xwide
+            extraActions={ended && result?.tables.length ? <Button variant="secondary" onClick={() => void excel()}>{T.excel}</Button> : undefined}>
       {error && <Alert tone="error">{error}</Alert>}
       {result?.error && <Alert tone="error">{result.error}</Alert>}
       {result && !ended && <p role="status">{T.running}</p>}

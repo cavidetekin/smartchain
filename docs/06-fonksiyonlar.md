@@ -742,6 +742,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F08 · A Veri alma · Çalışma prensibi 1/2</sub>
 
 - Çekim, Excel yüklemesi, validasyon, tam ve kısmi aktarımların kim, ne zaman, hangi varlıklar, hangi sonuçla yapıldığını izlenebilir tutmak; sorun olduğunda geriye bakabilmek.
+- **Uygulama (5.4, K-156):** geçmiş yalnız aktarımları (Tam / Kısmi) listeler; çekim ve Excel partileri Veri yükleme tablosunda ve validasyon çekmecesindedir. Veri yükleme üst şeridinde "Veri aktarım geçmişi" düğmesi, sağdan çekmece: ortak tablo, en yeni üstte, varsayılan süzgeç yok; tarih, tür ve gruplar, başlatan, veri versiyonu, süre, durum (Bitti / Hata), toplam yeni, güncellenen, silinen, aktarılmayan. Satıra tıklayınca Veri aktarım raporu penceresi; rapor Excel'e aktarılır. Hatayla biten aktarımda raporda hata metni. Aşağıdaki çekim, Excel, filtre varsayılanı (son 7 gün), hata raporu, ham veri ve versiyon farkı bağlantıları bu adımda yoktur.
 - **Veri aktarım raporu (5.4, K-151):** tablo başına yalnız özet sayılar: yeni, değişen, kapatılan, aktarılmayan; satır satır liste ve neden listesi yok (ayrıntı validasyon çekmecesinde). İki tek satır not: eşik aşıldığı için tablo aktarılmadı (oran ve eşikle); kısmi aktarımda ana verisi aktarılmadığı için bekleyen satır sayısı. Her tablonun son aktarım zamanı (tam / kısmi) ve staging'de aktarılmamış yeni veri olup olmadığı. Özet kayıtlar temizlikte silinmez (09).
 
 #### NASIL ÇALIŞIR
@@ -802,16 +803,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F09 · A Veri alma · Çalışma prensibi 1/2</sub>
 
 - Ham veri tablolarındaki eski partileri düzenli silerek disk alanını korumak; geçmiş kaydını ve versiyonlanmış veriyi etkilemeden.
+- **Uygulama (5.4, K-156):** saklama süresi `RawDataRetentionDays` (1–30 gün) Sistem ayarları'nda System owner girer; varsayılan yok, boşsa temizlik çalışmaz. Yalnız System owner başlatır: Veri aktarım geçmişi çekmecesinde "Ham veri temizliği"; onay penceresinde silinecek parti, satır ve dosya sayısı. Admin ve Key user son temizliğin sonucunu görür. Silinen: yaşı süreyi geçen partilerin güncel olmayan ham satırları, ön kontrol bulguları ve Excel dosyaları; terk edilen "Ön kontrol" partisi (durumu "Vazgeçildi"). Her varlığın son başarılı partisini koruma kuralı kalkar (güncel hâl zaten kalır, K-133). Sonuç iş sonucunda, bildirimde ve denetim izinde; zamanlama, Entegrasyon ekranındaki satır ve Sistem sağlığı 5.6'da.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (zamanlanmış, Pazar 03:00) · ayar: System owner · 'Şimdi çalıştır': Admin ve üstü
+  - Kim: Sistem (zamanlanmış, 5.6) · ayar ve 'Şimdi çalıştır': System owner · sonucu görme: Admin ve Key user
   - Nereden: Entegrasyon ve zamanlanmış işler ekranı · 'Ham veri temizliği' satırı
 - **01:** İş kuyruğuna temizlik işi düşer (gece kanalı, düşük öncelik); gece akışıyla çakışırsa akış bitene kadar bekler.
-- **02:** Yaşı saklama süresini geçen partiler bulunur; her varlığın son başarılı partisi listeden çıkarılır.
+- **02:** Yaşı saklama süresini geçen partiler bulunur; staging'in güncel satırları silinmez (K-133).
 - **GIRDI**
-  - Saklama süresi (SystemSetting, varsayılan 7 gün)
+  - Saklama süresi (SystemSetting `RawDataRetentionDays`; varsayılan yok, boşsa temizlik çalışmaz)
   - ImportBatch kayıtları (parti yaşı, varlık, durum)
   - Zamanlama
 - **03:** Seçilen partilerin stg.* satırları ve ekli Excel dosyaları silinir; ImportBatch kaydı 'ham veri silindi' işaretlenir, sayıları kalır. Veri aktarım raporunun özet kayıtları silinmez, yalnız ayrıntı verisi silinir (K-151); staging'in güncel satırı silinmez (K-133).
@@ -826,8 +828,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Geçmiş kayıtları, veri versiyonları ve geçerli tablolar hiç etkilenmez.
-  - Her varlık için son başarılı parti silinmez (yeniden yükleme imkânı).
-  - Saklama süresi System owner ayarıdır; 1–30 gün.
+  - Saklama süresi System owner ayarıdır; 1–30 gün, varsayılan yok (K-156).
 - **HATA VE ISTISNA**
   - Silme sırasında kilit çakışması: iş bekler ve tekrar dener; 3 denemede olmazsa Sistem sağlığına hata.
   - Disk doluysa temizlik yine de çalışır; yükleme ve çekim için eşik uyarısı ayrı (94).

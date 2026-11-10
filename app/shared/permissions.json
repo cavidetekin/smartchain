@@ -324,8 +324,8 @@
       "group": "A",
       "levels": {
         "System owner": "full",
-        "Admin": "full",
-        "Key user": "full",
+        "Admin": "read",
+        "Key user": "read",
         "End user": "none"
       }
     },
@@ -1332,6 +1332,7 @@
     }
   ],
   "exceptions": {
+    "9": "Ham veri temizliğini yalnız System owner başlatır; Admin ve Key user sonucu görür (K-156)",
     "48": "End user kendi işlerini görür: arka planda hazırlanan Excel'in bildirimi ve indirmesi (K-99)",
     "86": "Excel'e aktarma End user'ın hakkı (K-99)",
     "87": "End user yalnız kendi dışa aktarım kayıtlarını görür",

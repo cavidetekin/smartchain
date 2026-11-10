@@ -554,6 +554,11 @@
 .sc-drawer-body { display: flex; flex-direction: column; gap: var(--space-3); flex: 1; min-height: 0; }
 /* Çekmecedeki pencere tablosu (Bulgular): 24rem ile kesilmez, çekmecenin boş alanını doldurur; yalnız gerçekten taşarsa kayar (4.4 demosu, G1–G2) */
 .sc-drawer-body .sc-local-table-wrap { flex: 0 1 auto; min-height: 0; max-height: none; }
+/* Satırı açılan tablo (Veri aktarım geçmişi → Veri aktarım raporu, K-156) */
+tr.is-clickable { cursor: pointer; }
+/* Açılır menüde ayırıcı ve düğmedeki ok ("Veri aktarımı ▾", K-157) */
+.sc-popmenu-sep { height: 1px; margin: var(--space-1) 0; background: var(--table-border); }
+.sc-btn-caret { width: 1rem; height: 1rem; margin-left: var(--space-1); }
 .sc-drawer-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 .sc-validation-chip { padding: 0; border: 0; background: none; cursor: pointer; }
 .sc-validation-chip:focus-visible { outline: 2px solid var(--field-border-focus); outline-offset: 2px; border-radius: 999rem; }

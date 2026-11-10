@@ -18,7 +18,13 @@ PARTIAL = "Kısmi"
 
 
 def action(payload: dict) -> str:
+    """Denetim izindeki işlem adı (K-108; saklanan kayıtlarla aynı)."""
     return "Kısmi aktarım" if payload.get("mode") == PARTIAL else "Tam aktarım"
+
+
+def display_name(payload: dict) -> str:
+    """Bildirim ve iş metnindeki ad (K-157)."""
+    return "Kısmi veri aktarımı" if payload.get("mode") == PARTIAL else "Tam veri aktarımı"
 
 
 def summary_lines(tables: list[dict]) -> list[str]:
@@ -49,14 +55,14 @@ def run_transfer_job(job_id: int, attempt: int) -> None:
 
         try:
             groups = payload.get("groups") if payload.get("mode") == PARTIAL else None
-            result = engine.run_transfer(session, payload.get("user_id"), progress, groups=groups)
+            result = engine.run_transfer(session, payload.get("user_id"), progress, groups=groups, job_id=job_id)
             details = {"data_version": result["data_version"], "transfer_tables": summary_lines(result["tables"])}
             if groups:
                 details["groups"] = ", ".join(groups)
             audit.write_audit(session, action(payload), payload.get("user_id"), "DataVersion", str(result["data_version"]), details)
             job = metadata.tables["adm.Job"]  # tipli yazım: 4000 karakterden uzun sonuç nvarchar(max) olarak gider
             session.execute(sa.update(job).where(job.c.Id == job_id).values(Result=json.dumps(result, ensure_ascii=False)))
-            if queue.finish(session, job_id, attempt, progress=f"{action(payload)} bitti · v{result['data_version']}", commit=False):
+            if queue.finish(session, job_id, attempt, progress=f"{display_name(payload)} bitti · v{result['data_version']}", commit=False):
                 session.commit()
                 log.info("Aktarım işi %s bitti · v%s", job_id, result["data_version"])
             else:
@@ -66,7 +72,7 @@ def run_transfer_job(job_id: int, attempt: int) -> None:
             log.exception("Aktarım işi %s hata", job_id)
             session.rollback()
             with Session(db) as s:
-                queue.fail(s, job_id, attempt, f"{action(payload)} tamamlanamadı; önceki veri versiyonu geçerli. Destek için iş numarası: {job_id}")
+                queue.fail(s, job_id, attempt, f"{display_name(payload)} tamamlanamadı; önceki veri versiyonu geçerli. Destek için iş numarası: {job_id}")
 
 
 def transfer_process_main(job_id: int, attempt: int, _time_budget_seconds: int) -> None:

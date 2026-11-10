@@ -1316,7 +1316,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri bir hafta saklanır. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129).
+- Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri saklama süresi kadar saklanır (`RawDataRetentionDays`; boşsa temizlik çalışmaz, K-156); parti kaydı ve sayıları silinmez. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -1335,6 +1335,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | JobId | bigint |  | Büyük dosyada ön kontrol işi; SQL partisinde çekim işi | Sistem | H | H |  |
 | SourceObject | nvarchar(128) |  | SQL partisinde okunan view | Sistem | H | H |  |
 | SignalId | bigint |  | SQL partisinde okunan `ERP_LoadLog` satırı | Sistem | H | H |  |
+| RawDeletedAt | datetime2 |  | Ham verinin silindiği zaman; temizlik partinin güncel olmayan satırlarını, bulgularını ve dosyasını siler (UTC) | Sistem | H | H |  |
 
 ### ImportFinding
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1525,6 +1526,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | CreatedBy | int | FK | Kullanıcı ya da sistem kullanıcısı | Sistem | H | H |  |
 | IsPinned | bit |  | Onaylı plana bağlı; silinmez | Sistem | H | H | 0 |
 | IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) | Sistem | H | H | 0 |
+| JobId | bigint |  | Aktarım işi; versiyonu açan iş (`Job.Id`), veri aktarım geçmişi ve raporu buradan bağlanır | Sistem | H | H |  |
 
 ### DataVersionEntity
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1849,7 +1851,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Aktarım \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme \| Validasyon … | Sistem | H | E |  |
+| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Aktarım \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme \| Validasyon \| Temizlik … | Sistem | H | E |  |
 | Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel \| Veri çekme \| Veri işleme | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |
@@ -1968,6 +1970,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `ExportMaxRows`: bir aktarımda en çok satır (500000)
   - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
 - Sistem sağlığı (K-106; fonksiyon 94): `DiskWarnPercent` (85), `QueueWaitWarnMinutes` (10), `SystemEventRetentionDays` (90).
+- Ham veri temizliği (K-156; fonksiyon 09): `RawDataRetentionDays`: ham verinin saklama süresi, gün (1–30); varsayılan yok, boşsa temizlik çalışmaz.
 - Excel yükleme (K-129; fonksiyon 03): `ImportSyncMaxMb`: bu boyuta kadar ön kontrol istek içinde, üstü iş kuyruğunda (5); `ImportMaxMb`: en büyük dosya (100); `ImportMaxRows`: bir dosyada en çok satır (200000).
 - SQL çekimi (K-130; fonksiyon 01, 91): `IntegrationDatabase`: entegrasyon veritabanının adı, boşsa SQL yolu kapalı; `PullRetryWaitSeconds`: geçici hatada denemeler arası bekleme (30).
 - Giriş, şifre ve oturum ayarları (K-97, K-98; fonksiyon 89). Şifre kuralı değişikliği bir sonraki şifre değişiminde geçerli olur:

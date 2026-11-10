@@ -1,5 +1,8 @@
-"""Tam ve kısmi aktarım (ekran 02, fonksiyon 05, 06 ve 07, K-149…K-153, K-155). Yetki: tam 05, kısmi 06 (Key user ve üstü)."""
-from fastapi import APIRouter, Depends
+"""Tam ve kısmi aktarım (ekran 02, fonksiyon 05, 06 ve 07, K-149…K-153, K-155) ve Veri aktarım raporu (fonksiyon 08, K-156).
+Yetki: tam 05, kısmi 06, rapor 08 (Key user ve üstü)."""
+from urllib.parse import quote
+
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -14,6 +17,7 @@ read = require(5, Access.READ)
 write = require(5, Access.WRITE)
 partial_read = require(6, Access.READ)
 partial_write = require(6, Access.WRITE)
+report_read = require(8, Access.READ)
 
 
 class PartialRequest(BaseModel):
@@ -40,6 +44,12 @@ def start_partial(body: PartialRequest, user: CurrentUser = Depends(partial_writ
     return service.start_partial(session, user, body.groups)
 
 
-@router.get("/transfers/{job_id}", summary="Aktarımın sonucu: veri versiyonu, tablo başına yeni, değişen, kapatılan, aktarılmayan")
-def result(job_id: int, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
+@router.get("/transfers/{job_id}", summary="Veri aktarım raporu: durum, tür ve gruplar, başlatan, süre, veri versiyonu, tablo başına sayılar")
+def result(job_id: int, user: CurrentUser = Depends(report_read), session: Session = Depends(get_session)) -> dict:
     return service.result(session, job_id)
+
+
+@router.get("/transfers/{job_id}/excel", summary="Veri aktarım raporunun Excel'i; iz")
+def report_excel(job_id: int, user: CurrentUser = Depends(report_read), session: Session = Depends(get_session, scope="function")) -> Response:
+    data, name = service.report_excel(session, user, job_id)
+    return Response(data, media_type=service.XLSX, headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})

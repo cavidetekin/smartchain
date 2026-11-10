@@ -7,6 +7,10 @@ from db.models import metadata
 SETTING = metadata.tables["adm.SystemSetting"]
 
 
+def delete_setting(session: Session, key: str) -> None:
+    session.execute(sa.delete(SETTING).where(SETTING.c.SettingKey == key))
+
+
 def set_setting(session: Session, key: str, value: str) -> None:
     if session.execute(sa.update(SETTING).where(SETTING.c.SettingKey == key).values(Value=value)).rowcount == 0:
         session.execute(sa.insert(SETTING).values(SettingKey=key, Value=value))

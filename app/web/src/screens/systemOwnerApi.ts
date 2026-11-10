@@ -32,9 +32,11 @@ export interface LoginPolicy {
 }
 
 export interface HealthSettings {
-  values: Record<string, number>;
-  defaults: Record<string, number>;
+  values: Record<string, number | null>;
+  defaults: Record<string, number | null>;
   limits: Partial<Record<string, { min: number; max: number }>>;
+  /** Boş bırakılabilen ayarlar (ham verinin saklama süresi; boşsa temizlik çalışmaz, K-156). */
+  optional?: string[];
 }
 
 export type Level = "full" | "owner" | "self" | "read" | "none";

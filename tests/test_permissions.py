@@ -50,7 +50,7 @@ def test_group_table_in_docs_matches_code():
 def test_role_rules():
     for no in perm.FUNCTIONS:
         assert perm.level(SYSTEM_OWNER, no) == Level.FULL
-        assert perm.level(ADMIN, no) == (Level.NONE if no in (96, 97) else Level.READ if no == 90 else Level.FULL)
+        assert perm.level(ADMIN, no) == (Level.NONE if no in (96, 97) else Level.READ if no in (9, 90) else Level.FULL)  # 9: temizliği yalnız System owner başlatır (K-156)
         if 88 <= no <= 97 and no != 89:
             assert perm.level(KEY_USER, no) == Level.NONE
     end_writes = {no for no in perm.FUNCTIONS if perm.allows(END_USER, no, Access.WRITE, own=False)}
