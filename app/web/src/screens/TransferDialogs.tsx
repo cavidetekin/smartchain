@@ -45,12 +45,20 @@ export function TransferStartDialog({ onClose, onStarted }: { onClose(): void; o
             submitDisabled={!plan || Boolean(plan.blocked) || ready === 0} busy={busy} xwide className="sc-dialog--pull">
       {error && <Alert tone="error">{error}</Alert>}
       {plan?.blocked && <Alert tone="risk">{plan.blocked.reason}{plan.blocked.tables.length > 0 && ` ${T.blockedTables(plan.blocked.tables.join(", "))}`}</Alert>}
+      <FailedRules rows={plan?.tables ?? []} />
       {plan && <LocalTable label={T.startTitle} columns={columns} rows={plan.tables} rowKey={(t) => t.entity} />}
     </Dialog>
   );
 }
 
 type GroupRow = TransferPlanRow & { group?: string };
+
+/** Aktarılacak tablolarda çalışmayan veri kuralı (K-163): uyarı; aktarım engellenmez. */
+function FailedRules({ rows }: { rows: TransferPlanRow[] }) {
+  const failing = rows.filter((t) => (t.failed_rules ?? 0) > 0 && t.status === STATUS_READY);
+  if (!failing.length) return null;
+  return <Alert tone="risk">{T.failedRules(failing.length, failing.map((t) => t.name).join(", "))}</Alert>;
+}
 
 function planColumns(withGroup = false): LocalColumn<GroupRow>[] {
   const columns: LocalColumn<GroupRow>[] = [
@@ -102,6 +110,7 @@ export function PartialTransferDialog({ onClose, onStarted }: { onClose(): void;
             submitDisabled={!plan || chosen.length === 0 || Boolean(blocked) || ready === 0} busy={busy} xwide className="sc-dialog--pull">
       {error && <Alert tone="error">{error}</Alert>}
       {blocked && <Alert tone="risk">{blocked}</Alert>}
+      <FailedRules rows={rows} />
       {plan && (
         <fieldset className="sc-check-group">
           <legend>{T.groups}</legend>

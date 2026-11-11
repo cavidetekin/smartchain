@@ -17,7 +17,7 @@ from ..permissions import Access
 from ..repositories import audit, integration as repo, lists as lists_repo
 from ..repositories.settings import set_setting
 from ..settings import get_settings
-from . import auth, authz
+from . import auth, authz, flows
 from .auth import CurrentUser
 
 OBJECT = "IntegrationEntity"
@@ -136,6 +136,7 @@ def save_entities(session: Session | None, user: CurrentUser, changes: list[dict
                 _apply_view(session, user, source, entity, rows.get(entity.table), (change["view"] or "").strip())
 
     def work():
+        flows.ensure_idle(session)  # K-163: tablo ayarları akış sürerken değişmez
         if any((change.get("view") or "").strip() for _e, change, _r in checked):
             try:
                 with open_source(session) as source:

@@ -34,12 +34,16 @@ export function useTableEdits() {
   }), [drafts, set, discard]);
 }
 
-export function EditBar({ dirty, busy, onSave, onDiscard }: { dirty: boolean; busy?: boolean; onSave(): void; onDiscard(): void }) {
+export function EditBar({ dirty, busy, onSave, onDiscard, disabledReason }: {
+  dirty: boolean; busy?: boolean; onSave(): void; onDiscard(): void;
+  /** Kayıt şimdi yapılamıyorsa nedeni (ör. zamanlanmış akış sürüyor, K-163). */
+  disabledReason?: string | null;
+}) {
   if (!dirty) return null;
   const T = tr.table;
   return (
     <span className="sc-edit-bar">
-      <Button size="sm" variant="primary" busy={busy} onClick={onSave}>{T.editSave}</Button>
+      <Button size="sm" variant="primary" busy={busy} disabledReason={disabledReason ?? null} onClick={onSave}>{T.editSave}</Button>
       <Button size="sm" disabled={busy} onClick={onDiscard}>{T.editDiscard}</Button>
     </span>
   );

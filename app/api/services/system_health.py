@@ -18,7 +18,7 @@ from ..errors import AppError
 from ..permissions import Access, allows
 from ..repositories import system_health as repo
 from ..settings import get_settings
-from . import auth
+from . import auth, flows
 from .auth import CurrentUser
 
 log = logging.getLogger("smartchain.health")
@@ -89,6 +89,7 @@ def summary(session: Session | None, started_at: datetime, connections: int) -> 
                 {"key": "database", "status": RUNNING, "ms": _ping(session),
                  "pool_in_use": pool.checkedout(), "pool_size": pool.size()},
                 {"key": "notifications", "status": RUNNING, "connections": connections},
+                flows.scheduler_row(session, state, RUNNING, STOPPED),  # K-163: zamanlayıcı motor servisinin içinde
             ],
         }
 

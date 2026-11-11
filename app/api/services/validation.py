@@ -17,7 +17,7 @@ from db.models import metadata
 from ..errors import AppError
 from ..permissions import Access
 from ..repositories import audit
-from . import auth, authz
+from . import auth, authz, flows
 from .auth import CurrentUser
 
 BATCH = metadata.tables["adm.ImportBatch"]
@@ -205,6 +205,7 @@ def save_rules(session: Session | None, user: CurrentUser, changes: list[dict], 
     authz.ensure(user, 100, Access.WRITE)
 
     def work():
+        flows.ensure_idle(session)  # K-163
         engine.sync_rules(session)
         changed: set[str] = set()
         now = engine.utcnow()

@@ -11,6 +11,7 @@ import { tr } from "../i18n/tr";
 import { applyFontSize, DEFAULT_FONT_SIZE, type FontSize, userPrefs, validFontSize } from "../prefs";
 import { ContextBar } from "./ContextBar";
 import { type ExportItem, ExportToasts } from "./ExportToasts";
+import { FlowStatusProvider } from "./FlowStatus";
 import { ForbiddenNotice } from "./ForbiddenNotice";
 import { ShellContext, type TrackedExport } from "./ShellContext";
 import { Sidebar } from "./Sidebar";
@@ -102,6 +103,7 @@ export function Shell() {
 
   return (
     <ShellContext.Provider value={{ userId, fontSize, setFontSize: changeFontSize, trackExport }}>
+    <FlowStatusProvider>
     <div className={`sc-shell${collapsed ? " is-collapsed" : ""}`}>
       <Sidebar
         collapsed={collapsed}
@@ -121,6 +123,7 @@ export function Shell() {
       <ForbiddenNotice />
       <IdleWatch me={me} />
     </div>
+    </FlowStatusProvider>
     </ShellContext.Provider>
   );
 }

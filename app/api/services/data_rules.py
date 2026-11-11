@@ -16,7 +16,7 @@ from app.validation.sqlkit import label
 from ..errors import AppError
 from ..permissions import Access
 from ..repositories import audit
-from . import auth, authz
+from . import auth, authz, flows
 from .auth import CurrentUser
 from .validation import _groups_payload, entity_of, state_of
 
@@ -162,6 +162,7 @@ def save_rules(session: Session | None, user: CurrentUser, changes: list[dict], 
         authz.ensure(user, 18, Access.WRITE)
 
     def work():
+        flows.ensure_idle(session)  # K-163: akış sürerken kural kaydedilmez
         changed: set[str] = set()
         now = engine.utcnow()
         for change in changes:
@@ -249,6 +250,7 @@ def apply(session: Session | None, user: CurrentUser, table: str | None) -> dict
     authz.ensure(user, 19, Access.WRITE)
 
     def work():
+        flows.ensure_idle(session)
         if table:
             entities = [entity_of(table).table]
         else:

@@ -548,6 +548,19 @@ Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, d
 
 **Ölçüm (`python -m pytest -m perf -k raw_compare`, `tests/test_raw_compare_perf.py`):** 25 tablo × 50.000 satır, iki günlük hâl, satırların %10'unda bir alan değişik: 25 tablonun toplamı ortanca 29,6 sn (28,5–91,0; ilk koşu soğuk önbellekle), en yavaş tablo 5,8 sn. Hesap tablo başına validasyon işinin başındadır; tek tablo yüklemesine eklenen süre tablo başınadır. Sunucuda ilk kurulumda yeniden ölçülür.
 
+## Zamanlanmış akışlar (ekran 23, fonksiyon 92, K-163)
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| `GET /api/flows` | 92 okuma (System owner, Admin) | Akışlar: tanım, sıradaki çalışma, son çalışma (durum, adım, neden); `options`: SQL tabloları ve kısmi aktarım grupları |
+| `POST /api/flows` · `PUT /api/flows/{id}` | 92 yazma (System owner) | Akış tanımı. 422 doğrulama (ad, saat SS:DD, en az bir gün, Kısmi'de en az bir grup, Seçilen'de en az bir SQL tablosu); 409 `flow_conflict` (aynı gün ve saatte başka aktif akış, adıyla). İz "Akış tanımlandı" / "Akış değiştirildi" |
+| `POST /api/flows/{id}/run` | 92 yazma (System owner) | Şimdi çalıştır: çalıştırma "Bekliyor" olarak yazılır, zamanlayıcı aynı kurallarla başlatır; 409 `flow_running` (başka akış sürüyor). İz "Akış elle başlatıldı" |
+| Ortak liste `flow-runs` | 92 okuma | Geçmiş: Akış, Tetik, Saati, Başlama, Bitiş, Durum, Adım, Neden, Veri; arayüz akışı sabit filtreyle verir |
+| `GET /api/flows/status` | 01 okuma (Key user ve üstü) | `running` (ad, başlama) ve `alert` (son çalıştırma Durdu ya da Başlamadı ve kullanıcı kapatmadıysa: ad, durum, adım, neden, zaman); bağlam çubuğu ve ana sayfa okur |
+| `POST /api/flows/runs/{id}/dismiss` | 01 okuma | Kullanıcı çipi kapatır |
+
+Akış sürerken çekim, Excel yükleme ve devam, tam ve kısmi aktarım, ham veri temizliği, veri kuralı kaydetme ve yeniden uygulama, validasyon kuralı ve eşik kaydetme, Entegrasyon tablo ayarları 409 `flow_running` ("Zamanlanmış akış sürüyor: <ad> (başlama 02:00). Bitince yeniden deneyin."). Tam ve kısmi aktarımın plan cevabında tablo başına `failed_rules` (çalışmayan veri kuralı sayısı).
+
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 
 | Uç nokta | Cevap |

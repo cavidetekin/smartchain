@@ -6837,7 +6837,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | B · Validasyon kuralları | 100 | tam | tam | salt okunur | yok |
 | A · Dünden bugüne | 101 | tam | tam | tam | salt okunur |
 
-- **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur.
+- **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur · 92 Zamanlanmış işler Admin'e salt okunur (K-163) · 09 Ham veri temizliği Admin ve Key user'a salt okunur (K-156).
 - **Raporlama serbestliği (K-99):** görünüm kaydetme, alan ekleme ve çıkarma, sıralama, filtre, gruplama ve koşullu biçim fonksiyon sayılmaz; okuma yetkisi olan her listede herkese açıktır.
 
 ### 90 · Rol bazlı yetki · kurallar ve etkiler
@@ -6963,6 +6963,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F92 · K Yönetim ve sistem · Çalışma prensibi 1/2</sub>
 
 - Gece akışını (çekim → validasyon ve yükleme → senaryolar) ve bakım işlerini (senaryo silme, ham veri temizliği, versiyon sıkıştırma) zamanlamak, aç / kapa, sıra ve bağımlılıkla yönetmek.
+
+- **Uygulama (5.6, K-163):** uygulandı. Entegrasyon ekranında "Zamanlanmış akışlar": liste, akış penceresi (ad, saat, günler, Veri çek, aktarım, temizlik, aktif), geçmiş çekmecesi; System owner tanımlar ve "Şimdi çalıştır" (onaylı), Admin salt okunur. Zincir sabittir: Veri çek → validasyon → aktarım → temizlik; teknik hata aktarımdan önce durdurur, veri bulgusu durdurmaz. Zamanlayıcı motor servisinin içindedir; akış durunca ya da başlamayınca bağlam çubuğunda çip. Senaryolar, versiyon sıkıştırma ve 06:00 bitiş sınırı ilgili aşamalarda.
 
 #### NASIL ÇALIŞIR
 

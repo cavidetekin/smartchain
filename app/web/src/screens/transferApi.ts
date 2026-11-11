@@ -10,6 +10,8 @@ export interface TransferPlanRow {
   error_rows: number;
   status: string;
   note: string | null;
+  /** Çalışmayan veri kuralı sayısı (K-163): pencere uyarır, kullanıcı bilerek devam eder. */
+  failed_rules?: number;
 }
 
 export interface TransferPlan {

@@ -1250,7 +1250,7 @@
       "group": "K",
       "levels": {
         "System owner": "full",
-        "Admin": "full",
+        "Admin": "read",
         "Key user": "none",
         "End user": "none"
       }
@@ -1361,6 +1361,7 @@
     "86": "Excel'e aktarma End user'ın hakkı (K-99)",
     "87": "End user yalnız kendi dışa aktarım kayıtlarını görür",
     "89": "Giriş ve oturum herkese açık",
-    "90": "Admin matrisi görür, değiştiremez (Faz 1'de matris sabit)"
+    "90": "Admin matrisi görür, değiştiremez (Faz 1'de matris sabit)",
+    "92": "Akışları System owner tanımlar ve başlatır; Admin akışları ve geçmişi görür (K-163)"
   }
 }

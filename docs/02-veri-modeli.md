@@ -2010,6 +2010,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `ExportMaxRows`: bir aktarımda en çok satır (500000)
   - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
 - Sistem sağlığı (K-106; fonksiyon 94): `DiskWarnPercent` (85), `QueueWaitWarnMinutes` (10), `SystemEventRetentionDays` (90).
+- Zamanlanmış akışlar (K-163; fonksiyon 92): `FlowWaitMinutes`: elle başlatılmış işin bitmesini ve servisin geri gelmesini bekleme (60; 5–720); `FlowRefreshWaitMinutes`: ERP yenilemesinin bitmesini bekleme (120; 5–720).
 - Ham veri temizliği (K-156; fonksiyon 09): `RawDataRetentionDays`: ham verinin saklama süresi, gün (1–30); varsayılan yok, boşsa temizlik çalışmaz.
 - Excel yükleme (K-129; fonksiyon 03): `ImportSyncMaxMb`: bu boyuta kadar ön kontrol istek içinde, üstü iş kuyruğunda (5); `ImportMaxMb`: en büyük dosya (100); `ImportMaxRows`: bir dosyada en çok satır (200000).
 - SQL çekimi (K-130; fonksiyon 01, 91): `IntegrationDatabase`: entegrasyon veritabanının adı, boşsa SQL yolu kapalı; `PullRetryWaitSeconds`: geçici hatada denemeler arası bekleme (30).
@@ -2067,6 +2068,64 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | KnownFields | nvarchar(max) |  | Kaydedildiği anda listedeki alanlar; JSON. Sonradan eklenen alan ürünün varsayılanına göre gelir | Sistem | H | E |  |
 | UpdatedAt | datetime2 |  | Son değişiklik zamanı | Sistem | H | E |  |
 | UpdatedBy | int | FK | Kaydeden | Kullanıcı | H | E |  |
+
+### Flow
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Zamanlanmış veri akışı (K-163): zaman, Veri çek kapsamı, aktarım türü, isteğe bağlı temizlik. Adımların sırası sabittir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | int | PK | Akış kimliği | Sistem | H | E |  |
+| Name | nvarchar(100) | UK | Akışın adı | Kullanıcı | H | E |  |
+| IsActive | bit |  | Aktif | Kullanıcı | H | E | 1 |
+| RunTime | nvarchar(5) |  | Saat (SS:DD, sunucunun yerel saati) | Kullanıcı | H | E |  |
+| Days | nvarchar(20) |  | Haftanın günleri; 1 Pazartesi … 7 Pazar, virgülle | Kullanıcı | H | E |  |
+| PullScope | nvarchar(10) |  | Tümü \| Seçilen | Kullanıcı | H | E |  |
+| PullTables | nvarchar(max) |  | Seçilen SQL tabloları; JSON | Kullanıcı | H | H |  |
+| TransferMode | nvarchar(10) |  | Tam \| Kısmi | Kullanıcı | H | E |  |
+| TransferGroups | nvarchar(200) |  | Kısmi aktarımın grupları; JSON | Kullanıcı | H | H |  |
+| Cleanup | bit |  | Ham veri temizliği adımı | Kullanıcı | H | E | 0 |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) | Sistem | H | E |  |
+| UpdatedBy | int | FK | Değiştiren | Kullanıcı | H | E |  |
+
+### FlowRun
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Akışın her çalıştırması (K-163): zaman, adım, durum ve nedeni, işler, veri versiyonu.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Çalıştırma kimliği | Sistem | H | E |  |
+| FlowId | int | FK,IX | Akış | Sistem | H | E |  |
+| FlowName | nvarchar(100) |  | Çalıştığı andaki adı | Sistem | H | E |  |
+| TriggerType | nvarchar(15) |  | Zamanlanmış \| Elle | Sistem | H | E |  |
+| ScheduledAt | datetime2 |  | Saati (UTC) | Sistem | H | E |  |
+| StartedAt | datetime2 |  | Başlama (UTC) | Sistem | H | H |  |
+| EndedAt | datetime2 |  | Bitiş (UTC) | Sistem | H | H |  |
+| State | nvarchar(15) |  | Bekliyor \| Çalışıyor \| Bitti \| Durdu \| Başlamadı | Sistem | H | E |  |
+| Step | nvarchar(20) |  | Başlangıç \| Veri çekme \| Validasyon \| Aktarım \| Temizlik | Sistem | H | E |  |
+| Reason | nvarchar(400) |  | Durma ya da başlamama nedeni; bitende not | Sistem | H | H |  |
+| Detail | nvarchar(max) |  | Adım ayrıntısı; JSON (tablo durumları, yeniden çekim) | Sistem | H | H |  |
+| PullJobId | bigint |  | Son çekim işi | Sistem | H | H |  |
+| TransferJobId | bigint |  | Aktarım işi | Sistem | H | H |  |
+| CleanupJobId | bigint |  | Temizlik işi | Sistem | H | H |  |
+| DataVersionId | bigint |  | Açılan veri versiyonu | Sistem | H | H |  |
+| RequestedBy | int | FK | Elle başlatan | Kullanıcı | H | H |  |
+
+### FlowRunDismissal
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Kullanıcının kapattığı akış bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| FlowRunId | bigint | PK,FK | Çalıştırma | Sistem | H | E |  |
+| UserId | int | PK,FK | Kullanıcı | Sistem | H | E |  |
+| DismissedAt | datetime2 |  | Kapatma zamanı (UTC) | Sistem | H | E |  |
 
 ### License
 <sub>21. Veri modeli · Sistem</sub>

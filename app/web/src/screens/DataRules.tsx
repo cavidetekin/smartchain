@@ -20,6 +20,7 @@ import {
   DATE_OPERATORS, type DataRuleChange, type DataRuleField, dataRulesApi, emptyResult, KIND_CLEAR, KIND_FIELD, KIND_FORMULA, KIND_VALUE,
   MODE_ALWAYS, MODE_ONLY_EMPTY, NUMBER_OPERATORS, RESULT_KINDS, resultComplete, type RuleResult, STATUS_FAILED, STATUS_RAN,
 } from "./dataRulesApi";
+import { useFlowLock } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 
@@ -195,9 +196,10 @@ function StateCell({ state, row }: { state: string; row: Row }) {
 export function DataRules() {
   const me = useAuth().me!;
   const canWrite = can(me, 16, "write");
-  const writeReason = canWrite ? null : forbiddenReason(16, "write");
-  const orderReason = can(me, 18, "write") ? null : forbiddenReason(18, "write");
-  const applyReason = can(me, 19, "write") ? null : forbiddenReason(19, "write");
+  const flowLock = useFlowLock();  // K-163: akış sürerken kural kaydedilmez
+  const writeReason = canWrite ? flowLock : forbiddenReason(16, "write");
+  const orderReason = can(me, 18, "write") ? flowLock : forbiddenReason(18, "write");
+  const applyReason = can(me, 19, "write") ? flowLock : forbiddenReason(19, "write");
   const [entities, setEntities] = useState<Entity[]>([]);
   const [entity, setEntity] = useState(ALL);
   const edits = useTableEdits();
@@ -365,7 +367,7 @@ export function DataRules() {
         <Button variant="secondary" disabledReason={applyReason} onClick={() => setAsk(entity ? [entity] : "all")}>{T.apply}</Button>
       </TopStrip>
       <DataTable list="data-rules" baseFilters={baseFilters} cellRender={cellRender} rowMenu={rowMenu} reloadKey={reloadKey} rowOrder={orderDirty ? order : null} rowProps={rowProps} fieldHints={SEQ_HINTS}
-                 toolbarActions={<EditBar dirty={dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={discard} />} />
+                 toolbarActions={<EditBar dirty={dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={discard} disabledReason={flowLock} />} />
       <UnsavedGuard dirty={dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.RuleName))} anchor={menu.anchor} onClose={() => setMenu(null)}>

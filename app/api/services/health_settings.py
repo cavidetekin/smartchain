@@ -1,11 +1,11 @@
-"""Sistem sağlığı eşikleri, hataların saklanma süresi ve ham verinin saklama süresi (fonksiyon 96, K-106, K-156). Form ve kurallar Giriş ve oturum
+"""Sistem sağlığı eşikleri, hataların saklanma süresi, ham verinin saklama süresi ve akışların bekleme süreleri (fonksiyon 96, K-106, K-156, K-163). Form ve kurallar Giriş ve oturum
 ile aynıdır; ham verinin saklama süresinin varsayılanı yoktur, boş bırakılabilir (boşsa temizlik çalışmaz, K-138).
 """
 from sqlalchemy.orm import Session
 
 from app.cleanup import raw
 
-from app.jobs.settings import HEALTH_DEFAULTS, IMPORT_DEFAULTS, read_int_settings
+from app.jobs.settings import FLOW_DEFAULTS, HEALTH_DEFAULTS, IMPORT_DEFAULTS, read_int_settings
 
 from ..errors import AppError
 from ..repositories import audit, settings as repo
@@ -14,11 +14,12 @@ from .auth import CurrentUser
 
 LIMITS = {"DiskWarnPercent": (1, 99), "QueueWaitWarnMinutes": (1, 1440), "SystemEventRetentionDays": (7, 3650),
           "ImportSyncMaxMb": (1, 100), "ImportMaxMb": (1, 100), "ImportMaxRows": (1000, 1000000),  # K-129: Excel yükleme
+          "FlowWaitMinutes": (5, 720), "FlowRefreshWaitMinutes": (5, 720),  # K-163: zamanlanmış akışlar
           raw.SETTING_KEY: raw.LIMITS}  # K-156: ham veri temizliği
 OPTIONAL = (raw.SETTING_KEY,)  # varsayılanı yok; boş = ayar satırı yok
 
 
-DEFAULTS = {**HEALTH_DEFAULTS, **IMPORT_DEFAULTS}
+DEFAULTS = {**HEALTH_DEFAULTS, **IMPORT_DEFAULTS, **FLOW_DEFAULTS}
 
 
 def _current(session: Session) -> dict[str, int | None]:

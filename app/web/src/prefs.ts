@@ -52,6 +52,9 @@ export function userPrefs(userId: number) {
     /** 2.3'ten önce tarayıcıda kalmış yazı boyutu (yalnız taşıma için). */
     legacyFontSize: (): FontSize | null => validFontSize(read<number | null>(key("fontSize"), null)),
     clearLegacyFontSize: () => remove(key("fontSize")),
+    /** Bildirimi çıkmış akış çalıştırmaları (K-163): aynı durma her açılışta yeniden bildirilmez. */
+    notifiedFlowRuns: (): number[] => read<number[]>(key("flowRuns"), []),
+    setNotifiedFlowRuns: (ids: number[]) => write(key("flowRuns"), ids.slice(-50)),
   };
 }
 

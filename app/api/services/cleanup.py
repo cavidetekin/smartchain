@@ -15,7 +15,7 @@ from app.jobs.constants import ACTIVE_STATUSES, CHANNEL_PROCESSING, TYPE_CLEANUP
 
 from ..errors import AppError
 from ..repositories import audit, integration as repo
-from . import auth
+from . import auth, flows
 from .auth import CurrentUser
 
 ACTION = "Ham veri temizliği"
@@ -66,6 +66,7 @@ def start(session: Session | None, user: CurrentUser) -> dict:
     session = auth._require(session)
 
     def work():
+        flows.ensure_idle(session)  # K-163
         days = raw.retention_days(session)
         if days is None:
             raise AppError("cleanup_no_retention", NO_RETENTION, 409)

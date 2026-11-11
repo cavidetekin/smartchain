@@ -23,6 +23,8 @@ const SUMMARY: HealthSummary = {
     { key: "engine", status: "Çalışıyor", heartbeat_at: "2026-11-03T12:19:58+00:00", version: "0.19.0", busy: 2 },
     { key: "database", status: "Çalışıyor", ms: 12, pool_in_use: 6, pool_size: 20 },
     { key: "notifications", status: "Çalışıyor", connections: 14 },
+    { key: "scheduler", status: "Gecikti", checked_at: "2026-11-03T12:19:58+00:00", late: "Hafta içi kısmi",
+      next: { name: "Pazar tam", at: "2026-11-08T23:00:00+00:00" }, last: { name: "Hafta içi kısmi", state: "Durdu", at: "2026-11-02T23:14:00+00:00" } },
   ],
 };
 
@@ -80,6 +82,10 @@ describe("ekran", () => {
     expect(screen.getByTestId("service-engine")).toHaveTextContent("son sinyal");
     expect(screen.getByTestId("service-database")).toHaveTextContent("12 ms · 6 / 20 bağlantı · 1,2 GB · 3 veri versiyonu");
     expect(screen.getByTestId("service-notifications")).toHaveTextContent("14 bağlantı");
+    const scheduler = screen.getByTestId("service-scheduler");  // K-163
+    expect(scheduler).toHaveTextContent("Zamanlayıcı");
+    expect(within(scheduler).getByText("Gecikti")).toHaveClass("sc-tag--risk");
+    expect(scheduler).toHaveTextContent(/son kontrol \d\d:\d\d:\d\d · Hafta içi kısmi saatinde başlamadı · sıradaki: Pazar tam, .+ · son akış: Hafta içi kısmi, Durdu/);
     expect(screen.getByRole("radio", { name: "İş kuyruğu" })).toBeChecked();
     expect(screen.getByText("Sırada")).toHaveClass("sc-tag--risk");
     expect(document.body.textContent).not.toMatch(/K-\d+/);

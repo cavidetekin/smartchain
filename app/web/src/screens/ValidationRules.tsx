@@ -14,6 +14,7 @@ import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import { listApi, type ListFilter, type Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
 import { Alert, Badge, type BadgeTone, Button, ConfirmDialog, Dialog, SelectField, TextField, TopStrip } from "../ui";
+import { useFlowLock } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 import { SEVERITY_CLASS, SeverityTag } from "./ValidationDrawer";
@@ -125,7 +126,8 @@ function RuleDialog({ editing, onClose, onSaved, onReset }: { editing: Editing; 
 export function ValidationRules() {
   const me = useAuth().me!;
   const canWrite = can(me, 100, "write");
-  const writeReason = canWrite ? null : forbiddenReason(100, "write");
+  const flowLock = useFlowLock();  // K-163
+  const writeReason = canWrite ? flowLock : forbiddenReason(100, "write");
   const [entities, setEntities] = useState<Entity[]>([]);
   const [entity, setEntity] = useState(ALL);
   const [thresholds, setThresholds] = useState<Record<string, string>>({});
@@ -269,7 +271,7 @@ export function ValidationRules() {
                 onClick={() => setEditing({ entity, kind: KIND_USER, name: "", message: "", severity: "Uyarı", active: true, groups: [] })}>{T.newRule}</Button>
       </TopStrip>
       <DataTable list="validation-rules" baseFilters={baseFilters} cellRender={cellRender} rowMenu={rowMenu} reloadKey={reloadKey}
-                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} />} />
+                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />} />
       <UnsavedGuard dirty={edits.dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.RuleName))} anchor={menu.anchor} onClose={() => setMenu(null)}>

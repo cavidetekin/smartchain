@@ -24,7 +24,7 @@ from ..errors import AppError
 from ..export.describe import tr_number
 from ..repositories import audit, imports as repo, lists as lists_repo
 from ..settings import get_settings
-from . import auth
+from . import auth, flows
 from .auth import CurrentUser
 
 log = logging.getLogger("smartchain.imports")
@@ -187,6 +187,7 @@ def start(session: Session | None, user: CurrentUser, table: str, mode: str, fil
         return {"batch_id": batch_id, "job_id": job_id}, 202
 
     def work():
+        flows.ensure_idle(session)  # K-163
         settings = repo.read_settings(session)
         return small(settings) if temp.stat().st_size <= settings["ImportSyncMaxMb"] * MB else large()
 
@@ -395,6 +396,7 @@ def continue_batch(session: Session | None, user: CurrentUser, batch_id: int, mo
         check_mode(mode)
 
     def work():
+        flows.ensure_idle(session)
         batch = _owned(session, batch_id, user)
         if batch["Status"] != repo.PENDING or batch["RowCount"] is None or batch["RowCount"] - (batch["ErrorCount"] or 0) <= 0:
             raise AppError("import_not_pending", "Bu yükleme sürdürülemez.", 409)

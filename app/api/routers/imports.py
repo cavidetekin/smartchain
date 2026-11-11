@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..db import get_session
 from ..deps import require
 from ..permissions import Access
-from ..services import imports as service
+from ..services import flows, imports as service
 from ..services.auth import CurrentUser
 
 router = APIRouter(tags=["Excel yükleme"])
@@ -49,6 +49,7 @@ async def _receive(request: Request, max_mb: int) -> Path:
 async def upload_any(request: Request, mode: str = Query(service.MODE_CHANGED), skip: str = Query(""), user: CurrentUser = Depends(write),
                      session: Session = Depends(get_session, scope="function")) -> JSONResponse:
     service.check_mode(mode)
+    await run_in_threadpool(flows.check_idle, session)  # K-163: dosya alınmadan
     temp = await _receive(request, await run_in_threadpool(service.max_mb, session))
     try:
         entity = await run_in_threadpool(service.detect, temp, [s for s in skip.split(",") if s])
@@ -63,6 +64,7 @@ async def upload_any(request: Request, mode: str = Query(service.MODE_CHANGED), 
 async def upload(entity: str, request: Request, mode: str = Query(service.MODE_CHANGED), user: CurrentUser = Depends(write),
                  session: Session = Depends(get_session, scope="function")) -> JSONResponse:
     settings = await run_in_threadpool(service.limits, session, entity, mode)
+    await run_in_threadpool(flows.check_idle, session)
     temp = await _receive(request, settings["ImportMaxMb"])
     try:
         name = unquote(request.headers.get("x-file-name", "")) or f"{entity}.xlsx"

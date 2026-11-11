@@ -198,6 +198,7 @@ const HEALTH_GROUPS: FormGroup[] = [
   { title: T.healthGroup, keys: ["DiskWarnPercent", "QueueWaitWarnMinutes", "SystemEventRetentionDays"] },
   { title: T.importGroup, keys: ["ImportSyncMaxMb", "ImportMaxMb", "ImportMaxRows"] },
   { title: T.cleanupGroup, keys: ["RawDataRetentionDays"] },
+  { title: T.flowGroup, keys: ["FlowWaitMinutes", "FlowRefreshWaitMinutes"] },  // K-163
 ];
 
 const warningShorter = (key: string, values: FormValues) => {

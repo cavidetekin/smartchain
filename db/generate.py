@@ -81,7 +81,7 @@ REF_TARGET = {
     "ShiftPlanId": "ShiftPlan", "ShiftId": "Shift", "ScenarioDefinitionId": "ScenarioDefinition",
     "SalesOrderLineId": "SalesOrderLine", "ProjectGroupId": "ProjectGroup", "ProductionVersionId": "ProductionVersion",
     "ReferenceMaterialId": "Material", "ReferenceProductionVersionId": "ProductionVersion",
-    "ViewId": "TableView",
+    "ViewId": "TableView", "FlowId": "Flow", "FlowRunId": "FlowRun",
     "BaseUom": ("UnitOfMeasure", "Code"), "FromUom": ("UnitOfMeasure", "Code"),
     "ToUom": ("UnitOfMeasure", "Code"), "CapacityUnit": ("UnitOfMeasure", "Code"),
     "ComponentUom": ("UnitOfMeasure", "Code"), "Uom": ("UnitOfMeasure", "Code"),

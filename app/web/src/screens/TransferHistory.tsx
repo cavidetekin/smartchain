@@ -7,6 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { formatDateTime, formatNumber, serverDate } from "../format";
 import { tr } from "../i18n/tr";
+import { useFlowLock } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
 import { DataTable } from "../table/DataTable";
 import { type LocalColumn, LocalTable } from "../table/LocalTable";
@@ -38,6 +39,7 @@ function lastText(state: CleanupState): string {
 export function TransferHistoryDrawer({ onClose, onOpenReport }: { onClose(): void; onOpenReport(jobId: number): void }) {
   const me = useAuth().me!;
   const canClean = can(me, 9, "write");
+  const flowLock = useFlowLock();  // K-163
   const [state, setState] = useState<CleanupState | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [cleaning, setCleaning] = useState(false);
@@ -65,7 +67,7 @@ export function TransferHistoryDrawer({ onClose, onOpenReport }: { onClose(): vo
   const retention = state ? (state.retention_days === null ? T.noRetention : T.retention(state.retention_days)) : null;
   return (
     <Drawer title={T.title} subtitle={state && <>{retention} · {lastText(state)}</>} onClose={onClose}
-            actions={<Button variant="secondary" disabledReason={canClean ? null : forbiddenReason(9, "write")} onClick={() => setCleaning(true)}>{T.cleanup}</Button>}>
+            actions={<Button variant="secondary" disabledReason={canClean ? flowLock : forbiddenReason(9, "write")} onClick={() => setCleaning(true)}>{T.cleanup}</Button>}>
       {error && <Alert tone="error">{error}</Alert>}
       <p className="sc-muted">{T.subtitle}</p>
       <DataTable list="transfer-history" rowProps={rowProps} reloadKey={reloadKey} fit />

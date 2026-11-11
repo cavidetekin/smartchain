@@ -24,6 +24,8 @@ DEFAULTS = {
 HEALTH_DEFAULTS = {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90}
 # Excel yükleme (K-129): ölçüme göre 5 MB'a kadar istek içinde (docs/08)
 IMPORT_DEFAULTS = {"ImportSyncMaxMb": 5, "ImportMaxMb": 100, "ImportMaxRows": 200000}
+# Zamanlanmış akışlar (K-163): elle işin ve servisin beklenmesi, ERP yenilemesinin beklenmesi (dakika)
+FLOW_DEFAULTS = {"FlowWaitMinutes": 60, "FlowRefreshWaitMinutes": 120}
 
 
 @dataclass(frozen=True)

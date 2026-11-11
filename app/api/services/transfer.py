@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.integration import contract
 from app.jobs import queue
 from app.jobs.constants import ACTIVE_STATUSES, CHANNEL_PROCESSING, TYPE_CLEANUP, TYPE_PRECHECK, TYPE_PULL, TYPE_TRANSFER, TYPE_VALIDATION
+from app.flows.runner import failed_rules
 from app.transfer import engine as transfer
 from app.transfer.groups import GROUPS, UnknownGroup, group_tables
 from app.validation import engine as validation
@@ -24,7 +25,7 @@ from ..errors import AppError
 from ..export.writer import XlsxWriter, local_datetime
 from ..permissions import SYSTEM_OWNER
 from ..repositories import audit, export as export_repo, integration as repo
-from . import auth
+from . import auth, flows
 from .auth import CurrentUser
 from .validation import state_of
 
@@ -63,13 +64,15 @@ def blocked(session: Session, tables: set[str] | None = None) -> dict | None:
     return None
 
 
-def _plan_row(session: Session, e) -> dict:
+def _plan_row(session: Session, e, failed: dict[str, int]) -> dict:
+    """failed: çalışmayan veri kuralı sayısı (K-163); onay penceresi uyarır, kullanıcı bilerek devam eder."""
     if not transfer._has_raw(session, e.table):
-        return {"entity": e.table, "name": e.name, "current_rows": 0, "error_rows": 0, "status": SKIP_EMPTY, "note": transfer.NOTE_EMPTY}
+        return {"entity": e.table, "name": e.name, "current_rows": 0, "error_rows": 0, "status": SKIP_EMPTY, "note": transfer.NOTE_EMPTY,
+                "failed_rules": failed.get(e.table, 0)}
     c = validation.counts(session, e.table)
     note = transfer.threshold_note(session, e.table)
     return {"entity": e.table, "name": e.name, "current_rows": c["current_rows"], "error_rows": c["error_rows"],
-            "status": SKIP_THRESHOLD if note else READY, "note": note}
+            "status": SKIP_THRESHOLD if note else READY, "note": note, "failed_rules": failed.get(e.table, 0)}
 
 
 def plan(session: Session | None) -> dict:
@@ -77,7 +80,8 @@ def plan(session: Session | None) -> dict:
     session = auth._require(session)
 
     def work():
-        return {"tables": [_plan_row(session, e) for e in contract.ENTITIES], "blocked": blocked(session)}
+        failed = failed_rules(session)
+        return {"tables": [_plan_row(session, e, failed) for e in contract.ENTITIES], "blocked": blocked(session)}
 
     return auth._db(work)
 
@@ -87,6 +91,7 @@ def start(session: Session | None, user: CurrentUser) -> dict:
     session = auth._require(session)
 
     def work():
+        flows.ensure_idle(session)  # K-163
         reason = blocked(session)
         if reason:
             raise AppError("transfer_blocked", reason["reason"] + (f" Tablolar: {', '.join(reason['tables'])}." if reason["tables"] else ""), 409)
@@ -103,7 +108,8 @@ def partial_plan(session: Session | None) -> dict:
     session = auth._require(session)
 
     def work():
-        rows = {e.table: _plan_row(session, e) for e in contract.ENTITIES}
+        failed = failed_rules(session)
+        rows = {e.table: _plan_row(session, e, failed) for e in contract.ENTITIES}
         return {"groups": [{"name": g, "tables": [rows[t] for t in transfer.order() if t in tables]} for g, tables in GROUPS.items()],
                 "busy": busy_reason(session), "pending": [e.table for e in _pending(session, group_tables(GROUPS))]}
 
@@ -127,6 +133,7 @@ def start_partial(session: Session | None, user: CurrentUser, groups: list[str])
     chosen = _groups(groups)
 
     def work():
+        flows.ensure_idle(session)
         reason = blocked(session, group_tables(chosen))
         if reason:
             raise AppError("transfer_blocked", reason["reason"] + (f" Tablolar: {', '.join(reason['tables'])}." if reason["tables"] else ""), 409)

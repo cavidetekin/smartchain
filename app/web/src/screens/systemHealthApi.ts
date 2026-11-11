@@ -2,7 +2,7 @@
 import { getJson, sendJson } from "../api/client";
 import type { Job } from "../api/client";
 
-export type ServiceKey = "app" | "engine" | "database" | "notifications";
+export type ServiceKey = "app" | "engine" | "database" | "notifications" | "scheduler";
 
 export interface ServiceInfo {
   key: ServiceKey;
@@ -15,6 +15,11 @@ export interface ServiceInfo {
   pool_in_use?: number;
   pool_size?: number;
   connections?: number;
+  /** Zamanlayıcı (K-163): son kontrol, sıradaki ve son akış, geciken akışın adı. */
+  checked_at?: string | null;
+  next?: { name: string; at: string } | null;
+  last?: { name: string; state: string; at: string } | null;
+  late?: string | null;
 }
 
 export interface HealthSummary {

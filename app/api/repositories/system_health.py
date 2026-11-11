@@ -12,12 +12,12 @@ from db.models import metadata
 EVENT = metadata.tables["adm.SystemEvent"]
 
 
-def engine_status(session: Session) -> dict | None:
-    """Motorun kalp atışı ve kaç saniye önce atıldığı (veritabanı saatiyle)."""
+def engine_status(session: Session, name: str = ENGINE_SERVICE) -> dict | None:
+    """Motorun (ya da zamanlayıcının, K-163) kalp atışı ve kaç saniye önce atıldığı (veritabanı saatiyle)."""
     row = session.execute(text(
         "SELECT HeartbeatAt, StartedAt, StoppedAt, AppVersion, "
         "DATEDIFF(second, HeartbeatAt, SYSUTCDATETIME()) AS AgeSeconds FROM adm.ServiceStatus WHERE ServiceName = :n"),
-        {"n": ENGINE_SERVICE}).mappings().first()
+        {"n": name}).mappings().first()
     return dict(row) if row else None
 
 

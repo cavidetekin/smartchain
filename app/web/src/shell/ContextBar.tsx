@@ -1,4 +1,4 @@
-// Bağlam çubuğu (U-17, docs/12): senaryo / plan versiyonu / dönem (8.1), veri versiyonu, iş göstergesi, kullanıcı.
+// Bağlam çubuğu (U-17, docs/12): senaryo / plan versiyonu / dönem (8.1), veri versiyonu, iş göstergesi, akış çipi (K-163), kullanıcı.
 import { Database } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -6,6 +6,7 @@ import { api, ApiError, type DataVersion, JOB_TRANSFER, type Job } from "../api/
 import { formatDateTime } from "../format";
 import { tr } from "../i18n/tr";
 import type { FontSize } from "../prefs";
+import { FlowAlertChip } from "./FlowStatus";
 import { JobIndicator } from "./JobIndicator";
 import { useJobRefresh } from "./useJobRefresh";
 import { UserMenu } from "./UserMenu";
@@ -32,6 +33,7 @@ export function ContextBar({ fontSize, onFontSize, onJob }: Props) {
       <div className="sc-context-right">
         <DataVersionBadge />
         <JobIndicator onJob={onJob} />
+        <FlowAlertChip />
         <UserMenu fontSize={fontSize} onFontSize={onFontSize} />
       </div>
     </header>

@@ -21,7 +21,7 @@ from app.validation import engine as validation
 from ..errors import AppError
 from ..export.describe import tr_number
 from ..repositories import audit, imports as imports_repo, integration as repo, lists as lists_repo
-from . import auth, imports, integration
+from . import auth, flows, imports, integration
 from .auth import CurrentUser
 
 log = logging.getLogger("smartchain.pull")
@@ -112,6 +112,7 @@ def start(session: Session | None, user: CurrentUser, entities: list[str] | None
     session = auth._require(session)
 
     def work():
+        flows.ensure_idle(session)  # K-163
         if not repo.read_database(session):
             raise integration.not_configured()
         targets = _targets(entities)

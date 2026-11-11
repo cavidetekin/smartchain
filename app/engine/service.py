@@ -7,6 +7,8 @@
 - İşi tipine göre yönlendirir (K-93): "Dışa aktarım" işleri Excel dosyası üretir, diğerleri plan hesabıdır. Süresi
   geçen dışa aktarım dosyalarını açılışta ve saatte bir siler.
 - Kendi kalp atışını işten bağımsız yazar (adm.ServiceStatus); saklama süresi geçen sistem olaylarını siler (K-106).
+- Zamanlanmış akışların zamanlayıcısı bu serviste çalışır (K-163, `app/flows`): açılışta ve veritabanı bağlantısı geri gelince
+  çalışan akış "Durdu: akış yarıda kesildi" olur; zamanlayıcının kalp atışı ayrı satırda ("Zamanlayıcı").
 
 Çalıştırma (geliştirme):  python -m app.engine.service      Windows servisi olarak kurulum 0.6'da.
 """
@@ -16,9 +18,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
 from sqlalchemy.orm import Session
 
 from app import __version__
+from app.flows import runner as flows
 from app.jobs import events, queue
 from app.jobs.constants import CHANNELS, TYPE_CLEANUP, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_TRANSFER, TYPE_VALIDATION
 from app.jobs.settings import HEALTH_DEFAULTS, JobSettings, read_int_settings, read_settings
@@ -36,6 +40,7 @@ log = logging.getLogger("smartchain.engine")
 
 STALE_CHECK_SECONDS = 15
 EXPORT_CLEANUP_SECONDS = 3600
+FLOW_TICK_SECONDS = 5  # zamanlayıcı turu (K-163)
 
 
 @dataclass
@@ -62,6 +67,8 @@ class EngineService:
         self._last_stale_check = 0.0
         self._last_cleanup = 0.0
         self._last_beat = 0.0
+        self._last_flow_tick = 0.0
+        self._db_lost = False  # döngü veritabanı hatasıyla düştü: bağlantı gelince çalışan akış yarıda kesilmiş sayılır
         self.job_settings = job_settings or JobSettings()
         self.engine_settings = engine_settings or EngineSettings()
 
@@ -77,6 +84,7 @@ class EngineService:
             self._requeue_stale(s)
             self.cleanup_exports(s)
             self._mark_started(s)
+            self._interrupt_flows(s, flows.INTERRUPTED_RESTART)
             self._purge_events(s)
         log.info("Motor servisi başladı (kanallar: %s)", ", ".join(self.channels))
 
@@ -84,8 +92,23 @@ class EngineService:
         if events.service_started(session, __version__):
             log.warning("Motor servisi önceki çalışmada düzgün kapanmamıştı")
             events.record(session, events.COMPONENT_ENGINE, "Motor servisi beklenmedik kapanmıştı", "Yeniden başladı", resolved=True)
+        events.service_started(session, __version__, flows.SCHEDULER_SERVICE)
         session.commit()
         self._last_beat = time.monotonic()
+
+    def _interrupt_flows(self, session: Session, reason: str) -> None:
+        stopped = flows.interrupt(session, reason)
+        if stopped:
+            events.record(session, events.COMPONENT_ENGINE, "Zamanlanmış akış yarıda kesildi", reason, resolved=True)
+            session.commit()
+
+    def _flow_tick(self, session: Session) -> None:
+        if time.monotonic() - self._last_flow_tick < FLOW_TICK_SECONDS:
+            return
+        flows.tick(session)
+        events.service_beat(session, flows.SCHEDULER_SERVICE)
+        session.commit()
+        self._last_flow_tick = time.monotonic()
 
     def _beat(self, session: Session) -> None:
         if time.monotonic() - self._last_beat >= self.engine_settings.heartbeat_seconds:
@@ -106,6 +129,9 @@ class EngineService:
     def poll_once(self) -> None:
         with Session(self.db) as s:
             self._beat(s)
+            if self._db_lost:
+                self._interrupt_flows(s, flows.INTERRUPTED_DB)
+                self._db_lost = False
             if time.monotonic() - self._last_stale_check >= STALE_CHECK_SECONDS:
                 self._refresh_settings(s)
                 self._requeue_stale(s)
@@ -114,6 +140,7 @@ class EngineService:
                 self._purge_events(s)
             for run in list(self.running.values()):
                 self._check(s, run)
+            self._flow_tick(s)
             for channel in self.channels:
                 while (job := queue.claim_next(s, channel, self.job_settings)) is not None:
                     self._spawn(s, job, channel)
@@ -188,11 +215,14 @@ class EngineService:
         try:
             with Session(self.db) as s:
                 events.service_stopped(s)
+                events.service_stopped(s, flows.SCHEDULER_SERVICE)
                 s.commit()
         except Exception:  # kapanış kaydı yazılamazsa motor "Yanıt vermiyor" görünür
             log.exception("Motor servisinin kapanışı yazılamadı")
 
     def _record_loop_error(self, exc: Exception) -> None:
+        if isinstance(exc, DBAPIError) and (exc.connection_invalidated or isinstance(exc, (OperationalError, InterfaceError))):
+            self._db_lost = True  # bağlantı koptu (K-163); kilitlenme gibi tekil hatalar akışı kesmez
         try:
             with Session(self.db) as s:
                 events.record(s, events.COMPONENT_ENGINE, "Motor servisi döngüsünde hata", "Devam etti", detail=type(exc).__name__)

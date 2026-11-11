@@ -42,6 +42,9 @@ Her ekranın üstünde aynı yerde:
 - arka planda süren işlerin göstergesi (iş kuyruğu bildirimleri, K-69);
 - kullanıcı menüsü: ad ve rol, yazı boyutu (U-23), şifre değiştir, çıkış (2.1).
 
+- **Akış çipi (5.6, K-163):** bağlam çubuğunda "İş yok" çipinin yanında, yalnız son akış durduğunda ya da başlamadığında: kırmızı "Gece akışı durdu · 02:14 · Veri çekme" ya da "Gece akışı başlamadı · 02:00". Tıklayınca akışın adı, adımı ve nedeni; "Kapat" o kullanıcı için kapatır, System owner ve Admin için "Akış geçmişi" bağlantısı. Yeni bir durma ilk görüldüğünde bildirim de çıkar. End user'da yok.
+- **Akış sürerken (K-163):** Veri çek, Veri yükle, Veri aktarma menüsü, Excel'den yükle, ham veri temizliği ve kural kaydetme düğmeleri pasif; ipucu "Zamanlanmış akış sürüyor: Hafta içi kısmi (başlama 02:00). Bitince yeniden deneyin."
+
 ### Çalışma alanı
 
 Kenar menü ve bağlam çubuğu dışında kalan alanın tamamı ekranındır; ana tablo bu alanı doldurur (U-22).
@@ -424,3 +427,4 @@ Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyo
 | 4.1 ikinci ve üçüncü demo: sıra 1'den ve yalnız sürükle-bırak, Sıra kolonu dar ve sola hizalı (`DataTable` `fieldHints`), Durum her zaman dolu, lila hücre izi (`cellClass`), Kayıtlar kolon sırası seçeneğe göre, teknik kolonlar gizli (`filter_only`), ek alan etiketleri veri sözlüğünden, Veri çek penceresi ve başlıktaki toplu kutu (K-144, K-145) | uygulandı (4.1) |
 | Ana–detay düzeni (`ui/MasterDetail`): Dünden bugüne'de kapatma, ayraç, ilk dolu sekme | uygulandı (5.5b, K-161) |
 | Şirket Standart görünümü: Kaydet (System owner, Admin), Ürün Standart'ına döndür, sonradan eklenen alan | uygulandı (K-162) |
+| Zamanlanmış akışlar: Entegrasyon'da liste, pencere, geçmiş; bağlam çubuğunda akış çipi; akış sürerken pasif düğmeler | uygulandı (5.6, K-163) |

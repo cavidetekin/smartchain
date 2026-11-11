@@ -28,7 +28,9 @@ SOURCE = sa.select(
     sa.func.coalesce(JOB.c.StartedAt, JOB.c.CreatedAt).label("StartedAt"),
     sa.case((_partial, _text(PARTIAL)), else_=_text(FULL)).label("TransferType"),
     sa.case((_partial, _groups)).label("Groups"),
-    sa.case((USER.c.Role == SYSTEM_OWNER, _text(SUPPORT_NAME)), else_=sa.func.coalesce(USER.c.FullName, USER.c.UserName)).label("RequesterName"),
+    sa.case((USER.c.Role == SYSTEM_OWNER, _text(SUPPORT_NAME)),
+            (JOB.c.RequestedBy.is_(None), sa.func.json_value(JOB.c.Payload, "$.flow_name")),  # zamanlanmış akış (K-163)
+            else_=sa.func.coalesce(USER.c.FullName, USER.c.UserName)).label("RequesterName"),
     sa.cast(VERSION.c.Id, sa.Integer).label("DataVersionId"),
     sa.cast(sa.func.datediff(sa.text("second"), JOB.c.StartedAt, sa.func.isnull(JOB.c.EndedAt, sa.func.sysutcdatetime())), sa.Integer).label("DurationSeconds"),
     JOB.c.Status,

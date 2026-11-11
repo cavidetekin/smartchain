@@ -76,6 +76,7 @@ EXCEPTIONS: dict[int, tuple[dict[str, Level], str]] = {
     87: ({END_USER: S}, "End user yalnız kendi dışa aktarım kayıtlarını görür"),
     89: ({KEY_USER: F, END_USER: F}, "Giriş ve oturum herkese açık"),
     90: ({ADMIN: R}, "Admin matrisi görür, değiştiremez (Faz 1'de matris sabit)"),
+    92: ({ADMIN: R}, "Akışları System owner tanımlar ve başlatır; Admin akışları ve geçmişi görür (K-163)"),
 }
 
 # Fonksiyon adları docs/06'daki fonksiyon listesiyle birebir (test). Her satır: numara ve ad.

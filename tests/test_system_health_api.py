@@ -99,7 +99,7 @@ def test_summary_services_and_cards(db_engine, client, people, session):
     beat(db_engine)
     body = summary(client, people)
     services = {s["key"]: s for s in body["services"]}
-    assert list(services) == ["app", "engine", "database", "notifications"]
+    assert list(services) == ["app", "engine", "database", "notifications", "scheduler"]  # K-163: zamanlayıcı motor servisinde
     assert services["engine"]["status"] == "Çalışıyor" and services["engine"]["version"] == "0.19.0"
     assert services["database"]["ms"] >= 0 and services["database"]["pool_size"] > 0
     assert services["notifications"]["connections"] == 0
@@ -193,6 +193,7 @@ def test_settings_defaults_limits_and_audit(db_engine, client, people):
     owner = people[SYSTEM_OWNER]
     body = client.get(SETTINGS, headers=auth(owner)).json()
     assert body["values"] == body["defaults"] == {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90, "ImportSyncMaxMb": 5, "ImportMaxMb": 100, "ImportMaxRows": 200000,
+                                                  "FlowWaitMinutes": 60, "FlowRefreshWaitMinutes": 120,  # K-163
                                                   "RawDataRetentionDays": None}  # K-156: varsayılanı yok
     assert body["limits"]["ImportMaxRows"] == {"min": 1000, "max": 1000000}
     assert body["limits"]["SystemEventRetentionDays"] == {"min": 7, "max": 3650}

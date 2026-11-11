@@ -22,7 +22,7 @@ const TRANSFER = "Aktarım";
 const NIGHT = "Gece";
 const SYSTEM_OWNER = "System owner";
 
-const SERVICE_TONE: Record<string, BadgeTone> = { Çalışıyor: "ok", Yavaş: "risk", "Yanıt vermiyor": "critical", Kapalı: "critical" };
+const SERVICE_TONE: Record<string, BadgeTone> = { Çalışıyor: "ok", Yavaş: "risk", Gecikti: "risk", "Yanıt vermiyor": "critical", Kapalı: "critical" };
 const JOB_TONE: Record<string, BadgeTone> = { Çalışıyor: "info", Sırada: "risk", Bitti: "ok", Hata: "critical", İptal: "neutral" };
 
 const CELLS = {
@@ -47,6 +47,10 @@ function serviceNote(s: ServiceInfo, summary: HealthSummary): string {
               T.dataVersions(summary.cards.disk.data_versions)].join(" · ");
     case "notifications":
       return T.connections(s.connections ?? 0);
+    case "scheduler":  // K-163: zamanlayıcı motor servisinin içinde
+      return [clock(s.checked_at) && T.lastCheck(clock(s.checked_at)!), s.late && T.lateFlow(s.late),
+              s.next && T.nextFlow(s.next.name, formatDateTime(new Date(s.next.at))),
+              s.last && T.lastFlow(s.last.name, s.last.state)].filter(Boolean).join(" · ");
   }
 }
 

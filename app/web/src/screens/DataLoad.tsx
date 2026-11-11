@@ -21,6 +21,7 @@ import { type EntityChange, integrationApi, METHOD_SQL, METHODS } from "./integr
 import { PullResultDialog, PullStartDialog, PullSwitchDialog } from "./PullDialogs";
 import { PartialTransferDialog, TransferResultDialog, TransferStartDialog } from "./TransferDialogs";
 import { TransferHistoryDrawer } from "./TransferHistory";
+import { useFlowLock } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 import { ValidationChip, ValidationDrawer } from "./ValidationDrawer";
@@ -71,6 +72,10 @@ export function DataLoad() {
   const canPartial = can(me, 6, "write");
   const canHistory = can(me, 8, "read");
   const canUpload = can(me, 3, "write");
+  const flowLock = useFlowLock();  // K-163: akış sürerken veri işleri pasif, ipucunda akış
+  const pullReason = canPull ? flowLock : forbiddenReason(1, "write");
+  const uploadReason = canUpload ? flowLock : forbiddenReason(3, "write");
+  const reasonState = (reason: string | null) => (reason ? { allowed: false, reason } : ALLOWED);
   const [manyFiles, setManyFiles] = useState<File[] | null>(null);  // Veri yükle (K-158)
   const fileInput = useRef<HTMLInputElement>(null);
   const [transferStart, setTransferStart] = useState(false);
@@ -209,8 +214,8 @@ export function DataLoad() {
       <header className="sc-page-head sc-page-head--row">
         <h1>{T.title}</h1>
         <div className="sc-page-head-actions">
-          <Button variant="primary" disabledReason={canPull ? null : forbiddenReason(1, "write")} onClick={() => setPullStart({})}>{T.pullNow}</Button>
-          <Button variant="primary" disabledReason={canUpload ? null : forbiddenReason(3, "write")} onClick={() => fileInput.current?.click()}>{T.uploadMany}</Button>
+          <Button variant="primary" disabledReason={pullReason} onClick={() => setPullStart({})}>{T.pullNow}</Button>
+          <Button variant="primary" disabledReason={uploadReason} onClick={() => fileInput.current?.click()}>{T.uploadMany}</Button>
           <input ref={fileInput} type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-hidden="true"
                  data-testid="veri-yukle-dosya" onChange={(e) => { const chosen = [...(e.target.files ?? [])]; e.target.value = ""; if (chosen.length) setManyFiles(chosen); }} />
           <Button variant="secondary" aria-haspopup="menu" aria-expanded={Boolean(transferMenu)}
@@ -221,7 +226,7 @@ export function DataLoad() {
       </header>
       {error && <Alert tone="error">{error}</Alert>}
       <DataTable list="data-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey}
-                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} />} />
+                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />} />
       <UnsavedGuard dirty={edits.dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.Name))} anchor={menu.anchor} onClose={() => setMenu(null)}>
@@ -229,9 +234,9 @@ export function DataLoad() {
           <MenuItem label={T.viewData} state={ALLOWED}
                     onClick={() => { setDrawer({ entity: String(menu.row.Entity), name: String(menu.row.Name), all: true }); setMenu(null); }} />
           <MenuItem label={T.info} state={ALLOWED} onClick={() => { setInfoRow(menu.row); setMenu(null); }} />
-          <MenuItem label={T.upload} state={ALLOWED} onClick={() => { setUploadRow(menu.row); setMenu(null); }} />
+          <MenuItem label={T.upload} state={reasonState(uploadReason)} onClick={() => { setUploadRow(menu.row); setMenu(null); }} />
           {menu.row.Method === METHOD_SQL && (
-            <MenuItem label={T.pullNow} state={canPull ? ALLOWED : { allowed: false, reason: forbiddenReason(1, "write") }}
+            <MenuItem label={T.pullNow} state={reasonState(pullReason)}
                       onClick={() => { setPullStart({ entity: String(menu.row.Entity) }); setMenu(null); }} />
           )}
         </RowPopMenu>
@@ -242,9 +247,9 @@ export function DataLoad() {
       {transferStart && <TransferStartDialog onClose={() => setTransferStart(false)} onStarted={(job) => { setTransferStart(false); setTransferJob(job); }} />}
       {transferMenu && (
         <RowPopMenu label={tr.transfer.menu} anchor={transferMenu} onClose={() => setTransferMenu(null)}>
-          <MenuItem label={tr.transfer.startTitle} state={canTransfer ? ALLOWED : { allowed: false, reason: forbiddenReason(5, "write") }}
+          <MenuItem label={tr.transfer.startTitle} state={reasonState(canTransfer ? flowLock : forbiddenReason(5, "write"))}
                     onClick={() => { setTransferMenu(null); setTransferStart(true); }} />
-          <MenuItem label={tr.transfer.partialTitle} state={canPartial ? ALLOWED : { allowed: false, reason: forbiddenReason(6, "write") }}
+          <MenuItem label={tr.transfer.partialTitle} state={reasonState(canPartial ? flowLock : forbiddenReason(6, "write"))}
                     onClick={() => { setTransferMenu(null); setPartialStart(true); }} />
           <div role="separator" className="sc-popmenu-sep" />
           <MenuItem label={tr.history.button} state={canHistory ? ALLOWED : { allowed: false, reason: forbiddenReason(8, "read") }}
