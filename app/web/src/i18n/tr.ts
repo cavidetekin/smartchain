@@ -670,6 +670,8 @@ export const tr = {
     required: "zorunlu",
     close: "Kapat",
     resizePanes: "Tablo yükseklikleri",
+    expandPane: "Büyüt",
+    collapsePane: "Küçült",
     busy: "Çalışıyor…",
     invalidNumber: "Sayı geçersiz. Örnek: 1.234,5",
     invalidDate: "Tarih geçersiz. Biçim: gg.aa.yyyy",

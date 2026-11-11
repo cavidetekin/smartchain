@@ -1,6 +1,6 @@
-// Ana–detay düzeni (K-161, docs/12): üstte ana tablo, satır seçilince altta detay kartı. Kapatma (×, Esc, seçili satıra yeniden tıklama), sürüklenebilir ayraç,
-// kayıt olan ilk sekme. Ekranlar seçimi `useMasterDetail` ile tutar, yerleşimi `MasterDetail` çizer.
-import { X } from "lucide-react";
+// Ana–detay düzeni (K-161, docs/12): üstte ana tablo, satır seçilince altta detay kartı. Kapatma (×, Esc, seçili satıra yeniden tıklama), sürüklenebilir ayraç
+// (çift tıklayınca ilk oran), büyütme, kayıt olan ilk sekme. Ekranlar seçimi `useMasterDetail` ile tutar, yerleşimi `MasterDetail` çizer.
+import { Maximize2, Minimize2, X } from "lucide-react";
 import { type KeyboardEvent, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { tr } from "../i18n/tr";
@@ -51,9 +51,13 @@ export function MasterDetail<K extends string>({ id, master, detail, onClose }: 
   ratioRef.current = ratio;
   const open = detail !== null;
   const opener = useRef<HTMLElement | null>(null);
+  const [expanded, setExpanded] = useState(false);  // ana tablo tek satırlık şeritte; DataTable durumu korunsun diye bağlı kalır
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) {
+      setExpanded(false);
+      return undefined;
+    }
     opener.current = document.activeElement as HTMLElement | null;
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector(OVERLAYS)) onClose();
@@ -94,17 +98,26 @@ export function MasterDetail<K extends string>({ id, master, detail, onClose }: 
 
   return (
     <div className="sc-md" ref={root}>
-      <div className="sc-md-pane" style={{ flexGrow: open ? ratio : 1 }}>{master}</div>
+      {expanded && detail && <div className="sc-md-collapsed">{detail.title}</div>}
+      <div className="sc-md-pane" style={expanded ? { display: "none" } : { flexGrow: open ? ratio : 1 }}>{master}</div>
       {detail && (
         <>
-          <div role="separator" aria-orientation="horizontal" aria-label={tr.ui.resizePanes} tabIndex={0} className="sc-md-splitter"
-               aria-valuenow={Math.round(ratio * 100)} aria-valuemin={MIN_RATIO * 100} aria-valuemax={MAX_RATIO * 100}
-               onMouseDown={onMouseDown} onKeyDown={onKeyDown} />
-          <section className="sc-md-pane sc-md-detail" style={{ flexGrow: 1 - ratio }} aria-label={detail.title}>
+          {!expanded && (
+            <div role="separator" aria-orientation="horizontal" aria-label={tr.ui.resizePanes} tabIndex={0} className="sc-md-splitter"
+                 aria-valuenow={Math.round(ratio * 100)} aria-valuemin={MIN_RATIO * 100} aria-valuemax={MAX_RATIO * 100}
+                 onMouseDown={onMouseDown} onKeyDown={onKeyDown} onDoubleClick={() => apply(DEFAULT_RATIO, true)} />
+          )}
+          <section className="sc-md-pane sc-md-detail" style={{ flexGrow: expanded ? 1 : 1 - ratio }} aria-label={detail.title}>
             <header className="sc-md-head">
               <h2>{detail.title}</h2>
               <Segment<K> label={detail.tabsLabel} hideLabel value={detail.tab} onChange={detail.onTab} options={detail.tabs.map((t) => ({ value: t.value, label: t.label }))} />
-              <button type="button" className="sc-drawer-close sc-md-close" aria-label={tr.ui.close} onClick={onClose}><X aria-hidden /></button>
+              <div className="sc-md-actions">
+                <button type="button" className="sc-drawer-close" aria-label={expanded ? tr.ui.collapsePane : tr.ui.expandPane} title={expanded ? tr.ui.collapsePane : tr.ui.expandPane}
+                        aria-pressed={expanded} onClick={() => setExpanded((v) => !v)}>
+                  {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+                </button>
+                <button type="button" className="sc-drawer-close" aria-label={tr.ui.close} onClick={onClose}><X aria-hidden /></button>
+              </div>
             </header>
             {detail.body}
           </section>

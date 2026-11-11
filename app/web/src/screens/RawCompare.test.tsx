@@ -141,6 +141,48 @@ describe("ana–detay düzeni (K-161)", () => {
     noCard("Malzeme");
   });
 
+  it("ayraca çift tıklayınca ilk orana döner", async () => {
+    const { user } = await open("Key user");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    const splitter = screen.getByRole("separator", { name: "Tablo yükseklikleri" });
+    splitter.focus();
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    expect(splitter).toHaveAttribute("aria-valuenow", "60");
+    fireEvent.doubleClick(splitter);
+    expect(splitter).toHaveAttribute("aria-valuenow", "50");
+    expect(localStorage.getItem("smartchain.pane.raw-compare")).toBe("0.5");
+    localStorage.removeItem("smartchain.pane.raw-compare");
+  });
+
+  it("Büyüt: ana tablo şeride iner, kart yüksekliği alır; Küçült önceki orana döner; kart kapanınca sona erer", async () => {
+    const { user } = await open("Key user");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    const master = document.querySelector<HTMLElement>(".sc-md-pane")!;
+    const splitter = screen.getByRole("separator", { name: "Tablo yükseklikleri" });
+    splitter.focus();
+    await user.keyboard("{ArrowDown}");
+    await user.click(screen.getByRole("button", { name: "Büyüt" }));
+    expect(screen.getByRole("button", { name: "Küçült" })).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector(".sc-md-collapsed")).toHaveTextContent("Malzeme");
+    expect(master.style.display).toBe("none");                                                // tablo bağlı kalır: filtre ve sıralama korunur
+    expect(screen.queryByRole("separator", { name: "Tablo yükseklikleri" })).toBeNull();
+    expect(document.querySelector<HTMLElement>(".sc-md-detail")!.style.flexGrow).toBe("1");
+    await user.click(screen.getByRole("button", { name: "Küçült" }));
+    expect(document.querySelector(".sc-md-collapsed")).toBeNull();
+    expect(screen.getByRole("separator", { name: "Tablo yükseklikleri" })).toHaveAttribute("aria-valuenow", "55");
+    expect(master.style.flexGrow).toBe("0.55");
+    await user.click(screen.getByRole("button", { name: "Büyüt" }));
+    await user.keyboard("{Escape}");
+    noCard("Malzeme");
+    expect(master.style.display).toBe("");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    expect(screen.getByRole("button", { name: "Büyüt" })).toHaveAttribute("aria-pressed", "false");
+    localStorage.removeItem("smartchain.pane.raw-compare");
+  });
+
   it("ayraç klavyeyle ve sürükleyerek değişir, oran hatırlanır, sınırı aşmaz", async () => {
     const { user } = await open("Key user");
     await user.click(screen.getByText("Malzeme"));

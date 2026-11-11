@@ -563,7 +563,8 @@ tr.is-clickable { cursor: pointer; }
 .sc-md-splitter:hover, .sc-md-splitter:focus-visible { background-color: var(--indigo-300); outline: none; }
 .sc-md-head { display: flex; align-items: center; gap: var(--space-4); }
 .sc-md-head h2 { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
-.sc-md-close { margin-left: auto; }
+.sc-md-actions { display: flex; gap: var(--space-1); margin-left: auto; }
+.sc-md-collapsed { flex: 0 0 auto; margin-bottom: var(--space-2); padding: var(--space-1) var(--space-3); border: 1px solid var(--table-border); border-radius: var(--radius); color: var(--text-muted); }
 /* Açılır menüde ayırıcı ve düğmedeki ok ("Veri aktarımı ▾", K-157) */
 .sc-popmenu-sep { height: 1px; margin: var(--space-1) 0; background: var(--table-border); }
 .sc-btn-caret { width: 1rem; height: 1rem; margin-left: var(--space-1); }

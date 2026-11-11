@@ -188,7 +188,8 @@ Tablodan seçilen kaydın ayrıntısı aynı ekranda gösterilecekse standart bu
 
 - **Yerleşim:** üstte ana tablo, satır seçilince altta detay kartı; kart başlığında kaydın adı ve sekmeler. İkisi de ekrana sığar, kaydırma tablo içindedir.
 - **Kapatma:** kart başlığının sağında ×, Esc ve seçili satıra yeniden tıklamak. Açık pencere, çekmece ya da açılır menü varken Esc önce onu kapatır. Kapanınca ana tablo bütün yüksekliği alır, seçim işareti kalkar.
-- **Boyut:** iki tablo arasında sürüklenebilir ayraç; klavyeyle yukarı ve aşağı ok. Her tablo en az yüksekliğin %15'ini korur. Oran kullanıcının tarayıcısında ekran başına hatırlanır.
+- **Boyut:** iki tablo arasında sürüklenebilir ayraç; klavyeyle yukarı ve aşağı ok. Her tablo en az yüksekliğin %15'ini korur. Oran kullanıcının tarayıcısında ekran başına hatırlanır. Ayraca çift tıklayınca ilk orana döner.
+- **Büyütme:** kart başlığında × düğmesinin solunda "Büyüt": ana tablo seçili kaydın adını gösteren tek satırlık şeride iner (filtre, sıralama ve seçim korunur), kart ekranın neredeyse tamamını alır; aynı düğme ("Küçült") önceki orana döndürür. Kart kapanınca büyütme sona erer, kaydedilmez.
 - **Sekme:** kart kayıt olan ilk sekmeyle açılır (hepsi 0 ise ilk sekme); başka satır seçilince aynı kural yeniden uygulanır. Sekme adında kayıt sayısı yazar.
 - **Kullanım:** `useMasterDetail` seçimi ve sekmeyi tutar (`toggle(kayıt)`, `close()`); `MasterDetail` yerleşimi, ayracı ve kapatmayı çizer; ana tablo `DataTable` `selectedRowId` ile seçili satırı gösterir.
 

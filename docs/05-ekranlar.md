@@ -290,7 +290,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Üst tablo:** tablo başına bir satır: tablo, dünkü veri, bugünkü veri, bugünkü yükleme (Tam / Ekle / güncelle / Karma), dünkü satır, bugünkü satır, değişim %, yeni gelen, gelmeyen, güncellenen, durum. Önceki verisi olmayan tabloda karşılaştırma alanları "—", durum "Önceki veri yok".
 - **Alt tablo:** satır seçilince Yeni gelenler ve Gelmeyenler (tablonun bütün alanları), Güncellenenler (kayıt, alan, dünkü değer, bugünkü değer).
 - **Uygulama (5.5b, K-159, K-160):** iki tablo da ortak tablo (sıralama, filtre, Excel, koşullu biçim); End user da görür.
-- **Uygulama (5.5b demosu, K-161):** ana–detay düzeni (docs/12): kart × ile, Esc ile ya da seçili satıra yeniden tıklayınca kapanır, üst tablo bütün yüksekliği alır; iki tablo arasında sürüklenebilir ayraç; kart kayıt olan ilk sekmeyle açılır. "Kayıt" kolonu Yeni gelenler ve Gelmeyenler'de varsayılan gizli.
+- **Uygulama (5.5b demosu, K-161):** ana–detay düzeni (docs/12): kart × ile, Esc ile ya da seçili satıra yeniden tıklayınca kapanır, üst tablo bütün yüksekliği alır; iki tablo arasında sürüklenebilir ayraç (çift tıklayınca ilk orana döner); kart başlığında "Büyüt"; kart kayıt olan ilk sekmeyle açılır. "Kayıt" kolonu Yeni gelenler ve Gelmeyenler'de varsayılan gizli.
 
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>
