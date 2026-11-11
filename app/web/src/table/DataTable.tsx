@@ -258,7 +258,7 @@ function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec })
   );
 }
 
-export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarActions, fit = false, wrapFields, rowOrder }: {
+export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarActions, fit = false, wrapFields, rowOrder, selectedRowId }: {
   list: string;
   /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
   cellRender?: CellRender;
@@ -281,6 +281,8 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   /** Taslak satır sırası (Id listesi; ör. veri kurallarının sırası, K-142): verilirse ve gruplama yoksa satırlar bu sırayla çizilir.
    *  Bütün satırların yüklü olduğu küçük listeler içindir. */
   rowOrder?: readonly string[] | null;
+  /** Seçili satırı dışarıdan verir (ana–detay düzeni, K-161): detay kapanınca işaret kalkar; verilmezse tıklanan satır işaretli kalır. */
+  selectedRowId?: number | null;
 }) {
   const { fontSize, userId, trackExport } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
@@ -572,7 +574,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     [isNumeric(c) ? (fieldHints?.[c.field]?.left ? "sc-num" : "is-num sc-num") : "", pinnedCell(i).className].filter(Boolean).join(" ") || undefined;
 
   const renderRow = (key: string | number | bigint, index: number, row: Row | undefined) => (
-    <DataRow key={String(key)} index={index} row={row} cells={cellSpecs} selected={Boolean(row) && row!.Id === selectedId}
+    <DataRow key={String(key)} index={index} row={row} cells={cellSpecs} selected={Boolean(row) && row!.Id === (selectedRowId !== undefined ? selectedRowId : selectedId)}
              onSelect={setSelectedId} active={active} ruleText={ruleText} cellRender={cellRender} cellWrap={cellWrap} cellClass={cellClass} rowProps={rowProps} rowMenu={rowMenu}
              measure={fit ? virtualizer.measureElement : undefined} />
   );

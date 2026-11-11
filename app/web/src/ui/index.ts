@@ -4,6 +4,7 @@ export { Badge, type BadgeTone } from "./Badge";
 export { Button, type ButtonVariant } from "./Button";
 export { Tooltip } from "./Tooltip";
 export { TopStrip } from "./TopStrip";
+export { type DetailTab, firstFilledTab, MasterDetail, useMasterDetail } from "./MasterDetail";
 export { Card, KpiCard } from "./Card";
 export { Drawer } from "./Drawer";
 export { ConfirmDialog, Dialog } from "./Dialog";

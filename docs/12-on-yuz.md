@@ -146,6 +146,7 @@ Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. M
 | Form alanları | metin, sayı (Türkçe 1.234,5; sağa yaslı), tarih (gg.aa.yyyy elle ya da takvimden: alanın yanındaki düğme Türkçe ay ve gün adlarıyla takvim açar, hafta Pazartesi başlar, her satırda ISO hafta numarası H44, "Bugün" düğmesi; ok tuşları gün/hafta, Page Up/Down ay, Enter seçer, Esc kapatır; görünür alana sığacak şekilde açılır; kendi bileşenimiz; giriş kutusu, takvim düğmesi hariç, her yazı boyutunda "gg.aa.yyyy"nin tamamını gösterecek en küçük genişlikte: `ch` cinsinden, eşit genişlikte rakamlarla), seçim, çok satırlı metin, onay kutusu, seçenek grubu, segment, arama; etiket, yardım, zorunlu işareti, hata. Etiket alanın üstünde, her alanda aynı boşlukla (seçenek grubu ve segment dahil). Arama kutusu tek satır yüksekliğinde, genişliği içeriğine göre. Çerçeve #B4B9C2 (mockup değeri) |
 | Alert | bilgi, olumlu, risk, hata; her tonun ikonu var; hata `role="alert"` |
 | TopStrip | ekranın üstündeki ayar ve filtre alanlarının şeridi (bkz. Üst şerit) |
+| MasterDetail | ana tablo ve detay kartı: kapatma, ayraç, ilk dolu sekme (bkz. Ana–detay düzeni) |
 | OccupancyCell, OccupancyLegend | doluluk hücresi ve lejantı (eşikler parametre) |
 | Hücre işaretleri | manuel değişiklik (indigo çerçeve, U-4/U-16), dondurulmuş (gri ve kilit), kümülatif eksik (kiremit yazı); tablo 1.3'te kullanır |
 
@@ -180,6 +181,16 @@ Ekranın üstündeki ayar ve filtre alanları (Entegrasyon'da SQL kaynağı; Val
 - **Etiket:** alanın solunda, aynı satırda; alan, düğme ve yazılar dikeyde ortalı, alan ve düğme aynı yükseklikte (normal boy). Yardım metni yok.
 - **Boşluk:** şerit ile tablo araç çubuğu (görünüm seçimi, Grupla, Alanlar) arasında her ekranda aynı boşluk, `--top-strip-gap` (`--space-3`). Hata bandı şeridin üstündedir, şerit ile araç çubuğu arasına girmez.
 - **Tek tanım:** ekrana özel şerit sınıfı yazılmaz (stil testi denetler). İlerleme ya da rol gösteren şeritler ve durum kartları (Sistem sağlığı servis şeridi) bu kurala girmez.
+
+## Ana–detay düzeni (5.5b demosu, K-161; `ui/MasterDetail`)
+
+Tablodan seçilen kaydın ayrıntısı aynı ekranda gösterilecekse standart budur; ilk kullanan Dünden bugüne (ekran 28), sonraki ekranlar da bunu kullanır.
+
+- **Yerleşim:** üstte ana tablo, satır seçilince altta detay kartı; kart başlığında kaydın adı ve sekmeler. İkisi de ekrana sığar, kaydırma tablo içindedir.
+- **Kapatma:** kart başlığının sağında ×, Esc ve seçili satıra yeniden tıklamak. Açık pencere, çekmece ya da açılır menü varken Esc önce onu kapatır. Kapanınca ana tablo bütün yüksekliği alır, seçim işareti kalkar.
+- **Boyut:** iki tablo arasında sürüklenebilir ayraç; klavyeyle yukarı ve aşağı ok. Her tablo en az yüksekliğin %15'ini korur. Oran kullanıcının tarayıcısında ekran başına hatırlanır.
+- **Sekme:** kart kayıt olan ilk sekmeyle açılır (hepsi 0 ise ilk sekme); başka satır seçilince aynı kural yeniden uygulanır. Sekme adında kayıt sayısı yazar.
+- **Kullanım:** `useMasterDetail` seçimi ve sekmeyi tutar (`toggle(kayıt)`, `close()`); `MasterDetail` yerleşimi, ayracı ve kapatmayı çizer; ana tablo `DataTable` `selectedRowId` ile seçili satırı gösterir.
 
 ## Görünüm (1.4, K-89, K-90)
 
@@ -409,3 +420,4 @@ Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyo
 | Veri kuralları (ekran 04): liste, Sıra hücresinde sürükle-bırak ve Alt + ok (`DataTable` `rowOrder`), kural penceresi ve Sonuç bölümü, yeniden uygulama sorusu; çekmecede hücre izi (`DataTable` `cellWrap`); menü sırası (K-140…K-142) | uygulandı (4.1) |
 | 4.1 demo bulguları: Veri yükleme kendiliğinden yenilenir (`smartchain:job`), Kayıtlar · Bulgulu / Kuralla değişenler / Tüm satırlar, "Veriyi gör", koşul değerinde öneri (datalist), satırdan sürükle-bırak (`DataTable` `rowProps`) (K-143) | uygulandı (4.1) |
 | 4.1 ikinci ve üçüncü demo: sıra 1'den ve yalnız sürükle-bırak, Sıra kolonu dar ve sola hizalı (`DataTable` `fieldHints`), Durum her zaman dolu, lila hücre izi (`cellClass`), Kayıtlar kolon sırası seçeneğe göre, teknik kolonlar gizli (`filter_only`), ek alan etiketleri veri sözlüğünden, Veri çek penceresi ve başlıktaki toplu kutu (K-144, K-145) | uygulandı (4.1) |
+| Ana–detay düzeni (`ui/MasterDetail`): Dünden bugüne'de kapatma, ayraç, ilk dolu sekme | uygulandı (5.5b, K-161) |

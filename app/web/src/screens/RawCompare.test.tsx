@@ -1,5 +1,5 @@
-// Dünden bugüne (ekran 28, fonksiyon 101; K-159, K-160): üst tablo, "—" ve "Önceki veri yok", satır seçilince üç sekme, End user görür.
-import { screen, waitFor, within } from "@testing-library/react";
+// Dünden bugüne (ekran 28, fonksiyon 101; K-159, K-160, K-161): üst tablo, "—" ve "Önceki veri yok", ana–detay düzeni (üç sekme, ilk dolu sekme, kapatma, ayraç), End user görür.
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -23,6 +23,8 @@ const COLUMNS = [col("Name", "Tablo", "text", "text"), col("YesterdayAt", "Dünk
                  col("State", "Durum", "text", "list")];
 const ROWS = [
   { Id: 1, Entity: "Material", Name: "Malzeme", YesterdayAt: "2026-11-10T12:00:00", TodayLoad: "Karma", YesterdayRows: 200, ChangePct: 0.075, NewCount: 15, MissingCount: 0, ChangedCount: 3, State: "Hazır" },
+  { Id: 3, Entity: "BOM", Name: "Ürün ağacı", YesterdayAt: "2026-11-10T12:00:00", TodayLoad: "Tam", YesterdayRows: 10, ChangePct: 0, NewCount: 0, MissingCount: 0, ChangedCount: 4, State: "Hazır" },
+  { Id: 4, Entity: "Customer", Name: "Müşteri", YesterdayAt: "2026-11-10T12:00:00", TodayLoad: "Tam", YesterdayRows: 5, ChangePct: 0, NewCount: 0, MissingCount: 0, ChangedCount: 0, State: "Hazır" },
   { Id: 2, Entity: "Routing", Name: "Rota", YesterdayAt: null, TodayLoad: "Tam", YesterdayRows: null, ChangePct: null, NewCount: null, MissingCount: null, ChangedCount: null, State: "Önceki veri yok" },
 ];
 
@@ -30,7 +32,8 @@ function backend() {
   return mockApi({
     "/api/data-versions/current": { body: DATA_VERSION },
     ...routesOf("raw-compare", list(COLUMNS, ROWS)),
-    ...routesOf("raw-compare-new-Material", list([col("RowKey", "Kayıt", "text", "text"), col("Name", "Malzeme adı", "text", "text")], [{ Id: 11, RowKey: "ORM-01 · MAM-096", Name: "Yeni ürün" }])),
+    ...routesOf("raw-compare-new-Material", list([col("RowKey", "Kayıt", "text", "text", { default_visible: false }), col("Name", "Malzeme adı", "text", "text")], [{ Id: 11, RowKey: "ORM-01 · MAM-096", Name: "Yeni ürün" }])),
+    ...routesOf("raw-compare-new-Customer", list([col("Name", "Müşteri adı", "text", "text")], [])),
     ...routesOf("raw-compare-missing-Material", list([col("RowKey", "Kayıt", "text", "text")], [{ Id: 12, RowKey: "ORM-01 · MAM-001" }])),
     ...routesOf("raw-compare-changes", list([col("RowKey", "Kayıt", "text", "text"), col("FieldLabel", "Alan", "text", "text"), col("OldValue", "Dünkü değer", "text", "text"), col("NewValue", "Bugünkü değer", "text", "text")],
                                             [{ Id: 13, RowKey: "ORM-01 · MAM-002", FieldLabel: "Ad", OldValue: "Eski ad", NewValue: "Yeni ad" }])),
@@ -65,7 +68,8 @@ describe("Dünden bugüne", () => {
     expect(screen.queryByRole("radio", { name: /Yeni gelenler/ })).toBeNull();
     await user.click(screen.getByText("Malzeme"));
     expect(await screen.findByRole("heading", { level: 2, name: "Malzeme" })).toBeInTheDocument();
-    expect(await screen.findByText("ORM-01 · MAM-096")).toBeInTheDocument();
+    expect(await screen.findByText("Yeni ürün")).toBeInTheDocument();
+    expect(screen.queryByText("ORM-01 · MAM-096")).toBeNull();                               // Kayıt varsayılan gizli (K-161)
     await user.click(screen.getByRole("radio", { name: "Gelmeyenler · 0" }));
     expect(await screen.findByText("ORM-01 · MAM-001")).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "Güncellenenler · 3" }));
@@ -81,5 +85,81 @@ describe("Dünden bugüne", () => {
     const { user } = await open("Key user");
     await user.click(screen.getByText("Rota"));
     expect(screen.queryByRole("heading", { level: 2, name: "Rota" })).toBeNull();
+  });
+});
+
+describe("ana–detay düzeni (K-161)", () => {
+  const card = (name: string) => screen.findByRole("heading", { level: 2, name });
+  const noCard = (name: string) => expect(screen.queryByRole("heading", { level: 2, name })).toBeNull();
+
+  it("kart kayıt olan ilk sekmeyle açılır; hepsi 0 ise ilk sekme; başka satırda yeniden hesaplanır", async () => {
+    const { user } = await open("Key user");
+    await user.click(screen.getByText("Ürün ağacı"));
+    await card("Ürün ağacı");
+    expect(screen.getByRole("radio", { name: "Güncellenenler · 4" })).toBeChecked();
+    await user.click(screen.getByText("Müşteri"));
+    await card("Müşteri");
+    expect(screen.getByRole("radio", { name: "Yeni gelenler · 0" })).toBeChecked();
+  });
+
+  it("× kapatır, üst tablo tüm yüksekliği alır, seçim işareti kalkar", async () => {
+    const { user } = await open("Key user");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    const row = screen.getByText("Malzeme", { selector: "td *, td" }).closest("tr")!;
+    expect(row).toHaveClass("is-selected");
+    await user.click(screen.getByRole("button", { name: "Kapat" }));
+    noCard("Malzeme");
+    expect(screen.queryByRole("separator", { name: "Tablo yükseklikleri" })).toBeNull();
+    expect(row).not.toHaveClass("is-selected");
+    expect(document.querySelector<HTMLElement>(".sc-md-pane")!.style.flexGrow).toBe("1");
+  });
+
+  it("Esc ve seçili satıra yeniden tıklama kapatır", async () => {
+    const { user } = await open("Key user");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    await user.keyboard("{Escape}");
+    noCard("Malzeme");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    await user.click(screen.getByText("Malzeme", { selector: "td *, td" }));
+    noCard("Malzeme");
+  });
+
+  it("açık pencere varken Esc kartı kapatmaz", async () => {
+    const { user } = await open("Key user");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    const overlay = document.createElement("div");
+    overlay.className = "sc-floating";
+    document.body.appendChild(overlay);
+    await user.keyboard("{Escape}");
+    await card("Malzeme");
+    overlay.remove();
+    await user.keyboard("{Escape}");
+    noCard("Malzeme");
+  });
+
+  it("ayraç klavyeyle ve sürükleyerek değişir, oran hatırlanır, sınırı aşmaz", async () => {
+    const { user } = await open("Key user");
+    await user.click(screen.getByText("Malzeme"));
+    await card("Malzeme");
+    const splitter = screen.getByRole("separator", { name: "Tablo yükseklikleri" });
+    expect(splitter).toHaveAttribute("aria-valuenow", "50");
+    splitter.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(splitter).toHaveAttribute("aria-valuenow", "55");
+    expect(localStorage.getItem("smartchain.pane.raw-compare")).toBe("0.55");
+    const root = document.querySelector<HTMLElement>(".sc-md")!;
+    vi.spyOn(root, "getBoundingClientRect").mockReturnValue({ top: 100, height: 400 } as DOMRect);
+    fireEvent.mouseDown(splitter);
+    fireEvent.mouseMove(document, { clientY: 200 });
+    expect(splitter).toHaveAttribute("aria-valuenow", "25");
+    fireEvent.mouseMove(document, { clientY: 110 });
+    expect(splitter).toHaveAttribute("aria-valuenow", "15");
+    fireEvent.mouseUp(document);
+    expect(localStorage.getItem("smartchain.pane.raw-compare")).toBe("0.15");
+    localStorage.removeItem("smartchain.pane.raw-compare");
   });
 });

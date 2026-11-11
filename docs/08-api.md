@@ -537,7 +537,7 @@ Temizlik sıradayken ya da sürerken aktarım da başlamaz.
 |---|---|---|
 | Ortak liste `raw-compare` | 101 okuma (End user dahil) | Tablo başına: Dünkü veri, Bugünkü veri, Bugünkü yükleme, Dünkü satır, Bugünkü satır, Değişim %, Yeni gelen, Gelmeyen, Güncellenen, Durum (Hazır / Önceki veri yok / Hesaplanamadı / Veri yok) |
 | Ortak liste `raw-compare-changes` | 101 okuma | Güncellenenler: Kayıt, Alan, Dünkü değer, Bugünkü değer; arayüz tabloyu sabit filtreyle verir |
-| Ortak listeler `raw-compare-new-<tablo>`, `raw-compare-missing-<tablo>` | 101 okuma | Yeni gelenler ve Gelmeyenler: tablonun bütün alanları, ilk kolon Kayıt |
+| Ortak listeler `raw-compare-new-<tablo>`, `raw-compare-missing-<tablo>` | 101 okuma | Yeni gelenler ve Gelmeyenler: tablonun bütün alanları; Kayıt varsayılan gizli, Alanlar panelinden açılır (K-161) |
 | `GET /api/raw-compare/summary` | 101 okuma | Ana sayfa için toplamlar: karşılaştırılan tablo, yeni gelen, gelmeyen, güncellenen, son veri zamanı |
 
 Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, düşerse `State` "Hesaplanamadı" olur ve validasyon sürer. Temizlik "dün" satırlarını silmez (K-160).

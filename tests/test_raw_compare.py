@@ -265,6 +265,9 @@ def test_chain_computes_and_api_serves(db_engine):
         assert (rows["Customer"]["NewCount"], rows["Customer"]["MissingCount"], rows["Customer"]["ChangedCount"], rows["Customer"]["State"]) == (1, 1, 1, compare.READY)
         assert rows["Material"]["State"] == "Veri yok"
         h = auth(people[END_USER])
+        for name, hidden in (("raw-compare-new-Customer", True), ("raw-compare-missing-Customer", True), ("raw-compare-changes", False)):
+            shown = {c["field"]: c["default_visible"] for c in client.get(f"/api/{name}/columns", headers=h).json()["columns"]}
+            assert shown["RowKey"] is (not hidden), name                     # Kayıt: yeni ve gelmeyende gizli, Alanlar'dan açılır (K-161)
         new = client.post("/api/raw-compare-new-Customer/query", headers=h, json={"fields": ["RowKey", "Code", "Name"], "limit": 10}).json()["rows"]
         assert [x["Code"] for x in new] == ["RC-4"]
         missing = client.post("/api/raw-compare-missing-Customer/query", headers=h, json={"fields": ["RowKey", "Name"], "limit": 10}).json()["rows"]

@@ -13,6 +13,10 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
+/** Ana–detay düzeninde ayracın oranı, ekran başına (K-161). */
+export const loadPaneRatio = (id: string): number | null => read<number | null>(`pane.${id}`, null);
+export const savePaneRatio = (id: string, ratio: number): void => write(`pane.${id}`, ratio);
+
 function remove(key: string): void {
   try {
     window.localStorage.removeItem(`${PREFIX}.${key}`);

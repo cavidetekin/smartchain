@@ -55,9 +55,9 @@ def _rows_list(entity, kind: str, slug: str, title: str) -> ListDefinition:
               .select_from(ROW.join(s, s.c.StagingRowId == ROW.c.StagingRowId)).where(ROW.c.EntityName == entity.table, ROW.c.Kind == kind)
               .subquery(f"raw_compare_{slug}_{entity.table}"))
     labels = {**{n: l for n, l in field_labels(entity.table).items() if not n.startswith("Additional")}, "RowKey": "Kayıt"}
-    fields = ("RowKey", *names)
+    fields = ("RowKey", *names)  # Kayıt varsayılan gizli, Alanlar panelinden açılır (K-161)
     return ListDefinition(name=f"raw-compare-{slug}-{entity.table}", table=f"stg.{entity.table}", title=f"{title} · {entity.name}", file_slug=f"{slug}-{entity.slug}", function=101,
-                          versioned=False, source=source, fields=fields, default_visible=fields, default_sort=(("RowKey", "asc"),), labels=labels, decimals=_decimals(entity.table))
+                          versioned=False, source=source, fields=fields, default_visible=tuple(names), default_sort=(("RowKey", "asc"),), labels=labels, decimals=_decimals(entity.table))
 
 
 RAW_COMPARE_ROWS = tuple(_rows_list(e, kind, slug, title) for e in ENTITIES for kind, slug, title in ((compare.NEW, "new", "Yeni gelenler"), (compare.MISSING, "missing", "Gelmeyenler")))

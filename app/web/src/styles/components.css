@@ -556,11 +556,14 @@
 .sc-drawer-body .sc-local-table-wrap { flex: 0 1 auto; min-height: 0; max-height: none; }
 /* Satırı açılan tablo (Veri aktarım geçmişi → Veri aktarım raporu, K-156) */
 tr.is-clickable { cursor: pointer; }
-/* Dünden bugüne (K-160): iki ortak tablo alt alta, ekrana sığar */
-.sc-compare { display: flex; flex: 1; flex-direction: column; gap: var(--space-4); min-height: 0; }
-.sc-compare-pane { display: flex; flex: 1 1 0; flex-direction: column; gap: var(--space-2); min-height: 0; }
-.sc-compare-head { display: flex; align-items: center; gap: var(--space-4); }
-.sc-compare-head h2 { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+/* Ana–detay düzeni (K-161, docs/12): iki ortak tablo alt alta, ekrana sığar; flex-grow oranı ayraçtan */
+.sc-md { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.sc-md-pane { display: flex; flex: 1 1 0; flex-direction: column; gap: var(--space-2); min-height: 0; }
+.sc-md-splitter { flex: 0 0 var(--space-3); cursor: row-resize; background: linear-gradient(var(--table-border), var(--table-border)) center / 100% 1px no-repeat; }
+.sc-md-splitter:hover, .sc-md-splitter:focus-visible { background-color: var(--indigo-300); outline: none; }
+.sc-md-head { display: flex; align-items: center; gap: var(--space-4); }
+.sc-md-head h2 { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+.sc-md-close { margin-left: auto; }
 /* Açılır menüde ayırıcı ve düğmedeki ok ("Veri aktarımı ▾", K-157) */
 .sc-popmenu-sep { height: 1px; margin: var(--space-1) 0; background: var(--table-border); }
 .sc-btn-caret { width: 1rem; height: 1rem; margin-left: var(--space-1); }
