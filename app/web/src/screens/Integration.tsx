@@ -1,7 +1,6 @@
 // Entegrasyon (ekran 23, fonksiyon 91; K-130, K-132, docs/12). SQL view kartı, tablolar, bağlantı testi, önizleme, view sürümleri. API 11.5'te.
-// Zamanlanmış akışlar (fonksiyon 92, K-163): üst şeritteki düğme çekmeceyi açar; ?akis=<id> geçmişiyle açar (bağlam çubuğundaki çipten).
+// Zamanlanmış işler burada değil, Sistem ayarları'nın sekmesinde (K-164).
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -17,7 +16,6 @@ import { Alert, Badge, Button, Dialog, TextField, Tooltip, TopStrip } from "../u
 import { type EntityChange, integrationApi, METHOD_SQL, METHODS, type Connection, type Preview, type TestResult, type TestTable, type ViewVersion } from "./integrationApi";
 import { StateChip } from "./PullDialogs";
 import { useFlowLock } from "../shell/FlowStatus";
-import { FlowsDrawer } from "./FlowsDrawer";
 import { MenuItem, RowPopMenu } from "./RowPopMenu";
 
 const T = tr.integration;
@@ -121,19 +119,7 @@ export function Integration() {
   const me = useAuth().me!;
   const isOwner = can(me, 96, "write");
   const canTest = can(me, 91, "write");
-  const canFlows = can(me, 92, "read");
-  const flowLock = useFlowLock();  // K-163: tablo ayarları akış sürerken kaydedilmez
-  const { search, pathname } = useLocation();
-  const navigate = useNavigate();
-  const flowParam = new URLSearchParams(search).get("akis");
-  const [flows, setFlows] = useState<{ history: number | null } | null>(null);
-  useEffect(() => {
-    if (flowParam && canFlows) setFlows({ history: Number(flowParam) || null });
-  }, [flowParam, canFlows]);
-  const closeFlows = () => {
-    setFlows(null);
-    if (flowParam) navigate(pathname, { replace: true });
-  };
+  const flowLock = useFlowLock();  // K-163: tablo ayarları zamanlanmış iş sürerken kaydedilmez
   const [connection, setConnection] = useState<Connection | null>(null);
   const [database, setDatabase] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -235,7 +221,6 @@ export function Integration() {
           </>
         ) : <p>{T.database}: <strong>{connection?.database ?? T.undefinedDatabase}</strong></p>}
         {testButton}
-        <Button variant="secondary" disabledReason={canFlows ? null : forbiddenReason(92, "read")} onClick={() => setFlows({ history: null })}>{tr.flows.button}</Button>
         {connection && <p className="sc-muted">{T.account(connection.account)}</p>}
       </TopStrip>
       <DataTable list="integration-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey}
@@ -250,7 +235,6 @@ export function Integration() {
       {test && <TestDialog result={test} onClose={() => setTest(null)} />}
       {previewRow && <PreviewDialog row={previewRow} onClose={() => setPreviewRow(null)} />}
       {versionRow && <VersionsDialog row={versionRow} onClose={() => setVersionRow(null)} />}
-      {flows && <FlowsDrawer initialHistory={flows.history} onClose={closeFlows} />}
     </section>
   );
 }

@@ -11,7 +11,7 @@ from app.api.audit_format import FIELD_LABELS, SETTING_LABELS, VALUE_LABELS, cha
 from app.api.lists import LISTS
 from app.api.lists.request import ExportScope
 from app.api.permissions import Access
-from app.api.services import health_settings, login_policy
+from app.api.services import flows, health_settings, login_policy
 
 from audit_guard import unreadable
 
@@ -122,7 +122,7 @@ def test_export_details_are_fully_readable():
 
 def test_setting_names_match_the_form():
     """Yazılabilen her ayarın adı var ve Sistem ayarları formundakiyle aynı."""
-    keys = set(login_policy.LIMITS) | set(health_settings.LIMITS)
+    keys = set(login_policy.LIMITS) | set(health_settings.LIMITS) | set(flows.SETTING_LIMITS)  # K-164: bekleme süreleri kendi sekmesinde
     assert set(SETTING_LABELS) == keys
     source = (APP / "web" / "src" / "i18n" / "tr.ts").read_text(encoding="utf-8")
     for key, label in SETTING_LABELS.items():

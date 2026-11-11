@@ -196,7 +196,7 @@ function StateCell({ state, row }: { state: string; row: Row }) {
 export function DataRules() {
   const me = useAuth().me!;
   const canWrite = can(me, 16, "write");
-  const flowLock = useFlowLock();  // K-163: akış sürerken kural kaydedilmez
+  const flowLock = useFlowLock();  // K-163: zamanlanmış iş sürerken kural kaydedilmez
   const writeReason = canWrite ? flowLock : forbiddenReason(16, "write");
   const orderReason = can(me, 18, "write") ? flowLock : forbiddenReason(18, "write");
   const applyReason = can(me, 19, "write") ? flowLock : forbiddenReason(19, "write");

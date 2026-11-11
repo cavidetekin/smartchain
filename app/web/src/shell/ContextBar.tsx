@@ -1,4 +1,4 @@
-// Bağlam çubuğu (U-17, docs/12): senaryo / plan versiyonu / dönem (8.1), veri versiyonu, iş göstergesi, akış çipi (K-163), kullanıcı.
+// Bağlam çubuğu (U-17, docs/12): senaryo / plan versiyonu / dönem (8.1), veri versiyonu, iş göstergesi, zamanlanmış iş çipi (K-163), kullanıcı.
 import { Database } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 

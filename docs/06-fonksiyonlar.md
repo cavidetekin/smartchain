@@ -596,9 +596,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü · sistem (zamanlanmış akış adımı; akışları kurulumda System owner tanımlar, hangi grupların aktarılacağı akış tanımında seçilir, 5.6)
-  - Nereden: Veri yükleme ekranı · grup seçimi + 'Seçilenleri yükle' · zamanlanmış akış (ör. öğlen Talep ve Stok)
-- **01:** Kullanıcı ya da akış tanımı grupları seçer. Bağımlılık önerisi yoktur: bağlı olduğu ana veri core'da olmayan satır aktarılmaz, veri aktarım raporunda "ana verisi aktarılmadı" olarak sayılır, bir sonraki tam aktarımda girer (K-150).
+  - Kim: Key user ve üstü · sistem (zamanlanmış iş adımı; zamanlanmış işleri kurulumda System owner tanımlar, hangi grupların aktarılacağı zamanlanmış iş tanımında seçilir, 5.6)
+  - Nereden: Veri yükleme ekranı · grup seçimi + 'Seçilenleri yükle' · zamanlanmış iş (ör. öğlen Talep ve Stok)
+- **01:** Kullanıcı ya da zamanlanmış iş tanımı grupları seçer. Bağımlılık önerisi yoktur: bağlı olduğu ana veri core'da olmayan satır aktarılmaz, veri aktarım raporunda "ana verisi aktarılmadı" olarak sayılır, bir sonraki tam aktarımda girer (K-150).
 - **02:** Onay penceresinde seçilen grupların tabloları ve sayıları, 'seçilmeyen gruplar ve ana veri v231 değerlerini korur' bilgisi gösterilir.
 - **GIRDI**
   - Staging'in işlenmiş katmanı ve grup seçimi
@@ -620,7 +620,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yalnız işlem verisi grupları aktarılır; ana veri (malzeme, ağaç, rota, kaynak, tedarikçi, müşteri…) yalnız tam aktarımda gelir (K-149, K-150). Satırın baktığı ana veri core'da yoksa satır aktarılmaz, raporda bekleyen satır sayısı olarak görünür.
   - Kısmi aktarım da tam aktarım gibi ya hep ya hiç çalışır.
   - Seçilmeyen grupların verisi staging'de kalır; sonraki kısmi ya da tam aktarımda girer.
-  - Kısmi aktarım zamanlanmış bir akış adımı olabilir (ör. öğlen Talep ve Stok); gruplar akış tanımında seçilir (5.6). Hata eşiği aşılan tablo kısmi aktarımda da aktarılmaz (K-135).
+  - Kısmi aktarım zamanlanmış bir zamanlanmış iş adımı olabilir (ör. öğlen Talep ve Stok); gruplar zamanlanmış iş tanımında seçilir (5.6). Hata eşiği aşılan tablo kısmi aktarımda da aktarılmaz (K-135).
 - **HATA VE ISTISNA**
   - Ana verisi core'da olmayan satır: aktarılmaz, raporda "ana verisi aktarılmadı" sayısı (K-151).
   - Yükleme hatası: geri alınır, önceki versiyon geçerli.
@@ -6964,7 +6964,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - Gece akışını (çekim → validasyon ve yükleme → senaryolar) ve bakım işlerini (senaryo silme, ham veri temizliği, versiyon sıkıştırma) zamanlamak, aç / kapa, sıra ve bağımlılıkla yönetmek.
 
-- **Uygulama (5.6, K-163):** uygulandı. Entegrasyon ekranında "Zamanlanmış akışlar": liste, akış penceresi (ad, saat, günler, Veri çek, aktarım, temizlik, aktif), geçmiş çekmecesi; System owner tanımlar ve "Şimdi çalıştır" (onaylı), Admin salt okunur. Zincir sabittir: Veri çek → validasyon → aktarım → temizlik; teknik hata aktarımdan önce durdurur, veri bulgusu durdurmaz. Zamanlayıcı motor servisinin içindedir; akış durunca ya da başlamayınca bağlam çubuğunda çip. Senaryolar, versiyon sıkıştırma ve 06:00 bitiş sınırı ilgili aşamalarda.
+- **Uygulama (5.6, K-163, K-164):** uygulandı. Sistem ayarları → "Zamanlanmış işler" sekmesi: üst şeritte iki bekleme süresi (Vazgeç, Kaydet) ve "Yeni zamanlanmış iş"; ortak tabloda liste, seçilen işin geçmişi alt kartta (ana–detay); satır menüsünde düzenle (Admin'de görüntüle), şimdi çalıştır (System owner, onaylı) ve geçmiş. Pencerede adımlar: 1 · İş tanımı, 2 · Zamanlama, 3 · Veri çekimi, 4 · Veri aktarımı, 5 · Ham veri temizliği. Zincir sabittir: Veri çekimi → validasyon → aktarım → temizlik; teknik hata aktarımdan önce durdurur, veri bulgusu durdurmaz. Zamanlayıcı motor servisinin içindedir; zamanlanmış iş durunca ya da başlamayınca bağlam çubuğunda çip. Senaryolar, versiyon sıkıştırma ve 06:00 bitiş sınırı ilgili aşamalarda.
 
 #### NASIL ÇALIŞIR
 

@@ -36,7 +36,7 @@ export function useTableEdits() {
 
 export function EditBar({ dirty, busy, onSave, onDiscard, disabledReason }: {
   dirty: boolean; busy?: boolean; onSave(): void; onDiscard(): void;
-  /** Kayıt şimdi yapılamıyorsa nedeni (ör. zamanlanmış akış sürüyor, K-163). */
+  /** Kayıt şimdi yapılamıyorsa nedeni (ör. zamanlanmış iş sürüyor, K-163). */
   disabledReason?: string | null;
 }) {
   if (!dirty) return null;

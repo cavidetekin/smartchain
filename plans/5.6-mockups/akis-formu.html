@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Akış formu önerisi</title>
+<style>
+:root{--ink:#1F2430;--mute:#6B7280;--line:#E3E6EB;--soft:#F6F7F9;--ind:#4F46E5;--indsoft:#EEF0FE;--lila:#EDE9FE;--mor:#6D28D9}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:#9CA3AF66;margin:0;padding:28px;color:var(--ink);font-size:13.5px}
+.dlg{background:#fff;border-radius:12px;max-width:900px;margin:0 auto;box-shadow:0 20px 50px #0003;overflow:hidden}
+.head{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--line)}
+.head h1{font-size:17px;margin:0}
+.sw{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
+.tg{width:36px;height:20px;border-radius:10px;background:var(--ind);position:relative;display:inline-block}
+.tg:after{content:"";position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.off{background:#CDD2DA}.tg.off:after{right:auto;left:2px}
+.row{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);align-items:start}
+.row:last-of-type{border-bottom:0}
+.lbl{font-weight:600;padding-top:7px}
+.lbl small{display:block;color:var(--mute);font-weight:400;font-size:11.5px;margin-top:2px}
+input{border:1px solid #CDD2DA;border-radius:6px;padding:7px 10px;font:inherit;background:#fff}
+.req{color:#B4532A;margin-left:2px}
+.line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.time{width:84px;text-align:center;font-family:Inter,"Segoe UI",sans-serif}
+.days{display:inline-flex;border:1px solid #CDD2DA;border-radius:8px;overflow:hidden}
+.days span{padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--mute);border-right:1px solid #CDD2DA}
+.days span:last-child{border-right:0}
+.days span.on{background:var(--indsoft);color:var(--ind)}
+.quick{color:var(--mor);font-weight:600;font-size:12.5px;cursor:pointer}
+.seg{display:inline-flex;border:1px solid #CDD2DA;border-radius:8px;overflow:hidden}
+.seg span{padding:6px 14px;font-size:13px;font-weight:600;color:var(--mute);border-right:1px solid #CDD2DA}
+.seg span:last-child{border-right:0}
+.seg span.on{background:var(--indsoft);color:var(--ind)}
+.groups{margin-top:10px;display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:10px}
+.g{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--soft)}
+.g h4{margin:0 0 6px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+.g h4 .c{color:var(--mute);font-weight:500;font-family:Inter,"Segoe UI",sans-serif}
+.g.two ul{columns:2}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12.5px;break-inside:avoid}
+.cb{width:14px;height:14px;border:1.5px solid #9CA3AF;border-radius:3px;display:inline-block;flex:none;background:#fff}
+.cb.on{background:var(--ind);border-color:var(--ind);position:relative}
+.cb.on:after{content:"";position:absolute;left:3.5px;top:0.5px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.part{background:var(--ind);border-color:var(--ind);position:relative}
+.cb.part:after{content:"";position:absolute;left:2px;top:5px;width:7px;height:2px;background:#fff}
+.dis{color:#A0A6B1}
+.dis .cb{border-color:#D5D9E0;background:#F1F2F4}
+.tag{font-size:10.5px;font-weight:700;background:#EEF0F3;color:var(--mute);border-radius:4px;padding:0 5px;margin-left:2px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{border:1px solid #CDD2DA;border-radius:14px;padding:3px 11px;font-size:12.5px;font-weight:600;color:var(--mute)}
+.chip.on{background:var(--indsoft);border-color:#C7CBFB;color:var(--ind)}
+.agrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}
+.ag{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+.ag.on{border-color:#C7CBFB;background:var(--indsoft)}
+.ag h4{margin:0 0 4px;font-size:12.5px;display:flex;align-items:center;gap:6px}
+.ag p{margin:0;color:var(--mute);font-size:11.5px;line-height:1.45}
+.foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--line)}
+.primary{background:var(--ind);color:#fff;border-radius:6px;padding:8px 18px;font-weight:600}
+.ghost{color:var(--ind);font-weight:600;padding:8px 10px}
+.note{max-width:900px;margin:16px auto 0;background:#fff;border-radius:10px;padding:14px 18px;font-size:13px;line-height:1.6}
+.note b{color:var(--mor)}
+</style></head><body>
+
+<div class="dlg">
+  <div class="head">
+    <h1>Akış · Hafta içi kısmi</h1>
+    <div class="sw">Aktif <span class="tg"></span></div>
+  </div>
+
+  <div class="row">
+    <div class="lbl">1 · İş tanımı</div>
+    <div class="line"><span style="color:var(--mute)">Ad<span class="req">*</span></span><input style="flex:1" value="Hafta içi kısmi"></div>
+  </div>
+
+  <div class="row">
+    <div class="lbl">2 · Zamanlama<span class="req">*</span></div>
+    <div class="line">
+      <input class="time" value="02:00">
+      <div class="days"><span class="on">Pzt</span><span class="on">Sal</span><span class="on">Çar</span><span class="on">Per</span><span class="on">Cum</span><span>Cmt</span><span>Paz</span></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="lbl">3 · Veri çekimi</div>
+    <div>
+      <div class="seg"><span>Bütün tablolar</span><span class="on">Seçili tablolar</span></div>
+      <div class="groups">
+        <div class="g two"><h4><span><span class="cb"></span> Ana veri</span><span class="c">0 / 13</span></h4>
+          <ul><li><span class="cb"></span>Lokasyon</li><li><span class="cb"></span>Birim dönüşümü</li><li><span class="cb"></span>Malzeme</li><li><span class="cb"></span>Üretim versiyonu</li><li><span class="cb"></span>Ürün ağacı</li><li><span class="cb"></span>Rota</li><li><span class="cb"></span>Benzetilen ürün</li><li><span class="cb"></span>Kaynak grubu</li><li><span class="cb"></span>Kaynak</li><li><span class="cb"></span>Kaynak grubu ataması</li><li><span class="cb"></span>Tedarikçi</li><li><span class="cb"></span>Malzeme tedarikçisi</li><li><span class="cb"></span>Müşteri</li></ul>
+        </div>
+        <div>
+          <div class="g"><h4><span><span class="cb part"></span> Talep</span><span class="c">1 / 3</span></h4>
+            <ul><li><span class="cb on"></span>Satış siparişi</li><li><span class="cb"></span>Proje</li><li><span class="cb"></span>Proje grubu</li><li class="dis"><span class="cb"></span>Tahmin <span class="tag">Excel</span></li></ul></div>
+          <div class="g" style="margin-top:10px"><h4><span><span class="cb on"></span> Stok</span><span class="c">2 / 2</span></h4>
+            <ul><li><span class="cb on"></span>Stok</li><li><span class="cb on"></span>Ödünç ve geri ödeme</li></ul></div>
+        </div>
+        <div>
+          <div class="g"><h4><span><span class="cb"></span> Üretim</span><span class="c">0 / 4</span></h4>
+            <ul><li><span class="cb"></span>İş emri</li><li><span class="cb"></span>İş emri bileşeni</li><li><span class="cb"></span>İş emri operasyonu</li><li><span class="cb"></span>Üretim gerçekleşmesi</li></ul></div>
+          <div class="g" style="margin-top:10px"><h4><span><span class="cb"></span> Satın alma</span><span class="c">0 / 1</span></h4>
+            <ul><li><span class="cb"></span>Satın alma siparişi</li></ul></div>
+          <div class="g" style="margin-top:10px"><h4><span><span class="cb"></span> İzin</span><span class="c">0 / 1</span></h4>
+            <ul><li><span class="cb"></span>Çalışan izni</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="lbl">4 · Veri aktarımı</div>
+    <div>
+      <div class="seg"><span>Tam veri aktarımı</span><span class="on">Kısmi veri aktarımı</span></div>
+      <div class="agrid">
+        <div class="ag on"><h4><span class="cb on"></span>Talep</h4><p>Satış siparişi · Tahmin · Proje · Proje grubu</p></div>
+        <div class="ag on"><h4><span class="cb on"></span>Stok</h4><p>Stok · Ödünç ve geri ödeme</p></div>
+        <div class="ag"><h4><span class="cb"></span>Üretim</h4><p>İş emri · İş emri bileşeni · İş emri operasyonu · Üretim gerçekleşmesi</p></div>
+        <div class="ag"><h4><span class="cb"></span>Satın alma</h4><p>Satın alma siparişi</p></div>
+        <div class="ag"><h4><span class="cb"></span>İzin</h4><p>Çalışan izni</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="lbl">5 · Ham veri temizliği</div>
+    <div class="line" style="padding-top:5px"><span class="tg off"></span> <span>Aktarımdan sonra</span></div>
+  </div>
+
+  <div class="foot"><span class="ghost">Vazgeç</span><span class="primary">Kaydet</span></div>
+</div>
+
+<div class="note">
+<b>Adımlar:</b> 1 · İş tanımı (ad; Aktif başlıkta anahtar) · 2 · Zamanlama (saat ve gün şeridi) · 3 · Veri çekimi (Bütün tablolar / Seçili tablolar; seçilide aktarım gruplarıyla aynı kümeler, Excel tablosu pasif ve etiketli) · 4 · Veri aktarımı (Tam / Kısmi; Kısmi'de her grup kartında aktaracağı tablolar yazar) · 5 · Ham veri temizliği (anahtar) · Açıklama metni yok.
+</div>
+</body></html>

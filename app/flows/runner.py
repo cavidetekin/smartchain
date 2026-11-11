@@ -1,12 +1,12 @@
-"""Akış çalıştırma (K-163): zamanlayıcı ve durum makinesi. Motor servisi her turda `tick` çağırır.
+"""Zamanlanmış iş çalıştırma (K-163, K-164): zamanlayıcı ve durum makinesi. Motor servisi her turda `tick` çağırır.
 
-Zamanlama: akışın son saati geldiyse ve o saat için çalıştırma yoksa yazılır. Saatinden sonra `FlowWaitMinutes` içindeyse "Bekliyor"
-(servis o sürede geri geldiyse akış yine başlar); daha geçse "Başlamadı: servis kapalıydı". Başka akış sürüyorsa "Başlamadı".
+Zamanlama: zamanlanmış işin son saati geldiyse ve o saat için çalıştırma yoksa yazılır. Saatinden sonra `FlowWaitMinutes` içindeyse "Bekliyor"
+(servis o sürede geri geldiyse zamanlanmış iş yine başlar); daha geçse "Başlamadı: servis kapalıydı". Başka zamanlanmış iş sürüyorsa "Başlamadı".
 
 Adımlar sabit: Başlangıç (elle başlatılmış veri işi bitene kadar bekler) → Veri çekme → Validasyon → Aktarım → Temizlik. Her adım bugünkü
 işlerle yürür; çalıştırma yalnız iş kaydına bakar. Teknik hata aktarımdan önce durdurur; veri bulgusu durdurmaz (eşik aşan tablo aktarılmaz,
-notu raporda). Kesinti (servis yeniden başladı, veritabanı bağlantısı koptu) çalışan akışı "Durdu: akış yarıda kesildi" yapar; aktarım işi
-henüz bitmediyse iptal edilir, akış kaldığı yerden sürmez.
+notu raporda). Kesinti (servis yeniden başladı, veritabanı bağlantısı koptu) çalışan zamanlanmış işi "Durdu: zamanlanmış iş yarıda kesildi" yapar; aktarım işi
+henüz bitmediyse iptal edilir, zamanlanmış iş kaldığı yerden sürmez.
 """
 import json
 import logging
@@ -47,9 +47,9 @@ MISSED_HOURS = 24  # daha eski kaçırılan saat geçmişe yazılmaz
 
 BUSY_TEXT = {TYPE_TRANSFER: "Aktarım", TYPE_CLEANUP: "Ham veri temizliği", TYPE_PULL: "Veri çekme", TYPE_PRECHECK: "Excel ön kontrolü",
              TYPE_VALIDATION: "Validasyon"}  # öncelik sırası
-INTERRUPTED_RESTART = "Servis yeniden başladı; akış yarıda kesildi."
-INTERRUPTED_DB = "Veritabanı bağlantısı koptu; akış yarıda kesildi."
-MISSED = "Servis kapalıydı; akış saatinde başlamadı."
+INTERRUPTED_RESTART = "Servis yeniden başladı; zamanlanmış iş yarıda kesildi."
+INTERRUPTED_DB = "Veritabanı bağlantısı koptu; zamanlanmış iş yarıda kesildi."
+MISSED = "Servis kapalıydı; zamanlanmış iş saatinde başlamadı."
 PULL_FAILED_STATES = ("Hata", "Hatalı", "Tamamlanmadı")  # pull.ERROR, imports FAILED, INCOMPLETE
 REFRESHING = "Veri güncellemesi devam ediyor"
 
@@ -66,7 +66,7 @@ def active_run(session: Session) -> dict | None:
 
 
 def busy(session: Session) -> str | None:
-    """Süren veri işi (elle başlatılmış ya da akışın): adı; yoksa None."""
+    """Süren veri işi (elle başlatılmış ya da zamanlanmış işin): adı; yoksa None."""
     types = session.execute(sa.select(JOB.c.JobType).where(JOB.c.JobType.in_(BUSY_TEXT), JOB.c.Status.in_(ACTIVE_STATUSES)).distinct()).scalars().all()
     return next((text for t, text in BUSY_TEXT.items() if t in types), None)
 
@@ -79,7 +79,7 @@ def _job(session: Session, job_id: int | None) -> dict | None:
 
 
 def pull_tables(session: Session, scope: str, chosen: list[str] | None) -> list[str]:
-    """Akışın çekeceği SQL tabloları, tanımlı sırayla. Excel tabloları çekilmez."""
+    """Zamanlanmış işin çekeceği SQL tabloları, tanımlı sırayla. Excel tabloları çekilmez."""
     from app.api.repositories import integration as repo
     rows = repo.all_entities(session)
     sql = [e.table for e in contract.ENTITIES if repo.method_of(rows.get(e.table)) == repo.METHOD_SQL]
@@ -133,7 +133,7 @@ def _set(session: Session, run_id: int, **values) -> None:
 
 def _end(session: Session, run: dict, state: str, now: datetime, reason: str | None = None, **values) -> None:
     _set(session, run["Id"], State=state, EndedAt=now, Reason=reason, **values)
-    log.log(logging.INFO if state == DONE else logging.WARNING, "Akış %s (%s) %s: %s", run["FlowName"], run["Id"], state, reason or "")
+    log.log(logging.INFO if state == DONE else logging.WARNING, "Zamanlanmış iş %s (%s) %s: %s", run["FlowName"], run["Id"], state, reason or "")
 
 
 def insert_run(session: Session, flow: dict, trigger: str, scheduled_utc: datetime, state: str = WAITING, reason: str | None = None,
@@ -145,7 +145,7 @@ def insert_run(session: Session, flow: dict, trigger: str, scheduled_utc: dateti
 
 
 def _abort(session: Session, job_id: int | None, reason: str) -> None:
-    """Akışın işi sıradaysa ya da sürüyorsa iptal (aktarım dahil; elle iptal bunu yapamaz, K-107). Süren işin süreci sonucu yazamaz:
+    """Zamanlanmış işin adımındaki iş sıradaysa ya da sürüyorsa iptal (aktarım dahil; elle iptal bunu yapamaz, K-107). Süren işin süreci sonucu yazamaz:
     kalp atışı reddedilir, motor süreci sonlandırır; aktarım işlemi geri alınır."""
     if job_id:
         session.execute(sa.update(JOB).where(JOB.c.Id == job_id, JOB.c.Status.in_(ACTIVE_STATUSES))
@@ -153,7 +153,7 @@ def _abort(session: Session, job_id: int | None, reason: str) -> None:
 
 
 def interrupt(session: Session, reason: str, now: datetime | None = None) -> list[int]:
-    """Çalışan akışlar yarıda kesildi: aktarım ve temizlik işi bitmediyse iptal; çalıştırma Durdu. Commit eder."""
+    """Çalışan zamanlanmış işler yarıda kesildi: aktarım ve temizlik işi bitmediyse iptal; çalıştırma Durdu. Commit eder."""
     now = now or schedule.utcnow()
     stopped = []
     for run in session.execute(sa.select(RUN).where(RUN.c.State == RUNNING)).mappings().all():
@@ -185,7 +185,7 @@ def schedule_due(session: Session, now: datetime, cfg: dict[str, int] | None = N
             continue
         due = schedule.local_to_utc(due_local)
         if due < flow["UpdatedAt"] or now - due > timedelta(hours=MISSED_HOURS):
-            continue  # saat, akış kaydedilmeden önceydi
+            continue  # saat, zamanlanmış iş kaydedilmeden önceydi
         exists = session.execute(sa.select(RUN.c.Id).where(RUN.c.FlowId == flow["Id"], RUN.c.TriggerType == SCHEDULED, RUN.c.ScheduledAt == due)).first()
         if exists:
             continue
@@ -343,11 +343,23 @@ def advance(session: Session, now: datetime, cfg: dict[str, int] | None = None) 
         _cleanup(session, run, now)
 
 
+def refresh_next(session: Session, now: datetime) -> None:
+    """Listenin "Sıradaki" alanı (`NextRunAt`, K-164): saati geçen ya da boş kalan aktif iş için yeniden hesaplanır. Commit etmez."""
+    for flow in session.execute(sa.select(FLOW.c.Id, FLOW.c.IsActive, FLOW.c.RunTime, FLOW.c.Days, FLOW.c.NextRunAt)).mappings().all():
+        nxt = None
+        if flow["IsActive"]:
+            due = schedule.next_due(flow["RunTime"], schedule.parse_days(flow["Days"]), schedule.utc_to_local(now))
+            nxt = schedule.local_to_utc(due) if due else None
+        if nxt != flow["NextRunAt"]:
+            session.execute(sa.update(FLOW).where(FLOW.c.Id == flow["Id"]).values(NextRunAt=nxt))
+
+
 def tick(session: Session, now: datetime | None = None) -> None:
-    """Zamanlayıcının bir turu: saati gelenleri yaz, süreni ilerlet. Commit eder."""
+    """Zamanlayıcının bir turu: saati gelenleri yaz, süreni ilerlet, sıradaki saati güncelle. Commit eder."""
     now = now or schedule.utcnow()
     cfg = settings(session)
     schedule_due(session, now, cfg)
+    refresh_next(session, now)
     session.commit()
     advance(session, now, cfg)
     session.commit()

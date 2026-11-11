@@ -1,4 +1,4 @@
-"""Zamanlanmış akışlar (ekran 23, fonksiyon 92; K-163). Geçmiş ortak liste ucudur (flow-runs)."""
+"""Zamanlanmış işler (ekran 25 sekmesi, fonksiyon 92; K-163, K-164). Liste ve geçmiş ortak liste uçlarıdır (flows, flow-runs)."""
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Response
@@ -11,7 +11,7 @@ from ..permissions import Access
 from ..services import flows as service
 from ..services.auth import CurrentUser
 
-router = APIRouter(tags=["Zamanlanmış akışlar"])
+router = APIRouter(tags=["Zamanlanmış işler"])
 read = require(92, Access.READ)
 write = require(92, Access.WRITE)
 status_read = require(1, Access.READ)
@@ -30,17 +30,28 @@ class FlowBody(BaseModel):
     cleanup: bool = False
 
 
-@router.get("/flows", summary="Akışlar, sıradaki ve son çalışma; seçenekler (SQL tabloları, gruplar)")
+@router.get("/flows", summary="Zamanlanmış işler, sıradaki ve son çalışma; seçenekler (SQL tabloları, gruplar)")
 def list_flows(user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
     return service.list_flows(session, user)
 
 
-@router.post("/flows", summary="Akış tanımla (System owner)")
+class FlowSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    FlowWaitMinutes: int | None = None
+    FlowRefreshWaitMinutes: int | None = None
+
+
+@router.put("/flows/settings", summary="İki bekleme süresi (System owner); yalnız değişenler, denetim izine")
+def save_settings(body: FlowSettings, user: CurrentUser = Depends(write), session: Session = Depends(get_session)) -> dict:
+    return service.save_settings(session, user, body.model_dump(exclude_unset=True))
+
+
+@router.post("/flows", summary="Zamanlanmış iş tanımla (System owner)")
 def create(body: FlowBody, user: CurrentUser = Depends(write), session: Session = Depends(get_session)) -> dict:
     return service.save(session, user, body.model_dump())
 
 
-@router.put("/flows/{flow_id:int}", summary="Akışı değiştir (System owner)")
+@router.put("/flows/{flow_id:int}", summary="Zamanlanmış işi değiştir (System owner)")
 def update(flow_id: int, body: FlowBody, user: CurrentUser = Depends(write), session: Session = Depends(get_session)) -> dict:
     return service.save(session, user, body.model_dump(), flow_id)
 
@@ -50,12 +61,12 @@ def run_now(flow_id: int, user: CurrentUser = Depends(write), session: Session =
     return service.run_now(session, user, flow_id)
 
 
-@router.get("/flows/status", summary="Süren akış ve kapatılmamış durma / başlamama bildirimleri (bağlam çubuğu, ana sayfa)")
+@router.get("/flows/status", summary="Süren zamanlanmış iş ve kapatılmamış durma / başlamama bildirimleri (bağlam çubuğu, ana sayfa)")
 def status(user: CurrentUser = Depends(status_read), session: Session = Depends(get_session)) -> dict:
     return service.status(session, user)
 
 
-@router.post("/flows/runs/{run_id:int}/dismiss", status_code=204, summary="Akış bildirimini kapat (kullanıcı başına)")
+@router.post("/flows/runs/{run_id:int}/dismiss", status_code=204, summary="Zamanlanmış iş bildirimini kapat (kullanıcı başına)")
 def dismiss(run_id: int, user: CurrentUser = Depends(status_read), session: Session = Depends(get_session)) -> Response:
     service.dismiss(session, user, run_id)
     return Response(status_code=204)

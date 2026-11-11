@@ -216,6 +216,6 @@ export const transferResultPath = (jobId: number) => `/veri/veri-yukleme?aktarim
 export const JOB_CLEANUP = "Temizlik";  // ham veri temizliği (K-156)
 /** "Sonucu aç": Veri aktarım geçmişi çekmecesi; üstünde son temizliğin sonucu (K-156). */
 export const historyPath = "/veri/veri-yukleme?gecmis=1";
-export const flowHistoryPath = (flowId: number) => `/yonetim/entegrasyon?akis=${flowId}`;  // K-163
+export const flowHistoryPath = (flowId: number) => `/yonetim/sistem-ayarlari?sekme=zamanlanmis-isler&is=${flowId}`;  // K-164
 export const JOB_DONE = "Bitti";
 export const JOB_FAILED = "Hata";

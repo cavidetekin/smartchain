@@ -1,4 +1,4 @@
-// Sistem ayarları (ekran 25; K-104, K-105) ve yetki matrisi penceresi (ekran 22; K-100).
+// Sistem ayarları (ekran 25; K-104, K-105, K-164) ve yetki matrisi penceresi (ekran 22; K-100). Zamanlanmış işler sekmesi Flows.test.tsx'te.
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -71,7 +71,7 @@ describe("ekran", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem ayarları");
     expect(await screen.findByText("Sürüm 0.18.0")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Veri sözlüğü" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Giriş ve oturum" })).toBeInTheDocument();
+    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["Veri sözlüğü", "Giriş ve oturum", "Sistem sağlığı", "Zamanlanmış işler"]);
     expect(screen.getByRole("columnheader", { name: "Satır işlemleri" })).toBeInTheDocument();
   });
 
@@ -82,7 +82,7 @@ describe("ekran", () => {
     expect(screen.getByRole("link", { name: "Sistem ayarları" })).toHaveClass("is-active");
   });
 
-  it.each(["Admin", "Key user", "End user"])("%s açamaz", (role) => {
+  it.each(["Key user", "End user"])("%s açamaz", (role) => {
     backend();
     renderApp("/yonetim/sistem-ayarlari", meAs(role));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Bu ekranı açma yetkiniz yok");
@@ -173,23 +173,51 @@ describe("giriş ve oturum formu", () => {
     await screen.findByLabelText("En az karakter");
     return { user, m };
   }
+  const nav = () => screen.getByRole("navigation", { name: "Giriş ve oturum bölümleri" });
   const setNumber = (label: string, value: string) => {
     const input = screen.getByLabelText(label);
     fireEvent.change(input, { target: { value } });
     fireEvent.blur(input);
   };
 
-  it("bütün ayarlar değeriyle görünür, açıklama notu yok; değişiklik yoksa Kaydet pasif", async () => {
-    await openForm();
-    for (const [label, value] of [["En az karakter", "10"], ["Son kaç şifreden farklı", "5"], ["Geçerlilik süresi (gün)", "90"],
-                                  ["Kilit için hatalı giriş sayısı", "5"], ["Kilit süresi (dk)", "15"],
-                                  ["Oturumun kapandığı süre (dk)", "30"], ["Kapanmadan önce uyarı (dk)", "5"]]) {
+  it("solda alt menü (Şifre, Oturum), sağda yalnız seçili bölüm; şeritte ad, Vazgeç ve Kaydet, değişiklik yoksa pasif", async () => {
+    const { user } = await openForm();
+    expect(within(nav()).getAllByRole("button").map((b) => b.textContent)).toEqual(["Şifre", "Oturum"]);
+    expect(within(nav()).getByRole("button", { name: "Şifre" })).toHaveAttribute("aria-current", "true");
+    for (const [label, value] of [["En az karakter", "10"], ["Son kaç şifreden farklı", "5"], ["Geçerlilik süresi (gün)", "90"]]) {
       expect(screen.getByLabelText(label)).toHaveValue(value);
     }
     expect(screen.getByLabelText("Harf ve rakam zorunlu")).toBeChecked();
-    expect(screen.queryByText("Bir sonraki şifre değişiminde geçerli olur.")).toBeNull();
-    expect(screen.queryByText("Hemen geçerli olur.")).toBeNull();
-    expect(screen.getByRole("button", { name: "Kaydet" })).toBeDisabled();
+    expect(screen.queryByLabelText("Kilit süresi (dk)")).toBeNull();
+    const strip = screen.getByRole("group", { name: "Şifre" });
+    expect(within(strip).getByRole("heading", { name: "Şifre" })).toBeInTheDocument();
+    expect(within(strip).getByRole("button", { name: "Kaydet" })).toBeDisabled();
+    expect(within(strip).getByRole("button", { name: "Vazgeç" })).toBeDisabled();
+    await user.click(within(nav()).getByRole("button", { name: "Oturum" }));
+    for (const [label, value] of [["Kilit için hatalı giriş sayısı", "5"], ["Kilit süresi (dk)", "15"],
+                                  ["Oturumun kapandığı süre (dk)", "30"], ["Kapanmadan önce uyarı (dk)", "5"]]) {
+      expect(screen.getByLabelText(label)).toHaveValue(value);
+    }
+    expect(screen.queryByLabelText("En az karakter")).toBeNull();
+  });
+
+  it("kaydedilmemiş değişiklikle bölüm ya da sekme değişince uyarı; Vazgeç geri alır", async () => {
+    const { user } = await openForm();
+    setNumber("En az karakter", "12");
+    expect(screen.getByRole("button", { name: "Vazgeç" })).toBeEnabled();
+    await user.click(within(nav()).getByRole("button", { name: "Oturum" }));
+    let dialog = screen.getByRole("dialog", { name: "Kaydedilmemiş değişiklikler var" });
+    await user.click(within(dialog).getByRole("button", { name: "Vazgeç" }));
+    expect(screen.getByLabelText("En az karakter")).toHaveValue("12");
+    await user.click(screen.getByRole("radio", { name: "Sistem sağlığı" }));
+    dialog = screen.getByRole("dialog", { name: "Kaydedilmemiş değişiklikler var" });
+    await user.click(within(dialog).getByRole("button", { name: "Vazgeç" }));
+    expect(screen.getByRole("radio", { name: "Giriş ve oturum" })).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Vazgeç" }));
+    expect(screen.getByLabelText("En az karakter")).toHaveValue("10");
+    await user.click(within(nav()).getByRole("button", { name: "Oturum" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByLabelText("Kilit süresi (dk)")).toBeInTheDocument();
   });
 
   it("yalnız değişenler gider", async () => {
@@ -204,11 +232,12 @@ describe("giriş ve oturum formu", () => {
   });
 
   it("sınır dışı ve uyarı süresi denetimi Kaydet'i kapatır", async () => {
-    await openForm();
+    const { user } = await openForm();
     setNumber("En az karakter", "5");
     expect(screen.getByText("En az 8, en çok 128.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Kaydet" })).toBeDisabled();
-    setNumber("En az karakter", "12");
+    await user.click(screen.getByRole("button", { name: "Vazgeç" }));
+    await user.click(within(nav()).getByRole("button", { name: "Oturum" }));
     setNumber("Kapanmadan önce uyarı (dk)", "30");
     expect(screen.getByText("Uyarı süresi oturumun kapandığı süreden kısa olmalı.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Kaydet" })).toBeDisabled();
@@ -233,6 +262,10 @@ describe("ham veri temizliği ayarı", () => {
     const m = await openScreen({ "/api/settings/health": (_url: string, init?: RequestInit) =>
       ({ body: init?.method === "PUT" ? { ...HEALTH, values: { ...HEALTH.values, RawDataRetentionDays: null } } : HEALTH }) });
     await user.click(screen.getByRole("radio", { name: "Sistem sağlığı" }));
+    const nav = await screen.findByRole("navigation", { name: "Sistem sağlığı bölümleri" });
+    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(["İzleme eşikleri", "Excel yükleme", "Ham veri temizliği"]);
+    expect(screen.getByLabelText("Disk uyarı eşiği (%)")).toHaveValue("85");
+    await user.click(within(nav).getByRole("button", { name: "Ham veri temizliği" }));
     const input = await screen.findByLabelText("Ham verinin saklama süresi (gün)");
     expect(input).toHaveValue("7");
     expect(screen.getByText("Boşsa temizlik çalışmaz.")).toBeInTheDocument();

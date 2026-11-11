@@ -100,14 +100,6 @@ svg { width: var(--icon); height: var(--icon); flex: none; }
 .sc-flow-alert-list { display: grid; gap: var(--space-2); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
 .sc-flow-alert-list p { margin: 0; }
 .sc-flow-alert-actions { display: flex; gap: var(--space-2); margin-top: var(--space-1); }
-/* Akış penceresi: adımlar sabit sırayla */
-.sc-flow-step { display: grid; gap: var(--space-2); margin: 0 0 var(--space-3); padding: 0; border: 0; }
-.sc-flow-days, .sc-flow-tables { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
-.sc-flow-summary { display: grid; gap: var(--space-2); margin: 0; }
-.sc-flow-summary div { display: grid; grid-template-columns: 10rem 1fr; gap: var(--space-2); }
-.sc-flow-summary dd { margin: 0; }
-.sc-flow-history { margin-top: var(--space-3); }
-.sc-flow-history h2 { margin: 0 0 var(--space-2); font-size: 1rem; }
 .sc-user { display: flex; align-items: center; gap: var(--space-2); }
 .sc-popover { position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 30; width: 22rem; padding: 0.75rem;
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);

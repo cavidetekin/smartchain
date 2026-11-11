@@ -10,9 +10,9 @@ import { Card } from "../ui";
 import { HOME } from "./catalog";
 
 /** Ekranı görme yetkisi (fonksiyonun okuma yetkisi) yoksa açıklama sayfası. */
-export function ScreenGate({ fn, children }: { fn: number; children: ReactNode }) {
+export function ScreenGate({ fn, orFn, children }: { fn: number; orFn?: number; children: ReactNode }) {
   const me = useAuth().me!;
-  if (can(me, fn)) return <>{children}</>;
+  if (can(me, fn) || (orFn !== undefined && can(me, orFn))) return <>{children}</>;
   const role = requiredRole(fn, "read");
   return (
     <section className="sc-page">

@@ -1,5 +1,5 @@
-"""Zamanlanmış akışlar (fonksiyon 92, K-163): zamanlama, bekleme, teknik hata ve veri bulgusu, adımlar, kesinti ve SQL bağlantısının
-kopması, durum çipi, akış kilidi (409 flow_running), yetki, zamanlayıcı satırı. Test veritabanında (K-103); SQL Server'a dokunulmaz,
+"""Zamanlanmış işler (fonksiyon 92, K-163, K-164): zamanlama, bekleme, teknik hata ve veri bulgusu, adımlar, kesinti ve SQL bağlantısının
+kopması, durum çipi, zamanlanmış iş kilidi (409 flow_running), yetki, zamanlayıcı satırı. Test veritabanında (K-103); SQL Server'a dokunulmaz,
 bağlantı kopması taklit edilir."""
 import json
 from datetime import datetime, timedelta
@@ -70,10 +70,10 @@ def _clean_flows(engine) -> None:
 @pytest.fixture
 def people(db_engine):
     with db_engine.begin() as c:
-        return {SYSTEM_OWNER: ensure_user(c, "pytest.akis.owner", SYSTEM_OWNER, "Akış Owner"),
-                ADMIN: ensure_user(c, "pytest.akis.admin", ADMIN, "Akış Admin"),
-                KEY_USER: ensure_user(c, "pytest.akis.key", KEY_USER, "Akış Key"),
-                END_USER: ensure_user(c, "pytest.akis.end", END_USER, "Akış End")}
+        return {SYSTEM_OWNER: ensure_user(c, "pytest.akis.owner", SYSTEM_OWNER, "Zamanlanmış iş Owner"),
+                ADMIN: ensure_user(c, "pytest.akis.admin", ADMIN, "Zamanlanmış iş Admin"),
+                KEY_USER: ensure_user(c, "pytest.akis.key", KEY_USER, "Zamanlanmış iş Key"),
+                END_USER: ensure_user(c, "pytest.akis.end", END_USER, "Zamanlanmış iş End")}
 
 
 @pytest.fixture
@@ -149,7 +149,7 @@ def test_due_flow_starts_and_pulls_only_sql_tables(env, people):
 
 
 def test_service_back_within_wait_still_runs(env, people):
-    """01:55'te yeniden başlayıp 02:10'da gelen sunucuda 02:00 akışı çalışır."""
+    """01:55'te yeniden başlayıp 02:10'da gelen sunucuda 02:00 zamanlanmış işi çalışır."""
     flow(env, people[SYSTEM_OWNER])
     tick(env, DUE + timedelta(minutes=10))
     assert last(env)["State"] == "Çalışıyor" and last(env)["ScheduledAt"] == DUE
@@ -179,7 +179,7 @@ def test_overlap_marks_next_flow_not_started(env, people):
     flow(env, people[SYSTEM_OWNER], name="Pazar tam", run_time="01:00")
     flow(env, people[SYSTEM_OWNER], name="Hafta içi kısmi", run_time="02:00", mode="Kısmi", groups=["Stok"])
     sql_table(env, "Material")
-    tick(env, DUE - timedelta(minutes=60))                       # 01:00 akışı başlar, çekim sürer
+    tick(env, DUE - timedelta(minutes=60))                       # 01:00 zamanlanmış işi başlar, çekim sürer
     tick(env, DUE + timedelta(seconds=5))
     first, second = runs(env)
     assert first["State"] == "Çalışıyor"
@@ -326,8 +326,8 @@ def test_failed_validation_run_stops(env, people):
 
 
 def test_whole_flow_with_excel_table_transfers_and_skips_cleanup(env, people):
-    """Excel tablosu çekilmez, son yüklenmiş hâli aktarılır; Hatalı satır akışı durdurmaz; saklama süresi boşsa temizlik notla atlanır."""
-    put(env, {"Customer": [{"Code": "AK-1", "Name": "Akış", "IsActive": 1}]})
+    """Excel tablosu çekilmez, son yüklenmiş hâli aktarılır; Hatalı satır zamanlanmış işi durdurmaz; saklama süresi boşsa temizlik notla atlanır."""
+    put(env, {"Customer": [{"Code": "AK-1", "Name": "Zamanlanmış iş", "IsActive": 1}]})
     with Session(env) as s:
         validation_engine.enqueue(s, "Customer", validation_engine.SCOPE_TABLE, validation_engine.TRIGGER_UPLOAD)
     run_validations(env)
@@ -345,7 +345,7 @@ def test_whole_flow_with_excel_table_transfers_and_skips_cleanup(env, people):
     try:
         assert (r["State"], r["Reason"]) == ("Bitti", "Ham veri temizliği atlandı: saklama süresi tanımlı değil.") and version
         customer = next(t for t in json.loads(job(env, r["TransferJobId"])["Result"])["tables"] if t["entity"] == "Customer")
-        assert customer["not_transferred"] == 1                     # Excel tablosu aktarıldı; Hatalı satır veri bulgusudur, akışı durdurmaz
+        assert customer["not_transferred"] == 1                     # Excel tablosu aktarıldı; Hatalı satır veri bulgusudur, zamanlanmış işi durdurmaz
     finally:
         with env.begin() as c:
             c.execute(sa.text("DELETE FROM core.Customer WHERE VersionFrom = :v"), {"v": version})
@@ -405,7 +405,7 @@ def test_service_restart_interrupts_running_flow(env, people):
 
 
 def test_sql_connection_drop_during_flow(env, people, monkeypatch):
-    """Bağlantı adımların ortasında kopar (taklit), servis yeniden bağlanır: çalıştırma yarıda kesilir, aktarım yapılmaz, sonraki akış normal başlar."""
+    """Bağlantı adımların ortasında kopar (taklit), servis yeniden bağlanır: çalıştırma yarıda kesilir, aktarım yapılmaz, sonraki zamanlanmış iş normal başlar."""
     svc = _service(env)
     svc.start()
     try:
@@ -425,7 +425,7 @@ def test_sql_connection_drop_during_flow(env, people, monkeypatch):
         after = last(env)
         assert (after["State"], after["Reason"]) == ("Durdu", runner.INTERRUPTED_DB)
         assert job(env, r["TransferJobId"])["Status"] == "İptal" and not svc._db_lost
-        with Session(env) as s:                                                        # sonraki akış normal başlar
+        with Session(env) as s:                                                        # sonraki zamanlanmış iş normal başlar
             f = dict(s.execute(sa.select(runner.FLOW)).mappings().one())
             runner.insert_run(s, f, runner.MANUAL, schedule.utcnow())
             s.commit()
@@ -473,7 +473,7 @@ def test_validation_conflict_and_audit(env, people):
     assert bad.status_code == 422 and {p["field"] for p in bad.json()["error"]["details"]} == {"name", "run_time", "days", "pull_tables", "transfer_groups"}
     assert client.post("/api/flows", headers=h, json=BODY).status_code == 200
     r = client.post("/api/flows", headers=h, json={**BODY, "name": "Cuma tam", "days": [5, 6], "transfer_mode": "Tam", "transfer_groups": []})
-    assert r.status_code == 409 and r.json()["error"]["message"] == "Aynı gün ve saatte başka bir akış var: Hafta içi kısmi (Cum 02:00)."
+    assert r.status_code == 409 and r.json()["error"]["message"] == "Aynı gün ve saatte başka bir zamanlanmış iş var: Hafta içi kısmi (Cum 02:00)."
     assert client.post("/api/flows", headers=h, json={**BODY, "name": "Cuma tam", "days": [6], "transfer_mode": "Tam"}).status_code == 200
     assert client.post("/api/flows", headers=h, json={**BODY, "name": "Kapalı", "is_active": False}).status_code == 200   # pasif çakışmaz
     body = client.get("/api/flows", headers=h).json()
@@ -481,7 +481,7 @@ def test_validation_conflict_and_audit(env, people):
     assert saved["Cuma tam"]["transfer_groups"] == [] and saved["Hafta içi kısmi"]["days_text"] == "Hafta içi" and saved["Hafta içi kısmi"]["next_at"]
     assert {g["name"]: g["sql_tables"] for g in body["options"]["groups"]}["Stok"] == []                               # SQL tablosu yok
     with env.connect() as c:
-        row = c.execute(sa.text("SELECT TOP 1 ObjectKey, NewValue FROM adm.AuditLog WHERE Action = N'Akış tanımlandı' ORDER BY Id DESC")).one()
+        row = c.execute(sa.text("SELECT TOP 1 ObjectKey, NewValue FROM adm.AuditLog WHERE Action = N'Zamanlanmış iş tanımlandı' ORDER BY Id DESC")).one()
     assert row[0] == "Kapalı" and json.loads(row[1])["IsActive"] is False
 
 
@@ -496,7 +496,7 @@ def test_run_now_lock_and_chip(env, people):
     again = client.post(f"/api/flows/{flow_id}/run", headers=h)
     assert again.status_code == 409 and again.json()["error"]["code"] == "flow_running"
     status = client.get("/api/flows/status", headers=key).json()
-    assert status["running"]["flow_name"] == "Hafta içi kısmi" and status["running"]["message"].startswith("Zamanlanmış akış sürüyor: Hafta içi kısmi (başlama ")
+    assert status["running"]["flow_name"] == "Hafta içi kısmi" and status["running"]["message"].startswith("Zamanlanmış iş sürüyor: Hafta içi kısmi (başlama ")
     locked = [
         client.post("/api/pulls", headers=h, json={}),
         client.post("/api/transfers", headers=h),
@@ -511,7 +511,7 @@ def test_run_now_lock_and_chip(env, people):
     ]
     assert [x.status_code for x in locked] == [409] * len(locked), [x.text for x in locked]
     assert {x.json()["error"]["code"] for x in locked} == {"flow_running"}
-    # akış durdu: çip görünür, kapatılınca o kullanıcıda kaybolur
+    # zamanlanmış iş durdu: çip görünür, kapatılınca o kullanıcıda kaybolur
     with env.begin() as c:
         c.execute(sa.text("UPDATE adm.FlowRun SET State = N'Durdu', Step = N'Veri çekme', Reason = N'Veri çekilemedi', EndedAt = SYSUTCDATETIME()"))
     status = client.get("/api/flows/status", headers=key).json()
@@ -519,7 +519,7 @@ def test_run_now_lock_and_chip(env, people):
     assert client.post(f"/api/flows/runs/{run_id}/dismiss", headers=key).status_code == 204
     assert client.get("/api/flows/status", headers=key).json()["alerts"] == []
     assert len(client.get("/api/flows/status", headers=h).json()["alerts"]) == 1                   # öteki kullanıcıda durur
-    # başarılı akış çipi kaldırır
+    # başarılı zamanlanmış iş çipi kaldırır
     with Session(env) as s:
         f = dict(s.execute(sa.select(runner.FLOW)).mappings().one())
         runner.insert_run(s, f, runner.MANUAL, schedule.utcnow(), state=runner.DONE)
@@ -536,17 +536,54 @@ def test_transfer_plan_warns_failed_rules(env, people):
     assert all(t["failed_rules"] == 0 for g in partial["groups"] for t in g["tables"])
 
 
-def test_settings_have_flow_waits(env, people):
+def test_wait_settings_live_in_the_scheduled_jobs_tab(env, people):
+    """K-164: iki bekleme süresi Zamanlanmış işler sekmesinde (92 yazma); Sistem sağlığı formunda yok."""
     client = new_client()
     h = auth(people[SYSTEM_OWNER])
-    body = client.get("/api/settings/health", headers=h).json()
-    assert body["defaults"]["FlowWaitMinutes"] == 60 and body["defaults"]["FlowRefreshWaitMinutes"] == 120
+    body = client.get("/api/flows", headers=h).json()
+    assert body["settings"] == {"FlowWaitMinutes": 60, "FlowRefreshWaitMinutes": 120}
     assert body["limits"]["FlowWaitMinutes"] == {"min": 5, "max": 720}
-    assert client.put("/api/settings/health", headers=h, json={"FlowWaitMinutes": 4}).status_code == 422
-    assert client.put("/api/settings/health", headers=h, json={"FlowWaitMinutes": 30}).json()["values"]["FlowWaitMinutes"] == 30
+    assert "FlowWaitMinutes" not in client.get("/api/settings/health", headers=h).json()["values"]
+    assert client.put("/api/flows/settings", headers=h, json={"FlowWaitMinutes": 4}).status_code == 422
+    assert client.put("/api/flows/settings", headers=h, json={"FlowWaitMinutes": None}).status_code == 422
+    assert client.put("/api/flows/settings", headers=auth(people[ADMIN]), json={"FlowWaitMinutes": 30}).status_code == 403
+    assert client.put("/api/flows/settings", headers=h, json={"FlowWaitMinutes": 30}).json()["settings"]["FlowWaitMinutes"] == 30
+    with env.connect() as c:
+        row = c.execute(sa.text("SELECT TOP 1 OldValue, NewValue FROM adm.AuditLog WHERE ObjectKey = N'FlowWaitMinutes' ORDER BY Id DESC")).one()
+    assert json.loads(row[0]) == {"Value": 60} and json.loads(row[1]) == {"Value": 30}
     flow(env, people[SYSTEM_OWNER])
     tick(env, DUE + timedelta(minutes=31))
     assert last(env)["Reason"] == runner.MISSED
+
+
+def test_list_next_run_and_history_trigger(env, people):
+    """Ortak liste `flows` (K-164): zaman okunur, sıradaki saat NextRunAt'ten (kaydederken ve zamanlayıcıda), son çalışma; geçmişte "Elle · kullanıcı"."""
+    client = new_client()
+    h = auth(people[SYSTEM_OWNER])
+    flow_id = client.post("/api/flows", headers=h, json=BODY).json()["id"]
+    with env.connect() as c:
+        saved = c.execute(sa.text("SELECT NextRunAt FROM adm.Flow WHERE Id = :i"), {"i": flow_id}).scalar()
+    assert saved is not None and saved > schedule.utcnow()
+    with env.begin() as c:
+        c.execute(sa.text("UPDATE adm.Flow SET NextRunAt = NULL WHERE Id = :i"), {"i": flow_id})
+    tick(env, schedule.utcnow())
+    with env.connect() as c:
+        assert c.execute(sa.text("SELECT NextRunAt FROM adm.Flow WHERE Id = :i"), {"i": flow_id}).scalar() == saved
+    client.post(f"/api/flows/{flow_id}/run", headers=h)
+    rows = client.post("/api/flows/query", headers=h, json={"offset": 0, "limit": 50}).json()["rows"]
+    row = next(r for r in rows if r["Id"] == flow_id)
+    assert (row["Schedule"], row["PullText"], row["TransferText"], row["LastState"]) == ("Hafta içi 02:00", "1 tablo", "Kısmi · Stok", "Bekliyor")
+    runs = client.post("/api/flow-runs/query", headers=h, json={"offset": 0, "limit": 50, "filters": [{"field": "FlowId", "op": "eq", "value": flow_id}]}).json()["rows"]
+    assert [r["TriggerText"] for r in runs] == ["Elle · pytest.akis.owner"]
+    assert client.post("/api/flows/query", headers=auth(people[KEY_USER]), json={"offset": 0, "limit": 50}).status_code == 403
+    options = client.get("/api/flows", headers=h).json()["options"]
+    assert [s["name"] for s in options["pull_sets"]] == ["Ana veri", "Talep", "Stok", "Üretim", "Satın alma", "İzin"]
+    assert {t["entity"] for t in options["pull_sets"][0]["tables"]} >= {"Location", "Material", "Customer"}
+    with env.begin() as c:
+        c.execute(sa.text("UPDATE adm.Flow SET IsActive = 0 WHERE Id = :i"), {"i": flow_id})
+    tick(env, schedule.utcnow())
+    with env.connect() as c:
+        assert c.execute(sa.text("SELECT NextRunAt FROM adm.Flow WHERE Id = :i"), {"i": flow_id}).scalar() is None
 
 
 def test_scheduler_row(env, people):

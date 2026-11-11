@@ -1,6 +1,6 @@
-"""Akış zamanı (K-163): saat (SS:DD) ve haftanın günleri (1 Pazartesi … 7 Pazar), sunucunun yerel saatiyle.
+"""Zamanlanmış iş zamanı (K-163): saat (SS:DD) ve haftanın günleri (1 Pazartesi … 7 Pazar), sunucunun yerel saatiyle.
 
-Veritabanında zamanlar UTC saklanır; yerel saat yalnız akışın saatini hesaplarken ve gösterirken kullanılır.
+Veritabanında zamanlar UTC saklanır; yerel saat yalnız zamanlanmış işin saatini hesaplarken ve gösterirken kullanılır.
 """
 import re
 from datetime import date, datetime, time, timedelta, timezone

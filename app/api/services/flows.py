@@ -1,7 +1,8 @@
-"""Zamanlanmış akışlar (ekran 23, fonksiyon 92; K-163): tanım, şimdi çalıştır, durum çipi, akış kilidi, zamanlayıcı satırı.
+"""Zamanlanmış işler (ekran 25 · Zamanlanmış işler sekmesi, fonksiyon 92; K-163, K-164): tanım, bekleme süreleri, şimdi çalıştır, durum çipi,
+kilit, zamanlayıcı satırı.
 
 System owner tanımlar ve elle başlatır (92 yazma); Admin salt okunur görür (92 okuma, istisna). Durum çipi Key user ve üstüne (01 okuma).
-Akış sürerken veri işleri ve kural kaydetme 409 `flow_running` (`ensure_idle`).
+Zamanlanmış iş sürerken veri işleri ve kural kaydetme 409 `flow_running` (`ensure_idle`).
 """
 import json
 from datetime import datetime, timedelta, timezone
@@ -17,17 +18,19 @@ from db.models import metadata
 from ..errors import AppError
 from ..permissions import Access, allows
 from ..repositories import audit, integration as integration_repo, system_health as health_repo
-from . import auth
+from . import auth, login_policy
 from .auth import CurrentUser
 
 FLOW, RUN = runner.FLOW, runner.RUN
 DISMISSAL = metadata.tables["adm.FlowRunDismissal"]
 USER = metadata.tables["adm.AppUser"]
 OBJECT = "Flow"
-CREATED, CHANGED, RUN_NOW = "Akış tanımlandı", "Akış değiştirildi", "Akış elle başlatıldı"
-LATE_SECONDS = 120  # saati gelen akış bu sürede başlamadıysa zamanlayıcı "Gecikti"
+CREATED, CHANGED, RUN_NOW = "Zamanlanmış iş tanımlandı", "Zamanlanmış iş değiştirildi", "Zamanlanmış iş elle başlatıldı"
+LATE_SECONDS = 120  # saati gelen zamanlanmış iş bu sürede başlamadıysa zamanlayıcı "Gecikti"
 LATE = "Gecikti"
 NAMES = {e.table: e.name for e in contract.ENTITIES}
+MASTER_GROUP = "Ana veri"  # Veri çekimi seçiminde aktarım gruplarına girmeyen tablolar (K-164)
+SETTING_LIMITS = {"FlowWaitMinutes": (5, 720), "FlowRefreshWaitMinutes": (5, 720)}
 
 
 def iso(value: datetime | None) -> str | None:
@@ -36,11 +39,11 @@ def iso(value: datetime | None) -> str | None:
 
 def running_message(run: dict) -> str:
     at = schedule.hhmm(run["StartedAt"] or run["ScheduledAt"])
-    return f"Zamanlanmış akış sürüyor: {run['FlowName']} (başlama {at}). Bitince yeniden deneyin."
+    return f"Zamanlanmış iş sürüyor: {run['FlowName']} (başlama {at})"
 
 
 def ensure_idle(session: Session) -> None:
-    """Akış sürerken (bekliyor ya da çalışıyor) veri işi ve kural kaydı başlamaz (K-163)."""
+    """Zamanlanmış iş sürerken (bekliyor ya da çalışıyor) veri işi ve kural kaydı başlamaz (K-163)."""
     run = runner.active_run(session)
     if run:
         raise AppError("flow_running", running_message(run), 409)
@@ -73,12 +76,24 @@ def _flow_out(session: Session, f: dict, now_local: datetime) -> dict:
 
 
 def _options(session: Session) -> dict:
+    """Pencerenin seçenekleri: tablolar ve yöntemleri; aktarım grupları; Veri çekimi kümeleri (Ana veri + aktarım grupları, K-164)."""
     rows = integration_repo.all_entities(session)
-    sql = [e.table for e in contract.ENTITIES if integration_repo.method_of(rows.get(e.table)) == integration_repo.METHOD_SQL]
-    return {"tables": [{"entity": e.table, "name": e.name, "method": integration_repo.method_of(rows.get(e.table))} for e in contract.ENTITIES],
-            "sql_tables": sql,
-            "groups": [{"name": g, "tables": [{"entity": t, "name": NAMES[t]} for t in tables], "sql_tables": [t for t in sql if t in tables]}
-                       for g, tables in GROUPS.items()]}
+    method = {e.table: integration_repo.method_of(rows.get(e.table)) for e in contract.ENTITIES}
+    sql = [e.table for e in contract.ENTITIES if method[e.table] == integration_repo.METHOD_SQL]
+    grouped = {t for tables in GROUPS.values() for t in tables}
+    sets = {MASTER_GROUP: [e.table for e in contract.ENTITIES if e.table not in grouped], **{g: list(t) for g, t in GROUPS.items()}}
+    table = lambda t: {"entity": t, "name": NAMES[t], "method": method[t]}  # noqa: E731
+    return {"tables": [table(e.table) for e in contract.ENTITIES], "sql_tables": sql,
+            "groups": [{"name": g, "tables": [table(t) for t in tables], "sql_tables": [t for t in sql if t in tables]} for g, tables in GROUPS.items()],
+            "pull_sets": [{"name": g, "tables": [table(t) for t in tables]} for g, tables in sets.items()]}
+
+
+def next_run(flow: dict, now: datetime | None = None) -> datetime | None:
+    """Sıradaki saat (UTC); pasifte yok (K-164)."""
+    if not flow["IsActive"]:
+        return None
+    nxt = schedule.next_due(flow["RunTime"], schedule.parse_days(flow["Days"]), schedule.utc_to_local(now or schedule.utcnow()))
+    return schedule.local_to_utc(nxt) if nxt else None
 
 
 def list_flows(session: Session | None, user: CurrentUser) -> dict:
@@ -90,9 +105,23 @@ def list_flows(session: Session | None, user: CurrentUser) -> dict:
         now_local = schedule.utc_to_local(schedule.utcnow())
         return {"flows": [_flow_out(session, dict(r), now_local) for r in rows], "options": _options(session),
                 "running": _run_out(runner.active_run(session)), "can_edit": allows(user.role, 92, Access.WRITE),
-                "settings": runner.settings(session)}
+                "settings": runner.settings(session), "limits": {k: {"min": lo, "max": hi} for k, (lo, hi) in SETTING_LIMITS.items()}}
 
     return auth._db(work)
+
+
+def save_settings(session: Session | None, user: CurrentUser, changes: dict[str, int | None]) -> dict:
+    """İki bekleme süresi (K-164): yalnız değişenler yazılır, iz Sistem ayarlarıyla aynı; boş bırakılamaz."""
+    session = auth._require(session)
+
+    def work():
+        missing = [{"field": k, "problem": "Boş bırakılamaz."} for k, v in changes.items() if v is None]
+        if missing:
+            raise _invalid(missing)
+        login_policy.apply_changes(session, user, runner.settings(session), changes, SETTING_LIMITS)
+
+    auth._db(work)
+    return list_flows(session, user)
 
 
 # ------------------------------------------------------------------ tanım
@@ -109,7 +138,7 @@ def _clean(session: Session, body: dict, flow_id: int | None) -> dict:
     elif len(name) > 100:
         problems.append({"field": "name", "problem": "Ad en çok 100 karakter."})
     elif session.execute(sa.select(FLOW.c.Id).where(FLOW.c.Name == name, FLOW.c.Id != (flow_id or 0))).first():
-        problems.append({"field": "name", "problem": "Bu adla bir akış var."})
+        problems.append({"field": "name", "problem": "Bu adla bir zamanlanmış iş var."})
     run_time = (body.get("run_time") or "").strip()
     if not schedule.valid_time(run_time):
         problems.append({"field": "run_time", "problem": "Saat SS:DD biçiminde olmalı (ör. 02:00)."})
@@ -142,14 +171,14 @@ def _clean(session: Session, body: dict, flow_id: int | None) -> dict:
 
 
 def _conflict(session: Session, values: dict, flow_id: int | None) -> None:
-    """Aynı gün ve saatte iki aktif akış olmaz (K-163)."""
+    """Aynı gün ve saatte iki aktif zamanlanmış iş olmaz (K-163)."""
     if not values["IsActive"]:
         return
     days = set(schedule.parse_days(values["Days"]))
     for other in session.execute(sa.select(FLOW).where(FLOW.c.IsActive == sa.true(), FLOW.c.RunTime == values["RunTime"], FLOW.c.Id != (flow_id or 0))).mappings():
         common = sorted(days & set(schedule.parse_days(other["Days"])))
         if common:
-            raise AppError("flow_conflict", f"Aynı gün ve saatte başka bir akış var: {other['Name']} ({schedule.days_text(common)} {values['RunTime']}).", 409)
+            raise AppError("flow_conflict", f"Aynı gün ve saatte başka bir zamanlanmış iş var: {other['Name']} ({schedule.days_text(common)} {values['RunTime']}).", 409)
 
 
 def _audit_values(values: dict) -> dict:
@@ -164,10 +193,10 @@ def save(session: Session | None, user: CurrentUser, body: dict, flow_id: int | 
         if flow_id is not None:
             old = session.execute(sa.select(FLOW).where(FLOW.c.Id == flow_id)).mappings().first()
             if old is None:
-                raise AppError("flow_not_found", "Akış bulunamadı.", 404)
+                raise AppError("flow_not_found", "Zamanlanmış iş bulunamadı.", 404)
         values = _clean(session, body, flow_id)
         _conflict(session, values, flow_id)
-        stamp = {"UpdatedAt": schedule.utcnow(), "UpdatedBy": user.id}
+        stamp = {"UpdatedAt": schedule.utcnow(), "UpdatedBy": user.id, "NextRunAt": next_run(values)}
         if old is None:
             new_id = session.execute(sa.insert(FLOW).values(**values, **stamp).returning(FLOW.c.Id)).scalar_one()
             audit.write_audit(session, CREATED, user.id, OBJECT, values["Name"], _audit_values(values))
@@ -192,7 +221,7 @@ def run_now(session: Session | None, user: CurrentUser, flow_id: int) -> dict:
     def work():
         flow = session.execute(sa.select(FLOW).where(FLOW.c.Id == flow_id)).mappings().first()
         if flow is None:
-            raise AppError("flow_not_found", "Akış bulunamadı.", 404)
+            raise AppError("flow_not_found", "Zamanlanmış iş bulunamadı.", 404)
         ensure_idle(session)
         run_id = runner.insert_run(session, dict(flow), runner.MANUAL, schedule.utcnow(), requested_by=user.id)
         audit.write_audit(session, RUN_NOW, user.id, OBJECT, flow["Name"], {"run": run_id})
@@ -205,7 +234,7 @@ def run_now(session: Session | None, user: CurrentUser, flow_id: int) -> dict:
 # ------------------------------------------------------------------ durum çipi
 
 def _alerts(session: Session, user_id: int) -> list[dict]:
-    """Akış başına son biten çalıştırma Durdu ya da Başlamadı ise ve kullanıcı kapatmadıysa (K-163)."""
+    """Zamanlanmış iş başına son biten çalıştırma Durdu ya da Başlamadı ise ve kullanıcı kapatmadıysa (K-163)."""
     ranked = sa.select(RUN, sa.func.row_number().over(partition_by=RUN.c.FlowId, order_by=RUN.c.Id.desc()).label("rn")) \
         .where(RUN.c.State.not_in(runner.ACTIVE)).subquery()
     dismissed = sa.select(DISMISSAL.c.FlowRunId).where(DISMISSAL.c.UserId == user_id)
@@ -241,7 +270,7 @@ def dismiss(session: Session | None, user: CurrentUser, run_id: int) -> None:
 # ------------------------------------------------------------------ Sistem sağlığı
 
 def scheduler_row(session: Session, engine_state: str, running: str, stopped: str) -> dict:
-    """Zamanlayıcı satırı (K-163): son kontrol, sıradaki akış, son akış. Motor durmuşsa durmuş; saati gelen akış 2 dakikada başlamadıysa "Gecikti"."""
+    """Zamanlayıcı satırı (K-163): son kontrol, sıradaki zamanlanmış iş, son zamanlanmış iş. Motor durmuşsa durmuş; saati gelen zamanlanmış iş 2 dakikada başlamadıysa "Gecikti"."""
     row = health_repo.engine_status(session, runner.SCHEDULER_SERVICE)
     now = schedule.utcnow()
     now_local = schedule.utc_to_local(now)

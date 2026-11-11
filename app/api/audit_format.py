@@ -44,7 +44,7 @@ FIELD_LABELS = {
     "rule_name": "Kural", "severity": "Sınıf", "active": "Aktif", "message": "Mesaj", "condition": "Koşul", "deleted": "Silindi", "reset": "İlk hâline döndü", "error_threshold": "Hata eşiği (%)",
     # Veri kuralları (K-141, K-142)
     "target_field": "Hedef alan", "result": "Sonuç", "apply_mode": "Seçenek", "order": "Sıra",
-    # Zamanlanmış akışlar (K-163)
+    # Zamanlanmış işler (K-163, K-164)
     "RunTime": "Saat", "Days": "Günler", "PullScope": "Veri çek", "PullTables": "Çekilecek tablolar", "TransferMode": "Aktarım",
     "TransferGroups": "Aktarım grupları", "Cleanup": "Ham veri temizliği", "run": "Çalıştırma no",
 }
@@ -77,7 +77,7 @@ SETTING_LABELS = {
     "SessionIdleMinutes": "Oturumun kapandığı süre (dk)", "SessionWarningMinutes": "Kapanmadan önce uyarı (dk)",
     "DiskWarnPercent": "Disk uyarı eşiği (%)", "QueueWaitWarnMinutes": "Kuyruk bekleme eşiği (dk)", "ImportSyncMaxMb": "Beklemeden kontrol edilen en büyük dosya (MB)", "ImportMaxMb": "En büyük dosya (MB)", "ImportMaxRows": "Dosyada en çok satır", "SystemEventRetentionDays": "Hataların saklanma süresi (gün)",
     "RawDataRetentionDays": "Ham verinin saklama süresi (gün)",
-    "FlowWaitMinutes": "Akışın elle işi ve servisi bekleme süresi (dk)", "FlowRefreshWaitMinutes": "Akışın ERP yenilemesini bekleme süresi (dk)",
+    "FlowWaitMinutes": "Elle iş ve servis için bekleme (dk)", "FlowRefreshWaitMinutes": "ERP yenilemesi için bekleme (dk)",
 }
 OTHER_LISTS = {"permissions": "Yetki matrisi", "transfer-report": "Veri aktarım raporu"}  # ortak liste olmayan dışa aktarımlar (K-156)
 RETIRED_FIELDS = {"IsPermanent": "Silinemez"}  # listeden kalkan alanlar: eski aktarım kayıtlarında geçer

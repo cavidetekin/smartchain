@@ -505,8 +505,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Tablolar:** Her tablo için yöntem, kaynak (view), kolon uyumu ve son durum.
 - **Zamanlanmış işler:** Gece veri çekme, senaryolar, ham veri ve senaryo temizliği.
 - **Servis hesapları:** Entegrasyon kullanıcıları ayrı tutulur; son kullanım görünür.
-- **Uygulama (3.3, K-130, K-132):** Üst şerit (SQL kaynağı, Kaydet, Bağlantıyı test et, hesap; docs/12 · Üst şerit, K-139), ortak tablo, satır menüsünde Önizleme ve View sürümleri. Yöntem ve Kaynak tablo üzerinde System owner tarafından düzenlenir, Kaydet ile toplu kaydedilir. Mockup'tan farklar: API ve Excel kartı yok, alan eşleme yerine "Alan uyumu". Zamanlanmış işler kartı 5.6'da.
-- **Uygulama (5.6, K-163):** üst şeritte "Zamanlanmış akışlar" düğmesi sağdan çekmeceyi açar (ana tablo ekrana sığar). Akışlar listesi: ad, zaman, Veri çek, aktarım, temizlik, aktif, sıradaki, son çalışma; satır menüsünde düzenle (Admin'de görüntüle), şimdi çalıştır (System owner, onaylı) ve geçmiş. Bağlam çubuğundaki çipten "Akış geçmişi" çekmeceyi o akışın geçmişiyle açar.
+- **Uygulama (3.3, K-130, K-132):** Üst şerit (SQL kaynağı, Kaydet, Bağlantıyı test et, hesap; docs/12 · Üst şerit, K-139), ortak tablo, satır menüsünde Önizleme ve View sürümleri. Yöntem ve Kaynak tablo üzerinde System owner tarafından düzenlenir, Kaydet ile toplu kaydedilir. Mockup'tan farklar: API ve Excel kartı yok, alan eşleme yerine "Alan uyumu". Zamanlanmış işler kartı yok: zamanlanmış işler Sistem ayarları'nın "Zamanlanmış işler" sekmesindedir (5.6, K-164).
+- **Uygulama (5.6, K-163, K-164):** Entegrasyon'da zamanlanmış iş düğmesi ve kartı yoktur; tanım, liste ve geçmiş Sistem ayarları → Zamanlanmış işler sekmesindedir.
 
 ### Sistem sağlığı
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 24/25</sub>
@@ -519,7 +519,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Destek paketi:** Kapalı ağda uzaktan erişim yok; log ve ayarlar paket olarak dışa alınır.
 - **Ekran 26 · Denetim izi (2.6, K-108):** Bu ekran 25 ekranlık ilk listede yoktu; Yönetim'de Sistem sağlığı'ndan sonra. Mockup'ları docs/06 fonksiyon 98'de. Tasarım docs/12'de.
 - **Uygulama (2.5, K-106, K-107):** Kartlar, servis şeridi ve ortak tablolu üç bölüm: İş kuyruğu, Son çalışmalar, Hatalar. Süre trendi 10.13'te, zamanlayıcı 5.6'da, destek paketi 11.1'de (docs/12).
-- **Uygulama (5.6, K-163):** servis şeridinde zamanlayıcı satırı: son kontrol, sıradaki akış, son akış; saati gelen akış 2 dakikada başlamadıysa "Gecikti".
+- **Uygulama (5.6, K-163):** servis şeridinde zamanlayıcı satırı: son kontrol, sıradaki zamanlanmış iş, son zamanlanmış iş; saati gelen zamanlanmış iş 2 dakikada başlamadıysa "Gecikti".
 
 ### Sistem ayarları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 25/25</sub>
@@ -531,3 +531,4 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri sözlüğü:** Alan sınıfı, kaynak önceliği, Manuel ve Senaryo.
 - **Lisans ve sürüm:** Kurulum tipi, sürüm ve lisans bilgisi.
 - **Uygulama (2.4, K-104, K-105):** Ekranda salt okunur sürüm satırı, veri sözlüğü ve şifre ve oturum ayarları vardır. Motor ayarları 10.13'te, lisans 11.3'te, sürüm güncelleme 11.2'de gelir. Yetki matrisi Kullanıcılar ekranından açılır (docs/12).
+- **Uygulama (5.6, K-164):** dört sekme: Veri sözlüğü · Giriş ve oturum (Şifre, Oturum) · Sistem sağlığı (İzleme eşikleri, Excel yükleme, Ham veri temizliği) · Zamanlanmış işler. Birden çok bölümlü sekmede solda alt menü; formlar sıkı, her bölümün şeridinde Vazgeç ve Kaydet. Ekranı 96 ya da 92 okuma yetkisi olan görür; Admin yalnız Zamanlanmış işler sekmesini salt okunur görür (docs/12).

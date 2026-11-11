@@ -193,7 +193,6 @@ def test_settings_defaults_limits_and_audit(db_engine, client, people):
     owner = people[SYSTEM_OWNER]
     body = client.get(SETTINGS, headers=auth(owner)).json()
     assert body["values"] == body["defaults"] == {"DiskWarnPercent": 85, "QueueWaitWarnMinutes": 10, "SystemEventRetentionDays": 90, "ImportSyncMaxMb": 5, "ImportMaxMb": 100, "ImportMaxRows": 200000,
-                                                  "FlowWaitMinutes": 60, "FlowRefreshWaitMinutes": 120,  # K-163
                                                   "RawDataRetentionDays": None}  # K-156: varsayılanı yok
     assert body["limits"]["ImportMaxRows"] == {"min": 1000, "max": 1000000}
     assert body["limits"]["SystemEventRetentionDays"] == {"min": 7, "max": 3650}

@@ -72,7 +72,7 @@ export function DataLoad() {
   const canPartial = can(me, 6, "write");
   const canHistory = can(me, 8, "read");
   const canUpload = can(me, 3, "write");
-  const flowLock = useFlowLock();  // K-163: akış sürerken veri işleri pasif, ipucunda akış
+  const flowLock = useFlowLock();  // K-163: zamanlanmış iş sürerken veri işleri pasif, ipucunda zamanlanmış iş
   const pullReason = canPull ? flowLock : forbiddenReason(1, "write");
   const uploadReason = canUpload ? flowLock : forbiddenReason(3, "write");
   const reasonState = (reason: string | null) => (reason ? { allowed: false, reason } : ALLOWED);

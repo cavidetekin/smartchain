@@ -177,8 +177,8 @@
 | `adm.TableView` | Kayıtlı tablo görünümü (K-89): kolon seti ve sırası, genişlikler, sabitleme, sıralama, filtreler, gruplama. | Sistem |  | 8 |
 | `adm.TableViewDefault` | Kullanıcının bir liste için varsayılan görünümü (K-89). Satır yoksa liste tanımındaki "Standart" görünüm açılır. | Sistem |  | 3 |
 | `adm.TableViewStandard` | Şirket Standart görünümü (K-162): System owner ya da Admin'in kaydettiği Standart, liste başına tek satır. Satır yoksa liste tanımındaki Standart geçerlidir. | Sistem |  | 5 |
-| `adm.Flow` | Zamanlanmış veri akışı (K-163): zaman, Veri çek kapsamı, aktarım türü, isteğe bağlı temizlik. Adımların sırası sabittir. | Sistem |  | 12 |
-| `adm.FlowRun` | Akışın her çalıştırması (K-163): zaman, adım, durum ve nedeni, işler, veri versiyonu. | Sistem |  | 16 |
-| `adm.FlowRunDismissal` | Kullanıcının kapattığı akış bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez. | Sistem |  | 3 |
+| `adm.Flow` | Zamanlanmış iş (K-163, K-164): zaman, Veri çek kapsamı, aktarım türü, isteğe bağlı temizlik. Adımların sırası sabittir. | Sistem |  | 13 |
+| `adm.FlowRun` | Zamanlanmış işin her çalıştırması (K-163): zaman, adım, durum ve nedeni, işler, veri versiyonu. | Sistem |  | 16 |
+| `adm.FlowRunDismissal` | Kullanıcının kapattığı zamanlanmış iş bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez. | Sistem |  | 3 |
 | `adm.License` | Çevrimdışı imzalı lisans. | Sistem |  | 4 |
 

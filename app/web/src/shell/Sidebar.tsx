@@ -37,7 +37,7 @@ export function Sidebar({ collapsed, onToggle, onRequestSearch, searchTick, work
   const disabled = (s: Screen) => Boolean(s.requiresWorkspace && !workspaceOpen);
   // Rol bazlı görünürlük (K-100): okuma yetkisi olmayan ekran ve içi boş kalan grup menüde yok; arama da yalnız görünenlerde.
   const me = useAuth().me!;
-  const visible = (s: Screen) => can(me, s.fn);
+  const visible = (s: Screen) => can(me, s.fn) || (s.orFn !== undefined && can(me, s.orFn));  // K-164: 96 ya da 92
   const groups = GROUPS.filter((g) => screensInGroup(g.id).some(visible));
   const results = query.trim() ? SCREENS.filter((s) => visible(s) && fold(s.name).includes(fold(query.trim()))) : [];
   /** Grupta görünen tek ekran kaldıysa ikon doğrudan ona gider. */

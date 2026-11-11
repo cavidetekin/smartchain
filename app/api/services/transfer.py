@@ -128,7 +128,7 @@ def _groups(groups: list[str]) -> list[str]:
 
 
 def start_partial(session: Session | None, user: CurrentUser, groups: list[str]) -> dict:
-    """Kısmi aktarımı iş kuyruğuna yazar; yük {mode: Kısmi, groups} (5.6'daki akış adımı da aynı yükü yazar, K-155)."""
+    """Kısmi aktarımı iş kuyruğuna yazar; yük {mode: Kısmi, groups} (5.6'daki zamanlanmış iş adımı da aynı yükü yazar, K-155)."""
     session = auth._require(session)
     chosen = _groups(groups)
 

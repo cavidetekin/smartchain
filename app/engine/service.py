@@ -7,8 +7,8 @@
 - İşi tipine göre yönlendirir (K-93): "Dışa aktarım" işleri Excel dosyası üretir, diğerleri plan hesabıdır. Süresi
   geçen dışa aktarım dosyalarını açılışta ve saatte bir siler.
 - Kendi kalp atışını işten bağımsız yazar (adm.ServiceStatus); saklama süresi geçen sistem olaylarını siler (K-106).
-- Zamanlanmış akışların zamanlayıcısı bu serviste çalışır (K-163, `app/flows`): açılışta ve veritabanı bağlantısı geri gelince
-  çalışan akış "Durdu: akış yarıda kesildi" olur; zamanlayıcının kalp atışı ayrı satırda ("Zamanlayıcı").
+- Zamanlanmış işlerin zamanlayıcısı bu serviste çalışır (K-163, `app/flows`): açılışta ve veritabanı bağlantısı geri gelince
+  çalışan zamanlanmış iş "Durdu: zamanlanmış iş yarıda kesildi" olur; zamanlayıcının kalp atışı ayrı satırda ("Zamanlayıcı").
 
 Çalıştırma (geliştirme):  python -m app.engine.service      Windows servisi olarak kurulum 0.6'da.
 """
@@ -68,7 +68,7 @@ class EngineService:
         self._last_cleanup = 0.0
         self._last_beat = 0.0
         self._last_flow_tick = 0.0
-        self._db_lost = False  # döngü veritabanı hatasıyla düştü: bağlantı gelince çalışan akış yarıda kesilmiş sayılır
+        self._db_lost = False  # döngü veritabanı hatasıyla düştü: bağlantı gelince çalışan zamanlanmış iş yarıda kesilmiş sayılır
         self.job_settings = job_settings or JobSettings()
         self.engine_settings = engine_settings or EngineSettings()
 
@@ -99,7 +99,7 @@ class EngineService:
     def _interrupt_flows(self, session: Session, reason: str) -> None:
         stopped = flows.interrupt(session, reason)
         if stopped:
-            events.record(session, events.COMPONENT_ENGINE, "Zamanlanmış akış yarıda kesildi", reason, resolved=True)
+            events.record(session, events.COMPONENT_ENGINE, "Zamanlanmış iş yarıda kesildi", reason, resolved=True)
             session.commit()
 
     def _flow_tick(self, session: Session) -> None:
@@ -222,7 +222,7 @@ class EngineService:
 
     def _record_loop_error(self, exc: Exception) -> None:
         if isinstance(exc, DBAPIError) and (exc.connection_invalidated or isinstance(exc, (OperationalError, InterfaceError))):
-            self._db_lost = True  # bağlantı koptu (K-163); kilitlenme gibi tekil hatalar akışı kesmez
+            self._db_lost = True  # bağlantı koptu (K-163); kilitlenme gibi tekil hatalar zamanlanmış işi kesmez
         try:
             with Session(self.db) as s:
                 events.record(s, events.COMPONENT_ENGINE, "Motor servisi döngüsünde hata", "Devam etti", detail=type(exc).__name__)

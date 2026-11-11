@@ -24,8 +24,6 @@ class HealthSettingsChange(BaseModel):
     ImportMaxMb: int | None = None
     ImportMaxRows: int | None = None
     RawDataRetentionDays: int | None = None  # K-156: boş gönderilirse silinir (temizlik çalışmaz)
-    FlowWaitMinutes: int | None = None  # K-163
-    FlowRefreshWaitMinutes: int | None = None
 
 
 @router.get("/system-health", summary="Kartlar, servis durumu, eşik aşımları")

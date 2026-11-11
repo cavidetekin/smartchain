@@ -1,5 +1,5 @@
-// Zamanlanmış akışın durumu (K-163, docs/12): bağlam çubuğundaki çip ve akış sürerken pasif düğmeler aynı kaynaktan okur
-// (GET /api/flows/status; ana sayfa 9.1'de de). Çip yalnız son akış durduğunda ya da başlamadığında görünür, kişi kapatana kadar kalır;
+// Zamanlanmış işin durumu (K-163, K-164, docs/12): bağlam çubuğundaki çip ve zamanlanmış iş sürerken pasif düğmeler aynı kaynaktan okur
+// (GET /api/flows/status; ana sayfa 9.1'de de). Çip yalnız son zamanlanmış iş durduğunda ya da başlamadığında görünür, kişi kapatana kadar kalır;
 // yeni bir durma ilk görüldüğünde bildirim de çıkar. End user'da (01 okuma yok) sorgulanmaz.
 import { TriangleAlert } from "lucide-react";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -67,17 +67,16 @@ export function FlowStatusProvider({ children }: { children: ReactNode }) {
 
 export const useFlowStatus = () => useContext(FlowContext);
 
-/** Akış sürerken (bekliyor ya da çalışıyor) veri işleri ve kural kaydı pasif: ipucu metni; sürmüyorsa null. */
+/** Zamanlanmış iş sürerken (bekliyor ya da çalışıyor) veri işleri ve kural kaydı pasif: ipucu metni; sürmüyorsa null. */
 export function useFlowLock(): string | null {
   return useContext(FlowContext).status?.running?.message ?? null;
 }
 
-const hm = (iso: string) => formatDateTime(serverDate(iso)).slice(-5);
-
-/** "Gece akışı durdu · 02:14 · Veri çekme" ya da "Gece akışı başlamadı · 02:00"; bildirimde akışın adı ve nedeni de. */
+/** "Zamanlanmış iş durdu · Gece tam" ya da "Zamanlanmış iş başlamadı · Gece tam" (K-164); bildirimde adım ve neden de. */
 export function alertText(a: FlowAlert, full = false): string {
-  const head = a.state === FLOW_STOPPED ? T.chipStopped(hm(a.at), a.step) : T.chipNotStarted(hm(a.scheduled_at));
-  return full ? `${head} · ${a.flow_name}${a.reason ? ` · ${a.reason}` : ""}` : head;
+  const head = a.state === FLOW_STOPPED ? T.chipStopped(a.flow_name) : T.chipNotStarted(a.flow_name);
+  if (!full) return head;
+  return `${head}${a.state === FLOW_STOPPED ? ` · ${a.step}` : ""}${a.reason ? ` · ${a.reason}` : ""}`;
 }
 
 export function FlowAlertChip() {

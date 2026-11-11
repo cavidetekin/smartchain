@@ -35,7 +35,7 @@ export function App({ initialMe }: { initialMe?: Me | null }) {
           <Route element={<Shell />}>
             <Route index element={<Navigate to={HOME.path} replace />} />
             {SCREENS.map((s) => (
-              <Route key={s.no} path={s.path} element={<ScreenGate fn={s.fn}>{PAGES[s.no] ?? <Placeholder screen={s} />}</ScreenGate>} />
+              <Route key={s.no} path={s.path} element={<ScreenGate fn={s.fn} orFn={s.orFn}>{PAGES[s.no] ?? <Placeholder screen={s} />}</ScreenGate>} />
             ))}
             {/* Ekran 25'in eski adresi (K-104) */}
             <Route path="/yonetim/system-owner" element={<Navigate to="/yonetim/sistem-ayarlari" replace />} />

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Sistem ayarları önerisi</title>
+<style>
+:root{--ink:#1F2430;--mute:#6B7280;--line:#E3E6EB;--bg:#F6F7F9;--ind:#4F46E5;--indsoft:#EEF0FE;--lila:#EDE9FE;--mor:#6D28D9;--head:#E8EAFB}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI",system-ui,sans-serif;margin:0;padding:24px;background:#D9DCE2;color:var(--ink);font-size:13px}
+h2.cap{max-width:1400px;margin:0 auto 8px;font-size:14px;color:#374151}
+.app{max-width:1400px;margin:0 auto 28px;background:var(--bg);border-radius:10px;overflow:hidden;box-shadow:0 10px 30px #0002;display:grid;grid-template-columns:44px 1fr;height:640px}
+.rail{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:12px}
+.rail i{width:16px;height:16px;border-radius:4px;background:#C9CDD6;display:block}
+.rail i.on{background:var(--ind)}
+.main{display:flex;flex-direction:column;min-width:0}
+.ctx{display:flex;justify-content:space-between;padding:8px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.pill{border:1px solid var(--line);border-radius:14px;padding:3px 10px;color:var(--mute);margin-right:6px;font-size:12px}
+.title{padding:14px 20px 10px;display:flex;align-items:baseline;gap:12px}
+.title h1{font-size:22px;margin:0}
+.title span{color:var(--mute);font-size:12px}
+.body{flex:1;display:grid;grid-template-columns:210px 1fr;gap:16px;padding:0 20px 18px;min-height:0}
+.nav{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;align-self:start}
+.nav div{padding:9px 12px;border-radius:7px;font-weight:600;color:#374151;margin-bottom:2px}
+.nav div.on{background:var(--indsoft);color:var(--ind);box-shadow:inset 3px 0 0 var(--ind)}
+.content{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+.strip{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.strip h3{margin:0;font-size:15px;margin-right:auto}
+.btn{border-radius:6px;padding:7px 14px;font-weight:600;font-size:13px}
+.primary{background:var(--ind);color:#fff}
+.primary.dis{background:#C7CAF5}
+.ghost{color:var(--ind)}
+.ghost.dis{color:#A5A8D8}
+.second{background:var(--lila);color:var(--mor)}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px}
+.card h4{margin:0 0 6px;font-size:14px}
+.f{display:grid;grid-template-columns:1fr 110px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.f:first-of-type{border-top:0}
+input{border:1px solid #CDD2DA;border-radius:6px;padding:6px 9px;font:inherit;text-align:right;width:100%;font-family:Inter,"Segoe UI",sans-serif}
+.inl{display:flex;align-items:center;gap:8px;color:#374151}
+.inl input{width:70px}
+.tbl{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.tool{display:flex;align-items:center;gap:10px;padding:8px 12px}
+.tool .sel{border:1px solid #CDD2DA;border-radius:6px;padding:5px 10px;font-size:12px}
+.tool .sp{margin-left:auto;display:flex;gap:8px}
+.tool .sb{border:1px solid #CDD2DA;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600}
+table{border-collapse:collapse;width:100%}
+th{background:var(--head);text-align:left;font-weight:600;padding:7px 10px;font-size:12px}
+td{padding:7px 10px;border-top:1px solid var(--line);font-size:12.5px;white-space:nowrap}
+td.n{font-family:Inter,"Segoe UI",sans-serif}
+tr.sel td{background:#F1F2FE}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--ind)}
+.chip{border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:600}
+.ok{background:#DCF3E4;color:#1E7A43}.err{background:#FBDDD8;color:#A3311F}.off{background:#EEF0F3;color:var(--mute)}
+.split{height:6px;background:#E3E6EB;border-radius:3px;margin:0 auto;width:60px}
+.dhead{display:flex;align-items:center;gap:10px;padding:10px 12px 0}
+.dhead b{font-size:14px}
+.dhead .x{margin-left:auto;color:var(--mute);font-size:12px}
+.tabs{display:inline-flex;border:1px solid #CDD2DA;border-radius:8px;overflow:hidden;background:#fff;margin:0 20px 12px}
+.tabs span{padding:7px 14px;font-weight:600;color:#374151;border-right:1px solid #E3E6EB}
+.tabs span:last-child{border-right:0}
+.tabs span.on{background:var(--indsoft);color:var(--ind)}
+.body.one{grid-template-columns:1fr}
+.nav .cap2{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--mute);text-transform:uppercase;padding:6px 12px 4px;background:none;box-shadow:none}
+.note{max-width:1400px;margin:0 auto;background:#fff;border-radius:10px;padding:14px 18px;font-size:13px;line-height:1.6}
+.note b{color:var(--mor)}
+</style></head><body>
+
+<h2 class="cap">A · Birden çok bölümü olan sekme: "Sistem sağlığı" sekmesi, solda alt menü</h2>
+<div class="app">
+  <div class="rail"><i></i><i></i><i></i><i></i><i></i><i class="on"></i></div>
+  <div class="main">
+    <div class="ctx"><div><span class="pill">Senaryo: —</span><span class="pill">Plan versiyonu: —</span><span class="pill">Dönem: —</span></div><div><span class="pill">Veri v63 · 11.11.2026 14:18</span><span class="pill">İş yok</span><span class="pill">System owner</span></div></div>
+    <div class="title"><h1>Sistem ayarları</h1><span>Sürüm 0.31.0</span></div>
+    <div class="tabs"><span>Veri sözlüğü</span><span>Giriş ve oturum</span><span class="on">Sistem sağlığı</span><span>Zamanlanmış akışlar</span></div>
+    <div class="body">
+      <div class="nav">
+        <div>İzleme eşikleri</div>
+        <div class="on">Excel yükleme</div>
+        <div>Ham veri temizliği</div>
+      </div>
+      <div class="content">
+        <div class="strip"><h3>Excel yükleme</h3><span class="btn ghost">Vazgeç</span><span class="btn primary">Kaydet</span></div>
+        <div class="cards">
+          <div class="card"><h4>Dosya sınırları</h4>
+            <div class="f"><span>Beklemeden kontrol edilen en büyük dosya (MB)</span><input value="5"></div>
+            <div class="f"><span>En büyük dosya (MB)</span><input value="100"></div>
+            <div class="f"><span>Dosyada en çok satır</span><input value="200.000"></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 class="cap">B · Tek bölümlü sekme: "Zamanlanmış akışlar", alt menü yok, içerik tam genişlik</h2>
+<div class="app">
+  <div class="rail"><i></i><i></i><i></i><i></i><i></i><i class="on"></i></div>
+  <div class="main">
+    <div class="ctx"><div><span class="pill">Senaryo: —</span><span class="pill">Plan versiyonu: —</span><span class="pill">Dönem: —</span></div><div><span class="pill">Veri v63 · 11.11.2026 14:18</span><span class="pill">İş yok</span><span class="pill">System owner</span></div></div>
+    <div class="title"><h1>Sistem ayarları</h1><span>Sürüm 0.31.0</span></div>
+    <div class="tabs"><span>Veri sözlüğü</span><span>Giriş ve oturum</span><span>Sistem sağlığı</span><span class="on">Zamanlanmış akışlar</span></div>
+    <div class="body one">
+      <div class="content">
+        <div class="strip">
+          <h3>Zamanlanmış akışlar</h3>
+          <span class="inl">Elle iş ve servis için bekleme <input value="60"> dk</span>
+          <span class="inl">ERP yenilemesi için bekleme <input value="120"> dk</span>
+          <span class="btn ghost dis">Vazgeç</span><span class="btn second">Kaydet</span>
+          <span class="btn primary">Yeni akış</span>
+        </div>
+        <div class="tbl">
+          <div class="tool"><span class="sel">Standart (varsayılan) ▾</span><span style="color:var(--mute)">2 / 2</span><span class="sp"><span class="sb">Grupla</span><span class="sb">Alanlar</span><span class="sb">Excel'e aktar</span></span></div>
+          <table>
+            <tr><th>Akış</th><th>Zaman</th><th>Veri çek</th><th>Aktarım</th><th>Temizlik</th><th>Sıradaki</th><th>Son çalışma</th><th>Aktif</th><th></th></tr>
+            <tr class="sel"><td>Gece tam</td><td>Her gün 02:00</td><td>Bütün SQL tabloları</td><td>Tam</td><td>Evet</td><td class="n">12.11.2026 02:00</td><td><span class="chip err">Durdu · 11.11.2026 14:20</span></td><td><span class="chip ok">Evet</span></td><td>⋯</td></tr>
+            <tr><td>Hafta içi kısmi</td><td>Pzt–Cum 14:25</td><td>3 tablo</td><td>Kısmi · Talep, Stok</td><td>Hayır</td><td class="n">12.11.2026 14:25</td><td><span class="chip ok">Bitti · 11.11.2026 14:25</span></td><td><span class="chip ok">Evet</span></td><td>⋯</td></tr>
+          </table>
+        </div>
+        <div class="split"></div>
+        <div class="tbl">
+          <div class="dhead"><b>Gece tam · Geçmiş</b><span class="x">Büyüt &nbsp; ✕</span></div>
+          <div class="tool"><span class="sel">Standart (varsayılan) ▾</span><span style="color:var(--mute)">2 / 2</span><span class="sp"><span class="sb">Alanlar</span><span class="sb">Excel'e aktar</span></span></div>
+          <table>
+            <tr><th>Başlama</th><th>Bitiş</th><th>Tetik</th><th>Durum</th><th>Adım</th><th>Neden</th><th>Veri</th></tr>
+            <tr><td class="n">11.11.2026 14:20</td><td class="n">11.11.2026 14:20</td><td>Elle · sahip</td><td><span class="chip err">Durdu</span></td><td>Veri çek</td><td>Veri çekilemedi · 22 tablo: SQL kaynağına bağlanılamadı</td><td>—</td></tr>
+            <tr><td class="n">11.11.2026 02:00</td><td class="n">11.11.2026 02:09</td><td>Zamanlanmış</td><td><span class="chip ok">Bitti</span></td><td>Temizlik</td><td></td><td class="n">v62</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+<b>Kural:</b> Üstteki sekmeler ana gruplardır. Sekmenin tek bölümü varsa içerik doğrudan tam genişlikte açılır (B; Veri sözlüğü de böyle). Birden çok bölümü varsa solda alt menü çıkar, sağda yalnız seçili bölüm görünür (A). Her bölümün üst şeridinde adı, Kaydet ve Vazgeç; değişiklik yokken pasif, kaydedilmemiş değişiklikle başka bölüme ya da sekmeye geçince uyarı. İç kaydırma ve dar sütun yok.
+</div>
+</body></html>

@@ -15,7 +15,7 @@ export interface ServiceInfo {
   pool_in_use?: number;
   pool_size?: number;
   connections?: number;
-  /** Zamanlayıcı (K-163): son kontrol, sıradaki ve son akış, geciken akışın adı. */
+  /** Zamanlayıcı (K-163): son kontrol, sıradaki ve son zamanlanmış iş, geciken zamanlanmış işin adı. */
   checked_at?: string | null;
   next?: { name: string; at: string } | null;
   last?: { name: string; state: string; at: string } | null;

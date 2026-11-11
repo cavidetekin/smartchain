@@ -24,6 +24,8 @@ export interface Screen {
   requiresWorkspace?: boolean;
   /** Ekranı görme yetkisinin bağlı olduğu fonksiyon (K-100): okuma yetkisi yoksa menüde görünmez. */
   fn: number;
+  /** Ekranı bu fonksiyonun okuma yetkisi de açar (ör. Sistem ayarları: 96 ya da 92; K-164). */
+  orFn?: number;
 }
 
 export interface Group {
@@ -103,8 +105,8 @@ export const SCREENS: Screen[] = [
     description: "Servis durumu, iş kuyruğu, son çalışmalar, hatalar." },
   { no: "26", fn: 98, name: "Denetim izi", path: "/yonetim/denetim-izi", group: "yonetim", step: "2.6", icon: ScrollText,
     description: "Kim, ne zaman, neyi değiştirdi; eski ve yeni değer." },
-  { no: "25", fn: 96, name: "Sistem ayarları", path: "/yonetim/sistem-ayarlari", group: "yonetim", step: "2.4", icon: KeyRound,
-    description: "Veri sözlüğü, şifre ve oturum ayarları, sürüm." },
+  { no: "25", fn: 96, orFn: 92, name: "Sistem ayarları", path: "/yonetim/sistem-ayarlari", group: "yonetim", step: "2.4", icon: KeyRound,
+    description: "Veri sözlüğü, giriş ve oturum, sistem sağlığı ayarları, zamanlanmış işler, sürüm." },
 ];
 
 export const HOME = SCREENS[0];

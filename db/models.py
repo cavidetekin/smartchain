@@ -1780,8 +1780,8 @@ TableViewStandard = sa.Table(
 
 Flow = sa.Table(
     "Flow", metadata,
-    sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Akış kimliği", info={'label': "Akış kimliği"}),
-    sa.Column("Name", sa.Unicode(100), nullable=False, comment="Akışın adı", info={'label': "Akışın adı"}),
+    sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Zamanlanmış iş kimliği", info={'label': "Zamanlanmış iş kimliği"}),
+    sa.Column("Name", sa.Unicode(100), nullable=False, comment="Zamanlanmış işin adı", info={'label': "Zamanlanmış işin adı"}),
     sa.Column("IsActive", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Aktif", info={'label': "Aktif"}),
     sa.Column("RunTime", sa.Unicode(5), nullable=False, comment="Saat (SS:DD, sunucunun yerel saati)", info={'label': "Saat (SS:DD, sunucunun yerel saati)"}),
     sa.Column("Days", sa.Unicode(20), nullable=False, comment="Haftanın günleri; 1 Pazartesi … 7 Pazar, virgülle", info={'label': "Haftanın günleri"}),
@@ -1790,17 +1790,18 @@ Flow = sa.Table(
     sa.Column("TransferMode", sa.Unicode(10), nullable=False, comment="Tam | Kısmi", info={'values': ["Tam", "Kısmi"]}),
     sa.Column("TransferGroups", sa.Unicode(200), nullable=True, comment="Kısmi aktarımın grupları; JSON", info={'label': "Kısmi aktarımın grupları"}),
     sa.Column("Cleanup", sa.Boolean(), nullable=False, server_default=sa.text("0"), comment="Ham veri temizliği adımı", info={'label': "Ham veri temizliği adımı"}),
+    sa.Column("NextRunAt", mssql.DATETIME2(), nullable=True, comment="Sıradaki saat (UTC); kaydederken ve zamanlayıcının her turunda hesaplanır, pasifte boş (K-164)", info={'label': "Sıradaki saat (UTC)"}),
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)"}),
     sa.Column("UpdatedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=False, comment="Değiştiren", info={'label': "Değiştiren"}),
     sa.Index("UX_Flow_Name", "Name", unique=True),
     schema="adm",
-    comment="Zamanlanmış veri akışı (K-163): zaman, Veri çek kapsamı, aktarım türü, isteğe bağlı temizlik. Adımların sırası sabittir.",
+    comment="Zamanlanmış iş (K-163, K-164): zaman, Veri çek kapsamı, aktarım türü, isteğe bağlı temizlik. Adımların sırası sabittir.",
 )
 
 FlowRun = sa.Table(
     "FlowRun", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Çalıştırma kimliği", info={'label': "Çalıştırma kimliği"}),
-    sa.Column("FlowId", sa.Integer(), sa.ForeignKey("adm.Flow.Id"), index=True, nullable=False, comment="Akış", info={'label': "Akış"}),
+    sa.Column("FlowId", sa.Integer(), sa.ForeignKey("adm.Flow.Id"), index=True, nullable=False, comment="Zamanlanmış iş", info={'label': "Zamanlanmış iş"}),
     sa.Column("FlowName", sa.Unicode(100), nullable=False, comment="Çalıştığı andaki adı", info={'label': "Çalıştığı andaki adı"}),
     sa.Column("TriggerType", sa.Unicode(15), nullable=False, comment="Zamanlanmış | Elle", info={'values': ["Zamanlanmış", "Elle"]}),
     sa.Column("ScheduledAt", mssql.DATETIME2(), nullable=False, comment="Saati (UTC)", info={'label': "Saati (UTC)"}),
@@ -1816,7 +1817,7 @@ FlowRun = sa.Table(
     sa.Column("DataVersionId", sa.BigInteger(), nullable=True, comment="Açılan veri versiyonu", info={'label': "Açılan veri versiyonu"}),
     sa.Column("RequestedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Elle başlatan", info={'label': "Elle başlatan"}),
     schema="adm",
-    comment="Akışın her çalıştırması (K-163): zaman, adım, durum ve nedeni, işler, veri versiyonu.",
+    comment="Zamanlanmış işin her çalıştırması (K-163): zaman, adım, durum ve nedeni, işler, veri versiyonu.",
 )
 
 FlowRunDismissal = sa.Table(
@@ -1825,7 +1826,7 @@ FlowRunDismissal = sa.Table(
     sa.Column("UserId", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), primary_key=True, autoincrement=False, comment="Kullanıcı", info={'label': "Kullanıcı"}),
     sa.Column("DismissedAt", mssql.DATETIME2(), nullable=False, comment="Kapatma zamanı (UTC)", info={'label': "Kapatma zamanı (UTC)"}),
     schema="adm",
-    comment="Kullanıcının kapattığı akış bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez.",
+    comment="Kullanıcının kapattığı zamanlanmış iş bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez.",
 )
 
 License = sa.Table(

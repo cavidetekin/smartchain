@@ -110,7 +110,9 @@ export function MasterDetail<K extends string>({ id, master, detail, onClose }: 
           <section className="sc-md-pane sc-md-detail" style={{ flexGrow: expanded ? 1 : 1 - ratio }} aria-label={detail.title}>
             <header className="sc-md-head">
               <h2>{detail.title}</h2>
-              <Segment<K> label={detail.tabsLabel} hideLabel value={detail.tab} onChange={detail.onTab} options={detail.tabs.map((t) => ({ value: t.value, label: t.label }))} />
+              {detail.tabs.length > 1 && (  // tek sekmede seçim şeridi yok (ör. zamanlanmış işin geçmişi)
+                <Segment<K> label={detail.tabsLabel} hideLabel value={detail.tab} onChange={detail.onTab} options={detail.tabs.map((t) => ({ value: t.value, label: t.label }))} />
+              )}
               <div className="sc-md-actions">
                 <button type="button" className="sc-drawer-close" aria-label={expanded ? tr.ui.collapsePane : tr.ui.expandPane} title={expanded ? tr.ui.collapsePane : tr.ui.expandPane}
                         aria-pressed={expanded} onClick={() => setExpanded((v) => !v)}>

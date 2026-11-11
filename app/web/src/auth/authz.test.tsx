@@ -20,7 +20,7 @@ beforeEach(() => {
 describe("menü role göre (K-100)", () => {
   it.each([
     ["System owner", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Veri yükleme", "Kullanıcılar", "Sistem ayarları"], []],
-    ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı"], ["Sistem ayarları"]],
+    ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı", "Sistem ayarları"], []],  // K-164: yalnız Zamanlanmış işler sekmesi
     ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Senaryolar", "Veri yükleme", "Gece senaryoları", "Denetim izi"], ["Kullanıcılar"]],
     ["End user", ["Takip", "Veri"], ["Uyarılar", "Ana veri", "Veri kalitesi"],
      ["Senaryolar", "Çalışma", "Veri yükleme", "Veri kuralları", "Validasyon kuralları", "Parametre setleri", "Gece senaryoları", "Kullanıcılar", "Denetim izi"]],  // K-142
@@ -50,9 +50,9 @@ describe("yetkisiz ekran", () => {
     expect(screen.getByRole("link", { name: "Ana sayfaya dön" })).toHaveAttribute("href", "/ana-sayfa");
   });
 
-  it("Sistem ayarları Admin'e kapalı; destek yazar", () => {
+  it("Sistem ayarları Key user'a kapalı; destek yazar", () => {
     mockApi();
-    renderApp("/yonetim/sistem-ayarlari", meAs("Admin"));
+    renderApp("/yonetim/sistem-ayarlari", meAs("Key user"));
     expect(screen.getByText("Bu ekran için System owner yetkisi gerekir. Smartchain desteğine başvurun.")).toBeInTheDocument();
   });
 

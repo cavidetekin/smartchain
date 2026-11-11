@@ -60,6 +60,10 @@ export function NumberField({ label, help, error, required, value, onChange, dec
   const id = useId();
   const [text, setText] = useState(value === null ? "" : formatNumber(value, decimals));
   const [invalid, setInvalid] = useState(false);
+  useEffect(() => {  // değer dışarıdan değişince (ör. Vazgeç, K-164) kutu da değişir; yazarken değer değişmediği için dokunmaz
+    setText((t) => (parseTrNumber(t) === value ? t : value === null ? "" : formatNumber(value, decimals)));
+    setInvalid(false);
+  }, [value, decimals]);
   const commit = () => {
     if (!text.trim()) {
       setInvalid(false);

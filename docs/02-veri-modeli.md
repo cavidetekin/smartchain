@@ -2010,7 +2010,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `ExportMaxRows`: bir aktarımda en çok satır (500000)
   - `ExportFileHours`: arka planda hazırlanan dosyanın indirilebileceği süre, saat (24)
 - Sistem sağlığı (K-106; fonksiyon 94): `DiskWarnPercent` (85), `QueueWaitWarnMinutes` (10), `SystemEventRetentionDays` (90).
-- Zamanlanmış akışlar (K-163; fonksiyon 92): `FlowWaitMinutes`: elle başlatılmış işin bitmesini ve servisin geri gelmesini bekleme (60; 5–720); `FlowRefreshWaitMinutes`: ERP yenilemesinin bitmesini bekleme (120; 5–720).
+- Zamanlanmış işler (K-163, K-164; fonksiyon 92, Sistem ayarları → Zamanlanmış işler): `FlowWaitMinutes`: elle başlatılmış işin bitmesini ve servisin geri gelmesini bekleme (60; 5–720); `FlowRefreshWaitMinutes`: ERP yenilemesinin bitmesini bekleme (120; 5–720).
 - Ham veri temizliği (K-156; fonksiyon 09): `RawDataRetentionDays`: ham verinin saklama süresi, gün (1–30); varsayılan yok, boşsa temizlik çalışmaz.
 - Excel yükleme (K-129; fonksiyon 03): `ImportSyncMaxMb`: bu boyuta kadar ön kontrol istek içinde, üstü iş kuyruğunda (5); `ImportMaxMb`: en büyük dosya (100); `ImportMaxRows`: bir dosyada en çok satır (200000).
 - SQL çekimi (K-130; fonksiyon 01, 91): `IntegrationDatabase`: entegrasyon veritabanının adı, boşsa SQL yolu kapalı; `PullRetryWaitSeconds`: geçici hatada denemeler arası bekleme (30).
@@ -2073,12 +2073,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Sistem</sub>
 
 - Sistem · versiyonsuz · Faz 1
-- Zamanlanmış veri akışı (K-163): zaman, Veri çek kapsamı, aktarım türü, isteğe bağlı temizlik. Adımların sırası sabittir.
+- Zamanlanmış iş (K-163, K-164): zaman, Veri çek kapsamı, aktarım türü, isteğe bağlı temizlik. Adımların sırası sabittir.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
-| Id | int | PK | Akış kimliği | Sistem | H | E |  |
-| Name | nvarchar(100) | UK | Akışın adı | Kullanıcı | H | E |  |
+| Id | int | PK | Zamanlanmış iş kimliği | Sistem | H | E |  |
+| Name | nvarchar(100) | UK | Zamanlanmış işin adı | Kullanıcı | H | E |  |
 | IsActive | bit |  | Aktif | Kullanıcı | H | E | 1 |
 | RunTime | nvarchar(5) |  | Saat (SS:DD, sunucunun yerel saati) | Kullanıcı | H | E |  |
 | Days | nvarchar(20) |  | Haftanın günleri; 1 Pazartesi … 7 Pazar, virgülle | Kullanıcı | H | E |  |
@@ -2087,6 +2087,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | TransferMode | nvarchar(10) |  | Tam \| Kısmi | Kullanıcı | H | E |  |
 | TransferGroups | nvarchar(200) |  | Kısmi aktarımın grupları; JSON | Kullanıcı | H | H |  |
 | Cleanup | bit |  | Ham veri temizliği adımı | Kullanıcı | H | E | 0 |
+| NextRunAt | datetime2 |  | Sıradaki saat (UTC); kaydederken ve zamanlayıcının her turunda hesaplanır, pasifte boş (K-164) | Sistem | H | H |  |
 | UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) | Sistem | H | E |  |
 | UpdatedBy | int | FK | Değiştiren | Kullanıcı | H | E |  |
 
@@ -2094,12 +2095,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Sistem</sub>
 
 - Sistem · versiyonsuz · Faz 1
-- Akışın her çalıştırması (K-163): zaman, adım, durum ve nedeni, işler, veri versiyonu.
+- Zamanlanmış işin her çalıştırması (K-163): zaman, adım, durum ve nedeni, işler, veri versiyonu.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Çalıştırma kimliği | Sistem | H | E |  |
-| FlowId | int | FK,IX | Akış | Sistem | H | E |  |
+| FlowId | int | FK,IX | Zamanlanmış iş | Sistem | H | E |  |
 | FlowName | nvarchar(100) |  | Çalıştığı andaki adı | Sistem | H | E |  |
 | TriggerType | nvarchar(15) |  | Zamanlanmış \| Elle | Sistem | H | E |  |
 | ScheduledAt | datetime2 |  | Saati (UTC) | Sistem | H | E |  |
@@ -2119,7 +2120,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Sistem</sub>
 
 - Sistem · versiyonsuz · Faz 1
-- Kullanıcının kapattığı akış bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez.
+- Kullanıcının kapattığı zamanlanmış iş bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|

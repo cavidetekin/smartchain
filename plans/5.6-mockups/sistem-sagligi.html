@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Sistem ayarları · Sistem sağlığı</title>
+<style>
+:root{--ink:#1F2430;--mute:#6B7280;--line:#E3E6EB;--bg:#F6F7F9;--ind:#4F46E5;--indsoft:#EEF0FE}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI",system-ui,sans-serif;margin:0;padding:24px;background:#D9DCE2;color:var(--ink);font-size:13px}
+.app{max-width:1400px;margin:0 auto;background:var(--bg);border-radius:10px;overflow:hidden;box-shadow:0 10px 30px #0002;display:grid;grid-template-columns:44px 1fr;height:620px}
+.rail{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:12px}
+.rail i{width:16px;height:16px;border-radius:4px;background:#C9CDD6;display:block}
+.rail i.on{background:var(--ind)}
+.main{display:flex;flex-direction:column;min-width:0}
+.ctx{display:flex;justify-content:space-between;padding:8px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.pill{border:1px solid var(--line);border-radius:14px;padding:3px 10px;color:var(--mute);margin-right:6px;font-size:12px}
+.title{padding:14px 20px 10px}
+.title h1{font-size:22px;margin:0}
+.title span{color:var(--mute);font-size:12px}
+.tabs{display:inline-flex;border:1px solid #CDD2DA;border-radius:8px;overflow:hidden;background:#fff;margin:0 20px 14px;align-self:flex-start}
+.tabs span{padding:7px 14px;font-weight:600;color:#374151;border-right:1px solid #E3E6EB}
+.tabs span:last-child{border-right:0}
+.tabs span.on{background:var(--indsoft);color:var(--ind)}
+.body{flex:1;display:grid;grid-template-columns:200px auto;justify-content:start;gap:16px;padding:0 20px 18px;min-height:0}
+.nav{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;align-self:start}
+.nav div{padding:9px 12px;border-radius:7px;font-weight:600;color:#374151;margin-bottom:2px}
+.nav div.on{background:var(--indsoft);color:var(--ind);box-shadow:inset 3px 0 0 var(--ind)}
+.content{display:flex;flex-direction:column;gap:10px;min-width:0;width:640px}
+.strip{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.strip h3{margin:0;font-size:15px;margin-right:auto}
+.btn{border-radius:6px;padding:6px 14px;font-weight:600;font-size:13px}
+.primary{background:#C7CAF5;color:#fff}
+.ghost{color:#A5A8D8}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px}
+.fields{padding:4px 18px 8px}
+.f{display:grid;grid-template-columns:1fr 130px;gap:16px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.f:first-child{border-top:0}
+.f b{font-weight:400;display:block;color:var(--ink)}
+.f small{color:var(--mute);font-size:12px}
+input{border:1px solid #CDD2DA;border-radius:6px;padding:6px 10px;font:inherit;text-align:right;width:100%;font-family:Inter,"Segoe UI",sans-serif}
+</style></head><body>
+<div class="app">
+  <div class="rail"><i></i><i></i><i></i><i></i><i></i><i class="on"></i></div>
+  <div class="main">
+    <div class="ctx"><div><span class="pill">Senaryo: —</span><span class="pill">Plan versiyonu: —</span><span class="pill">Dönem: —</span></div><div><span class="pill">Veri v63 · 11.11.2026 14:18</span><span class="pill">İş yok</span><span class="pill">System owner</span></div></div>
+    <div class="title"><h1>Sistem ayarları</h1><span>Sürüm 0.31.0</span></div>
+    <div class="tabs"><span>Veri sözlüğü</span><span>Giriş ve oturum</span><span class="on">Sistem sağlığı</span><span>Zamanlanmış akışlar</span></div>
+    <div class="body">
+      <div class="nav">
+        <div class="on">İzleme eşikleri</div>
+        <div>Excel yükleme</div>
+        <div>Ham veri temizliği</div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="strip"><h3>İzleme eşikleri</h3><span class="btn ghost">Vazgeç</span><span class="btn primary">Kaydet</span></div>
+          <div class="fields">
+            <div class="f"><b>Disk uyarı eşiği (%)</b><input value="85"></div>
+            <div class="f"><b>Kuyruk bekleme eşiği (dk)</b><input value="10"></div>
+            <div class="f"><b>Hataların saklama süresi (gün)</b><input value="90"></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

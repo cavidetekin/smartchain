@@ -42,8 +42,8 @@ Her ekranın üstünde aynı yerde:
 - arka planda süren işlerin göstergesi (iş kuyruğu bildirimleri, K-69);
 - kullanıcı menüsü: ad ve rol, yazı boyutu (U-23), şifre değiştir, çıkış (2.1).
 
-- **Akış çipi (5.6, K-163):** bağlam çubuğunda "İş yok" çipinin yanında, yalnız son akış durduğunda ya da başlamadığında: kırmızı "Gece akışı durdu · 02:14 · Veri çekme" ya da "Gece akışı başlamadı · 02:00". Tıklayınca akışın adı, adımı ve nedeni; "Kapat" o kullanıcı için kapatır, System owner ve Admin için "Akış geçmişi" bağlantısı. Yeni bir durma ilk görüldüğünde bildirim de çıkar. End user'da yok.
-- **Akış sürerken (K-163):** Veri çek, Veri yükle, Veri aktarma menüsü, Excel'den yükle, ham veri temizliği ve kural kaydetme düğmeleri pasif; ipucu "Zamanlanmış akış sürüyor: Hafta içi kısmi (başlama 02:00). Bitince yeniden deneyin."
+- **Zamanlanmış iş çipi (5.6, K-163, K-164):** bağlam çubuğunda "İş yok" çipinin yanında, yalnız son çalıştırma durduğunda ya da başlamadığında: kırmızı "Zamanlanmış iş durdu · Gece tam" ya da "Zamanlanmış iş başlamadı · Gece tam". Tıklayınca zaman, adım ve neden; "Kapat" o kullanıcı için kapatır, System owner ve Admin için "Geçmiş" (Sistem ayarları → Zamanlanmış işler, o işin geçmişiyle). Yeni bir durma ilk görüldüğünde bildirim de çıkar. End user'da yok.
+- **Zamanlanmış iş sürerken (K-163):** Veri çek, Veri yükle, Veri aktarma menüsü, Excel'den yükle, ham veri temizliği ve kural kaydetme düğmeleri pasif; ipucu "Zamanlanmış iş sürüyor: Hafta içi kısmi (başlama 02:00)".
 
 ### Çalışma alanı
 
@@ -249,12 +249,12 @@ Tablodan seçilen kaydın ayrıntısı aynı ekranda gösterilecekse standart bu
 ## Yetki (2.2, K-99, K-100; fonksiyon 90)
 
 - **Kaynak:** rolün yetkileri `GET /api/auth/me`'nin `permissions` alanında (`{fonksiyon: full | owner | self | read | none}`); arayüz yalnız görünürlüğü ayarlar, güvenlik sunucudadır. Yardımcılar `app/web/src/auth/permissions.ts`: `can(me, fn, "read" | "write")`, gereken rol ve ipucu metni.
-- **Menü:** her ekranın bir fonksiyonu vardır (`catalog.ts`): Ana sayfa 82 · Senaryolar 42 · Çalışma 43 (çalışmanın ekranları onunla) · Uyarılar 83 · Raporlar 85 · Veri yükleme 03 · Ana veri 10 · Veri kuralları 16 · Veri kalitesi 20 · Parametre setleri 22 · Gece senaryoları 27 · Kullanıcılar 88 · Entegrasyon 91 · Sistem sağlığı 94 · Denetim izi 98 · Sistem ayarları 96. Okuma yetkisi olmayan ekran gizlenir.
+- **Menü:** her ekranın bir fonksiyonu vardır (`catalog.ts`): Ana sayfa 82 · Senaryolar 42 · Çalışma 43 (çalışmanın ekranları onunla) · Uyarılar 83 · Raporlar 85 · Veri yükleme 03 · Ana veri 10 · Veri kuralları 16 · Veri kalitesi 20 · Parametre setleri 22 · Gece senaryoları 27 · Kullanıcılar 88 · Entegrasyon 91 · Sistem sağlığı 94 · Denetim izi 98 · Sistem ayarları 96 ya da 92 (K-164). Okuma yetkisi olmayan ekran gizlenir.
 
   | Rol | Menü |
   |---|---|
   | System owner | hepsi |
-  | Admin | Sistem ayarları dışında hepsi |
+  | Admin | hepsi; Sistem ayarları'nda yalnız Zamanlanmış işler sekmesi, salt okunur (K-164) |
   | Key user | Yönetim grubunda yalnız Denetim izi (kendi kayıtları), ötekiler hepsi |
   | End user | Ana sayfa · Takip · Veri (Veri yükleme dışında) |
 
@@ -308,12 +308,24 @@ Başlık "Kullanıcılar", sağda "+ Kullanıcı ekle"; altında ekranı doldura
 
 **Rol değişince:** `me` yenilendiğinde rol farklıysa kabukta geçici bildirim: "Rolünüz Key user olarak değiştirildi."
 
-## Sistem ayarları (2.4, K-104, K-105; ekran 25, fonksiyon 96)
+## Sistem ayarları (2.4, K-104, K-105, K-164; ekran 25, fonksiyon 96 ve 92)
 
-Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski `/yonetim/system-owner` yeni adrese yönlenir); altında "Sürüm 0.18.0". Rol adı System owner olarak kalır; yetki mesajları değişmez. İki bölüm (`Segment`; K-82 ekranlar arası sekmeyi yasaklar, bu aynı ekranın bölümleri):
+Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski `/yonetim/system-owner` yeni adrese yönlenir); altında "Sürüm 0.18.0". Rol adı System owner olarak kalır; yetki mesajları değişmez. Ekranı 96 ya da 92 okuma yetkisi olan görür; her sekme kendi fonksiyonuyla açılır, yetkisi olmayan sekme gösterilmez (Admin: yalnız Zamanlanmış işler, salt okunur).
 
-- **Veri sözlüğü:** ekranı dolduran ortak tablo: Tablo, Alan, Etiket, Sınıf, Değer önceliği, Manuel, Senaryo, Zorunlu, Varsayılan değer, Ek alan; "Açıklama" varsayılan gizlidir, Alanlar panelinden açılır, Excel'e kolon açıksa ya da Sütunlar "Tümü" seçilirse çıkar. Satır sonundaki "Düzenle" pencereyi açar: alt satır `Material · AdditionalText1`, onun altında tek satır salt okunur açıklama; pencere tablo düzenindedir (solda alan adı, sağda değer, satırlar ince çizgiyle ayrılır). Etiket düzenlenir, yardımında standart etiket, ek alanda "Boşsa alan listelerde görünmez."; öteki alanlar pasif form öğesidir: Sınıf ve Değer önceliği liste; Manuel, Senaryo ve Zorunlu onay kutusu; Varsayılan değer metin kutusu. 5.1'de bunlar yalnız aktifleşir. Kullanılan ek alanın etiketi silinirken: "Bu alan 3 görünümde ve 1 kuralda kullanılıyor. Etiket silinirse bu görünümlerde görünmez; etiket yeniden yazılınca geri gelir." ve kiremit "Etiketi sil".
-- **Giriş ve oturum:** iki küme (Şifre; Giriş ve oturum), tablo düzeninde: solda alan adı, sağda içeriğe göre kısa sayı kutusu; form ekranı doldurmaz, sağdan taşmaz. Kayıtlı olmayan ayar varsayılan değeriyle görünür. Kaydet değişiklik yoksa pasif.
+**Ayar ekranı standardı (K-164; bundan sonraki ayar ekranları da böyle):**
+
+- **Sekmeler ana gruplardır** (`Segment`; K-82 ekranlar arası sekmeyi yasaklar, bunlar aynı ekranın bölümleri): Veri sözlüğü · Giriş ve oturum · Sistem sağlığı · Zamanlanmış işler. Adres `?sekme=…` ile açılır.
+- **Tek bölümlü sekme** içeriği doğrudan açar. **Birden çok bölümlü sekmede** solda alt menü çıkar, sağda yalnız seçili bölüm görünür.
+- **Ayar formu içeriği kadar geniştir:** sıkı satırlar (solda ad, sağda dar değer kutusu, satırlar ince çizgiyle ayrılır), ekranı kaplamaz. Yalnız tablolar (Veri sözlüğü, zamanlanmış işler listesi ve geçmişi) tam genişliktedir. Dar sütun ve iç kaydırma olmaz.
+- **Bölüm şeridi:** her bölümün üstünde bölümün adı, Vazgeç ve Kaydet; değişiklik yokken ikisi de pasif. Kaydedilmemiş değişiklikle başka bölüme, sekmeye ya da ekrana geçince uyarı (K-132).
+
+**Sekmeler:**
+
+- **Veri sözlüğü** (tek bölüm, tam genişlik ortak tablo): Tablo, Alan, Etiket, Sınıf, Değer önceliği, Manuel, Senaryo, Zorunlu, Varsayılan değer, Ek alan; "Açıklama" varsayılan gizlidir, Alanlar panelinden açılır, Excel'e kolon açıksa ya da Sütunlar "Tümü" seçilirse çıkar. Satır sonundaki "Düzenle" pencereyi açar: alt satır `Material · AdditionalText1`, onun altında tek satır salt okunur açıklama; pencere tablo düzenindedir (solda alan adı, sağda değer, satırlar ince çizgiyle ayrılır). Etiket düzenlenir, yardımında standart etiket, ek alanda "Boşsa alan listelerde görünmez."; öteki alanlar pasif form öğesidir: Sınıf ve Değer önceliği liste; Manuel, Senaryo ve Zorunlu onay kutusu; Varsayılan değer metin kutusu. 5.1'de bunlar yalnız aktifleşir. Kullanılan ek alanın etiketi silinirken: "Bu alan 3 görünümde ve 1 kuralda kullanılıyor. Etiket silinirse bu görünümlerde görünmez; etiket yeniden yazılınca geri gelir." ve kiremit "Etiketi sil".
+- **Giriş ve oturum:** alt menü Şifre (en az karakter, harf ve rakam zorunlu, son kaç şifreden farklı, geçerlilik süresi) · Oturum (kilit için hatalı giriş sayısı, kilit süresi, oturumun kapandığı süre, kapanmadan önce uyarı). Kayıtlı olmayan ayar varsayılan değeriyle görünür.
+- **Sistem sağlığı:** alt menü İzleme eşikleri (disk uyarı eşiği, kuyruk bekleme eşiği, hataların saklama süresi) · Excel yükleme · Ham veri temizliği (boş bırakılabilir).
+- **Zamanlanmış işler** (fonksiyon 92, K-163): üst şeritte "Zamanlanmış işler", iki bekleme süresi ("Elle iş ve servis için bekleme … dk", "ERP yenilemesi için bekleme … dk"), Vazgeç, Kaydet (ikincil) ve ana aksiyon "Yeni zamanlanmış iş". Altında ortak tabloda liste; satıra tıklayınca alt kartta "<ad> · Geçmiş" (ana–detay, K-161). Satır menüsü: Düzenle (Admin'de Görüntüle), Şimdi çalıştır (System owner, onaylı), Geçmiş. Admin'de bekleme süreleri, Kaydet, Yeni zamanlanmış iş ve Şimdi çalıştır pasif, ipuçlu.
+- **Zamanlanmış iş penceresi:** başlık "Zamanlanmış iş · <ad>" (yenide "Yeni zamanlanmış iş"), başlıkta Aktif anahtarı. Adımlar solda kalın adla, sağda kontrollerle, ince çizgiyle ayrılır: 1 · İş tanımı (Ad*) · 2 · Zamanlama* (dar saat kutusu, Pzt…Paz tek parça seçim şeridi) · 3 · Veri çekimi (Bütün tablolar / Seçili tablolar; seçilide Ana veri, Talep, Stok, Üretim, Satın alma, İzin kümeleri, başlıkta tümünü seç kutusu ve "seçili / seçilebilen" sayısı, Excel tablosu pasif ve "Excel" etiketli) · 4 · Veri aktarımı (Tam veri aktarımı / Kısmi veri aktarımı; kısmide grup kartları, kartta aktaracağı tablolar) · 5 · Ham veri temizliği (anahtar, "Aktarımdan sonra"). Kısmi seçilince Veri çekimi, kullanıcı değiştirmediyse, seçilen grupların SQL tablolarına geçer. Açıklama metni yoktur.
 
 **Yetki matrisi (K-100; ekran 22):** Kullanıcılar başlığının yanında "Yetki matrisi"; en geniş pencere, hücrelerde satır kayması olmaz: 14 grup satırı × 4 rol (Tam, Sahibi, Kendi, Salt okunur, Yok), grup yalnız adıyla; altında "Excel'e aktar", Kapat. İstisnalar pencerede yoktur; Excel fonksiyon düzeyindedir ve onları gösterir (98 satır; No, Fonksiyon, Grup, dört rol).
 
@@ -331,7 +343,7 @@ Başlık "Sistem sağlığı", sağda sunucu saati. Sırayla:
 
 **İptal penceresi** (ekran 24 ve iş paneli, yalnız başkasının işinde): "İşi iptal et", alt satır "Malzeme listesi · 142.000 satır · Mert · sıra 2" (özeti olmayan işte tür), "İş sahibine bildirim gider.", Neden (zorunlu, en çok 200), kiremit "İptal et". Öne al pencere açmaz: "İş öne alındı · Malzeme listesi · 142.000 satır" (özeti olmayan işte numara).
 
-**Sistem ayarları, üçüncü bölüm "Sistem sağlığı":** Disk uyarı eşiği (%), Kuyruk bekleme eşiği (dk), Hataların saklanma süresi (gün); Giriş ve oturum formuyla aynı düzen.
+**Sistem ayarları, "Sistem sağlığı" sekmesi:** İzleme eşikleri bölümünde Disk uyarı eşiği (%), Kuyruk bekleme eşiği (dk), Hataların saklanma süresi (gün); sıkı form (K-164).
 
 ## Denetim izi (2.6, K-108; ekran 26, fonksiyon 98)
 
@@ -427,4 +439,4 @@ Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyo
 | 4.1 ikinci ve üçüncü demo: sıra 1'den ve yalnız sürükle-bırak, Sıra kolonu dar ve sola hizalı (`DataTable` `fieldHints`), Durum her zaman dolu, lila hücre izi (`cellClass`), Kayıtlar kolon sırası seçeneğe göre, teknik kolonlar gizli (`filter_only`), ek alan etiketleri veri sözlüğünden, Veri çek penceresi ve başlıktaki toplu kutu (K-144, K-145) | uygulandı (4.1) |
 | Ana–detay düzeni (`ui/MasterDetail`): Dünden bugüne'de kapatma, ayraç, ilk dolu sekme | uygulandı (5.5b, K-161) |
 | Şirket Standart görünümü: Kaydet (System owner, Admin), Ürün Standart'ına döndür, sonradan eklenen alan | uygulandı (K-162) |
-| Zamanlanmış akışlar: Entegrasyon'da liste, pencere, geçmiş; bağlam çubuğunda akış çipi; akış sürerken pasif düğmeler | uygulandı (5.6, K-163) |
+| Zamanlanmış işler: Sistem ayarları'nda sekme (liste, pencere, geçmiş); bağlam çubuğunda çip; sürerken pasif düğmeler; ayar ekranı standardı | uygulandı (5.6, K-163, K-164) |

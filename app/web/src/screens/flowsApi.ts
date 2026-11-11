@@ -1,4 +1,4 @@
-// Zamanlanmış akışlar (ekran 23, fonksiyon 92; K-163): tanım, şimdi çalıştır, durum çipi.
+// Zamanlanmış işler (ekran 25 · Zamanlanmış işler sekmesi, fonksiyon 92; K-163, K-164): tanım, bekleme süreleri, şimdi çalıştır, durum çipi.
 import { getJson, postJson, sendJson } from "../api/client";
 
 export const SCOPE_ALL = "Tümü";
@@ -42,18 +42,30 @@ export interface Flow {
   last: FlowRun | null;
 }
 
-export interface FlowOptions {
-  tables: { entity: string; name: string; method: string }[];
-  sql_tables: string[];
-  groups: { name: string; tables: { entity: string; name: string }[]; sql_tables: string[] }[];
+export interface FlowTable {
+  entity: string;
+  name: string;
+  method: string;
 }
+
+export interface FlowOptions {
+  tables: FlowTable[];
+  sql_tables: string[];
+  /** Aktarım grupları (Kısmi veri aktarımı kartları). */
+  groups: { name: string; tables: FlowTable[]; sql_tables: string[] }[];
+  /** Veri çekimi kümeleri: Ana veri ve aktarım grupları (K-164). */
+  pull_sets: { name: string; tables: FlowTable[] }[];
+}
+
+export type FlowSettings = { FlowWaitMinutes: number; FlowRefreshWaitMinutes: number };
 
 export interface FlowsResponse {
   flows: Flow[];
   options: FlowOptions;
   running: FlowRun | null;
   can_edit: boolean;
-  settings: { FlowWaitMinutes: number; FlowRefreshWaitMinutes: number };
+  settings: FlowSettings;
+  limits: Record<keyof FlowSettings, { min: number; max: number }>;
 }
 
 export interface FlowBody {
@@ -82,6 +94,7 @@ export const flowsApi = {
   list: (signal?: AbortSignal) => getJson<FlowsResponse>("/api/flows", signal),
   create: (body: FlowBody) => postJson<FlowsResponse & { id: number }>("/api/flows", body),
   update: (id: number, body: FlowBody) => sendJson<FlowsResponse & { id: number }>("PUT", `/api/flows/${id}`, body),
+  saveSettings: (changes: Partial<FlowSettings>) => sendJson<FlowsResponse>("PUT", "/api/flows/settings", changes),
   runNow: (id: number) => postJson<{ run_id: number }>(`/api/flows/${id}/run`, {}),
   status: (signal?: AbortSignal) => getJson<FlowStatus>("/api/flows/status", signal),
   dismiss: (runId: number) => sendJson<void>("POST", `/api/flows/runs/${runId}/dismiss`),

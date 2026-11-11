@@ -85,7 +85,7 @@ describe("ekran", () => {
     const scheduler = screen.getByTestId("service-scheduler");  // K-163
     expect(scheduler).toHaveTextContent("Zamanlayıcı");
     expect(within(scheduler).getByText("Gecikti")).toHaveClass("sc-tag--risk");
-    expect(scheduler).toHaveTextContent(/son kontrol \d\d:\d\d:\d\d · Hafta içi kısmi saatinde başlamadı · sıradaki: Pazar tam, .+ · son akış: Hafta içi kısmi, Durdu/);
+    expect(scheduler).toHaveTextContent(/son kontrol \d\d:\d\d:\d\d · Hafta içi kısmi saatinde başlamadı · sıradaki: Pazar tam, .+ · son zamanlanmış iş: Hafta içi kısmi, Durdu/);
     expect(screen.getByRole("radio", { name: "İş kuyruğu" })).toBeChecked();
     expect(screen.getByText("Sırada")).toHaveClass("sc-tag--risk");
     expect(document.body.textContent).not.toMatch(/K-\d+/);
