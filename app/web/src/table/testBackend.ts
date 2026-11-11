@@ -160,6 +160,11 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.views.push({ method, url, body });
       if (method === "GET") return { body: saved };
+      if (url.includes("/views/standard")) {   // şirket Standart'ı (K-162)
+        const standard = method === "DELETE" ? null : { definition: body.definition, warnings: [], updated_by_name: "Ad Admin", updated_at: "2026-11-11T10:00:00+00:00" };
+        saved = { ...saved, standard };
+        return method === "DELETE" ? { status: 204, body: null } : { body: standard };
+      }
       if (url.includes("/views/default")) {
         saved = { ...saved, default_view_id: body.view_id };
         return { body: { default_view_id: body.view_id } };

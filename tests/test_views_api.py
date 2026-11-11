@@ -1,4 +1,5 @@
 """Kayıtlı görünümler (K-89): veritabanıyla. Geçici ikinci kullanıcı ve "pytest " önekli görünümler temizlenir."""
+import json
 from datetime import date, timedelta, timezone
 
 import pytest
@@ -149,3 +150,71 @@ def test_aggregate_choice_is_saved_with_view(api, users):
 def test_views_are_per_list(api, users):
     v = create(api, users[0], "pytest Liste")
     assert api.put(f"/api/othername/views/{v['id']}", headers=auth(users[0]), json={"name": "x"}).status_code == 404
+
+
+# --- Şirket Standart'ı (K-162) ---
+
+@pytest.fixture
+def roles(db_engine):
+    """Admin, Key user ve End user; şirket Standart'ı ve onların varsayılanları sonra temizlenir."""
+    names = {"Admin": "pytest-std-admin", "Key user": "pytest-std-key", "End user": "pytest-std-end"}
+
+    def clean(conn):
+        conn.execute(text("DELETE FROM adm.TableViewStandard WHERE ListName = N'materials'"))
+        ids = [r[0] for r in conn.execute(text("SELECT Id FROM adm.AppUser WHERE UserName LIKE 'pytest-std-%'"))]
+        if ids:
+            conn.execute(text(f"DELETE FROM adm.TableViewDefault WHERE UserId IN ({','.join(map(str, ids))})"))
+            conn.execute(text(f"DELETE FROM adm.TableView WHERE OwnerUserId IN ({','.join(map(str, ids))})"))
+        delete_users(conn, ids)
+    with db_engine.begin() as conn:
+        clean(conn)
+        out = {role: ensure_user(conn, name, role, f"Ad {role}") for role, name in names.items()}
+    yield out
+    with db_engine.begin() as conn:
+        clean(conn)
+
+
+STANDARD = {"columns": [{"field": "Name", "width": 12}, {"field": "Code"}, {"field": "MaterialGroup"}], "pinned": 0, "sort": [], "filters": [], "group_by": []}
+
+
+def test_company_standard_saved_by_admin_opens_for_everyone_without_default(api, roles, db_engine):
+    admin, key, end = roles["Admin"], roles["Key user"], roles["End user"]
+    before = listed(api, end)
+    assert before["standard"] is None and before["can_edit_standard"] is False and listed(api, admin)["can_edit_standard"] is True
+    for user in (key, end):
+        r = api.put("/api/materials/views/standard", headers=auth(user), json={"definition": STANDARD})
+        assert r.status_code == 403 and r.json()["error"]["code"] == "view_standard_forbidden"
+    r = api.put("/api/materials/views/standard", headers=auth(admin), json={"definition": STANDARD})
+    assert r.status_code == 200, r.text
+    got = listed(api, end)
+    assert [c["field"] for c in got["standard"]["definition"]["columns"]] == ["Name", "Code", "MaterialGroup"]
+    assert got["standard"]["updated_by_name"] == "Ad Admin" and got["default_view_id"] is None
+    own = create(api, end, "pytest kendi")                                                   # kendi varsayılanı olan: onunki açılır
+    api.put("/api/materials/views/default", headers=auth(end), json={"view_id": own["id"]})
+    assert listed(api, end)["default_view_id"] == own["id"]
+    with db_engine.connect() as c:
+        actions = [r[0] for r in c.execute(text("SELECT Action FROM adm.AuditLog WHERE ObjectKey = N'materials · Standart' ORDER BY Id"))]
+    assert actions[-1] == "Standart görünüm değiştirildi"
+
+
+def test_fields_added_later_follow_product_default_and_hidden_stay_hidden(api, roles, db_engine):
+    admin = roles["Admin"]
+    api.put("/api/materials/views/standard", headers=auth(admin), json={"definition": STANDARD})
+    with db_engine.begin() as c:   # ürün güncellemesini taklit: MaterialLevel (varsayılan görünür) ve Brand (varsayılan gizli) kayıt anında yokmuş
+        known = [f for f in api.get("/api/materials/columns", headers=auth(admin)).json()["columns"]]
+        names = [k["field"] for k in known if k["field"] not in ("MaterialLevel", "Brand")]
+        c.execute(text("UPDATE adm.TableViewStandard SET KnownFields = :k WHERE ListName = N'materials'"), {"k": json.dumps(names)})
+    fields = [c["field"] for c in listed(api, admin)["standard"]["definition"]["columns"]]
+    assert fields[:3] == ["Name", "Code", "MaterialGroup"] and "MaterialLevel" in fields      # yeni ve varsayılan görünür: eklendi
+    assert "Brand" not in fields and "BaseUom" not in fields                                   # yeni ama gizli; Standart'ta gizlenmiş: gizli kalır
+
+
+def test_reset_to_product_standard(api, roles, db_engine):
+    admin, key = roles["Admin"], roles["Key user"]
+    api.put("/api/materials/views/standard", headers=auth(admin), json={"definition": STANDARD})
+    assert api.delete("/api/materials/views/standard", headers=auth(key)).status_code == 403
+    assert api.delete("/api/materials/views/standard", headers=auth(admin)).status_code == 204
+    assert listed(api, key)["standard"] is None
+    with db_engine.connect() as c:
+        last = c.execute(text("SELECT TOP 1 Action FROM adm.AuditLog WHERE ObjectKey = N'materials · Standart' ORDER BY Id DESC")).scalar()
+    assert last == "Standart görünüm ürün hâline döndü"

@@ -1,6 +1,7 @@
 // Kayıtlı görünüm (U-9, K-89): seçici (görünür etiketsiz, ekran okuyucu adı "Görünüm"), "⋯" menüsü (Kaydet, Farklı
 // kaydet, Varsayılan yap, Sil) ve hemen yanında "Sıralamayı temizle" ikonu (1.6 demosu). Kaydedilmemiş değişiklik "⋯" düğmesinin köşesinde indigo noktayla gösterilir.
-// Görünümler veritabanında; kullanıcı A-36 gereği şimdilik user_id ile. Açılışta kullanıcının varsayılanı uygulanır.
+// Görünümler veritabanında; kullanıcı A-36 gereği şimdilik user_id ile. Açılışta kullanıcının varsayılanı uygulanır, yoksa Standart: şirket Standart'ı varsa o (K-162).
+// Standart'ı yalnız System owner ve Admin kaydeder ya da ürün hâline döndürür (sunucunun `can_edit_standard` bilgisi).
 import { ArrowUpDown, Ellipsis } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -8,7 +9,7 @@ import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
 import { Checkbox, ConfirmDialog, Dialog, TextField } from "../ui";
 import { useFloating } from "../ui/popover";
-import { listApi, type ListColumn, type SavedView, type ViewDefinition } from "./types";
+import { listApi, type ListColumn, type SavedView, type StandardView, type ViewDefinition } from "./types";
 import { fromDefinition, isDirty, standardState, type TableState, toDefinition } from "./viewState";
 
 const T = tr.table;
@@ -21,11 +22,15 @@ export interface Views {
   currentId: number | null;
   baseline: ViewDefinition | null;
   warnings: string[];
+  /** Şirket Standart'ı var mı; kullanıcı Standart'ı kaydedebilir mi (K-162). */
+  companyStandard: boolean;
+  canEditStandard: boolean;
   select(id: number | null): void;
   save(state: TableState): Promise<void>;
   saveAs(state: TableState, name: string, shared: boolean): Promise<void>;
   remove(): Promise<void>;
   toggleDefault(): Promise<void>;
+  resetStandard(): Promise<void>;
   dismissWarnings(): void;
 }
 
@@ -40,17 +45,25 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [standard, setStandard] = useState<StandardView | null>(null);
+  const [canEditStandard, setCanEditStandard] = useState(false);
   const applyRef = useRef(apply);
   applyRef.current = apply;
+  const standardRef = useRef<StandardView | null>(null);
 
   const use = useCallback((view: SavedView | null) => {
     if (!columns) return;
-    const state = view ? fromDefinition(view.definition, columns) : standardState(columns);
+    const company = standardRef.current;
+    const state = view ? fromDefinition(view.definition, columns) : company ? fromDefinition(company.definition, columns) : standardState(columns);
     applyRef.current(state);
     setCurrentId(view?.id ?? null);
     setBaseline(toDefinition(state));
-    setWarnings(view?.warnings ?? []);
+    setWarnings(view ? view.warnings : company?.warnings ?? []);
   }, [columns]);
+  const setCompany = (s: StandardView | null) => {
+    standardRef.current = s;
+    setStandard(s);
+  };
 
   useEffect(() => {
     if (!columns) return;
@@ -59,6 +72,9 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
       .then((r) => {
         setViews(r.views);
         setDefaultId(r.default_view_id);
+        standardRef.current = r.standard ?? null;
+        setStandard(r.standard ?? null);
+        setCanEditStandard(Boolean(r.can_edit_standard));
         use(r.views.find((v) => v.id === r.default_view_id) ?? null);
         setReady(true);
       })
@@ -73,10 +89,15 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
 
   const current = views.find((v) => v.id === currentId) ?? null;
   return {
-    ready, error, views, defaultId, currentId, baseline, warnings,
+    ready, error, views, defaultId, currentId, baseline, warnings, companyStandard: standard !== null, canEditStandard,
     select: (id) => use(views.find((v) => v.id === id) ?? null),
     async save(state) {
-      if (!current) return;
+      if (!current) {
+        if (!canEditStandard) return;
+        setCompany(await api.saveStandard(toDefinition(state)));  // şirket Standart'ı (K-162)
+        setBaseline(toDefinition(state));
+        return;
+      }
       const saved = await api.updateView(current.id, { definition: toDefinition(state) });
       setViews((vs) => vs.map((v) => (v.id === saved.id ? saved : v)));
       setBaseline(toDefinition(state));
@@ -100,12 +121,17 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
       await api.setDefaultView(next);
       setDefaultId(next);
     },
+    async resetStandard() {
+      await api.resetStandard();
+      setCompany(null);
+      if (currentId === null) use(null);
+    },
     dismissWarnings: () => setWarnings([]),
   };
 }
 
 export function ViewBar({ views, state, onClearSort }: { views: Views; state: TableState; onClearSort(): void }) {
-  const [confirm, setConfirm] = useState<{ kind: "switch"; id: number | null } | { kind: "delete" } | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: "switch"; id: number | null } | { kind: "delete" } | { kind: "reset" } | null>(null);
   const [saveAs, setSaveAs] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -139,11 +165,17 @@ export function ViewBar({ views, state, onClearSort }: { views: Views; state: Ta
   const isDefault = views.defaultId === views.currentId;
   // Nesne bağlamı (K-100): başkasının görünümü salt okunur; Kaydet ve Sil pasif, nedeni araç ipucunda.
   const notOwner = current && !owner ? tr.authz.viewOwnerOnly : undefined;
+  // Standart (K-162): System owner ve Admin kaydeder; öteki rollerde nedeni ipucunda.
+  const canSave = owner || (!current && views.canEditStandard);
+  const saveReason = notOwner ?? (!current && !views.canEditStandard ? tr.authz.standardOnlyAdmins : undefined);
   const items: { label: string; disabled: boolean; strong?: boolean; reason?: string; run(): void }[] = [
-    { label: T.save, disabled: !(dirty && owner), strong: dirty && owner, reason: notOwner, run: () => views.save(state) },
+    { label: T.save, disabled: !(dirty && canSave), strong: dirty && canSave, reason: saveReason, run: () => views.save(state) },
     { label: T.saveAs, disabled: false, run: () => setSaveAs(true) },
     { label: isDefault && current ? T.removeDefault : T.makeDefault, disabled: isDefault && !current, run: () => views.toggleDefault() },
     { label: T.deleteView, disabled: !owner, reason: notOwner, run: () => setConfirm({ kind: "delete" }) },
+    ...(!current && views.canEditStandard
+      ? [{ label: T.resetStandard, disabled: !views.companyStandard, reason: views.companyStandard ? undefined : T.noCompanyStandard, run: () => setConfirm({ kind: "reset" }) }]
+      : []),
   ];
 
   return (
@@ -176,6 +208,11 @@ export function ViewBar({ views, state, onClearSort }: { views: Views; state: Ta
         <ConfirmDialog title={T.switchTitle} message={T.switchMessage} confirmLabel={T.switchConfirm}
                        onCancel={() => setConfirm(null)}
                        onConfirm={() => { views.select(confirm.id); setConfirm(null); }} />
+      )}
+      {confirm?.kind === "reset" && (
+        <ConfirmDialog title={T.resetStandard} message={T.resetStandardMessage} confirmLabel={T.resetStandard} danger
+                       onCancel={() => setConfirm(null)}
+                       onConfirm={() => { setConfirm(null); void views.resetStandard(); }} />
       )}
       {confirm?.kind === "delete" && current && (
         <ConfirmDialog title={T.deleteTitle} message={T.deleteMessage(current.name)} confirmLabel={T.deleteView} danger

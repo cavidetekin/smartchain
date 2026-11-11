@@ -2054,6 +2054,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ListName | nvarchar(60) | PK | Liste adı | Sistem | H | E |  |
 | ViewId | int | FK | Varsayılan görünüm | Kullanıcı | H | E |  |
 
+### TableViewStandard
+<sub>21. Veri modeli · Sistem</sub>
+
+- Sistem · versiyonsuz · Faz 1
+- Şirket Standart görünümü (K-162): System owner ya da Admin'in kaydettiği Standart, liste başına tek satır. Satır yoksa liste tanımındaki Standart geçerlidir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| ListName | nvarchar(60) | PK | Liste adı | Sistem | H | E |  |
+| Definition | nvarchar(max) |  | Görünüm içeriği; JSON, sürümlü (docs/08) | Kullanıcı | H | E |  |
+| KnownFields | nvarchar(max) |  | Kaydedildiği anda listedeki alanlar; JSON. Sonradan eklenen alan ürünün varsayılanına göre gelir | Sistem | H | E |  |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı | Sistem | H | E |  |
+| UpdatedBy | int | FK | Kaydeden | Kullanıcı | H | E |  |
+
 ### License
 <sub>21. Veri modeli · Sistem</sub>
 

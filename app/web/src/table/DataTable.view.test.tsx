@@ -38,6 +38,47 @@ async function saveAs(user: ReturnType<typeof userEvent.setup>, name: string, sh
   await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
 }
 
+describe("şirket Standart'ı (K-162)", () => {
+  const company = { definition: { v: 1 as const, columns: [{ field: "Name" }, { field: "Code", width: 9 }], pinned: 0, sort: [], filters: [], group_by: [], aggregates: {}, rules: [] },
+                    warnings: [], updated_by_name: "Ad Admin", updated_at: "2026-11-11T10:00:00+00:00" };
+
+  it("şirket Standart'ı varsa kendi varsayılanı olmayana o açılır", async () => {
+    await openTable({ views: { views: [], default_view_id: null, standard: company, can_edit_standard: false } });
+    expect(calls.queries[0].fields).toEqual(["Name", "Code"]);
+    expect(selectedText()).toBe("Standart (varsayılan)");
+  });
+
+  it("System owner ve Admin Standart'ı kaydeder; ürün Standart'ına onayla döner", async () => {
+    const user = userEvent.setup();
+    await openTable({ views: { views: [], default_view_id: null, can_edit_standard: true } });
+    const menu = await viewMenu(user);
+    expect(within(menu).getByRole("menuitem", { name: "Ürün Standart'ına döndür" })).toBeDisabled();  // şirket Standart'ı yok
+    await user.keyboard("{Escape}");
+    await user.click(sortButton("Malzeme kodu"));
+    await viewAction(user, "Kaydet");
+    await waitFor(() => expect(lastViewCall("PUT")?.url).toBe("/api/materials/views/standard"));
+    expect(lastViewCall("PUT")?.body).toMatchObject({ definition: { sort: [{ field: "Code", dir: "asc" }] } });
+    await waitFor(() => expect(screen.queryByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeNull());
+    await viewAction(user, "Ürün Standart'ına döndür");
+    const dialog = screen.getByRole("dialog", { name: "Ürün Standart'ına döndür" });
+    expect(within(dialog).getByText(/Kendi varsayılanını seçmemiş herkes için geçerlidir/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Ürün Standart'ına döndür" }));
+    await waitFor(() => expect(lastViewCall("DELETE")?.url).toBe("/api/materials/views/standard"));
+    await waitFor(() => expect(calls.queries.at(-1)?.fields).toEqual(STANDARD_FIELDS));
+  });
+
+  it("öteki rollerde Standart'ta Kaydet pasif, nedeni ipucunda; ürün hâline dönüş görünmez", async () => {
+    const user = userEvent.setup();
+    await openTable({ views: { views: [], default_view_id: null, can_edit_standard: false } });
+    await user.click(sortButton("Malzeme kodu"));
+    const menu = await viewMenu(user);
+    const save = within(menu).getByRole("menuitem", { name: "Kaydet" });
+    expect(save).toBeDisabled();
+    expect(save).toHaveAttribute("title", "Standart görünümü yalnız System owner ve Admin değiştirebilir.");
+    expect(within(menu).queryByRole("menuitem", { name: "Ürün Standart'ına döndür" })).toBeNull();
+  });
+});
+
 describe("kayıtlı görünüm (U-9, K-89)", () => {
   const mine = savedView(5, "Benim", { columns: [{ field: "Name" }, { field: "Code", width: 8 }], sort: [{ field: "Code", dir: "desc" }] });
 

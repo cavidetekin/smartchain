@@ -1,6 +1,8 @@
 """Kayıtlı görünümler (K-89, docs/08 "Görünümler").
 
 İçerik kaydederken liste tanımına göre doğrulanır; açılırken artık olmayan alanlar atılır ve uyarı döner.
+Şirket Standart'ı (K-162): Standart'ı System owner ve Admin kaydeder, kendi varsayılanını seçmemiş herkese açılır; sonradan listeye eklenen alan
+ürünün varsayılanına göre gelir (kaydedildiği andaki alan listesi `KnownFields`).
 Yalnız sahibi değiştirir ya da siler; paylaşılanı şimdilik herkes görür (rol kuralı 2.2). Kullanıcı A-36 gereği
 şimdilik user_id ile gelir.
 """
@@ -15,9 +17,10 @@ from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, field_title
 from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
-    AggSpec, DefaultViewRequest, FilterItem, FormatRule, ViewCreate, ViewDefinition, ViewUpdate,
+    AggSpec, DefaultViewRequest, FilterItem, FormatRule, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
 )
 from ..repositories import audit, lists as list_repo, views as repo
+from ..permissions import ADMIN, SYSTEM_OWNER, Access
 from . import authz
 from .auth import CurrentUser
 
@@ -26,6 +29,10 @@ SHARED_CREATED = "Paylaşılan görünüm oluşturuldu"
 SHARED_CHANGED = "Paylaşılan görünüm değiştirildi"
 SHARED_DELETED = "Paylaşılan görünüm silindi"
 VIEW_OBJECT = "TableView"
+STANDARD_CHANGED = "Standart görünüm değiştirildi"
+STANDARD_RESET = "Standart görünüm ürün hâline döndü"
+STANDARD_EDITORS = (SYSTEM_OWNER, ADMIN)
+STANDARD_FORBIDDEN = "Standart görünümü yalnız System owner ve Admin değiştirebilir."
 
 
 
@@ -144,6 +151,24 @@ def _out(b: Builder, row: dict, user_id: int) -> dict:
     }
 
 
+def _standard_out(b: Builder, row: dict | None) -> dict | None:
+    """Şirket Standart'ı bugünkü listeye uyarlanır: kalkan alan atılır (uyarı), sonradan eklenen alan ürünün varsayılanına göre sona eklenir."""
+    if row is None:
+        return None
+    definition, warnings = _clean(b, row["Definition"])
+    known = set(json.loads(row["KnownFields"] or "[]"))
+    present = {c["field"] for c in definition["columns"]}
+    definition["columns"] += [{"field": f, "width": None} for f, c in b.columns.items() if c["default_visible"] and f not in known and f not in present]
+    return {"definition": definition, "warnings": warnings, "updated_by_name": row["UpdatedByName"],
+            "updated_at": row["UpdatedAt"].replace(tzinfo=timezone.utc).isoformat(timespec="seconds")}
+
+
+def _ensure_editor(user: CurrentUser, defn: ListDefinition) -> None:
+    if user.role not in STANDARD_EDITORS:
+        authz.record_denial(user, defn.function, Access.WRITE, {"list": defn.name, "reason": "Standart görünüm"})
+        raise AppError("view_standard_forbidden", STANDARD_FORBIDDEN, 403)
+
+
 def _run(session: Session | None, user_id: int, work):
     if session is None:
         raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
@@ -176,12 +201,13 @@ def _owned(session: Session, defn: ListDefinition, view_id: int, user: CurrentUs
     return row
 
 
-def list_views(session: Session | None, defn: ListDefinition, user_id: int) -> dict:
+def list_views(session: Session | None, defn: ListDefinition, user_id: int, role: str | None = None) -> dict:
     def work():
         b = _builder(session, defn)
         views = [_out(b, r, user_id) for r in repo.list_views(session, defn.name, user_id)]
         default = repo.read_default(session, user_id, defn.name)
-        return {"views": views, "default_view_id": default if any(v["id"] == default for v in views) else None}
+        return {"views": views, "default_view_id": default if any(v["id"] == default for v in views) else None,
+                "standard": _standard_out(b, repo.get_standard(session, defn.name)), "can_edit_standard": role in STANDARD_EDITORS}
     return _run(session, user_id, work)
 
 
@@ -238,6 +264,30 @@ def delete(session: Session | None, defn: ListDefinition, user: CurrentUser, vie
                               {"Name": row["Name"], "IsShared": True})
         session.commit()
     _run(session, user_id, work)
+
+
+def save_standard(session: Session | None, defn: ListDefinition, user: CurrentUser, body: StandardUpdate) -> dict:
+    """Şirket Standart'ını yazar (K-162); yalnız System owner ve Admin. İz aynı işlemde."""
+    def work():
+        _ensure_editor(user, defn)
+        b = _builder(session, defn)
+        d = _validated(b, body.definition)
+        had = repo.get_standard(session, defn.name) is not None
+        repo.save_standard(session, defn.name, _dump(d), json.dumps(list(b.columns), ensure_ascii=False), user.id, repo.now(session))
+        audit.write_audit(session, STANDARD_CHANGED, user.id, VIEW_OBJECT, f"{defn.name} · Standart", {"list": defn.name, "Definition": "değişti" if had else "ilk kez kaydedildi"})
+        session.commit()
+        return _standard_out(b, repo.get_standard(session, defn.name))
+    return _run(session, user.id, work)
+
+
+def reset_standard(session: Session | None, defn: ListDefinition, user: CurrentUser) -> None:
+    """Ürün Standart'ına döndür (K-162): şirket Standart'ı silinir."""
+    def work():
+        _ensure_editor(user, defn)
+        if repo.delete_standard(session, defn.name):
+            audit.write_audit(session, STANDARD_RESET, user.id, VIEW_OBJECT, f"{defn.name} · Standart", {"list": defn.name})
+        session.commit()
+    _run(session, user.id, work)
 
 
 def set_default(session: Session | None, defn: ListDefinition, user_id: int, body: DefaultViewRequest) -> dict:

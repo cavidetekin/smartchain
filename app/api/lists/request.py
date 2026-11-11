@@ -157,6 +157,11 @@ class ViewUpdate(BaseModel):
     definition: ViewDefinition | None = None
 
 
+class StandardUpdate(BaseModel):
+    """Şirket Standart'ı (K-162)."""
+    definition: ViewDefinition
+
+
 class DefaultViewRequest(BaseModel):
     view_id: int | None = None
 

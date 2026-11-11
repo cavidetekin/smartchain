@@ -84,6 +84,7 @@ export const tr = {
     screenText: (role: string, systemOwner: boolean) =>
       `Bu ekran için ${role} yetkisi gerekir. ${systemOwner ? "Smartchain desteğine başvurun." : "Yetki için yöneticinize başvurun."}`,
     viewOwnerOnly: "Bu görünümü yalnız sahibi değiştirebilir.",
+    standardOnlyAdmins: "Standart görünümü yalnız System owner ve Admin değiştirebilir.",
     notice: "Bildirim",
     roleChanged: (role: string) => `Rolünüz ${role} olarak değiştirildi.`,
   },
@@ -819,6 +820,9 @@ export const tr = {
     makeDefault: "Varsayılan yap",
     removeDefault: "Varsayılanı kaldır",
     deleteView: "Sil",
+    resetStandard: "Ürün Standart'ına döndür",
+    resetStandardMessage: "Şirketin Standart görünümü silinir; liste ürünle gelen Standart görünümle açılır. Kendi varsayılanını seçmemiş herkes için geçerlidir.",
+    noCompanyStandard: "Standart zaten ürünle gelen hâlinde.",
     viewName: "Görünüm adı",
     shared: "Paylaşılan (herkes görür)",
     switchTitle: "Kaydedilmemiş değişiklik",

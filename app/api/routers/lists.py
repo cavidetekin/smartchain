@@ -10,7 +10,7 @@ from ..deps import require
 from ..permissions import Access
 from ..lists import LISTS, ListDefinition
 from ..lists.request import (
-    DefaultViewRequest, ExportRequest, GroupsRequest, QueryRequest, ValuesRequest, ViewCreate, ViewUpdate,
+    DefaultViewRequest, ExportRequest, GroupsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
 )
 from ..services import export, lists as service, views
 from ..services.auth import CurrentUser
@@ -52,7 +52,7 @@ def list_router(defn: ListDefinition) -> APIRouter:
     # Kayıtlı görünümler (K-89).
     @router.get("/views", summary=f"{defn.name}: görünümler ve kullanıcının varsayılanı")
     def list_views(user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
-        return views.list_views(session, defn, user.id)
+        return views.list_views(session, defn, user.id, user.role)
 
     @router.post("/views", status_code=201, summary=f"{defn.name}: yeni görünüm")
     def create_view(body: ViewCreate, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
@@ -62,6 +62,15 @@ def list_router(defn: ListDefinition) -> APIRouter:
     def default_view(body: DefaultViewRequest, user: CurrentUser = Depends(read),
                      session: Session = Depends(get_session)) -> dict:
         return views.set_default(session, defn, user.id, body)
+
+    @router.put("/views/standard", summary=f"{defn.name}: şirket Standart'ını kaydet (System owner, Admin; K-162)")
+    def save_standard(body: StandardUpdate, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
+        return views.save_standard(session, defn, user, body)
+
+    @router.delete("/views/standard", status_code=204, summary=f"{defn.name}: ürün Standart'ına döndür (System owner, Admin; K-162)")
+    def reset_standard(user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> Response:
+        views.reset_standard(session, defn, user)
+        return Response(status_code=204)
 
     @router.put("/views/{view_id}", summary=f"{defn.name}: görünümü değiştir (yalnız sahibi)")
     def update_view(view_id: int, body: ViewUpdate, user: CurrentUser = Depends(read),

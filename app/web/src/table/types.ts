@@ -195,9 +195,19 @@ export interface SavedView {
   warnings: string[];
 }
 
+/** Şirket Standart'ı (K-162): System owner ya da Admin'in kaydettiği Standart. */
+export interface StandardView {
+  definition: ViewDefinition;
+  warnings: string[];
+  updated_by_name: string;
+  updated_at: string;
+}
+
 export interface ViewsResponse {
   views: SavedView[];
   default_view_id: number | null;
+  standard?: StandardView | null;
+  can_edit_standard?: boolean;
 }
 
 export type Row = { Id: number } & Record<string, unknown>;
@@ -232,6 +242,8 @@ export function listApi(list: string) {
     updateView: (id: number, body: { name?: string; is_shared?: boolean; definition?: ViewDefinition }) =>
       sendJson<SavedView>("PUT", `${base}/views/${id}`, body),
     deleteView: (id: number) => sendJson<void>("DELETE", `${base}/views/${id}`),
+    saveStandard: (definition: ViewDefinition) => sendJson<StandardView>("PUT", `${base}/views/standard`, { definition }),
+    resetStandard: () => sendJson<void>("DELETE", `${base}/views/standard`),
     export: async (body: ExportRequest): Promise<ExportResult> => {
       const r = await ensureOk(await fetch(`${base}/export`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),

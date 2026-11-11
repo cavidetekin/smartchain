@@ -1,4 +1,4 @@
-"""Kayıtlı görünüm sorguları (adm.TableView, adm.TableViewDefault; K-89)."""
+"""Kayıtlı görünüm sorguları (adm.TableView, adm.TableViewDefault, adm.TableViewStandard; K-89, K-162)."""
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,7 @@ from db.models import metadata
 
 VIEW = metadata.tables["adm.TableView"]
 DEFAULT = metadata.tables["adm.TableViewDefault"]
+STANDARD = metadata.tables["adm.TableViewStandard"]
 USER = metadata.tables["adm.AppUser"]
 
 
@@ -54,6 +55,24 @@ def set_default(session: Session, user_id: int, list_name: str, view_id: int | N
     session.execute(sa.delete(DEFAULT).where(DEFAULT.c.UserId == user_id, DEFAULT.c.ListName == list_name))
     if view_id is not None:
         session.execute(sa.insert(DEFAULT).values(UserId=user_id, ListName=list_name, ViewId=view_id))
+
+
+def get_standard(session: Session, list_name: str) -> dict | None:
+    """Şirket Standart'ı (K-162) ve kaydedenin adı."""
+    name = sa.func.coalesce(USER.c.FullName, USER.c.UserName).label("UpdatedByName")
+    row = session.execute(sa.select(STANDARD, name).select_from(STANDARD.join(USER, USER.c.Id == STANDARD.c.UpdatedBy))
+                          .where(STANDARD.c.ListName == list_name)).mappings().first()
+    return dict(row) if row else None
+
+
+def save_standard(session: Session, list_name: str, definition: str, known: str, user_id: int, at) -> None:
+    values = {"Definition": definition, "KnownFields": known, "UpdatedAt": at, "UpdatedBy": user_id}
+    if session.execute(sa.update(STANDARD).where(STANDARD.c.ListName == list_name).values(**values)).rowcount == 0:
+        session.execute(sa.insert(STANDARD).values(ListName=list_name, **values))
+
+
+def delete_standard(session: Session, list_name: str) -> bool:
+    return session.execute(sa.delete(STANDARD).where(STANDARD.c.ListName == list_name)).rowcount > 0
 
 
 def now(session: Session):

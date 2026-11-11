@@ -62,7 +62,7 @@ VALUE_LABELS = {
     "dir": {"asc": "Artan", "desc": "Azalan"},
     "filters": {"yok": "Yok"},
     "source": {"kurulum": "Kurulum"},
-    "Definition": {"değişti": "Değişti"},
+    "Definition": {"değişti": "Değişti", "ilk kez kaydedildi": "İlk kez kaydedildi"},
 }
 
 FIELD_NAME_KEYS = frozenset({"columns", "group_by", "field"})  # değeri listenin alan adı: listenin etiketiyle gösterilir

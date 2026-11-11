@@ -280,6 +280,10 @@ Kullanıcı oturumdan gelir (K-97).
 | `PUT /api/<liste>/views/{id}` | Ad, paylaşım ya da içerik değişir; yalnız sahibi |
 | `DELETE /api/<liste>/views/{id}` | Siler (varsayılan yapılmışsa o seçimler de kalkar); yalnız sahibi |
 | `PUT /api/<liste>/views/default` | `{"view_id": 4}` ya da `{"view_id": null}` (Standart) |
+| `PUT /api/<liste>/views/standard` | Şirket Standart'ı: `{"definition"}`; yalnız System owner ve Admin, öteki rollere 403 `view_standard_forbidden`. İz "Standart görünüm değiştirildi" (K-162) |
+| `DELETE /api/<liste>/views/standard` | Ürün Standart'ına döndür: şirket Standart'ı silinir; yalnız System owner ve Admin. İz "Standart görünüm ürün hâline döndü" |
+
+`GET /api/<liste>/views` cevabında `standard`: şirket Standart'ı (`definition`, `updated_at`, `updated_by_name`, `warnings`) ya da `null`; `can_edit_standard`. Kaydedildikten sonra listeye eklenen alan ürünün varsayılanına göre eklenir (`KnownFields`).
 
 **İçerik** (`definition`, sürüm 1):
 

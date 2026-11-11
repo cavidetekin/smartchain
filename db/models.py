@@ -1767,6 +1767,17 @@ TableViewDefault = sa.Table(
     comment="Kullanıcının bir liste için varsayılan görünümü (K-89). Satır yoksa liste tanımındaki \"Standart\" görünüm açılır.",
 )
 
+TableViewStandard = sa.Table(
+    "TableViewStandard", metadata,
+    sa.Column("ListName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Liste adı", info={'label': "Liste adı"}),
+    sa.Column("Definition", mssql.NVARCHAR(), nullable=False, comment="Görünüm içeriği; JSON, sürümlü (docs/08)", info={'label': "Görünüm içeriği"}),
+    sa.Column("KnownFields", mssql.NVARCHAR(), nullable=False, comment="Kaydedildiği anda listedeki alanlar; JSON. Sonradan eklenen alan ürünün varsayılanına göre gelir", info={'label': "Kaydedildiği anda listedeki alanlar"}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı"}),
+    sa.Column("UpdatedBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=False, comment="Kaydeden", info={'label': "Kaydeden"}),
+    schema="adm",
+    comment="Şirket Standart görünümü (K-162): System owner ya da Admin'in kaydettiği Standart, liste başına tek satır. Satır yoksa liste tanımındaki Standart geçerlidir.",
+)
+
 License = sa.Table(
     "License", metadata,
     sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Kimlik", info={'label': "Kimlik"}),
