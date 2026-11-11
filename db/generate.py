@@ -50,6 +50,7 @@ STAGING_COLS = [
     ("ErrorText", "nvarchar(400)", "Hata açıklaması", False),
     ("SourceRowNo", "int", "Kaynaktaki satır no", False),
     ("IsCurrent", "bit", "Tablonun güncel hâlinde mi (K-133)", True),
+    ("SupersededAt", "datetime2", "Satırın güncel hâlden çıktığı zaman (UTC; K-160)", False),
 ]
 # İşlenmiş katman (K-140): ham katmanın güncel satırlarının kopyası; StagingRowId ham satırdan gelir, kimlik değil
 PROCESSED_COLS = [
@@ -355,7 +356,7 @@ def render_map(spec) -> str:
         "- **Aynı ad, üç katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla, hiç değişmez), `prc.Material` güncel hâli veri kuralları uygulanmış, `core.Material` Smartchain'in tablosu (Id ile). Kurallar `prc`'de çalışır, aktarım `prc`'den `core`'a yapılır (K-58, K-140).",
         "- **Versiyonlu tablolar:** `VersionFrom`, `VersionTo`, `ImportBatchId`, `BusinessKey`, `UpdatedAt` alanlarını taşır. Birincil anahtar `Id + VersionFrom`; `Id` bir kaydın bütün versiyonlarında aynıdır. Güncel kayıtta `VersionTo` boştur; tekillik (UK) yalnız güncel kayıtlarda aranır.",
         "- **İlişkiler:** Versiyonsuz tabloya giden ilişkiler veritabanında yabancı anahtarla (FK) korunur. Versiyonlu tabloya giden ilişkilerde FK yoktur, yalnız indeks vardır; bütünlüğü aktarım adımı (kod→Id) sağlar.",
-        "- **Entegrasyon tablolarının standart alanları:** `stg`'de `StagingRowId`, `ImportBatchId`, `ErrorText`, `SourceRowNo`, `IsCurrent` (K-133); `prc`'de `StagingRowId` (ham satırdan), `ImportBatchId`, `SourceRowNo`, `RowStatus` (Yeni, Hatalı, Aktarıldı). Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.",
+        "- **Entegrasyon tablolarının standart alanları:** `stg`'de `StagingRowId`, `ImportBatchId`, `ErrorText`, `SourceRowNo`, `IsCurrent` (K-133), `SupersededAt` (K-160); `prc`'de `StagingRowId` (ham satırdan), `ImportBatchId`, `SourceRowNo`, `RowStatus` (Yeni, Hatalı, Aktarıldı). Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.",
         "- **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.",
         "",
     ]

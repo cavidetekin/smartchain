@@ -2,6 +2,7 @@
 // step: ekranın geleceği geliştirme adımı (GELISTIRME_ADIMLARI.md); description: docs/05'teki tek satır.
 import type { LucideIcon } from "lucide-react";
 import {
+  GitCompareArrows,
   Activity, Boxes, CalendarClock, CalendarRange, ChartGantt, ClipboardList, Database, Factory, FileChartColumn,
   FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, ListChecks, Moon, Network, Package, Plug, ScrollText, Send, Settings,
   ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles,
@@ -78,6 +79,8 @@ export const SCREENS: Screen[] = [
 
   { no: "02", fn: 3, name: "Veri yükleme", path: "/veri/veri-yukleme", group: "veri", step: "3.1", icon: Upload,
     description: "Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, veri aktarım geçmişi." },
+  { no: "28", fn: 101, name: "Dünden bugüne", path: "/veri/dunden-bugune", group: "veri", step: "5.5b", icon: GitCompareArrows,
+    description: "Ham veride tablo başına dünden bugüne satır sayısı değişimi; yeni gelen, gelmeyen ve güncellenen kayıtlar." },
   { no: "04", fn: 16, name: "Veri kuralları", path: "/veri/veri-kurallari", group: "veri", step: "4.1", icon: WandSparkles,
     description: "Tablo başına sıralı veri kuralları: koşul, sonuç, seçenek; sıra, aç / kapa, kuralları yeniden uygula." },
   { no: "27", fn: 100, name: "Validasyon kuralları", path: "/veri/validasyon-kurallari", group: "veri", step: "3.4", icon: ListChecks,

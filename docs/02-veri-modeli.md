@@ -95,7 +95,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Alan grupları ve veri akışı
 <sub>21. Veri modeli · Genel görünüm</sub>
 
-- **Veri yönetimi  13 tablo:** ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · DataVersion
+- **Veri yönetimi  15 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · DataVersion
 - **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** ParameterSet · PlanningSetting · PriorityRule · AllocationRule
@@ -217,6 +217,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **prc.*:** İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış (K-140)
 - **DataVersion:** Aktarım ile oluşan dondurulmuş veri versiyonu
 - **DataVersionEntity:** Aktarımda hangi tabloların aktarıldığı
+- **RawCompare:** Dünden bugüne: tablo başına karşılaştırma özeti (K-160)
+- **RawCompareRow:** Dünden bugüne: yeni gelen, gelmeyen ve güncellenen kayıtlar (K-160)
 
 ### Tablo listesi
 <sub>21. Veri modeli · Tablo listesi · 6/6</sub>
@@ -1335,6 +1337,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | JobId | bigint |  | Büyük dosyada ön kontrol işi; SQL partisinde çekim işi | Sistem | H | H |  |
 | SourceObject | nvarchar(128) |  | SQL partisinde okunan view | Sistem | H | H |  |
 | SignalId | bigint |  | SQL partisinde okunan `ERP_LoadLog` satırı | Sistem | H | H |  |
+| AppliedAt | datetime2 |  | Partinin güncel hâle işlendiği zaman (UTC); Dünden bugüne karşılaştırması buna göre | Sistem | H | H |  |
 | RawDeletedAt | datetime2 |  | Ham verinin silindiği zaman; temizlik partinin güncel olmayan satırlarını, bulgularını ve dosyasını siler (UTC) | Sistem | H | H |  |
 
 ### ImportFinding
@@ -1544,6 +1547,43 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ClosedCount | int |  | Silinen (kapatılan) kayıt sayısı | Sistem | H | H |  |
 | NotTransferredCount | int |  | Aktarılmayan satır sayısı (Hatalı, zorunlu ilişkisi çevrilemeyen) | Sistem | H | H |  |
 | Note | nvarchar(400) |  | Tek satır not: eşik aşıldı, veri gelmedi, ana verisi aktarılmadı (K-151) | Sistem | H | H |  |
+
+### RawCompare
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Dünden bugüne (K-160): tablo başına ham verinin son hâli ile önceki günün son hâlinin karşılaştırma özeti. Yükleme sonrası hesaplanır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| EntityName | nvarchar(60) | PK | Tablo | Sistem | H | E |  |
+| TodayAt | datetime2 |  | Son verinin işlendiği zaman (UTC) | Sistem | H | E |  |
+| YesterdayAt | datetime2 |  | Önceki günün son verisinin işlendiği zaman (UTC); yoksa boş | Sistem | H | H |  |
+| TodayLoad | nvarchar(20) |  | Tam \| Ekle / güncelle \| Karma | Sistem | H | E |  |
+| YesterdayRows | int |  | Dünkü satır sayısı | Sistem | H | H |  |
+| TodayRows | int |  | Bugünkü satır sayısı | Sistem | H | E |  |
+| NewCount | int |  | Yeni gelen kayıt sayısı | Sistem | H | H |  |
+| MissingCount | int |  | Dün gelip bugün gelmeyen kayıt sayısı | Sistem | H | H |  |
+| ChangedCount | int |  | Güncellenen kayıt sayısı | Sistem | H | H |  |
+| State | nvarchar(20) |  | Hazır \| Önceki veri yok \| Hesaplanamadı | Sistem | H | E |  |
+| ComputedAt | datetime2 |  | Hesap zamanı (UTC) | Sistem | H | E |  |
+
+### RawCompareRow
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Dünden bugüne (K-160): yeni gelen, gelmeyen ve güncellenen kayıtlar; güncellenen kayıtta değişen alan başına bir satır. Tablonun her hesabında yeniden yazılır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| EntityName | nvarchar(60) | IX | Tablo | Sistem | H | E |  |
+| Kind | nvarchar(15) |  | Yeni \| Gelmeyen \| Güncellenen | Sistem | H | E |  |
+| StagingRowId | bigint |  | Ham satır: yeni gelende bugünkü, gelmeyende dünkü, güncellenende bugünkü satır | Sistem | H | E |  |
+| RowKey | nvarchar(200) |  | Kayıt: tablonun anahtar alanları | Sistem | H | E |  |
+| FieldLabel | nvarchar(200) |  | Alan; yalnız güncellenende dolu | Sistem | H | H |  |
+| OldValue | nvarchar(400) |  | Dünkü değer | Sistem | H | H |  |
+| NewValue | nvarchar(400) |  | Bugünkü değer | Sistem | H | H |  |
 
 ### ScenarioDefinition
 <sub>21. Veri modeli · Plan</sub>

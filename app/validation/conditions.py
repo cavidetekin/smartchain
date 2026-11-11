@@ -19,7 +19,7 @@ OPERATORS = (EQ, NE, GT, LT, GE, LE, CONTAINS, STARTS, IN_LIST, EMPTY, FILLED)  
 NO_VALUE = (EMPTY, FILLED)
 TEXT_ONLY = (CONTAINS, STARTS)
 SYMBOL = {EMPTY: "boş", FILLED: "boş değil", CONTAINS: "içerir", STARTS: "ile başlar", IN_LIST: "listede"}
-EXCLUDED = ("StagingRowId", "ImportBatchId", "RowStatus", "ErrorText", "SourceRowNo", "IsCurrent")
+EXCLUDED = ("StagingRowId", "ImportBatchId", "RowStatus", "ErrorText", "SourceRowNo", "IsCurrent", "SupersededAt")
 
 
 class ConditionError(ValueError):

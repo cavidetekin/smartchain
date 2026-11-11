@@ -215,6 +215,14 @@ export const tr = {
     excel: "Excel'e aktar",
     excelFailed: "Excel dosyası hazırlanamadı.",
   },
+  // Dünden bugüne (ekran 28, fonksiyon 101; K-159, K-160)
+  rawCompare: {
+    title: "Dünden bugüne",
+    tabs: "Kayıtlar",
+    newTab: (n: string) => `Yeni gelenler · ${n}`,
+    missingTab: (n: string) => `Gelmeyenler · ${n}`,
+    changedTab: (n: string) => `Güncellenenler · ${n}`,
+  },
   // Veri aktarım geçmişi ve ham veri temizliği (fonksiyon 08, 09; K-156)
   history: {
     button: "Veri aktarım geçmişi",

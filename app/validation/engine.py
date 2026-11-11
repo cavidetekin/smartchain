@@ -321,7 +321,9 @@ def run_table(session: Session, run_id: int, entity: str, related: bool, progres
 
 
 def _run_table(session: Session, run_id: int, entity: str, related: bool, progress: Callable[[str], None]) -> dict:
+    from app.compare import raw as compare
     from . import rules_step
+    compare.refresh(session, entity)  # Dünden bugüne (K-160): ham veri karşılaştırması; düşerse validasyon sürer
     _set_run(session, run_id, State=RULES, StartedAt=utcnow())
     progress(RULES)
     rules_step.run(session, entity)

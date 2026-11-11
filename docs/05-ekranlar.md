@@ -284,6 +284,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Uygulama (5.4 demo, K-157):** üst şeritte iki düğme: "Veri çek" (ana) ve "Veri aktarımı ▾" (ikincil); menüde "Tam veri aktarımı", "Kısmi veri aktarımı", ayırıcı, "Veri aktarım geçmişi" (yukarıdaki ayrı düğmelerin yerine). Ham veri temizliği penceresinde tek uyarı cümlesi ve "Silinecek: n yükleme · n eski satır · n dosya (boyut)".
 - **Uygulama (5.5, K-158):** üst şeritte "Veri çek", "Veri yükle" (birden çok Excel dosyası; tek listede ön kontrol, mod dosya başına) ve "Veri aktarma ▾". Tabloda "Son aktarım" kolonu ve "Yeni veri" çipi; şablon bilgisi kolonları varsayılan olarak gizli. Yukarıdaki "Önce doğrula" (yeni, değişen, silinen ön izlemesi), "Kısmi aktarım" (hatalı varlık seçimi) ve sağ paneller yapılmaz; hata detayı validasyon çekmecesinde, geçmiş Veri aktarım geçmişi çekmecesinde.
 
+### Dünden bugüne
+<sub>24. Ekranlar ve fonksiyonlar · Ekran 28</sub>
+
+- **Üst tablo:** tablo başına bir satır: tablo, dünkü veri, bugünkü veri, bugünkü yükleme (Tam / Ekle / güncelle / Karma), dünkü satır, bugünkü satır, değişim %, yeni gelen, gelmeyen, güncellenen, durum. Önceki verisi olmayan tabloda karşılaştırma alanları "—", durum "Önceki veri yok".
+- **Alt tablo:** satır seçilince Yeni gelenler ve Gelmeyenler (tablonun bütün alanları), Güncellenenler (kayıt, alan, dünkü değer, bugünkü değer).
+- **Uygulama (5.5b, K-159, K-160):** iki tablo da ortak tablo (sıralama, filtre, Excel, koşullu biçim); End user da görür.
+
 ### Ana veri ekranları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 03/25</sub>
 

@@ -105,7 +105,7 @@ export function CleanupDialog({ onClose, onStarted }: { onClose(): void; onStart
   };
 
   const p = plan?.preview;
-  const empty = p !== null && p !== undefined && p.batches === 0;
+  const empty = p !== null && p !== undefined && p.batches === 0 && p.rows === 0;
   return (
     <Dialog title={T.cleanupTitle} onClose={onClose} onSubmit={() => void start()} submitLabel={T.cleanupStart} danger
             submitDisabled={!plan || Boolean(plan.blocked) || !p || empty} busy={busy} wide>

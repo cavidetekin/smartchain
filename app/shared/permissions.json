@@ -227,6 +227,19 @@
         "Key user": "read",
         "End user": "none"
       }
+    },
+    {
+      "key": "A2",
+      "letter": "A",
+      "name": "Dünden bugüne",
+      "first": 101,
+      "last": 101,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
     }
   ],
   "functions": [
@@ -1328,6 +1341,17 @@
         "Admin": "full",
         "Key user": "read",
         "End user": "none"
+      }
+    },
+    {
+      "no": 101,
+      "name": "Dünden bugüne",
+      "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
       }
     }
   ],

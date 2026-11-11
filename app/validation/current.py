@@ -4,6 +4,8 @@ Tam: güncel hâlin yerine geçer; partide olmayan kayıt güncel hâlden çıka
 öteki kayıtlar kalır. Ön kontrolde düşen satırın anahtarı okunabiliyorsa (bulgudaki kayıt) o anahtarın önceki güncel
 satırı kalır; Tam'da da silinmiş sayılmaz. Güncel hâlden çıkan satırların validasyon bulguları silinir.
 """
+from datetime import datetime, timezone
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
@@ -15,6 +17,7 @@ from .sqlkit import ROW_KEY_SEPARATOR, current, raw_table as table, same
 FULL, CHANGED = "Tam", "Değişen"
 FINDING = metadata.tables["adm.ImportFinding"]
 VALIDATION = metadata.tables["adm.ValidationFinding"]
+BATCH = metadata.tables["adm.ImportBatch"]
 ERROR = "Hata"
 
 
@@ -36,9 +39,10 @@ def _protected(session: Session, entity: str, batch_id: int) -> list[int]:
     return out
 
 
-def apply_batch(session: Session, entity: str, batch_id: int, mode: str) -> dict[str, int]:
-    """Partiyi güncel hâle işler; commit çağıranındır. (çıkan, giren) satır sayısı."""
+def apply_batch(session: Session, entity: str, batch_id: int, mode: str, now: datetime | None = None) -> dict[str, int]:
+    """Partiyi güncel hâle işler; commit çağıranındır. (çıkan, giren) satır sayısı. Çıkan satırın ve partinin zamanı aynıdır (K-160: "dün" hâli bunlarla ayrılır)."""
     t = table(entity)
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
     keys = key_fields(entity)
     if mode == FULL or not keys:
         keep = _protected(session, entity, batch_id) if mode == FULL else []
@@ -50,18 +54,19 @@ def apply_batch(session: Session, entity: str, batch_id: int, mode: str) -> dict
                     for start in range(0, len(keep), 1000):
                         session.execute(sa.text("INSERT INTO #keep (Id) VALUES " + ", ".join(f"({int(i)})" for i in keep[start:start + 1000])))
                     stmt = stmt.where(sa.text("StagingRowId NOT IN (SELECT Id FROM #keep)"))
-                    removed = session.execute(stmt.values(IsCurrent=False)).rowcount
+                    removed = session.execute(stmt.values(IsCurrent=False, SupersededAt=now)).rowcount
                 finally:
                     session.execute(sa.text("DROP TABLE #keep"))
             else:
-                removed = session.execute(stmt.values(IsCurrent=False)).rowcount
+                removed = session.execute(stmt.values(IsCurrent=False, SupersededAt=now)).rowcount
         else:
             removed = 0  # anahtarsız tabloda ekle / güncelle ekler
     else:
         new = t.alias("new")
         matched = sa.exists().where(new.c.ImportBatchId == batch_id, *[same(new.c[k], t.c[k]) for k in keys])
-        removed = session.execute(sa.update(t).where(current(t), t.c.ImportBatchId != batch_id, matched).values(IsCurrent=False)).rowcount
+        removed = session.execute(sa.update(t).where(current(t), t.c.ImportBatchId != batch_id, matched).values(IsCurrent=False, SupersededAt=now)).rowcount
     added = session.execute(sa.update(t).where(t.c.ImportBatchId == batch_id).values(IsCurrent=True)).rowcount
+    session.execute(sa.update(BATCH).where(BATCH.c.Id == batch_id).values(AppliedAt=now))
     if removed:
         session.execute(sa.delete(VALIDATION).where(
             VALIDATION.c.EntityName == entity,

@@ -8,7 +8,7 @@
 - **Aynı ad, üç katman:** `stg.Material` ERP'den geldiği haliyle (kodlarla, hiç değişmez), `prc.Material` güncel hâli veri kuralları uygulanmış, `core.Material` Smartchain'in tablosu (Id ile). Kurallar `prc`'de çalışır, aktarım `prc`'den `core`'a yapılır (K-58, K-140).
 - **Versiyonlu tablolar:** `VersionFrom`, `VersionTo`, `ImportBatchId`, `BusinessKey`, `UpdatedAt` alanlarını taşır. Birincil anahtar `Id + VersionFrom`; `Id` bir kaydın bütün versiyonlarında aynıdır. Güncel kayıtta `VersionTo` boştur; tekillik (UK) yalnız güncel kayıtlarda aranır.
 - **İlişkiler:** Versiyonsuz tabloya giden ilişkiler veritabanında yabancı anahtarla (FK) korunur. Versiyonlu tabloya giden ilişkilerde FK yoktur, yalnız indeks vardır; bütünlüğü aktarım adımı (kod→Id) sağlar.
-- **Entegrasyon tablolarının standart alanları:** `stg`'de `StagingRowId`, `ImportBatchId`, `ErrorText`, `SourceRowNo`, `IsCurrent` (K-133); `prc`'de `StagingRowId` (ham satırdan), `ImportBatchId`, `SourceRowNo`, `RowStatus` (Yeni, Hatalı, Aktarıldı). Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
+- **Entegrasyon tablolarının standart alanları:** `stg`'de `StagingRowId`, `ImportBatchId`, `ErrorText`, `SourceRowNo`, `IsCurrent` (K-133), `SupersededAt` (K-160); `prc`'de `StagingRowId` (ham satırdan), `ImportBatchId`, `SourceRowNo`, `RowStatus` (Yeni, Hatalı, Aktarıldı). Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
 - **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.
 
 ## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58); ham katman, hiç değişmez (K-140) (25 tablo)
@@ -142,7 +142,7 @@
 | `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan |  | 8 |
 | `planning.PlanMetric` | Senaryo karşılaştırma metrikleri; senaryo silinse de özet kısa süre kalır. | Plan |  | 3 |
 
-## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (29 tablo)
+## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (31 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -152,7 +152,7 @@
 | `adm.DataRuleEffect` | Kural izi (K-140): işlenmiş katmanda hangi hücreyi hangi kuralın son değiştirdiği ve ham değer; her çalıştırmada tablo için yeniden yazılır. İpucu: "Kural 3 · Lokasyon bayrakları · ham değer: boş". | Veri yönetimi |  | 5 |
 | `adm.ManualValue` | Kayıt bazında elle girilen değer. | Veri yönetimi |  | 8 |
 | `adm.FieldValueSource` | Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır). | Veri yönetimi |  | 6 |
-| `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri saklama süresi kadar saklanır (`RawDataRetentionDays`; boşsa temizlik çalışmaz, K-156); parti kaydı ve sayıları silinmez. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129). | Veri yönetimi |  | 16 |
+| `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri saklama süresi kadar saklanır (`RawDataRetentionDays`; boşsa temizlik çalışmaz, K-156); parti kaydı ve sayıları silinmez. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129). | Veri yönetimi |  | 17 |
 | `adm.ImportFinding` | Partinin ön kontrol bulguları (fonksiyon 03). Validasyon (fonksiyon 04) partiye değil staging'in güncel hâline aittir, bulguları `ValidationFinding`'dedir (K-134). | Veri yönetimi |  | 9 |
 | `adm.IntegrationEntity` | Tablo başına çekim ayarı (K-130). Satır yoksa ya da yöntem boşsa tablo Excel sayılır, çekim açıktır. | Veri yönetimi |  | 19 |
 | `adm.IntegrationViewVersion` | View'ın sürüm geçmişi (K-130): tanım değişince yeni sürüm. Smartchain view oluşturmaz, yalnız okur ve saklar. | Veri yönetimi |  | 8 |
@@ -162,6 +162,8 @@
 | `adm.ValidationFinding` | Staging'in güncel hâlinin validasyon bulguları (K-134). Bir kural yeniden çalışınca o kuralın o tablodaki bulguları yenilenir; güncel hâlden çıkan satırın bulguları silinir. Ön kontrol bulguları `ImportFinding`'dedir. | Veri yönetimi |  | 10 |
 | `adm.DataVersion` | Aktarım ile oluşan dondurulmuş veri versiyonu; tam ya da kısmi (K-152). | Veri yönetimi |  | 8 |
 | `adm.DataVersionEntity` | Aktarımda hangi tabloların aktarıldığı (kısmi aktarımda seçilen grupların tabloları). | Veri yönetimi |  | 8 |
+| `adm.RawCompare` | Dünden bugüne (K-160): tablo başına ham verinin son hâli ile önceki günün son hâlinin karşılaştırma özeti. Yükleme sonrası hesaplanır. | Veri yönetimi |  | 11 |
+| `adm.RawCompareRow` | Dünden bugüne (K-160): yeni gelen, gelmeyen ve güncellenen kayıtlar; güncellenen kayıtta değişen alan başına bir satır. Tablonun her hesabında yeniden yazılır. | Veri yönetimi |  | 8 |
 | `adm.AppUser` | Uygulama kullanıcısı (Faz 1'de yerel). | Sistem |  | 14 |
 | `adm.UserSession` | Sunucu tarafı oturum (K-97). Tarayıcıdaki çerez rastgele bir anahtar taşır; tabloda yalnız anahtarın SHA-256 özeti durur. | Sistem |  | 9 |
 | `adm.PasswordHistory` | Kullanıcının önceki şifre özetleri (K-98): yeni şifre son `PasswordHistoryCount` şifreden farklı olmalı. | Sistem |  | 4 |

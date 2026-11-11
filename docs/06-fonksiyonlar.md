@@ -830,6 +830,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Geçmiş kayıtları, veri versiyonları ve geçerli tablolar hiç etkilenmez.
   - Saklama süresi System owner ayarıdır; 1–30 gün, varsayılan yok (K-156).
+  - Dünden bugüne karşılaştırmasının "dün" hâlini oluşturan satırlar, partisi eski olsa da silinmez; yeni günün verisi gelince bir sonraki temizlikte silinir (K-160).
 - **HATA VE ISTISNA**
   - Silme sırasında kilit çakışması: iş bekler ve tekrar dener; 3 denemede olmazsa Sistem sağlığına hata.
   - Disk doluysa temizlik yine de çalışır; yükleme ve çekim için eşik uyarısı ayrı (94).
@@ -865,6 +866,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **21 · Kalite düzeltme aksiyonu:** Veri kalitesi uyarısından doğrudan düzeltmeye geçmek: kayda gidip elle düzeltmek, önerilen kuralı uygulamak, uyarıyı gerekçeyle 'bilerek böyle' kapatmak ya da kişiye atamak; tek tek ya da toplu.
 - **99 · Malzeme blokajı:** Belli bir dönem için malzemenin üretimini, satın almasını ya da satışını durdurmak.
 - **100 · Validasyon kuralı tanımlama:** Staging'deki veride hangi durumun Hata, Uyarı ya da Bilgi olacağını tablo başına tanımlamak; hazır kuralların sınıfını değiştirmek ya da kapatmak, kullanıcı kuralı eklemek, hata eşiğini girmek (K-136).
+- **101 · Dünden bugüne:** Ham veride tablo başına son veri ile önceki günün son verisini karşılaştırmak: satır sayısı değişimi, yeni gelen, gelmeyen ve güncellenen kayıtlar (K-159, K-160).
 
 ### 10 · Ana veri görüntüleme
 <sub>24. Ekranlar ve fonksiyonlar · F10 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
@@ -1702,6 +1704,21 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; etkisi bir sonraki validasyondadır (04).
 - **ÖRNEK:** Admin, Malzeme için "Minimum lot boş değil ve Maksimum lot boş" (VE) VEYA "Lot katı > Maksimum lot" kullanıcı kuralını Uyarı olarak ekler, "Güvenlik stoğu maksimum stoktan büyük" kuralının koşuluna "Maksimum stok > 0" ekler, "Güvenlik stoğu hem miktar hem gün" kuralını kapatır, eşiği %2 yapar, kaydeder ve "Yeniden valide et"i onaylar.
 - **Uygulama (3.4, K-139):** uygulandı. Sınıf ve aktiflik tablo içinde, toplu kayıtla (K-132); kural penceresi (kullanıcı kuralı, düzenlenebilir hazır kural, İlk hâline döndür, silme) tek kayıtla. Kaydedince değişen tablolar için "Yeniden valide et" onayı. Eşik seçili tablonun şeridinde, toplu kayıtla. Kural kodu: hazır kuralda katalog kodu, kullanıcı kuralında KUL-n.
+
+### 101 · Dünden bugüne
+<sub>24. Ekranlar ve fonksiyonlar · F101 · A Veri alma · Çalışma prensibi</sub>
+
+- ERP'den gelen verinin önceki güne göre ne kadar ve nasıl değiştiğini görmek; sessiz veri kaybını ve beklenmeyen değişiklikleri fark etmek. Karşılaştırma ham veriyle yapılır, veri kurallarının etkisi karışmaz.
+
+#### NASIL ÇALIŞIR
+
+- **KIM VE NEREDEN**
+  - Kim: Bütün roller görür; End user salt okunur
+  - Nereden: Veri grubunda Dünden bugüne ekranı
+- **01:** Yükleme sonrası tablo validasyon işinin başında tablonun son hâli ile önceki günün son hâli karşılaştırılır, sonuç saklanır.
+- **02:** "Bugün" tablonun güncel hâli, "dün" son verinin gününden önceki günlerde işlenen son partinin anındaki hâlidir; o gün veri gelmediyse daha eski bir gün alınır, tarih ekranda yazar. Aynı gün gelen yeni yükleme "dün"ü değiştirmez.
+- **03:** Üst tabloda satır seçilince Yeni gelenler, Gelmeyenler ve Güncellenenler açılır.
+- **Uygulama (5.5b, K-160):** uygulandı. Ekle / güncelle yüklemesi "gelmeyen" üretmez; Tam yüklemede ön kontrolde düşen satır "gelmeyen" sayılmaz. Etiketsiz ek alanlar karşılaştırılmaz. Hesap düşerse satırda "Hesaplanamadı" yazar, validasyon sürer. Ana sayfa özet sayıları aynı API'den alır; bağlantı ana sayfa adımında.
 
 ### C · Parametre
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
@@ -6818,6 +6835,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | K · Denetim izi | 98 | tam | tam | kendi | yok |
 | B · Malzeme blokajı | 99 | tam | tam | tam | salt okunur |
 | B · Validasyon kuralları | 100 | tam | tam | salt okunur | yok |
+| A · Dünden bugüne | 101 | tam | tam | tam | salt okunur |
 
 - **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur.
 - **Raporlama serbestliği (K-99):** görünüm kaydetme, alan ekleme ve çıkarma, sıralama, filtre, gruplama ve koşullu biçim fonksiyon sayılmaz; okuma yetkisi olan her listede herkese açıktır.

@@ -99,7 +99,7 @@ Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz.
 
 ## Yetki (K-99, K-100, fonksiyon 90)
 
-Matris kodda (`app/api/permissions.py`): 4 rol × 99 fonksiyon; grup tablosu docs/06 fonksiyon 90'da. Hücre düzeyleri `full` (tam), `owner` (hepsini okur, yalnız kendi nesnesini değiştirir), `self` (yalnız kendi kayıtları), `read` (salt okunur), `none`. `GET /api/auth/me` rolün düzeylerini `permissions`'ta verir; arayüz menüyü ve düğmeleri buna göre gösterir, güvenlik sunucudadır.
+Matris kodda (`app/api/permissions.py`): 4 rol × 101 fonksiyon; grup tablosu docs/06 fonksiyon 90'da. Hücre düzeyleri `full` (tam), `owner` (hepsini okur, yalnız kendi nesnesini değiştirir), `self` (yalnız kendi kayıtları), `read` (salt okunur), `none`. `GET /api/auth/me` rolün düzeylerini `permissions`'ta verir; arayüz menüyü ve düğmeleri buna göre gösterir, güvenlik sunucudadır.
 
 - **Her uç nokta bir fonksiyon ve erişime bağlıdır** (`deps.require(fn, access)`, `access`: `read` | `write`). Bağsız uç nokta testte yakalanır; açık olanlar yalnız `GET /api/health` ve `POST /api/auth/login`.
 - **Yetkisiz istek 403 `forbidden`**; denetim izine "Yetkisiz istek" (ObjectType "Fonksiyon", ObjectKey fonksiyon numarası; NewValue rol, yöntem, adres, gereken rol):
@@ -170,7 +170,7 @@ Veri sözlüğü listesi `field-definitions` adıyla ortak liste sözleşmesini 
 | `PUT /api/field-definitions/{tablo}/{alan}/label` | `{"label"}`, en çok 40 karakter; boşsa standart etiket. Aynı tabloda aynı etiket 409 `label_taken`. İz "Alan etiketi değişikliği" |
 | `GET /api/settings/login-policy` | `{"values", "defaults", "limits"}` |
 | `PUT /api/settings/login-policy` | Değişen anahtarlar; sınır dışı ya da uyarı süresi oturum süresinden kısa değilse 422, hiçbiri yazılmaz. İz "Ayar değişikliği", anahtar başına |
-| `GET /api/permissions/matrix` | Roller, 14 grup satırı, 99 fonksiyon, istisnalar |
+| `GET /api/permissions/matrix` | Roller, 18 grup satırı, 101 fonksiyon, istisnalar |
 | `GET /api/permissions/matrix/export` | Excel: fonksiyon düzeyinde 98 satır. İz "Dışa aktarım" |
 
 ## Liste sorgusu (K-87)
@@ -530,6 +530,19 @@ Temizlik sıradayken ya da sürerken aktarım da başlamaz.
 Öteki ayarlarda `null` 422.
 
 **Ölçüm (`python -m pytest -m perf -k cleanup`, `tests/test_cleanup_perf.py`):** 25 tablo × 50.000 güncel olmayan satır (1.250.000 satır), partiler süreden eski: ortanca 40,3 sn (39,3–40,5); sınır 30 dk. Sunucuda ilk kurulumda yeniden ölçülür.
+
+## Dünden bugüne (ekran 28, fonksiyon 101, K-159, K-160)
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| Ortak liste `raw-compare` | 101 okuma (End user dahil) | Tablo başına: Dünkü veri, Bugünkü veri, Bugünkü yükleme, Dünkü satır, Bugünkü satır, Değişim %, Yeni gelen, Gelmeyen, Güncellenen, Durum (Hazır / Önceki veri yok / Hesaplanamadı / Veri yok) |
+| Ortak liste `raw-compare-changes` | 101 okuma | Güncellenenler: Kayıt, Alan, Dünkü değer, Bugünkü değer; arayüz tabloyu sabit filtreyle verir |
+| Ortak listeler `raw-compare-new-<tablo>`, `raw-compare-missing-<tablo>` | 101 okuma | Yeni gelenler ve Gelmeyenler: tablonun bütün alanları, ilk kolon Kayıt |
+| `GET /api/raw-compare/summary` | 101 okuma | Ana sayfa için toplamlar: karşılaştırılan tablo, yeni gelen, gelmeyen, güncellenen, son veri zamanı |
+
+Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, düşerse `State` "Hesaplanamadı" olur ve validasyon sürer. Temizlik "dün" satırlarını silmez (K-160).
+
+**Ölçüm (`python -m pytest -m perf -k raw_compare`, `tests/test_raw_compare_perf.py`):** 25 tablo × 50.000 satır, iki günlük hâl, satırların %10'unda bir alan değişik: 25 tablonun toplamı ortanca 29,6 sn (28,5–91,0; ilk koşu soğuk önbellekle), en yavaş tablo 5,8 sn. Hesap tablo başına validasyon işinin başındadır; tek tablo yüklemesine eklenen süre tablo başınadır. Sunucuda ilk kurulumda yeniden ölçülür.
 
 ## Excel şablonu (ekran 02, fonksiyon 02, K-110)
 

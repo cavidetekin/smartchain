@@ -281,7 +281,7 @@ def test_setup_db_on_local_server(monkeypatch):
             members = [u.upper() for u in setup_db._role_members(c, setup_db.APP_ROLE)]
             assert names[0].upper() in members and names[0].upper() not in [u.upper() for u in setup_db._role_members(c, "db_owner")]
         with setup_db._connect(db) as c:
-            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0047"
+            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0048"
             assert c.execute("SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')").fetchone()[0] == setup_db.COLLATION
         # İlk hesap (K-102): temiz veritabanında açılır, ikinci çalıştırmada dokunulmaz, --reset yeni şifre verir.
         user_name, password = setup_db.first_account(ROOT, db, reset=False)

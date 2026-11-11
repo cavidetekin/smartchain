@@ -3,6 +3,8 @@
 Yaşı saklama süresini (`RawDataRetentionDays`, gün) geçen partilerde: güncel olmayan ham satırlar (`IsCurrent = 0`), ön kontrol bulguları ve
 yüklenen Excel dosyası silinir; terk edilen "Ön kontrol" partisi "Vazgeçildi" olur; parti kaydı ve sayıları kalır, `RawDeletedAt` yazılır.
 Staging'in güncel hâli, işlenmiş katman, validasyon bulguları, veri versiyonları ve özet kayıtlar silinmez. Süre boşsa temizlik çalışmaz.
+Dünden bugüne karşılaştırmasının "dün" hâlini oluşturan satırlar da silinmez (partisi dün anından önce işlenmiş, dün anından sonra güncel hâlden çıkmış; K-160); satır silme `RawDeletedAt`'e bakmaz,
+dün anı ilerleyince bir sonraki temizlikte silinirler.
 
 Veritabanı değişiklikleri tek işlemde; dosyalar işlem commit edildikten sonra silinir (işlem düşerse dosyaya dokunulmaz).
 """
@@ -15,6 +17,7 @@ from pathlib import Path
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.compare import raw as compare
 from app.integration.contract import ENTITIES
 from app.validation import engine as validation
 from db.models import metadata
@@ -51,9 +54,17 @@ def _old_batches(cutoff: datetime) -> sa.Select:
     return sa.select(BATCH.c.Id).where(BATCH.c.ReceivedAt < cutoff, BATCH.c.RawDeletedAt.is_(None))
 
 
-def _stale_rows(entity: str, cutoff: datetime):
+def _stale_rows(session: Session, entity: str, cutoff: datetime):
+    """Silinecek ham satırlar: partisi eski, güncel değil ve "dün" hâlinde yok (K-160)."""
     t = metadata.tables[f"stg.{entity}"]
-    return t, sa.and_(t.c.IsCurrent == sa.false(), t.c.ImportBatchId.in_(_old_batches(cutoff).where(BATCH.c.EntityName == entity)))
+    aged = sa.select(BATCH.c.Id).where(BATCH.c.ReceivedAt < cutoff, BATCH.c.EntityName == entity)
+    baseline = compare.baseline_at(session, entity)
+    if baseline is None:
+        not_yesterday = sa.true()
+    else:  # "dün": partisi dün anından önce işlenmiş ve o anda güncel; gün içinde gelip çıkan ara satırlar "dün" değildir
+        later = sa.select(BATCH.c.Id).where(BATCH.c.EntityName == entity, BATCH.c.AppliedAt > baseline)
+        not_yesterday = sa.or_(t.c.SupersededAt.is_(None), t.c.SupersededAt <= baseline, t.c.ImportBatchId.in_(later))
+    return t, sa.and_(t.c.IsCurrent == sa.false(), t.c.ImportBatchId.in_(aged), not_yesterday)
 
 
 def _files(session: Session, cutoff: datetime) -> list[tuple[int, Path]]:
@@ -97,7 +108,7 @@ def preview(session: Session, days: int, now: datetime | None = None) -> dict:
     """Silinecek parti, satır ve dosya sayısı (onay penceresi); hiçbir şey değişmez."""
     s = _base(session, days, now or utcnow())
     for e in ENTITIES:
-        t, cond = _stale_rows(e.table, s.cutoff)
+        t, cond = _stale_rows(session, e.table, s.cutoff)
         n = int(session.execute(sa.select(sa.func.count()).select_from(t).where(cond)).scalar() or 0)
         if n:
             s.tables.append({"entity": e.table, "name": e.name, "rows": n})
@@ -118,7 +129,7 @@ def run(session: Session, days: int, progress: Callable[[str], None] | None = No
     for i, e in enumerate(ENTITIES, 1):
         if progress:
             progress(f"{e.name} · {i} / {len(ENTITIES)}")
-        t, cond = _stale_rows(e.table, s.cutoff)
+        t, cond = _stale_rows(session, e.table, s.cutoff)
         n = session.execute(sa.delete(t).where(cond)).rowcount or 0
         if n:
             s.tables.append({"entity": e.table, "name": e.name, "rows": n})
