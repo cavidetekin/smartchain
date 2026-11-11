@@ -315,9 +315,10 @@ Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski
 **Ayar ekranı standardı (K-164; bundan sonraki ayar ekranları da böyle):**
 
 - **Sekmeler ana gruplardır** (`Segment`; K-82 ekranlar arası sekmeyi yasaklar, bunlar aynı ekranın bölümleri): Veri sözlüğü · Giriş ve oturum · Sistem sağlığı · Zamanlanmış işler. Adres `?sekme=…` ile açılır.
-- **Tek bölümlü sekme** içeriği doğrudan açar. **Birden çok bölümlü sekmede** solda alt menü çıkar, sağda yalnız seçili bölüm görünür.
-- **Ayar formu içeriği kadar geniştir:** sıkı satırlar (solda ad, sağda dar değer kutusu, satırlar ince çizgiyle ayrılır), ekranı kaplamaz. Yalnız tablolar (Veri sözlüğü, zamanlanmış işler listesi ve geçmişi) tam genişliktedir. Dar sütun ve iç kaydırma olmaz.
-- **Bölüm şeridi:** her bölümün üstünde bölümün adı, Vazgeç ve Kaydet; değişiklik yokken ikisi de pasif. Kaydedilmemiş değişiklikle başka bölüme, sekmeye ya da ekrana geçince uyarı (K-132).
+- **Tek bölümlü sekme** içeriği doğrudan açar. **Birden çok bölümlü sekmede** solda 200 px genişliğinde alt menü çıkar, sağda yalnız seçili bölüm görünür.
+- **Bölüm kartı (K-165):** başlık, Vazgeç ve Kaydet ile alanlar tek kartta: üst satırda bölümün adı ve düğmeler (altında ince çizgi), altında alanlar. Kart sabit genişliktedir (yaklaşık 640 px, rem cinsinden), ekranı kaplamaz; yalnız tablolar (Veri sözlüğü, zamanlanmış işler listesi ve geçmişi) tam genişliktedir. Dar sütun ve iç kaydırma olmaz.
+- **Alan satırı:** solda ad, sağda 130 px değer kutusu (sayı sağa yaslı); satır yüksekliği yaklaşık 44 px, satırlar ince çizgiyle ayrılır. Ad standart yazı renginde; gri yalnız ikincil bilgi (yardım, ör. "Boşsa temizlik çalışmaz.") içindir. Evet/Hayır ayarı onay kutusu değil anahtardır (zamanlanmış iş penceresindeki Aktif gibi).
+- **Düğmeler:** Kaydet değişiklik varken indigo ana düğme; yokken pasif ve soluk indigo (belirgin biçimde pasif). Vazgeç hayalet düğme, değişiklik yokken pasif. Kaydedilmemiş değişiklikle başka bölüme, sekmeye ya da ekrana geçince uyarı (K-132).
 
 **Sekmeler:**
 

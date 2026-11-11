@@ -91,18 +91,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"SQL kaynağı: {m['database']} · {len(m['tables'])} tablo, {sum(m['tables'].values())} satır, {len(m['errors'])} kasıtlı hata")
         print("Demo: Ürün ağacı, Rota, Stok, Satış siparişi, İş emri SQL ve view'lı; Malzeme ekranda seçilir.")
         return 0
+    from db import guard
     from .load import ResetRefused, SyntheticLockError, load, reset, unload
     if a.command == "reset":
         def confirm(preview: dict) -> bool:
-            print(f"Veritabanı: {preview['database']}")
-            print(f"  Geri alınacak aktarım versiyonları: {', '.join(map(str, preview['versions'])) or 'yok'}")
-            print(f"  Silinecek core satırı: {preview['rows']}, aktarımın eklediği lokasyon: {preview['locations']}")
-            print("  Aktarımın kapattığı sentetik satırlar açılır, sentetik veri yeniden yüklenir. Staging değişmez.")
-            answer = input("Onaylamak için veritabanının adını yazın: ").strip()
-            if answer != preview["database"]:
-                print("Ad tutmadı; hiçbir şey değişmedi.")
+            status = (f"geri alınacak aktarım versiyonları {', '.join(map(str, preview['versions'])) or 'yok'}; silinecek core satırı {preview['rows']}, "
+                      f"aktarımın eklediği lokasyon {preview['locations']}. Aktarımın kapattığı sentetik satırlar açılır, sentetik veri yeniden yüklenir; staging değişmez.")
+            try:  # K-165: yalnız etkileşimli terminalde, ad yazılınca; test veritabanında sorulmaz
+                guard.confirm(preview["database"], "Sentetik veriye sıfırlama (reset)", status)
+            except guard.Refused as exc:
+                print(exc, file=sys.stderr)
                 return False
             return True
+        try:
+            guard.require_terminal(get_engine().url.database, "Sentetik veriye sıfırlama (reset)")  # bağlanmadan önce (K-165)
+        except guard.Refused as exc:
+            print(exc, file=sys.stderr)
+            return 2
         try:
             r = reset(get_engine(), ds, confirm)
         except (ResetRefused, SyntheticLockError) as exc:
@@ -114,7 +119,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     try:
         if a.command == "unload":
-            removed = unload(get_engine())
+            engine = get_engine()
+            try:  # K-165: silme onay ister
+                guard.confirm(engine.url.database, "Sentetik veriyi silme (unload)")
+            except guard.Refused as exc:
+                print(exc, file=sys.stderr)
+                return 2
+            removed = unload(engine)
             print(f"Sentetik veri silindi (veri versiyonları: {removed or 'yok'})")
             return 0
         r = load(get_engine(), ds)

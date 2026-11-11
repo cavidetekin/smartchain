@@ -13,6 +13,7 @@
 .sc-btn:disabled { cursor: not-allowed; color: var(--text-muted); background: var(--field-disabled-bg);
   border-color: var(--lead-100); }
 .sc-btn--primary { background: var(--indigo-500); border-color: var(--indigo-500); color: var(--sidebar-active-text); }
+.sc-btn--primary:disabled { background: var(--indigo-100); border-color: var(--indigo-100); color: var(--indigo-300); }  /* belirgin pasif (K-165) */
 .sc-btn--primary:hover:not(:disabled) { background: var(--indigo-700); border-color: var(--indigo-700); }
 .sc-btn--ghost { border-color: transparent; background: transparent; color: var(--indigo-700); }
 .sc-btn--ghost:hover:not(:disabled) { background: var(--indigo-50); border-color: transparent; }
@@ -471,17 +472,25 @@
    form içeriği kadar geniş (sıkı satır, dar değer kutusu), bölüm şeridinde ad, Vazgeç ve Kaydet; yalnız tablolar tam genişlikte. */
 .sc-page-head-actions { display: flex; gap: var(--space-2); }
 .sc-section-switch { margin-bottom: var(--space-3); }
-.sc-settings-body { display: grid; grid-template-columns: 12rem auto; justify-content: start; align-items: start; gap: var(--space-4); }
+.sc-settings-body { display: grid; grid-template-columns: 15.3846rem auto; justify-content: start; align-items: start; gap: var(--space-4); }
 .sc-settings-nav { display: flex; flex-direction: column; gap: 0.1538rem; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
 .sc-settings-nav button { padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius); background: transparent; color: var(--text); font: inherit;
   font-weight: var(--fw-semibold); text-align: left; cursor: pointer; }
 .sc-settings-nav button:hover { background: var(--lead-50); }
 .sc-settings-nav button[aria-current="true"] { background: var(--indigo-50); color: var(--indigo-700); box-shadow: inset 0.2308rem 0 0 var(--indigo-500); }
 .sc-settings-nav button:focus-visible { outline: 2px solid var(--focus-ring); }
-.sc-settings-section { display: flex; flex-direction: column; gap: var(--space-2); width: max-content; max-width: 100%; }
-.sc-settings-section .sc-field-rows { --field-row-label: minmax(14rem, max-content); border-top: 0; }
-.sc-settings-section .sc-field-rows > :last-child { border-bottom: 0; }
-.sc-settings-section .sc-input--number { width: 6rem; }
+/* Bölüm kartı (K-165): 640 px sabit genişlik; üstte ad ve düğmeler, altında alanlar; satır ~44 px, değer kutusu 130 px; ad standart yazı renginde */
+.sc-settings-section { display: flex; flex-direction: column; gap: var(--space-2); width: 49.2308rem; max-width: 100%; }
+.sc-settings-card { border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--surface); }
+.sc-settings-head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+.sc-settings-head h2 { margin: 0 auto 0 0; font-size: var(--fs-md); }
+.sc-settings-card .sc-field-rows { --field-row-label: minmax(0, 1fr); padding: 0 var(--space-4); border-top: 0; }
+.sc-settings-card .sc-field-rows > .sc-field { grid-template-columns: minmax(0, 1fr) 10rem; min-height: 3.3846rem; padding: 0.4615rem 0; }
+.sc-settings-card .sc-field-rows > :last-child { border-bottom: 0; }
+.sc-settings-card .sc-field-rows .sc-field-label { color: var(--text); }
+.sc-settings-card .sc-input--number { width: 100%; }
+.sc-switch-row > .sc-field-label { grid-column: 1; }
+.sc-switch-row > .sc-toggle { grid-column: 2; justify-self: end; }
 .sc-top-strip > h2 { margin: 0 auto 0 0; font-size: var(--fs-md); }   /* bölüm şeridi: ortak üst şerit, solda bölümün adı */
 .sc-strip-actions { display: flex; gap: var(--space-2); }
 .sc-settings-section > .sc-top-strip, .sc-flows-tab > .sc-top-strip { margin-bottom: 0; }

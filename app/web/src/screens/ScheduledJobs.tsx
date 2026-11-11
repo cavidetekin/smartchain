@@ -333,7 +333,7 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
           </label>
         ))}
         <span className="sc-strip-actions">
-          <Button variant="neutral" disabled={!dirty || saving} onClick={() => data && show(data)}>{tr.systemOwner.discard}</Button>
+          <Button variant="ghost" disabled={!dirty || saving} onClick={() => data && show(data)}>{tr.systemOwner.discard}</Button>
           <Button variant="secondary" busy={saving} disabledReason={writeReason} disabled={!dirty || Boolean(invalid)} onClick={() => void saveSettings()}>{T.save}</Button>
           <Button variant="primary" disabledReason={writeReason} onClick={() => setEditing("new")}>{T.newFlow}</Button>
         </span>

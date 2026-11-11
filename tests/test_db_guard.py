@@ -113,3 +113,72 @@ def test_skipped_database_tests_fail_the_run():
 def test_running_without_database_is_explicit():
     r = run_pytest("tests/test_health.py", "-m", "not db")
     assert r.returncode == 0, r.stdout.decode("utf-8", "replace")
+
+
+# --- Geliştirme veritabanında yıkıcı komut onay ister (K-165, db/guard.py) ---
+
+from db import guard  # noqa: E402
+
+UNKNOWN_DB = "Smartchain_guardcheck"  # yok; koruma bozulsa bile bağlantı açılamaz, hiçbir veritabanına dokunulmaz
+
+
+class Tty:
+    def __init__(self, tty: bool):
+        self.tty = tty
+
+    def isatty(self) -> bool:
+        return self.tty
+
+
+def test_guard_refuses_without_a_terminal():
+    asked = []
+    with pytest.raises(guard.Refused) as caught:
+        guard.confirm("Smartchain", "Geçişi geri alma", stdin=Tty(False), ask=asked.append)
+    assert caught.value.code == 2 and "açık onay ister" in str(caught.value) and asked == []
+
+
+def test_guard_needs_the_database_name_in_a_terminal(capsys):
+    with pytest.raises(guard.Refused):
+        guard.confirm("Smartchain", "Geçişi geri alma", "geçiş 0051", stdin=Tty(True), ask=lambda _: "evet")
+    assert "Mevcut durum: geçiş 0051" in capsys.readouterr().out
+    guard.confirm("Smartchain", "Geçişi geri alma", stdin=Tty(True), ask=lambda _: "Smartchain")  # ad tutunca geçer
+
+
+def test_guard_lets_test_databases_through():
+    guard.confirm("Smartchain_test", "Geçişi geri alma", stdin=Tty(False), ask=lambda _: pytest.fail("sorulmamalı"))
+
+
+def _env() -> dict:
+    url = f"mssql+pyodbc://@localhost/{UNKNOWN_DB}?driver=ODBC+Driver+18+for+SQL+Server&trusted_connection=yes&TrustServerCertificate=yes"
+    return {**os.environ, "SMARTCHAIN_DB_URL": url, "PYTHONIOENCODING": "utf-8"}
+
+
+def test_alembic_downgrade_stops_in_a_command_chain():
+    r = subprocess.run([sys.executable, "-m", "alembic", "-c", "db/alembic.ini", "downgrade", "-1"], cwd=ROOT, env=_env(),
+                       stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8", timeout=120)
+    assert r.returncode == 2, r.stderr
+    assert "DURDU: Geçişi geri alma (alembic downgrade) geliştirme veritabanında (Smartchain_guardcheck) açık onay ister" in r.stderr
+    assert "Cannot open database" not in r.stderr  # bağlanmadan durdu
+
+
+def test_alembic_downgrade_offline_sql_is_not_blocked():
+    r = subprocess.run([sys.executable, "-m", "alembic", "-c", "db/alembic.ini", "downgrade", "0051:0050", "--sql"], cwd=ROOT, env=_env(),
+                       stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8", timeout=120)
+    assert r.returncode == 0, r.stderr
+    assert "DROP COLUMN" in r.stdout or "NextRunAt" in r.stdout
+
+
+@pytest.mark.parametrize("command", ["unload", "reset"])
+def test_synthetic_destructive_commands_stop_in_a_command_chain(command):
+    r = subprocess.run([sys.executable, "-m", "app.data.synthetic", command], cwd=ROOT, env=_env(), input="Smartchain_guardcheck\n",
+                       capture_output=True, text=True, encoding="utf-8", timeout=180)
+    assert r.returncode != 0
+    assert "açık onay ister" in r.stderr or "açık onay ister" in r.stdout, (r.stdout, r.stderr)
+
+
+def test_null_device_is_not_a_terminal():
+    """Windows'ta NUL isatty() için terminal sayılır; `< NUL` ile koruma atlanamaz (GetConsoleMode)."""
+    with open(os.devnull, encoding="utf-8") as null:
+        assert not guard.interactive(null)
+        with pytest.raises(guard.Refused):
+            guard.require_terminal("Smartchain", "Geçişi geri alma", null)

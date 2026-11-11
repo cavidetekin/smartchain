@@ -10,10 +10,11 @@ import { appVersion } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
 import { can } from "../auth/permissions";
 import { tr } from "../i18n/tr";
+import { SwitchCell } from "../table/CellEditors";
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import { UnsavedGuard } from "../table/useTableEdits";
 import type { Row } from "../table/types";
-import { Alert, Button, Card, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, TextField, TopStrip } from "../ui";
+import { Alert, Button, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, TextField } from "../ui";
 import { ScheduledJobs } from "./ScheduledJobs";
 import { type FieldDetail, type PolicyValues, systemOwnerApi } from "./systemOwnerApi";
 
@@ -193,26 +194,29 @@ function SettingsTab({ label, sections, labels, read, write, crossCheck, onDirty
   if (!data) return error ? <Alert tone="error">{error}</Alert> : null;
   const form = (
     <div className="sc-settings-section">
-      <TopStrip label={section.title}>
-        <h2>{section.title}</h2>
-        <span className="sc-strip-actions">
-          <Button variant="neutral" disabled={!dirty || busy} onClick={discard}>{T.discard}</Button>
-          <Button variant="primary" busy={busy} disabled={!dirty || invalid} onClick={() => void save()}>{T.save}</Button>
-        </span>
-      </TopStrip>
-      <Card>
+      <section className="sc-settings-card" aria-label={section.title}>
+        <header className="sc-settings-head">
+          <h2>{section.title}</h2>
+          <span className="sc-strip-actions">
+            <Button variant="ghost" disabled={!dirty || busy} onClick={discard}>{T.discard}</Button>
+            <Button variant="primary" busy={busy} disabled={!dirty || invalid} onClick={() => void save()}>{T.save}</Button>
+          </span>
+        </header>
         <div className="sc-field-rows">
           {section.keys.map((key) => (
             <NumberField key={key} label={labels[key]} value={values[key] as number | null} error={problem(key)}
                          help={data.optional?.includes(key) ? T.optionalEmpty : undefined}
                          onChange={(v) => setValues((s) => ({ ...s, [key]: v }))} />
           ))}
-          {section.checkbox && (
-            <Checkbox label={labels[section.checkbox]} checked={Boolean(values[section.checkbox])}
-                      onChange={(v) => setValues((s) => ({ ...s, [section.checkbox as string]: v }))} />
+          {section.checkbox && (  // Evet/Hayır ayarı anahtardır (K-165)
+            <div className="sc-field sc-switch-row">
+              <span className="sc-field-label">{labels[section.checkbox]}</span>
+              <SwitchCell label={labels[section.checkbox]} checked={Boolean(values[section.checkbox])} editable
+                          onToggle={(v) => setValues((s) => ({ ...s, [section.checkbox as string]: v }))} />
+            </div>
           )}
         </div>
-      </Card>
+      </section>
       {error && <Alert tone="error">{error}</Alert>}
     </div>
   );

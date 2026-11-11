@@ -180,19 +180,27 @@ describe("giriş ve oturum formu", () => {
     fireEvent.blur(input);
   };
 
-  it("solda alt menü (Şifre, Oturum), sağda yalnız seçili bölüm; şeritte ad, Vazgeç ve Kaydet, değişiklik yoksa pasif", async () => {
+  it("solda alt menü (Şifre, Oturum), sağda yalnız seçili bölüm; tek kartta ad, Vazgeç ve Kaydet, değişiklik yoksa pasif; Evet/Hayır anahtar", async () => {
     const { user } = await openForm();
     expect(within(nav()).getAllByRole("button").map((b) => b.textContent)).toEqual(["Şifre", "Oturum"]);
     expect(within(nav()).getByRole("button", { name: "Şifre" })).toHaveAttribute("aria-current", "true");
     for (const [label, value] of [["En az karakter", "10"], ["Son kaç şifreden farklı", "5"], ["Geçerlilik süresi (gün)", "90"]]) {
       expect(screen.getByLabelText(label)).toHaveValue(value);
     }
-    expect(screen.getByLabelText("Harf ve rakam zorunlu")).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Harf ve rakam zorunlu" })).toBeChecked();
     expect(screen.queryByLabelText("Kilit süresi (dk)")).toBeNull();
-    const strip = screen.getByRole("group", { name: "Şifre" });
-    expect(within(strip).getByRole("heading", { name: "Şifre" })).toBeInTheDocument();
-    expect(within(strip).getByRole("button", { name: "Kaydet" })).toBeDisabled();
-    expect(within(strip).getByRole("button", { name: "Vazgeç" })).toBeDisabled();
+    const card = screen.getByRole("region", { name: "Şifre" });
+    expect(card).toHaveClass("sc-settings-card");
+    expect(within(card).getByRole("heading", { name: "Şifre" })).toBeInTheDocument();
+    expect(within(card).getByLabelText("En az karakter")).toBeInTheDocument();  // alanlar başlıkla aynı kartta
+    const save = within(card).getByRole("button", { name: "Kaydet" });
+    expect(save).toBeDisabled();
+    expect(save.className).toContain("sc-btn--primary");
+    expect(within(card).getByRole("button", { name: "Vazgeç" }).className).toContain("sc-btn--ghost");
+    await user.click(screen.getByRole("switch", { name: "Harf ve rakam zorunlu" }));
+    expect(save).toBeEnabled();
+    await user.click(within(card).getByRole("button", { name: "Vazgeç" }));
+    expect(screen.getByRole("switch", { name: "Harf ve rakam zorunlu" })).toBeChecked();
     await user.click(within(nav()).getByRole("button", { name: "Oturum" }));
     for (const [label, value] of [["Kilit için hatalı giriş sayısı", "5"], ["Kilit süresi (dk)", "15"],
                                   ["Oturumun kapandığı süre (dk)", "30"], ["Kapanmadan önce uyarı (dk)", "5"]]) {
@@ -223,7 +231,7 @@ describe("giriş ve oturum formu", () => {
   it("yalnız değişenler gider", async () => {
     const { user, m } = await openForm();
     setNumber("En az karakter", "12");
-    await user.click(screen.getByLabelText("Harf ve rakam zorunlu"));
+    await user.click(screen.getByRole("switch", { name: "Harf ve rakam zorunlu" }));
     await user.click(screen.getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(called(m, "/api/settings/login-policy")).toBeTruthy());
     expect(JSON.parse(String(called(m, "/api/settings/login-policy")?.[1]?.body)))
