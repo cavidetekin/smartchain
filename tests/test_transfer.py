@@ -164,6 +164,30 @@ def test_second_transfer_keeps_unchanged_versions_changed_and_closes(s):
     assert t["Customer"]["closed"] >= 1 and t["Customer"]["new"] == 1
 
 
+def test_empty_to_value_and_back_is_a_change(s):
+    """5.2 düzeltmesi: tek değişikliği boş ↔ dolu olan kayıt değişmiş sayılır (yeni versiyon); aynı değer değişiklik değildir."""
+    first = transfer.run_transfer(s, None)["data_version"]
+    set_prc(s, "Material", "Code = N'T-OK' AND LocationCode = N'TL-1'", MaterialGroup=None)    # dolu → boş
+    set_prc(s, "Material", "Code = N'T-ERR'", MaterialGroup="G2")                              # boş → dolu
+    second = transfer.run_transfer(s, None)
+    v, t = second["data_version"], by_entity(second)
+    ok = core_rows(s, "Material", "Code = N'T-OK' AND LocationId = :l", l=loc_id(s, L1))[0]
+    err = core_rows(s, "Material", "Code = N'T-ERR'")[0]
+    assert (ok["VersionFrom"], ok["MaterialGroup"]) == (v, None) and (err["VersionFrom"], err["MaterialGroup"]) == (v, "G2")
+    assert t["Material"]["changed"] == 2
+    third = by_entity(transfer.run_transfer(s, None))                                           # değişiklik yok: yeni versiyon yok
+    assert third["Material"]["changed"] == 0 and first < v
+
+
+def test_differs_handles_empty_values(s):
+    from app.transfer.engine import _differs
+    def check(a, b, kind=sa.Unicode):
+        x, y = (sa.literal_column(v if v is not None else "NULL", kind) for v in (a, b))
+        return s.execute(sa.select(sa.case((_differs(sa.cast(x, kind), sa.cast(y, kind)), 1), else_=0))).scalar()
+    assert [check(None, "N'x'"), check("N'x'", None), check(None, None), check("N'x'", "N'x'"), check("N'x'", "N'X'")] == [1, 1, 0, 0, 1]
+    assert [check(None, "5", sa.Integer), check("5", "5", sa.Integer), check("5", "6", sa.Integer)] == [1, 0, 1]
+
+
 def test_threshold_skips_table_and_keeps_previous_version(s, monkeypatch):
     transfer.run_transfer(s, None)
     before = core_rows(s, "Resource", "Code = N'TR-1'")

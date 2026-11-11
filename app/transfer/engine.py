@@ -264,9 +264,11 @@ def _same(a, b) -> sa.ColumnElement:
 
 
 def _differs(a, b) -> sa.ColumnElement:
+    """Değer farklı mı: boşlar eşit, boşla dolu farklı (5.2 düzeltmesi: `NOT (a = b OR ikisi boş)` boş ↔ dolu değişiminde bilinmeyen döner,
+    satır değişmemiş sayılıyordu). Metinde büyük/küçük harf farkı değişikliktir."""
     if isinstance(a.type, (sa.String, sa.Unicode)):
         a, b = a.collate(BIN), b.collate(BIN)
-    return ~sa.or_(a == b, sa.and_(a.is_(None), b.is_(None)))
+    return sa.or_(sa.and_(a.is_(None), b.is_not(None)), sa.and_(a.is_not(None), b.is_(None)), sa.and_(a.is_not(None), b.is_not(None), a != b))
 
 
 def _collisions(session: Session, m: TableMap, tmp: sa.Table) -> None:
