@@ -168,7 +168,7 @@ def test_alembic_downgrade_offline_sql_is_not_blocked():
     assert "DROP COLUMN" in r.stdout or "NextRunAt" in r.stdout
 
 
-@pytest.mark.parametrize("command", ["unload", "reset"])
+@pytest.mark.parametrize("command", ["unload", "reset", "load"])
 def test_synthetic_destructive_commands_stop_in_a_command_chain(command):
     r = subprocess.run([sys.executable, "-m", "app.data.synthetic", command], cwd=ROOT, env=_env(), input="Smartchain_guardcheck\n",
                        capture_output=True, text=True, encoding="utf-8", timeout=180)

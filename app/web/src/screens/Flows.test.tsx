@@ -136,17 +136,25 @@ describe("Sistem ayarları → Zamanlanmış işler", () => {
     return { user: userEvent.setup(), fetchMock };
   }
 
-  it("şeritte bekleme süreleri, Vazgeç, Kaydet ve Yeni zamanlanmış iş; satıra tıklayınca alt kartta geçmiş; Entegrasyon'da düğme yok", async () => {
+  it("şeritte solda bekleme süreleri, Vazgeç ve Kaydet, sağda Yeni zamanlanmış iş; sekmenin adı yinelenmez; satıra tıklayınca alt kartta geçmiş", async () => {
     const { user, fetchMock } = await openTab("System owner", { "/api/flows/settings": { body: { ...FLOWS, settings: { FlowWaitMinutes: 45, FlowRefreshWaitMinutes: 120 } } } });
     const strip = screen.getByRole("group", { name: "Zamanlanmış işler" });
-    const wait = within(strip).getByLabelText("Elle iş ve servis için bekleme (dk)");
+    expect(within(strip).queryByRole("heading")).toBeNull();
+    expect([...strip.querySelectorAll("input, button")].map((e) => e.getAttribute("id") ?? e.textContent))
+      .toEqual(["flow-setting-FlowWaitMinutes", "flow-setting-FlowRefreshWaitMinutes", "Vazgeç", "Kaydet", "Yeni zamanlanmış iş"]);
+    const wait = within(strip).getByLabelText("Başlangıç bekleme süresi (dk)");
     expect(wait).toHaveValue("60");
-    expect(within(strip).getByLabelText("ERP yenilemesi için bekleme (dk)")).toHaveValue("120");
+    expect(wait).toHaveAccessibleDescription("Saatinde başlayamayan zamanlanmış iş en çok bu kadar bekler.");
+    const erp = within(strip).getByLabelText("ERP bekleme süresi (dk)");
+    expect(erp).toHaveValue("120");
+    expect(erp).toHaveAccessibleDescription("ERP verisi hazır değilse çekim en çok bu kadar bekler.");
+    expect(within(strip).getByRole("button", { name: "Vazgeç" })).toBeDisabled();
     expect(within(strip).getByRole("button", { name: "Kaydet" })).toBeDisabled();
     expect(within(strip).getByRole("button", { name: "Yeni zamanlanmış iş" }).className).toContain("sc-btn--primary");
     fireEvent.change(wait, { target: { value: "4" } });
     expect(within(strip).getByRole("button", { name: "Kaydet" })).toBeDisabled();
-    expect(screen.getByText("Elle iş ve servis için bekleme (dk): En az 5, en çok 720.")).toBeInTheDocument();
+    expect(screen.getByText("Başlangıç bekleme süresi (dk): En az 5, en çok 720.")).toBeInTheDocument();
+    expect(within(strip).getByRole("button", { name: "Vazgeç" })).toBeEnabled();
     fireEvent.change(wait, { target: { value: "45" } });
     await user.click(within(strip).getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(calls(fetchMock, "PUT", "/api/flows/settings")).toHaveLength(1));
@@ -162,7 +170,9 @@ describe("Sistem ayarları → Zamanlanmış işler", () => {
     await user.click(screen.getByRole("button", { name: "Yeni zamanlanmış iş" }));
     const dialog = screen.getByRole("dialog", { name: "Yeni zamanlanmış iş" });
     expect([...dialog.querySelectorAll(".sc-flow-step > h3")].map((h) => h.textContent))
-      .toEqual(["1 · İş tanımı", "2 · Zamanlama*", "3 · Veri çekimi", "4 · Veri aktarımı", "5 · Ham veri temizliği"]);
+      .toEqual(["1 · İş tanımı*", "2 · Zamanlama*", "3 · Veri çekimi", "4 · Veri aktarımı", "5 · Ham veri temizliği"]);
+    expect(dialog.querySelectorAll("[placeholder]")).toHaveLength(0);  // yer tutucu yok (K-166)
+    expect(dialog.querySelectorAll(".sc-segment-fill")).toHaveLength(2);
     expect(within(dialog).getByRole("switch", { name: "Aktif" })).toBeChecked();
     expect(dialog).not.toHaveTextContent("(zorunlu)");
     expect(dialog).not.toHaveTextContent("sunucunun yerel saati");
@@ -174,12 +184,16 @@ describe("Sistem ayarları → Zamanlanmış işler", () => {
     expect(within(dialog).getByText("Satış siparişi · Tahmin")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("checkbox", { name: "Stok grubunu aktar" }));  // aktarım grubu kartı
     expect(within(dialog).getByRole("radio", { name: "Seçili tablolar" })).toHaveAttribute("aria-checked", "true");
-    const stok = within(dialog).getByRole("group", { name: /^Stok/ });
+    expect(within(dialog).getByRole("checkbox", { name: "Stok grubunu aktar" }).closest(".sc-group-row")).toHaveClass("is-on");
+    const stok = within(dialog).getByRole("group", { name: "Stok" });
     expect(within(stok).getByText("2 / 2")).toBeInTheDocument();
-    const talep = within(dialog).getByRole("group", { name: /^Talep/ });
+    expect(within(stok).getByRole("button", { name: "Stok" })).toHaveAttribute("aria-pressed", "true");
+    const talep = within(dialog).getByRole("group", { name: "Talep" });
     expect(within(talep).getByText("0 / 1")).toBeInTheDocument();
-    expect(within(talep).getByRole("checkbox", { name: /Tahmin/ })).toBeDisabled();
-    expect(within(talep).getByText("Excel")).toBeInTheDocument();
+    const excel = within(talep).getByRole("button", { name: /Tahmin/ });
+    expect(excel).toBeDisabled();
+    expect(excel).toHaveClass("is-excel");
+    expect(within(excel).getByText("Excel")).toBeInTheDocument();
     await user.click(within(talep).getByRole("checkbox", { name: "Talep grubunun tablolarının hepsi" }));
     expect(within(talep).getByText("1 / 1")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
@@ -205,7 +219,7 @@ describe("Sistem ayarları → Zamanlanmış işler", () => {
     expect(screen.queryByRole("radio", { name: "Veri sözlüğü" })).toBeNull();
     expect(screen.queryByRole("radio", { name: "Giriş ve oturum" })).toBeNull();
     const strip = screen.getByRole("group", { name: "Zamanlanmış işler" });
-    expect(within(strip).getByLabelText("Elle iş ve servis için bekleme (dk)")).toBeDisabled();
+    expect(within(strip).getByLabelText("Başlangıç bekleme süresi (dk)")).toBeDisabled();
     expect(within(strip).getByRole("button", { name: "Yeni zamanlanmış iş" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Hafta içi kısmi için işlemler" }));
     expect(await screen.findByRole("menuitem", { name: "Şimdi çalıştır" })).toBeDisabled();

@@ -1,5 +1,5 @@
-"""Geliştirme veritabanı koruması (K-165, CLAUDE.md): adı `_test` ile bitmeyen veritabanında yıkıcı komut (alembic downgrade, sentetik reset ve
-unload) yalnız etkileşimli terminalde, veritabanının adı yazılınca çalışır. Girdi terminal değilse (komut zinciri, yönlendirilmiş girdi, betik)
+"""Geliştirme veritabanı koruması (K-165, CLAUDE.md): adı `_test` ile bitmeyen veritabanında yıkıcı komut (alembic downgrade, sentetik reset,
+unload ve load) yalnız etkileşimli terminalde, veritabanının adı yazılınca çalışır. Girdi terminal değilse (komut zinciri, yönlendirilmiş girdi, betik)
 hiçbir şey değiştirmeden durur; ortam değişkeniyle atlanamaz. Test veritabanı (`_test`) serbesttir.
 """
 import os

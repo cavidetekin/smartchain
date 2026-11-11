@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Zamanlanmış iş penceresi v2</title>
+<style>
+:root{--ink:#1F2430;--mute:#6B7280;--line:#E3E6EB;--ind:#4F46E5;--indsoft:#EEF0FE;--indline:#C7CBFB}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:#9CA3AF66;margin:0;padding:28px;color:var(--ink);font-size:13.5px}
+.dlg{background:#fff;border-radius:12px;max-width:900px;margin:0 auto;box-shadow:0 20px 50px #0003;overflow:hidden}
+.head{display:flex;align-items:center;justify-content:space-between;padding:16px 24px}
+.head h1{font-size:17px;margin:0}
+.sw{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
+.tg{width:34px;height:18px;border-radius:9px;background:var(--ind);position:relative;display:inline-block;flex:none}
+.tg:after{content:"";position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.tg.off{background:#CDD2DA}.tg.off:after{right:auto;left:2px}
+.row{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:12px 24px;border-top:1px solid var(--line);align-items:start}
+.lbl{font-weight:600;padding-top:7px}
+.req{color:#B4532A;margin-left:2px}
+input{border:1px solid #CDD2DA;border-radius:6px;padding:7px 10px;font:inherit;width:100%}
+input::placeholder{color:#A0A6B1}
+.time{display:flex;gap:10px}
+.time input{width:84px;flex:none;text-align:center;font-family:Inter,"Segoe UI",sans-serif}
+.seg{display:flex;border:1px solid #CDD2DA;border-radius:6px;overflow:hidden;flex:1}
+.seg span{flex:1;text-align:center;padding:7px 0;font-weight:600;color:var(--mute);border-right:1px solid #CDD2DA}
+.seg span:last-child{border-right:0}
+.seg span.on{background:var(--indsoft);color:var(--ind)}
+.tables{margin-top:10px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.grp{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:8px 12px;border-top:1px solid var(--line);align-items:start}
+.grp:first-child{border-top:0}
+.gname{display:flex;align-items:center;gap:7px;font-weight:600;padding-top:3px}
+.gname .c{margin-left:auto;color:var(--mute);font-weight:500;font-family:Inter,"Segoe UI",sans-serif;font-size:12px}
+.cb{width:14px;height:14px;border:1.5px solid #9CA3AF;border-radius:3px;display:inline-block;flex:none;background:#fff;position:relative}
+.cb.on{background:var(--ind);border-color:var(--ind)}
+.cb.on:after{content:"";position:absolute;left:3.5px;top:0.5px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.part{background:var(--ind);border-color:var(--ind)}
+.cb.part:after{content:"";position:absolute;left:2px;top:5px;width:7px;height:2px;background:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid #CDD2DA;border-radius:14px;padding:3px 10px;font-size:12.5px;white-space:nowrap;color:#374151;background:#fff}
+.chip.on{background:var(--indsoft);border-color:var(--indline);color:var(--ind);font-weight:600}
+.chip.dis{color:#A0A6B1;border-style:dashed}
+.chip .tag{font-size:10px;font-weight:700;background:#EEF0F3;color:var(--mute);border-radius:4px;padding:0 4px;margin-left:4px}
+.ag.on{background:var(--indsoft)}
+.list{color:var(--mute);padding-top:3px;font-size:12.5px}
+.ag.on .list{color:#374151}
+.clean{display:flex;align-items:center;gap:8px;padding-top:6px}
+.foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--line)}
+.primary{background:var(--ind);color:#fff;border-radius:6px;padding:8px 18px;font-weight:600}
+.ghost{color:var(--ind);font-weight:600;padding:8px 10px}
+.note{max-width:900px;margin:16px auto 0;background:#fff;border-radius:10px;padding:14px 18px;font-size:13px;line-height:1.6}
+.note b{color:#6D28D9}
+</style></head><body>
+<div class="dlg">
+  <div class="head"><h1>Yeni zamanlanmış iş</h1><div class="sw">Aktif <span class="tg"></span></div></div>
+
+  <div class="row"><div class="lbl">1 · İş tanımı<span class="req">*</span></div><div><input></div></div>
+
+  <div class="row"><div class="lbl">2 · Zamanlama<span class="req">*</span></div>
+    <div class="time"><input value="02:00"><div class="seg"><span class="on">Pzt</span><span class="on">Sal</span><span class="on">Çar</span><span class="on">Per</span><span class="on">Cum</span><span>Cmt</span><span>Paz</span></div></div></div>
+
+  <div class="row"><div class="lbl">3 · Veri çekimi</div>
+    <div>
+      <div class="seg"><span>Bütün tablolar</span><span class="on">Seçili tablolar</span></div>
+      <div class="tables">
+        <div class="grp"><div class="gname"><span class="cb"></span>Ana veri<span class="c">0 / 13</span></div>
+          <div class="chips"><span class="chip">Lokasyon</span><span class="chip">Birim dönüşümü</span><span class="chip">Malzeme</span><span class="chip">Üretim versiyonu</span><span class="chip">Ürün ağacı</span><span class="chip">Rota</span><span class="chip">Benzetilen ürün</span><span class="chip">Kaynak grubu</span><span class="chip">Kaynak</span><span class="chip">Kaynak grubu ataması</span><span class="chip">Tedarikçi</span><span class="chip">Malzeme tedarikçisi</span><span class="chip">Müşteri</span></div></div>
+        <div class="grp"><div class="gname"><span class="cb on"></span>Talep<span class="c">3 / 3</span></div>
+          <div class="chips"><span class="chip on">Satış siparişi</span><span class="chip on">Proje</span><span class="chip on">Proje grubu</span><span class="chip dis">Tahmin<span class="tag">Excel</span></span></div></div>
+        <div class="grp"><div class="gname"><span class="cb on"></span>Stok<span class="c">2 / 2</span></div>
+          <div class="chips"><span class="chip on">Stok</span><span class="chip on">Ödünç ve geri ödeme</span></div></div>
+        <div class="grp"><div class="gname"><span class="cb"></span>Üretim<span class="c">0 / 4</span></div>
+          <div class="chips"><span class="chip">İş emri</span><span class="chip">İş emri bileşeni</span><span class="chip">İş emri operasyonu</span><span class="chip">Üretim gerçekleşmesi</span></div></div>
+        <div class="grp"><div class="gname"><span class="cb"></span>Satın alma<span class="c">0 / 1</span></div>
+          <div class="chips"><span class="chip">Satın alma siparişi</span></div></div>
+        <div class="grp"><div class="gname"><span class="cb"></span>İzin<span class="c">0 / 1</span></div>
+          <div class="chips"><span class="chip">Çalışan izni</span></div></div>
+      </div>
+    </div></div>
+
+  <div class="row"><div class="lbl">4 · Veri aktarımı</div><div>
+      <div class="seg"><span>Tam veri aktarımı</span><span class="on">Kısmi veri aktarımı</span></div>
+      <div class="tables">
+        <div class="grp ag on"><div class="gname"><span class="cb on"></span>Talep</div><div class="list">Satış siparişi · Tahmin · Proje · Proje grubu</div></div>
+        <div class="grp ag on"><div class="gname"><span class="cb on"></span>Stok</div><div class="list">Stok · Ödünç ve geri ödeme</div></div>
+        <div class="grp ag"><div class="gname"><span class="cb"></span>Üretim</div><div class="list">İş emri · İş emri bileşeni · İş emri operasyonu · Üretim gerçekleşmesi</div></div>
+        <div class="grp ag"><div class="gname"><span class="cb"></span>Satın alma</div><div class="list">Satın alma siparişi</div></div>
+        <div class="grp ag"><div class="gname"><span class="cb"></span>İzin</div><div class="list">Çalışan izni</div></div>
+      </div>
+    </div></div>
+
+  <div class="row"><div class="lbl">5 · Ham veri temizliği</div><div class="clean"><span class="tg off"></span>Aktarımdan sonra</div></div>
+
+  <div class="foot"><span class="ghost">Vazgeç</span><span class="primary">Kaydet</span></div>
+</div>
+<div class="note">
+<b>Kısmi veri aktarımı:</b> Her grup bir satır; satırın kutusu grubu seçer, sağda grubun aktaracağı tablolar düz yazıyla (tablo tek tek seçilmez, kısmi aktarım grup bazında). Seçili grup satırı açık indigo. Kısmi seçilince Veri çekimi kendiliğinden seçili grupların SQL tablolarına geçer (Talep 3 / 3, Stok 2 / 2; Tahmin Excel olduğu için çekilmez ama aktarılır).<br><b>Değişenler:</b> Tablolar grup satırlarında, seçilebilir çipler olarak; ad tek satırda kalır, kırılmaz · Grup adı ve "4 / 13" solda sabit kolonda, başlıktaki kutu grubun tümünü seçer · Seçili çip indigo, Excel tablosu kesik çerçeveli pasif çip · Bütün kontroller Ad kutusunun hizasında: gün şeridi saat kutusunun yanında satırı doldurur, seçenek şeritleri yarı yarıya · "Ad*" etiketi kalktı, yıldız adım adında; kutunun içinde yazı yok.
+</div>
+</body></html>

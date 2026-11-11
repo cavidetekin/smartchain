@@ -77,7 +77,7 @@ SETTING_LABELS = {
     "SessionIdleMinutes": "Oturumun kapandığı süre (dk)", "SessionWarningMinutes": "Kapanmadan önce uyarı (dk)",
     "DiskWarnPercent": "Disk uyarı eşiği (%)", "QueueWaitWarnMinutes": "Kuyruk bekleme eşiği (dk)", "ImportSyncMaxMb": "Beklemeden kontrol edilen en büyük dosya (MB)", "ImportMaxMb": "En büyük dosya (MB)", "ImportMaxRows": "Dosyada en çok satır", "SystemEventRetentionDays": "Hataların saklanma süresi (gün)",
     "RawDataRetentionDays": "Ham verinin saklama süresi (gün)",
-    "FlowWaitMinutes": "Elle iş ve servis için bekleme (dk)", "FlowRefreshWaitMinutes": "ERP yenilemesi için bekleme (dk)",
+    "FlowWaitMinutes": "Başlangıç bekleme süresi (dk)", "FlowRefreshWaitMinutes": "ERP bekleme süresi (dk)",
 }
 OTHER_LISTS = {"permissions": "Yetki matrisi", "transfer-report": "Veri aktarım raporu"}  # ortak liste olmayan dışa aktarımlar (K-156)
 RETIRED_FIELDS = {"IsPermanent": "Silinemez"}  # listeden kalkan alanlar: eski aktarım kayıtlarında geçer

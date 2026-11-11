@@ -4,6 +4,8 @@
 
 Kullanıcı silinmeden önce oturumları, şifre geçmişi ve denetim izi satırları silinir (delete_users).
 """
+import time
+
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
@@ -11,7 +13,8 @@ from app.api.db import get_engine
 from app.api.deps import COOKIE
 from app.api.services.auth import open_session
 
-_tokens: dict[int, str] = {}
+_tokens: dict[int, tuple[str, float]] = {}
+REFRESH_SECONDS = 20 * 60  # oturum 30 dk hareketsizlikte kapanır (K-97); yavaş koşuda uzun süre kullanılmayan oturum yenilenir
 
 
 def token(user_id: int, fresh: bool = False) -> str:
@@ -19,9 +22,11 @@ def token(user_id: int, fresh: bool = False) -> str:
     if fresh:
         with Session(get_engine()) as s:
             return open_session(s, user_id, agent="pytest")
-    if user_id not in _tokens:
-        _tokens[user_id] = token(user_id, fresh=True)
-    return _tokens[user_id]
+    cached = _tokens.get(user_id)
+    if cached is None or time.monotonic() - cached[1] > REFRESH_SECONDS:
+        cached = (token(user_id, fresh=True), time.monotonic())
+    _tokens[user_id] = (cached[0], time.monotonic())
+    return cached[0]
 
 
 def auth(user_id: int, fresh: bool = False) -> dict:

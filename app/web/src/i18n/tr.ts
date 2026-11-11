@@ -290,11 +290,14 @@ export const tr = {
     settingsSaved: "Bekleme süreleri kaydedildi.",
     // Bekleme süreleri (üst şerit); adları Sistem ayarları izindeki adlarla aynı (audit_format.SETTING_LABELS)
     settings: {
-      FlowWaitMinutes: "Elle iş ve servis için bekleme (dk)",
-      FlowRefreshWaitMinutes: "ERP yenilemesi için bekleme (dk)",
+      FlowWaitMinutes: "Başlangıç bekleme süresi (dk)",
+      FlowRefreshWaitMinutes: "ERP bekleme süresi (dk)",
     } as Record<string, string>,
-    waitLabel: { FlowWaitMinutes: "Elle iş ve servis için bekleme", FlowRefreshWaitMinutes: "ERP yenilemesi için bekleme" } as Record<string, string>,
-    minutes: "dk",
+    // Alanın ipucu (K-166): formda açıklama metni yok
+    settingTips: {
+      FlowWaitMinutes: "Saatinde başlayamayan zamanlanmış iş en çok bu kadar bekler.",
+      FlowRefreshWaitMinutes: "ERP verisi hazır değilse çekim en çok bu kadar bekler.",
+    } as Record<string, string>,
     // Bağlam çubuğundaki çip
     chipStopped: (name: string) => `Zamanlanmış iş durdu · ${name}`,
     chipNotStarted: (name: string) => `Zamanlanmış iş başlamadı · ${name}`,

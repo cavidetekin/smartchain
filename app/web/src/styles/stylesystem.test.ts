@@ -265,12 +265,14 @@ describe("Çekmecedeki pencere tablosu (4.4 demosu, G1–G2)", () => {
 
 describe("ayar ekranı standardı (K-165)", () => {
   const body = (selector: string) => rules(sheets["components.css"]).find((r) => r.selector === selector)?.body ?? "";
-  it("bölüm kartı 640 px, alt menü 200 px, değer kutusu 130 px, satır ~44 px, ad standart yazı renginde; pasif Kaydet soluk indigo", () => {
+  it("bölüm kartı 640 px, alt menü 200 px, değer kutusu 130 px, satır ~44 px, ad standart yazı renginde; pasif düğme her yerde gri (K-166)", () => {
     expect(body(".sc-settings-section")).toMatch(/width:\s*49\.2308rem/);
     expect(body(".sc-settings-body")).toMatch(/grid-template-columns:\s*15\.3846rem auto/);
     expect(body(".sc-settings-card .sc-field-rows > .sc-field")).toMatch(/10rem/);
     expect(body(".sc-settings-card .sc-field-rows > .sc-field")).toMatch(/min-height:\s*3\.3846rem/);
     expect(body(".sc-settings-card .sc-field-rows .sc-field-label")).toMatch(/color:\s*var\(--text\)/);
-    expect(body(".sc-btn--primary:disabled")).toMatch(/background:\s*var\(--indigo-100\)/);
+    expect(rules(sheets["components.css"]).filter((r) => /--(primary|secondary|ghost|danger)(?![^,{]*:not\(:disabled\))[^,{]*:disabled/.test(r.selector))).toEqual([]);
+    expect(body(".sc-btn:disabled")).toMatch(/background:\s*var\(--field-disabled-bg\)/);
+    expect(body(".sc-top-strip .sc-input--number")).toMatch(/width:\s*6\.1538rem/);
   });
 });

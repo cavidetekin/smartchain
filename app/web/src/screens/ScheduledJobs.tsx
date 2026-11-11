@@ -26,8 +26,6 @@ const SETTING_KEYS: (keyof FlowSettings)[] = ["FlowWaitMinutes", "FlowRefreshWai
 const SQL = "SQL";
 const errorText = (e: unknown) => (e instanceof ApiError ? e.message : T.failed);
 const STATE_TONE: Record<string, BadgeTone> = { [FLOW_DONE]: "ok", [FLOW_STOPPED]: "critical", [FLOW_NOT_STARTED]: "critical" };
-/** Veri çekimi kümelerinin yerleşimi (mockup akis-formu): Ana veri geniş sütunda, gruplar iki sütunda alt alta. */
-const PULL_COLUMNS = [["Ana veri"], ["Talep", "Stok"], ["Üretim", "Satın alma", "İzin"]];
 
 const transferText = (f: Flow) => (f.transfer_mode === MODE_PARTIAL ? `${MODE_PARTIAL} · ${f.transfer_groups.join(", ")}` : MODE_FULL);
 
@@ -53,7 +51,8 @@ function GroupCheck({ label, checked, partial, disabled, onChange }: { label: st
   return <input ref={ref} type="checkbox" aria-label={label} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />;
 }
 
-/** Zamanlanmış iş penceresi (System owner). Kısmi seçilince Veri çekimi, kullanıcı değiştirmediyse, seçilen grupların SQL tablolarına geçer. */
+/** Zamanlanmış iş penceresi (System owner; K-164, K-166, mockup akis-formu-v2). Bütün kontroller tek hizada; yıldız adım adında; yer tutucu yok.
+ *  Kısmi veri aktarımında grup seçilince ya da kaldırılınca Veri çekimi o grubun SQL tablolarını ekler ya da çıkarır. */
 export function FlowDialog({ flow, options, onClose, onSaved }: { flow: Flow | null; options: FlowOptions; onClose(): void; onSaved(r: FlowsResponse): void }) {
   const [body, setBody] = useState<FlowBody>(() => (flow ? {
     name: flow.name, is_active: flow.is_active, run_time: flow.run_time, days: flow.days, pull_scope: flow.pull_scope, pull_tables: flow.pull_tables,
@@ -65,13 +64,15 @@ export function FlowDialog({ flow, options, onClose, onSaved }: { flow: Flow | n
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<FlowBody>) => setBody((b) => ({ ...b, ...patch }));
   const groupSql = (groups: string[]) => options.groups.filter((g) => groups.includes(g.name)).flatMap((g) => g.sql_tables);
-  const sets = new Map(options.pull_sets.map((s) => [s.name, s]));
-  const columns = PULL_COLUMNS.map((names) => names.map((n) => sets.get(n)).filter(Boolean)) as FlowOptions["pull_sets"][];
-  const placed = new Set(PULL_COLUMNS.flat());
-  const rest = options.pull_sets.filter((s) => !placed.has(s.name));
-  if (rest.length) columns[columns.length - 1].push(...rest);
 
-  const setGroups = (groups: string[]) => set({ transfer_groups: groups, ...(!pullTouched ? { pull_scope: SCOPE_SELECTED, pull_tables: groupSql(groups) } : {}) });
+  const toggleGroup = (name: string, on: boolean) => {
+    const tables = groupSql([name]);
+    set({
+      transfer_groups: on ? [...body.transfer_groups, name] : body.transfer_groups.filter((x) => x !== name),
+      pull_scope: SCOPE_SELECTED,
+      pull_tables: on ? [...new Set([...body.pull_tables, ...tables])] : body.pull_tables.filter((t) => !tables.includes(t)),
+    });
+  };
   const setMode = (mode: string) => {
     if (pullTouched) set({ transfer_mode: mode });
     else if (mode === MODE_FULL) set({ transfer_mode: mode, pull_scope: SCOPE_ALL, pull_tables: [] });
@@ -106,15 +107,12 @@ export function FlowDialog({ flow, options, onClose, onSaved }: { flow: Flow | n
               </span>
             )}>
       {error && <Alert tone="error">{error}</Alert>}
-      <Step no={1} title={T.stepDefinition}>
-        <label className="sc-flow-inline">
-          <span>{T.name}<span className="sc-req" aria-hidden="true">*</span></span>
-          <input className="sc-input sc-flow-name" aria-label={`${T.name} (${T.required})`} value={body.name} maxLength={100} onChange={(e) => set({ name: e.target.value })} />
-        </label>
+      <Step no={1} title={T.stepDefinition} required>
+        <input className="sc-input" aria-label={`${T.name} (${T.required})`} value={body.name} maxLength={100} onChange={(e) => set({ name: e.target.value })} />
         {fieldError("name")}
       </Step>
       <Step no={2} title={T.stepSchedule} required>
-        <div className="sc-flow-inline">
+        <div className="sc-flow-time">
           <input className="sc-input sc-input--time" aria-label={`${T.runTime} (${T.required})`} value={body.run_time} maxLength={5} onChange={(e) => set({ run_time: e.target.value })} />
           <div className="sc-day-picker" role="group" aria-label={T.days}>
             {DAYS.map((d) => {
@@ -129,59 +127,59 @@ export function FlowDialog({ flow, options, onClose, onSaved }: { flow: Flow | n
         {fieldError("run_time")}{fieldError("days")}
       </Step>
       <Step no={3} title={T.stepPull}>
-        <Segment<string> label={T.stepPull} hideLabel value={body.pull_scope} onChange={(v) => { setPullTouched(true); set({ pull_scope: v }); }}
-                         options={[{ value: SCOPE_ALL, label: T.pullAll }, { value: SCOPE_SELECTED, label: T.pullSelected }]} />
+        <div className="sc-segment-fill">
+          <Segment<string> label={T.stepPull} hideLabel value={body.pull_scope} onChange={(v) => { setPullTouched(true); set({ pull_scope: v }); }}
+                           options={[{ value: SCOPE_ALL, label: T.pullAll }, { value: SCOPE_SELECTED, label: T.pullSelected }]} />
+        </div>
         {body.pull_scope === SCOPE_SELECTED && (
-          <div className="sc-pull-sets">
-            {columns.map((col, i) => (
-              <div key={i} className="sc-pull-col">
-                {col.map((s) => {
-                  const selectable = s.tables.filter((t) => t.method === SQL).map((t) => t.entity);
-                  const chosen = selectable.filter((t) => body.pull_tables.includes(t));
-                  return (
-                    <fieldset key={s.name} className={`sc-pull-set${s.tables.length > 6 ? " is-wide" : ""}`}>
-                      <legend>
-                        <GroupCheck label={T.selectAll(s.name)} checked={selectable.length > 0 && chosen.length === selectable.length}
-                                    partial={chosen.length > 0 && chosen.length < selectable.length} disabled={!selectable.length}
-                                    onChange={(on) => toggleTables(selectable, on)} />
-                        <span>{s.name}</span>
-                        <span className="sc-pull-count">{`${chosen.length} / ${selectable.length}`}</span>
-                      </legend>
-                      <ul>
-                        {s.tables.map((t) => (
-                          <li key={t.entity} className={t.method === SQL ? undefined : "is-disabled"}>
-                            <label>
-                              <input type="checkbox" disabled={t.method !== SQL} checked={body.pull_tables.includes(t.entity)}
-                                     onChange={(e) => toggleTables([t.entity], e.target.checked)} />
-                              <span>{t.name}</span>
-                              {t.method !== SQL && <span className="sc-mini-tag">{T.excel}</span>}
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    </fieldset>
-                  );
-                })}
-              </div>
-            ))}
+          <div className="sc-group-rows">
+            {options.pull_sets.map((s) => {
+              const selectable = s.tables.filter((t) => t.method === SQL).map((t) => t.entity);
+              const chosen = selectable.filter((t) => body.pull_tables.includes(t));
+              return (
+                <div key={s.name} className="sc-group-row" role="group" aria-label={s.name}>
+                  <span className="sc-group-name">
+                    <GroupCheck label={T.selectAll(s.name)} checked={selectable.length > 0 && chosen.length === selectable.length}
+                                partial={chosen.length > 0 && chosen.length < selectable.length} disabled={!selectable.length}
+                                onChange={(on) => toggleTables(selectable, on)} />
+                    <span>{s.name}</span>
+                    <span className="sc-pull-count">{`${chosen.length} / ${selectable.length}`}</span>
+                  </span>
+                  <span className="sc-chips">
+                    {s.tables.map((t) => {
+                      const excel = t.method !== SQL;
+                      const on = body.pull_tables.includes(t.entity);
+                      return (
+                        <button key={t.entity} type="button" className={`sc-chip-toggle${on ? " is-on" : ""}${excel ? " is-excel" : ""}`} disabled={excel}
+                                aria-pressed={excel ? undefined : on} onClick={() => toggleTables([t.entity], !on)}>
+                          {t.name}{excel && <span className="sc-mini-tag">{T.excel}</span>}
+                        </button>
+                      );
+                    })}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
         {fieldError("pull_tables")}
       </Step>
       <Step no={4} title={T.stepTransfer}>
-        <Segment<string> label={T.stepTransfer} hideLabel value={body.transfer_mode} onChange={setMode}
-                         options={[{ value: MODE_FULL, label: T.full }, { value: MODE_PARTIAL, label: T.partial }]} />
+        <div className="sc-segment-fill">
+          <Segment<string> label={T.stepTransfer} hideLabel value={body.transfer_mode} onChange={setMode}
+                           options={[{ value: MODE_FULL, label: T.full }, { value: MODE_PARTIAL, label: T.partial }]} />
+        </div>
         {body.transfer_mode === MODE_PARTIAL && (
-          <div className="sc-group-cards">
+          <div className="sc-group-rows">
             {options.groups.map((g) => {
               const on = body.transfer_groups.includes(g.name);
               return (
-                <label key={g.name} className={`sc-group-card${on ? " is-on" : ""}`}>
-                  <span className="sc-group-card-head">
-                    <input type="checkbox" aria-label={T.transferGroup(g.name)} checked={on} onChange={(e) => setGroups(e.target.checked ? [...body.transfer_groups, g.name] : body.transfer_groups.filter((x) => x !== g.name))} />
-                    <strong>{g.name}</strong>
+                <label key={g.name} className={`sc-group-row${on ? " is-on" : ""}`}>
+                  <span className="sc-group-name">
+                    <input type="checkbox" aria-label={T.transferGroup(g.name)} checked={on} onChange={(e) => toggleGroup(g.name, e.target.checked)} />
+                    <span>{g.name}</span>
                   </span>
-                  <span className="sc-group-card-tables">{g.tables.map((t) => t.name).join(" · ")}</span>
+                  <span className="sc-group-tables">{g.tables.map((t) => t.name).join(" · ")}</span>
                 </label>
               );
             })}
@@ -323,18 +321,20 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
   return (
     <div className="sc-flows-tab">
       <TopStrip label={T.title}>
-        <h2>{T.title}</h2>
         {SETTING_KEYS.map((k) => (
-          <label key={k} className="sc-inline-number">
-            <span>{T.waitLabel[k]}</span>
-            <input className="sc-input sc-input--number" aria-label={T.settings[k]} disabled={!canEdit} title={writeReason ?? undefined} inputMode="numeric"
-                   aria-invalid={invalid === k} value={values[k] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))} />
-            <span>{T.minutes}</span>
-          </label>
+          <span key={k} className="sc-inline-number">
+            <Tooltip content={T.settingTips[k]}><label htmlFor={`flow-setting-${k}`}>{T.settings[k]}</label></Tooltip>
+            <input id={`flow-setting-${k}`} className="sc-input sc-input--number" disabled={!canEdit} title={writeReason ?? undefined} inputMode="numeric"
+                   aria-describedby={`flow-setting-${k}-tip`} aria-invalid={invalid === k} value={values[k] ?? ""}
+                   onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))} />
+            <span id={`flow-setting-${k}-tip`} className="sc-visually-hidden">{T.settingTips[k]}</span>
+          </span>
         ))}
         <span className="sc-strip-actions">
           <Button variant="ghost" disabled={!dirty || saving} onClick={() => data && show(data)}>{tr.systemOwner.discard}</Button>
           <Button variant="secondary" busy={saving} disabledReason={writeReason} disabled={!dirty || Boolean(invalid)} onClick={() => void saveSettings()}>{T.save}</Button>
+        </span>
+        <span className="sc-strip-end">
           <Button variant="primary" disabledReason={writeReason} onClick={() => setEditing("new")}>{T.newFlow}</Button>
         </span>
       </TopStrip>

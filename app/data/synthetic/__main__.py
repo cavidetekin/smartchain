@@ -1,6 +1,6 @@
 """Sentetik veri v0 komutları (docs/11, K-79).
 
-  python -m app.data.synthetic load   [--date 2026-10-27] [--seed 22]   temiz hâli ana tablolara yükler (öncekini siler)
+  python -m app.data.synthetic load   [--date 2026-10-27] [--seed 22]   temiz hâli ana tablolara yükler (öncekini siler; onay ister, K-166)
   python -m app.data.synthetic unload                                    sentetik veriyi siler
   python -m app.data.synthetic reset                                     aktarımları geri alıp temiz sentetik hâle döner (K-153; onay ister)
   python -m app.data.synthetic excel  [--out data/synthetic/v0/kirli]    kirli hâl: entegrasyon Excel'i + beklenen hatalar
@@ -128,7 +128,13 @@ def main(argv: list[str] | None = None) -> int:
             removed = unload(engine)
             print(f"Sentetik veri silindi (veri versiyonları: {removed or 'yok'})")
             return 0
-        r = load(get_engine(), ds)
+        engine = get_engine()
+        try:  # K-166: öncekini siler; onay ister
+            guard.confirm(engine.url.database, "Sentetik veriyi yeniden yükleme (load; öncekini siler)")
+        except guard.Refused as exc:
+            print(exc, file=sys.stderr)
+            return 2
+        r = load(engine, ds)
     except SyntheticLockError as exc:
         print(f"DURDU: {exc}", file=sys.stderr)
         return 2

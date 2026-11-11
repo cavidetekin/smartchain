@@ -196,7 +196,6 @@ function SettingsTab({ label, sections, labels, read, write, crossCheck, onDirty
     <div className="sc-settings-section">
       <section className="sc-settings-card" aria-label={section.title}>
         <header className="sc-settings-head">
-          <h2>{section.title}</h2>
           <span className="sc-strip-actions">
             <Button variant="ghost" disabled={!dirty || busy} onClick={discard}>{T.discard}</Button>
             <Button variant="primary" busy={busy} disabled={!dirty || invalid} onClick={() => void save()}>{T.save}</Button>
@@ -205,7 +204,7 @@ function SettingsTab({ label, sections, labels, read, write, crossCheck, onDirty
         <div className="sc-field-rows">
           {section.keys.map((key) => (
             <NumberField key={key} label={labels[key]} value={values[key] as number | null} error={problem(key)}
-                         help={data.optional?.includes(key) ? T.optionalEmpty : undefined}
+                         tip={data.optional?.includes(key) ? T.optionalEmpty : undefined}
                          onChange={(v) => setValues((s) => ({ ...s, [key]: v }))} />
           ))}
           {section.checkbox && (  // Evet/Hayır ayarı anahtardır (K-165)

@@ -10,21 +10,28 @@ import { formatDate, formatNumber, parseTrDate, parseTrNumber } from "../format"
 import { tr } from "../i18n/tr";
 import { Calendar } from "./Calendar";
 import { useFloating } from "./popover";
+import { Tooltip } from "./Tooltip";
 
 interface FieldProps {
   label: string;
   help?: string;
   error?: string;
   required?: boolean;
+  /** Açıklama ipucunda (K-166): formda alan altında metin yerine adın ipucu; ekran okuyucu da duyar. */
+  tip?: string;
 }
 
-function Field({ label, help, error, required, id, children }: FieldProps & { id: string; children: ReactNode }) {
+function Field({ label, help, error, required, tip, id, children }: FieldProps & { id: string; children: ReactNode }) {
+  const name = (
+    <label htmlFor={id} className="sc-field-label">
+      {label}
+      {required && <span className="sc-field-required"> ({tr.ui.required})</span>}
+    </label>
+  );
   return (
     <div className={`sc-field${error ? " is-invalid" : ""}`}>
-      <label htmlFor={id} className="sc-field-label">
-        {label}
-        {required && <span className="sc-field-required"> ({tr.ui.required})</span>}
-      </label>
+      {tip ? <Tooltip content={tip}>{name}</Tooltip> : name}
+      {tip && <span id={`${id}-tip`} className="sc-visually-hidden">{tip}</span>}
       {children}
       {error ? (
         <p className="sc-field-error" id={`${id}-msg`}><CircleAlert aria-hidden="true" /> {error}</p>
@@ -38,23 +45,24 @@ function Field({ label, help, error, required, id, children }: FieldProps & { id
 type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & FieldProps;
 
 function describedBy(id: string, p: FieldProps) {
-  return p.error || p.help ? `${id}-msg` : undefined;
+  const ids = [p.error || p.help ? `${id}-msg` : null, p.tip ? `${id}-tip` : null].filter(Boolean);
+  return ids.length ? ids.join(" ") : undefined;
 }
 
-export function TextField({ label, help, error, required, value, onChange, ...rest }: InputProps & {
+export function TextField({ label, help, error, required, tip, value, onChange, ...rest }: InputProps & {
   value: string; onChange(v: string): void;
 }) {
   const id = useId();
   return (
-    <Field {...{ label, help, error, required, id }}>
+    <Field {...{ label, help, error, required, tip, id }}>
       <input id={id} className="sc-input" value={value} required={required} aria-invalid={Boolean(error)}
-             aria-describedby={describedBy(id, { label, help, error })} onChange={(e) => onChange(e.target.value)} {...rest} />
+             aria-describedby={describedBy(id, { label, help, error, tip })} onChange={(e) => onChange(e.target.value)} {...rest} />
     </Field>
   );
 }
 
 /** Sayı: Inter, eşit genişlikte rakam (K-86), sağa yaslı; "1.234,5" biçiminde girilir; geçersizse hata ve değer değişmez. */
-export function NumberField({ label, help, error, required, value, onChange, decimals = 0, ...rest }: InputProps & {
+export function NumberField({ label, help, error, required, tip, value, onChange, decimals = 0, ...rest }: InputProps & {
   value: number | null; onChange(v: number | null): void; decimals?: number;
 }) {
   const id = useId();
@@ -79,9 +87,9 @@ export function NumberField({ label, help, error, required, value, onChange, dec
   };
   const shownError = error ?? (invalid ? tr.ui.invalidNumber : undefined);
   return (
-    <Field {...{ label, help, error: shownError, required, id }}>
+    <Field {...{ label, help, error: shownError, required, tip, id }}>
       <input id={id} className="sc-input sc-input--number" inputMode="decimal" value={text} required={required}
-             aria-invalid={Boolean(shownError)} aria-describedby={describedBy(id, { label, help, error: shownError })}
+             aria-invalid={Boolean(shownError)} aria-describedby={describedBy(id, { label, help, error: shownError, tip })}
              onChange={(e) => setText(e.target.value)} onBlur={commit}
              onKeyDown={(e) => e.key === "Enter" && commit()} {...rest} />
     </Field>

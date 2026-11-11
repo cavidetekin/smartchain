@@ -191,7 +191,7 @@ describe("giriş ve oturum formu", () => {
     expect(screen.queryByLabelText("Kilit süresi (dk)")).toBeNull();
     const card = screen.getByRole("region", { name: "Şifre" });
     expect(card).toHaveClass("sc-settings-card");
-    expect(within(card).getByRole("heading", { name: "Şifre" })).toBeInTheDocument();
+    expect(within(card).queryByRole("heading")).toBeNull();  // alt menüdeki ad kartta yinelenmez (K-166)
     expect(within(card).getByLabelText("En az karakter")).toBeInTheDocument();  // alanlar başlıkla aynı kartta
     const save = within(card).getByRole("button", { name: "Kaydet" });
     expect(save).toBeDisabled();
@@ -237,6 +237,8 @@ describe("giriş ve oturum formu", () => {
     expect(JSON.parse(String(called(m, "/api/settings/login-policy")?.[1]?.body)))
       .toEqual({ PasswordMinLength: 12, PasswordRequireLetterAndDigit: false });
     expect(await screen.findByText("Ayarlar kaydedildi.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kaydet" })).toBeDisabled();  // Vazgeç ve Kaydet birlikte (K-166)
+    expect(screen.getByRole("button", { name: "Vazgeç" })).toBeDisabled();
   });
 
   it("sınır dışı ve uyarı süresi denetimi Kaydet'i kapatır", async () => {
@@ -276,7 +278,8 @@ describe("ham veri temizliği ayarı", () => {
     await user.click(within(nav).getByRole("button", { name: "Ham veri temizliği" }));
     const input = await screen.findByLabelText("Ham verinin saklama süresi (gün)");
     expect(input).toHaveValue("7");
-    expect(screen.getByText("Boşsa temizlik çalışmaz.")).toBeInTheDocument();
+    expect(input).toHaveAccessibleDescription("Boşsa temizlik çalışmaz.");  // açıklama ipucunda, formda metin yok (K-166)
+    expect(document.querySelector(".sc-settings-card .sc-field-help")).toBeNull();
     fireEvent.change(input, { target: { value: "45" } });
     fireEvent.blur(input);
     expect(screen.getByText("En az 1, en çok 30.")).toBeInTheDocument();
