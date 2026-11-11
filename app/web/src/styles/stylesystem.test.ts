@@ -274,5 +274,7 @@ describe("ayar ekranı standardı (K-165)", () => {
     expect(rules(sheets["components.css"]).filter((r) => /--(primary|secondary|ghost|danger)(?![^,{]*:not\(:disabled\))[^,{]*:disabled/.test(r.selector))).toEqual([]);
     expect(body(".sc-btn:disabled")).toMatch(/background:\s*var\(--field-disabled-bg\)/);
     expect(body(".sc-top-strip .sc-input--number")).toMatch(/width:\s*6\.1538rem/);
+    expect(body(".sc-settings-foot")).toMatch(/border-top:/);
+    expect(body(".sc-toggle--md .sc-toggle-track")).toMatch(/width:\s*3\.3846rem;\s*height:\s*1\.8462rem/);  // ~44 × 24 px
   });
 });

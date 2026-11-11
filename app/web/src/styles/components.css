@@ -61,7 +61,7 @@
 .sc-input--date { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .sc-textarea { min-height: 4.9231rem; padding: var(--space-2) var(--space-3); resize: vertical; }
 .sc-field-help { margin: 0; color: var(--text-muted); font-size: var(--fs-sm); }
-.sc-field.is-invalid .sc-input { border-color: var(--status-over); }
+.sc-field.is-invalid .sc-input, .sc-input[aria-invalid="true"] { border-color: var(--status-over); }
 .sc-field-error { display: flex; align-items: center; gap: var(--space-1); margin: 0; color: var(--status-over-text-strong);
   font-size: var(--fs-sm); }
 .sc-field-error svg { width: 1rem; height: 1rem; }
@@ -481,8 +481,8 @@
 /* Bölüm kartı (K-165): 640 px sabit genişlik; üstte ad ve düğmeler, altında alanlar; satır ~44 px, değer kutusu 130 px; ad standart yazı renginde */
 .sc-settings-section { display: flex; flex-direction: column; gap: var(--space-2); width: 49.2308rem; max-width: 100%; }
 .sc-settings-card { border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--surface); }
-.sc-settings-head { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
-.sc-settings-card .sc-field-rows { --field-row-label: minmax(0, 1fr); padding: 0 var(--space-4); border-top: 0; }
+.sc-settings-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }  /* düğmeler alanların altında (K-166) */
+.sc-settings-card .sc-field-rows { --field-row-label: minmax(0, 1fr); padding: 0.7692rem var(--space-4); border-top: 0; }  /* ilk satırın üstünde ve son satırın altında ~10 px */
 .sc-settings-card .sc-field-rows > .sc-field { grid-template-columns: minmax(0, 1fr) 10rem; min-height: 3.3846rem; padding: 0.4615rem 0; }
 .sc-settings-card .sc-field-rows > :last-child { border-bottom: 0; }
 .sc-settings-card .sc-field-rows .sc-field-label { color: var(--text); }
@@ -540,6 +540,7 @@ label.sc-group-row { cursor: pointer; }
 .sc-field-rows > .sc-field, .sc-field-rows > .sc-check { display: grid; grid-template-columns: var(--field-row-label) minmax(0, 1fr); align-items: center;
   gap: var(--space-1) var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
 .sc-field-rows > .sc-field > :not(label) { grid-column: 2; }
+.sc-field-rows > .sc-field > .sc-tip-anchor { grid-column: 1; order: -1; }  /* ipuçlu ad da solda (K-166); tek alanlı kartta da aynı düzen */
 .sc-field-rows .sc-field-label, .sc-field-rows > .sc-check > span { order: -1; color: var(--text-muted); font-size: var(--fs-base); }
 .sc-matrix { width: 100%; border-collapse: collapse; }
 .sc-matrix th, .sc-matrix td { padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--line); text-align: left; font-weight: var(--fw-regular); white-space: nowrap; }
@@ -569,6 +570,10 @@ label.sc-group-row { cursor: pointer; }
 .sc-toggle input:checked + .sc-toggle-track { background: var(--indigo-500); }
 .sc-toggle input:checked + .sc-toggle-track::after { transform: translateX(0.9rem); }
 .sc-toggle input:disabled + .sc-toggle-track { opacity: 0.55; }
+/* Formda ve pencerede büyük anahtar (K-166): ~44 × 24 px */
+.sc-toggle--md .sc-toggle-track { width: 3.3846rem; height: 1.8462rem; }
+.sc-toggle--md .sc-toggle-track::after { top: 0.2308rem; left: 0.2308rem; width: 1.3846rem; height: 1.3846rem; }
+.sc-toggle--md input:checked + .sc-toggle-track::after { transform: translateX(1.5385rem); }
 .sc-toggle input:focus-visible + .sc-toggle-track { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .sc-toggle.is-edited .sc-toggle-track { box-shadow: 0 0 0 2px var(--indigo-300); }
 .sc-tip-anchor { display: inline-flex; align-items: center; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }

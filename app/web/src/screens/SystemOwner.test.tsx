@@ -195,6 +195,9 @@ describe("giriş ve oturum formu", () => {
     expect(within(card).getByLabelText("En az karakter")).toBeInTheDocument();  // alanlar başlıkla aynı kartta
     const save = within(card).getByRole("button", { name: "Kaydet" });
     expect(save).toBeDisabled();
+    expect(save.closest(".sc-settings-foot")).not.toBeNull();  // düğmeler alanların altında (K-166)
+    expect(card.lastElementChild).toHaveClass("sc-settings-foot");
+    expect(screen.getByRole("switch", { name: "Harf ve rakam zorunlu" }).closest(".sc-toggle")).toHaveClass("sc-toggle--md");
     expect(save.className).toContain("sc-btn--primary");
     expect(within(card).getByRole("button", { name: "Vazgeç" }).className).toContain("sc-btn--ghost");
     await user.click(screen.getByRole("switch", { name: "Harf ve rakam zorunlu" }));

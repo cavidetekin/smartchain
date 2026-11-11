@@ -11,7 +11,7 @@ import { tr } from "../i18n/tr";
 import { useFlowStatus } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
 import { SwitchCell } from "../table/CellEditors";
-import { DataTable, type RowMenuSpec } from "../table/DataTable";
+import { DataTable, type FieldHints, type RowMenuSpec } from "../table/DataTable";
 import type { Row } from "../table/types";
 import { Alert, Badge, type BadgeTone, Button, ConfirmDialog, type DetailTab, Dialog, MasterDetail, Segment, Tooltip, TopStrip, useMasterDetail } from "../ui";
 import { type Flow, type FlowBody, type FlowOptions, type FlowSettings, type FlowsResponse, flowsApi, FLOW_DONE, FLOW_STOPPED, FLOW_NOT_STARTED,
@@ -103,7 +103,7 @@ export function FlowDialog({ flow, options, onClose, onSaved }: { flow: Flow | n
             titleAside={(
               <span className="sc-dialog-aside">
                 <span>{T.active}</span>
-                <SwitchCell label={T.active} checked={body.is_active} editable onToggle={(v) => set({ is_active: v })} />
+                <SwitchCell label={T.active} checked={body.is_active} editable size="md" onToggle={(v) => set({ is_active: v })} />
               </span>
             )}>
       {error && <Alert tone="error">{error}</Alert>}
@@ -189,7 +189,7 @@ export function FlowDialog({ flow, options, onClose, onSaved }: { flow: Flow | n
       </Step>
       <Step no={5} title={T.stepCleanup}>
         <span className="sc-flow-inline">
-          <SwitchCell label={`${T.stepCleanup}: ${T.afterTransfer}`} checked={body.cleanup} editable onToggle={(v) => set({ cleanup: v })} />
+          <SwitchCell label={`${T.stepCleanup}: ${T.afterTransfer}`} checked={body.cleanup} editable size="md" onToggle={(v) => set({ cleanup: v })} />
           <span>{T.afterTransfer}</span>
         </span>
       </Step>
@@ -228,6 +228,9 @@ function LastState({ row }: { row: Row }) {
 }
 
 const CELLS = { LastState: (_v: unknown, row: Row) => <LastState row={row} /> };
+/** Liste ekrana sığar (U-kuralı, K-166 görsel kontrol): varsayılan genişliklerle 8 kolon 1440 px'te taşıyordu. */
+const FLOW_HINTS: FieldHints = { Name: { width: 13 }, Schedule: { width: 10 }, PullText: { width: 9 }, TransferText: { width: 11 }, Cleanup: { width: 6 },
+  NextRunAt: { width: 10 }, LastState: { width: 15 }, IsActive: { width: 6 } };
 
 /** Sekmenin içeriği. initialFlow: çipteki "Geçmiş" ile gelen işin geçmişi açık gelir. onDirty: bekleme sürelerinde kaydedilmemiş değişiklik. */
 export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number | null; onDirty?(dirty: boolean): void }) {
@@ -320,6 +323,8 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
 
   return (
     <div className="sc-flows-tab">
+      {limitText && <Alert tone="error">{`${T.settings[invalid!]}: ${limitText}`}</Alert>}{/* hata bandı şeridin üstünde (docs/12 Üst şerit) */}
+      {error && <Alert tone="error">{error}</Alert>}
       <TopStrip label={T.title}>
         {SETTING_KEYS.map((k) => (
           <span key={k} className="sc-inline-number">
@@ -338,11 +343,9 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
           <Button variant="primary" disabledReason={writeReason} onClick={() => setEditing("new")}>{T.newFlow}</Button>
         </span>
       </TopStrip>
-      {limitText && <Alert tone="error">{`${T.settings[invalid!]}: ${limitText}`}</Alert>}
-      {error && <Alert tone="error">{error}</Alert>}
       <MasterDetail<"history">
         id="scheduled-jobs"
-        master={<DataTable list="flows" rowMenu={rowMenu} rowProps={rowProps} cellRender={CELLS} reloadKey={reloadKey} selectedRowId={selected?.id ?? null} />}
+        master={<DataTable list="flows" rowMenu={rowMenu} rowProps={rowProps} cellRender={CELLS} fieldHints={FLOW_HINTS} reloadKey={reloadKey} selectedRowId={selected?.id ?? null} />}
         onClose={close}
         detail={selected ? {
           title: T.historyOf(selected.name), tabsLabel: T.history, tabs: tabsOf(), tab: "history", onTab: () => undefined,

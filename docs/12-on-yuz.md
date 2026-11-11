@@ -319,8 +319,9 @@ Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski
 
 - **Sekmeler ana gruplardır** (`Segment`; K-82 ekranlar arası sekmeyi yasaklar, bunlar aynı ekranın bölümleri): Veri sözlüğü · Giriş ve oturum · Sistem sağlığı · Zamanlanmış işler. Adres `?sekme=…` ile açılır.
 - **Tek bölümlü sekme** içeriği doğrudan açar. **Birden çok bölümlü sekmede** solda 200 px genişliğinde alt menü çıkar, sağda yalnız seçili bölüm görünür.
-- **Bölüm kartı (K-165, K-166):** Vazgeç ve Kaydet ile alanlar tek kartta: kartın üst satırında yalnız Vazgeç ve Kaydet (sağda, altında ince çizgi), altında alanlar. Bölümün adı kartta yazılmaz; alt menüde ya da sekmede zaten yazar. Kart sabit genişliktedir (yaklaşık 640 px, rem cinsinden), ekranı kaplamaz; yalnız tablolar (Veri sözlüğü, zamanlanmış işler listesi ve geçmişi) tam genişliktedir. Dar sütun ve iç kaydırma olmaz.
+- **Bölüm kartı (K-165, K-166):** alanlar ile Vazgeç ve Kaydet tek kartta: önce alanlar, altında ince çizgi ve sağda Vazgeç ile Kaydet (pencerelerdeki gibi); kartın üst satırı yoktur. Bölümün adı kartta yazılmaz; alt menüde ya da sekmede zaten yazar. Kart sabit genişliktedir (yaklaşık 640 px, rem cinsinden), ekranı kaplamaz; yalnız tablolar (Veri sözlüğü, zamanlanmış işler listesi ve geçmişi) tam genişliktedir. Dar sütun ve iç kaydırma olmaz.
 - **Alan satırı:** solda ad, sağda 130 px değer kolonu (sayı sağa yaslı); satır yüksekliği yaklaşık 44 px, satırlar ince çizgiyle ayrılır. Ad standart yazı renginde. Evet/Hayır ayarı anahtardır ve öteki satırlar gibi durur: ad solda, anahtar sağdaki değer kolonunda.
+- **Anahtarın iki ölçüsü (K-166):** tablo satırında küçük anahtar; formda ve pencerede yaklaşık 44 × 24 px (ör. "Harf ve rakam zorunlu", zamanlanmış iş penceresindeki Aktif ve Ham veri temizliği).
 - **Açıklama ipucunda (K-166):** formda alan altında açıklama metni yoktur; açıklama (ör. "Boşsa temizlik çalışmaz.") alanın adının ipucundadır. Formda yalnız hata metni görünür.
 - **Vazgeç ve Kaydet birlikte (K-166):** değişiklik yokken ikisi pasif, varken ikisi etkin. Kaydet indigo ana düğme, Vazgeç çerçevesiz (hayalet) düğme. Kaydedilmemiş değişiklikle başka bölüme, sekmeye ya da ekrana geçince uyarı (K-132).
 
@@ -336,7 +337,7 @@ Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski
 
 - **Hiza:** penceredeki bütün kontroller aynı sol ve sağ kenarda durur (en geniş giriş kutusunun genişliği); seçenek ve kutular satırı doldurur.
 - **Zorunlu alan:** yıldız alanın ya da adımın adında ("1 · İş tanımı*"); "(zorunlu)" yazılmaz.
-- **Yer tutucu yok:** giriş kutularında yer tutucu metin kullanılmaz; kutunun anlamı adında, açıklaması ipucundadır.
+- **Yer tutucu yok:** zamanlanmış iş penceresinde ve ayar ekranlarında giriş kutularında yer tutucu metin kullanılmaz; kutunun anlamı adında, açıklaması ipucundadır. Kapsam bugün bu kadardır: tarih kutusundaki biçim, kenar menü araması, Entegrasyon view hücresi, koşul editörünün liste ipucu ve renk seçicideki yer tutucular şimdilik kalır.
 - **Seçenek şeridi:** iki ya da daha çok seçenekli şerit (`Segment`) penceredeki kutuyu eşit paylaşır (ikide yarı yarıya); seçenek yazı kadar kalıp sağı boş bırakmaz.
 - **Gruplu seçim:** gruplar satır satırdır: solda grup adı, tümünü seç kutusu ve "seçili / seçilebilir"; sağda öğeler seçilebilir çip (ad kırılmaz, sığmayan alt satıra geçer); seçilemeyen öğe kesik çerçeveli pasif çip ve küçük etiketiyle.
 
@@ -454,3 +455,4 @@ Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyo
 | Ana–detay düzeni (`ui/MasterDetail`): Dünden bugüne'de kapatma, ayraç, ilk dolu sekme | uygulandı (5.5b, K-161) |
 | Şirket Standart görünümü: Kaydet (System owner, Admin), Ürün Standart'ına döndür, sonradan eklenen alan | uygulandı (K-162) |
 | Zamanlanmış işler: Sistem ayarları'nda sekme (liste, pencere, geçmiş); bağlam çubuğunda çip; sürerken pasif düğmeler; ayar ekranı standardı | uygulandı (5.6, K-163, K-164) |
+| Ayar ekranı standardı: bölüm kartı (alanlar, altında Vazgeç ve Kaydet), sabit ölçüler, açıklama ipucunda, anahtarın iki ölçüsü; üst şerit sırası ve başlık tekrarı yok; pasif düğme her yerde gri; pencere standardı (tek hiza, yer tutucu yok, seçenek şeritleri, gruplu seçim) | uygulandı (5.6, K-165, K-166) |

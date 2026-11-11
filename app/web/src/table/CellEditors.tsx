@@ -17,11 +17,12 @@ export function SelectCell({ label, value, options, editable, changed, onChange 
 }
 
 /** Aç/kapa anahtarı (U-4). Kapatırken sebep, açarken uyarı üst bileşenin (ekran 02). */
-export function SwitchCell({ label, checked, editable, changed, onToggle }: {
-  label: string; checked: boolean; editable: boolean; changed?: boolean; onToggle(next: boolean): void;
+/** Anahtar (K-166): tablo satırında küçük; formda ve pencerede size="md" (~44 × 24 px). */
+export function SwitchCell({ label, checked, editable, changed, onToggle, size = "sm" }: {
+  label: string; checked: boolean; editable: boolean; changed?: boolean; onToggle(next: boolean): void; size?: "sm" | "md";
 }) {
   return (
-    <label className={`sc-toggle${edited(changed)}`} onClick={stop}>
+    <label className={`sc-toggle${size === "md" ? " sc-toggle--md" : ""}${edited(changed)}`} onClick={stop}>
       <input type="checkbox" role="switch" aria-label={label} checked={checked} disabled={!editable} onClick={stop} onChange={(e) => onToggle(e.target.checked)} />
       <span className="sc-toggle-track" aria-hidden="true" />
     </label>

@@ -11,7 +11,7 @@ import { useAuth } from "../auth/AuthContext";
 import { can } from "../auth/permissions";
 import { tr } from "../i18n/tr";
 import { SwitchCell } from "../table/CellEditors";
-import { DataTable, type RowMenuSpec } from "../table/DataTable";
+import { DataTable, type FieldHints, type RowMenuSpec } from "../table/DataTable";
 import { UnsavedGuard } from "../table/useTableEdits";
 import type { Row } from "../table/types";
 import { Alert, Button, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, TextField } from "../ui";
@@ -85,6 +85,10 @@ function FieldDialog({ table, field, onClose, onDone }: { table: string; field: 
   );
 }
 
+/** Tablo ekrana sığar (K-166 görsel kontrol): varsayılan genişliklerle 10 kolon 1440 px'te taşıyordu. */
+const DICTIONARY_HINTS: FieldHints = { TableName: { width: 11 }, FieldName: { width: 12 }, DisplayLabel: { width: 12 }, FieldClass: { width: 8 },
+  ValuePriority: { width: 8 }, ManualOverrides: { width: 6 }, EditableInWorkspace: { width: 6 }, IsRequired: { width: 6 }, IfEmpty: { width: 9 }, IsAdditional: { width: 6 } };
+
 function Dictionary() {
   const [reloadKey, setReloadKey] = useState(0);
   const [open, setOpen] = useState<{ table: string; field: string } | null>(null);
@@ -95,7 +99,7 @@ function Dictionary() {
   }), []);
   return (
     <>
-      <DataTable list="field-definitions" rowMenu={rowMenu} reloadKey={reloadKey} />
+      <DataTable list="field-definitions" rowMenu={rowMenu} reloadKey={reloadKey} fieldHints={DICTIONARY_HINTS} />
       {open && (
         <FieldDialog {...open} onClose={() => setOpen(null)} onDone={() => {
           emitNotice(T.labelSaved(`${open.table}.${open.field}`));
@@ -195,12 +199,6 @@ function SettingsTab({ label, sections, labels, read, write, crossCheck, onDirty
   const form = (
     <div className="sc-settings-section">
       <section className="sc-settings-card" aria-label={section.title}>
-        <header className="sc-settings-head">
-          <span className="sc-strip-actions">
-            <Button variant="ghost" disabled={!dirty || busy} onClick={discard}>{T.discard}</Button>
-            <Button variant="primary" busy={busy} disabled={!dirty || invalid} onClick={() => void save()}>{T.save}</Button>
-          </span>
-        </header>
         <div className="sc-field-rows">
           {section.keys.map((key) => (
             <NumberField key={key} label={labels[key]} value={values[key] as number | null} error={problem(key)}
@@ -210,11 +208,15 @@ function SettingsTab({ label, sections, labels, read, write, crossCheck, onDirty
           {section.checkbox && (  // Evet/Hayır ayarı anahtardır (K-165)
             <div className="sc-field sc-switch-row">
               <span className="sc-field-label">{labels[section.checkbox]}</span>
-              <SwitchCell label={labels[section.checkbox]} checked={Boolean(values[section.checkbox])} editable
+              <SwitchCell label={labels[section.checkbox]} checked={Boolean(values[section.checkbox])} editable size="md"
                           onToggle={(v) => setValues((s) => ({ ...s, [section.checkbox as string]: v }))} />
             </div>
           )}
         </div>
+        <footer className="sc-settings-foot">
+          <Button variant="ghost" disabled={!dirty || busy} onClick={discard}>{T.discard}</Button>
+          <Button variant="primary" busy={busy} disabled={!dirty || invalid} onClick={() => void save()}>{T.save}</Button>
+        </footer>
       </section>
       {error && <Alert tone="error">{error}</Alert>}
     </div>
