@@ -190,8 +190,8 @@ describe("ekran 04 · Veri kuralları", () => {
     expect(within(dialog).getByRole("radio", { name: "Her zaman" })).toHaveAttribute("aria-checked", "true");
   });
 
-  it("menü sırası: Veri yükleme, Dünden bugüne, Veri kuralları, Validasyon kuralları, Ana veri, Veri kalitesi", () => {
-    expect(SCREENS.filter((s) => s.group === "veri").map((s) => s.name)).toEqual(["Veri yükleme", "Dünden bugüne", "Veri kuralları", "Validasyon kuralları", "Ana veri", "Veri kalitesi"]);
+  it("menü sırası: Veri yükleme, Dünden bugüne, Veri kuralları, Validasyon kuralları, Ana veri, İşlem verisi, Veri kalitesi", () => {
+    expect(SCREENS.filter((s) => s.group === "veri").map((s) => s.name)).toEqual(["Veri yükleme", "Dünden bugüne", "Veri kuralları", "Validasyon kuralları", "Ana veri", "İşlem verisi", "Veri kalitesi"]);
   });
 });
 

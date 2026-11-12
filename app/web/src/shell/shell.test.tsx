@@ -198,9 +198,9 @@ describe("daraltılmış menü", () => {
 
 describe("sayfalar", () => {
   it("her ekran kendi adresinde açılır", () => {
-    renderApp("/veri/ana-veri");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana veri");
-    expect(screen.getByText("Bu ekran 6.1 adımında gelecek.")).toBeInTheDocument();
+    renderApp("/veri/veri-kalitesi");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Veri kalitesi");
+    expect(screen.getByText("Bu ekran 6.5 adımında gelecek.")).toBeInTheDocument();
   });
 
   it("kök adres Ana sayfa'ya, bilinmeyen adres 'Sayfa bulunamadı'", () => {

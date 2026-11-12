@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   GitCompareArrows,
   Activity, Boxes, CalendarClock, CalendarRange, ChartGantt, ClipboardList, Database, Factory, FileChartColumn,
-  FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, ListChecks, Moon, Network, Package, Plug, ScrollText, Send, Settings,
+  FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, ListChecks, ListOrdered, Moon, Network, Package, Plug, ScrollText, Send, Settings,
   ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles,
 } from "lucide-react";
 
@@ -88,7 +88,9 @@ export const SCREENS: Screen[] = [
   { no: "27", fn: 100, name: "Validasyon kuralları", path: "/veri/validasyon-kurallari", group: "veri", step: "3.4", icon: ListChecks,
     description: "Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu; hazır ve kullanıcı kuralları, hata eşiği." },
   { no: "03", fn: 10, name: "Ana veri", path: "/veri/ana-veri", group: "veri", step: "6.1", icon: Table2,
-    description: "Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya." },
+    description: "Malzeme, ürün ağacı ve rota, kaynak, tedarikçi ve müşteri, lokasyon ve birim; aktarılan veri, salt okunur." },
+  { no: "29", fn: 102, name: "İşlem verisi", path: "/veri/islem-verisi", group: "veri", step: "6.1", icon: ListOrdered,
+    description: "Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi, çalışan izni; aktarılan veri, salt okunur." },
   { no: "05", fn: 20, name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
     description: "Ana veri ve işlem verisi uyarıları; düzeltme listesi." },
 

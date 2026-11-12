@@ -371,7 +371,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.3). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5).
+- **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.3). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5). Bu Smartchain alanları Kapasite yönetimi ekranında (7.3) girilir, güncel satırda yerinde güncellenir (yeni veri versiyonu açılmaz, izli; aktarım yeni versiyona taşır; K-167); ana veri ekranında salt okunur (K-168).
 - **Tip:** `ResourceType` ERP'den ham değerdir; tip bayraklarla ifade edilir. `IsFurnace` ve `IsMold` yalnız sözleşmededir, Faz 1 planlamada kullanılmaz.
 - **İşçi:** İşçiler kaynaktır (`IsEmployee`), yetkinlikler kaynak grubudur (`IsCompetenceGroup`), işçi yetkinlikleri `ResourceGroupAssignment`'tadır.
 
@@ -427,6 +427,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | DurationDays | decimal(9,4) |  | Süre, gün olarak (yarım gün 0,5) | Süre (gün) | Ön hesap | H | H |  |
 | Note | nvarchar(400) |  | Açıklama |  | Kullanıcı | H | H | bilinmiyor |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
+
+- **Smartchain'de girilen tablolar (K-167):** Calendar, CalendarDay, Shift, ShiftPlan, ResourceCapacityProfile ve ResourceDowntime (ve Aşama 7'de açılacak malzeme blokajı) Kapasite yönetimi ve Malzeme blokajı ekranlarında girilir. Kaydedilince yeni veri versiyonu açılmaz; mevcut veride yerinde güncellenir, değişiklik denetim izinde kalır. Şema bu kurala Aşama 7'nin ilk ekran adımında geçer (versiyonsuz; sentetik yükleme de orada uyarlanır).
 
 ### ResourceEfficiency
 <sub>21. Veri modeli · Kaynak</sub>

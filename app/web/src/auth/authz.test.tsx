@@ -37,7 +37,7 @@ describe("menü role göre (K-100)", () => {
     mockApi();
     renderApp("/ana-sayfa", meAs("End user"));
     await user.type(within(menu()).getByRole("searchbox", { name: "Ekran ara" }), "veri");
-    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ana veri", "Veri kalitesi"]);  // Veri kuralları End user'a kapalı (K-142)
+    expect(within(menu()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ana veri", "İşlem verisi", "Veri kalitesi"]);  // Veri kuralları End user'a kapalı (K-142)
   });
 });
 

@@ -55,6 +55,10 @@ export function userPrefs(userId: number) {
     /** Bildirimi çıkmış zamanlanmış iş çalıştırmaları (K-163): aynı durma her açılışta yeniden bildirilmez. */
     notifiedFlowRuns: (): number[] => read<number[]>(key("flowRuns"), []),
     setNotifiedFlowRuns: (ids: number[]) => write(key("flowRuns"), ids.slice(-50)),
+    /** Veri ekranının (Ana veri, İşlem verisi) son sekmesi ve her sekmenin son tablosu (K-168, K-169). */
+    dataScreen: (id: string): { tab: string | null; tables: Record<string, string> } =>
+      read<{ tab: string | null; tables: Record<string, string> }>(key(id), { tab: null, tables: {} }),
+    setDataScreen: (id: string, value: { tab: string; tables: Record<string, string> }) => write(key(id), value),
   };
 }
 

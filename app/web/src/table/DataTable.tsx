@@ -83,6 +83,9 @@ const features = tableFeatures({
   rowSortingFeature, columnVisibilityFeature, columnOrderingFeature, columnPinningFeature, columnSizingFeature,
 });
 const helper = createColumnHelper<typeof features, Row>();
+/** fitHeaders: başlığın harf başına genişliği ve sıralama, filtre düğmeleriyle iç boşluk (rem; 13 px'te ölçüldü). */
+const HEADER_CHAR_REM = 0.56;
+const HEADER_PAD_REM = 3.6;
 const NO_DATA: Row[] = [];
 
 /** Birim bilinmiyorsa miktar ondalığı (docs/02 UnitOfMeasure.Decimals). */
@@ -258,7 +261,7 @@ function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec })
   );
 }
 
-export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarActions, fit = false, wrapFields, rowOrder, selectedRowId }: {
+export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarLead, toolbarActions, fit = false, fitHeaders = false, wrapFields, rowOrder, selectedRowId }: {
   list: string;
   /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
   cellRender?: CellRender;
@@ -272,8 +275,12 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   reloadKey?: number;
   /** Sabit filtre (ör. tek parti, K-129): her sorguya eklenir, etiketlerde görünmez, kaldırılamaz; Excel de yalnız bu satırları alır. */
   baseFilters?: ListFilter[];
+  /** Araç çubuğunun en başında, görünüm seçiminin solunda (ör. çok tablolu ekranda tablo seçimi, K-168). */
+  toolbarLead?: ReactNode;
   /** Araç çubuğunun başında (ör. tablo içi düzenlemenin Kaydet ve Vazgeç'i, K-132). */
   toolbarActions?: ReactNode;
+  /** Varsayılan genişlik en az başlığı sığdırır (K-169; veri ekranları: tablo yana kayar, başlık kesilmez). Kullanıcının genişliği önce gelir. */
+  fitHeaders?: boolean;
   /** Pencere kipi (docs/12): tablo pencereye sığar, kolon genişliği içerikten; sabitleme ve genişlik ayarı yok. */
   fit?: boolean;
   /** Pencere kipinde kalan genişliği alıp alt satıra kayan uzun metin kolonları (ör. Sorun). */
@@ -328,11 +335,17 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const update = useCallback((fn: (s: TableState) => TableState) => setState((s) => (s ? fn(s) : s)), []);
   const s = state ?? standardState(columns ?? []);
   const byField = useMemo(() => new Map((columns ?? []).map((c) => [c.field, c])), [columns]);
+  /** Kolonun varsayılan genişliği (rem): ipucu ya da tipin varsayılanı; fitHeaders'ta başlık (sıralama ve filtre düğmeleriyle) kesilmesin. */
+  const baseWidth = (f: string): number => {
+    const c = byField.get(f);
+    const w = fieldHints?.[f]?.width ?? DEFAULT_WIDTH_REM[c?.type ?? "text"];
+    return fitHeaders && c ? Math.max(w, clampWidth(c.label.length * HEADER_CHAR_REM + HEADER_PAD_REM)) : w;
+  };
 
   // TanStack durumu TableState'ten türetilir (genişlikler rem).
   const sorting: SortingState = useMemo(() => s.sort.map((x) => ({ id: x.field, desc: x.dir === "desc" })), [s.sort]);
   const defs = useMemo(() => (columns ?? []).map((c) => helper.accessor((r) => r[c.field], {
-    id: c.field, header: c.label, size: fieldHints?.[c.field]?.width ?? DEFAULT_WIDTH_REM[c.type], minSize: MIN_WIDTH_REM, maxSize: MAX_WIDTH_REM,
+    id: c.field, header: c.label, size: baseWidth(c.field), minSize: MIN_WIDTH_REM, maxSize: MAX_WIDTH_REM,
   })), [columns]);
   const table = useTable({
     features, columns: defs, data: NO_DATA,
@@ -341,7 +354,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
       columnVisibility: Object.fromEntries((columns ?? []).map((c) => [c.field, s.order.includes(c.field)])),
       columnOrder: [...s.order, ...(columns ?? []).map((c) => c.field).filter((f) => !s.order.includes(f))],
       columnPinning: { start: s.order.slice(0, s.pinned), end: [] },
-      columnSizing: Object.fromEntries(s.order.map((f) => [f, s.widths[f] ?? fieldHints?.[f]?.width ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"]])),
+      columnSizing: Object.fromEntries(s.order.map((f) => [f, s.widths[f] ?? baseWidth(f)])),
     },
     onSortingChange: (u) => update((st) => {
       const next = typeof u === "function" ? u(st.sort.map((x) => ({ id: x.field, desc: x.dir === "desc" }))) : u;
@@ -352,7 +365,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   });
   const visible = useMemo(() => s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c)),
     [s.order, byField]);
-  const width = (f: string) => s.widths[f] ?? fieldHints?.[f]?.width ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
+  const width = (f: string) => s.widths[f] ?? baseWidth(f);
   const pinnedCount = fit ? 0 : s.pinned;
   const wrapKey = (wrapFields ?? []).join(",");
   const pinStart = (i: number) => visible.slice(0, i).reduce((sum, c) => sum + width(c.field), 0);
@@ -367,7 +380,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   // Gruplu görünümde veri satırının ilk hücresi, en alt grubun adıyla aynı hizada başlar (girinti + ok + boşluk).
   const groupDepth = s.groupBy.length;
   const cellSpecs: CellSpec[] = useMemo(() => {
-    const widthOf = (f: string) => s.widths[f] ?? fieldHints?.[f]?.width ?? DEFAULT_WIDTH_REM[byField.get(f)?.type ?? "text"];
+    const widthOf = (f: string) => s.widths[f] ?? baseWidth(f);
     const cols = s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c));
     const indent = groupDepth ? `calc(var(--space-2) + ${(groupDepth - 1) * GROUP_INDENT_REM + GROUP_ARROW_REM}rem)` : undefined;
     let left = 0;
@@ -639,6 +652,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
       {/* Araç çubuğu ve filtre / gruplama satırı sayfa zemininde; tablo çerçevesi başlık satırından başlar (U-22, docs/12) */}
       <div className="sc-table-toolbar">
         <div className="sc-table-toolbar-main">
+          {toolbarLead}
           <ViewBar views={views} state={s} onClearSort={() => update((st) => ({ ...st, sort: [] }))} />
           <output className="sc-table-count sc-num" aria-label={T.countLabel}>
             {T.count(formatNumber(filtered), formatNumber(fixed.length ? filtered : total))}

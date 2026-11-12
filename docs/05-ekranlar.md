@@ -40,6 +40,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, veri aktarım geçmişi.
 - **28 · Dünden bugüne:** Ham veride tablo başına dünden bugüne satır sayısı değişimi; yeni gelen, gelmeyen ve güncellenen kayıtlar (5.5b, K-159).
 - **03 · Ana veri ekranları:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya… Her değerin kaynağı (ERP, kural, elle) görünür; elle düzeltme yapılır.
+- **29 · İşlem verisi:** Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi ve çalışan izni; aktarılan veri, salt okunur (6.1, K-169).
 - **04 · Veri kuralları:** Tablo başına sıralı veri kuralları; kural penceresi (koşul, sonuç, seçenek), sıra, aç / kapa, kuralları yeniden uygula (K-141, K-142).
 - **27 · Validasyon kuralları:** Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu: yapısal kontroller, hazır kurallar, kullanıcı kuralları; tablo başına hata eşiği (K-136).
 - **05 · Veri kalitesi:** Ana veri ve işlem verisi uyarıları; düzeltme listesi.
@@ -301,7 +302,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Değerin kaynağı:** Her hücrede ERP, kural ya da elle etiketi görünür; varsayılan yoktur (K-138).
 - **Elle düzeltme:** Elle değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
 - **İz:** Her değişiklik kim, ne zaman, eski ve yeni değerle geçmişte tutulur.
-- **Malzeme blokajı (fonksiyon 99, K-126):** Malzeme sekmesinden tanımlanır (6.1).
+- **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.7, K-167); ana veri ekranında yok.
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.3, K-167). Elle değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
+
+### İşlem verisi
+<sub>Ekran 29 · geliştirme 6.1 · K-169 (mockup yok; Ana veri ekranının düzeni) · uygulandı</sub>
+
+- **Ne:** aktarılan işlem verisi, salt okunur; Ana veri ekranının bileşeni ve kuralları (tablo seçimi, Standart görünüm, sayı biçimi).
+- **Sekmeler (aktarım grupları, K-150):** Talep (Satış siparişi · Tahmin · Proje · Proje grubu) · Stok (Stok · Ödünç ve geri ödeme) · Üretim (İş emri · İş emri bileşeni · İş emri operasyonu · Üretim gerçekleşmesi) · Satın alma (Satın alma siparişi) · İzin (Çalışan izni). Tek tablolu sekmede tablo seçimi görünmez.
+- **Yetki:** fonksiyon 102; bütün roller görür, End user salt okunur (görünüm, alan, Excel serbest).
 
 ### Veri kuralları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 04/25</sub>

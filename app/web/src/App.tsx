@@ -14,16 +14,18 @@ import { AuthGate } from "./auth/AuthGate";
 import { LoginPage } from "./auth/LoginPage";
 import { HOME, SCREENS } from "./screens/catalog";
 import { ScreenGate } from "./screens/Forbidden";
+import { MasterData } from "./screens/MasterData";
 import { NotFound, Placeholder } from "./screens/Placeholder";
 import { StyleGuide } from "./screens/StyleGuide";
 import { SystemHealth } from "./screens/SystemHealth";
 import { SystemOwner } from "./screens/SystemOwner";
+import { TransactionData } from "./screens/TransactionData";
 import { TableDemo } from "./screens/TableDemo";
 import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
 
 /** Yazılmış ekranlar; öteki ekranlar boş sayfasını gösterir. */
-const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "28": <RawCompare />, "04": <DataRules />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
+const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "03": <MasterData />, "29": <TransactionData />, "28": <RawCompare />, "04": <DataRules />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
 
 /** initialMe yalnız testlerde verilir; verilmezse oturum açılışta sunucuya sorulur. */
 export function App({ initialMe }: { initialMe?: Me | null }) {

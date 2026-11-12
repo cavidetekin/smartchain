@@ -1,4 +1,4 @@
-"""Yetki matrisi (fonksiyon 90; K-99, K-100): 4 rol × 101 fonksiyon, Faz 1'de kodda sabit, tek kaynak.
+"""Yetki matrisi (fonksiyon 90; K-99, K-100): 4 rol × 102 fonksiyon, Faz 1'de kodda sabit, tek kaynak.
 
 Grup düzeyi docs/06 fonksiyon 90'daki tabloyla birebirdir (test). Arayüz rolün düzeylerini GET /api/auth/me ile alır;
 app/shared/permissions.json yalnız üretilmiş kopyadır (ön yüz testleri, ileride matris ekranı 2.4):
@@ -66,6 +66,7 @@ GROUP_ROWS: tuple[GroupRow, ...] = (
     GroupRow("B2", "B", "Malzeme blokajı", 99, 99, (F, F, F, R)),
     GroupRow("B3", "B", "Validasyon kuralları", 100, 100, (F, F, R, N)),
     GroupRow("A2", "A", "Dünden bugüne", 101, 101, (F, F, F, R)),
+    GroupRow("B6", "B", "İşlem verisi", 102, 102, (F, F, F, R)),  # K-169: Ana veri görüntüleme ile aynı
 )
 
 # Fonksiyon istisnaları: grup düzeyinden ayrılan hücreler (rol → düzey) ve gerekçesi.
@@ -182,6 +183,7 @@ _NAMES = """
 99 Malzeme blokajı
 100 Validasyon kuralı tanımlama
 101 Dünden bugüne
+102 İşlem verisi görüntüleme
 """
 
 

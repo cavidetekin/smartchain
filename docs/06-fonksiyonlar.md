@@ -867,11 +867,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **99 · Malzeme blokajı:** Belli bir dönem için malzemenin üretimini, satın almasını ya da satışını durdurmak.
 - **100 · Validasyon kuralı tanımlama:** Staging'deki veride hangi durumun Hata, Uyarı ya da Bilgi olacağını tablo başına tanımlamak; hazır kuralların sınıfını değiştirmek ya da kapatmak, kullanıcı kuralı eklemek, hata eşiğini girmek (K-136).
 - **101 · Dünden bugüne:** Ham veride tablo başına son veri ile önceki günün son verisini karşılaştırmak: satır sayısı değişimi, yeni gelen, gelmeyen ve güncellenen kayıtlar (K-159, K-160).
+- **102 · İşlem verisi görüntüleme:** Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi ve çalışan izni verisini Ana veri'nin düzeninde, salt okunur görüntülemek (K-169).
 
 ### 10 · Ana veri görüntüleme
 <sub>24. Ekranlar ve fonksiyonlar · F10 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
 - Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
+
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim ve vardiya Kapasite yönetimi'nde (7.3, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
 
 #### NASIL ÇALIŞIR
 
@@ -898,7 +901,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Ekran geçerli veri versiyonunu okur; çalışma içinde açılırsa geçici değerler (WorkspaceOverride) 'çalışma' etiketiyle görünür.
-  - Pasif (ERP'de silinmiş) kayıtlar varsayılan gizlidir; 'pasifleri göster' ile listelenir.
+  - Pasif (ERP'de silinmiş ya da Aktif = Hayır) kayıtlar aktarımda kapatılır (K-149), ekranda görünmez; versiyonsuz Lokasyon pasif kalır, Aktif kolonunda görünür (K-169).
   - End user düzenleme butonlarını hiç görmez; yetki ekranda değil sunucuda da kontrol edilir.
   - Her sekme aynı düzeni kullanır: liste solda, detay sağda, lejant altta.
 - **HATA VE ISTISNA**
@@ -1210,6 +1213,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F15 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
 - Çok sayıda kaydı tek tek düzeltmek yerine filtrelenmiş listeyi Excel'e alıp düzeltmek ve değişen hücreleri elle değer olarak geri yüklemek; aynı izlenebilirlik ve geri alma ile.
+
+- **Durum (K-167):** Sonraya bırakıldı; ilerleyen aşamalarda yeniden değerlendirilecek. Excel'le gelen veri Veri yükleme'den yüklenir.
 
 #### NASIL ÇALIŞIR
 
@@ -1668,12 +1673,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Ana veri ekranı, Malzeme sekmesi (6.1)
+  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.7; K-167)
 - **01:** Malzeme seçilir, blokaj türü (üretim, satın alma ya da satış), başlangıç ve bitiş tarihi ile neden girilir.
 - **02:** Kayıt saklanır, iz bırakır; süresi biten blokaj kendiliğinden geçersiz olur, kayıt silinmez.
 - **GIRDI**
   - LocationCode, MaterialCode, HoldType, StartDate, EndDate, Reason
-- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 6.1'de açılır.
+- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.7'de açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
 - **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motorda uygulanışı Aşama 10.
 - **Uygulama (K-126):** Henüz uygulanmadı; yalnız tanım.
 
@@ -1719,6 +1724,23 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** "Bugün" tablonun güncel hâli, "dün" son verinin gününden önceki günlerde işlenen son partinin anındaki hâlidir; o gün veri gelmediyse daha eski bir gün alınır, tarih ekranda yazar. Aynı gün gelen yeni yükleme "dün"ü değiştirmez.
 - **03:** Üst tabloda satır seçilince Yeni gelenler, Gelmeyenler ve Güncellenenler açılır.
 - **Uygulama (5.5b, K-160):** uygulandı. Ekle / güncelle yüklemesi "gelmeyen" üretmez; Tam yüklemede ön kontrolde düşen satır "gelmeyen" sayılmaz. Etiketsiz ek alanlar karşılaştırılmaz. Hesap düşerse satırda "Hesaplanamadı" yazar, validasyon sürer. Ana sayfa özet sayıları aynı API'den alır; bağlantı ana sayfa adımında.
+
+### 102 · İşlem verisi görüntüleme
+<sub>24. Ekranlar ve fonksiyonlar · F102 · B Ana veri ve kurallar · Çalışma prensibi (6.1, K-169)</sub>
+
+- Aktarılan işlem verisini plan öncesi kontrol için görmek: siparişler, tahminler, projeler, stok, ödünç, iş emirleri, satın alma siparişleri, çalışan izinleri.
+
+#### NASIL ÇALIŞIR
+
+- **KIM VE NEREDEN**
+  - Kim: Bütün roller görür; End user salt okunur
+  - Nereden: Veri grubunda İşlem verisi ekranı (29)
+- **01:** Sekme aktarım grubudur (Talep, Stok, Üretim, Satın alma, İzin); çok tablolu sekmede tablo araç çubuğunun başındaki açılır listeden seçilir.
+- **02:** Liste geçerli veri versiyonundan okunur; ilişkiler kodla görünür, Standart görünümde aktarılan bütün alanlar açıktır.
+- **KURALLAR VE SINIRLAR**
+  - Salt okunur: işlem verisi Smartchain'de değiştirilmez, ERP'de düzeltilir.
+  - Miktarlar malzemenin temel biriminin ondalığıyla; iş emri operasyonunun tüketimleri kaynağın kapasite biriminin.
+- **Uygulama (6.1, K-169):** uygulandı.
 
 ### C · Parametre
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
@@ -1892,6 +1914,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Çalışma prensibi 1/3</sub>
 
 - Kaynak kapasitesini etkileyen parametreleri set bazında yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri.
+
+- **Kapsam (K-167):** Kapasite yönetimi ekranına (7.3) döner: kaynak kapasitesi (günlük kapasite, paralel adet, kapasite kaynağı, takvim ataması, fason parametreleri; alt kartta duruşlar ve kapasite profili), takvim, vardiya tanımı ve planı, verim ve hedef doluluk, kişi sayısının kapasiteye dönüşümü. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
 
 #### NASIL ÇALIŞIR
 
@@ -6836,6 +6860,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | B · Malzeme blokajı | 99 | tam | tam | tam | salt okunur |
 | B · Validasyon kuralları | 100 | tam | tam | salt okunur | yok |
 | A · Dünden bugüne | 101 | tam | tam | tam | salt okunur |
+| B · İşlem verisi | 102 | tam | tam | tam | salt okunur |
 
 - **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur · 92 Zamanlanmış işler Admin'e salt okunur (K-163) · 09 Ham veri temizliği Admin ve Key user'a salt okunur (K-156).
 - **Raporlama serbestliği (K-99):** görünüm kaydetme, alan ekleme ve çıkarma, sıralama, filtre, gruplama ve koşullu biçim fonksiyon sayılmaz; okuma yetkisi olan her listede herkese açıktır.

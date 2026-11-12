@@ -99,7 +99,7 @@ Kullanıcı oturumdan gelir; uç noktalar kullanıcıyı parametre olarak almaz.
 
 ## Yetki (K-99, K-100, fonksiyon 90)
 
-Matris kodda (`app/api/permissions.py`): 4 rol × 101 fonksiyon; grup tablosu docs/06 fonksiyon 90'da. Hücre düzeyleri `full` (tam), `owner` (hepsini okur, yalnız kendi nesnesini değiştirir), `self` (yalnız kendi kayıtları), `read` (salt okunur), `none`. `GET /api/auth/me` rolün düzeylerini `permissions`'ta verir; arayüz menüyü ve düğmeleri buna göre gösterir, güvenlik sunucudadır.
+Matris kodda (`app/api/permissions.py`): 4 rol × 102 fonksiyon; grup tablosu docs/06 fonksiyon 90'da. Hücre düzeyleri `full` (tam), `owner` (hepsini okur, yalnız kendi nesnesini değiştirir), `self` (yalnız kendi kayıtları), `read` (salt okunur), `none`. `GET /api/auth/me` rolün düzeylerini `permissions`'ta verir; arayüz menüyü ve düğmeleri buna göre gösterir, güvenlik sunucudadır.
 
 - **Her uç nokta bir fonksiyon ve erişime bağlıdır** (`deps.require(fn, access)`, `access`: `read` | `write`). Bağsız uç nokta testte yakalanır; açık olanlar yalnız `GET /api/health` ve `POST /api/auth/login`.
 - **Yetkisiz istek 403 `forbidden`**; denetim izine "Yetkisiz istek" (ObjectType "Fonksiyon", ObjectKey fonksiyon numarası; NewValue rol, yöntem, adres, gereken rol):
@@ -170,7 +170,7 @@ Veri sözlüğü listesi `field-definitions` adıyla ortak liste sözleşmesini 
 | `PUT /api/field-definitions/{tablo}/{alan}/label` | `{"label"}`, en çok 40 karakter; boşsa standart etiket. Aynı tabloda aynı etiket 409 `label_taken`. İz "Alan etiketi değişikliği" |
 | `GET /api/settings/login-policy` | `{"values", "defaults", "limits"}` |
 | `PUT /api/settings/login-policy` | Değişen anahtarlar; sınır dışı ya da uyarı süresi oturum süresinden kısa değilse 422, hiçbiri yazılmaz. İz "Ayar değişikliği", anahtar başına |
-| `GET /api/permissions/matrix` | Roller, 18 grup satırı, 101 fonksiyon, istisnalar |
+| `GET /api/permissions/matrix` | Roller, 19 grup satırı, 102 fonksiyon, istisnalar |
 | `GET /api/permissions/matrix/export` | Excel: fonksiyon düzeyinde 98 satır. İz "Dışa aktarım" |
 
 ## Liste sorgusu (K-87)
@@ -373,7 +373,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `POST /api/jobs/{id}/dismiss` | Kendi işinin bildirimini kapatır (`Job.DismissedAt`, K-132); kapatılan bildirim yeniden çıkmaz. Başkasının işi 403. | uygulandı (3.3) |
 | `POST /api/jobs/{id}/prioritize` | Sıradaki işi kanalında öne alır. Çalışan iş ve Gece kanalı 409 `job_not_prioritizable`. İz "İş öne alma". | uygulandı (2.5) |
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
-| `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87). Şimdilik tablo bileşeni denemesi (`/tablo`); malzeme ekranı 6.1'de. | uygulandı (1.3) |
+| `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87): Ana veri ekranının Malzeme tablosu (6.1) ve tablo bileşeni denemesi (`/tablo`). | uygulandı (1.3) |
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
 | `POST /api/materials/export` · `GET /api/exports/{job_id}/file` | Excel'e aktarım: anlık ya da arka planda (K-91, K-93) | uygulandı (1.5) |
 | `query`'de `rules` | Koşullu biçim kuralları: satır başına tutan kurallar (K-95) | uygulandı (1.6) |
@@ -548,6 +548,16 @@ Temizlik sıradayken ya da sürerken aktarım da başlamaz.
 Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, düşerse `State` "Hesaplanamadı" olur ve validasyon sürer. Temizlik "dün" satırlarını silmez (K-160).
 
 **Ölçüm (`python -m pytest -m perf -k raw_compare`, `tests/test_raw_compare_perf.py`):** 25 tablo × 50.000 satır, iki günlük hâl, satırların %10'unda bir alan değişik: 25 tablonun toplamı ortanca 29,6 sn (28,5–91,0; ilk koşu soğuk önbellekle), en yavaş tablo 5,8 sn. Hesap tablo başına validasyon işinin başındadır; tek tablo yüklemesine eklenen süre tablo başınadır. Sunucuda ilk kurulumda yeniden ölçülür.
+
+## Ana veri ve işlem verisi (ekran 03 ve 29, fonksiyon 10 ve 102, K-168, K-169)
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| Ortak listeler `materials`, `master-…` | 10 okuma | Ana veri: 14 tablo, salt okunur; ilişkiler kodla; miktar ondalığı satırın biriminden |
+| Ortak listeler `transaction-…` | 102 okuma | İşlem verisi: 12 tablo (Proje ve Proje grubu dahil), salt okunur |
+| `GET /api/master-data/counts` · `GET /api/transaction-data/counts` | 10 / 102 okuma | Sekmeler, tablolar ve güncel veri versiyonundaki kayıt sayıları (tablo seçimi için); veri yoksa sayı boş |
+
+Uygulandı (6.1, K-168, K-169). Satırlar ortak liste sözleşmesiyle (K-87); yazma ucu yok, elle değer 6.2'de.
 
 ## Zamanlanmış işler (ekran 25, fonksiyon 92, K-163, K-164)
 

@@ -73,32 +73,32 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 6 · Ana veri ve kalite
 
-- [ ] 6.1 Ana veri ekranları (03, fn 10), sekme sekme:
-  - [ ] Lokasyon
-  - [ ] Birim: ad ve ondalık hane burada elle ya da veri kuralıyla yönetilir (K-112)
-  - [ ] Birim dönüşümü
-  - [ ] Kaynak: günlük kapasite, paralel adet, kapasite kaynağı, fason parametreleri ve takvim burada tanımlanır, entegre edilmez (K-117)
-  - [ ] Malzeme: malzeme blokajı (fonksiyon 99, K-126) bu sekmeden tanımlanır, tablosu bu adımda açılır; motorda uygulanışı Aşama 10
-  - [ ] Ürün ağacı: `ScrapRatio` yüzde gösterilir (`percent`, K-113)
-  - [ ] Rota
-  - [ ] Tedarikçi: `MaterialSupplier.QuotaRatio` yüzde gösterilir (`percent`, K-113, K-118)
-  - [ ] Müşteri
-  - [ ] Proje
-  - [ ] Takvim
-  - [ ] Vardiya
-- [ ] 6.2 Değerin kaynağı (11), elle değer girme ve kaldırma (12, 13) · U-15, U-16: yapıştırma, toplu düzenleme, doğrulama, kaydetme · **elle değerin load'da korunması** (5.1'den, K-148): elle değer girme ekranıyla birlikte yapılır ve test edilir; hangi alanların elle değiştirilebileceği burada konuşulur · veri sözlüğünde Sınıf, Değer önceliği, Manuel, Senaryo ve Zorunlu düzenlemesi açılır (pencerede pasif öğeler aktifleşir; Boşsa docs'tan gelir, salt okunur); zorunlu ve `DataRule` kilidi, etki sayısı ve "Şimdi uygula" (K-104)
+- [x] 6.1 Ana veri ekranı (03, fn 10) ve İşlem verisi ekranı (29, fn 102) · K-167, K-168, K-169 · yalnız aktarılan veri, salt okunur (giriş, yeni kayıt, silme yok; elle değer 6.2, Smartchain verisi Aşama 7) · tablo seçimi araç çubuğunun başında açılır liste, kayıt sayılarıyla (tek tablolu sekmede yok) · Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) · varsayılan sekme Malzeme, son sekme ve tablo hatırlanır · Ana veri sekmeleri: · demo bulguları: K-169 (Aktif süzgeci kalktı, Standart görünümde aktarılan bütün alanlar ve yana kaydırma, başlığı kesmeyen kolon genişliği, İşlem verisi ekranı 29 ve fonksiyon 102); bileşen birimi boşken temel birimin ondalığı (K-168); görsel kontrol uygun
+  - [x] Malzeme: Malzeme · Benzetilen ürün
+  - [x] Ürün ağacı ve rota: Üretim versiyonu · Ürün ağacı (`ScrapRatio` yüzde, K-113) · Rota
+  - [x] Kaynak: Kaynak (Smartchain alanları salt okunur; girişi 7.3'te) · Kaynak grubu · Grup ataması
+  - [x] Tedarikçi ve müşteri: Tedarikçi · Malzeme tedarikçisi (`QuotaRatio` yüzde, K-113, K-118) · Müşteri
+  - [x] Lokasyon ve birim: Lokasyon · Birim (ad ve ondalık veri kuralıyla ya da "Manuel: Evet" ile, 6.2; K-112) · Birim dönüşümü
+  - İşlem verisi sekmeleri (aktarım grupları, K-150):
+  - [x] Talep: Satış siparişi · Tahmin · Proje · Proje grubu
+  - [x] Stok: Stok · Ödünç ve geri ödeme
+  - [x] Üretim: İş emri · İş emri bileşeni · İş emri operasyonu · Üretim gerçekleşmesi
+  - [x] Satın alma: Satın alma siparişi
+  - [x] İzin: Çalışan izni
+- [ ] 6.2 Değerin kaynağı (11), elle değer girme ve kaldırma (12, 13) · K-167: yalnız "Manuel: Evet" alanlara giriş, "Manuel: Hayır" hücre salt okunur; kurulumda bütün alanlar Hayır (`ManualOverrides` varsayılanı 0, geçişle mevcut alanlar Hayır), System owner veri sözlüğünden açar; kaldırılınca kural ya da ERP; ipucu "ERP / Kural n / Elle · kişi · tarih"; Excel'den yapıştırma yalnız manuel alanlara · U-15, U-16: yapıştırma, toplu düzenleme, doğrulama, kaydetme · **elle değerin load'da korunması** (5.1'den, K-148): elle değer girme ekranıyla birlikte yapılır ve test edilir; hangi alanların elle değiştirilebileceği burada konuşulur · veri sözlüğünde Sınıf, Değer önceliği, Manuel, Senaryo ve Zorunlu düzenlemesi açılır (pencerede pasif öğeler aktifleşir; Boşsa docs'tan gelir, salt okunur); zorunlu ve `DataRule` kilidi, etki sayısı ve "Şimdi uygula" (K-104)
 - [ ] 6.3 Değişiklik geçmişi (14) · denetim izinden okur; denetim izinde "Kayda git" ve bağlı kayıtlar (K-108)
-- [ ] 6.4 Excel ile toplu düzeltme (15)
+- [—] 6.4 Excel ile toplu düzeltme (15) · Sonraya bırakılanlar'a taşındı (K-167)
 - [ ] 6.5 Veri kalitesi ekranı (05) · kontrol, düzeltme aksiyonu (20, 21) · aktif ve kritik olup kapasitesi tanımsız kaynak uyarı (K-117) · tedarik satırında `FixedLeadTimeDays` ve `VariableLeadTimeDays` ikisi de boşsa uyarı (K-118)
 
 ## Aşama 7 · Parametreler
 
 - [ ] 7.1 Parametre seti (22) · tedarikçi seçim kuralı seçilir: en kısa tedarik süresi ya da `Priority` (K-118) · `SafetyStock` ile `StockCoverageDays` ikisi de doluysa hangisinin geçerli olacağı (büyük olan, yalnız miktar, yalnız gün…) motor parametresi olarak burada seçilir (K-113)
 - [ ] 7.2 Zaman yapısı (23)
-- [ ] 7.3 Kapasite parametreleri (24) · `ShiftPlan.ResourceGroupId` boşsa anlamı (BOŞSA, K-138) vardiya ekranında kararlaştırılır; tablo ekrandan girilir, staging'de yok (K-117) · verim ve hedef doluluk burada tanımlanır, entegre edilmez; vardiyadaki kişi sayısının işçi kaynaklarının kapasitesine nasıl dönüşeceği burada netleşir (K-117)
+- [ ] 7.3 Kapasite yönetimi (ekran, fonksiyon 24) · K-167 · bağımsız ekran: kaynak kapasitesi (günlük kapasite, paralel adet, kapasite kaynağı, takvim ataması, fason parametreleri; alt kartta duruşlar ve kapasite profili), takvim (alt kartta günler, "Günleri oluştur"), vardiya tanımı ve vardiya planı, verim ve hedef doluluk, kişi sayısının kapasiteye dönüşümü · kayıt yeni veri versiyonu açmaz, yerinde güncellenir ve izlenir; bu tablolar versiyonsuz olur (şema geçişi ve sentetik yüklemenin uyarlanması bu adımda) · menüde Parametre grubunda (öneri) · `ShiftPlan.ResourceGroupId` boşsa anlamı (BOŞSA, K-138) vardiya ekranında kararlaştırılır; tablo ekrandan girilir, staging'de yok (K-117) · verim ve hedef doluluk burada tanımlanır, entegre edilmez; vardiyadaki kişi sayısının işçi kaynaklarının kapasitesine nasıl dönüşeceği burada netleşir (K-117)
 - [ ] 7.4 Alokasyon ve öncelik kuralı (25)
 - [ ] 7.5 Uyarı eşikleri (26)
 - [ ] 7.6 Gece senaryo tanımları ekranı (07) · tanım, sıra ve aç/kapa (27, 28)
+- [ ] 7.7 Malzeme blokajı (99) · K-126, K-167 · ayrı ekran (menüde Parametre grubunda, öneri); tablo bu adımda açılır (versiyonsuz, yerinde güncellenir, izli); motorda uygulanışı Aşama 10
 
 ## Aşama 8 · Plan ekranları (fikstürle)
 
@@ -145,7 +145,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 11.1 Destek paketi (95) · Sistem sağlığında düğme ve hatadan "Destek paketine ekle" (K-106)
 - [ ] 11.2 Sürüm güncelleme (97)
 - [ ] 11.3 Yedekleme, geri yükleme, lisans
-- [ ] 11.4 Kurulum paketinin tamamı (27. adım)
+- [ ] 11.4 Kurulum paketinin tamamı (27. adım) · `open_session` (şifresiz oturum açan fonksiyon, `app/api/services/auth.py`) ürün kodundan çıkarılıp yalnız testlere (`tests/auth_helpers.py`) ve kurulum duman testine (`installer/smoke.py`) taşınır; geliştirme betikleri (`scripts/engine_demo.py`, `scripts/job_demo.py`) de oradan alır. Kurulum paketinde ürün kodunda şifresiz oturum açan fonksiyon kalmaz (5.6 kapanışında not edildi)
 - [ ] 11.5 API adaptörü (Faz 2) · varlık başına yöntem seçimine (A-38) üçüncü seçenek olarak bağlanır · Faz 1'de API hiç görünmez: yöntem listesi ve ekran 23'teki API kartı burada eklenir (K-130)
 - [ ] 11.6 Doğruluk raporları (A-22)
 
@@ -169,6 +169,7 @@ Adımı kapanmış ama elle denenmesi sonraya bırakılmış işler.
 
 Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alınır.
 
+- **Excel ile toplu düzeltme (fonksiyon 15, eski 6.4):** ilerleyen aşamalarda yeniden değerlendirilecek; Excel'le gelen veri Veri yükleme'den yüklenir (K-167).
 - **Akış yapısı kurulumda ayarlanır (5.6'da fonksiyon 92 madde madde gözden geçirilir):** gece akışının yapısını (hangi adımlar, sıra, bağımlılık, başlangıç saati, günler, bitiş sınırı, adım hata verirse devam / dur) kurulumda System owner ayarlar; hangi senaryoların çalışacağı müşterinin kararıdır (7.6, fonksiyon 27, 28). Docs'taki "zincir sırası değiştirilemez" ve sabit değerler (22:00 çekim, 06:00 bitiş, 2 paralel senaryo, hafta sonu açık, Pazar 03:00 temizlik, 22:00–06:00 arası yasaklar) varsayılan olmama prensibine göre düzeltilir. Bakılacaklar: adımların iş türü olarak tanımlanması, zorunlu ön koşullar (ör. doğrulama çekimden sonra), birden fazla akış (ör. gün ortası kısmi yükleme), yetki (K-100).
 - **Çoklu dosya ile Excel yükleme (5.5'te ele alınır):** pencerede birden fazla dosya seçilir; her dosyanın tablosu şablondaki teknik addan anlaşılır, hepsi tek listede ön kontrol edilir. Her dosya yine tek tabloya karşılık gelir; docs/06 fonksiyon 03'teki "tek dosya tek varlık" buna göre düzeltilir.
 - **Malzeme bazlı ikame:** ağaçtan bağımsız ikame tablosu şimdilik yok; ağaç içi alternatif `BOM.AlternativeGroup` (A-41), ağaç bazlı alternatif ayrı ağaç kodu ve üretim versiyonu (A-40) ile çözülür (K-115).

@@ -21,16 +21,16 @@ def test_100_functions_match_docs():
     documented = {}
     for m in re.finditer(r"^- \*\*(\d{2,3}) · (.+?):\*\*", DOCS06, re.M):
         documented.setdefault(int(m.group(1)), m.group(2))
-    assert sorted(perm.FUNCTIONS) == list(range(1, 102))
+    assert sorted(perm.FUNCTIONS) == list(range(1, 103))
     assert {no: f.name for no, f in perm.FUNCTIONS.items()} == documented
 
 
 def test_groups_cover_functions_once_and_match_mockup_ranges():
     covered = [no for g in perm.GROUP_ROWS for no in range(g.first, g.last + 1)]
-    assert covered == list(range(1, 102))
+    assert covered == list(range(1, 103))
     assert [(g.letter, g.first, g.last) for g in perm.GROUP_ROWS] == [
         ("A", 1, 9), ("B", 10, 15), ("B", 16, 19), ("B", 20, 21), ("C", 22, 28), ("D", 29, 39), ("E", 40, 49), ("F", 50, 63), ("G", 64, 69),
-        ("H", 70, 75), ("I", 76, 81), ("J", 82, 87), ("K", 88, 95), ("K", 96, 97), ("K", 98, 98), ("B", 99, 99), ("B", 100, 100), ("A", 101, 101)]
+        ("H", 70, 75), ("I", 76, 81), ("J", 82, 87), ("K", 88, 95), ("K", 96, 97), ("K", 98, 98), ("B", 99, 99), ("B", 100, 100), ("A", 101, 101), ("B", 102, 102)]
 
 
 def test_group_table_in_docs_matches_code():
@@ -72,7 +72,7 @@ def test_access_and_required_role():
     assert perm.required_role(96, Access.READ) == SYSTEM_OWNER
     assert perm.forbidden_message(12, Access.WRITE) == "Bu işlem için Key user yetkisi gerekir. Yetki için yöneticinize başvurun."
     assert perm.forbidden_message(96, Access.READ) == "Bu işlem için System owner yetkisi gerekir. Smartchain desteğine başvurun."
-    assert perm.role_permissions(END_USER)["86"] == "full" and len(perm.role_permissions(ADMIN)) == 101
+    assert perm.role_permissions(END_USER)["86"] == "full" and len(perm.role_permissions(ADMIN)) == 102
 
 
 def test_shared_copy_is_up_to_date():

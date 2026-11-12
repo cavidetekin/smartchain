@@ -200,13 +200,13 @@ def test_company_standard_saved_by_admin_opens_for_everyone_without_default(api,
 def test_fields_added_later_follow_product_default_and_hidden_stay_hidden(api, roles, db_engine):
     admin = roles["Admin"]
     api.put("/api/materials/views/standard", headers=auth(admin), json={"definition": STANDARD})
-    with db_engine.begin() as c:   # ürün güncellemesini taklit: MaterialLevel (varsayılan görünür) ve Brand (varsayılan gizli) kayıt anında yokmuş
+    with db_engine.begin() as c:   # ürün güncellemesini taklit: MaterialLevel (varsayılan görünür) ve IsActive (varsayılan gizli, K-169) kayıt anında yokmuş
         known = [f for f in api.get("/api/materials/columns", headers=auth(admin)).json()["columns"]]
-        names = [k["field"] for k in known if k["field"] not in ("MaterialLevel", "Brand")]
+        names = [k["field"] for k in known if k["field"] not in ("MaterialLevel", "IsActive")]
         c.execute(text("UPDATE adm.TableViewStandard SET KnownFields = :k WHERE ListName = N'materials'"), {"k": json.dumps(names)})
     fields = [c["field"] for c in listed(api, admin)["standard"]["definition"]["columns"]]
     assert fields[:3] == ["Name", "Code", "MaterialGroup"] and "MaterialLevel" in fields      # yeni ve varsayılan görünür: eklendi
-    assert "Brand" not in fields and "BaseUom" not in fields                                   # yeni ama gizli; Standart'ta gizlenmiş: gizli kalır
+    assert "IsActive" not in fields and "BaseUom" not in fields                                   # yeni ama gizli; Standart'ta gizlenmiş: gizli kalır
 
 
 def test_reset_to_product_standard(api, roles, db_engine):

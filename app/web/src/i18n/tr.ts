@@ -429,6 +429,29 @@ export const tr = {
     lastTransfer: (when: string, kind: string) => `${when} · ${kind}`,
     newData: "Yeni veri",
   },
+  // Veri ekranlarının ortak bileşeni (Ana veri, İşlem verisi; K-168, K-169)
+  dataScreen: {
+    table: "Tablo",
+    tableWithCount: (label: string, n: string) => `${label} (${n})`,
+  },
+  masterData: {
+    title: "Ana veri",
+    sections: "Ana veri bölümleri",
+    tabs: { material: "Malzeme", bomRouting: "Ürün ağacı ve rota", resource: "Kaynak", supplierCustomer: "Tedarikçi ve müşteri",
+            locationUnit: "Lokasyon ve birim" },
+    tables: { material: "Malzeme", materialReference: "Benzetilen ürün", productionVersion: "Üretim versiyonu", bom: "Ürün ağacı", routing: "Rota",
+              resource: "Kaynak", resourceGroup: "Kaynak grubu", groupAssignment: "Grup ataması", supplier: "Tedarikçi",
+              materialSupplier: "Malzeme tedarikçisi", customer: "Müşteri", location: "Lokasyon", unit: "Birim", uomConversion: "Birim dönüşümü" },
+  },
+  transactionData: {
+    title: "İşlem verisi",
+    sections: "İşlem verisi bölümleri",
+    tabs: { demand: "Talep", stock: "Stok", production: "Üretim", purchase: "Satın alma", absence: "İzin" },
+    tables: { salesOrder: "Satış siparişi", forecast: "Tahmin", project: "Proje", projectGroup: "Proje grubu", stock: "Stok",
+              borrowPayback: "Ödünç ve geri ödeme", workOrder: "İş emri", workOrderComponent: "İş emri bileşeni",
+              workOrderOperation: "İş emri operasyonu", productionConfirmation: "Üretim gerçekleşmesi", purchaseOrder: "Satın alma siparişi",
+              employeeAbsence: "Çalışan izni" },
+  },
   auditLog: {
     title: "Denetim izi",
     detailTitle: "Kayıt detayı",

@@ -240,6 +240,19 @@
         "Key user": "full",
         "End user": "read"
       }
+    },
+    {
+      "key": "B6",
+      "letter": "B",
+      "name": "İşlem verisi",
+      "first": 102,
+      "last": 102,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
     }
   ],
   "functions": [
@@ -1347,6 +1360,17 @@
       "no": 101,
       "name": "Dünden bugüne",
       "group": "A",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 102,
+      "name": "İşlem verisi görüntüleme",
+      "group": "B",
       "levels": {
         "System owner": "full",
         "Admin": "full",

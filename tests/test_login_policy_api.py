@@ -134,7 +134,7 @@ def test_policy_only_system_owner(client, people, role):
 def test_matrix_open_to_admin_and_owner(client, people, role):
     body = client.get("/api/permissions/matrix", headers=auth(people[role])).json()
     assert body["roles"] == [SYSTEM_OWNER, ADMIN, KEY_USER, END_USER]
-    assert len(body["groups"]) == 18 and len(body["functions"]) == 101
+    assert len(body["groups"]) == 19 and len(body["functions"]) == 102
 
 
 @pytest.mark.parametrize("role", [KEY_USER, END_USER])
@@ -152,7 +152,7 @@ def test_matrix_excel_and_trace(db_engine, client, people):
     book = load_workbook(io.BytesIO(r.content))
     rows = list(book.worksheets[0].iter_rows(values_only=True))
     assert rows[0] == ("No", "Fonksiyon", "Grup", SYSTEM_OWNER, ADMIN, KEY_USER, END_USER)
-    assert len(rows) == 102
+    assert len(rows) == 103
     by_no = {row[0]: row for row in rows[1:]}
     assert by_no[86][6] == "Tam" and by_no[96][4] == "Yok" and by_no[22][6] == "Yok" and by_no[90][4] == "Salt okunur"
     assert by_no[50][5] == "Sahibi" and by_no[98][5] == "Kendi" and by_no[10][2] == "Ana veri" and by_no[16][2] == "Veri kuralları"
