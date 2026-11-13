@@ -12,11 +12,11 @@ import { formatDateTime } from "../format";
 import { tr } from "../i18n/tr";
 import { useFlowLock } from "../shell/FlowStatus";
 import type { CellEditing, PasteCell } from "../table/cellEditing";
-import { type CellClass, type CellRender, type CellWrap, formatCell } from "../table/DataTable";
+import { type CellClass, type CellMenuItem, type CellRender, type CellWrap, formatCell, type Selection } from "../table/DataTable";
+import type { MenuAction } from "../ui/PopMenu";
 import type { ListColumn, Row } from "../table/types";
 import { EditBar, useTableEdits } from "../table/useTableEdits";
-import { Button, Tooltip } from "../ui";
-import { MenuItem, RowPopMenu } from "./RowPopMenu";
+import { Tooltip } from "../ui";
 import { type CellSource, type CellSources, type ManualChange, type ManualItem, manualValuesApi } from "./manualValuesApi";
 
 const T = tr.manualValues;
@@ -120,8 +120,6 @@ export function useManualValues(list: string, columns: ListColumn[] | null, onSa
   const [saving, setSaving] = useState(false);
   const [problems, setProblems] = useState<Record<string, string>>({});
   const [paste, setPaste] = useState<PasteReport | null>(null);
-  const [picked, setPicked] = useState<Map<string, Row>>(new Map());
-  const [menu, setMenu] = useState<{ anchor: HTMLElement; row: Row; col: ListColumn } | null>(null);
   const byField = useMemo(() => new Map((columns ?? []).map((c) => [c.field, c])), [columns]);
   /** Tabloda manuel alan var mı: yoksa hücre imleci, ✎ ve seçim kutuları da yok (K-172). */
   const hasManual = useMemo(() => (columns ?? []).some((c) => c.manual), [columns]);
@@ -150,11 +148,6 @@ export function useManualValues(list: string, columns: ListColumn[] | null, onSa
       clear: (col, row) => {
         if (!removable(row, col.field)) return false;
         removeCell(row, col.field);
-        return true;
-      },
-      menu: (col, row, anchor) => {
-        if (!removable(row, col.field)) return false;
-        setMenu({ anchor, row, col });
         return true;
       },
       paste: (cells: PasteCell[]) => {
@@ -196,8 +189,7 @@ export function useManualValues(list: string, columns: ListColumn[] | null, onSa
     return formatCell(col, value, row);
   }])), [columns, edits]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Kaynak ipucu yalnız manuel değer, kural sonucu ya da geçersiz taslakta. Sağ tık hücre menüsü ortak tablonun hücresinde (cellEditing.menu):
-  // ipucu sarmalayıcısı metin kadar geniş olduğundan burada dinlenince hücrenin boş kısmında tarayıcının menüsü çıkıyordu.
+  // Kaynak ipucu yalnız manuel değer, kural sonucu ya da geçersiz taslakta. Sağ tık hücre menüsü ortak tablonun hücresinde (menuItems, K-173).
   const cellWrap: CellWrap = useCallback((field: string, row: Row, content: ReactNode) => {
     const col = byField.get(field);
     if (!col) return content;
@@ -222,25 +214,19 @@ export function useManualValues(list: string, columns: ListColumn[] | null, onSa
     return classes.join(" ") || undefined;
   }, [problems, edits]);
 
-  // Toplu kaldırma (K-170): seçili kayıtların bütün manuel değerleri taslağa (Kaydet ile yazılır). Seçim kutuları yalnız manuel alanı olan
-  // tabloda ve kaldırma yetkisinde (K-172).
-  const selection = canRemove && hasManual ? {
-    selected: new Set(picked.keys()) as ReadonlySet<string>,
-    label: (row: Row) => T.select(recordLabel(row)),
-    onToggle: (rows: Row[], on: boolean) => setPicked((prev) => {
-      const next = new Map(prev);
-      for (const r of rows) {
-        if (on) next.set(String(r.Id), r);
-        else next.delete(String(r.Id));
-      }
-      return next;
-    }),
-  } : undefined;
-  const pickedManual = [...picked.values()].flatMap((r) => Object.entries(sources(r)).filter(([f, c]) => c.source === "Manuel" && draft(r, f) !== REMOVE).map(([f]) => [r, f] as const));
-  const removePicked = () => {
-    for (const [r, f] of pickedManual) removeCell(r, f);
-    setPicked(new Map());  // taslağa alındı; seçim kalkar, düğme gizlenir
+  // Toplu kaldırma (K-170, K-171): çoklu seçimde seçili satıra sağ tık → "Seçili n satır · Manuel değerleri kaldır"; seçili kayıtların bütün
+  // manuel değerleri taslağa (Kaydet ile yazılır). Yalnız manuel alanı olan tabloda ve kaldırma yetkisinde.
+  const removeRows = async (selection: Selection) => {
+    const rows = await selection.rows();
+    const cells = rows.flatMap((r) => Object.entries(sources(r)).filter(([f, c]) => c.source === "Manuel" && draft(r, f) !== REMOVE).map(([f]) => [r, f] as const));
+    if (!cells.length) {
+      emitNotice(T.removePickedNone);
+      return;
+    }
+    for (const [r, f] of cells) removeCell(r, f);
   };
+  const selectionMenu = useCallback((selection: Selection): MenuAction[] => (canRemove && hasManual
+    ? [{ label: T.removePicked, onClick: () => void removeRows(selection) }] : []), [canRemove, hasManual, edits]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     const changes: ManualChange[] = [];
@@ -262,7 +248,6 @@ export function useManualValues(list: string, columns: ListColumn[] | null, onSa
       if (changes.length) await manualValuesApi.save(list, changes);
       if (removes.length) await manualValuesApi.remove(list, removes);
       edits.discard();
-      setPicked(new Map());
       setPaste(null);
       emitNotice(T.saved(changes.length, removes.length));
       onSaved();
@@ -285,22 +270,13 @@ export function useManualValues(list: string, columns: ListColumn[] | null, onSa
     setPaste(null);
   };
 
-  // Yalnız kayıt seçiliyken (araç çubuğu tek satırda kalsın)
-  const removeButton = selection && picked.size > 0 ? (
-    <Button size="sm" variant="secondary" disabledReason={pickedManual.length ? null : T.removePickedNone} onClick={removePicked}>
-      {T.removePicked(pickedManual.length)}
-    </Button>
-  ) : null;
   const editBar = canEdit || canRemove
-    ? <>{removeButton}<EditBar dirty={edits.dirty} busy={saving} onSave={() => void save()} onDiscard={discard} disabledReason={flowLock} /></>
+    ? <EditBar dirty={edits.dirty} busy={saving} onSave={() => void save()} onDiscard={discard} disabledReason={flowLock} />
     : null;
 
-  // Hücre menüsü (sağ tık): manuel değeri kaldırma taslağı
-  const cellMenu = menu ? (
-    <RowPopMenu label={T.cellMenu(menu.col.label)} anchor={menu.anchor} onClose={() => setMenu(null)}>
-      <MenuItem label={T.removeOne} state={{ allowed: true }} onClick={() => { removeCell(menu.row, menu.col.field); setMenu(null); }} />
-    </RowPopMenu>
-  ) : null;
+  // Ortak tablonun hücre menüsüne (sağ tık, K-173) ek öğe: manuel değerli hücrede kaldırma taslağı
+  const menuItems = useCallback((col: ListColumn, row: Row): CellMenuItem[] => (removable(row, col.field)
+    ? [{ label: T.removeOne, onClick: () => removeCell(row, col.field) }] : []), [canRemove, edits]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { cellEditing, cellRender, cellWrap, cellClass, selection, editBar, cellMenu, paste, closePaste: () => setPaste(null), dirty: edits.dirty, discard };
+  return { cellEditing, cellRender, cellWrap, cellClass, selectionMenu, editBar, menuItems, paste, closePaste: () => setPaste(null), dirty: edits.dirty, discard };
 }

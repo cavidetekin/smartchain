@@ -16,6 +16,9 @@ export interface AuditDetail {
   object: string | null;
   has_object: boolean;
   changes: AuditChange[];
+  /** "Kayda git" (K-173): nesnesi veri kaydı olan satırda hedef ya da bulunamama nedeni. */
+  target?: { list: string; id: string } | null;
+  target_reason?: string;
 }
 
 export interface AuditHistory {

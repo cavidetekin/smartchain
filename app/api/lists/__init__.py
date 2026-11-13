@@ -6,6 +6,7 @@ from .definition import ListDefinition
 from .field_definitions import FIELD_DEFINITIONS
 from .flow_runs import FLOW_RUNS
 from .flows import FLOWS
+from .history import RECORD_HISTORY, RECORD_HISTORY_MANY
 from .import_findings import IMPORT_FINDINGS
 from .jobs import JOB_QUEUE, JOB_RUNS, SYSTEM_EVENTS
 from .master_data import MASTER_LISTS, TRANSACTION_LISTS
@@ -17,4 +18,4 @@ from .validation import RECORDS_LISTS, VALIDATION_RULES
 
 LISTS: tuple[ListDefinition, ...] = (INTEGRATION_ENTITIES, MATERIALS, USERS, FIELD_DEFINITIONS, JOB_QUEUE, JOB_RUNS, SYSTEM_EVENTS, AUDIT_LOG, DATA_ENTITIES, IMPORT_FINDINGS,
                                 VALIDATION_RULES, DATA_RULES, TRANSFER_HISTORY, *RECORDS_LISTS, RAW_COMPARE, RAW_COMPARE_CHANGES, *RAW_COMPARE_ROWS, FLOWS, FLOW_RUNS,
-                                *MASTER_LISTS, *TRANSACTION_LISTS)
+                                *MASTER_LISTS, *TRANSACTION_LISTS, RECORD_HISTORY, RECORD_HISTORY_MANY)

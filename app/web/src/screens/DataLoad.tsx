@@ -24,7 +24,7 @@ import { PartialTransferDialog, TransferResultDialog, TransferStartDialog } from
 import { TransferHistoryDrawer } from "./TransferHistory";
 import { useFlowLock } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
-import { MenuItem, RowPopMenu } from "./RowPopMenu";
+import { type MenuAction, MenuActions, MenuItem, RowPopMenu } from "./RowPopMenu";
 import { ValidationChip, ValidationDrawer } from "./ValidationDrawer";
 import { RUNNING_STATES } from "./validationApi";
 
@@ -90,7 +90,7 @@ export function DataLoad() {
   const [switching, setSwitching] = useState<Row | null>(null);
   const [saving, setSaving] = useState(false);
   const edits = useTableEdits();
-  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const [infoRow, setInfoRow] = useState<Row | null>(null);
   const [uploadRow, setUploadRow] = useState<Row | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -126,7 +126,7 @@ export function DataLoad() {
 
   const rowMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.rowMenu(String(row.Name)),
-    onOpen: (row: Row, anchor: HTMLElement) => setMenu({ row, anchor }),
+    onOpen: (row: Row, anchor: HTMLElement, extra?: MenuAction[]) => setMenu({ row, anchor, extra }),
   }), []);
 
   const toggle = useCallback((row: Row) => {
@@ -212,9 +212,16 @@ export function DataLoad() {
 
   return (
     <section className="sc-page--fill">
-      <header className="sc-page-head sc-page-head--row">
+      <header className="sc-page-head">
         <h1>{T.title}</h1>
-        <div className="sc-page-head-actions">
+      </header>
+      {error && <Alert tone="error">{error}</Alert>}
+      {/* Ekranın işlemleri şeridin solunda (K-171) */}
+      <DataTable list="data-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey} cellEditing={canMethod ? methodEdit.editing : undefined}
+                 cellClass={(field, row) => (methodEdit.changed(field, row) ? "is-draft" : undefined)}
+                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />}
+                 toolbarLead={(
+        <>
           <Button variant="primary" disabledReason={pullReason} onClick={() => setPullStart({})}>{T.pullNow}</Button>
           <Button variant="primary" disabledReason={uploadReason} onClick={() => fileInput.current?.click()}>{T.uploadMany}</Button>
           <input ref={fileInput} type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-hidden="true"
@@ -223,19 +230,16 @@ export function DataLoad() {
                   onClick={(e) => { const at = e.currentTarget; setTransferMenu((open) => (open ? null : at)); }}>
             {tr.transfer.menu}<ChevronDown aria-hidden="true" className="sc-btn-caret" />
           </Button>
-        </div>
-      </header>
-      {error && <Alert tone="error">{error}</Alert>}
-      <DataTable list="data-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey} cellEditing={canMethod ? methodEdit.editing : undefined}
-                 cellClass={(field, row) => (methodEdit.changed(field, row) ? "is-draft" : undefined)}
-                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />} />
+        </>
+                 )} />
       <UnsavedGuard dirty={edits.dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.Name))} anchor={menu.anchor} onClose={() => setMenu(null)}>
+          <MenuActions items={menu.extra} onDone={() => setMenu(null)} />
+          <MenuItem label={tr.table.detailItem} state={ALLOWED} onClick={() => { setInfoRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.download(menu.row.Version)} state={ALLOWED} onClick={() => download(menu.row)} />
           <MenuItem label={T.viewData} state={ALLOWED}
                     onClick={() => { setDrawer({ entity: String(menu.row.Entity), name: String(menu.row.Name), all: true }); setMenu(null); }} />
-          <MenuItem label={T.info} state={ALLOWED} onClick={() => { setInfoRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.upload} state={reasonState(uploadReason)} onClick={() => { setUploadRow(menu.row); setMenu(null); }} />
           {menu.row.Method === METHOD_SQL && (
             <MenuItem label={T.pullNow} state={reasonState(pullReason)}

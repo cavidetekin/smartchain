@@ -22,8 +22,8 @@ const columnByField = (f: string) => COLUMNS.find((c) => c.field === f) as ListC
 
 /** Görünüm "⋯" menüsünü açar (Kaydet, Farklı kaydet, Varsayılan yap, Sil, Sıralamayı temizle). */
 async function viewMenu(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Görünüm işlemleri" }));
-  return screen.getByRole("menu", { name: "Görünüm işlemleri" });
+  await user.click(screen.getByRole("button", { name: "Tablo ayarları" }));
+  return screen.getByRole("menu", { name: "Tablo ayarları" });
 }
 
 async function viewAction(user: ReturnType<typeof userEvent.setup>, name: string) {
@@ -45,24 +45,24 @@ describe("şirket Standart'ı (K-162)", () => {
   it("şirket Standart'ı varsa kendi varsayılanı olmayana o açılır", async () => {
     await openTable({ views: { views: [], default_view_id: null, standard: company, can_edit_standard: false } });
     expect(calls.queries[0].fields).toEqual(["Name", "Code"]);
-    expect(selectedText()).toBe("Standart (varsayılan)");
+    expect(selectedText()).toBe("Standart *");
   });
 
   it("System owner ve Admin Standart'ı kaydeder; ürün Standart'ına onayla döner", async () => {
     const user = userEvent.setup();
     await openTable({ views: { views: [], default_view_id: null, can_edit_standard: true } });
     const menu = await viewMenu(user);
-    expect(within(menu).getByRole("menuitem", { name: "Ürün Standart'ına döndür" })).toBeDisabled();  // şirket Standart'ı yok
+    expect(within(menu).getByRole("menuitem", { name: "Görünüm standardına dön" })).toBeDisabled();  // şirket Standart'ı yok
     await user.keyboard("{Escape}");
     await user.click(sortButton("Malzeme kodu"));
     await viewAction(user, "Kaydet");
     await waitFor(() => expect(lastViewCall("PUT")?.url).toBe("/api/materials/views/standard"));
     expect(lastViewCall("PUT")?.body).toMatchObject({ definition: { sort: [{ field: "Code", dir: "asc" }] } });
     await waitFor(() => expect(screen.queryByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeNull());
-    await viewAction(user, "Ürün Standart'ına döndür");
-    const dialog = screen.getByRole("dialog", { name: "Ürün Standart'ına döndür" });
+    await viewAction(user, "Görünüm standardına dön");
+    const dialog = screen.getByRole("dialog", { name: "Görünüm standardına dön" });
     expect(within(dialog).getByText(/Kendi varsayılanını seçmemiş herkes için geçerlidir/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Ürün Standart'ına döndür" }));
+    await user.click(within(dialog).getByRole("button", { name: "Görünüm standardına dön" }));
     await waitFor(() => expect(lastViewCall("DELETE")?.url).toBe("/api/materials/views/standard"));
     await waitFor(() => expect(calls.queries.at(-1)?.fields).toEqual(STANDARD_FIELDS));
   });
@@ -75,7 +75,7 @@ describe("şirket Standart'ı (K-162)", () => {
     const save = within(menu).getByRole("menuitem", { name: "Kaydet" });
     expect(save).toBeDisabled();
     expect(save).toHaveAttribute("title", "Standart görünümü yalnız System owner ve Admin değiştirebilir.");
-    expect(within(menu).queryByRole("menuitem", { name: "Ürün Standart'ına döndür" })).toBeNull();
+    expect(within(menu).queryByRole("menuitem", { name: "Görünüm standardına dön" })).toBeNull();
   });
 });
 
@@ -85,14 +85,14 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
   it("açılışta kullanıcının varsayılan görünümü uygulanır; Standart istenmeden", async () => {
     await openTable({ views: { views: [mine], default_view_id: 5 } });
     expect(calls.queries[0]).toMatchObject({ fields: ["Name", "Code"], sort: [{ field: "Code", dir: "desc" }] });
-    expect(selectedText()).toBe("Benim (varsayılan)");
+    expect(selectedText()).toBe("Benim *");
     expect(calls.views[0].url).toBe("/api/materials/views");  // kullanıcı oturumdan (K-97)
   });
 
   it("varsayılan yoksa Standart; değişince • çıkar, Kaydet yeni içeriği gönderir", async () => {
     const user = userEvent.setup();
     await openTable({ views: { views: [mine], default_view_id: null } });
-    expect(selectedText()).toBe("Standart (varsayılan)");
+    expect(selectedText()).toBe("Standart *");
     expect(calls.queries[0].fields).toEqual(STANDARD_FIELDS);
     expect(screen.queryByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeNull();
     await user.selectOptions(viewSelect(), "5");
@@ -123,13 +123,13 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     const user = userEvent.setup();
     const shared = savedView(7, "Ekip", {}, { is_owner: false, is_shared: true, owner_user_id: 9, owner_name: "Ayşe" });
     await openTable({ views: { views: [shared], default_view_id: 7 } });
-    expect(selectedText()).toBe("Ekip · Ayşe paylaştı (varsayılan)");
+    expect(selectedText()).toBe("Ekip *");   // yalnız görünümün adı (K-171)
     await user.click(sortButton("Malzeme kodu"));
     expect(screen.getByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeInTheDocument();
     const menu = await viewMenu(user);
     expect(within(menu).getByRole("menuitem", { name: "Kaydet" })).toBeDisabled();
-    expect(within(menu).getByRole("menuitem", { name: "Sil" })).toBeDisabled();
-    for (const name of ["Kaydet", "Sil"]) {
+    expect(within(menu).getByRole("menuitem", { name: "Görünümü sil" })).toBeDisabled();
+    for (const name of ["Kaydet", "Görünümü sil"]) {
       expect(within(menu).getByRole("menuitem", { name })).toHaveAttribute(
         "title", "Bu görünümü yalnız sahibi değiştirebilir.");
     }
@@ -144,7 +144,7 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     await user.selectOptions(viewSelect(), "6");
     const dialog = screen.getByRole("dialog", { name: "Kaydedilmemiş değişiklik" });
     await user.click(within(dialog).getByRole("button", { name: "Vazgeç" }));
-    expect(selectedText()).toBe("Benim (varsayılan)");
+    expect(selectedText()).toBe("Benim *");
     await user.selectOptions(viewSelect(), "6");
     await user.click(screen.getByRole("button", { name: "Değişiklikleri bırak" }));
     await waitFor(() => expect(lastQuery().fields).toEqual(["MaterialLevel"]));
@@ -157,13 +157,13 @@ describe("kayıtlı görünüm (U-9, K-89)", () => {
     await user.selectOptions(viewSelect(), "5");
     await viewAction(user, "Varsayılan yap");
     await waitFor(() => expect(lastViewCall("PUT")?.body).toEqual({ view_id: 5 }));
-    await waitFor(() => expect(selectedText()).toBe("Benim (varsayılan)"));
-    await viewAction(user, "Sil");
+    await waitFor(() => expect(selectedText()).toBe("Benim *"));
+    await viewAction(user, "Görünümü sil");
     const dialog = screen.getByRole("dialog", { name: "Görünümü sil" });
     expect(within(dialog).getByText(/"Benim" görünümü silinsin mi/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Sil" }));
+    await user.click(within(dialog).getByRole("button", { name: "Görünümü sil" }));
     await waitFor(() => expect(lastViewCall("DELETE")?.url).toBe("/api/materials/views/5"));
-    await waitFor(() => expect(selectedText()).toBe("Standart (varsayılan)"));
+    await waitFor(() => expect(selectedText()).toBe("Standart *"));
     expect(lastQuery().fields).toEqual(STANDARD_FIELDS);
   });
 
@@ -273,7 +273,7 @@ describe("gruplama ve ara toplam (U-11, K-90)", () => {
     const user = userEvent.setup();
     await openTable({ groups });
     await user.click(screen.getByRole("button", { name: "Grupla" }));
-    await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialLevel");
+    await user.selectOptions(screen.getByLabelText("Gruplanacak alan"), "MaterialLevel");
     await waitFor(() => expect(calls.groups[0]).toEqual({ group_by: ["MaterialLevel"], fields: STANDARD_FIELDS,
                                                          aggregates: { SafetyStock: { fn: "sum" } }, filters: [], sort: [] }));
     expect(screen.getByText("Malzeme seviyesi ile gruplu")).toBeInTheDocument();
@@ -286,7 +286,6 @@ describe("gruplama ve ara toplam (U-11, K-90)", () => {
     expect(await screen.findByText("Hammadde-0")).toBeInTheDocument();
     expect(calls.queries.some((q) => JSON.stringify(q.group_key) === JSON.stringify([{ field: "MaterialLevel", value: "Hammadde" }]))).toBe(true);
     expect(calls.queries.some((q) => JSON.stringify(q.group_key) === JSON.stringify([{ field: "MaterialLevel", value: null }]))).toBe(true);
-    expect(screen.getByLabelText("Kayıt sayısı (gösterilen / toplam)")).toHaveTextContent("6 / 50.000");
   });
 
   it("satır tonları: 1. düzey ve alt düzey grup ayrı sınıf, veri satırı grup sınıfı taşımaz", async () => {
@@ -306,7 +305,7 @@ describe("gruplama ve ara toplam (U-11, K-90)", () => {
     expect(await screen.findByRole("button", { name: "Tümünü daralt" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "1. düzeye kadar aç" })).toBeNull();  // tek düzey
     await user.click(screen.getByRole("button", { name: "Grupla (1)" }));
-    await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialGroup");
+    await user.selectOptions(screen.getByLabelText("Gruplanacak alan"), "MaterialGroup");
     await user.click(await screen.findByRole("button", { name: "1. düzeye kadar aç" }));
     const level = (n: number) => screen.getAllByRole("row").filter((r) => r.getAttribute("aria-level") === String(n));
     expect(level(1).map((r) => r.getAttribute("aria-expanded"))).toEqual(["true", "true"]);
@@ -356,8 +355,8 @@ describe("gruplama ve ara toplam (U-11, K-90)", () => {
     expect(screen.getByRole("menuitem", { name: "Bu alana göre grupla" })).toBeEnabled();
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Grupla" }));
-    await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialLevel");
-    await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialGroup");
+    await user.selectOptions(screen.getByLabelText("Gruplanacak alan"), "MaterialLevel");
+    await user.selectOptions(screen.getByLabelText("Gruplanacak alan"), "MaterialGroup");
     await waitFor(() => expect(calls.groups[calls.groups.length - 1].group_by).toEqual(["MaterialLevel", "MaterialGroup"]));
     const [top, sub] = await screen.findAllByRole("row", { expanded: true });
     expect(top).toHaveAttribute("aria-level", "1");
@@ -598,18 +597,18 @@ describe("açılır menülerin yerleşimi (docs/12, ui/popover)", () => {
     const user = userEvent.setup();
     await openTable({ views: { views: [savedView(5, "Benim", {})], default_view_id: 5 } });
     mockRects((el) => {
-      const label = el.textContent ?? "";
+      const label = el.getAttribute("aria-label") ?? "";   // şeridin düğmeleri yalnız simge (K-173)
       if (el.tagName === "BUTTON" && label.startsWith("Alanlar")) return { left: 960, top: 10, width: 60, height: 30 };
       if (el.tagName === "BUTTON" && label.startsWith("Grupla")) return { left: 880, top: 10, width: 70, height: 30 };
-      if (el.tagName === "BUTTON" && el.getAttribute("aria-label") === "Görünüm işlemleri") return { left: 1000, top: 10, width: 20, height: 20 };
+      if (el.tagName === "BUTTON" && el.getAttribute("aria-label") === "Tablo ayarları") return { left: 1000, top: 10, width: 20, height: 20 };
       if (el.classList.contains("sc-floating")) return { left: 0, top: 0, width: 300, height: 200 };
     });
     await user.click(screen.getByRole("button", { name: /^Alanlar/ }));
     expect(px(screen.getByRole("dialog", { name: /^Alanlar/ }))).toEqual({ left: 1024 - 8 - 300, top: 44 });
     await user.click(screen.getByRole("button", { name: /^Grupla/ }));
-    expect(px(screen.getByRole("dialog", { name: "Gruplama" }))).toEqual({ left: 950 - 300, top: 44 });
-    await user.click(screen.getByRole("button", { name: "Görünüm işlemleri" }));
-    expect(px(screen.getByRole("menu", { name: "Görünüm işlemleri" }))).toEqual({ left: 1024 - 8 - 300, top: 34 });
+    expect(px(screen.getByRole("dialog", { name: "Grupla" }))).toEqual({ left: 950 - 300, top: 44 });
+    await user.click(screen.getByRole("button", { name: "Tablo ayarları" }));
+    expect(px(screen.getByRole("menu", { name: "Tablo ayarları" }))).toEqual({ left: 1024 - 8 - 300, top: 34 });
   });
 });
 
@@ -662,7 +661,7 @@ describe("tablo ayrıntıları (docs/12)", () => {
     const toggles = await screen.findByRole("group", { name: "Grupları daralt ve aç" });
     expect(within(toggles).getAllByRole("button").map((b) => b.getAttribute("title")))
       .toEqual(["Tümünü daralt", "Tümünü aç", "1. düzeye kadar aç"]);
-    expect(toggles.previousElementSibling).toHaveTextContent("Grupla (2)");
+    expect(toggles.previousElementSibling).toHaveAccessibleName("Grupla (2)");
   });
 
   it("kaydedilmemiş değişiklik: '⋯' köşesinde nokta, menüde Kaydet koyu; değişiklik yoksa Kaydet pasif", async () => {
@@ -675,7 +674,7 @@ describe("tablo ayrıntıları (docs/12)", () => {
     await user.click(sortButton("Malzeme adı"));
     const dot = screen.getByRole("img", { name: "Kaydedilmemiş değişiklik" });
     expect(dot).toHaveClass("sc-viewbar-dot");
-    expect(dot.previousElementSibling).toHaveAccessibleName("Görünüm işlemleri");
+    expect(dot.previousElementSibling).toHaveAccessibleName("Tablo ayarları");
     expect(screen.queryByText("Kaydedilmedi")).toBeNull();
     menu = await viewMenu(user);
     const save = within(menu).getByRole("menuitem", { name: "Kaydet" });
@@ -689,20 +688,22 @@ describe("araç çubuğu düzeni (U-22, docs/12)", () => {
   const status = () => document.querySelector(".sc-table-status");
   const toolbarEl = () => root().querySelector(":scope > .sc-table-toolbar")!;
 
-  it("araç çubuğu (görünüm, sayaç | Grupla, Alanlar, Excel'e aktar) tablonun hemen üstünde, çerçevenin dışında; filtre ya da gruplama yoksa ikinci satır yok", async () => {
+  it("tek şerit (K-171, K-173): sağda görünüm, Sıralamayı temizle, Grupla, Alanlar, Excel'e aktar, ⚙ Tablo ayarları (yalnız simge, adları ipucunda); kayıt sayısı yok; filtre yoksa ikinci satır yok", async () => {
     await openTable();
     const toolbar = toolbarEl();
     expect(toolbar.nextElementSibling).toHaveAttribute("data-testid", "table-scroll");
     const main = toolbar.querySelector(".sc-table-toolbar-main")!;
-    expect(within(main as HTMLElement).getByRole("combobox", { name: "Görünüm" })).toBeInTheDocument();
-    // solda yalnız seçici (görünür etiketsiz; ekran okuyucu adı "Görünüm"), "⋯" ve sayaç; Kaydet / Farklı kaydet düğmesi yok
-    expect(within(main as HTMLElement).getAllByRole("button").map((b) => b.getAttribute("aria-label")))
-      .toEqual(["Görünüm işlemleri", "Sıralamayı temizle"]);
-    expect(within(main as HTMLElement).getByRole("combobox", { name: "Görünüm" })).toHaveAttribute("aria-label", "Görünüm");
-    expect(within(main as HTMLElement).queryByText("Görünüm")).toBeNull();
-    expect(within(main as HTMLElement).getByLabelText("Kayıt sayısı (gösterilen / toplam)")).toHaveTextContent("1.234 / 50.000");
-    const tools = toolbar.querySelector(".sc-table-tools")!;
-    expect(within(tools as HTMLElement).getAllByRole("button").map((b) => b.textContent)).toEqual(["Grupla", "Alanlar (7/10)", "Excel'e aktar"]);
+    expect(main.children).toHaveLength(0);   // sekme ve tablo seçimi yoksa sol boş
+    const tools = toolbar.querySelector(".sc-table-tools") as HTMLElement;
+    expect(within(tools).getByRole("combobox", { name: "Görünüm" })).toHaveAttribute("aria-label", "Görünüm");
+    expect(within(tools).queryByText("Görünüm")).toBeNull();
+    const buttons = within(tools).getAllByRole("button");
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual(["Sıralamayı temizle", "Grupla", "Alanlar (7/10)", "Excel'e aktar", "Tablo ayarları"]);
+    expect(buttons.every((b) => b.textContent === "" && b.getAttribute("title") === b.getAttribute("aria-label"))).toBe(true);
+    expect(toolbar.querySelector(".sc-table-count")).toBeNull();
+    expect(root().querySelector(".sc-table-footer")).toBeNull();
+    expect(screen.queryByLabelText("Kayıt sayısı")).toBeNull();
+    expect(within(tools).getByRole("button", { name: "Excel'e aktar" }).querySelector("svg.lucide-download")).not.toBeNull();  // standart indirme simgesi
     expect(status()).toBeNull();
   });
 
@@ -717,22 +718,23 @@ describe("araç çubuğu düzeni (U-22, docs/12)", () => {
     await user.click(screen.getByRole("button", { name: "Filtreleri temizle" }));
     await waitFor(() => expect(status()).toBeNull());
     await user.click(screen.getByRole("button", { name: "Grupla" }));
-    await user.selectOptions(screen.getByLabelText("Alan ekle"), "MaterialLevel");
+    await user.selectOptions(screen.getByLabelText("Gruplanacak alan"), "MaterialLevel");
     expect(await within(root() as HTMLElement).findByText("Malzeme seviyesi ile gruplu")).toBeInTheDocument();
     expect(status()).not.toBeNull();
   });
 
-  it("görünüm menüsü sırası; 'Sıralamayı temizle' menüde değil, '⋯'nin hemen yanında ikon; sıralama yokken pasif", async () => {
+  it("⚙ Tablo ayarları menüsü sırası; 'Sıralamayı temizle' menüde değil, görünüm seçiminin hemen yanında simge; sıralama yokken pasif", async () => {
     const user = userEvent.setup();
     await openTable();
     const menu = await viewMenu(user);
-    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Kaydet", "Farklı kaydet", "Varsayılan yap", "Sil"]);
-    expect(within(menu).getByRole("menuitem", { name: "Sil" })).toBeDisabled();  // Standart silinemez
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Kaydet", "Farklı kaydet", "Varsayılan yap", "Görünümü sil"]);
+    expect(within(menu).getByRole("menuitem", { name: "Görünümü sil" })).toBeDisabled();  // Standart silinemez
     await user.keyboard("{Escape}");
     const clear = screen.getByRole("button", { name: "Sıralamayı temizle" });
     expect(clear).toBeDisabled();
     expect(clear).toHaveAttribute("title", "Sıralamayı temizle");
-    expect(clear.previousElementSibling).toHaveClass("sc-viewbar-anchor");      // "⋯"nin hemen yanında, dışarıda
+    expect(clear.previousElementSibling).toHaveAccessibleName("Görünüm");       // görünüm seçiminin hemen yanında (K-173)
+    expect(clear.parentElement!.lastElementChild).toHaveClass("sc-viewbar-anchor");   // ⚙ en sonda
     await user.click(sortButton("Malzeme kodu"));
     expect(clear).toBeEnabled();
     await user.click(clear);

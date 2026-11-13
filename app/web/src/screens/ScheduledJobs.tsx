@@ -1,6 +1,6 @@
-// Zamanlanmış işler (Sistem ayarları sekmesi, fonksiyon 92; K-163, K-164). Üst şeritte iki bekleme süresi (Vazgeç, Kaydet) ve ana aksiyon
-// "Yeni zamanlanmış iş"; altında ortak tabloda liste, satıra tıklayınca alt kartta o işin geçmişi (ana–detay, K-161). Satır menüsü: Düzenle
-// (Admin'de Görüntüle), Şimdi çalıştır (System owner, onaylı), Geçmiş. Pencere adımları sabit sırayla: İş tanımı, Zamanlama, Veri çekimi,
+// Zamanlanmış işler (Sistem ayarları sekmesi, fonksiyon 92; K-163, K-164, K-171). Tek şerit: solda sekmeler, ana işlem "Yeni zamanlanmış iş" ve
+// "Bekleme süreleri" (iki süre küçük pencerede, Vazgeç / Kaydet); sağda tablo düğmeleri. Satıra tıklayınca alt kartta o işin geçmişi (ana–detay,
+// K-161). Satır menüsü: Detay (geçmiş kartı), Düzenle (Admin'de Görüntüle), Şimdi çalıştır (System owner, onaylı). Pencere adımları sabit sırayla: İş tanımı, Zamanlama, Veri çekimi,
 // Veri aktarımı, Ham veri temizliği.
 import { type HTMLAttributes, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -13,10 +13,10 @@ import { useJobRefresh } from "../shell/useJobRefresh";
 import { SwitchCell } from "../table/CellEditors";
 import { DataTable, type FieldHints, type RowMenuSpec } from "../table/DataTable";
 import type { Row } from "../table/types";
-import { Alert, Badge, type BadgeTone, Button, ConfirmDialog, type DetailTab, Dialog, MasterDetail, Segment, Tooltip, TopStrip, useMasterDetail } from "../ui";
+import { Alert, Badge, type BadgeTone, Button, ConfirmDialog, type DetailTab, Dialog, MasterDetail, Segment, TextField, Tooltip, useMasterDetail } from "../ui";
 import { type Flow, type FlowBody, type FlowOptions, type FlowSettings, type FlowsResponse, flowsApi, FLOW_DONE, FLOW_STOPPED, FLOW_NOT_STARTED,
   MODE_FULL, MODE_PARTIAL, SCOPE_ALL, SCOPE_SELECTED } from "./flowsApi";
-import { MenuItem, RowPopMenu } from "./RowPopMenu";
+import { type MenuAction, MenuActions, MenuItem, RowPopMenu } from "./RowPopMenu";
 
 const T = tr.flows;
 const ALLOWED = { allowed: true };
@@ -232,14 +232,45 @@ const CELLS = { LastState: (_v: unknown, row: Row) => <LastState row={row} /> };
 const FLOW_HINTS: FieldHints = { Name: { width: 13 }, Schedule: { width: 10 }, PullText: { width: 9 }, TransferText: { width: 11 }, Cleanup: { width: 6 },
   NextRunAt: { width: 10 }, LastState: { width: 15 }, IsActive: { width: 6 } };
 
-/** Sekmenin içeriği. initialFlow: çipteki "Geçmiş" ile gelen işin geçmişi açık gelir. onDirty: bekleme sürelerinde kaydedilmemiş değişiklik. */
-export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number | null; onDirty?(dirty: boolean): void }) {
-  const [data, setData] = useState<FlowsResponse | null>(null);
-  const [values, setValues] = useState<Record<string, string>>({});
+/** Bekleme süreleri penceresi (K-171): iki süre, ipuçları alanın adında; Kaydet değişmeyince ya da sınır dışındayken pasif. */
+function WaitDialog({ data, writeReason, onClose, onSaved }: { data: FlowsResponse; writeReason: string | null; onClose(): void; onSaved(r: FlowsResponse): void }) {
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(SETTING_KEYS.map((k) => [k, formatNumber(data.settings[k], 0)])));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const parsed = Object.fromEntries(SETTING_KEYS.map((k) => [k, parseTrNumber(values[k] ?? "")]));
+  const changed = SETTING_KEYS.filter((k) => parsed[k] !== data.settings[k]);
+  const invalidOf = (k: keyof FlowSettings) => parsed[k] === null || parsed[k]! < data.limits[k].min || parsed[k]! > data.limits[k].max;
+  const invalid = SETTING_KEYS.some(invalidOf);
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      onSaved(await flowsApi.saveSettings(Object.fromEntries(changed.map((k) => [k, parsed[k]]))));
+      emitNotice(T.settingsSaved);
+    } catch (e) {
+      setError(errorText(e));
+      setSaving(false);
+    }
+  };
+  return (
+    <Dialog title={T.waitTitle} onClose={onClose} onSubmit={() => void save()} submitLabel={T.save} busy={saving} submitDisabled={!changed.length || invalid} submitReason={writeReason}>
+      {error && <Alert tone="error">{error}</Alert>}
+      {SETTING_KEYS.map((k) => (
+        <TextField key={k} label={T.settings[k]} tip={T.settingTips[k]} inputMode="numeric" value={values[k] ?? ""} disabled={Boolean(writeReason)}
+                   error={invalidOf(k) ? tr.systemOwner.limit(data.limits[k].min, data.limits[k].max) : undefined}
+                   onChange={(v) => setValues((s) => ({ ...s, [k]: v }))} />
+      ))}
+    </Dialog>
+  );
+}
+
+/** Sekmenin içeriği. initialFlow: çipteki "Geçmiş" ile gelen işin geçmişi açık gelir. lead: Sistem ayarları'nın sekmeleri (şeridin başında, K-171). */
+export function ScheduledJobs({ initialFlow, lead }: { initialFlow?: number | null; lead?: ReactNode }) {
+  const [data, setData] = useState<FlowsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [waiting, setWaiting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const [editing, setEditing] = useState<Flow | "new" | null>(null);
   const [viewing, setViewing] = useState<Flow | null>(null);
   const [confirm, setConfirm] = useState<Flow | null>(null);
@@ -249,10 +280,7 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
   useJobRefresh(JOBS, reload);
 
-  const show = useCallback((r: FlowsResponse) => {
-    setData(r);
-    setValues(Object.fromEntries(SETTING_KEYS.map((k) => [k, formatNumber(r.settings[k], 0)])));
-  }, []);
+  const show = useCallback((r: FlowsResponse) => setData(r), []);
   useEffect(() => {
     const ctrl = new AbortController();
     flowsApi.list(ctrl.signal).then(show).catch((e: unknown) => {
@@ -278,24 +306,6 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
   }, [data, initialFlow, toggle]);
 
   const canEdit = Boolean(data?.can_edit);
-  const parsed = Object.fromEntries(SETTING_KEYS.map((k) => [k, parseTrNumber(values[k] ?? "")]));
-  const changed = data ? SETTING_KEYS.filter((k) => parsed[k] !== data.settings[k]) : [];
-  const invalid = data ? SETTING_KEYS.find((k) => parsed[k] === null || parsed[k]! < data.limits[k].min || parsed[k]! > data.limits[k].max) : undefined;
-  const dirty = changed.length > 0;
-  useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
-
-  const saveSettings = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      show(await flowsApi.saveSettings(Object.fromEntries(changed.map((k) => [k, parsed[k]]))));
-      emitNotice(T.settingsSaved);
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setSaving(false);
-    }
-  };
   const runNow = async (f: Flow) => {
     setConfirm(null);
     setError(null);
@@ -313,53 +323,47 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
   const runState = writeReason ? { allowed: false, reason: writeReason } : data?.running ? { allowed: false, reason: T.alreadyRunning(data.running.flow_name) } : ALLOWED;
   const rowMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.rowMenu(String(row.Name)),
-    onOpen: (row: Row, anchor: HTMLElement) => setMenu({ row, anchor }),
+    onOpen: (row: Row, anchor: HTMLElement, extra?: MenuAction[]) => setMenu({ row, anchor, extra }),
   }), []);
   const rowProps = useCallback((row: Row): HTMLAttributes<HTMLTableRowElement> => {
     const open = () => toggle({ id: Number(row.Id), name: String(row.Name) });
     return { className: "is-clickable", tabIndex: 0, onClick: open, onKeyDown: (e) => { if (e.key === "Enter") open(); } };
   }, [toggle]);
-  const limitText = invalid && data ? tr.systemOwner.limit(data.limits[invalid].min, data.limits[invalid].max) : null;
 
   return (
     <div className="sc-flows-tab">
-      {limitText && <Alert tone="error">{`${T.settings[invalid!]}: ${limitText}`}</Alert>}{/* hata bandı şeridin üstünde (docs/12 Üst şerit) */}
       {error && <Alert tone="error">{error}</Alert>}
-      <TopStrip label={T.title}>
-        {SETTING_KEYS.map((k) => (
-          <span key={k} className="sc-inline-number">
-            <Tooltip content={T.settingTips[k]}><label htmlFor={`flow-setting-${k}`}>{T.settings[k]}</label></Tooltip>
-            <input id={`flow-setting-${k}`} className="sc-input sc-input--number" disabled={!canEdit} title={writeReason ?? undefined} inputMode="numeric"
-                   aria-describedby={`flow-setting-${k}-tip`} aria-invalid={invalid === k} value={values[k] ?? ""}
-                   onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))} />
-            <span id={`flow-setting-${k}-tip`} className="sc-visually-hidden">{T.settingTips[k]}</span>
-          </span>
-        ))}
-        <span className="sc-strip-actions">
-          <Button variant="ghost" disabled={!dirty || saving} onClick={() => data && show(data)}>{tr.systemOwner.discard}</Button>
-          <Button variant="secondary" busy={saving} disabledReason={writeReason} disabled={!dirty || Boolean(invalid)} onClick={() => void saveSettings()}>{T.save}</Button>
-        </span>
-        <span className="sc-strip-end">
-          <Button variant="primary" disabledReason={writeReason} onClick={() => setEditing("new")}>{T.newFlow}</Button>
-        </span>
-      </TopStrip>
       <MasterDetail<"history">
         id="scheduled-jobs"
-        master={<DataTable list="flows" rowMenu={rowMenu} rowProps={rowProps} cellRender={CELLS} fieldHints={FLOW_HINTS} reloadKey={reloadKey} selectedRowId={selected?.id ?? null} />}
-        onClose={close}
+        master={(
+          <DataTable list="flows" rowMenu={rowMenu} rowProps={rowProps} cellRender={CELLS} fieldHints={FLOW_HINTS} reloadKey={reloadKey} selectedRowId={selected?.id ?? null}
+                     toolbarLead={(
+                       <>
+                         {lead}
+                         <Button variant="primary" disabledReason={writeReason} onClick={() => setEditing("new")}>{T.newFlow}</Button>
+                         <Button variant="secondary" disabled={!data} onClick={() => setWaiting(true)}>{T.waitTitle}</Button>
+                       </>
+                     )} />
+        )}
+        onClose={close} hideTitle
         detail={selected ? {
           title: T.historyOf(selected.name), tabsLabel: T.history, tabs: tabsOf(), tab: "history", onTab: () => undefined,
-          body: <DataTable key={selected.id} list="flow-runs" baseFilters={[{ field: "FlowId", op: "eq", value: selected.id }]} reloadKey={reloadKey} />,
+          // Kartın şeridi tablo standardında (K-173): sağda tablo düğmeleri, Büyüt ve ✕
+          renderBody: ({ tabs, controls }) => (
+            <DataTable key={selected.id} list="flow-runs" baseFilters={[{ field: "FlowId", op: "eq", value: selected.id }]} reloadKey={reloadKey} compact
+                       toolbarLead={tabs} toolbarEnd={controls} />
+          ),
         } : null} />
       {menu && data && (() => {
         const f = flowOf(menu.row);
         return (
           <RowPopMenu label={T.rowMenu(String(menu.row.Name))} anchor={menu.anchor} onClose={() => setMenu(null)}>
+            <MenuActions items={menu.extra} onDone={() => setMenu(null)} />
+            <MenuItem label={tr.table.detailItem} state={ALLOWED} onClick={() => { if (!selected || selected.id !== Number(menu.row.Id)) toggle({ id: Number(menu.row.Id), name: String(menu.row.Name) }); setMenu(null); }} />
             {canEdit
               ? <MenuItem label={T.edit} state={ALLOWED} onClick={() => { setEditing(f); setMenu(null); }} />
               : <MenuItem label={T.view} state={ALLOWED} onClick={() => { setViewing(f); setMenu(null); }} />}
             <MenuItem label={T.runNow} state={runState} onClick={() => { setConfirm(f); setMenu(null); }} />
-            <MenuItem label={T.history} state={ALLOWED} onClick={() => { if (!selected || selected.id !== Number(menu.row.Id)) toggle({ id: Number(menu.row.Id), name: String(menu.row.Name) }); setMenu(null); }} />
           </RowPopMenu>
         );
       })()}
@@ -367,6 +371,7 @@ export function ScheduledJobs({ initialFlow, onDirty }: { initialFlow?: number |
         <FlowDialog flow={editing === "new" ? null : editing} options={data.options} onClose={() => setEditing(null)}
                     onSaved={(r) => { setEditing(null); show(r); reload(); }} />
       )}
+      {waiting && data && <WaitDialog data={data} writeReason={writeReason} onClose={() => setWaiting(false)} onSaved={(r) => { setWaiting(false); show(r); }} />}
       {viewing && data && <FlowSummary flow={viewing} options={data.options} onClose={() => setViewing(null)} />}
       {confirm && (
         <ConfirmDialog title={T.runNowTitle} message={T.runNowMessage(confirm.name, transferText(confirm))} confirmLabel={T.runNow}

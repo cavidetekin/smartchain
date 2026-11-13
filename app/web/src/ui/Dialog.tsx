@@ -7,7 +7,7 @@ import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useId, u
 import { tr } from "../i18n/tr";
 import { Button } from "./Button";
 
-export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, wide,
+export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, submitReason, wide,
                          dismissible = true, cancelLabel, blurred, noCancel, xwide, extraActions, className, titleAside }: {
   title: string;
   /** Başlığın altında sessiz satır (ör. kaynak ve satır sayısı). */
@@ -20,6 +20,8 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   /** Geri alınamaz işlem (kiremit düğme, K-85). */
   danger?: boolean;
   submitDisabled?: boolean;
+  /** Kaydet yetki ya da durum yüzünden pasifse nedeni (ipucunda). */
+  submitReason?: string | null;
   wide?: boolean;
   /** En geniş pencere; ekrana sığmayan içerik kayar (ör. satır kaymayan tablo). */
   xwide?: boolean;
@@ -89,7 +91,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
           {(dismissible || cancelLabel) && !noCancel && (
             <Button variant={cancelLabel ? "neutral" : "ghost"} onClick={onClose}>{cancelLabel ?? tr.ui.cancel}</Button>
           )}
-          <Button type="submit" variant={danger ? "danger" : "primary"} busy={busy} disabled={submitDisabled}>{submitLabel}</Button>
+          <Button type="submit" variant={danger ? "danger" : "primary"} busy={busy} disabled={submitDisabled} disabledReason={submitReason ?? null}>{submitLabel}</Button>
         </div>
       </form>
     </div>

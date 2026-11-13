@@ -22,12 +22,15 @@ def _underlying(entity: str, field: str, value, staging_row, col) -> dict:
             "IsBaseChanged": sa.case((differs(from_text(MANUAL.c.BaseValue, col), value, col), sa.true()), else_=sa.false())}
 
 
-def apply_versioned(session: Session, entity: str, core: sa.Table, plain, tmp: sa.Table, ok: int) -> None:
-    """Eşleşen ve aktarılacak satırlarda (geçici tablo, karşılaştırmadan önce)."""
+def apply_versioned(session: Session, entity: str, core: sa.Table, plain, tmp: sa.Table, ok: int, run=None) -> None:
+    """Eşleşen ve aktarılacak satırlarda (geçici tablo, karşılaştırmadan önce). run verilirse alttaki değerin değişimi geçmişe yazılır (K-173)."""
     for f in fields(session, entity, plain):
         col = core.c[f]
         hit = [MANUAL.c.TableName == entity, MANUAL.c.FieldName == f, MANUAL.c.RecordKey == sa.cast(tmp.c.Id, sa.Unicode(KEY_LENGTH)),
                tmp.c.St == ok, tmp.c.M == sa.true()]
+        if run is not None:
+            from app import history
+            history.write_manual_kept(session, entity, run, core, f, hit, tmp.c[f], tmp.c.StagingRowId)
         session.execute(sa.update(MANUAL).where(*hit).values(_underlying(entity, f, tmp.c[f], tmp.c.StagingRowId, col)))
         session.execute(sa.update(tmp).where(*hit).values({f: from_text(MANUAL.c.Value, col)}))
 

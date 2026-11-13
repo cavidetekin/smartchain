@@ -193,6 +193,9 @@ def _write_rows(result, plan: Plan, writer: XlsxWriter, nodes: dict, fns: dict, 
         unit = units.get(row[UNIT]) if UNIT in row else None
         if plan.defn.value_format:  # ekranla aynı okunur biçim (K-108)
             row = {**row, **{f: fn(row[f]) for f, fn in plan.defn.value_format.items() if f in row}}
+        if plan.defn.row_format:  # satıra bağlı okunur biçim (K-173)
+            row = dict(row)
+            plan.defn.row_format([row])
         writer.data_row(row, unit, indent=len(plan.group_by))
         written += 1
         if progress and written % PROGRESS_EVERY == 0:

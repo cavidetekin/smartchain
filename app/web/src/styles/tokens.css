@@ -90,6 +90,7 @@
   /* Boşluk ölçeği: 4, 8, 12, 16, 20, 24, 32 px (standart boyutta) */
   --space-1: 0.3077rem;
   --space-2: 0.6154rem;
+  --strip-gap: var(--space-2);                /* şeridin bütün öğeleri arası, simgeler arasındaki kadar (K-171, docs/12 Şerit boşluğu) */
   --space-3: 0.9231rem;
   --space-4: 1.2308rem;
   --space-5: 1.5385rem;
@@ -180,12 +181,12 @@
   --table-head-border: #c5cbf2;
   --table-border: #c5cbf2;                    /* tablonun dış çerçevesi */
   --table-toolbar-gap: 0.5rem;                /* araç çubuğu, filtre satırı ve tablo arası (docs/12) */
-  --top-strip-gap: var(--space-3);            /* üst şerit ile tablo araç çubuğu arası, her ekranda aynı (docs/12 · Üst şerit) */
   --rule-trace-bg: #f3eeff;                   /* kuralla değişen hücre: açık lila (K-143) */
   --table-group-1-bg: #eceef7;
   --table-group-1-border: #e1e4ee;
   --table-group-2-bg: #f7f8fc;
   --table-row-selected-bg: var(--indigo-50);  /* #EEF0FB */
+  --table-row-picked-bg: var(--indigo-100);   /* çoklu seçimde seçili satır: açık indigo (K-171) */
   --table-row-hover-bg: #f4f5fb;
   --row-height: 2.1538rem;                  /* tablo satırı: 28 px standart boyutta; yazı boyutuyla ölçeklenir (U-23). DataTable ROW_REM ile aynı */
   --radius: 0.375rem;

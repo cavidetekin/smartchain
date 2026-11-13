@@ -132,13 +132,13 @@ describe("hücre düzenleme standardı", () => {
 });
 
 describe("kaldırma", () => {
-  it("hücre menüsünden (sağ tık, hücrenin boş kısmında da) kaldırma taslaktır; Kaydet kaldırır", async () => {
+  it("sağ tıkta satır menüsü, hücre seçenekleri başta (hücrenin boş kısmında da: Kopyala · Manuel değeri kaldır · Detay; K-171); kaldırma taslaktır; Kaydet kaldırır", async () => {
     const { user, sent } = await open();
     const cell = cellOf("MUS-A", "Müşteri adı");
     const empty = createEvent.contextMenu(cell);   // metnin dışı: hücrenin kendisi
     fireEvent(cell, empty);
     expect(empty.defaultPrevented).toBe(true);   // tarayıcının menüsü çıkmaz
-    expect(screen.getByRole("menu", { name: "Müşteri adı hücre menüsü" })).toBeInTheDocument();
+    expect(within(screen.getByRole("menu", { name: "MUS-A işlemleri" })).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Kopyala", "Manuel değeri kaldır", "Detay"]);
     expect(cell).toHaveClass("is-cursor");   // sağ tık hücreyi seçer
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -146,7 +146,7 @@ describe("kaldırma", () => {
     expect(await screen.findByRole("tooltip")).toBeInTheDocument();
     fireEvent.contextMenu(cell.querySelector(".sc-cell-source")!);
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();   // ipucu menüyü örtmez
-    await user.click(within(screen.getByRole("menu", { name: "Müşteri adı hücre menüsü" })).getByRole("menuitem", { name: "Manuel değeri kaldır" }));
+    await user.click(within(screen.getByRole("menu", { name: "MUS-A işlemleri" })).getByRole("menuitem", { name: "Manuel değeri kaldır" }));
     expect(cellOf("MUS-A", "Müşteri adı")).toHaveTextContent("Akdeniz Pompa");   // alttaki değer görünür
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     await user.click(within(toolbar()).getByRole("button", { name: "Kaydet" }));
@@ -165,23 +165,44 @@ describe("kaldırma", () => {
     expect(cellOf("MUS-C", "Müşteri önceliği").querySelector(".sc-cell-editor")).toBeNull();
   });
 
-  it("manuel değeri olmayan hücrede sağ tık tarayıcının menüsüdür", async () => {
-    await open();
+  it("manuel değeri olmayan hücrede menü Kopyala · Detay; Kopyala ve Ctrl+C hücreyi ekrandaki biçimiyle kopyalar", async () => {
+    const { user } = await open();
     const event = createEvent.contextMenu(cellOf("MUS-B", "Müşteri adı"));
     fireEvent(cellOf("MUS-B", "Müşteri adı"), event);
-    expect(event.defaultPrevented).toBe(false);
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(event.defaultPrevented).toBe(true);
+    const menu = screen.getByRole("menu", { name: "MUS-B işlemleri" });
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Kopyala", "Detay"]);
+    await user.click(within(menu).getByRole("menuitem", { name: "Kopyala" }));
+    await waitFor(async () => expect(await navigator.clipboard.readText()).toBe("Batı"));
+    expect(screen.queryByText(/kopyalandı/i)).toBeNull();   // kopyalamada bildirim yok (K-171)
+    await user.click(cellOf("MUS-C", "Müşteri önceliği"));
+    fireEvent.keyDown(cellOf("MUS-C", "Müşteri önceliği"), { key: "c", ctrlKey: true });
+    await waitFor(async () => expect(await navigator.clipboard.readText()).toBe("3"));
   });
 
-  it("seçili kayıtlarda toplu: bütün manuel değerleri taslağa, Kaydet kaldırır", async () => {
+  it("çoklu seçimde toplu (K-171): seçili satıra sağ tıkta \"Seçili n satır · Manuel değerleri kaldır\"; şeritte düğme yok; Kaydet kaldırır", async () => {
     const { user, sent } = await open();
-    expect(within(toolbar()).queryByRole("button", { name: /Manuel değerleri kaldır/ })).not.toBeInTheDocument();   // seçim yokken yok
-    await user.click(screen.getByRole("checkbox", { name: "Seç: MUS-B" }));
-    expect(within(toolbar()).getByRole("button", { name: "Manuel değerleri kaldır (0)" })).toBeDisabled();
-    await user.click(screen.getByRole("checkbox", { name: "Seç: MUS-B" }));
-    await user.click(screen.getByRole("checkbox", { name: "Seç: MUS-A" }));
-    await user.click(screen.getByRole("checkbox", { name: "Seç: MUS-C" }));
-    await user.click(within(toolbar()).getByRole("button", { name: "Manuel değerleri kaldır (2)" }));
+    expect(screen.queryByRole("button", { name: /Manuel değerleri kaldır/ })).not.toBeInTheDocument();   // şeritte düğme yok
+    const row = (code: string) => cellOf(code, "Müşteri adı").closest("tr") as HTMLElement;
+    await user.keyboard("{Control>}");
+    await user.click(row("MUS-B"));
+    await user.keyboard("{/Control}");
+    fireEvent.contextMenu(cellOf("MUS-B", "Müşteri adı"));
+    let menu = screen.getByRole("menu", { name: "MUS-B işlemleri" });
+    expect(within(menu).getByText("Seçili 1 satır")).toBeInTheDocument();
+    await user.click(within(menu).getByRole("menuitem", { name: "Manuel değerleri kaldır" }));
+    expect(await screen.findByText("Seçili kayıtlarda manuel değer yok.")).toBeInTheDocument();
+    await user.keyboard("{Control>}");
+    await user.click(row("MUS-B"));
+    await user.click(row("MUS-A"));
+    await user.click(row("MUS-C"));
+    await user.keyboard("{/Control}");
+    fireEvent.contextMenu(cellOf("MUS-C", "Müşteri adı"));
+    menu = screen.getByRole("menu", { name: "MUS-C işlemleri" });
+    expect(within(menu).getByText("Seçili 2 satır")).toBeInTheDocument();
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Manuel değerleri kaldır", "Kopyala", "Detay"]);
+    await user.click(within(menu).getByRole("menuitem", { name: "Manuel değerleri kaldır" }));
+    await waitFor(() => expect(cellOf("MUS-A", "Müşteri adı")).toHaveClass("is-draft"));
     expect(cellOf("MUS-C", "Müşteri önceliği")).toHaveTextContent("9");
     await user.click(within(toolbar()).getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(sent).toEqual([{ url: "/api/manual-values/remove", body: { list: "master-customer", items: [{ id: "1", field: "Name" }, { id: "3", field: "Priority" }] } }]));

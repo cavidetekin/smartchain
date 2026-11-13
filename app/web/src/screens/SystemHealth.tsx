@@ -1,6 +1,5 @@
 // Sistem sağlığı (ekran 24, fonksiyon 94, 93; K-106, K-107, docs/12): kartlar, servis şeridi, üç ortak tablo.
 // Canlılık: "health" WebSocket mesajı (en sık THROTTLE_MS'te bir) ve POLL_MS yedek yenileme. Ulaşılamazsa son değerler kalır.
-import { Eye } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, ApiError, emitNotice, HEALTH_EVENT } from "../api/client";
@@ -8,10 +7,11 @@ import { useAuth } from "../auth/AuthContext";
 import { formatDateTime, formatNumber, formatTime } from "../format";
 import { tr } from "../i18n/tr";
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
+import { useRowMenu } from "../table/rowMenu";
 import type { Row } from "../table/types";
-import { Alert, Badge, type BadgeTone, Card, Dialog, KpiCard, Segment } from "../ui";
+import { Alert, Badge, type BadgeTone, Card, Dialog, KpiCard, OverflowTabs } from "../ui";
 import { CancelJobDialog } from "./CancelJobDialog";
-import { MenuItem, type MenuState, RowPopMenu } from "./RowPopMenu";
+import { type MenuAction, MenuActions, MenuItem, type MenuState, RowPopMenu } from "./RowPopMenu";
 import { type EventDetail, type HealthSummary, type ServiceInfo, systemHealthApi } from "./systemHealthApi";
 
 const T = tr.systemHealth;
@@ -83,7 +83,8 @@ function Overview({ data }: { data: HealthSummary }) {
 /** Bildirimlerde işin adı: özet, yoksa numara (K-107). */
 const jobLabel = (row: Row) => (row.Summary ? String(row.Summary) : `#${row.Id}`);
 
-function JobMenu({ row, anchor, onClose, onChanged, onCancelOther }: {
+function JobMenu({ row, anchor, extra, onClose, onChanged, onCancelOther }: {
+  extra?: MenuAction[];
   row: Row; anchor: HTMLElement; onClose(): void; onChanged(notice: string): void; onCancelOther(row: Row): void;
 }) {
   const me = useAuth().me!;
@@ -105,6 +106,7 @@ function JobMenu({ row, anchor, onClose, onChanged, onCancelOther }: {
   };
   return (
     <RowPopMenu label={T.jobMenu(row.Id)} anchor={anchor} onClose={onClose}>
+      <MenuActions items={extra} onDone={onClose} />
       <MenuItem label={T.moveUp} state={moveState} onClick={() => void run(() => systemHealthApi.prioritize(row.Id), T.movedNotice(jobLabel(row)))} />
       <MenuItem label={T.cancel} state={cancelState} onClick={() => {
         if (own) {
@@ -154,7 +156,7 @@ export function SystemHealth() {
   const [problem, setProblem] = useState<string | null>(null);
   const [section, setSection] = useState<Section>("queue");
   const [reloadKey, setReloadKey] = useState(0);
-  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const [cancelling, setCancelling] = useState<Row | null>(null);
   const [eventId, setEventId] = useState<number | null>(null);
   const lastLoad = useRef(0);
@@ -198,14 +200,15 @@ export function SystemHealth() {
   };
   const jobMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.jobMenu(row.Id),
-    onOpen: (row: Row, anchor: HTMLElement) => setMenu((m) => (m?.row.Id === row.Id ? null : { row, anchor })),
+    onOpen: (row: Row, anchor: HTMLElement, extra?: MenuAction[]) => setMenu((m) => (m?.row.Id === row.Id && !extra ? null : { row, anchor, extra })),
   }), []);
-  const eventMenu: RowMenuSpec = useMemo(() => ({
-    icon: Eye,
-    label: () => T.eventTitle,
-    onOpen: (row: Row) => setEventId(row.Id),
-  }), []);
+  // ⋯ menüsü (K-171): Detay → hata detayı penceresi
+  const eventMenu = useRowMenu(() => T.eventTitle, (row) => [{ label: tr.table.detailItem, onClick: () => setEventId(row.Id) }]);
 
+  const sectionTabs = (
+    <OverflowTabs<Section> label={T.sections} value={section} onChange={(v) => { setMenu(null); setSection(v); }}
+                           options={[{ value: "queue", label: T.queueSection }, { value: "runs", label: T.runsSection }, { value: "events", label: T.eventsSection }]} />
+  );
   return (
     <section className="sc-page--fill">
       <header className="sc-page-head sc-page-head--row">
@@ -214,15 +217,12 @@ export function SystemHealth() {
       </header>
       {problem && <Alert tone="risk">{data ? T.lastKnown(problem, formatTime(new Date(data.server_time))) : problem}</Alert>}
       {data && <Overview data={data} />}
-      <div className="sc-section-switch">
-        <Segment<Section> label={T.sections} hideLabel value={section} onChange={(v) => { setMenu(null); setSection(v); }}
-                 options={[{ value: "queue", label: T.queueSection }, { value: "runs", label: T.runsSection }, { value: "events", label: T.eventsSection }]} />
-      </div>
-      {section === "queue" && <DataTable key="queue" list="job-queue" cellRender={CELLS} rowMenu={jobMenu} reloadKey={reloadKey} />}
-      {section === "runs" && <DataTable key="runs" list="job-runs" cellRender={CELLS} reloadKey={reloadKey} />}
-      {section === "events" && <DataTable key="events" list="system-events" rowMenu={eventMenu} reloadKey={reloadKey} />}
+      {/* Bölümler tablonun şeridinin solunda (K-173) */}
+      {section === "queue" && <DataTable key="queue" list="job-queue" cellRender={CELLS} rowMenu={jobMenu} reloadKey={reloadKey} toolbarLead={sectionTabs} />}
+      {section === "runs" && <DataTable key="runs" list="job-runs" cellRender={CELLS} reloadKey={reloadKey} toolbarLead={sectionTabs} />}
+      {section === "events" && <DataTable key="events" list="system-events" rowMenu={eventMenu.rowMenu} reloadKey={reloadKey} toolbarLead={sectionTabs} />}
       {menu && (
-        <JobMenu key={menu.row.Id} row={menu.row} anchor={menu.anchor} onClose={() => setMenu(null)} onChanged={changed}
+        <JobMenu key={menu.row.Id} row={menu.row} anchor={menu.anchor} extra={menu.extra} onClose={() => setMenu(null)} onChanged={changed}
                  onCancelOther={setCancelling} />
       )}
       {cancelling && (
@@ -236,6 +236,7 @@ export function SystemHealth() {
                            changed(T.cancelledNotice(label));
                          }} />
       )}
+      {eventMenu.element}
       {eventId !== null && <EventDialog id={eventId} onClose={() => setEventId(null)} />}
     </section>
   );

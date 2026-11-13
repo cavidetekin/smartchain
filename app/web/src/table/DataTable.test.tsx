@@ -13,14 +13,15 @@ const sortButton = (label: string) => within(screen.getByRole("columnheader", { 
   .getAllByRole("button")[0];
 
 describe("sayaç ve sözleşme", () => {
-  it("varsayılan alanlarla ilk parçayı ister; sayaç Türkçe '1.234 / 50.000'", async () => {
+  it("varsayılan alanlarla ilk parçayı ister; kayıt sayısı gösterilmez (K-171)", async () => {
     await open();
     expect(queries[0]).toEqual({
       fields: ["Code", "Name", "MaterialLevel", "MaterialGroup", "IsSellable", "SafetyStock", "UpdatedAt"],
       sort: [], filters: [], offset: 0, limit: 100,
     });
-    expect(await screen.findByLabelText("Kayıt sayısı (gösterilen / toplam)")).toHaveTextContent("1.234 / 50.000");
     expect(await screen.findByText("M-0")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Kayıt sayısı")).toBeNull();
+    expect(screen.queryByText("1.234 kayıt")).toBeNull();
     const first = dataRows()[0];
     expect(within(first as HTMLElement).getByText("1.234")).toHaveClass("is-num");          // ADET: 0 ondalık
     expect(within(dataRows()[1] as HTMLElement).getByText("12,250")).toHaveClass("is-num");  // KG: 3 ondalık (K-88)
@@ -285,5 +286,77 @@ describe("hata", () => {
     const before = queries.length;
     await user.click(screen.getByRole("button", { name: "Yeniden dene" }));
     await waitFor(() => expect(queries.length).toBe(before + 1));
+  });
+});
+
+describe("sağ tık ve çoklu seçim (K-171)", () => {
+  const rowOf = (code: string) => screen.getByText(code, { selector: "td, td *" }).closest("tr") as HTMLElement;
+  const tableBox = () => screen.getByTestId("table-scroll");
+
+  it("satır menüsü olmayan tabloda ⋯ kolonu yok; sağ tık yine açılır, en azından Kopyala; kopyalamada bildirim çıkmaz", async () => {
+    const user = userEvent.setup();
+    await open({ filtered: 3 });
+    await screen.findByText("M-0");
+    expect(document.querySelector(".sc-table-rowmenu")).toBeNull();
+    fireEvent.contextMenu(within(rowOf("M-1")).getByText("Malzeme 1"));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Kopyala"]);
+    await user.click(within(menu).getByRole("menuitem", { name: "Kopyala" }));
+    await waitFor(async () => expect(await navigator.clipboard.readText()).toBe("Malzeme 1"));
+    expect(screen.queryByText(/kopyalandı/i)).toBeNull();
+  });
+
+  it("Ctrl + tık ekler ya da çıkarır (ilk Ctrl tıklamada son tıklanan da girer), Shift + tık aralık; seçili satırlar açık indigo; düz tık ve Esc temizler", async () => {
+    const user = userEvent.setup();
+    await open({ filtered: 6 });
+    await screen.findByText("M-0");
+    await user.click(rowOf("M-1"));
+    expect(document.querySelectorAll("tr.is-picked")).toHaveLength(0);
+    await user.keyboard("{Control>}");
+    await user.click(rowOf("M-3"));
+    await user.keyboard("{/Control}");
+    expect([...document.querySelectorAll("tr.is-picked")].map((r) => r.querySelector("td")?.textContent)).toEqual(["M-1", "M-3"]);
+    await user.keyboard("{Shift>}");
+    await user.click(rowOf("M-5"));
+    await user.keyboard("{/Shift}");
+    expect(document.querySelectorAll("tr.is-picked")).toHaveLength(4);   // M-1, M-3, M-4, M-5
+    await user.keyboard("{Control>}");
+    await user.click(rowOf("M-4"));
+    await user.keyboard("{/Control}");
+    expect(rowOf("M-4")).not.toHaveClass("is-picked");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(document.querySelectorAll("tr.is-picked")).toHaveLength(0));
+    await user.keyboard("{Control>}");
+    await user.click(rowOf("M-2"));
+    await user.keyboard("{/Control}");
+    await user.click(rowOf("M-0"));
+    expect(document.querySelectorAll("tr.is-picked")).toHaveLength(0);
+  });
+
+  it("tablo odaktayken Ctrl + A filtredeki bütün satırları seçer (sunucudan kimlikler)", async () => {
+    await open({ filtered: 6 });
+    await screen.findByText("M-0");
+    tableBox().focus();
+    fireEvent.keyDown(tableBox(), { key: "a", ctrlKey: true });
+    await waitFor(() => expect(document.querySelectorAll("tr.is-picked")).toHaveLength(6));
+    expect(calls.ids.at(-1)).toEqual({ filters: [] });
+  });
+
+  it("⚙ Tablo ayarları → Çoklu seçim: seçim kutusu kolonu açılır, hatırlanır; başlıktaki kutu bütün satırları seçer", async () => {
+    const user = userEvent.setup();
+    await open({ filtered: 4 });
+    await screen.findByText("M-0");
+    expect(document.querySelector(".sc-table-check")).toBeNull();   // varsayılan yok
+    await user.click(screen.getByRole("button", { name: "Tablo ayarları" }));
+    const item = screen.getByRole("menuitemcheckbox", { name: "Çoklu seçim" });
+    expect(item).toHaveAttribute("aria-checked", "false");
+    await user.click(item);
+    await user.click(within(rowOf("M-2")).getByRole("checkbox", { name: "Satırı seç" }));
+    expect(rowOf("M-2")).toHaveClass("is-picked");
+    await user.click(screen.getByRole("checkbox", { name: "Filtredeki bütün satırları seç" }));
+    await waitFor(() => expect(document.querySelectorAll("tr.is-picked")).toHaveLength(0));   // seçim varken başlıktaki kutu seçimi kaldırır
+    await user.click(screen.getByRole("checkbox", { name: "Filtredeki bütün satırları seç" }));
+    await waitFor(() => expect(document.querySelectorAll("tr.is-picked")).toHaveLength(4));
+    expect(Object.keys(window.localStorage).some((k) => k.endsWith("multiSelect.materials") && window.localStorage.getItem(k) === "true")).toBe(true);
   });
 });

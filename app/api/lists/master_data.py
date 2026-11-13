@@ -158,6 +158,8 @@ def _build(spec: Spec) -> ListDefinition:
     decimals = {f: spec.decimals[f] for f in numeric if f in spec.decimals}
     missing = numeric - set(decimals) - set(spec.unit_decimals)
     assert not missing, f"{spec.table}: ondalığı tanımsız sayı alanı {sorted(missing)}"  # K-88
+    if "Id" in table.c:  # İlişkili kayıtlar kimlikle süzülür (K-173; yalnız süzmede)
+        labels["Id"] = "Kayıt no"
     hidden = ("UpdatedAt",) if spec.table == "Location" else HIDDEN  # Lokasyon versiyonsuz, pasif kalır (K-153, K-169)
     return ListDefinition(
         name=spec.name,
@@ -176,7 +178,8 @@ def _build(spec: Spec) -> ListDefinition:
         percent=spec.percent,
         unit_field=unit if spec.unit_decimals else None,
         unit_decimals=spec.unit_decimals,
-        server_values=frozenset(f for f in fields if f.endswith("Code") and f != "Code"),
+        server_values=frozenset(f for f in fields if f.endswith("Code") and f != "Code") | ({"Id"} if "Id" in table.c else set()),
+        filter_only=("Id",) if "Id" in table.c else (),
         manual_table=spec.table,
     )
 

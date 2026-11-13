@@ -6,6 +6,7 @@ import { type KeyboardEvent, type MouseEvent, type ReactNode, useCallback, useEf
 import { tr } from "../i18n/tr";
 import { loadPaneRatio, savePaneRatio } from "../prefs";
 import { Segment } from "./fields";
+import { OverflowTabs } from "./OverflowTabs";
 
 const MIN_RATIO = 0.15;
 const MAX_RATIO = 0.85;
@@ -18,6 +19,8 @@ export interface DetailTab<K extends string> {
   value: K;
   label: string;
   count: number;
+  /** Pasif sekme (ör. boş ilişki, K-173). */
+  disabled?: boolean;
 }
 
 const clamp = (ratio: number) => Math.min(MAX_RATIO, Math.max(MIN_RATIO, ratio));
@@ -38,12 +41,16 @@ export function useMasterDetail<T, K extends string>(tabsOf: (item: T) => readon
   return { selected: state?.item ?? null, tab: state?.tab ?? null, toggle, close, setTab };
 }
 
-export function MasterDetail<K extends string>({ id, master, detail, onClose }: {
+export function MasterDetail<K extends string>({ id, master, detail, onClose, hideTitle = false }: {
   /** Ayraç oranının hatırlandığı ekran adı. */
   id: string;
   master: ReactNode;
-  detail: { title: string; tabsLabel: string; tabs: readonly DetailTab<K>[]; tab: K; onTab(tab: K): void; body: ReactNode } | null;
+  detail: { title: string; tabsLabel: string; tabs: readonly DetailTab<K>[]; tab: K; onTab(tab: K): void; body?: ReactNode;
+            /** Şerit kipi (K-173): başlık satırı yok; sekmeler ve Büyüt / ✕ kart tablosunun şeridine verilir (solda sekmeler, sağda düğmeler). */
+            renderBody?: (parts: { tabs: ReactNode; controls: ReactNode }) => ReactNode } | null;
   onClose(): void;
+  /** Başlık kartta yazmaz (ör. kaydın kodu ve adı kartın araç çubuğunda, K-171); erişilebilir ad ve büyütme şeridi yine başlıktan. */
+  hideTitle?: boolean;
 }) {
   const [ratio, setRatio] = useState(() => clamp(loadPaneRatio(id) ?? DEFAULT_RATIO));
   const root = useRef<HTMLDivElement>(null);
@@ -96,6 +103,16 @@ export function MasterDetail<K extends string>({ id, master, detail, onClose }: 
     apply(ratio + (e.key === "ArrowDown" ? KEY_STEP : -KEY_STEP), true);
   };
 
+  const controls = (
+    <>
+      <button type="button" className="sc-tool-btn" aria-label={expanded ? tr.ui.collapsePane : tr.ui.expandPane} title={expanded ? tr.ui.collapsePane : tr.ui.expandPane}
+              aria-pressed={expanded} onClick={() => setExpanded((v) => !v)}>
+        {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+      </button>
+      <button type="button" className="sc-tool-btn" aria-label={tr.ui.close} title={tr.ui.close} onClick={onClose}><X aria-hidden /></button>
+    </>
+  );
+
   return (
     <div className="sc-md" ref={root}>
       {expanded && detail && <div className="sc-md-collapsed">{detail.title}</div>}
@@ -107,21 +124,30 @@ export function MasterDetail<K extends string>({ id, master, detail, onClose }: 
                  aria-valuenow={Math.round(ratio * 100)} aria-valuemin={MIN_RATIO * 100} aria-valuemax={MAX_RATIO * 100}
                  onMouseDown={onMouseDown} onKeyDown={onKeyDown} onDoubleClick={() => apply(DEFAULT_RATIO, true)} />
           )}
-          <section className="sc-md-pane sc-md-detail" style={{ flexGrow: expanded ? 1 : 1 - ratio }} aria-label={detail.title}>
-            <header className="sc-md-head">
-              <h2>{detail.title}</h2>
-              {detail.tabs.length > 1 && (  // tek sekmede seçim şeridi yok (ör. zamanlanmış işin geçmişi)
-                <Segment<K> label={detail.tabsLabel} hideLabel value={detail.tab} onChange={detail.onTab} options={detail.tabs.map((t) => ({ value: t.value, label: t.label }))} />
-              )}
-              <div className="sc-md-actions">
-                <button type="button" className="sc-drawer-close" aria-label={expanded ? tr.ui.collapsePane : tr.ui.expandPane} title={expanded ? tr.ui.collapsePane : tr.ui.expandPane}
-                        aria-pressed={expanded} onClick={() => setExpanded((v) => !v)}>
-                  {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
-                </button>
-                <button type="button" className="sc-drawer-close" aria-label={tr.ui.close} onClick={onClose}><X aria-hidden /></button>
-              </div>
-            </header>
-            {detail.body}
+          <section className={`sc-md-pane sc-md-detail${detail.renderBody ? " sc-md-detail--strip" : ""}`} style={{ flexGrow: expanded ? 1 : 1 - ratio }} aria-label={detail.title}>
+            {detail.renderBody ? (
+              <>
+                {hideTitle && <h2 className="sc-visually-hidden">{detail.title}</h2>}
+                {detail.renderBody({
+                  tabs: (  // tek sekme olsa da sekme şeridi görünür (K-171)
+                    <OverflowTabs<K> label={detail.tabsLabel} value={detail.tab} onChange={detail.onTab}
+                                     options={detail.tabs.map((t) => ({ value: t.value, label: t.label, disabled: t.disabled }))} />
+                  ),
+                  controls,
+                })}
+              </>
+            ) : (
+              <>
+                <header className="sc-md-head">
+                  {hideTitle ? <h2 className="sc-visually-hidden">{detail.title}</h2> : <h2>{detail.title}</h2>}
+                  {detail.tabs.length > 1 && (  // tek sekmede seçim şeridi yok (ör. zamanlanmış işin geçmişi)
+                    <Segment<K> label={detail.tabsLabel} hideLabel value={detail.tab} onChange={detail.onTab} options={detail.tabs.map((t) => ({ value: t.value, label: t.label, disabled: t.disabled }))} />
+                  )}
+                  <div className="sc-md-actions">{controls}</div>
+                </header>
+                {detail.body}
+              </>
+            )}
           </section>
         </>
       )}

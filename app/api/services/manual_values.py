@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app import history
 from app.integration.structural import BadValue, convert
 from app.jobs.constants import ACTIVE_STATUSES, TYPE_TRANSFER
 from app.manual import (ERP, FIELDS, MANUAL, RULE, RULE_SOURCE, SOURCE, UNVERSIONED, as_text, core_table, kind, manual_fields, not_manual_reason,
@@ -151,6 +152,7 @@ def _write(session: Session, actor: CurrentUser, tg: Target, t: sa.Table, key: s
     col = t.c[field]
     where = _current(tg.table, t, key)
     old = session.execute(sa.select(col).where(*where)).scalar()
+    old_text = session.execute(sa.select(as_text(col, col)).where(*where)).scalar()
     mv = session.execute(sa.select(MANUAL.c.Id).where(MANUAL.c.TableName == tg.table, MANUAL.c.RecordKey == key, MANUAL.c.FieldName == field)).scalar()
     if mv is None:  # ilk giriş: alttaki değer ve kaynağı saklanır
         base = session.execute(sa.select(as_text(col, col)).where(*where)).scalar()
@@ -163,8 +165,9 @@ def _write(session: Session, actor: CurrentUser, tg: Target, t: sa.Table, key: s
     text = session.execute(sa.select(as_text(col, col)).where(*where)).scalar()
     session.execute(sa.update(MANUAL).where(MANUAL.c.TableName == tg.table, MANUAL.c.RecordKey == key, MANUAL.c.FieldName == field)
                     .values(Value=text, UpdatedBy=actor.id, UpdatedAt=sa.func.sysutcdatetime()))
+    history.record(session, tg.table, key, field, old_text, text, history.MANUAL_SOURCE, actor.id)  # geçmiş (K-173)
     audit.write_audit(session, SAVE_ACTION, actor.id, OBJECT, f"{tg.title} · {_record_text(session, tg.table, t, key)}",
-                      {"list": tg.list_name, "field": field, "Value": value}, {"list": tg.list_name, "field": field, "Value": old})
+                      {"list": tg.list_name, "record": key, "field": field, "Value": value}, {"list": tg.list_name, "record": key, "field": field, "Value": old})
 
 
 def _restore(session: Session, actor: CurrentUser | None, tg: Target, t: sa.Table, rows: Iterable) -> int:
@@ -174,12 +177,14 @@ def _restore(session: Session, actor: CurrentUser | None, tg: Target, t: sa.Tabl
         col = t.c[mv.FieldName]
         where = _current(tg.table, t, mv.RecordKey)
         old = session.execute(sa.select(col).where(*where)).scalar()
+        old_text = session.execute(sa.select(as_text(col, col)).where(*where)).scalar()
         session.execute(sa.update(t).where(*where).values({mv.FieldName: sa.select(sa.cast(sa.literal(mv.UnderlyingValue, sa.Unicode(200)), col.type)
                                                                                      if kind(col) != "text" else sa.literal(mv.UnderlyingValue, sa.Unicode(200))).scalar_subquery()}))
         session.execute(sa.delete(MANUAL).where(MANUAL.c.Id == mv.Id))
+        history.record(session, tg.table, mv.RecordKey, mv.FieldName, old_text, mv.UnderlyingValue, history.MANUAL_REMOVE, actor.id if actor else None)
         audit.write_audit(session, REMOVE_ACTION, actor.id if actor else None, OBJECT, f"{tg.title} · {_record_text(session, tg.table, t, mv.RecordKey)}",
-                          {"list": tg.list_name, "field": mv.FieldName, "Value": typed(mv.UnderlyingValue, col)},
-                          {"list": tg.list_name, "field": mv.FieldName, "Value": old})
+                          {"list": tg.list_name, "record": mv.RecordKey, "field": mv.FieldName, "Value": typed(mv.UnderlyingValue, col)},
+                          {"list": tg.list_name, "record": mv.RecordKey, "field": mv.FieldName, "Value": old})
         n += 1
     return n
 

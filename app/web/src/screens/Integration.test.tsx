@@ -76,7 +76,7 @@ describe("ekran 23", () => {
 
   it("System owner: şeritte alan, Kaydet indigo, Bağlantıyı test et tonal mor, hesap", async () => {
     await open("System owner");
-    const strip = (await screen.findByRole("textbox", { name: /SQL kaynağı/ })).closest(".sc-top-strip") as HTMLElement;
+    const strip = (await screen.findByRole("textbox", { name: /SQL kaynağı/ })).closest(".sc-table-toolbar-main") as HTMLElement;  // tablonun şeridinde (K-171)
     expect(within(strip).getByRole("button", { name: "Kaydet" }).className).toContain("sc-btn--primary");
     expect(within(strip).getByRole("button", { name: "Bağlantıyı test et" }).className).toContain("sc-btn--secondary");
     expect(await within(strip).findByText(/Hesap: SUNUCU/)).toBeInTheDocument();
@@ -109,7 +109,7 @@ describe("ekran 23", () => {
     await setCell(user, "Malzeme", "Kaynak", "View_Yeni");
     expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(0);
     const table = screen.getByTestId("table-scroll").parentElement!;
-    await user.click(within(table).getByRole("button", { name: "Kaydet" }));
+    await user.click(within(table.querySelector(".sc-edit-bar") as HTMLElement).getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(1));
     expect(JSON.parse(String((calls(fetchMock, "PUT", "/api/integration/entities")[0][1] as RequestInit).body)).changes).toEqual([
       { entity: "Resource", method: "SQL", view: "View_Resource" }, { entity: "Material", view: "View_Yeni" },

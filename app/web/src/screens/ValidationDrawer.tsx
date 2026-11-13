@@ -9,7 +9,7 @@ import { formatDateTime, formatNumber, serverDate } from "../format";
 import { tr } from "../i18n/tr";
 import { type CellClass, type CellRender, type CellWrap, DataTable } from "../table/DataTable";
 import { type LocalColumn, LocalTable } from "../table/LocalTable";
-import { Alert, Badge, type BadgeTone, Button, Drawer, KpiCard, Segment, Tooltip } from "../ui";
+import { Alert, Badge, type BadgeTone, Button, Drawer, KpiCard, OverflowTabs, Segment, Tooltip } from "../ui";
 import { parseEffects } from "./dataRulesApi";
 import { dataList, type RecordScope, recordsList, type RuleCount, ruleFilter, RUNNING_STATES, scopeFilter, STATE_DONE, STATE_FAILED, validationApi, type ValidationSummary } from "./validationApi";
 
@@ -190,8 +190,6 @@ export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason
               : <p className="sc-muted">{T.noFindings}</p>
           ) : (
             <>
-              <Segment<RecordScope> label={T.scope} hideLabel value={scope} onChange={(v) => { setScope(v); if (v !== "findings") setRule(null); }}
-                                    options={[{ value: "findings", label: T.scopeFindings }, { value: "effects", label: T.scopeEffects }, { value: "all", label: T.scopeAll }]} />
               {rule && (
                 <ul className="sc-chips">
                   <li className="sc-chip-filter">
@@ -200,7 +198,11 @@ export function ValidationDrawer({ entity, name, canRevalidate, revalidateReason
                   </li>
                 </ul>
               )}
-              <DataTable key={`records:${scope}:${rule?.id ?? ""}`} list={scope === "findings" ? recordsList(entity) : dataList(entity)} baseFilters={recordFilters} cellRender={SEVERITY_CELLS} cellWrap={RULE_TRACE} cellClass={RULE_TRACE_CELL} reloadKey={reloadKey} />
+              <DataTable key={`records:${scope}:${rule?.id ?? ""}`} list={scope === "findings" ? recordsList(entity) : dataList(entity)} baseFilters={recordFilters} cellRender={SEVERITY_CELLS} cellWrap={RULE_TRACE} cellClass={RULE_TRACE_CELL} reloadKey={reloadKey}
+                         toolbarLead={(  // kapsam tablonun şeridinin solunda (K-173)
+                           <OverflowTabs<RecordScope> label={T.scope} value={scope} onChange={(v) => { setScope(v); if (v !== "findings") setRule(null); }}
+                                                      options={[{ value: "findings", label: T.scopeFindings }, { value: "effects", label: T.scopeEffects }, { value: "all", label: T.scopeAll }]} />
+                         )} />
             </>
           )}
         </>

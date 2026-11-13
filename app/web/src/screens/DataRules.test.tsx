@@ -67,12 +67,21 @@ describe("ekran 04 · Veri kuralları", () => {
     expect(screen.getByRole("switch", { name: "Tesis bayrağı aktif" })).toBeDisabled();
   });
 
-  it("şerit: Tablo, Yeni kural, Kuralları yeniden uygula aynı üst şeritte; Çalışmadı çipi", async () => {
+  it("şerit (K-171): Tablo, Yeni kural (indigo), Kuralları yeniden uygula (mor) tablonun şeridinin solunda; üst kutu yok; Çalışmadı çipi", async () => {
+    const user = userEvent.setup();
     backend();
     renderApp(PATH, meAs("Admin"));
     await screen.findByText("Tesis bayrağı", {}, { timeout: 5000 });
-    const strip = screen.getByRole("group", { name: "Tablo seçimi" });
-    expect(within(strip).getByRole("combobox", { name: "Tablo" })).toBeInTheDocument();
+    const strip = screen.getByRole("combobox", { name: "Tablo" }).closest(".sc-table-toolbar-main") as HTMLElement;
+    expect(strip).not.toBeNull();
+    expect(document.querySelector(".sc-top-strip")).toBeNull();
+    expect(within(strip).getAllByRole("button").map((b) => b.textContent)).toEqual(["Yeni kural", "Kuralları yeniden uygula"]);
+    const add = within(strip).getByRole("button", { name: "Yeni kural" });
+    expect(add.className).toContain("sc-btn--primary");
+    expect(add).toBeEnabled();  // "Tümü"de de indigo; tıklayınca önce tablo seçilmesini bildirir
+    await user.click(add);
+    expect(await screen.findByText("Yeni kural için önce bir tablo seçin.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(within(strip).getByRole("button", { name: "Kuralları yeniden uygula" }).className).toContain("sc-btn--secondary");
     expect(screen.getAllByText("Çalışmadı").find((el) => el.classList.contains("sc-tag"))!.className).toContain("sc-tag--critical");
   });

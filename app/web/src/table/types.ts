@@ -232,6 +232,8 @@ export function listApi(list: string) {
   return {
     columns: (signal?: AbortSignal) => getJson<ColumnsResponse>(`${base}/columns`, signal),
     query: (body: QueryRequest, signal?: AbortSignal) => postJson<QueryResponse>(`${base}/query`, body, signal),
+    /** Filtredeki satırların kimlikleri (çoklu seçim, K-171): en çok 10.000; truncated: fazlası var. */
+    ids: (filters: ListFilter[], signal?: AbortSignal) => postJson<{ ids: string[]; truncated: boolean }>(`${base}/ids`, { filters }, signal),
     values: (body: { field: string; search: string; filters: ListFilter[] }, signal?: AbortSignal) =>
       postJson<ValueCount[]>(`${base}/values`, body, signal),
     groups: (body: { group_by: string[]; fields: string[]; aggregates: Record<string, AggSpec>; filters: ListFilter[];

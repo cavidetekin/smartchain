@@ -227,7 +227,11 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset":
 - **Türkçe:** metin karşılaştırma ve sıralama `Turkish_100_CI_AS` ile; büyük/küçük harf duyarsız, "İ/i" ve "I/ı" doğru.
 - **Güvenlik:** alan ve operatör liste tanımındaki beyaz listeden; değerler parametreyle gider; `LIKE` içinde `%`, `_`, `[` düz karakterdir.
 - **Kararlı parçalar:** sıralamanın sonuna her zaman `Id` eklenir; parçalar örtüşmez. Sıralama verilmezse liste tanımındaki varsayılan kullanılır.
-- **Sınırlar:** `limit` varsayılan ve en çok `ListChunkSize` (kolonlar cevabındaki `chunk_size`); `offset` ≥ 0.
+- **Sınırlar:** `limit` varsayılan ve en çok `ListChunkSize` (kolonlar cevabındaki `chunk_size`); `offset` ≥ 0. Liste filtresinin değer sayısı sınırsızdır (çok değerde parametre yerine metin olarak gömülür; SQL Server'ın 2.100 parametre sınırı).
+
+### Kimlikler · `POST /api/<liste>/ids` (K-171)
+
+Çoklu seçimde Ctrl + A ve başlıktaki kutu: gövde `{"filters": [...]}` (sorgudaki gibi), cevap `{"ids": ["7", "9"], "truncated": false}`; sıra listenin varsayılan sıralaması, en çok 10.000 kimlik (`truncated`: fazlası var). Yetki listenin okuma yetkisi.
 - **Hatalar:** bilinmeyen alan, operatör, eksik değer ya da sınır dışı `limit` → 422 `validation` (`details`: `field`, `problem`); veritabanı yoksa 503 `database_unavailable`; veri versiyonu yoksa 404 `no_data_version`.
 - **Versiyon:** liste güncel veri versiyonunu okur (`VersionFrom ≤ v` ve `VersionTo` boş ya da `≥ v`; motorun okuduğu koşulla aynı).
 
@@ -410,7 +414,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | Uç nokta | Cevap |
 |---|---|
 | Ortak liste `audit-log` | `At`, `ActorName`, `Action`, `ObjectTypeLabel`, `ObjectShown`, `OldText`, `NewText` (okunur), `OldValue`, `NewValue` (ham, varsayılan gizli). Kapsam `row_scope(role, user_id)` |
-| `GET /api/audit-log/{id}` | `id`, `at`, `actor`, `action`, `object_type`, `object`, `has_object`, `changes`: `[{"field", "old", "new"}]`. Kapsam dışıysa 404 `audit_not_found`. Gerçek ad, nesne ve değerler yalnız System owner'a |
+| `GET /api/audit-log/{id}` | `id`, `at`, `actor`, `action`, `object_type`, `object`, `has_object`, `changes`: `[{"field", "old", "new"}]`. Kapsam dışıysa 404 `audit_not_found`. Nesnesi veri kaydı olan satırda `target` (`list`, `id`; "Kayda git", K-173) ya da bulunamazsa `target_reason`. Gerçek ad, nesne ve değerler yalnız System owner'a |
 | `GET /api/audit-log/{id}/history` | Aynı nesne tipi ve anahtarın kayıtları zaman sırasıyla: `rows`, `truncated` (en çok 200; en yeniler). Kapsam ve maske listeyle aynı |
 
 **Okunur biçim:** `app/api/audit_format.py` tek yer: `FIELD_LABELS` her anahtar, `VALUE_LABELS` kodlu değerler, `SETTING_LABELS` ayar anahtarları (Sistem ayarları formuyla aynı adlar, testle denetlenir; `ObjectShown` sorguda üretilir, süzme bu adda); kolon ve sıralama alanları listenin etiketiyle. Yeni iz anahtarı ya da kodlu değer eklenirse çevirisi de eklenir: yazma noktaları taranır (`tests/test_audit_format.py`), test sırasında yazılan her iz denetlenir (`tests/audit_guard.py`). Bilinmeyen anahtar üretimde olduğu gibi görünür, bilgi kaybolmaz.
@@ -558,6 +562,18 @@ Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, d
 | `GET /api/master-data/counts` · `GET /api/transaction-data/counts` | 10 / 102 okuma | Sekmeler, tablolar ve güncel veri versiyonundaki kayıt sayıları (tablo seçimi için); veri yoksa sayı boş |
 
 Uygulandı (6.1, K-168, K-169). Satırlar ortak liste sözleşmesiyle (K-87); yazma ucu yok, manuel değer 6.2'de.
+
+## Kayıt, geçmiş ve ilişkili kayıtlar (ekran 03 ve 29, fonksiyon 14; K-171, K-173)
+
+Uygulandı (6.3, K-171, K-173).
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| `GET /api/records/{liste}/{id}` | listenin fonksiyonu (10 / 102) okuma | Kaydın kartı: `code`, `name`, `label` (kod · ad), `current` (güncel veride mi), `closed_version` (kapandığı versiyon), `relations` (İlişkili kayıtlar: `key`, `label`, `list`, `filters`, `count`; yalnız Ana veri, okuma yetkisi olan ilişkiler). Liste ya da kayıt yoksa 404 |
+| `POST /api/records/{liste}/many` | listenin fonksiyonu (10 / 102) okuma | Çoklu seçimde kart (K-171): gövde `{"ids": [...]}` (en çok 10.000); cevap `table`, `ids`, `relations` (seçili kayıtların ilişkilerinin birleşimi, `GET` ile aynı biçimde). Liste yoksa 404 |
+| `record-history-many` listesi | 14 okuma | Çoklu seçimde Geçmiş: `record-history` ile aynı, başta "Kayıt" kolonu (`RecordLabel`, kaydın kodu) |
+| `record-history` listesi (`/api/record-history/columns · query · values`) | 14 okuma | Geçmiş (`adm.FieldChange`), liste sözleşmesiyle; süzgeç `TableName` ve `RecordKey` (yalnız süzmede). Kolonlar Tarih, Veri, Alan, Eski değer, Yeni değer, Kaynak; değerler alanın tipine göre biçimli; en yeni üstte |
+| `GET /api/audit-log/{id}` | 98 okuma | Detayda `target` (`list`, `id`): "Kayda git" hedefi; bulunamazsa `target_reason` |
 
 ## Manuel değer (ekran 03 ve 29, fonksiyon 11, 12, 13; K-170)
 

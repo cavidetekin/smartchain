@@ -32,8 +32,6 @@ export interface CellEditing {
   label(col: ListColumn, row: Row): string;
   /** Seçili hücrede Delete (ör. manuel değeri kaldırma taslağı); işlendiyse true. */
   clear?(col: ListColumn, row: Row): boolean;
-  /** Hücre menüsü (sağ tık, hücrenin tamamında; K-172): açıldıysa true (tarayıcının menüsü çıkmaz, hücre seçilir). */
-  menu?(col: ListColumn, row: Row, anchor: HTMLElement): boolean;
   /** Seçili hücreden başlayarak yapıştırılan blok (sekme ve satır ayraçlı; Excel). */
   paste?(cells: PasteCell[]): void;
 }

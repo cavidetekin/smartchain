@@ -14,7 +14,7 @@ from .errors import install_error_handlers
 from .logging_setup import setup_logging
 from .middleware import TraceMiddleware
 from .notify import ConnectionManager, JobWatcher
-from .routers import audit_log, auth, cleanup, data_rules, data_versions, exports, flows, health, integration, jobs, lists, manual_values, master_data, raw_compare, system_health, system_owner, imports, templates, transfers, users, validation, ws
+from .routers import audit_log, auth, cleanup, data_rules, data_versions, exports, flows, health, integration, jobs, lists, manual_values, master_data, raw_compare, records, system_health, system_owner, imports, templates, transfers, users, validation, ws
 from .settings import get_settings
 
 log = logging.getLogger("smartchain")
@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(flows.router, prefix="/api")
     app.include_router(master_data.router, prefix="/api")
     app.include_router(manual_values.router, prefix="/api")
+    app.include_router(records.router, prefix="/api")
     for r in lists.routers:
         app.include_router(r, prefix="/api")
     app.include_router(ws.router, prefix="/api")

@@ -1203,6 +1203,25 @@ ManualValue = sa.Table(
     comment="Manuel değer (K-170): ana veri ve işlem verisinde kayıt ve alan başına; kuralı ve ERP'yi ezer, aktarımda korunur, süresi yoktur. Alttaki değer (ERP ya da kural sonucu) girişte ve her aktarımda saklanır; kaldırılınca hücreye son alttaki değer döner. Değerler alanın tipinden metne çevrilmiş hâldedir.",
 )
 
+FieldChange = sa.Table(
+    "FieldChange", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
+    sa.Column("TableName", sa.Unicode(60), nullable=False, comment="Tablo (core adı)", info={'label': "Tablo (core adı)"}),
+    sa.Column("RecordKey", sa.Unicode(60), index=True, nullable=False, comment="Kaydın kimliği: Id, bütün versiyonlarda aynı (K-63); birimde kod", info={'label': "Kaydın kimliği: Id, bütün versiyonlarda aynı (K-63)"}),
+    sa.Column("FieldName", sa.Unicode(60), nullable=True, comment="Alan; kayıt oluştu ya da kapandı satırında boş", info={'label': "Alan"}),
+    sa.Column("ChangeType", sa.Unicode(10), nullable=False, comment="Oluştu | Değişti | Kapandı", info={'values': ["Oluştu", "Değişti", "Kapandı"]}),
+    sa.Column("OldValue", sa.Unicode(400), nullable=True, comment="Eski değer (metin)", info={'label': "Eski değer (metin)"}),
+    sa.Column("NewValue", sa.Unicode(400), nullable=True, comment="Yeni değer (metin)", info={'label': "Yeni değer (metin)"}),
+    sa.Column("DataVersionId", sa.BigInteger(), nullable=True, comment="Değişikliğin olduğu veri versiyonu; Smartchain girişinde o anki güncel versiyon", info={'label': "Değişikliğin olduğu veri versiyonu"}),
+    sa.Column("At", mssql.DATETIME2(), nullable=False, comment="Zaman (UTC)", info={'label': "Zaman (UTC)"}),
+    sa.Column("Source", sa.Unicode(40), nullable=False, comment="Aktarım | Manuel değer | Manuel değer kaldırma | Kapasite yönetimi | Malzeme blokajı", info={'values': ["Aktarım", "Manuel değer", "Manuel değer kaldırma", "Kapasite yönetimi", "Malzeme blokajı"]}),
+    sa.Column("UserId", sa.Integer(), nullable=True, comment="Değiştiren kullanıcı; aktarımda aktarımı başlatan, zamanlanmış işte boş", info={'label': "Değiştiren kullanıcı"}),
+    sa.Column("DataRuleId", sa.BigInteger(), nullable=True, comment="Aktarımda hücreyi değiştiren kural", info={'label': "Aktarımda hücreyi değiştiren kural"}),
+    sa.Column("Note", sa.Unicode(100), nullable=True, comment="Not (ör. \"Manuel değer korundu\")", info={'label': "Not (ör. \"Manuel değer korundu\")"}),
+    schema="adm",
+    comment="Alan değişikliği (K-173): ana veri ve işlem verisinde kaydın alanı her değiştiğinde, değişiklik anında aynı işlemde yazılır; detay kartının Geçmiş sekmesi buradan okunur. Yazanlar aktarım, manuel değer girme ve kaldırma ve Smartchain girişleridir. Değerler alanın tipinden metne çevrilmiş hâldedir. Silinmez.",
+)
+
 FieldValueSource = sa.Table(
     "FieldValueSource", metadata,
     sa.Column("TableName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Tablo", info={'label': "Tablo"}),

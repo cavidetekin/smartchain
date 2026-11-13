@@ -25,6 +25,7 @@ export function GroupPanel({ ref, columns, groupBy, onChange }: {
   const candidates = columns.filter((c) => isGroupable(c) && !groupBy.includes(c.field));
   return (
     <div ref={ref} className="sc-table-pop sc-table-group-panel sc-floating" role="dialog" aria-label={T.groupPanel}>
+      <div className="sc-popover-title">{T.groupPanel}</div>
       {groupBy.length > 0 && (
         <ol className="sc-tgroup-list">
           {groupBy.map((f, i) => (

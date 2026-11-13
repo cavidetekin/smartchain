@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Ana veri ekranı önerisi</title>
+<style>
+:root{--ink:#1F2430;--mute:#6B7280;--line:#E3E6EB;--bg:#F6F7F9;--ind:#4F46E5;--indsoft:#EEF0FE;--lila:#EDE9FE;--mor:#6D28D9;--head:#E8EAFB}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI",system-ui,sans-serif;margin:0;padding:20px;background:#D9DCE2;color:var(--ink);font-size:12.5px}
+.app{max-width:1500px;margin:0 auto;background:var(--bg);border-radius:10px;overflow:hidden;box-shadow:0 10px 30px #0002;display:grid;grid-template-columns:44px 1fr;height:860px}
+.rail{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:12px}
+.rail i{width:16px;height:16px;border-radius:4px;background:#C9CDD6;display:block}.rail i.on{background:var(--ind)}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.ctx{display:flex;justify-content:space-between;padding:7px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.pill{border:1px solid var(--line);border-radius:14px;padding:2px 10px;color:var(--mute);margin-right:6px;font-size:11.5px}
+.title{padding:12px 20px 8px}.title h1{font-size:21px;margin:0}
+.tabs{display:inline-flex;border:1px solid #CDD2DA;border-radius:8px;overflow:hidden;background:#fff;margin:0 20px 12px;align-self:flex-start}
+.tabs span{padding:6px 13px;font-weight:600;color:#374151;border-right:1px solid #E3E6EB}.tabs span:last-child{border-right:0}
+.tabs span.on{background:var(--indsoft);color:var(--ind)}
+.body{flex:1;display:grid;grid-template-columns:1fr;gap:14px;padding:0 20px 16px;min-height:0}
+.nav{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;align-self:start}
+.nav div{padding:8px 11px;border-radius:7px;font-weight:600;color:#374151;margin-bottom:2px;display:flex;justify-content:space-between}
+.nav div small{color:var(--mute);font-weight:500;font-family:Inter,"Segoe UI",sans-serif}
+.nav div.on{background:var(--indsoft);color:var(--ind);box-shadow:inset 3px 0 0 var(--ind)}
+.nav .col{color:var(--mute);font-weight:500;justify-content:flex-start;gap:6px;border-top:1px solid var(--line);border-radius:0;margin-top:6px;padding-top:9px}
+.content{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0}
+.box{background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tool{display:flex;align-items:center;gap:10px;padding:8px 12px}
+.sel{border:1px solid #CDD2DA;border-radius:6px;padding:4px 9px;font-size:12px}
+.sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+.sb{border:1px solid #CDD2DA;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600}
+.btn{border-radius:6px;padding:5px 12px;font-weight:600;font-size:12px}
+.primary{background:var(--ind);color:#fff}.ghost{color:var(--ind)}
+.second{background:var(--lila);color:var(--mor)}
+.dirty{color:var(--mor);font-weight:600;font-size:12px}
+table{border-collapse:collapse;width:100%}
+th{background:var(--head);text-align:left;font-weight:600;padding:6px 9px;font-size:11.5px;white-space:nowrap}
+th.ed:after{content:" ✎";color:var(--mor);font-weight:400}
+td{padding:5px 9px;border-top:1px solid var(--line);white-space:nowrap}
+td.n{text-align:right;font-family:Inter,"Segoe UI",sans-serif}
+td.e{background:#FCFBFF}
+td.ch{background:var(--lila);box-shadow:inset 0 0 0 1.5px #A78BFA}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--ind)}
+tr.sel td{background:#F1F2FE}
+.chip{border-radius:10px;padding:1px 7px;font-size:11px;font-weight:600}
+.ok{background:#DCF3E4;color:#1E7A43}.off{background:#EEF0F3;color:var(--mute)}.warn{background:#FBEFC8;color:#8A6510}
+.tsel{border:1.5px solid var(--ind);border-radius:6px;padding:4px 10px;font-weight:700;color:var(--ind);background:var(--indsoft);font-size:12.5px}
+.tsel small,.pop small{color:var(--mute);font-weight:500;font-family:Inter,"Segoe UI",sans-serif;margin-left:6px}
+.pop{position:absolute;left:12px;top:36px;background:#fff;border:1px solid #CDD2DA;border-radius:8px;box-shadow:0 8px 20px #0002;padding:4px;width:200px;z-index:2}
+.pop div{padding:6px 10px;border-radius:5px;font-weight:600;display:flex;justify-content:space-between}
+.pop div.on{background:var(--indsoft);color:var(--ind)}
+.badge{display:inline-block;border:1px solid #C7CBFB;color:var(--ind);background:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}
+.badge.on{background:var(--ind);color:#fff;border-color:var(--ind)}
+tr.hov td{background:#FAFAFC}
+.dtabs{display:inline-flex;border:1px solid #CDD2DA;border-radius:8px;overflow:hidden;background:#fff}
+.dtabs span{padding:5px 13px;font-weight:600;color:#374151;border-right:1px solid #E3E6EB}
+.dtabs span:last-child{border-right:0}
+.dtabs span.on{background:var(--indsoft);color:var(--ind)}
+.split{height:6px;background:#E3E6EB;border-radius:3px;margin:0 auto;width:60px;flex:none}
+.dhead{display:flex;align-items:center;gap:12px;padding:9px 12px 0}
+.dhead b{font-size:13.5px}
+.seg{display:inline-flex;border:1px solid #CDD2DA;border-radius:7px;overflow:hidden}
+.seg span{padding:4px 11px;font-weight:600;color:var(--mute);border-right:1px solid #CDD2DA}.seg span:last-child{border-right:0}
+.seg span.on{background:var(--indsoft);color:var(--ind)}
+.x{margin-left:auto;color:var(--mute)}
+.note{max-width:1500px;margin:14px auto 0;background:#fff;border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.6}
+.note b{color:var(--mor)}
+</style></head><body>
+<div class="app">
+  <div class="rail"><i></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+  <div class="main">
+    <div class="ctx"><div><span class="pill">Senaryo: —</span><span class="pill">Plan versiyonu: —</span><span class="pill">Dönem: —</span></div><div><span class="pill">Veri v64 · 12.11.2026 09:02</span><span class="pill">İş yok</span><span class="pill">Key user</span></div></div>
+    <div class="title"><h1>Ana veri</h1></div>
+    <div class="tabs"><span>Malzeme</span><span>Ürün ağacı ve rota</span><span class="on">Kaynak</span><span>Takvim ve vardiya</span><span>Tedarikçi ve müşteri</span><span>Proje</span><span>Lokasyon ve birim</span></div>
+    <div class="body">
+      <div class="content">
+        <div class="box" style="flex:1.25">
+          <div class="tool" style="position:relative"><span class="tsel">Kaynak <small>47</small> ▾</span><span class="sel">Standart (varsayılan) ▾</span><span style="color:var(--mute)">⋯ &nbsp; 47 / 52</span>
+            <span class="sp"><span class="sb">Grupla</span><span class="sb">Alanlar</span><span class="sb">Excel'e aktar</span></span></div>
+          <table>
+            <tr><th>Kaynak kodu</th><th>Kaynak adı</th><th>Tip</th><th>Kritik</th><th>Kapasite birimi</th><th >Günlük kapasite</th><th >Paralel adet</th><th >Takvim</th><th >Kapasite kaynağı</th><th>Fasoncu</th><th>Aktif</th><th></th></tr>
+            <tr><td>KYN-CNC-01</td><td>CNC Torna 1</td><td>Makine</td><td>Evet</td><td>SAAT</td><td class="n">16,00</td><td class="n">1</td><td>STD-5</td><td>Kaynak</td><td></td><td><span class="chip ok">Evet</span></td><td></td></tr>
+            <tr class="sel"><td>KYN-CNC-02</td><td>CNC Torna 2</td><td>Makine</td><td>Evet</td><td>SAAT</td><td class="n">22,50</td><td class="n">1</td><td>STD-6</td><td>Kaynak</td><td></td><td><span class="chip ok">Evet</span></td><td><span class="badge on">Detay ›</span></td></tr>
+            <tr class="hov"><td>KYN-FRZ-01</td><td>Freze 1</td><td>Makine</td><td>Hayır</td><td>SAAT</td><td class="n">16,00</td><td class="n">2</td><td>STD-5</td><td>Kaynak</td><td></td><td><span class="chip ok">Evet</span></td><td><span class="badge">Detay ›</span></td></tr>
+            <tr><td>KYN-KYN-01</td><td>Kaynak hattı</td><td>Hat</td><td>Evet</td><td>SAAT</td><td class="n"></td><td class="n"></td><td></td><td></td><td></td><td><span class="chip ok">Evet</span></td><td></td></tr>
+            <tr><td>KYN-BOY-01</td><td>Boyahane</td><td>Hat</td><td>Hayır</td><td>M2</td><td class="n">1.200,00</td><td class="n">1</td><td>STD-6</td><td>Kaynak</td><td></td><td><span class="chip ok">Evet</span></td><td></td></tr>
+            <tr><td>KYN-MON-01</td><td>Montaj 1</td><td>İşçilik</td><td>Evet</td><td>SAAT</td><td class="n">40,00</td><td class="n">5</td><td>STD-5</td><td>Vardiya</td><td></td><td><span class="chip ok">Evet</span></td><td></td></tr>
+            <tr><td>FSN-ISL-01</td><td>Isıl işlem (fason)</td><td>Fason</td><td>Hayır</td><td>GÜN</td><td class="n"></td><td class="n"></td><td></td><td>Fason</td><td>TED-014</td><td><span class="chip ok">Evet</span></td><td></td></tr>
+            <tr><td>KYN-KLT-01</td><td>Kalite kontrol</td><td>İşçilik</td><td>Hayır</td><td>SAAT</td><td class="n">16,00</td><td class="n">2</td><td>STD-5</td><td>Vardiya</td><td></td><td><span class="chip ok">Evet</span></td><td></td></tr>
+          </table>
+        </div>
+        <div class="split"></div>
+        <div class="box" style="flex:1">
+          <div class="dhead"><div class="dtabs"><span class="on">Geçmiş</span><span>İlişkili kayıtlar</span></div><span class="x">Büyüt &nbsp; ✕</span></div>
+          <div class="tool" style="position:relative"><span class="sel">Standart (varsayılan) ▾</span><span style="color:var(--mute)">4 / 4</span><span style="color:#9CA3AF;font-size:12px">KYN-CNC-02 · CNC Torna 2</span>
+            <span class="sp"><span class="sb">Alanlar</span><span class="sb">Excel'e aktar</span></span></div>
+          <table>
+            <tr><th>Tarih</th><th>Veri</th><th>Alan</th><th>Eski değer</th><th>Yeni değer</th><th>Kaynak</th></tr>
+            <tr><td class="n">12.11.2026 10:14</td><td class="n">v64</td><td>Günlük kapasite</td><td class="n">16,00</td><td class="n">22,50</td><td>Kapasite yönetimi · planlama</td></tr>
+            <tr><td class="n">11.11.2026 02:09</td><td class="n">v62</td><td>Takvim</td><td>STD-5</td><td>STD-6</td><td>Kapasite yönetimi · sahip</td></tr>
+            <tr><td class="n">10.11.2026 15:03</td><td class="n">v58</td><td>Kaynak adı</td><td>CNC Torna-2</td><td>CNC Torna 2</td><td>Aktarım · Tam</td></tr>
+            <tr><td class="n">26.10.2026 11:40</td><td class="n">v1</td><td>—</td><td></td><td>Kayıt oluştu</td><td>Aktarım · Tam</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+<b>Detay kartı:</b> Satıra tıklamak yalnız seçer · Satırın üzerine gelince sonunda "Detay ›" rozeti görünür (Freze 1 satırında), basınca alt kart açılır (CNC Torna 2) · Kart açıkken başka satıra tıklamak kartı o kayda geçirir · Kartın üstünde sekmeler; kaydın kodu ve adı görünüm seçiminin yanında küçük, soluk yazıyla (ekranın üst sekmeleriyle aynı görünüm): Geçmiş, İlişkili kayıtlar; her ekran kendi sekmelerini tanımlar · ✕ ya da Esc kapatır.
+</div>
+</body></html>

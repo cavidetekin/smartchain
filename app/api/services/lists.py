@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session
 
 from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, columns as column_list
-from ..lists.query import DEFAULT_UNIT_DECIMALS, UNIT, UNIT_DECIMALS, Builder, ListQueryError
+from ..lists.query import DEFAULT_UNIT_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists.groups import build_tree
-from ..lists.request import GroupsRequest, QueryRequest, ValuesRequest
+from ..lists.request import GroupsRequest, IdsRequest, QueryRequest, ValuesRequest
 from app.manual import manual_fields
 
 from ..repositories import data_versions, export as export_repo, lists as repo
@@ -78,6 +78,8 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role
             for r in rows:
                 if field_name in r:
                     r[field_name] = fn(r[field_name])
+        if defn.row_format:  # satıra bağlı okunur biçim (K-173)
+            defn.row_format(rows)
         if req.rules:  # tutan kuralların istekteki sırası (K-95); dönen satırlarda ayrı sorguyla
             hit = {}
             if rows and rules_valid:
@@ -96,6 +98,15 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role
         narrowed = req.filters or req.group_key
         filtered = repo.fetch_count(session, b.filtered_query(req.filters, req.group_key)) if narrowed else total
         return {"rows": rows, "offset": req.offset, "filtered": filtered, "total": total}
+    return _run(session, work)
+
+
+def ids(session: Session | None, defn: ListDefinition, req: IdsRequest, role: str | None = None, user_id: int | None = None) -> dict:
+    """Filtredeki satırların kimlikleri (çoklu seçim, K-171), en çok SELECTION_MAX."""
+    def work():
+        b = _builder(session, defn, role, user_id)
+        found = [r["Id"] for r in repo.fetch_rows(session, b.ids_query(req.filters, SELECTION_MAX))]
+        return {"ids": [str(i) for i in found[:SELECTION_MAX]], "truncated": len(found) > SELECTION_MAX}
     return _run(session, work)
 
 

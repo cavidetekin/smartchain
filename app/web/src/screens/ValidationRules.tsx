@@ -4,7 +4,7 @@
 // "Yeni kural" seçili tablonun şeridinde, tek satırda.
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ApiError, JOB_VALIDATION } from "../api/client";
+import { ApiError, emitNotice, JOB_VALIDATION } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { tr } from "../i18n/tr";
@@ -13,10 +13,10 @@ import { type ConditionField, ConditionEditor, type ConditionRow, groupsComplete
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import { listApi, type ListFilter, type Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
-import { Alert, Badge, type BadgeTone, Button, ConfirmDialog, Dialog, SelectField, TextField, TopStrip } from "../ui";
+import { Alert, Badge, type BadgeTone, Button, ConfirmDialog, Dialog, StripSelect, StripText, TextField } from "../ui";
 import { useFlowLock } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
-import { MenuItem, RowPopMenu } from "./RowPopMenu";
+import { type MenuAction, MenuActions, MenuItem, RowPopMenu } from "./RowPopMenu";
 import { SEVERITY_CLASS, SeverityTag } from "./ValidationDrawer";
 import { KIND_BUILTIN, KIND_USER, type RuleChange, SEVERITIES, validationApi } from "./validationApi";
 
@@ -135,7 +135,7 @@ export function ValidationRules() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [deleting, setDeleting] = useState<Row | null>(null);
   const [resetting, setResetting] = useState<{ id: number; name: string } | null>(null);
@@ -247,7 +247,7 @@ export function ValidationRules() {
 
   const rowMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.rowMenu(String(row.RuleName)),
-    onOpen: (row: Row, anchor: HTMLElement) => setMenu({ row, anchor }),
+    onOpen: (row: Row, anchor: HTMLElement, extra?: MenuAction[]) => setMenu({ row, anchor, extra }),
   }), []);
 
   const thresholdKey = `${THRESHOLD}:${entity}`;
@@ -258,23 +258,27 @@ export function ValidationRules() {
 
   return (
     <section className="sc-page--fill">
-      <header className="sc-page-head sc-page-head--row">
+      <header className="sc-page-head">
         <h1>{T.title}</h1>
       </header>
       {error && <Alert tone="error">{error}</Alert>}
-      <TopStrip label={T.stripLabel}>
-        <SelectField label={T.table} value={entity} onChange={setEntity}
-                     options={[{ value: ALL, label: T.all }, ...entities.map((e) => ({ value: e.table, label: e.name }))]} />
-        <TextField label={T.threshold} value={String(shownThreshold ?? "")} disabled={!entity || !canWrite} inputMode="decimal"
-                   onChange={(v) => edits.set(thresholdKey, "value", v, savedThreshold)} />
-        <Button variant="primary" disabledReason={writeReason ?? (entity ? null : T.pickTable)}
-                onClick={() => setEditing({ entity, kind: KIND_USER, name: "", message: "", severity: "Uyarı", active: true, groups: [] })}>{T.newRule}</Button>
-      </TopStrip>
+      {/* Tablo seçimi, hata eşiği ve ekranın işlemi şeridin solunda (K-171) */}
       <DataTable list="validation-rules" baseFilters={baseFilters} cellRender={cellRender} rowMenu={rowMenu} reloadKey={reloadKey}
-                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />} />
+                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />}
+                 toolbarLead={(
+                   <>
+                     <StripSelect label={T.table} value={entity} onChange={setEntity}
+                                  options={[{ value: ALL, label: T.all }, ...entities.map((e) => ({ value: e.table, label: e.name }))]} />
+                     <StripText label={T.threshold} value={String(shownThreshold ?? "")} disabled={!entity || !canWrite} inputMode="decimal"
+                                onChange={(v) => edits.set(thresholdKey, "value", v, savedThreshold)} />
+                     <Button variant="primary" disabledReason={writeReason}
+                             onClick={() => (entity ? setEditing({ entity, kind: KIND_USER, name: "", message: "", severity: "Uyarı", active: true, groups: [] }) : emitNotice(T.pickTable))}>{T.newRule}</Button>
+                   </>
+                 )} />
       <UnsavedGuard dirty={edits.dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.RuleName))} anchor={menu.anchor} onClose={() => setMenu(null)}>
+          <MenuActions items={menu.extra} onDone={() => setMenu(null)} />
           <MenuItem label={T.edit} state={editState(menu.row)} onClick={() => void openEdit(menu.row)} />
           {menu.row.Kind === KIND_BUILTIN ? (
             <MenuItem label={T.reset} state={writeReason ? { allowed: false, reason: writeReason } : ALLOWED}

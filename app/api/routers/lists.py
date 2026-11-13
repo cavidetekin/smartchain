@@ -10,7 +10,7 @@ from ..deps import require
 from ..permissions import Access
 from ..lists import LISTS, ListDefinition
 from ..lists.request import (
-    DefaultViewRequest, ExportRequest, GroupsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
+    DefaultViewRequest, ExportRequest, GroupsRequest, IdsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
 )
 from ..services import export, lists as service, views
 from ..services.auth import CurrentUser
@@ -33,6 +33,10 @@ def list_router(defn: ListDefinition) -> APIRouter:
     @router.post("/groups", summary=f"{defn.table}: gruplar, satır sayıları ve ara toplamlar (K-90)")
     def groups(body: GroupsRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
         return service.groups(session, defn, body, user.role, user.id)
+
+    @router.post("/ids", summary=f"{defn.table}: filtredeki satırların kimlikleri (çoklu seçim, K-171)")
+    def ids(body: IdsRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
+        return service.ids(session, defn, body, user.role, user.id)
 
     @router.post("/values", summary=f"{defn.table}: liste filtresinin değerleri ve sayıları")
     def values(body: ValuesRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> list[dict]:

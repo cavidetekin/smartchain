@@ -256,7 +256,8 @@ describe("hata detayı", () => {
     const user = userEvent.setup();
     await open("Admin", { "/api/system-events/9": { body: body as Reply["body"] } });
     await user.click(screen.getByRole("radio", { name: "Hatalar" }));
-    await user.click(await screen.findByRole("button", { name: "Hata detayı" }, { timeout: 5000 }));
+    await user.click(await screen.findByRole("button", { name: "Hata detayı" }, { timeout: 5000 }));  // ⋯ menüsü (K-171)
+    await user.click(await screen.findByRole("menuitem", { name: "Detay" }));
     return screen.findByRole("dialog", { name: "Hata detayı" });
   }
 

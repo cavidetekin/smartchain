@@ -5,7 +5,7 @@
 import { GripVertical } from "lucide-react";
 import { type DragEvent, type HTMLAttributes, useCallback, useEffect, useMemo, useState } from "react";
 
-import { ApiError, JOB_VALIDATION } from "../api/client";
+import { ApiError, emitNotice, JOB_VALIDATION } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { formatDateTime, serverDate } from "../format";
@@ -15,14 +15,14 @@ import { type ConditionField, ConditionEditor, type ConditionRow, groupsComplete
 import { DataTable, type FieldHints, type RowMenuSpec } from "../table/DataTable";
 import { listApi, type ListFilter, type Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
-import { Alert, type BadgeTone, Button, ConfirmDialog, Dialog, Segment, SelectField, TextField, Tooltip, TopStrip } from "../ui";
+import { Alert, type BadgeTone, Button, ConfirmDialog, Dialog, Segment, SelectField, StripSelect, TextField, Tooltip } from "../ui";
 import {
   DATE_OPERATORS, type DataRuleChange, type DataRuleField, dataRulesApi, emptyResult, KIND_CLEAR, KIND_FIELD, KIND_FORMULA, KIND_VALUE,
   MODE_ALWAYS, MODE_ONLY_EMPTY, NUMBER_OPERATORS, RESULT_KINDS, resultComplete, type RuleResult, STATUS_FAILED, STATUS_RAN,
 } from "./dataRulesApi";
 import { useFlowLock } from "../shell/FlowStatus";
 import { useJobRefresh } from "../shell/useJobRefresh";
-import { MenuItem, RowPopMenu } from "./RowPopMenu";
+import { type MenuAction, MenuActions, MenuItem, RowPopMenu } from "./RowPopMenu";
 
 const T = tr.dataRules;
 const ALL = "";
@@ -209,7 +209,7 @@ export function DataRules() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [deleting, setDeleting] = useState<Row | null>(null);
   const [ask, setAsk] = useState<string[] | "all" | null>(null);
@@ -349,28 +349,32 @@ export function DataRules() {
 
   const rowMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.rowMenu(String(row.RuleName)),
-    onOpen: (row: Row, anchor: HTMLElement) => setMenu({ row, anchor }),
+    onOpen: (row: Row, anchor: HTMLElement, extra?: MenuAction[]) => setMenu({ row, anchor, extra }),
   }), []);
   const writeState = writeReason ? { allowed: false, reason: writeReason } : ALLOWED;
 
   return (
     <section className="sc-page--fill">
-      <header className="sc-page-head sc-page-head--row">
+      <header className="sc-page-head">
         <h1>{T.title}</h1>
       </header>
       {error && <Alert tone="error">{error}</Alert>}
-      <TopStrip label={T.stripLabel}>
-        <SelectField label={T.table} value={entity} onChange={setEntity}
-                     options={[{ value: ALL, label: T.all }, ...entities.map((e) => ({ value: e.table, label: e.name }))]} />
-        <Button variant="primary" disabledReason={writeReason ?? (entity ? null : T.pickTable)}
-                onClick={() => setEditing({ entity, name: "", target: "", result: emptyResult(), mode: MODE_ONLY_EMPTY, active: true, groups: [] })}>{T.newRule}</Button>
-        <Button variant="secondary" disabledReason={applyReason} onClick={() => setAsk(entity ? [entity] : "all")}>{T.apply}</Button>
-      </TopStrip>
+      {/* Tablo seçimi ve ekranın işlemleri şeridin solunda (K-171); "Yeni kural" ana işlem, Tümü'de önce tablo istenir */}
       <DataTable list="data-rules" baseFilters={baseFilters} cellRender={cellRender} rowMenu={rowMenu} reloadKey={reloadKey} rowOrder={orderDirty ? order : null} rowProps={rowProps} fieldHints={SEQ_HINTS}
-                 toolbarActions={<EditBar dirty={dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={discard} disabledReason={flowLock} />} />
+                 toolbarActions={<EditBar dirty={dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={discard} disabledReason={flowLock} />}
+                 toolbarLead={(
+                   <>
+                     <StripSelect label={T.table} value={entity} onChange={setEntity}
+                                  options={[{ value: ALL, label: T.all }, ...entities.map((e) => ({ value: e.table, label: e.name }))]} />
+                     <Button variant="primary" disabledReason={writeReason}
+                             onClick={() => (entity ? setEditing({ entity, name: "", target: "", result: emptyResult(), mode: MODE_ONLY_EMPTY, active: true, groups: [] }) : emitNotice(T.pickTable))}>{T.newRule}</Button>
+                     <Button variant="secondary" disabledReason={applyReason} onClick={() => setAsk(entity ? [entity] : "all")}>{T.apply}</Button>
+                   </>
+                 )} />
       <UnsavedGuard dirty={dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.RuleName))} anchor={menu.anchor} onClose={() => setMenu(null)}>
+          <MenuActions items={menu.extra} onDone={() => setMenu(null)} />
           <MenuItem label={T.edit} state={writeState} onClick={() => void openEdit(menu.row)} />
           <MenuItem label={T.remove} state={writeState} onClick={() => { setDeleting(menu.row); setMenu(null); }} />
         </RowPopMenu>

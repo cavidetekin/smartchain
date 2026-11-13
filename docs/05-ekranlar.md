@@ -305,6 +305,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.7, K-167); ana veri ekranında yok.
 - **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.3, K-167). Manuel değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
 - **Uygulama (6.2, K-170, K-172):** uygulandı. "Manuel: Evet" alanlarda manuel değer hücre içinde (Ana veri ve İşlem verisi); ilk kolon "Manuel değer", köşe işareti, kaynak ipucu yalnız manuel değer ve kural sonucunda.
+- **Karar (6.3, K-171, K-173):** detay kartı ("Detay ›" rozeti): Geçmiş ve İlişkili kayıtlar; İşlem verisi'nde yalnız Geçmiş. Denetim izinde "Kayda git".
+- **Uygulama (6.3, K-171, K-173):** uygulandı. Detay simgesi (›) tablonun en sağında dar kolonda; hücre menüsü Detay · Kopyala · Manuel değeri kaldır, Ctrl+C; kartın sekmeleri tek sıra: Geçmiş ve tablonun ilişkileri (boş ilişki pasif).
 
 ### İşlem verisi
 <sub>Ekran 29 · geliştirme 6.1 · K-169 (mockup yok; Ana veri ekranının düzeni) · uygulandı</sub>

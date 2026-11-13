@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   Alert, Badge, Button, Checkbox, DateField, KpiCard, NumberField, OccupancyCell, OccupancyLegend, RadioGroup, SearchField,
-  Segment, TextField, TopStrip,
+  Segment, StripSelect, StripText,
 } from ".";
 
 describe("rozet ve uyarı (U-3)", () => {
@@ -149,12 +149,16 @@ describe("form alanları (U-19)", () => {
   });
 });
 
-describe("üst şerit (K-139 eki)", () => {
-  it("ayar ve filtre alanları adlı grupta; etiket alana bağlı", () => {
-    render(<TopStrip label="Tablo ve eşik"><TextField label="Hata eşiği (%)" value="" onChange={() => {}} /><Button>Yeni kural</Button></TopStrip>);
-    const strip = screen.getByRole("group", { name: "Tablo ve eşik" });
-    expect(strip).toHaveClass("sc-top-strip");
-    expect(strip).toContainElement(screen.getByLabelText("Hata eşiği (%)"));
+describe("şeritteki alan (K-171)", () => {
+  it("etiket alana bağlı, alanla aynı satırda", () => {
+    render(
+      <>
+        <StripSelect label="Tablo" value="b" onChange={() => {}} options={[{ value: "a", label: "Tümü" }, { value: "b", label: "Malzeme" }]} />
+        <StripText label="Hata eşiği (%)" value="5" inputMode="decimal" onChange={() => {}} />
+      </>,
+    );
+    expect(screen.getByLabelText("Tablo")).toHaveValue("b");
+    expect(screen.getByLabelText("Hata eşiği (%)").closest(".sc-strip-field")).not.toBeNull();
   });
 });
 

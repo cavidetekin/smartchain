@@ -336,7 +336,7 @@ describe("görünüm ve Excel", () => {
     await screen.findByRole("dialog", { name: "Koşullu biçim kuralları" });  // listeden açıldı: liste geri açılır
     await userEvent.keyboard("{Escape}");
 
-    await userEvent.click(screen.getByRole("button", { name: "Görünüm işlemleri" }));
+    await userEvent.click(screen.getByRole("button", { name: "Tablo ayarları" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Kaydet" }));
     await waitFor(() => expect(calls.views.some((c) => c.method === "PUT")).toBe(true));
     const saved = calls.views.find((c) => c.method === "PUT")!.body as { definition: { rules: FormatRule[] } };

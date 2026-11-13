@@ -44,7 +44,8 @@ async function openScreen(role = "Admin", routes: Record<string, Reply> = {}) {
 
 /** Ayşe'nin satırının (ikinci satır) detayı. */
 async function openRow(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getAllByRole("button", { name: "Kayıt detayı" })[1]);
+  await user.click(screen.getAllByRole("button", { name: "Kayıt detayı" })[1]);  // ⋯ menüsü (K-171)
+  await user.click(await screen.findByRole("menuitem", { name: "Detay" }));
   return screen.findByRole("dialog", { name: "Kayıt detayı" });
 }
 

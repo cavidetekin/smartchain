@@ -12,11 +12,11 @@ import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import { type LocalColumn, LocalTable } from "../table/LocalTable";
 import type { Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
-import { Alert, Badge, Button, Dialog, TextField, Tooltip, TopStrip } from "../ui";
+import { Alert, Badge, Button, Dialog, StripText, Tooltip } from "../ui";
 import { type EntityChange, integrationApi, METHOD_SQL, METHODS, type Connection, type Preview, type TestResult, type TestTable, type ViewVersion } from "./integrationApi";
 import { StateChip } from "./PullDialogs";
 import { useFlowLock } from "../shell/FlowStatus";
-import { MenuItem, RowPopMenu } from "./RowPopMenu";
+import { type MenuAction, MenuActions, MenuItem, RowPopMenu } from "./RowPopMenu";
 
 const T = tr.integration;
 const ALLOWED = { allowed: true };
@@ -126,7 +126,7 @@ export function Integration() {
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [test, setTest] = useState<TestResult | null>(null);
-  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const [previewRow, setPreviewRow] = useState<Row | null>(null);
   const [versionRow, setVersionRow] = useState<Row | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -185,7 +185,7 @@ export function Integration() {
 
   const rowMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.rowMenu(String(row.Name)),
-    onOpen: (row: Row, anchor: HTMLElement) => setMenu({ row, anchor }),
+    onOpen: (row: Row, anchor: HTMLElement, extra?: MenuAction[]) => setMenu({ row, anchor, extra }),
   }), []);
   // Yöntem ve view: hücre düzenleme standardı (K-172), kutusuz; view yalnız SQL yönteminde
   const isSql = (row: Row) => edits.get(String(row.Entity), "Method", String(row.Method)) === METHOD_SQL;
@@ -210,22 +210,26 @@ export function Integration() {
         <h1>{T.title}</h1>
       </header>
       {error && <Alert tone="error">{error}</Alert>}
-      <TopStrip label={T.stripLabel}>
-        {isOwner ? (
-          <>
-            <TextField label={T.database} value={database} onChange={setDatabase} />
-            <Button variant="primary" disabled={database.trim() === (connection?.database ?? "")} onClick={() => void saveDatabase()}>{T.save}</Button>
-          </>
-        ) : <p>{T.database}: <strong>{connection?.database ?? T.undefinedDatabase}</strong></p>}
-        {testButton}
-        {connection && <p className="sc-muted">{T.account(connection.account)}</p>}
-      </TopStrip>
+      {/* SQL kaynağı ve ekranın işlemleri şeridin solunda (K-171) */}
       <DataTable list="integration-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey} cellEditing={isOwner ? cellEdit.editing : undefined}
                  cellClass={(field, row) => (cellEdit.changed(field, row) ? "is-draft" : undefined)}
-                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />} />
+                 toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />}
+                 toolbarLead={(
+                   <>
+                     {isOwner ? (
+                       <>
+                         <StripText label={T.database} value={database} onChange={setDatabase} wide />
+                         <Button variant="primary" disabled={database.trim() === (connection?.database ?? "")} onClick={() => void saveDatabase()}>{T.save}</Button>
+                       </>
+                     ) : <span className="sc-strip-field"><span>{T.database}</span><strong>{connection?.database ?? T.undefinedDatabase}</strong></span>}
+                     {testButton}
+                     {connection && <span className="sc-muted sc-strip-note">{T.account(connection.account)}</span>}
+                   </>
+                 )} />
       <UnsavedGuard dirty={edits.dirty} />
       {menu && (
         <RowPopMenu label={T.rowMenu(String(menu.row.Name))} anchor={menu.anchor} onClose={() => setMenu(null)}>
+          <MenuActions items={menu.extra} onDone={() => setMenu(null)} />
           <MenuItem label={T.preview} state={needsView(menu.row)} onClick={() => { setPreviewRow(menu.row); setMenu(null); }} />
           <MenuItem label={T.versions} state={ALLOWED} onClick={() => { setVersionRow(menu.row); setMenu(null); }} />
         </RowPopMenu>

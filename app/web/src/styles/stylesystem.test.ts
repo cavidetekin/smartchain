@@ -83,13 +83,19 @@ describe("sayı kartı ve pencere tablosu (3.3 kontrol demosu)", () => {
     expect(rules(sheets["components.css"]).filter((r) => /\.sc-kpi/.test(r.selector) && r.selector.includes(" ")).map((r) => r.selector)).toEqual([]);
   });
 
-  it("üst şerit her ekranda aynı: beyaz kart, etiket solda, araç çubuğuna --top-strip-gap; ekrana özel şerit yok", () => {
-    expect(body(".sc-top-strip")).toMatch(/background:\s*var\(--surface\)/);
-    expect(body(".sc-top-strip")).toMatch(/margin-bottom:\s*var\(--top-strip-gap\)/);
-    expect(body(".sc-top-strip .sc-field")).toMatch(/flex-direction:\s*row/);
-    expect(token("top-strip-gap")).toBe(token("space-3"));
+  it("şerit boşluğu (K-171): bütün öğeler arasında aynı boşluk, simgeler arasındaki kadar; Kaydet/Vazgeç'te ek boşluk yok", () => {
+    expect(token("strip-gap")).toBe(token("space-2"));
+    for (const sel of [".sc-table-toolbar-main", ".sc-table-tools", ".sc-viewbar", ".sc-edit-bar"]) expect(body(sel)).toMatch(/gap:\s*var\(--strip-gap\)/);
+    expect(body(".sc-edit-bar")).not.toMatch(/margin/);
+    expect(body(".sc-table-grid tr.sc-table-row.is-picked td")).toMatch(/var\(--table-row-picked-bg\)/);
+  });
+
+  it("üst şerit yok (K-171): ekranın alanları tablonun şeridinde, etiket solda, aynı satırda; ekrana özel şerit yok", () => {
+    expect(body(".sc-strip-field")).toMatch(/display:\s*inline-flex/);
+    expect(body(".sc-strip-field")).toMatch(/white-space:\s*nowrap/);
+    expect(body(".sc-strip-field .sc-input")).toMatch(/width:\s*6\.1538rem/);  // sayı kutusu ~80 px (K-166)
     const strips = rules(sheets["components.css"]).flatMap((r) => r.selector.match(/\.sc-[\w-]*-strip\b/g) ?? []);
-    expect([...new Set(strips)].sort()).toEqual([".sc-service-strip", ".sc-top-strip"]); // servis şeridi durum kartıdır, ayar değil
+    expect([...new Set(strips)].sort()).toEqual([".sc-service-strip"]); // servis şeridi durum kartıdır, ayar değil
   });
 
   it("pencere tablosu pencereye sığar", () => {
@@ -273,7 +279,6 @@ describe("ayar ekranı standardı (K-165)", () => {
     expect(body(".sc-settings-card .sc-field-rows .sc-field-label")).toMatch(/color:\s*var\(--text\)/);
     expect(rules(sheets["components.css"]).filter((r) => /--(primary|secondary|ghost|danger)(?![^,{]*:not\(:disabled\))[^,{]*:disabled/.test(r.selector))).toEqual([]);
     expect(body(".sc-btn:disabled")).toMatch(/background:\s*var\(--field-disabled-bg\)/);
-    expect(body(".sc-top-strip .sc-input--number")).toMatch(/width:\s*6\.1538rem/);
     expect(body(".sc-settings-foot")).toMatch(/border-top:/);
     expect(body(".sc-toggle--md .sc-toggle-track")).toMatch(/width:\s*3\.3846rem;\s*height:\s*1\.8462rem/);  // ~44 × 24 px
   });

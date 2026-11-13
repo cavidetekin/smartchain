@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app import history
 from app.integration import references as refs
 from app.integration.contract import ENTITIES, entity as contract_entity
 from app.validation import catalog as cat, engine as validation
@@ -75,6 +76,7 @@ class Run:
     now: datetime
     skipped: set[str] = field(default_factory=set)   # bu aktarımda yazılmayan tablolar (eşik, veri yok, kısmide seçilmeyen)
     waiting: set[str] = field(default_factory=set)   # kısmide seçilmeyen tablolar: onlara bağlı eksik satır bekler (K-155)
+    user_id: int | None = None                       # aktarımı başlatan (geçmiş, K-173); zamanlanmış işte boş
 
 
 # ------------------------------------------------------------------ ön koşul ve plan
@@ -397,10 +399,11 @@ def transfer_table(session: Session, entity: str, run: Run) -> dict:
         _match(session, m, tmp)
         _new_ids(session, m, tmp)
         _self_refs(session, m, tmp)
-        manual.apply_versioned(session, m.entity, m.core, m.plain, tmp, OK)  # manuel değer korunur (K-170)
+        manual.apply_versioned(session, m.entity, m.core, m.plain, tmp, OK, run)  # manuel değer korunur (K-170)
         _changed(session, m, tmp)
         counts = _counts(session, tmp)
         note = _guard_note(session, m, tmp)
+        history.write_transfer(session, m, run, tmp, OK, KEEP, _differs)  # geçmiş: yeni, değişen alan, kapanan (K-173)
         closed = _close(session, m, run, tmp)
         _insert(session, m, run, tmp)
         _value_sources(session, m, tmp)
@@ -413,6 +416,7 @@ def transfer_table(session: Session, entity: str, run: Run) -> dict:
 def _transfer_location(session: Session, m: TableMap, run: Run) -> dict:
     """Lokasyon versiyonsuz (K-153): kodla eşleşir, eklenir ya da güncellenir; staging'de olmayan ve pasif lokasyon IsActive 0."""
     p, t = m.prc, LOCATION
+    before = history.snapshot_location(session)  # geçmiş (K-173): önce ve sonra okunur
     ok = sa.and_(sa.func.coalesce(p.c.IsActive, sa.true()) == sa.true(), sa.func.coalesce(p.c.RowStatus, "") != ERROR_ROW)
     names = list(m.plain)
     kept = manual.fields(session, "Location", names)  # manuel değer gelen değerin yerine (K-170)
@@ -428,6 +432,8 @@ def _transfer_location(session: Session, m: TableMap, run: Run) -> dict:
     not_transferred = session.execute(sa.select(sa.func.count()).select_from(p).where(sa.func.coalesce(p.c.RowStatus, "") == ERROR_ROW,
                                                                                      sa.func.coalesce(p.c.IsActive, sa.true()) == sa.true())).scalar()
     session.execute(sa.update(p).where(ok).values(RowStatus=TRANSFERRED))
+    history.write_location(session, run, before, history.snapshot_location(session))
+    history.write_created_unversioned(session, run, "Location")
     return {"new": new, "changed": changed, "closed": closed, "not_transferred": int(not_transferred or 0)}
 
 
@@ -448,13 +454,14 @@ def run_transfer(session: Session, user_id: int | None, progress: Callable[[str]
     now = utcnow()
     version = session.execute(sa.insert(DATA_VERSION).values(LocationId=None, CreatedAt=now, LoadType=PARTIAL if selected else FULL, CreatedBy=user_id,
                                                              IsPinned=False, IsSynthetic=False, JobId=job_id).returning(DATA_VERSION.c.Id)).scalar_one()
-    run = Run(int(version), now)
+    run = Run(int(version), now, user_id=user_id)
     names = order()
     if selected:
         run.waiting = {e for e in names if e not in selected}
         run.skipped |= run.waiting
         names = tuple(e for e in names if e in selected)
     ensure_units(session, set(names) if selected else None)
+    history.write_created_unversioned(session, run, "UnitOfMeasure")  # yeni birimler (K-173)
     results: list[TableResult] = []
     for i, entity in enumerate(names, 1):
         info = contract_entity(entity)

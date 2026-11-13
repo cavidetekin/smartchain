@@ -95,11 +95,13 @@ describe("Ana veri", () => {
     const user = await openMaster();
     await waitFor(() => expect(picker()).toBeInTheDocument());
     await waitFor(() => expect([...picker()!.querySelectorAll("option")].map((o) => o.textContent)).toEqual(["Malzeme (1.212)", "Benzetilen ürün (0)"]));
-    expect(picker()!.closest(".sc-table-toolbar-main")!.firstElementChild).toBe(picker());
+    const lead = picker()!.closest(".sc-table-toolbar-main")!;   // şeridin solu: sekmeler, sonra tablo seçimi (K-173)
+    expect(lead.firstElementChild).toHaveClass("sc-overflow-tabs");
+    expect(lead.children[1]).toBe(picker());
     await user.selectOptions(picker()!, "master-material-reference");
     expect(await screen.findByRole("columnheader", { name: /Süre katsayısı/ }, { timeout: 5000 })).toBeInTheDocument();
     // başlık kesilmez (K-169): sayı kolonunun varsayılanı 9,23 rem; "Süre katsayısı" 14 harf → 14 × 0,56 + 3,6 = 11,44 rem
-    expect([...document.querySelectorAll("colgroup col")].map((c) => (c as HTMLElement).style.width)).toEqual(["10.32rem", "11.44rem"]);
+    expect([...document.querySelectorAll("colgroup col")].map((c) => (c as HTMLElement).style.width)).toEqual(["10.32rem", "11.44rem", "2.5rem"]);  // son kolon ⋯ menüsü (K-171)
   });
 
   it("adresle sekme ve tablo açılır", async () => {
@@ -117,7 +119,7 @@ describe("Ana veri", () => {
     await user.click(within(tabs("Ana veri bölümleri")).getByRole("radio", { name: "Lokasyon ve birim" }));
     await screen.findByText("ORM-01", {}, { timeout: 5000 });
     const saved = JSON.parse(window.localStorage.getItem("smartchain.u3.masterData") ?? "{}") as { tab: string; tables: Record<string, string> };
-    expect(saved).toEqual({ tab: "lokasyon-ve-birim", tables: { malzeme: "master-material-reference" } });
+    expect(saved).toEqual({ tab: "lokasyon-ve-birim", tables: { malzeme: "master-material-reference" }, cards: {} });
   });
 });
 

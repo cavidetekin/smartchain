@@ -59,11 +59,12 @@ describe("ekran 02", () => {
     expect(screen.queryByText("Kaynak")).not.toBeInTheDocument();
   });
 
-  it("satır menüsü: şablon, bilgi ve tek dosyalık yükleme etkin; \"Son Excel yüklemesini gör\" yok (K-158)", async () => {
+  it("satır menüsü: ilk seçenek Detay (şablon bilgisi, K-171), şablon ve tek dosyalık yükleme etkin; \"Son Excel yüklemesini gör\" yok (K-158)", async () => {
     const { menu } = await openMenu();
     const item = (name: string | RegExp) => within(menu).getByRole("menuitem", { name });
+    expect(within(menu).getAllByRole("menuitem")[0]).toHaveTextContent("Detay");
     expect(item("Şablonu indir (v1)")).toBeEnabled();
-    expect(item("Şablon bilgisi")).toBeEnabled();
+    expect(item("Detay")).toBeEnabled();
     expect(item("Excel'den yükle")).toBeEnabled();
     expect(item("Excel'den yükle")).not.toHaveAttribute("title");
     expect(within(menu).queryByRole("menuitem", { name: "Son Excel yüklemesini gör" })).toBeNull();
@@ -86,7 +87,7 @@ describe("ekran 02", () => {
 
   it("Şablon bilgisi penceresi", async () => {
     const { user, menu } = await openMenu("Key user", { "/api/templates/Resource": { body: {} } });
-    await user.click(within(menu).getByRole("menuitem", { name: "Şablon bilgisi" }));
+    await user.click(within(menu).getByRole("menuitem", { name: "Detay" }));
     const dialog = await screen.findByRole("dialog", { name: "Şablon bilgisi" });
     expect(await within(dialog).findByText("smartchain_kaynak_v1.xlsx")).toBeInTheDocument();
     expect(within(dialog).getByText("Lokasyon kodu, Kaynak kodu")).toBeInTheDocument();
@@ -101,7 +102,7 @@ describe("ekran 02", () => {
   it("değeri olmayan satır görünmez", async () => {
     const empty = { ...INFO, required: [] };
     const { user, menu } = await openMenu("Key user", { "/api/templates/Resource/info": { body: empty as unknown as Reply["body"] } });
-    await user.click(within(menu).getByRole("menuitem", { name: "Şablon bilgisi" }));
+    await user.click(within(menu).getByRole("menuitem", { name: "Detay" }));
     const dialog = await screen.findByRole("dialog", { name: "Şablon bilgisi" });
     await within(dialog).findByText("smartchain_kaynak_v1.xlsx");
     expect(within(dialog).queryByText("Zorunlu alan")).not.toBeInTheDocument();

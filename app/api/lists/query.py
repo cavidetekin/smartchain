@@ -10,6 +10,18 @@ import sqlalchemy as sa
 from .definition import ListDefinition, column_type, columns, filter_type
 from .request import AggSpec, FilterItem, GroupKeyItem, QueryRequest, RuleSpec, SortItem
 
+# Çok değerli liste filtresi (K-171, çoklu seçim): bu sayıdan fazla değer parametre yerine metin olarak gömülür (SQL Server'ın 2.100 parametre
+# sınırı). Değerler yine SQLAlchemy'nin kaçışıyla yazılır.
+LITERAL_IN_AT = 200
+# Çoklu seçimde en çok satır (K-171): Ctrl + A ve başlıktaki kutu, çoklu kayıt kartı.
+SELECTION_MAX = 10_000
+
+
+def in_values(col: sa.ColumnElement, values: list) -> sa.ColumnElement:
+    if len(values) <= LITERAL_IN_AT:
+        return col.in_(values)
+    return col.in_(sa.bindparam("in_values", list(values), expanding=True, literal_execute=True, unique=True))
+
 TURKISH = "Turkish_100_CI_AS"
 BINARY = "Latin1_General_100_BIN2"
 RELATIVE = ("this_week", "next_4_weeks")
@@ -185,7 +197,7 @@ class Builder:
                     return bad("Evet/Hayır değeri true ya da false olmalı", "values")
             elif any(not isinstance(v, str) for v in values):
                 return bad("Değerler metin olmalı", "values")
-            parts = ([col.in_(values)] if values else []) + ([self.is_empty(col)] if f.empty else [])
+            parts = ([in_values(col, values)] if values else []) + ([self.is_empty(col)] if f.empty else [])
             return sa.or_(*parts)
 
         if kind == "number":
@@ -364,6 +376,8 @@ class Builder:
         dirs = {s.field: s.dir for s in sort}
         order = []
         sel = [self.table.c.Id] + [c for c in cols if c.name != "Id"]
+        if self.defn.row_format:  # satır biçiminin okuduğu alanlar (K-173)
+            sel += [self.table.c[k] for k in self.defn.key_fields if k not in fields]
         for i, c in enumerate(gcols):
             g = self.group_expr(c)
             sel.append(g.label(f"_g{i}"))
@@ -380,6 +394,10 @@ class Builder:
     def total_query(self) -> sa.Select:
         """Filtresiz sayı (güncel versiyondaki bütün kayıtlar)."""
         return sa.select(sa.func.count()).select_from(self.table).where(self.base_clause())
+
+    def ids_query(self, filters: list[FilterItem], limit: int) -> sa.Select:
+        """Filtredeki satırların kimlikleri (çoklu seçim, K-171): varsayılan sırayla, en çok limit (+1: fazlası var mı)."""
+        return sa.select(self.table.c.Id).where(self.base_clause(), *self.where(filters)).order_by(*self.order_by([])).limit(limit + 1)
 
     def filtered_query(self, filters: list[FilterItem], group_key: list[GroupKeyItem] = ()) -> sa.Select:
         """Filtreli sayı (grubun satırlarında grup içi); filtre yoksa sorulmaz (toplamla aynı)."""

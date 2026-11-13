@@ -1,14 +1,16 @@
-// Denetim izi (ekran 26, fonksiyon 98; K-108, docs/12): ortak tablo, detay penceresi, nesnenin geçmişi. Kayıtlar yalnız okunur.
-import { Eye } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+// Denetim izi (ekran 26, fonksiyon 98; K-108, docs/12): ortak tablo, detay penceresi, nesnenin geçmişi. Kayıtlar yalnız okunur. Nesnesi veri
+// kaydı olan satırda "Kayda git": ilgili ekran, kayıt seçili, kart Geçmiş'te (K-173).
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
 import { formatDate, formatTime } from "../format";
 import { tr } from "../i18n/tr";
-import { DataTable, type RowMenuSpec } from "../table/DataTable";
-import type { Row } from "../table/types";
+import { DataTable } from "../table/DataTable";
+import { useRowMenu } from "../table/rowMenu";
 import { Alert, Button, Dialog } from "../ui";
 import { type AuditDetail, type AuditHistory, auditLogApi } from "./auditLogApi";
+import { recordUrl } from "./dataScreenTabs";
 
 const T = tr.auditLog;
 
@@ -19,6 +21,8 @@ const fullTime = (iso: string) => {
 };
 
 function Detail({ detail, onHistory }: { detail: AuditDetail; onHistory(): void }) {
+  const navigate = useNavigate();
+  const target = detail.target ? recordUrl(detail.target.list, detail.target.id) : null;
   return (
     <>
       <dl className="sc-detail-rows">
@@ -48,8 +52,11 @@ function Detail({ detail, onHistory }: { detail: AuditDetail; onHistory(): void 
           </tbody>
         </table>
       )}
-      <div>
+      <div className="sc-inline-actions">
         <Button variant="secondary" disabledReason={detail.has_object ? null : T.noObject} onClick={onHistory}>{T.history}</Button>
+        {(detail.target !== undefined || detail.target_reason) && (
+          <Button variant="secondary" disabledReason={target ? null : detail.target_reason ?? T.noObject} onClick={() => target && navigate(target)}>{T.goToRecord}</Button>
+        )}
       </div>
     </>
   );
@@ -120,17 +127,15 @@ function AuditDialog({ id, onClose }: { id: number; onClose(): void }) {
 
 export function AuditLog() {
   const [open, setOpen] = useState<number | null>(null);
-  const rowMenu: RowMenuSpec = useMemo(() => ({
-    icon: Eye,
-    label: () => T.detailTitle,
-    onOpen: (row: Row) => setOpen(row.Id),
-  }), []);
+  // ⋯ menüsü (K-171): Detay → kayıt detayı penceresi
+  const rowMenu = useRowMenu(() => T.detailTitle, (row) => [{ label: tr.table.detailItem, onClick: () => setOpen(row.Id) }]);
   return (
     <section className="sc-page--fill">
       <header className="sc-page-head">
         <h1>{T.title}</h1>
       </header>
-      <DataTable list="audit-log" rowMenu={rowMenu} />
+      <DataTable list="audit-log" rowMenu={rowMenu.rowMenu} />
+      {rowMenu.element}
       {open !== null && <AuditDialog id={open} onClose={() => setOpen(null)} />}
     </section>
   );

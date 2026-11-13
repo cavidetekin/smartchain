@@ -42,6 +42,12 @@ export function validFontSize(value: unknown): FontSize | null {
   return (FONT_SIZES as readonly unknown[]).includes(value) ? (value as FontSize) : null;
 }
 
+export interface DataScreenPrefs {
+  tab: string | null;
+  tables: Record<string, string>;
+  cards?: Record<string, { id: string; tab: string }>;
+}
+
 export function userPrefs(userId: number) {
   const key = (name: string) => `u${userId}.${name}`;
   return {
@@ -56,9 +62,12 @@ export function userPrefs(userId: number) {
     notifiedFlowRuns: (): number[] => read<number[]>(key("flowRuns"), []),
     setNotifiedFlowRuns: (ids: number[]) => write(key("flowRuns"), ids.slice(-50)),
     /** Veri ekranının (Ana veri, İşlem verisi) son sekmesi ve her sekmenin son tablosu (K-168, K-169). */
-    dataScreen: (id: string): { tab: string | null; tables: Record<string, string> } =>
-      read<{ tab: string | null; tables: Record<string, string> }>(key(id), { tab: null, tables: {} }),
-    setDataScreen: (id: string, value: { tab: string; tables: Record<string, string> }) => write(key(id), value),
+    /** Veri ekranının son sekmesi, sekme başına son tablo ve tablo başına açık detay kartı (K-168, K-171). */
+    /** Çoklu seçim kolonu (K-171): ⚙ Tablo ayarları menüsünden, tablo başına. */
+    multiSelect: (list: string): boolean => read<boolean>(key(`multiSelect.${list}`), false),
+    setMultiSelect: (list: string, on: boolean) => write(key(`multiSelect.${list}`), on),
+    dataScreen: (id: string): DataScreenPrefs => read<DataScreenPrefs>(key(id), { tab: null, tables: {} }),
+    setDataScreen: (id: string, value: DataScreenPrefs) => write(key(id), value),
   };
 }
 

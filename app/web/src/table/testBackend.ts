@@ -37,9 +37,10 @@ export interface Calls {
   groups: { group_by: string[]; fields: string[]; aggregates: Record<string, { fn: string; weight?: string }>; filters: unknown[]; sort: unknown[] }[];
   views: { method: string; url: string; body: unknown }[];
   exports: { url: string; body: ExportRequest }[];
+  ids: unknown[];
   downloads: string[];
 }
-export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [] };
+export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [], ids: [] };
 
 /** Kural sorgularını bekleten kapı: açık değilse kurallı sorgu cevabı kapı açılana kadar gelmez. */
 export const ruleGate = { hold: false, release: () => {} };
@@ -144,6 +145,11 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
         rows.forEach((row) => Object.assign(row, { _rules: body.rules!.map((r, i) => (evalRule(row, r) ? i : -1)).filter((i) => i >= 0) }));
       }
       return { body: { rows, offset: body.offset, filtered: inGroup ?? filtered, total } };
+    },
+    "/api/materials/ids": (_url, init): Reply => {   // çoklu seçimde Ctrl + A (K-171)
+      calls.ids.push(JSON.parse(String(init?.body)));
+      const n = Math.min(filtered, 10_000);
+      return { body: { ids: Array.from({ length: n }, (_, i) => String(i + 1)), truncated: filtered > 10_000 } };
     },
     "/api/materials/values": (_url, init): Reply => {
       calls.values.push(JSON.parse(String(init?.body)));

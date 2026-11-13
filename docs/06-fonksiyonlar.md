@@ -1094,7 +1094,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural ya da ERP) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
 
 - **Karar (6.2, K-170):** hücre menüsünden ya da seçili kayıtlarda toplu; değer kural ya da ERP'ye döner, denetim izine yazılır. Veri sözlüğünde Manuel kapatılınca "n kayıtta manuel değer kaldırılacak" uyarısı; onayla manuel değerler kalkar.
-- **Uygulama (6.2, K-170, K-172):** uygulandı. Tekil kaldırma hücre menüsünden (sağ tık, hücrenin tamamında) ya da seçili hücrede Delete; toplu kaldırma seçili kayıtlarda (seçim kutuları yalnız manuel alanı olan tabloda).
+- **Uygulama (6.2, K-170, K-172):** uygulandı. Tekil kaldırma hücre menüsünden (sağ tık, hücrenin tamamında) ya da seçili hücrede Delete; toplu kaldırma seçili kayıtlarda (6.3 tablo standardı, K-171: çoklu seçimle, seçili satırın sağ tık menüsünde "Seçili n satır · Manuel değerleri kaldır"; şeritteki düğme kalktı) (seçim kutuları yalnız manuel alanı olan tabloda).
 
 #### NASIL ÇALIŞIR
 
@@ -1162,6 +1162,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Bir kaydın alanlarının zaman içinde nasıl değiştiğini tek zaman çizgisinde göstermek: elle girişler, kural sonuçları ve ERP yüklemeleri; kim, ne zaman, eski ve yeni değer.
 
 - **Karar (6.3, K-171):** detay kartının Geçmiş sekmesinde: tarih, veri numarası, alan, eski değer, yeni değer, kaynak (aktarım türü ya da Smartchain'de değiştiren kişi ve ekran). Kart "Detay ›" rozeti ya da satır menüsüyle açılır; denetim izinde "Kayda git" (K-108).
+- **Karar (6.3, K-173):** geçmiş `adm.FieldChange`'ten okunur (değişiklik anında yazılır: aktarım, manuel değer, Aşama 7 girişleri); eski geçmiş geçişte versiyonlardan bir kez doldurulur; kural değiştirdiyse kaynakta "Kural: <ad>". End user Geçmiş'i görür (salt okunur; yalnız veri değişiklikleri). "Bu değere dön" (04) sonraya; hücre ipucundan Geçmiş'e geçiş yok.
+- **Uygulama (6.3, K-171, K-173):** uygulandı. Geçmiş `record-history` listesi (`adm.FieldChange`, geçiş 0055; eski geçmiş versiyonlardan ve denetim izinden dolduruldu); denetim izinde "Kayda git".
 
 #### NASIL ÇALIŞIR
 

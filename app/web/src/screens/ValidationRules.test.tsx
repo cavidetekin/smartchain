@@ -73,7 +73,10 @@ describe("ekran 27 · Validasyon kuralları", () => {
     renderApp("/veri/validasyon-kurallari", meAs("Admin"));
     await screen.findByText(NAME, {}, { timeout: 5000 });
     expect(screen.queryByText(/Boşsa eşik kontrolü yapılmaz/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Hata eşiği (%)").closest(".sc-top-strip")).toContainElement(screen.getByRole("button", { name: "Yeni kural" }));
+    const strip = screen.getByLabelText("Hata eşiği (%)").closest(".sc-table-toolbar-main");  // tablonun şeridinin solunda (K-171)
+    expect(strip).toContainElement(screen.getByRole("combobox", { name: "Tablo" }));
+    expect(strip).toContainElement(screen.getByRole("button", { name: "Yeni kural" }));
+    expect(document.querySelector(".sc-top-strip")).toBeNull();
   });
 
   it("Admin: sınıf pastel çipten seçilir, toplu kaydedilir, yeniden validasyon önerilir; onay bandı yok", async () => {

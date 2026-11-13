@@ -1,6 +1,8 @@
 """Denetim izi detayı ve nesne geçmişi (ekran 26, fonksiyon 98; K-108). Görüntüleme iz bırakmaz."""
 from datetime import datetime, timezone
 
+import json
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
@@ -42,9 +44,11 @@ def detail(session: Session | None, audit_id: int, user: CurrentUser) -> dict:
     def work():
         row = _row(session, user, audit_id)
         old, new = (row["RawOld"], row["RawNew"]) if real else (row["OldValue"], row["NewValue"])
-        return {"id": row["Id"], "at": _iso(row["At"]), "actor": _actor(row, real), "action": row["Action"],
-                "object_type": row["ObjectTypeLabel"], "object": row["RawKey"] if real and row["ObjectShown"] == SUPPORT_ACCOUNT else row["ObjectShown"],
-                "has_object": row["RawKey"] is not None, "changes": changes(old, new)}
+        out = {"id": row["Id"], "at": _iso(row["At"]), "actor": _actor(row, real), "action": row["Action"],
+               "object_type": row["ObjectTypeLabel"], "object": row["RawKey"] if real and row["ObjectShown"] == SUPPORT_ACCOUNT else row["ObjectShown"],
+               "has_object": row["RawKey"] is not None, "changes": changes(old, new)}
+        out.update(record_target(session, row["RawType"], row["RawKey"], row["RawNew"]))
+        return out
 
     return auth._db(work)
 
@@ -67,3 +71,38 @@ def history(session: Session | None, audit_id: int, user: CurrentUser) -> dict:
                          for r in reversed(rows[:HISTORY_LIMIT])]}
 
     return auth._db(work)
+
+
+# ------------------------------------------------------------------ "Kayda git" (K-173)
+
+TARGET_NOT_FOUND = "Kayıt bulunamadı."
+TARGET_AMBIGUOUS = "Kod birden çok kayıtta (lokasyon); kayıt seçilemedi."
+
+
+def record_target(session: Session, raw_type: str | None, raw_key: str | None, raw_new: str | None) -> dict:
+    """Nesnesi veri kaydı olan satırın hedefi: liste ve kayıt. Yeni kayıtta JSON'daki kimlik; eski kayıtta nesnedeki koddan tek eşleşme."""
+    from app.api.services.manual_values import OBJECT as MANUAL_OBJECT
+    from app.manual import core_table
+
+    from ..lists.master_data import BY_NAME
+    if raw_type != MANUAL_OBJECT:
+        return {}
+    try:
+        new = json.loads(raw_new or "{}")
+    except ValueError:
+        new = {}
+    title, _, code = (raw_key or "").partition(" · ")
+    list_name = new.get("list") if new.get("list") in BY_NAME else next((n for n, d in BY_NAME.items() if d.title == title), None)
+    if list_name is None:
+        return {"target": None, "target_reason": TARGET_NOT_FOUND}
+    if new.get("record") is not None:
+        return {"target": {"list": list_name, "id": str(new["record"])}}
+    t = core_table(BY_NAME[list_name].table_name)
+    if not code or "Code" not in t.c:
+        return {"target": None, "target_reason": TARGET_NOT_FOUND}
+    key = t.c.Id if "Id" in t.c else t.c.Code
+    ids = session.execute(sa.select(key).where(t.c.Code == code).distinct()).scalars().all()
+    if len(ids) != 1:
+        return {"target": None, "target_reason": TARGET_AMBIGUOUS if ids else TARGET_NOT_FOUND}
+    return {"target": {"list": list_name, "id": str(ids[0])}}
+

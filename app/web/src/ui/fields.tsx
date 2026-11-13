@@ -253,7 +253,7 @@ export function ChoiceCards({ label, options, value, onChange }: {
 /** Segment (ör. Günlük / Haftalık / Aylık): tek seçim; ok tuşlarıyla gezilir. Etiket üstte görünür;
  *  başlığı zaten yazan yerde (kullanıcı menüsü) hideLabel ile yalnız erişilebilir ad kalır. */
 export function Segment<T extends string | number>({ label, options, value, onChange, hideLabel }: {
-  label: string; options: { value: T; label: ReactNode }[]; value: T; onChange(v: T): void; hideLabel?: boolean;
+  label: string; options: { value: T; label: ReactNode; disabled?: boolean }[]; value: T; onChange(v: T): void; hideLabel?: boolean;
 }) {
   const id = useId();
   const index = options.findIndex((o) => o.value === value);
@@ -261,7 +261,13 @@ export function Segment<T extends string | number>({ label, options, value, onCh
     const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
     if (!step) return;
     e.preventDefault();
-    const next = options[(index + step + options.length) % options.length];
+    let i = index;
+    for (let n = 0; n < options.length; n++) {  // pasif seçenek atlanır
+      i = (i + step + options.length) % options.length;
+      if (!options[i].disabled) break;
+    }
+    const next = options[i];
+    if (next.disabled) return;
     onChange(next.value);
     (e.currentTarget.querySelector(`[data-value="${String(next.value)}"]`) as HTMLElement | null)?.focus();
   };
@@ -270,7 +276,7 @@ export function Segment<T extends string | number>({ label, options, value, onCh
          aria-labelledby={hideLabel ? undefined : id} onKeyDown={onKey}>
       {options.map((o) => (
         <button key={String(o.value)} type="button" role="radio" aria-checked={o.value === value}
-                data-value={String(o.value)} tabIndex={o.value === value ? 0 : -1} onClick={() => onChange(o.value)}>
+                data-value={String(o.value)} tabIndex={o.value === value ? 0 : -1} disabled={o.disabled} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}

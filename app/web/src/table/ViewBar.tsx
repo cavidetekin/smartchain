@@ -2,8 +2,8 @@
 // kaydet, Varsayılan yap, Sil) ve hemen yanında "Sıralamayı temizle" ikonu (1.6 demosu). Kaydedilmemiş değişiklik "⋯" düğmesinin köşesinde indigo noktayla gösterilir.
 // Görünümler veritabanında; kullanıcı A-36 gereği şimdilik user_id ile. Açılışta kullanıcının varsayılanı uygulanır, yoksa Standart: şirket Standart'ı varsa o (K-162).
 // Standart'ı yalnız System owner ve Admin kaydeder ya da ürün hâline döndürür (sunucunun `can_edit_standard` bilgisi).
-import { ArrowUpDown, Ellipsis } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpDown, Settings } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
@@ -130,7 +130,13 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
   };
 }
 
-export function ViewBar({ views, state, onClearSort }: { views: Views; state: TableState; onClearSort(): void }) {
+/** Şeridin sağ yarısı (K-173): görünüm seçici, Sıralamayı temizle, aradaki tablo düğmeleri (children: Grupla, Alanlar, Excel'e aktar) ve en sonda
+ *  ⚙ Tablo ayarları (görünüm işleri; 9.3'te Grafik). Kaydedilmemiş değişiklikte ⚙'nin köşesinde nokta. */
+export function ViewBar({ views, state, onClearSort, children, multi }: {
+  views: Views; state: TableState; onClearSort(): void; children?: ReactNode;
+  /** ⚙ menüsünde "Çoklu seçim" (K-171): seçim kutusu kolonunu açar ya da kapatır. */
+  multi?: { on: boolean; toggle(): void };
+}) {
   const [confirm, setConfirm] = useState<{ kind: "switch"; id: number | null } | { kind: "delete" } | { kind: "reset" } | null>(null);
   const [saveAs, setSaveAs] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -159,7 +165,7 @@ export function ViewBar({ views, state, onClearSort }: { views: Views; state: Ta
     if (dirty) setConfirm({ kind: "switch", id });
     else views.select(id);
   };
-  const label = (v: SavedView) => `${v.name}${v.is_owner ? "" : ` · ${T.sharedBy(v.owner_name)}`}${v.id === views.defaultId ? ` (${T.defaultMark})` : ""}`;
+  const label = (v: SavedView) => `${v.name}${v.id === views.defaultId ? ` ${T.defaultMark}` : ""}`;  // yalnız ad; varsayılan "Ad *" (K-171)
 
   const owner = Boolean(current?.is_owner);
   const isDefault = views.defaultId === views.currentId;
@@ -182,13 +188,16 @@ export function ViewBar({ views, state, onClearSort }: { views: Views; state: Ta
     <div className="sc-viewbar">
       <select className="sc-input sc-select sc-viewbar-select" aria-label={T.view} value={views.currentId ?? ""}
               onChange={(e) => choose(e.target.value)}>
-        <option value="">{T.standard}{views.defaultId === null ? ` (${T.defaultMark})` : ""}</option>
+        <option value="">{T.standard}{views.defaultId === null ? ` ${T.defaultMark}` : ""}</option>
         {views.views.map((v) => <option key={v.id} value={v.id}>{label(v)}</option>)}
       </select>
+      <button type="button" className="sc-tool-btn" aria-label={T.clearSort} title={T.clearSort}
+              disabled={state.sort.length === 0} onClick={onClearSort}><ArrowUpDown aria-hidden="true" /></button>
+      {children}
       <div className="sc-table-anchor sc-viewbar-anchor" ref={menuRef}>
         <button type="button" className="sc-tool-btn" ref={menuButtonRef} aria-label={T.viewMenu} aria-haspopup="menu"
-                aria-expanded={menuOpen} title={dirty ? T.unsaved : T.viewMenu} onClick={() => setMenuOpen((o) => !o)}>
-          <Ellipsis aria-hidden="true" />
+                aria-expanded={menuOpen} title={dirty ? `${T.viewMenu} · ${T.unsaved}` : T.viewMenu} onClick={() => setMenuOpen((o) => !o)}>
+          <Settings aria-hidden="true" />
         </button>
         {dirty && <span className="sc-viewbar-dot" role="img" aria-label={T.unsaved} title={T.unsaved} />}
         {menuOpen && (
@@ -198,11 +207,18 @@ export function ViewBar({ views, state, onClearSort }: { views: Views; state: Ta
                       className={`sc-popmenu-item${it.strong ? " is-strong" : ""}`}
                       onClick={() => { setMenuOpen(false); it.run(); }}>{it.label}</button>
             ))}
+            {multi && (
+              <>
+                <div role="separator" className="sc-popmenu-sep" />
+                <button type="button" role="menuitemcheckbox" aria-checked={multi.on} className="sc-popmenu-item sc-popmenu-check"
+                        onClick={() => { setMenuOpen(false); multi.toggle(); }}>
+                  <span>{T.multiSelect}</span><span className="sc-popmenu-mark" aria-hidden="true">{multi.on ? "✓" : ""}</span>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
-      <button type="button" className="sc-tool-btn" aria-label={T.clearSort} title={T.clearSort}
-              disabled={state.sort.length === 0} onClick={onClearSort}><ArrowUpDown aria-hidden="true" /></button>
       {saveAs && <SaveAsDialog onClose={() => setSaveAs(false)} onSave={(name, shared) => views.saveAs(state, name, shared)} />}
       {confirm?.kind === "switch" && (
         <ConfirmDialog title={T.switchTitle} message={T.switchMessage} confirmLabel={T.switchConfirm}

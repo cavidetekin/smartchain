@@ -80,6 +80,7 @@
   background: transparent; color: var(--text); cursor: pointer; }
 .sc-segment button[aria-checked="true"] { background: var(--indigo-50); color: var(--indigo-700);
   font-weight: var(--fw-semibold); }
+.sc-segment button:disabled { color: var(--text-muted); opacity: 0.55; cursor: default; }  /* pasif seçenek (ör. boş ilişki, K-173) */
 .sc-search-field { display: inline-flex; align-self: start; justify-self: start; max-width: 100%;
   align-items: center; gap: var(--space-2); height: 2.4615rem;
   padding: 0 var(--space-3); border: 1px solid var(--field-border); border-radius: var(--radius); background: var(--field-bg);
@@ -146,15 +147,35 @@
 /* Tablo bileşeni (1.3, K-87, docs/12): ekrana sığar (U-22), satır yüksekliği yazı boyutuyla (U-23) */
 .sc-page--fill { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .sc-table { position: relative; display: flex; flex: 1; flex-direction: column; gap: var(--table-toolbar-gap); min-height: 0; }
-/* Araç çubuğu (U-22): sayfa zemininde, kendi zemini, çerçevesi ve çizgisi yok; tabloyla arası --table-toolbar-gap.
-   Sığmazsa sağ grup alt satıra sarar */
+/* Tablo şeridi (U-22, K-173): sayfa zemininde tek satır, tablonun kutusunun dışında; solda sekmeler ve tablo seçimi, sağda görünüm ve
+   simge düğmeleri. Sığmayan sekmeler "Diğer ▾"ye girer (OverflowTabs) */
 .sc-table-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
   gap: var(--space-1) var(--space-3); }
-.sc-table-toolbar-main { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.sc-table-toolbar-main { display: flex; flex: 1 1 auto; align-items: center; gap: var(--strip-gap); min-width: 0; }
+.sc-table-toolbar-main > select { flex: none; }  /* tablo seçimi küçülüp yanındakine binmez */
+/* Şeritte etiketli alan (K-171): etiket solda, aynı satırda */
+.sc-strip-field { display: inline-flex; flex: none; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.sc-strip-field > label, .sc-strip-field > span { color: var(--text-muted); }
+.sc-strip-field .sc-input { width: 6.1538rem; min-height: 2.1538rem; }  /* sayı kutusu ~80 px, şeridi doldurmaz (K-166) */
+.sc-strip-field .sc-input[inputmode="decimal"] { text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.sc-strip-field .sc-select { width: auto; }
+.sc-strip-field .sc-input.is-wide { width: 13.8462rem; }
+.sc-strip-note { white-space: nowrap; font-size: var(--fs-sm); }
 .sc-table-count { color: var(--text-muted); font-size: var(--fs-sm); }
+.sc-overflow-tabs { position: relative; flex: 0 0 auto; }  /* genişliği hesapla belirlenir; küçülüp yanındakine binmez */
+.sc-overflow-measure { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; white-space: nowrap; }
+.sc-overflow-tabs .sc-segment button { white-space: nowrap; }
+.sc-overflow-more { display: inline-flex; align-items: center; gap: var(--space-1); max-width: 12.3077rem; }
+.sc-overflow-more-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sc-overflow-more svg { width: 0.9231rem; height: 0.9231rem; }
+.sc-segment button.sc-overflow-more.is-current { background: var(--indigo-50); color: var(--indigo-700); font-weight: var(--fw-semibold); }
+/* Alçak şerit (detay kartı, K-173) */
+.sc-table-toolbar--compact .sc-segment button { padding: 0.1538rem var(--space-2); }
+.sc-table-toolbar--compact .sc-viewbar-select { min-height: 1.8462rem; }
+.sc-table-toolbar--compact .sc-table-tools .sc-tool-btn { width: 1.8462rem; height: 1.8462rem; }
 .sc-table-anchor { position: relative; }
 .sc-table-scroll { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--table-border); border-radius: var(--radius);
-  background: var(--surface); }
+  background: var(--surface); clip-path: inset(0 round var(--radius)); }  /* dört köşe aynı yuvarlaklıkta: kaydırma çubuğu da köşeden kırpılır (K-171) */
 .sc-table-grid { width: max-content; min-width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 .sc-table-grid thead th { position: sticky; top: 0; z-index: 1; height: var(--row-height); padding: 0;
   border-bottom: 1px solid var(--table-head-border); background: var(--table-head-bg); color: var(--table-head-text);
@@ -183,6 +204,7 @@
 /* Yalnız zemin rengi: hücrenin köşe işareti (arka plan görseli, K-172) satır vurgusunda da kalır */
 .sc-table-grid tr.sc-table-row:hover td { background-color: var(--table-row-hover-bg); }
 .sc-table-grid tr.sc-table-row.is-selected td { background-color: var(--table-row-selected-bg); }
+.sc-table-grid tr.sc-table-row.is-picked td { background-color: var(--table-row-picked-bg); }  /* çoklu seçim (K-171) */
 .sc-table-grid tr.is-placeholder td { background: var(--lead-50); }
 .sc-table-state td { padding: var(--space-4) var(--space-3); color: var(--text-muted); }
 .sc-table-pop { position: absolute; z-index: 40; width: max-content; min-width: 21.5385rem; max-width: calc(100vw - 2rem);
@@ -237,14 +259,26 @@
 .sc-cal-foot { display: flex; justify-content: flex-end; margin-top: var(--space-2); }
 
 /* Görünüm (1.4, K-89, K-90; docs/12) */
-.sc-table-tools { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
-.sc-viewbar { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-.sc-viewbar-select { width: auto; min-width: 12.3077rem; max-width: 24.6154rem; min-height: 2.1538rem; }
+.sc-table-tools { display: flex; flex: 0 0 auto; align-items: center; gap: var(--strip-gap); margin-left: auto; }
+/* Şeridin simge düğmeleri (K-173): görünüm seçimiyle aynı yükseklikte, çerçeveli; gruplama varken köşede işaret */
+.sc-table-tools .sc-tool-btn { width: 2.1538rem; height: 2.1538rem; border: 1px solid var(--lead-300); background: var(--surface); }
+.sc-table-tools .sc-btn-group .sc-tool-btn { border-color: transparent; background: transparent; }
+/* Tablo içi düzenlemenin Vazgeç ve Kaydet'i şeritteki öteki kutularla aynı yükseklikte (K-171) */
+.sc-table-tools .sc-btn, .sc-table-toolbar-main .sc-btn { min-height: 2.1538rem; white-space: nowrap; }
+.sc-table-toolbar--compact .sc-table-tools .sc-btn { min-height: 1.8462rem; }
+.sc-tool-btn.has-mark { position: relative; }
+.sc-tool-btn.has-mark::after { content: ""; position: absolute; top: 0.1538rem; right: 0.1538rem; width: 0.4615rem; height: 0.4615rem; border-radius: 50%; background: var(--indigo-500); }
+.sc-viewbar { display: flex; align-items: center; gap: var(--strip-gap); min-width: 0; }
+.sc-viewbar-select { width: auto; min-width: 0; max-width: 24.6154rem; min-height: 2.1538rem; }  /* en uzun ada göre ("Standart *", K-171) */
 .sc-viewbar-anchor { position: relative; }
-/* Kaydedilmemiş değişiklik: "⋯" düğmesinin köşesinde küçük indigo nokta (1.6 demosu) */
+/* Kaydedilmemiş değişiklik: ⚙ Tablo ayarları düğmesinin köşesinde küçük indigo nokta (1.6 demosu, K-173) */
 .sc-viewbar-dot { position: absolute; top: 0.1538rem; right: 0.1538rem; width: 0.4615rem; height: 0.4615rem;
   border-radius: 50%; background: var(--indigo-500); pointer-events: none; }
 .sc-popmenu-item.is-strong { font-weight: var(--fw-semibold); }
+.sc-popmenu-sep { height: 1px; margin: var(--space-1) 0; background: var(--line); }
+.sc-popmenu-heading { padding: var(--space-1) var(--space-3) 0; color: var(--text-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }  /* "Seçili n satır" (K-171) */
+.sc-popmenu-check { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }  /* işaret sağda; ad öteki seçeneklerle aynı hizada */
+.sc-popmenu-mark { display: inline-block; width: 1em; text-align: right; color: var(--indigo-500); }  /* sağ tıkta hücre seçenekleri ile satır işlemleri arası (K-171) */
 .sc-table-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font-size: var(--fs-sm); }
 .sc-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .sc-chip-filter { display: inline-flex; align-items: center; border: 1px solid var(--info-border); border-radius: var(--radius);
@@ -256,7 +290,7 @@
 .sc-chip-filter-x svg { width: 0.9231rem; height: 0.9231rem; }
 .sc-chip-filter-text:focus-visible, .sc-chip-filter-x:focus-visible { outline: 2px solid var(--focus-ring); }
 .sc-table-grouped { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font-size: var(--fs-sm); }
-.sc-tool-btn { display: inline-grid; place-items: center; width: 1.8462rem; height: 1.8462rem; border: 0; border-radius: var(--radius);
+.sc-tool-btn { display: inline-grid; place-items: center; width: 1.8462rem; height: 1.8462rem; padding: 0; border: 0; border-radius: var(--radius);
   background: transparent; color: var(--text-muted); cursor: pointer; }
 .sc-tool-btn:hover:not(:disabled) { background: var(--lead-50); color: var(--text); }
 .sc-tool-btn:disabled { color: var(--lead-300); cursor: not-allowed; }
@@ -449,6 +483,8 @@
 .sc-table-grid thead th.sc-table-rowmenu { z-index: 3; background: var(--table-head-bg); }
 .sc-table-grid tr.is-selected .sc-table-rowmenu { background: inherit; }
 .sc-table-grid tr.sc-table-group .sc-table-rowmenu { background: inherit; }
+/* Yan yana düğmeler (ör. denetim izi detayında Bu nesnenin tüm geçmişi · Kayda git) */
+.sc-inline-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .sc-popmenu-note { margin: 0; padding: var(--space-2); }
 /* Kullanıcılar (2.3, K-101): başlık satırı, form, geçici şifre */
 .sc-page-head--row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
@@ -489,10 +525,6 @@
 .sc-settings-card .sc-field-rows > :last-child { border-bottom: 0; }
 .sc-settings-card .sc-field-rows .sc-field-label { color: var(--text); }
 .sc-settings-card .sc-input--number { width: 100%; }
-.sc-top-strip > h2 { margin: 0 auto 0 0; font-size: var(--fs-md); }   /* bölüm şeridi: ortak üst şerit, solda bölümün adı */
-.sc-strip-actions { display: flex; gap: var(--space-2); }
-.sc-settings-section > .sc-top-strip, .sc-flows-tab > .sc-top-strip { margin-bottom: 0; }
-.sc-inline-number { display: inline-flex; align-items: center; gap: var(--space-2); }
 .sc-flows-tab { display: flex; flex-direction: column; gap: var(--space-3); flex: 1; min-height: 0; }
 /* Zamanlanmış iş penceresi (K-164): solda kalın adım adı, sağda kontroller, adımlar ince çizgiyle ayrılır */
 .sc-dialog--flow .sc-flow-step { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: var(--space-4); padding: var(--space-3) 0;
@@ -583,7 +615,7 @@ label.sc-group-row { cursor: pointer; }
 .sc-name-cell { display: inline-flex; align-items: center; gap: var(--space-1); max-width: 100%; min-width: 0; }
 .sc-name-text { overflow: hidden; text-overflow: ellipsis; }
 .sc-warn-icon { flex: none; width: 0.9231rem; height: 0.9231rem; color: var(--status-risk); }
-.sc-edit-bar { display: inline-flex; gap: var(--space-1); margin-right: var(--space-2); }
+.sc-edit-bar { display: inline-flex; gap: var(--strip-gap); }  /* şeritte öteki öğelerle aynı boşluk (K-171) */
 .sc-dialog .sc-floating { z-index: 110; }
 .sc-local-table-wrap { overflow: auto; max-height: 24rem; margin-block: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); }
 .sc-local-table { width: 100%; table-layout: auto; }
@@ -628,6 +660,7 @@ tr.is-clickable { cursor: pointer; }
 /* Ana–detay düzeni (K-161, docs/12): iki ortak tablo alt alta, ekrana sığar; flex-grow oranı ayraçtan */
 .sc-md { display: flex; flex: 1; flex-direction: column; min-height: 0; }
 .sc-md-pane { display: flex; flex: 1 1 0; flex-direction: column; gap: var(--space-2); min-height: 0; }
+.sc-card-body { display: flex; flex: 1 1 0; flex-direction: column; gap: var(--space-2); min-height: 0; }  /* detay kartının gövdesi (K-171) */
 .sc-md-splitter { flex: 0 0 var(--space-3); cursor: row-resize; background: linear-gradient(var(--table-border), var(--table-border)) center / 100% 1px no-repeat; }
 .sc-md-splitter:hover, .sc-md-splitter:focus-visible { background-color: var(--indigo-300); outline: none; }
 .sc-md-head { display: flex; align-items: center; gap: var(--space-4); }
@@ -672,18 +705,6 @@ tr.is-clickable { cursor: pointer; }
 .sc-contents { display: contents; }
 .sc-validation-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
 .sc-validation-chip .sc-tag { gap: var(--space-1); }
-
-/* Üst şerit (K-139 eki, docs/12 · Üst şerit): ayar ve filtre alanları her ekranda aynı; beyaz kart, tek satır,
-   etiket alanın solunda, alan ve düğmeler aynı yükseklikte; altında araç çubuğuna --top-strip-gap */
-.sc-top-strip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); flex: none;
-  margin-bottom: var(--top-strip-gap); padding: var(--space-2) var(--space-3); border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg); background: var(--surface); }
-.sc-top-strip .sc-field { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.sc-top-strip .sc-field-label { white-space: nowrap; }
-.sc-top-strip .sc-input { width: 16rem; }
-.sc-top-strip .sc-input[inputmode="decimal"] { width: 7rem; text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-.sc-top-strip .sc-input--number { width: 6.1538rem; text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }  /* ~80 px, şeridi doldurmaz (K-166) */
-.sc-top-strip p { margin: 0; }
 
 /* Veri kuralları (K-141, K-142): Sıra hücresinde tutamak; bırakma yeri çizgiyle. Sonuç bölümü tek satır. */
 .sc-seq-cell { display: inline-flex; align-items: center; gap: var(--space-1); width: 100%; height: 100%; }

@@ -1,5 +1,14 @@
 // Bütün arayüz metinleri tek yerde (K-81). Faz 1'de yalnız Türkçe.
 
+/** Sayının bulunma eki (v63'te, v60'ta, v61'de): okunuşun son sözcüğüne göre. */
+export function locative(n: number): string {
+  const ones = ["", "de", "de", "te", "te", "te", "da", "de", "de", "da"];
+  const tens = ["", "da", "de", "da", "ta", "de", "ta", "te", "de", "da"];
+  if (n % 10) return ones[n % 10];
+  if (n % 100) return tens[Math.floor(n / 10) % 10];
+  return "de";  // yüz'de, bin'de
+}
+
 export const tr = {
   app: { name: "Smartchain" },
   menu: {
@@ -289,7 +298,8 @@ export const tr = {
     history: "Geçmiş",
     historyOf: (name: string) => `${name} · Geçmiş`,
     settingsSaved: "Bekleme süreleri kaydedildi.",
-    // Bekleme süreleri (üst şerit); adları Sistem ayarları izindeki adlarla aynı (audit_format.SETTING_LABELS)
+    waitTitle: "Bekleme süreleri",
+    // Bekleme süreleri (küçük pencere, K-171); adları Sistem ayarları izindeki adlarla aynı (audit_format.SETTING_LABELS)
     settings: {
       FlowWaitMinutes: "Başlangıç bekleme süresi (dk)",
       FlowRefreshWaitMinutes: "ERP bekleme süresi (dk)",
@@ -440,7 +450,6 @@ export const tr = {
     empty: "boş",
     cellLabel: (label: string) => `${label}: manuel değer`,
     datePlaceholder: "gg.aa.yyyy",
-    cellMenu: (label: string) => `${label} hücre menüsü`,
     removeOne: "Manuel değeri kaldır",
     saved: (saved: number, removed: number) => [saved ? `${saved} manuel değer kaydedildi` : "", removed ? `${removed} manuel değer kaldırıldı` : ""].filter(Boolean).join(", ") + ".",
     notSavedOne: (record: string, label: string, problem: string) => `Kaydedilmedi. ${record} · ${label}: ${problem}`,
@@ -454,7 +463,7 @@ export const tr = {
     pasteGroup: (reason: string, fields: string[], cells: number) => `${reason}: ${fields.join(", ")} (${cells} hücre).`,
     pasteOutside: (cells: number) => `Tablonun dışında: ${cells} hücre.`,
     select: (record: string) => `Seç: ${record}`,
-    removePicked: (n: number) => `Manuel değerleri kaldır (${n})`,
+    removePicked: "Manuel değerleri kaldır",
     removePickedNone: "Seçili kayıtlarda manuel değer yok.",
   },
 
@@ -462,6 +471,15 @@ export const tr = {
   dataScreen: {
     table: "Tablo",
     tableWithCount: (label: string, n: string) => `${label} (${n})`,
+    // Detay kartı (K-171, K-173)
+    cardTabs: "Kart bölümleri",
+    history: "Geçmiş",
+    rowMenu: (record: string) => `${record} işlemleri`,
+    manyRecords: (n: string) => `Seçili ${n} kayıt`,
+    detail: "Detay",
+    loading: "Yükleniyor…",
+    notFound: "Kayıt bulunamadı.",
+    closed: (version: number | null) => (version ? `Kayıt güncel veride yok (v${version}'${locative(version)} kapandı).` : "Kayıt güncel veride yok."),
   },
   masterData: {
     title: "Ana veri",
@@ -496,6 +514,7 @@ export const tr = {
     history: "Bu nesnenin tüm geçmişi",
     back: "Geri",
     noObject: "Bu kaydın nesnesi yok.",
+    goToRecord: "Kayda git",
     truncated: (n: number) => `Son ${n} kayıt`,
   },
   // Sistem sağlığı (ekran 24, fonksiyon 94, 93; K-106, K-107, docs/12)
@@ -787,6 +806,7 @@ export const tr = {
   },
   ui: {
     required: "zorunlu",
+    moreTabs: "Diğer",
     close: "Kapat",
     resizePanes: "Tablo yükseklikleri",
     expandPane: "Büyüt",
@@ -844,11 +864,22 @@ export const tr = {
     unsavedTitle: "Kaydedilmemiş değişiklikler var",
     unsavedText: "Çıkarsanız bu değişiklikler kaybolur.",
     unsavedLeave: "Kaydetmeden çık",
-    selectLoaded: "Yüklenen satırların hepsini seç",
+    selectAll: "Filtredeki bütün satırları seç",
+    selectRow: "Satırı seç",
+    pickedRows: (n: string) => `Seçili ${n} satır`,
+    selectionMax: "En çok 10.000 satır seçilir.",
+    multiSelect: "Çoklu seçim",
+    editItem: "Düzenle",
     editableColumn: "Düzenlenebilir: çift tıklayın, Enter ya da yazmaya başlayın",
     rowActions: "Satır işlemleri",
+    detailColumn: "Detay",
+    cellMenu: "Hücre menüsü",
+    detailItem: "Detay",
+    copy: "Kopyala",
+    copyFailed: "Hücre kopyalanamadı.",
     count: (filtered: string, total: string) => `${filtered} / ${total}`,
-    countLabel: "Kayıt sayısı (gösterilen / toplam)",
+    records: (n: string) => `${n} kayıt`,
+    countLabel: "Kayıt sayısı",
     fields: (visible: number, all: number) => `Alanlar (${visible}/${all})`,
     fieldSearch: "Alan ara",
     resetFields: "Varsayılana dön",
@@ -904,9 +935,9 @@ export const tr = {
     widthOf: (label: string) => `${label} genişliği`,
     // Gruplama (U-11, K-90)
     group: (n: number) => (n ? `Grupla (${n})` : "Grupla"),
-    groupPanel: "Gruplama",
+    groupPanel: "Grupla",
     groupedBy: (labels: string) => `${labels} ile gruplu`,
-    addGroup: "Alan ekle",
+    addGroup: "Gruplanacak alan",
     addGroupPlaceholder: "Alan seçin",
     removeGroups: "Gruplamayı kaldır",
     collapseAll: "Tümünü daralt",
@@ -931,16 +962,16 @@ export const tr = {
     // Kayıtlı görünüm (U-9, K-89)
     view: "Görünüm",
     standard: "Standart",
-    defaultMark: "varsayılan",
+    defaultMark: "*",
     sharedBy: (name: string) => `${name} paylaştı`,
     unsaved: "Kaydedilmemiş değişiklik",
     save: "Kaydet",
     saveAs: "Farklı kaydet",
-    viewMenu: "Görünüm işlemleri",
+    viewMenu: "Tablo ayarları",
     makeDefault: "Varsayılan yap",
     removeDefault: "Varsayılanı kaldır",
-    deleteView: "Sil",
-    resetStandard: "Ürün Standart'ına döndür",
+    deleteView: "Görünümü sil",
+    resetStandard: "Görünüm standardına dön",
     resetStandardMessage: "Şirketin Standart görünümü silinir; liste ürünle gelen Standart görünümle açılır. Kendi varsayılanını seçmemiş herkes için geçerlidir.",
     noCompanyStandard: "Standart zaten ürünle gelen hâlinde.",
     viewName: "Görünüm adı",

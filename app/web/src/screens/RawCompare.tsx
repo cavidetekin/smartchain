@@ -61,10 +61,14 @@ export function RawCompare() {
       <MasterDetail<Tab>
         id="raw-compare"
         master={<DataTable list="raw-compare" cellRender={CELLS} rowProps={rowProps} reloadKey={reloadKey} selectedRowId={selected?.id ?? null} />}
-        onClose={close}
+        onClose={close} hideTitle
         detail={selected && tab ? {
           title: selected.name, tabsLabel: T.tabs, tabs: tabsOf(selected), tab, onTab: setTab,
-          body: <DataTable key={`${selected.entity}:${tab}`} list={listOf(tab, selected.entity)} baseFilters={filters} reloadKey={reloadKey} />,
+          // Kartın şeridi tablo standardında (K-173): solda sekmeler, sağda tablo düğmeleri, Büyüt ve ✕
+          renderBody: ({ tabs, controls }) => (
+            <DataTable key={`${selected.entity}:${tab}`} list={listOf(tab, selected.entity)} baseFilters={filters} reloadKey={reloadKey} compact
+                       toolbarLead={tabs} toolbarEnd={controls} />
+          ),
         } : null} />
     </section>
   );

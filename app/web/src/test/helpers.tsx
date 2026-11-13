@@ -100,5 +100,5 @@ export function mockSocket() {
 /** me: oturum açık kullanıcı (varsayılan ME); null oturumsuz; "ask" açılışta sunucuya sorulur (mockApi). */
 export function renderApp(path = "/ana-sayfa", me: Me | null | "ask" = ME) {
   const router = createMemoryRouter([{ path: "*", element: <App initialMe={me === "ask" ? undefined : me} /> }], { initialEntries: [path] });
-  return render(<RouterProvider router={router} />);
+  return Object.assign(render(<RouterProvider router={router} />), { router });  // adres: router.state.location
 }

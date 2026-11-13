@@ -10,7 +10,7 @@ import { DataTable } from "../table/DataTable";
 import type { Row } from "../table/types";
 import { Alert, Badge, type BadgeTone, Button } from "../ui";
 import { PermissionMatrixDialog } from "./PermissionMatrixDialog";
-import { MenuItem, RowPopMenu } from "./RowPopMenu";
+import { type MenuAction, MenuActions, MenuItem, RowPopMenu } from "./RowPopMenu";
 import { ActionDialog, AddUserDialog, nameOf, NameDialog, RoleDialog, TemporaryPasswordDialog } from "./UserDialogs";
 import { type TemporaryPassword, type UserAction, type UserDetail, usersApi } from "./usersApi";
 
@@ -22,7 +22,8 @@ const CELLS = {
   Status: (value: unknown): ReactNode => (value ? <Badge tone={STATUS_TONE[String(value)] ?? "neutral"}>{String(value)}</Badge> : null),
 };
 
-function RowMenu({ row, anchor, onClose, onPick }: {
+function RowMenu({ row, anchor, extra, onClose, onPick }: {
+  extra?: MenuAction[];
   row: Row; anchor: HTMLElement; onClose(): void; onPick(action: UserAction, detail: UserDetail): void;
 }) {
   const [detail, setDetail] = useState<UserDetail | null>(null);
@@ -41,6 +42,7 @@ function RowMenu({ row, anchor, onClose, onPick }: {
   );
   return (
     <RowPopMenu label={T.rowMenu(String(row.UserName))} anchor={anchor} onClose={onClose} ready={Boolean(detail)}>
+      <MenuActions items={extra} onDone={onClose} />
       {error ? <Alert tone="error">{error}</Alert> : !detail ? <p className="sc-muted sc-popmenu-note">{tr.ui.busy}</p> : (
         <>
           {item("role", T.roleTitle)}
@@ -63,7 +65,7 @@ type Shown =
 export function Users() {
   const me = useAuth().me!;
   const [reloadKey, setReloadKey] = useState(0);
-  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const [shown, setShown] = useState<Shown | null>(null);
 
   const close = () => setShown(null);
@@ -74,7 +76,7 @@ export function Users() {
   };
   const rowMenu = useMemo(() => ({
     label: (row: Row) => T.rowMenu(String(row.UserName)),
-    onOpen: (row: Row, anchor: HTMLElement) => setMenu((m) => (m?.row.Id === row.Id ? null : { row, anchor })),
+    onOpen: (row: Row, anchor: HTMLElement, extra?: MenuAction[]) => setMenu((m) => (m?.row.Id === row.Id && !extra ? null : { row, anchor, extra })),
   }), []);
 
   const dialog = () => {
@@ -131,19 +133,21 @@ export function Users() {
 
   return (
     <section className="sc-page--fill">
-      <header className="sc-page-head sc-page-head--row">
+      <header className="sc-page-head">
         <h1>{T.title}</h1>
-        <div className="sc-page-head-actions">
-          {can(me, 90) && <Button variant="secondary" onClick={() => setShown({ kind: "matrix" })}>{tr.matrix.title}</Button>}
+      </header>
+      {/* Ekranın işlemleri şeridin solunda (K-171): ana işlem indigo, ikincil mor */}
+      <DataTable list="users" cellRender={CELLS} rowMenu={rowMenu} reloadKey={reloadKey} toolbarLead={(
+        <>
           <Button variant="primary" disabledReason={can(me, 88, "write") ? null : forbiddenReason(88, "write")}
                   onClick={() => setShown({ kind: "add" })}>
             {T.add}
           </Button>
-        </div>
-      </header>
-      <DataTable list="users" cellRender={CELLS} rowMenu={rowMenu} reloadKey={reloadKey} />
+          {can(me, 90) && <Button variant="secondary" onClick={() => setShown({ kind: "matrix" })}>{tr.matrix.title}</Button>}
+        </>
+      )} />
       {menu && (
-        <RowMenu key={menu.row.Id} row={menu.row} anchor={menu.anchor} onClose={() => setMenu(null)}
+        <RowMenu key={menu.row.Id} row={menu.row} anchor={menu.anchor} extra={menu.extra} onClose={() => setMenu(null)}
                  onPick={(kind, detail) => {
                    setMenu(null);
                    setShown({ kind, detail });

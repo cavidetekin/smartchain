@@ -117,6 +117,10 @@ class GroupsRequest(BaseModel):
     sort: list[SortItem] = []
 
 
+class IdsRequest(BaseModel):
+    filters: list[FilterItem] = []
+
+
 class ValuesRequest(BaseModel):
     field: str
     search: str = ""

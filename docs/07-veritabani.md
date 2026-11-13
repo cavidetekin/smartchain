@@ -142,7 +142,7 @@
 | `planning.PlanWarning` | Plan hesabının ürettiği uyarılar. | Plan |  | 8 |
 | `planning.PlanMetric` | Senaryo karşılaştırma metrikleri; senaryo silinse de özet kısa süre kalır. | Plan |  | 3 |
 
-## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (35 tablo)
+## `adm` · Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`) (36 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -151,6 +151,7 @@
 | `adm.DataRuleCondition` | Kural koşulları: aynı GroupNo'daki koşullar VE, gruplar arası VEYA (K-136); koşul editörü validasyon kurallarıyla ortaktır. | Veri yönetimi |  | 7 |
 | `adm.DataRuleEffect` | Kural izi (K-140): işlenmiş katmanda hangi hücreyi hangi kuralın son değiştirdiği ve ham değer; her çalıştırmada tablo için yeniden yazılır. İpucu: "Kural 3 · Lokasyon bayrakları · ham değer: boş". | Veri yönetimi |  | 5 |
 | `adm.ManualValue` | Manuel değer (K-170): ana veri ve işlem verisinde kayıt ve alan başına; kuralı ve ERP'yi ezer, aktarımda korunur, süresi yoktur. Alttaki değer (ERP ya da kural sonucu) girişte ve her aktarımda saklanır; kaldırılınca hücreye son alttaki değer döner. Değerler alanın tipinden metne çevrilmiş hâldedir. | Veri yönetimi |  | 14 |
+| `adm.FieldChange` | Alan değişikliği (K-173): ana veri ve işlem verisinde kaydın alanı her değiştiğinde, değişiklik anında aynı işlemde yazılır; detay kartının Geçmiş sekmesi buradan okunur. Yazanlar aktarım, manuel değer girme ve kaldırma ve Smartchain girişleridir. Değerler alanın tipinden metne çevrilmiş hâldedir. Silinmez. | Veri yönetimi |  | 13 |
 | `adm.FieldValueSource` | Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır). | Veri yönetimi |  | 6 |
 | `adm.ImportBatch` | Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla. Ham veri saklama süresi kadar saklanır (`RawDataRetentionDays`; boşsa temizlik çalışmaz, K-156); parti kaydı ve sayıları silinmez. LoadType Değişen: arayüzde "Ekle / güncelle" (K-129). | Veri yönetimi |  | 17 |
 | `adm.ImportFinding` | Partinin ön kontrol bulguları (fonksiyon 03). Validasyon (fonksiyon 04) partiye değil staging'in güncel hâline aittir, bulguları `ValidationFinding`'dedir (K-134). | Veri yönetimi |  | 9 |

@@ -113,6 +113,7 @@
     "table-head-border": "#c5cbf2",
     "table-head-text": "#1e2257",
     "table-row-hover-bg": "#f4f5fb",
+    "table-row-picked-bg": "#dce0f7",
     "table-row-selected-bg": "#eef0fb",
     "table-row-selected-ring": "#4f5bd5",
     "text": "#1f2430",

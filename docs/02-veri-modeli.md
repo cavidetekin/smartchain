@@ -95,7 +95,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Alan grupları ve veri akışı
 <sub>21. Veri modeli · Genel görünüm</sub>
 
-- **Veri yönetimi  15 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · DataVersion
+- **Veri yönetimi  16 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataVersion
 - **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** ParameterSet · PlanningSetting · PriorityRule · AllocationRule
@@ -208,6 +208,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **DataRuleCondition:** Kural koşulları (VE / VEYA)
 - **DataRuleEffect:** Kural izi: hücreyi son değiştiren kural ve ham değer (K-140)
 - **ManualValue:** Kayıt ve alan başına manuel değer; alttaki değer (ERP ya da kural) saklanır (K-170)
+- **FieldChange:** Alan değişikliği: kaydın geçmişi (aktarım, manuel değer, Smartchain girişi; K-173)
 - **FieldValueSource:** Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır)
 - **ImportBatch:** Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla
 - **ImportFinding:** Partinin bulguları (ön kontrol ve doğrulama)
@@ -1306,6 +1307,28 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | CreatedAt | datetime2 |  | Giriş zamanı | Sistem | H | E |  |
 | UpdatedBy | int | FK | Son değiştiren | Sistem | H | E |  |
 | UpdatedAt | datetime2 |  | Son değişiklik | Sistem | H | E |  |
+
+### FieldChange
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Alan değişikliği (K-173): ana veri ve işlem verisinde kaydın alanı her değiştiğinde, değişiklik anında aynı işlemde yazılır; detay kartının Geçmiş sekmesi buradan okunur. Yazanlar aktarım, manuel değer girme ve kaldırma ve Smartchain girişleridir. Değerler alanın tipinden metne çevrilmiş hâldedir. Silinmez.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| TableName | nvarchar(60) |  | Tablo (core adı) | Sistem | H | E |  |
+| RecordKey | nvarchar(60) | IX | Kaydın kimliği: Id, bütün versiyonlarda aynı (K-63); birimde kod | Sistem | H | E |  |
+| FieldName | nvarchar(60) |  | Alan; kayıt oluştu ya da kapandı satırında boş | Sistem | H | H |  |
+| ChangeType | nvarchar(10) |  | Oluştu \| Değişti \| Kapandı | Sistem | H | E |  |
+| OldValue | nvarchar(400) |  | Eski değer (metin) | Sistem | H | H |  |
+| NewValue | nvarchar(400) |  | Yeni değer (metin) | Sistem | H | H |  |
+| DataVersionId | bigint |  | Değişikliğin olduğu veri versiyonu; Smartchain girişinde o anki güncel versiyon | Sistem | H | H |  |
+| At | datetime2 |  | Zaman (UTC) | Sistem | H | E |  |
+| Source | nvarchar(40) |  | Aktarım \| Manuel değer \| Manuel değer kaldırma \| Kapasite yönetimi \| Malzeme blokajı | Sistem | H | E |  |
+| UserId | int |  | Değiştiren kullanıcı; aktarımda aktarımı başlatan, zamanlanmış işte boş | Sistem | H | H |  |
+| DataRuleId | bigint |  | Aktarımda hücreyi değiştiren kural | Sistem | H | H |  |
+| Note | nvarchar(100) |  | Not (ör. "Manuel değer korundu") | Sistem | H | H |  |
 
 ### FieldValueSource
 <sub>21. Veri modeli · Veri yönetimi</sub>

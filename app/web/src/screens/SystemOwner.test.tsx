@@ -59,7 +59,8 @@ async function openScreen(routes = {}, detail = field()) {
 }
 
 async function openField(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Material AdditionalText2 düzenle" }));
+  await user.click(screen.getByRole("button", { name: "Material AdditionalText2 düzenle" }));  // ⋯ menüsü (K-171)
+  await user.click(await screen.findByRole("menuitem", { name: "Düzenle" }));   // düzenleme açan seçenek "Düzenle"
   const dialog = await screen.findByRole("dialog", { name: "Alan" });
   await within(dialog).findByLabelText("Etiket");
   return dialog;

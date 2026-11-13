@@ -1,8 +1,7 @@
 // Sistem ayarları (ekran 25, fonksiyon 96 ve 92; K-104, K-105, K-164, docs/12): sürüm satırı; sekmeler Veri sözlüğü · Giriş ve oturum · Sistem sağlığı ·
 // Zamanlanmış işler. Ayar ekranı standardı: birden çok bölümlü sekmede solda alt menü, sıkı form, bölüm şeridinde Vazgeç ve Kaydet.
 // Veri sözlüğünde şimdilik yalnız etiket düzenlenir; öteki alanlar pasif form öğesi, 5.1'de yalnız aktifleşir.
-import { Pencil } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { ApiError, emitNotice } from "../api/client";
@@ -10,9 +9,9 @@ import { useAuth } from "../auth/AuthContext";
 import { can } from "../auth/permissions";
 import { tr } from "../i18n/tr";
 import { SwitchCell } from "../table/CellEditors";
-import { DataTable, type FieldHints, type RowMenuSpec } from "../table/DataTable";
+import { DataTable, type FieldHints } from "../table/DataTable";
+import { useRowMenu } from "../table/rowMenu";
 import { UnsavedGuard } from "../table/useTableEdits";
-import type { Row } from "../table/types";
 import { Alert, Button, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, TextField, Tooltip } from "../ui";
 import { ScheduledJobs } from "./ScheduledJobs";
 import { type FieldDetail, type PolicyValues, systemOwnerApi } from "./systemOwnerApi";
@@ -96,17 +95,16 @@ function FieldDialog({ table, field, onClose, onDone }: { table: string; field: 
 const DICTIONARY_HINTS: FieldHints = { TableName: { width: 11 }, FieldName: { width: 12 }, DisplayLabel: { width: 12 }, FieldClass: { width: 8 },
   ValuePriority: { width: 8 }, ManualOverrides: { width: 6 }, EditableInWorkspace: { width: 6 }, IsRequired: { width: 6 }, IfEmpty: { width: 9 }, IsAdditional: { width: 6 } };
 
-function Dictionary() {
+function Dictionary({ lead }: { lead?: ReactNode }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [open, setOpen] = useState<{ table: string; field: string } | null>(null);
-  const rowMenu: RowMenuSpec = useMemo(() => ({
-    icon: Pencil,
-    label: (row: Row) => T.editField(String(row.TableName), String(row.FieldName)),
-    onOpen: (row: Row) => setOpen({ table: String(row.TableName), field: String(row.FieldName) }),
-  }), []);
+  // ⋯ menüsü (K-171): Düzenle → alan penceresi (düzenleme açan seçenek "Düzenle")
+  const rowMenu = useRowMenu((row) => T.editField(String(row.TableName), String(row.FieldName)),
+                             (row) => [{ label: tr.table.editItem, onClick: () => setOpen({ table: String(row.TableName), field: String(row.FieldName) }) }]);
   return (
     <>
-      <DataTable list="field-definitions" rowMenu={rowMenu} reloadKey={reloadKey} fieldHints={DICTIONARY_HINTS} />
+      <DataTable list="field-definitions" rowMenu={rowMenu.rowMenu} reloadKey={reloadKey} fieldHints={DICTIONARY_HINTS} toolbarLead={lead} />
+      {rowMenu.element}
       {open && (
         <FieldDialog {...open} onClose={() => setOpen(null)} onDone={() => {
           emitNotice(T.labelSaved(`${open.table}.${open.field}`));
@@ -262,6 +260,7 @@ const warningShorter = (key: string, values: FormValues) => {
 const writePolicy = (changes: FormValues) => systemOwnerApi.setPolicy(changes as Partial<PolicyValues>);
 
 type Tab = "dictionary" | "policy" | "health" | "flows";
+const TABLE_TABS: Tab[] = ["dictionary", "flows"];
 /** Sekme, adresteki adı ve yetkisi (K-164): yetkisi olmayan sekme gösterilmez; Admin yalnız Zamanlanmış işler'i görür. */
 const TABS: { value: Tab; slug: string; label: string; fn: number }[] = [
   { value: "dictionary", slug: "veri-sozlugu", label: T.dictionary, fn: 96 },
@@ -302,23 +301,23 @@ export function SystemOwner() {
     setParams({ sekme: TABS.find((t) => t.value === next)!.slug }, { replace: true });
   };
   const onDirty = useCallback((d: boolean) => setDirty(d), []);
+  const sections = tabs.length > 1
+    ? <Segment<Tab> label={T.sections} hideLabel value={tab} onChange={choose} options={tabs.map((t) => ({ value: t.value, label: t.label }))} />
+    : null;
 
   return (
     <section className="sc-page--fill">
       <header className="sc-page-head">
         <h1>{T.title}</h1>
       </header>
-      {tabs.length > 1 && (
-        <div className="sc-section-switch">
-          <Segment<Tab> label={T.sections} hideLabel value={tab} onChange={choose} options={tabs.map((t) => ({ value: t.value, label: t.label }))} />
-        </div>
-      )}
-      {tab === "dictionary" && <Dictionary />}
+      {/* Sekmeler (K-171): tablolu sekmede tablonun şeridinin başında, formlu sekmede üstte */}
+      {sections && !TABLE_TABS.includes(tab) && <div className="sc-section-switch">{sections}</div>}
+      {tab === "dictionary" && <Dictionary lead={sections} />}
       {tab === "policy" && <SettingsTab key="policy" label={T.policyTitle} sections={POLICY_SECTIONS} labels={T.policy} read={systemOwnerApi.policy} write={writePolicy}
                                         crossCheck={warningShorter} onDirty={onDirty} />}
       {tab === "health" && <SettingsTab key="health" label={T.healthTitle} sections={HEALTH_SECTIONS} labels={T.health} read={systemOwnerApi.healthSettings}
                                         write={systemOwnerApi.setHealthSettings} onDirty={onDirty} />}
-      {tab === "flows" && <ScheduledJobs initialFlow={initialFlow} onDirty={onDirty} />}
+      {tab === "flows" && <ScheduledJobs initialFlow={initialFlow} lead={sections} />}
       <UnsavedGuard dirty={dirty} />
       {pending && <UnsavedConfirm onStay={() => setPending(null)} onLeave={leave} />}
     </section>
