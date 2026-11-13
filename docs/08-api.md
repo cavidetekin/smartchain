@@ -166,7 +166,7 @@ Veri sözlüğü listesi `field-definitions` adıyla ortak liste sözleşmesini 
 
 | Adres | Ne |
 |---|---|
-| `GET /api/field-definitions/{tablo}/{alan}` | Alan, `label`, `standard_label`, `description`, `is_additional`, öteki alanlar, `options` (`field_class`, `value_priority` listelerinin seçenekleri), `used_in_views`, `used_in_rules`. Yoksa 404 `field_not_found` |
+| `GET /api/field-definitions/{tablo}/{alan}` | Alan, `label`, `standard_label`, `description`, `is_additional`, öteki alanlar, `options` (`field_class` seçenekleri; Değer önceliği kalktı, K-172), `manual_reason`, `manual_count`, `used_in_views`, `used_in_rules`. Yoksa 404 `field_not_found` |
 | `PUT /api/field-definitions/{tablo}/{alan}/label` | `{"label"}`, en çok 40 karakter; boşsa standart etiket. Aynı tabloda aynı etiket 409 `label_taken`. İz "Alan etiketi değişikliği" |
 | `GET /api/settings/login-policy` | `{"values", "defaults", "limits"}` |
 | `PUT /api/settings/login-policy` | Değişen anahtarlar; sınır dışı ya da uyarı süresi oturum süresinden kısa değilse 422, hiçbiri yazılmaz. İz "Ayar değişikliği", anahtar başına |
@@ -557,7 +557,20 @@ Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, d
 | Ortak listeler `transaction-…` | 102 okuma | İşlem verisi: 12 tablo (Proje ve Proje grubu dahil), salt okunur |
 | `GET /api/master-data/counts` · `GET /api/transaction-data/counts` | 10 / 102 okuma | Sekmeler, tablolar ve güncel veri versiyonundaki kayıt sayıları (tablo seçimi için); veri yoksa sayı boş |
 
-Uygulandı (6.1, K-168, K-169). Satırlar ortak liste sözleşmesiyle (K-87); yazma ucu yok, elle değer 6.2'de.
+Uygulandı (6.1, K-168, K-169). Satırlar ortak liste sözleşmesiyle (K-87); yazma ucu yok, manuel değer 6.2'de.
+
+## Manuel değer (ekran 03 ve 29, fonksiyon 11, 12, 13; K-170)
+
+Uygulandı (6.2, K-170, K-172).
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| `POST /api/manual-values` | 12 yazma | Gövde `{list, changes: [{id, field, value}]}`. Alan veri sözlüğünde Manuel olmalı; değer tipe, uzunluğa, değer listesine ve zorunluluğa uymalı. Biri uymazsa 422 ("Kaydedilmedi.") ve `details: [{id, field, problem, record}]` (`record` kaydın okunur adı; ipucu kalıbı "Sayı girilmeli.", K-172), hiçbiri yazılmaz. Kaydedince core'un güncel satırı yerinde güncellenir (yeni veri versiyonu yok), alttaki değer `ManualValue`'da saklanır, denetim izine "Manuel değer girildi". Zamanlanmış iş ya da aktarım sürerken 409 |
+| `POST /api/manual-values/remove` | 13 yazma | Gövde `{list, items: [{id, field?}]}` (alan yoksa kaydın bütün manuel değerleri). Hücreye son alttaki değer döner; denetim izine "Manuel değer kaldırıldı" |
+| `PUT /api/field-definitions/{tablo}/{alan}/manual` | 96 yazma | Gövde `{on, confirm}`. Anahtar, ilişki, sistem alanında açılmaz (422). Kapatırken manuel değer varsa 409 `manual_values` ("n kayıtta manuel değer kaldırılacak."); `confirm` ile manuel değerler kalkar |
+| Ortak listeler (`materials`, `master-…`, `transaction-…`) | 10 / 102 okuma | Kolon bilgisinde `manual`; ilk kolon "Manuel değer" (`ManualState`: boş, "Var", "Var / ERP Güncellendi", "Var / Kural Güncellendi"); satırlarda `_sources` (manuel: kişi, zaman, güncellendi mi, girildiğindeki ve son alttaki değer, kaynağı ve kuralın adı; kural: numara ve ad; ERP'den olduğu gibi gelen hücre yok) |
+
+Aktarım (tam ve kısmi) eşleşen satırda gelen değeri alttaki değer olarak saklar, yerine manuel değeri koyar; yalnız manuel değer farkı yeni versiyon açmaz. Uygulanıyor (6.2).
 
 ## Zamanlanmış işler (ekran 25, fonksiyon 92, K-163, K-164)
 

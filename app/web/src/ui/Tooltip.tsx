@@ -1,5 +1,5 @@
 // İpucu (K-132, docs/12): açıklama taşıyan ipucu tarayıcınınki yerine bu bileşenle; çok satır alır, odakta da görünür.
-// Pencereye asılır: tablo hücresinin ve pencerenin kırpmasından etkilenmez.
+// Pencereye asılır: tablo hücresinin ve pencerenin kırpmasından etkilenmez. Sağ tıkta kapanır (açılan hücre menüsünü örtmesin, K-172).
 import { type FocusEvent, type MouseEvent, type ReactNode, useId, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -21,7 +21,7 @@ export function Tooltip({ content, focusable = false, children }: {
   const hide = () => setAt(null);
   return (
     <span className="sc-tip-anchor" tabIndex={focusable ? 0 : undefined} aria-describedby={at ? id : undefined}
-          onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
+          onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} onContextMenu={hide}>
       {children}
       {at && createPortal(<div id={id} role="tooltip" className="sc-tooltip" style={{ left: at.x, top: at.y }}>{content}</div>, document.body)}
     </span>

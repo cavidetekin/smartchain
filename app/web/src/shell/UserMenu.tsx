@@ -1,7 +1,8 @@
-// Kullanıcı menüsü (fonksiyon 89; docs/12): ad ve rol, yazı boyutu (U-23), "Şifre değiştir", "Çıkış".
+// Kullanıcı menüsü (fonksiyon 89; docs/12): ad ve rol, yazı boyutu (U-23), "Şifre değiştir", "Çıkış"; altta küçük satırda sürüm (K-172).
 import { CircleUser } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { appVersion } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
 import { PasswordDialog } from "../auth/PasswordDialog";
 import { tr } from "../i18n/tr";
@@ -18,12 +19,17 @@ export function UserMenu({ fontSize, onFontSize }: Props) {
   const [open, setOpen] = useState(false);
   const [changing, setChanging] = useState(false);
   const [changed, setChanged] = useState(false);
+  const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (!changed) return;
     const t = setTimeout(() => setChanged(false), 5000);
     return () => clearTimeout(t);
   }, [changed]);
+
+  useEffect(() => {  // menü ilk açılınca bir kez
+    if (open && version === null) void appVersion().then((v) => setVersion(v ?? ""));
+  }, [open, version]);
 
   if (!me) return null;
   const name = me.full_name || me.user_name;
@@ -52,6 +58,7 @@ export function UserMenu({ fontSize, onFontSize }: Props) {
           <button type="button" className="sc-menu-btn" onClick={() => void signOut("logout")}>
             {tr.user.logout}
           </button>
+          {version && <div className="sc-user-version sc-num">{tr.user.version(version)}</div>}
         </div>
       )}
       {changing && (

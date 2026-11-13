@@ -47,6 +47,8 @@ FIELD_LABELS = {
     # Zamanlanmış işler (K-163, K-164)
     "RunTime": "Saat", "Days": "Günler", "PullScope": "Veri çek", "PullTables": "Çekilecek tablolar", "TransferMode": "Aktarım",
     "TransferGroups": "Aktarım grupları", "Cleanup": "Ham veri temizliği", "run": "Çalıştırma no",
+    # Manuel değer ve veri sözlüğünde Manuel (K-170)
+    "ManualOverrides": "Manuel",
 }
 
 # Kodlu değerler; anahtara göre. Burada olmayan değer (ad, adres, serbest metin) olduğu gibi görünür.

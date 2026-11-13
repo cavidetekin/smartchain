@@ -2,6 +2,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { cellOf, openEditor, setCell } from "../table/testEditing";
 
 import { col, useTableTestSetup } from "../table/testBackend";
 import { DATA_VERSION, meAs, mockApi, renderApp, type Routes } from "../test/helpers";
@@ -100,13 +101,12 @@ describe("ekran 23", () => {
 
   it("System owner yöntem ve view'ı tabloda düzenler, Kaydet toplu yazar", async () => {
     const { user, fetchMock } = await open("System owner");
-    const method = screen.getByRole("combobox", { name: "Kaynak yöntemi" });
+    const method = await openEditor(user, cellOf("Kaynak", "Yöntem"));
     expect(within(method).getAllByRole("option").map((o) => o.textContent)).toEqual(["Excel", "SQL"]);
     await user.selectOptions(method, "SQL");
-    await user.type(screen.getByRole("textbox", { name: "Kaynak view adı" }), "View_Resource");
-    const view = screen.getByRole("textbox", { name: "Malzeme view adı" });
-    await user.clear(view);
-    await user.type(view, "View_Yeni");
+    await user.keyboard("{Enter}");
+    await setCell(user, "Kaynak", "Kaynak", "View_Resource");
+    await setCell(user, "Malzeme", "Kaynak", "View_Yeni");
     expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(0);
     const table = screen.getByTestId("table-scroll").parentElement!;
     await user.click(within(table).getByRole("button", { name: "Kaydet" }));

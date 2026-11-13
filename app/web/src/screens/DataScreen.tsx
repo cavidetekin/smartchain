@@ -11,9 +11,13 @@ import { tr } from "../i18n/tr";
 import { userPrefs } from "../prefs";
 import { useShell } from "../shell/ShellContext";
 import { DataTable, type FieldHints } from "../table/DataTable";
-import { Segment } from "../ui";
+import type { ListColumn } from "../table/types";
+import { UnsavedGuard } from "../table/useTableEdits";
+import { Alert, ConfirmDialog, Segment } from "../ui";
+import { useManualValues } from "./useManualValues";
 
 const T = tr.dataScreen;
+const MT = tr.manualValues;
 
 export interface TableDef { list: string; slug: string; label: string }
 export interface TabDef { key: string; label: string; tables: TableDef[] }
@@ -64,6 +68,9 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
   const prefs = userPrefs(userId);
   const [choice, setChoice] = useState<Choice>(() => initial(prefs.dataScreen(id), tabs, search));
   const [counts, setCounts] = useState<Map<string, number | null>>(new Map());
+  const [columns, setColumns] = useState<ListColumn[] | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [pending, setPending] = useState<Choice | null>(null);  // kaydedilmemiş manuel değerle sekme ya da tablo değişiyor
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -75,6 +82,11 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
 
   const tab = tabs.find((t) => t.key === choice.tab) ?? tabs[0];
   const table = tab.tables.find((x) => x.list === choice.tables[tab.key]) ?? tab.tables[0];
+  const manual = useManualValues(table.list, columns, () => setReloadKey((n) => n + 1));  // manuel değer (K-170)
+  const choose = (next: Choice) => {
+    if (manual.dirty) setPending(next);
+    else setChoice(next);
+  };
 
   useEffect(() => {  // adres ve hatırlanan seçim (kullanıcı başına)
     prefs.setDataScreen(id, choice);
@@ -88,7 +100,7 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
   };
   const picker = tab.tables.length > 1 ? (
     <select className="sc-input sc-select sc-viewbar-select" aria-label={T.table} value={table.list}
-            onChange={(e) => setChoice((c) => ({ ...c, tables: { ...c.tables, [tab.key]: e.target.value } }))}>
+            onChange={(e) => choose({ ...choice, tables: { ...choice.tables, [tab.key]: e.target.value } })}>
       {tab.tables.map((x) => <option key={x.list} value={x.list}>{label(x)}</option>)}
     </select>
   ) : null;
@@ -99,10 +111,23 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
         <h1>{title}</h1>
       </header>
       <div className="sc-section-switch">
-        <Segment<string> label={sections} hideLabel value={tab.key} onChange={(key) => setChoice((c) => ({ ...c, tab: key }))}
+        <Segment<string> label={sections} hideLabel value={tab.key} onChange={(key) => choose({ ...choice, tab: key })}
                          options={tabs.map((t) => ({ value: t.key, label: t.label }))} />
       </div>
-      <DataTable key={table.list} list={table.list} fieldHints={HINTS} toolbarLead={picker} fitHeaders />
+      {manual.paste && (
+        <Alert tone={manual.paste.rejected ? "risk" : "info"} onClose={manual.closePaste} title={MT.pasteSummary(manual.paste.taken, manual.paste.rejected)}>
+          {manual.paste.details.length > 0 && manual.paste.details.join(" ")}
+        </Alert>
+      )}
+      <DataTable key={table.list} list={table.list} fieldHints={HINTS} toolbarLead={picker} fitHeaders onColumns={setColumns} reloadKey={reloadKey}
+                 cellRender={manual.cellRender} cellWrap={manual.cellWrap} cellClass={manual.cellClass} toolbarActions={manual.editBar}
+                 cellEditing={manual.cellEditing} selection={manual.selection} />
+      {manual.cellMenu}
+      <UnsavedGuard dirty={manual.dirty} />
+      {pending && (
+        <ConfirmDialog title={tr.table.unsavedTitle} message={tr.table.unsavedText} confirmLabel={tr.table.unsavedLeave} danger
+                       onCancel={() => setPending(null)} onConfirm={() => { manual.discard(); setChoice(pending); setPending(null); }} />
+      )}
     </section>
   );
 }

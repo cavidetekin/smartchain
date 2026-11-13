@@ -15,11 +15,12 @@ SOURCE = sa.select(
     sa.func.row_number().over(order_by=(FD.c.TableName, FD.c.FieldName)).label("Id"),
     FD.c.TableName, FD.c.FieldName,
     sa.func.coalesce(FD.c.Label, FD.c.StandardLabel).label("DisplayLabel"), FD.c.Description,
-    FD.c.FieldClass, FD.c.ValuePriority, FD.c.ManualOverrides, FD.c.EditableInWorkspace, FD.c.IsRequired, FD.c.IfEmpty,
+    FD.c.FieldClass, FD.c.ManualOverrides, FD.c.EditableInWorkspace, FD.c.IsRequired, FD.c.IfEmpty,
     sa.cast(sa.case((FD.c.FieldName.like("Additional%"), 1), else_=0), sa.Boolean).label("IsAdditional"),
 ).subquery("fd")
 
-FIELDS = ("TableName", "FieldName", "DisplayLabel", "Description", "FieldClass", "ValuePriority", "ManualOverrides",
+# Değer önceliği listede yok: öncelik sabit, manuel > kural > ERP; bilgiyi Manuel verir (K-172)
+FIELDS = ("TableName", "FieldName", "DisplayLabel", "Description", "FieldClass", "ManualOverrides",
           "EditableInWorkspace", "IsRequired", "IfEmpty", "IsAdditional")
 
 FIELD_DEFINITIONS = ListDefinition(
@@ -32,11 +33,12 @@ FIELD_DEFINITIONS = ListDefinition(
     source=SOURCE,
     key_fields=("TableName", "FieldName"),
     fields=FIELDS,
-    default_visible=tuple(f for f in FIELDS if f != "Description"),  # açıklama Alanlar panelinden açılır
+    # açıklama Alanlar panelinden açılır; Senaryo Aşama 8'e kadar gizli (K-172)
+    default_visible=tuple(f for f in FIELDS if f not in ("Description", "EditableInWorkspace")),
     default_sort=(("TableName", "asc"), ("FieldName", "asc")),
     labels={"TableName": "Tablo", "FieldName": "Alan", "DisplayLabel": "Etiket", "Description": "Açıklama", "FieldClass": "Sınıf",
-            "ValuePriority": "Değer önceliği", "ManualOverrides": "Manuel", "EditableInWorkspace": "Senaryo",
+            "ManualOverrides": "Manuel", "EditableInWorkspace": "Senaryo",
             "IsRequired": "Zorunlu", "IfEmpty": "Boşsa", "IsAdditional": "Ek alan"},
-    values={"FieldClass": FD.c.FieldClass.info["values"], "ValuePriority": FD.c.ValuePriority.info["values"]},
+    values={"FieldClass": FD.c.FieldClass.info["values"]},
     server_values=frozenset({"TableName"}),
 )

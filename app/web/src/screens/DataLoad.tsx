@@ -9,7 +9,8 @@ import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { formatDateTime, serverDate } from "../format";
 import { tr } from "../i18n/tr";
-import { SelectCell, SwitchCell } from "../table/CellEditors";
+import { SwitchCell } from "../table/CellEditors";
+import { draftEditing } from "../table/cellEditing";
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import type { Row } from "../table/types";
 import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
@@ -163,6 +164,10 @@ export function DataLoad() {
     }
   };
 
+  // Yöntem: hücre düzenleme standardı (K-172), kutusuz; değişen hücre lila
+  const methodEdit = useMemo(() => draftEditing(edits, (row) => String(row.Entity), {
+    Method: { label: (row) => T.method(String(row.Name)), editable: () => canMethod, options: METHODS },
+  }), [edits, canMethod]);
   const cellRender = useMemo(() => ({
     Validation: (value: unknown, row: Row) => {
       const state = value ? String(value) : null;
@@ -176,11 +181,7 @@ export function DataLoad() {
         {Boolean(row.Warning) && <Tooltip content={String(row.Warning)} focusable><TriangleAlert className="sc-warn-icon" aria-label={T.warningOf(String(value), String(row.Warning))} /></Tooltip>}
       </span>
     ),
-    Method: (value: unknown, row: Row) => {
-      const key = String(row.Entity);
-      return <SelectCell label={T.method(String(row.Name))} value={edits.get(key, "Method", String(value))} options={METHODS} editable={canMethod} changed={edits.changed(key, "Method")}
-                         onChange={(next) => edits.set(key, "Method", next, String(value))} />;
-    },
+    Method: methodEdit.cellRender.Method,
     LastTransferAt: (value: unknown, row: Row) => (value ? T.lastTransfer(formatDateTime(serverDate(String(value))), String(row.LastTransferType ?? "")) : "—"),
     HasNewData: (value: unknown) => (value ? <Badge tone="info">{T.newData}</Badge> : ""),
     IsPullEnabled: (value: unknown, row: Row) => {
@@ -200,7 +201,7 @@ export function DataLoad() {
         </Tooltip>
       );
     },
-  }), [canMethod, canSwitch, edits, toggle]);
+  }), [canSwitch, edits, toggle, methodEdit]);
 
   const download = (row: Row) => {
     setError(null);
@@ -225,7 +226,8 @@ export function DataLoad() {
         </div>
       </header>
       {error && <Alert tone="error">{error}</Alert>}
-      <DataTable list="data-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey}
+      <DataTable list="data-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey} cellEditing={canMethod ? methodEdit.editing : undefined}
+                 cellClass={(field, row) => (methodEdit.changed(field, row) ? "is-draft" : undefined)}
                  toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />} />
       <UnsavedGuard dirty={edits.dirty} />
       {menu && (

@@ -303,4 +303,12 @@ describe("kullanıcı menüsü", () => {
     renderApp("/ana-sayfa", { ...ME, font_size: 16 });
     expect(document.documentElement.style.fontSize).toBe("16px");
   });
+
+  it("altta küçük satırda sürüm (K-172)", async () => {
+    mockApi({ "/api/health": { body: { status: "ok", app_version: "0.33.0" } } });
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole("button", { name: "Kullanıcı menüsü: Mert Planlama" }));
+    expect(await within(screen.getByRole("dialog", { name: "Kullanıcı menüsü" })).findByText("Sürüm 0.33.0")).toBeInTheDocument();
+  });
 });

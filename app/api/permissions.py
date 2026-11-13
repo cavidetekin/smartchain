@@ -93,8 +93,8 @@ _NAMES = """
 09 Ham veri temizliği
 10 Ana veri görüntüleme
 11 Değerin kaynağını gösterme
-12 Elle değer girme
-13 Elle değeri kaldırma
+12 Manuel değer girme
+13 Manuel değeri kaldırma
 14 Değişiklik geçmişi
 15 Excel ile toplu düzeltme (öneri)
 16 Veri kuralı tanımlama

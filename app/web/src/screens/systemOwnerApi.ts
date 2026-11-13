@@ -9,14 +9,17 @@ export interface FieldDetail {
   description: string | null;
   is_additional: boolean;
   field_class: string;
-  value_priority: string | null;
   manual_overrides: boolean | null;
   editable_in_workspace: boolean;
   is_required: boolean | null;
   if_empty: string | null;
-  options: { field_class: string[]; value_priority: string[] };
+  options: { field_class: string[] };
   used_in_views: number;
   used_in_rules: number;
+  /** Manuel olamıyorsa nedeni (anahtar, ilişki, sistem alanı; K-170); olabiliyorsa null. */
+  manual_reason: string | null;
+  /** Bu alanda manuel değer olan kayıt sayısı. */
+  manual_count: number;
 }
 
 export type PolicyKey =
@@ -51,6 +54,7 @@ const path = (table: string, field: string) => `/api/field-definitions/${encodeU
 export const systemOwnerApi = {
   field: (table: string, field: string, signal?: AbortSignal) => getJson<FieldDetail>(path(table, field), signal),
   setLabel: (table: string, field: string, label: string) => sendJson<FieldDetail>("PUT", `${path(table, field)}/label`, { label }),
+  setManual: (table: string, field: string, on: boolean, confirm: boolean) => sendJson<FieldDetail>("PUT", `${path(table, field)}/manual`, { on, confirm }),
   policy: (signal?: AbortSignal) => getJson<LoginPolicy>("/api/settings/login-policy", signal),
   setPolicy: (changes: Partial<PolicyValues>) => sendJson<LoginPolicy>("PUT", "/api/settings/login-policy", changes),
   healthSettings: (signal?: AbortSignal) => getJson<HealthSettings>("/api/settings/health", signal),

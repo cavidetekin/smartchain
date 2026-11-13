@@ -36,7 +36,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Staging iki katman (K-140):** Ham katman (`stg.<Tablo>`) gelen veridir, hiç değişmez. İşlenmiş katman (`prc.<Tablo>`) ham katmanın güncel satırlarının kopyasıdır; her çalıştırmada ham veriden baştan kurulur, veri kuralları sırayla bu kopyada çalışır (K-141). Formül birikmez, kapatılan kuralın etkisi kendiliğinden kalkar. Validasyon ve aktarım yalnız işlenmiş katmanı okur; hangi hücreyi hangi kuralın değiştirdiği kural izinde (`adm.DataRuleEffect`) tutulur.
 - **Staging'in güncel hâli (K-133):** Her `stg` tablosu, ham partilerin yanında tablonun güncel ve tam hâlini taşır (`IsCurrent`). Tam parti güncel hâlin yerine geçer (partide olmayan kayıt silinmiş sayılır); Ekle / güncelle aynı anahtarlı kaydı değiştirir, ötekiler kalır; SQL çekimi her zaman Tam'dır. Ön kontrolde düşen satır güncel hâle girmez, o anahtarın önceki güncel satırı kalır. Güncel hâl ham katmana aittir; rules, validasyon ve aktarım onun işlenmiş kopyasını okur (K-140); core'a bakılmaz. Ham veri temizliği güncel satırı silmez. Satır güncel hâlden çıkınca `SupersededAt`, parti işlenince `ImportBatch.AppliedAt` yazılır; Dünden bugüne ekranı iki hâli bunlarla ayırır (K-160).
 - **Ham değer kurala girdidir (K-121):** ERP'den gelen ham değerler (Status, Type gibi) yalnız veri kurallarına girdidir; motor ve ekranlar bayrakları okur (IsActive, IsOnHold, IsReleased…). Bayraklar kurallarla ham değerden doldurulur. Ham değer ile bayrak çelişirse bayrak geçerlidir. Bütün tablolar için geçerlidir.
-- **ERP ana veri sahibidir:** Ana veri ve işlem verisinde ERP master'dır. Smartchain'e özgü alanlar (verim, kritik kaynak, parametreler) Smartchain'de tutulur; ERP'de yoksa kural ya da elle değerle tamamlanır.
+- **ERP ana veri sahibidir:** Ana veri ve işlem verisinde ERP master'dır. Smartchain'e özgü alanlar (verim, kritik kaynak, parametreler) Smartchain'de tutulur; ERP'de yoksa kural ya da manuel değerle tamamlanır.
 - **Hata izole edilir:** Bir varlığın hatası diğerlerini durdurmaz; satır hatası satırı atlatır, eşik aşımı varlığı dışarıda bırakır. Gece akışı bu kurallarla kendi kendine ilerler.
 - **Versiyonlu ve ya hep ya hiç:** Her aktarım yeni veri versiyonu açar; ortada kalan aktarım geri alınır. Açık çalışmalar kendi versiyonunda kalır.
 - **İzlenebilir:** Her çağrı, parti, satır sayısı ve hata loglanır; Entegrasyon ekranında 'son çağrı', Sistem sağlığında süreler. Müşteriyle konuşma dili: varlık, parti numarası, hata sınıfı.
@@ -58,7 +58,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - 1 hafta saklama
 - **Smartchain**
   - Geçerli ana veri ve işlem verisi
-  - Parametreler ve elle değerler (Smartchain sahibi)
+  - Parametreler ve manuel değerler (Smartchain sahibi)
   - Planlama motoru, ekranlar, raporlar
 - **Entegrasyon veritabanı (ham tablolar ve view'lar)**
   - Müşteri ETL'i ERP_* ham tablolarını doldurur, ERP_LoadLog'a bitti yazar
@@ -70,7 +70,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri kuralları → validasyon → aktarım**
   - Veri kuralları işlenmiş katmanda (K-140, K-141)
   - Yapısal, referans, mantıksal, tutarlılık
-  - Alan önceliği: ERP / kural / elle (varsayılan yok, K-138; elle değerin korunması aktarımda, 6.2)
+  - Alan önceliği: ERP / kural / elle (varsayılan yok, K-138; manuel değerin korunması aktarımda, 6.2)
   - Türetilmiş alanlar (LLC)
   - Veri versiyonu (tam / kısmi)
 - **Çıkış (Faz 1: Excel)**
@@ -809,7 +809,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yükleme:** Ekrandan sürükle-bırak (03): varlık ve sürüm tanıma, mod (ekle / güncelle ya da tam), satır bazlı ön kontrol, hata raporu, geçerli satırlarla devam. Hatalı satır ham veriye alınmaz, bulgu listesinde ve hata raporunda durur (K-129).
 - **Anahtar:** Tablolardaki ANAHTAR kolonu veritabanı indeksi değildir: `stg` ham veridir, aynı anahtar aynı partide (hata) ve sonraki partide (normal) gelebilir. Tekrar kontrolü bu tanımı okur (K-129). `stg` tablolarının standart alanları: `StagingRowId`, `ImportBatchId`, `RowStatus`, `ErrorText`, `SourceRowNo` (kaynaktaki satır no).
 - **Sınırlar:** Tek dosya tek varlık; 200.000 satır ve 100 MB (parametre); eski şablon sürümü uyarı verir. Excel yolu ERP'den gelen varlığın master'ı olamaz (çakışma: ERP ezer, alan ayarına göre).
-- **Dışa aktarma:** Aynı şablonlarla ana veri dışa aktarılır, düzeltilir ve elle değer olarak geri yüklenir; plan çıktıları (satın alma talebi, iş emri açma) ERP'nin alışık olduğu sütun düzeninde Excel listesi.
+- **Dışa aktarma:** Aynı şablonlarla ana veri dışa aktarılır, düzeltilir ve manuel değer olarak geri yüklenir; plan çıktıları (satın alma talebi, iş emri açma) ERP'nin alışık olduğu sütun düzeninde Excel listesi.
 
 ### Alan eşleme ve dönüşüm kuralları
 <sub>26. Entegrasyon tasarımı · Alan eşleme ve dönüşüm</sub>
@@ -898,13 +898,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | VERI | MASTER | SMARTCHAIN'DE | ÇAKIŞMA KURALI |
 |---|---|---|---|
-| Ana veri (malzeme, ağaç, rota, tedarikçi, müşteri, proje) | ERP | Salt okunur; elle değer alan bazında | ERP ezer; elle değer alan ayarına göre kalır (FieldDefinition.ManualOverrides) |
+| Ana veri (malzeme, ağaç, rota, tedarikçi, müşteri, proje) | ERP | Salt okunur; manuel değer alan bazında | ERP ezer; manuel değer alan ayarına göre kalır (FieldDefinition.ManualOverrides) |
 | Kaynak temel bilgisi (kod, ad, grup) | ERP ya da Excel | Salt okunur | Kaynağa göre |
 | Kaynak planlama alanları (günlük kapasite, paralel adet, kapasite kaynağı, verim, hedef doluluk, fason parametreleri) | Smartchain | Ekranda tanımlanır, entegre edilmez (K-117) | Aktarımda ezilmez |
 | Takvim, vardiya, duruş | Smartchain (K-65) | Ekrandan girilir | Smartchain değeri kalır |
 | Siparişler, stok, iş emirleri, gerçekleşmeler | ERP | Salt okunur | Her aktarımda ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
 | Tahmin | ERP ya da Excel | Excel ile yüklenir | Son yükleme geçerli; versiyonlu |
-| Parametreler, senaryo tanımları, kurallar, elle değerler | Smartchain | Ekrandan | ERP'ye gitmez |
+| Parametreler, senaryo tanımları, kurallar, manuel değerler | Smartchain | Ekrandan | ERP'ye gitmez |
 | Plan çıktıları (planlı sipariş, öneri) | Smartchain | Onaylı plan | Faz 1: Excel ile ERP'ye elle; Faz 2: API geri yazma, ERP belge no geri okunur |
 
 ### Senkron sıklığı ve zamanlama

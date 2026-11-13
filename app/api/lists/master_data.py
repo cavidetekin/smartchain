@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 import sqlalchemy as sa
 
+from app.manual import MANUAL_COLUMN, MANUAL_LABEL, STATES, state_column
 from db.models import ENTITY_CATALOG, metadata
 
 from .definition import ListDefinition
@@ -117,7 +118,9 @@ def _current(t: sa.Table) -> sa.ColumnElement:
 
 def _build(spec: Spec) -> ListDefinition:
     table = metadata.tables[f"core.{spec.table}"]
-    cols, labels, values, fields = [], {}, {}, []
+    # İlk kolon "Manuel değer" (K-170): boş, Var, Var / ERP Güncellendi, Var / Kural Güncellendi, süzülebilir
+    cols, fields = [state_column(spec.table, table)], [MANUAL_COLUMN]
+    labels, values = {MANUAL_COLUMN: MANUAL_LABEL}, {MANUAL_COLUMN: STATES}
     joined = table
     aliases: dict[str, sa.Alias] = {}
     for c in table.c:
@@ -168,12 +171,13 @@ def _build(spec: Spec) -> ListDefinition:
         values=values,
         fields=tuple(fields),
         default_visible=tuple(f for f in fields if f not in hidden),
-        default_sort=((next(f for f in fields if f != "LocationCode"), "asc"),),
+        default_sort=((next(f for f in fields if f not in ("LocationCode", MANUAL_COLUMN)), "asc"),),
         decimals=decimals,
         percent=spec.percent,
         unit_field=unit if spec.unit_decimals else None,
         unit_decimals=spec.unit_decimals,
         server_values=frozenset(f for f in fields if f.endswith("Code") and f != "Code"),
+        manual_table=spec.table,
     )
 
 

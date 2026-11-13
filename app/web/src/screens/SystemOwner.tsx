@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { ApiError, emitNotice } from "../api/client";
-import { appVersion } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
 import { can } from "../auth/permissions";
 import { tr } from "../i18n/tr";
@@ -14,7 +13,7 @@ import { SwitchCell } from "../table/CellEditors";
 import { DataTable, type FieldHints, type RowMenuSpec } from "../table/DataTable";
 import { UnsavedGuard } from "../table/useTableEdits";
 import type { Row } from "../table/types";
-import { Alert, Button, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, TextField } from "../ui";
+import { Alert, Button, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, TextField, Tooltip } from "../ui";
 import { ScheduledJobs } from "./ScheduledJobs";
 import { type FieldDetail, type PolicyValues, systemOwnerApi } from "./systemOwnerApi";
 
@@ -29,6 +28,7 @@ const listOptions = (values: string[], current: string | null) =>
 function FieldDialog({ table, field, onClose, onDone }: { table: string; field: string; onClose(): void; onDone(): void }) {
   const [detail, setDetail] = useState<FieldDetail | null>(null);
   const [label, setLabel] = useState("");
+  const [manual, setManual] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +37,7 @@ function FieldDialog({ table, field, onClose, onDone }: { table: string; field: 
     systemOwnerApi.field(table, field, ctrl.signal).then((d) => {
       setDetail(d);
       setLabel(d.label ?? "");
+      setManual(Boolean(d.manual_overrides));
     }).catch((e: unknown) => {
       if (!ctrl.signal.aborted) setError(errorText(e));
     });
@@ -44,14 +45,19 @@ function FieldDialog({ table, field, onClose, onDone }: { table: string; field: 
   }, [table, field]);
 
   const trimmed = label.trim();
-  const unchanged = trimmed === (detail?.label ?? "");
+  const labelChanged = trimmed !== (detail?.label ?? "");
+  const manualChanged = manual !== Boolean(detail?.manual_overrides);
+  const unchanged = !labelChanged && !manualChanged;
+  // Manuel kapanıyor ve manuel değer var: onayla kalkar (K-170)
+  const removesManual = Boolean(detail && manualChanged && !manual && detail.manual_count > 0);
   // Kullanılan ek alanın etiketi siliniyor: alan görünümlerden düşer (K-104).
   const hides = Boolean(detail?.is_additional && detail.label && !trimmed && (detail.used_in_views > 0 || detail.used_in_rules > 0));
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      await systemOwnerApi.setLabel(table, field, trimmed);
+      if (labelChanged) await systemOwnerApi.setLabel(table, field, trimmed);
+      if (manualChanged) await systemOwnerApi.setManual(table, field, manual, removesManual);
       onDone();
     } catch (e) {
       setError(errorText(e));
@@ -62,7 +68,7 @@ function FieldDialog({ table, field, onClose, onDone }: { table: string; field: 
   return (
     <Dialog title={T.fieldTitle} onClose={onClose}
             subtitle={<>{`${table} · ${field}`}{detail?.description && <span className="sc-dialog-subtitle-line">{detail.description}</span>}</>} onSubmit={submit} busy={busy}
-            submitLabel={hides ? T.removeLabel : T.save} danger={hides} submitDisabled={!detail || unchanged} wide>
+            submitLabel={hides ? T.removeLabel : removesManual ? T.removeManual : T.save} danger={hides || removesManual} submitDisabled={!detail || unchanged} wide>
       {detail && (
         <>
           <div className="sc-field-rows">
@@ -70,14 +76,15 @@ function FieldDialog({ table, field, onClose, onDone }: { table: string; field: 
                        help={detail.is_additional ? T.additionalHelp : T.standardHelp(detail.standard_label)} />
             <SelectField label={T.fieldClass} disabled value={detail.field_class} onChange={noop}
                          options={listOptions(detail.options.field_class, detail.field_class)} />
-            <SelectField label={T.valuePriority} disabled value={detail.value_priority ?? ""} onChange={noop}
-                         options={listOptions(detail.options.value_priority, detail.value_priority)} />
-            <Checkbox label={T.manualOverrides} disabled checked={Boolean(detail.manual_overrides)} onChange={noop} />
+            <Tooltip content={detail.manual_reason}>
+              <Checkbox label={T.manualOverrides} disabled={Boolean(detail.manual_reason)} checked={manual} onChange={setManual} />
+            </Tooltip>
             <Checkbox label={T.editableInWorkspace} disabled checked={detail.editable_in_workspace} onChange={noop} />
             <Checkbox label={T.required} disabled checked={Boolean(detail.is_required)} onChange={noop} />
             <TextField label={T.ifEmpty} disabled value={detail.if_empty ?? ""} onChange={noop} />
           </div>
           {hides && <Alert tone="risk">{T.usedWarning(detail.used_in_views, detail.used_in_rules)}</Alert>}
+          {removesManual && <Alert tone="risk">{T.manualRemoveWarning(detail.manual_count)}</Alert>}
         </>
       )}
       {error && <Alert tone="error">{error}</Alert>}
@@ -274,11 +281,7 @@ export function SystemOwner() {
   const [tab, setTab] = useState<Tab>(tabs.find((t) => t.value === fromUrl)?.value ?? tabs[0]?.value ?? "dictionary");
   const [pending, setPending] = useState<Tab | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [version, setVersion] = useState<string | null>(null);
   const initialFlow = Number(params.get("is")) || null;
-  useEffect(() => {
-    void appVersion().then(setVersion);
-  }, []);
   useEffect(() => {  // çipteki "Geçmiş" başka sekmedeyken de bu sekmeye getirir
     if (fromUrl && tabs.some((t) => t.value === fromUrl)) setTab(fromUrl);
   }, [fromUrl]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -304,7 +307,6 @@ export function SystemOwner() {
     <section className="sc-page--fill">
       <header className="sc-page-head">
         <h1>{T.title}</h1>
-        {version && <p className="sc-muted">{T.version(version)}</p>}
       </header>
       {tabs.length > 1 && (
         <div className="sc-section-switch">

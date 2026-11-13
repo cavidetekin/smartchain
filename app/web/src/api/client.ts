@@ -5,6 +5,9 @@ export interface ApiErrorDetail {
   problem: string;
   /** Kullanıcı adı çakışmasında öneri (K-101). */
   suggestion?: string;
+  /** Manuel değer doğrulamasında satır ve kaydın okunur adı (K-170, K-172). */
+  id?: number | string;
+  record?: string;
 }
 
 export interface ApiErrorBody {

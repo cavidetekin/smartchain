@@ -109,16 +109,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **10 · Ana veri görüntüleme:** Arama, filtre ve sekmeler: kaynak, malzeme, ağaç, rota, tedarikçi, müşteri, proje, takvim, vardiya.
 - **11 · Değerin kaynağını gösterme:** Her alanda ERP, kural, elle ya da varsayılan etiketi.
-- **12 · Elle değer girme:** Alanın ayarına göre ERP'yi ve kuralı ezer ya da ezmez.
+- **12 · Manuel değer girme:** Alanın ayarına göre ERP'yi ve kuralı ezer ya da ezmez.
 
 ### Fonksiyon listesi
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon listesi · 2/8</sub>
 
 #### ANA VERI VE VERI KURALLARI (DEVAM)
 
-- **13 · Elle değeri kaldırma:** Değer ERP'ye ya da kurala geri döner.
+- **13 · Manuel değeri kaldırma:** Değer ERP'ye ya da kurala geri döner.
 - **14 · Değişiklik geçmişi:** Alan bazında eski ve yeni değer, kişi, tarih.
-- **15 · Excel ile toplu düzeltme:** Ana veri dışa aktarılır, düzeltilir, elle değer olarak geri yüklenir. (öneri)
+- **15 · Excel ile toplu düzeltme:** Ana veri dışa aktarılır, düzeltilir, manuel değer olarak geri yüklenir. (öneri)
 - **16 · Veri kuralı tanımlama:** EĞER … O HALDE … kalıbıyla kural yazılır.
 - **17 · Kural önizleme:** Kaydetmeden önce hangi kayıtların nasıl değişeceği görülür.
 - **18 · Kural sıralama ve aç / kapa:** Kurallar sırayla uygulanır; tek tek devre dışı bırakılabilir.
@@ -181,7 +181,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### MANUEL PLANLAMA
 
-- **50 · Ürün bazlı · üretim miktarı girme:** Hücreye değer yazılır; elle değer kilitlenir (A-14 önerisi).
+- **50 · Ürün bazlı · üretim miktarı girme:** Hücreye değer yazılır; manuel değer kilitlenir (A-14 önerisi).
 - **51 · Ürün bazlı · talebe eşitle:** Üretim satırı talebe eşitlenir.
 - **52 · Kaynak bazlı · yük taşıma:** Yük başka döneme taşınır.
 - **53 · Kaynak bazlı · alternatif kaynağa aktarma:** Rotadaki alternatif kaynağa aktarılır.
@@ -300,10 +300,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Tek ekran, sekmeler:** Kaynak, malzeme, ürün ağacı, rota, takvim ve diğer ana veriler aynı düzende.
 - **Değerin kaynağı:** Her hücrede ERP, kural ya da elle etiketi görünür; varsayılan yoktur (K-138).
-- **Elle düzeltme:** Elle değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
+- **Elle düzeltme:** Manuel değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
 - **İz:** Her değişiklik kim, ne zaman, eski ve yeni değerle geçmişte tutulur.
 - **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.7, K-167); ana veri ekranında yok.
-- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.3, K-167). Elle değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.3, K-167). Manuel değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
+- **Uygulama (6.2, K-170, K-172):** uygulandı. "Manuel: Evet" alanlarda manuel değer hücre içinde (Ana veri ve İşlem verisi); ilk kolon "Manuel değer", köşe işareti, kaynak ipucu yalnız manuel değer ve kural sonucunda.
 
 ### İşlem verisi
 <sub>Ekran 29 · geliştirme 6.1 · K-169 (mockup yok; Ana veri ekranının düzeni) · uygulandı</sub>
@@ -319,9 +320,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Kural listesi:** Kurallar sırayla uygulanır; her kuralın kaç kaydı değiştirdiği görünür.
 - **Koşul ve sonuç:** EĞER … O HALDE … kalıbı; kod bilmeden kural yazılır.
-- **Öncelik seçenekli:** ERP ile çakışırsa kim ezer, elle değer varsa ne olur: alan bazında seçilir.
+- **Öncelik seçenekli:** ERP ile çakışırsa kim ezer, manuel değer varsa ne olur: alan bazında seçilir.
 - **Önizleme:** Kaydetmeden önce hangi kayıtların nasıl değişeceği listelenir.
-- **Uygulama (4.1, K-140, K-141, K-142):** Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`. Validasyon kuralları ile aynı desende. Üst şerit (docs/12 · Üst şerit): tablo seçimi ("Tümü" ya da tablo), "Yeni kural" ("Tümü"de pasif) ve "Kuralları yeniden uygula". Liste: Sıra, Kural, Koşul (okunur cümle), Sonuç (okunur cümle), Seçenek (Yalnız boşsa / Her zaman), Aktif, Durum ("Çalışmadı" çipi); "Tümü"de Tablo kolonu. Sıra tablo seçiliyken satır tutamağıyla sürüklenir ya da Alt + ok ile taşınır; sıra ve aktiflik toplu kaydedilir (K-132). Kural penceresi 3.4'ün düzeninde (Aktif anahtarı başlıkta, Kural adı ve Hedef alan, koşul editörü), altında Sonuç (Değer / Alan / Formül / Boşalt) ve Seçenek. Kaydedince "Kurallar yeniden uygulansın mı?" sorusu. System owner ve Admin düzenler, Key user salt okunur görür, End user görmez. Mockup'tan farklar: etki sayısı, ERP ve elle önceliği ve önizleme yok (K-142; elle değer 5.1'de). Fonksiyon 16, 18, 19.
+- **Uygulama (4.1, K-140, K-141, K-142):** Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`. Validasyon kuralları ile aynı desende. Üst şerit (docs/12 · Üst şerit): tablo seçimi ("Tümü" ya da tablo), "Yeni kural" ("Tümü"de pasif) ve "Kuralları yeniden uygula". Liste: Sıra, Kural, Koşul (okunur cümle), Sonuç (okunur cümle), Seçenek (Yalnız boşsa / Her zaman), Aktif, Durum ("Çalışmadı" çipi); "Tümü"de Tablo kolonu. Sıra tablo seçiliyken satır tutamağıyla sürüklenir ya da Alt + ok ile taşınır; sıra ve aktiflik toplu kaydedilir (K-132). Kural penceresi 3.4'ün düzeninde (Aktif anahtarı başlıkta, Kural adı ve Hedef alan, koşul editörü), altında Sonuç (Değer / Alan / Formül / Boşalt) ve Seçenek. Kaydedince "Kurallar yeniden uygulansın mı?" sorusu. System owner ve Admin düzenler, Key user salt okunur görür, End user görmez. Mockup'tan farklar: etki sayısı, ERP ve elle önceliği ve önizleme yok (K-142; manuel değer 5.1'de). Fonksiyon 16, 18, 19.
 - **Ekran 27 · Validasyon kuralları (3.4, K-136, K-139):** Bu ekran 25 ekranlık ilk listede yoktu; Veri menüsünde Veri kurallarından sonra. Mockup yok. Liste: Tablo, Kural (kullanıcı dilinde ad), Koşul (okunur cümle), Sınıf (pastel çip), Mesaj, Tür (Hazır / Kullanıcı), Kontrol türü (Mantıksal / Tablolar arası, K-146), Aktif; Kod gizli kolon. Üst şerit (docs/12 · Üst şerit): tablo seçimi, seçili tablonun hata eşiği ve "Yeni kural" ("Tümü"de pasif). Yapısal kontroller listede görünmez; koşulu editörle ifade edilen hazır kural pencerede düzenlenir ("İlk hâline döndür" ile), ötekilerde sınıf ve aktiflik değişir; hazır kural silinmez; "Yeni kural" ile kullanıcı kuralı, koşul editörü ortak bileşen (docs/12). Değişiklik toplu kaydedilir (K-132), kaydedince "Yeniden valide et" önerilir. System owner ve Admin düzenler, Key user salt okunur görür, End user görmez. Fonksiyon 100, kural listesi docs/06 fonksiyon 04.
 
 ### Veri kalitesi
@@ -390,7 +391,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![Ürün bazlı planlama](mockups/m24e-0320-urun-bazli-planlama.png)
 
 - **Dört satır:** Her ürün için talep, üretim, stok projeksiyonu ve kümülatif eksik.
-- **Üretim girilir:** Üretim hücresi değiştirilir; elle değer kilitlenir ve model ona dokunmaz.
+- **Üretim girilir:** Üretim hücresi değiştirilir; manuel değer kilitlenir ve model ona dokunmaz.
 - **Dondurulmuş dönem:** İlk bucket gri ve kilitli; değiştirilemez.
 - **Anlık etki:** Alttaki kaynak şeridi değişiklikle birlikte güncellenir; kaydedince yeniden çözülür.
 

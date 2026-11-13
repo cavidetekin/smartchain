@@ -56,10 +56,10 @@ def error(r):
 def test_list_columns_filter_group_and_keys(client, people):
     h = auth(people[SYSTEM_OWNER])
     cols = {c["field"]: c for c in client.get("/api/field-definitions/columns", headers=h).json()["columns"]}
-    assert list(cols) == ["TableName", "FieldName", "DisplayLabel", "Description", "FieldClass", "ValuePriority", "ManualOverrides",
+    assert list(cols) == ["TableName", "FieldName", "DisplayLabel", "Description", "FieldClass", "ManualOverrides",  # Değer önceliği yok (K-172)
                           "EditableInWorkspace", "IsRequired", "IfEmpty", "IsAdditional"]
     assert cols["Description"]["label"] == "Açıklama"
-    assert [f for f, c in cols.items() if not c["default_visible"]] == ["Description"]  # Alanlar panelinden açılır
+    assert [f for f, c in cols.items() if not c["default_visible"]] == ["Description", "EditableInWorkspace"]  # Alanlar'dan; Senaryo Aşama 8'e kadar gizli
     assert [cols[f]["label"] for f in ("ManualOverrides", "EditableInWorkspace", "IfEmpty")] == ["Manuel", "Senaryo", "Boşsa"]
     assert cols["FieldClass"]["values"] == ["Ana veri", "Parametre", "İşlem verisi"]
     assert cols["IsAdditional"]["type"] == "bool" and cols["TableName"]["values_from_server"] is True
@@ -102,7 +102,8 @@ def test_detail_and_unknown(client, people):
     assert d["field_class"] == "Ana veri" and d["used_in_views"] == 0
     assert d["description"] == "Ek metin alanları"
     assert d["options"]["field_class"] == ["Ana veri", "Parametre", "İşlem verisi"]
-    assert d["options"]["value_priority"] == ["ERP ezer", "Kural ezer"]
+    assert "value_priority" not in d and "value_priority" not in d["options"]  # öncelik sabit (K-172)
+    assert d["manual_overrides"] is False and d["manual_reason"] is None and d["manual_count"] == 0  # kurulumda Hayır (K-167)
     assert client.get("/api/field-definitions/Material/Name", headers=h).json()["is_additional"] is False
     assert error(client.get("/api/field-definitions/Material/Yok", headers=h)) == (404, "field_not_found")
     assert error(label(client, people[SYSTEM_OWNER], "x", "/api/field-definitions/Yok/Yok")) == (404, "field_not_found")

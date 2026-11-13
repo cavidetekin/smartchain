@@ -10,7 +10,10 @@ from ..lists.definition import ListDefinition, columns as column_list
 from ..lists.query import DEFAULT_UNIT_DECIMALS, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists.groups import build_tree
 from ..lists.request import GroupsRequest, QueryRequest, ValuesRequest
+from app.manual import manual_fields
+
 from ..repositories import data_versions, export as export_repo, lists as repo
+from . import manual_values
 
 
 RULES = "_rules"  # satırda tutan kurallar (K-95, docs/08)
@@ -56,7 +59,8 @@ def columns(session: Session | None, defn: ListDefinition) -> dict:
     def work():
         limits = export_repo.read_settings(session)
         return {"chunk_size": repo.read_chunk_size(session),
-                "columns": column_list(defn, repo.read_labels(session, defn.table_name)),
+                "columns": column_list(defn, repo.read_labels(session, defn.table_name),
+                                       manual=frozenset(manual_fields(session, defn.manual_table)) if defn.manual_table else frozenset()),
                 "export": {"title": defn.title or defn.name, "file_slug": defn.file_slug or defn.name,
                            "sync_max_rows": limits["ExportSyncMaxRows"], "max_rows": limits["ExportMaxRows"],
                            "file_hours": limits["ExportFileHours"]}}
@@ -81,6 +85,8 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role
                     hit[r["Id"]] = [i for i in range(len(req.rules)) if r[f"_r{i}"]]
             for r in rows:
                 r[RULES] = hit.get(r["Id"], [])
+        if defn.manual_table:  # hücre kaynağı: manuel değer ve kural (K-170)
+            manual_values.annotate(session, defn.manual_table, rows)
         if defn.unit_field:  # her satırda temel birimin ondalığı (K-88); birim bilinmiyorsa 2
             units = repo.read_unit_decimals(session)
             for r in rows:

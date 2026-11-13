@@ -32,6 +32,7 @@ import { FilterMenu, valueLabel } from "./filters";
 import { GroupPanel } from "./GroupPanel";
 import { RuleDialog } from "./RuleDialog";
 import { RuledValue } from "./RuleIcon";
+import { type CellEditing, type EditorSpec, type PasteCell, parseClipboard } from "./cellEditing";
 import {
   activeRules, cellFormat, describeRule, formatStyle, newRuleId, RULE_OPS, ruleKind, toRequestRule,
 } from "./rules";
@@ -78,6 +79,8 @@ export interface RowMenuSpec {
 
 /** "⋯" kolonunun genişliği (rem). */
 const ROW_MENU_REM = 2.5;
+/** Satır seçim kutusu kolonu (rem; toplu işlem, K-172). */
+const SELECT_REM = 2.3077;
 
 const features = tableFeatures({
   rowSortingFeature, columnVisibilityFeature, columnOrderingFeature, columnPinningFeature, columnSizingFeature,
@@ -192,7 +195,73 @@ interface CellSpec {
  * (K-95) yalnız onlarda hesaplanır. Her kaydırmada görünen bütün satırları yeniden çizmek, özellikle kurallar
  * varken ve geliştirme modunda tabloyu yavaşlatıyordu (1.6 ölçümü, docs/12).
  */
-const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText, cellRender, cellWrap, cellClass, rowProps, rowMenu, measure }: {
+/** Satırın düzenleme durumu (K-172): imleç ve açık düzenleyici yalnız ilgili satıra verilir (öteki satırlar yeniden çizilmesin). */
+interface RowEditing {
+  spec: CellEditing;
+  cursorField: string | null;
+  open: { field: string; initial: string | null } | null;
+  onCell(index: number, field: string): void;
+  onStart(index: number, field: string): void;
+  onDone(index: number, field: string, result: { text: string; move: Move } | null): void;
+}
+type Move = "down" | "right" | "left" | null;
+
+/** Hücreyi kaplayan düzenleyici: Enter ve Tab taslağa alır, sonraki hücreye geçer; Esc vazgeçer; odak kaybı taslağa alır. */
+function CellEditorBox({ spec, label, initial, onDone }: {
+  spec: EditorSpec; label: string; initial: string | null; onDone(result: { text: string; move: Move } | null): void;
+}) {
+  const [text, setText] = useState(initial !== null && spec.kind === "text" ? initial : spec.text);
+  const done = useRef(false);
+  const box = useRef<HTMLInputElement & HTMLSelectElement>(null);
+  useEffect(() => {  // odak kaydırmasız (tablo kaymasın); metinde imleç sona
+    const el = box.current;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    if (el instanceof HTMLInputElement) el.setSelectionRange(el.value.length, el.value.length);
+  }, []);
+  const finish = (result: { text: string; move: Move } | null) => {
+    if (done.current) return;
+    done.current = true;
+    onDone(result);
+  };
+  const onKey = (e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (e.key === "Enter") finish({ text, move: "down" });
+    else if (e.key === "Tab") finish({ text, move: e.shiftKey ? "left" : "right" });
+    else if (e.key === "Escape") finish(null);
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const stop = (e: ReactMouseEvent) => e.stopPropagation();
+  if (spec.kind === "select") {
+    return (
+      <select ref={box} className="sc-cell-editor" aria-label={label} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey}
+              onBlur={() => finish({ text, move: null })} onClick={stop} onDoubleClick={stop}>
+        {(spec.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    );
+  }
+  return (
+    <input ref={box} className="sc-cell-editor" aria-label={label} value={text} placeholder={spec.placeholder} onChange={(e) => setText(e.target.value)}
+           onKeyDown={onKey} onBlur={() => finish({ text, move: null })} onClick={stop} onDoubleClick={stop} />
+  );
+}
+
+/** Hücreyi en az kaydırmayla görünür yapar: yapışkan başlığın altında ve sabit kolonların sağında kalsın (tarayıcının odak kaydırması
+ *  bunları hesaba katmaz, K-172). */
+function revealCell(box: HTMLElement, el: HTMLElement) {
+  const b = box.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const head = box.querySelector("thead")?.getBoundingClientRect().height ?? 0;
+  const pinned = el.classList.contains("is-pinned") ? b.left
+    : Math.max(b.left, ...[...box.querySelectorAll<HTMLElement>("thead th.is-pinned")].map((th) => th.getBoundingClientRect().right));
+  if (r.top < b.top + head) box.scrollTop -= b.top + head - r.top;
+  else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom;
+  if (r.left < pinned) box.scrollLeft -= pinned - r.left;
+  else if (r.right > b.right) box.scrollLeft += r.right - b.right;
+}
+
+const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, active, ruleText, cellRender, cellWrap, cellClass, rowProps, rowMenu, measure, edit, check }: {
   index: number;
   row: Row | undefined;
   cells: CellSpec[];
@@ -207,19 +276,44 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, onSelect, a
   rowMenu?: RowMenuSpec;
   /** Pencere kipinde satır yüksekliği ölçülür (alt satıra kayan metin, sanal kaydırma kaymasın). */
   measure?: (el: HTMLTableRowElement | null) => void;
+  edit?: RowEditing;
+  /** Satır seçim kutusu (toplu işlem): işaretli mi, değişince. */
+  check?: { checked: boolean; label: string; onChange(next: boolean): void };
 }) {
   const extra = row && rowProps ? rowProps(row) : {};  // satırın onClick'i seçimden sonra çalışır (ör. Veri aktarım raporu, K-156)
   return (
     <tr ref={measure} data-index={index} aria-rowindex={index + 2} aria-current={selected || undefined} {...extra}
         className={row ? [`sc-table-row${selected ? " is-selected" : ""}`, extra.className].filter(Boolean).join(" ") : "is-placeholder"}
         onClick={row ? (e) => { onSelect(row.Id); extra.onClick?.(e); } : undefined}>
+      {check && (
+        <td className="sc-table-check is-pinned" style={{ left: 0 }} onClick={(e) => e.stopPropagation()}>
+          {row && <input type="checkbox" aria-label={check.label} checked={check.checked} onChange={(e) => check.onChange(e.target.checked)} />}
+        </td>
+      )}
       {cells.map(({ col, className, style, numeric }) => {
         const cf = row ? cellFormat(active, row, col.field) : null;
+        const editable = Boolean(row && edit?.spec.canEdit(col, row));
+        const isCursor = edit?.cursorField === col.field;
+        const open = row && edit?.open?.field === col.field ? edit.open : null;
         const content = row ? (cellRender?.[col.field] ? cellRender[col.field](row[col.field], row) : formatCell(col, row[col.field], row)) : null;
+        const classes = [className, row && cellClass?.(col.field, row), editable ? "is-editable" : "", isCursor ? "is-cursor" : "", open ? "is-editing" : ""];
         return (
-          <td key={col.field} className={[className, row && cellClass?.(col.field, row)].filter(Boolean).join(" ") || undefined} style={cf ? { ...style, ...formatStyle(cf.format) } : style}
-              title={cf ? T.ruleCellHint(cf.rules.map((r) => ruleText.get(r.id)).join("; ")) : undefined}>
-            {row ? (
+          <td key={col.field} className={classes.filter(Boolean).join(" ") || undefined} style={cf ? { ...style, ...formatStyle(cf.format) } : style}
+              title={cf ? T.ruleCellHint(cf.rules.map((r) => ruleText.get(r.id)).join("; ")) : undefined}
+              {...(edit ? {
+                "data-cell": `${index}|${col.field}`, tabIndex: isCursor ? 0 : -1,
+                onClick: () => edit.onCell(index, col.field),
+                onDoubleClick: editable ? () => edit.onStart(index, col.field) : undefined,
+                onContextMenu: row && edit.spec.menu ? (e: ReactMouseEvent<HTMLTableCellElement>) => {  // hücrenin tamamında (metnin dışında da)
+                  if (!edit.spec.menu!(col, row, e.currentTarget)) return;
+                  e.preventDefault();
+                  edit.onCell(index, col.field);
+                } : undefined,
+              } : {})}>
+            {row && open ? (
+              <CellEditorBox spec={edit!.spec.editor(col, row)} label={edit!.spec.label(col, row)} initial={open.initial}
+                             onDone={(result) => edit!.onDone(index, col.field, result)} />
+            ) : row ? (
               <RuledValue format={cf?.format} numeric={numeric}>
                 {cellWrap ? cellWrap(col.field, row, content) : content}
               </RuledValue>
@@ -261,7 +355,7 @@ function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec })
   );
 }
 
-export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarLead, toolbarActions, fit = false, fitHeaders = false, wrapFields, rowOrder, selectedRowId }: {
+export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarLead, toolbarActions, fit = false, fitHeaders = false, onColumns, cellEditing, selection, wrapFields, rowOrder, selectedRowId }: {
   list: string;
   /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
   cellRender?: CellRender;
@@ -281,6 +375,12 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   toolbarActions?: ReactNode;
   /** Varsayılan genişlik en az başlığı sığdırır (K-169; veri ekranları: tablo yana kayar, başlık kesilmez). Kullanıcının genişliği önce gelir. */
   fitHeaders?: boolean;
+  /** Hücre düzenleme standardı (K-172): imleç, ok tuşları, düzenleyici, yapıştırma. */
+  cellEditing?: CellEditing;
+  /** Satır seçim kutuları (toplu işlem, K-172); gruplu görünümde yok. Anahtar satırın Id'si (metin). */
+  selection?: { selected: ReadonlySet<string>; onToggle(rows: Row[], on: boolean): void; label(row: Row): string };
+  /** Kolonlar yüklenince (ör. manuel değer düzenleyicileri kolon tipini bilsin, K-170). */
+  onColumns?: (columns: ListColumn[]) => void;
   /** Pencere kipi (docs/12): tablo pencereye sığar, kolon genişliği içerikten; sabitleme ve genişlik ayarı yok. */
   fit?: boolean;
   /** Pencere kipinde kalan genişliği alıp alt satıra kayan uzun metin kolonları (ör. Sorun). */
@@ -315,12 +415,16 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const fieldsBtnRef = useRef<HTMLButtonElement>(null);
   const panelPopRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  /** Hücre imleci ve açık düzenleyici (K-172): satır sırası (index) ve alan. */
+  const [cursor, setCursor] = useState<{ index: number; field: string } | null>(null);
+  const [openCell, setOpenCell] = useState<{ index: number; field: string; initial: string | null } | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
     listApi(list).columns(ctrl.signal)
       .then(({ columns: cols, chunk_size, export: info }) => {
         setColumns(cols);
+        onColumns?.(cols);
         setChunkSize(chunk_size);
         setExportInfo(info);
         setColumnsError(null);
@@ -367,8 +471,9 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     [s.order, byField]);
   const width = (f: string) => s.widths[f] ?? baseWidth(f);
   const pinnedCount = fit ? 0 : s.pinned;
+  const selRem = selection && !s.groupBy.length && !fit ? SELECT_REM : 0;
   const wrapKey = (wrapFields ?? []).join(",");
-  const pinStart = (i: number) => visible.slice(0, i).reduce((sum, c) => sum + width(c.field), 0);
+  const pinStart = (i: number) => selRem + visible.slice(0, i).reduce((sum, c) => sum + width(c.field), 0);
 
   const ready = Boolean(columns && state && views.ready && chunkSize);
   // Koşullu biçim (K-95): ekrana uygulanan kurallar aktif, alanı görünen ve karşılaştırılan alanı listede olanlar.
@@ -383,7 +488,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     const widthOf = (f: string) => s.widths[f] ?? baseWidth(f);
     const cols = s.order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c));
     const indent = groupDepth ? `calc(var(--space-2) + ${(groupDepth - 1) * GROUP_INDENT_REM + GROUP_ARROW_REM}rem)` : undefined;
-    let left = 0;
+    let left = selRem;
     return cols.map((col, i) => {
       const pinned = i < pinnedCount;
       const style: CSSProperties | undefined = pinned ? { left: `${left}rem` } : undefined;
@@ -393,7 +498,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
                          wrapKey.split(",").includes(col.field) ? "is-wrap" : ""].filter(Boolean).join(" ") || undefined;
       return { col, numeric: isNumeric(col), className, style: i === 0 && indent ? { ...style, paddingLeft: indent } : style };
     });
-  }, [s.order, s.widths, pinnedCount, wrapKey, groupDepth, byField]);
+  }, [s.order, s.widths, pinnedCount, wrapKey, groupDepth, byField, selRem]);
   const baseKey = JSON.stringify(baseFilters ?? []);
   const fixed = useMemo(() => JSON.parse(baseKey) as ListFilter[], [baseKey]);
   const requestKey = JSON.stringify([s.order, s.sort, s.filters, fixed, active.map(toRequestRule)]);
@@ -421,6 +526,74 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const count = grouped ? display?.length ?? 0 : flat.filtered;
   const ordered = orderedRows(grouped ? null : rowOrder ?? null, count, flat.row);
   const status = grouped ? g.status : flat.status;
+  const rowAtIndex = useCallback((i: number) => (ordered ? ordered[i] : flat.row(i)), [ordered, flat]);
+  // Hücre imleci yalnız düzenlenebilir kolonu olan tabloda (K-172): öteki tabloda yalnız satır vurgusu
+  const gridOn = Boolean(cellEditing) && !grouped && (columns ?? []).some((c) => cellEditing!.editableColumn(c));
+  /** İmleç klavyeyle (ya da düzenleyiciden) taşındı: görünür alana getirilir. Fareyle kaydırma imleci geri çekmez (K-172). */
+  const reveal = useRef(false);
+  const startEdit = useCallback((index: number, field: string, initial: string | null) => {
+    const row = rowAtIndex(index);
+    const col = byField.get(field);
+    if (!cellEditing || !row || !col || !cellEditing.canEdit(col, row)) return;
+    reveal.current = true;
+    setCursor({ index, field });
+    setOpenCell({ index, field, initial });
+  }, [cellEditing, rowAtIndex, byField]);
+  const moveCursor = useCallback((from: { index: number; field: string }, di: number, dj: number) => {
+    const j = visible.findIndex((c) => c.field === from.field);
+    const index = Math.min(Math.max(from.index + di, 0), Math.max(count - 1, 0));
+    const field = visible[Math.min(Math.max(j + dj, 0), visible.length - 1)]?.field ?? from.field;
+    reveal.current = true;
+    setCursor({ index, field });
+  }, [visible, count]);
+  const finishEdit = useCallback((index: number, field: string, result: { text: string; move: Move } | null) => {
+    const row = rowAtIndex(index);
+    const col = byField.get(field);
+    if (result && row && col && cellEditing) cellEditing.commit(col, row, result.text);
+    setOpenCell(null);
+    if (result?.move) moveCursor({ index, field }, result.move === "down" ? 1 : 0, result.move === "right" ? 1 : result.move === "left" ? -1 : 0);
+  }, [rowAtIndex, byField, cellEditing, moveCursor]);
+  /** Klavye ve yapıştırma yalnız hücreden ya da tablo kutusundan (imleç hücresi kaydırmayla çizimden çıkınca odak kutuda kalır). */
+  const fromGrid = (target: EventTarget) => target === scrollRef.current || Boolean((target as HTMLElement).closest?.("td[data-cell]"))
+    && !(target as HTMLElement).closest("button, input, select, a, textarea");
+  const onGridKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!gridOn || !cursor || openCell || !fromGrid(e.target)) return;
+    const j = visible.findIndex((c) => c.field === cursor.field);
+    switch (e.key) {
+      case "ArrowUp": moveCursor(cursor, -1, 0); break;
+      case "ArrowDown": moveCursor(cursor, 1, 0); break;
+      case "ArrowLeft": moveCursor(cursor, 0, -1); break;
+      case "ArrowRight": moveCursor(cursor, 0, 1); break;
+      case "Tab":
+        if ((e.shiftKey && j <= 0) || (!e.shiftKey && j >= visible.length - 1)) return;  // sınırda odak tablodan çıkar
+        moveCursor(cursor, 0, e.shiftKey ? -1 : 1);
+        break;
+      case "Enter": case "F2": startEdit(cursor.index, cursor.field, null); break;
+      case "Delete": {  // seçili hücrenin değerini kaldırma (manuel değer, K-172); düzenleyiciyi açmaz
+        const row = rowAtIndex(cursor.index);
+        const col = byField.get(cursor.field);
+        if (!row || !col || !cellEditing?.clear?.(col, row)) return;
+        break;
+      }
+      default:
+        if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+        startEdit(cursor.index, cursor.field, e.key);  // yazmaya başlamak düzenleyiciyi açar
+    }
+    e.preventDefault();
+  };
+  const onGridPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (!gridOn || !cursor || openCell || !cellEditing?.paste || !fromGrid(e.target)) return;
+    const text = e.clipboardData.getData("text/plain");
+    if (!text) return;
+    e.preventDefault();
+    const j = visible.findIndex((c) => c.field === cursor.field);
+    const cells: PasteCell[] = [];
+    parseClipboard(text).forEach((line, r) => line.forEach((value, c) => {
+      const index = cursor.index + r;
+      cells.push({ row: index < count ? rowAtIndex(index) : undefined, col: visible[j + c], text: value });
+    }));
+    cellEditing.paste(cells);
+  };
   const error = grouped ? g.error : flat.error;
   const filtered = grouped ? g.tree?.filtered ?? 0 : flat.filtered;
   const total = grouped ? g.tree?.total ?? 0 : flat.total;
@@ -432,6 +605,31 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   });
   useEffect(() => virtualizer.measure(), [rowPx, virtualizer]);
   const items = virtualizer.getVirtualItems();
+  // İmleç hücresine odak. Yalnız klavyeyle taşınan imleç görünür alana getirilir (reveal); fareyle kaydırırken imleç hücresi çizimden
+  // çıkarsa odak tablo kutusuna geçer (klavye çalışmaya devam eder), kaydırma geri çekilmez (K-172). Odak tablonun dışındaysa (ör. açık
+  // pencere, araç çubuğu) ya da tablodaki bir düğme ve kutudaysa alınmaz.
+  useEffect(() => {
+    if (!cursor || openCell || !gridOn) return;
+    const box = scrollRef.current;
+    if (!box) return;
+    const el = box.querySelector<HTMLElement>(`td[data-cell="${cursor.index}|${cursor.field}"]`);
+    const activeEl = document.activeElement;
+    const ours = activeEl === document.body || activeEl === box || Boolean(activeEl?.matches("td[data-cell]") && box.contains(activeEl));
+    if (!el) {
+      if (reveal.current) virtualizer.scrollToIndex(cursor.index);
+      else if (activeEl === document.body) box.focus({ preventScroll: true });
+      return;
+    }
+    if (!ours) {
+      reveal.current = false;
+      return;
+    }
+    if (activeEl !== el) el.focus({ preventScroll: true });
+    if (reveal.current) {
+      reveal.current = false;
+      revealCell(box, el);
+    }
+  }, [cursor, openCell, gridOn, items, virtualizer]);
   const first = items[0]?.index ?? 0;
   const last = items[items.length - 1]?.index ?? 0;
   const { ensure: ensureFlat } = flat;
@@ -577,6 +775,19 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   if (!columns || !state) return <p className="sc-muted">{T.loading}</p>;
 
   const paddingTop = items[0]?.start ?? 0;
+  const extraCols = (rowMenu ? 1 : 0) + (selRem ? 1 : 0);
+  /** Başlıktaki kutu: yüklü satırların hepsi (parça parça yüklenir; filtrelenmiş liste kaydırdıkça gelir). */
+  const loadedRows = (): Row[] => {
+    const rows: Row[] = [];
+    for (let i = 0; i < count; i++) {
+      const r = rowAtIndex(i);
+      if (r) rows.push(r);
+    }
+    return rows;
+  };
+  const loaded = selRem ? loadedRows() : [];
+  const allLoadedChecked = loaded.length > 0 && loaded.every((r) => selection!.selected.has(String(r.Id)));
+  const toggleLoaded = (on: boolean) => selection!.onToggle(loaded, on);
   const paddingBottom = items.length ? virtualizer.getTotalSize() - items[items.length - 1].end : 0;
   const popColumn = pop ? byField.get(pop.field) : undefined;
   const multi = s.sort.length > 1;
@@ -589,7 +800,16 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const renderRow = (key: string | number | bigint, index: number, row: Row | undefined) => (
     <DataRow key={String(key)} index={index} row={row} cells={cellSpecs} selected={Boolean(row) && row!.Id === (selectedRowId !== undefined ? selectedRowId : selectedId)}
              onSelect={setSelectedId} active={active} ruleText={ruleText} cellRender={cellRender} cellWrap={cellWrap} cellClass={cellClass} rowProps={rowProps} rowMenu={rowMenu}
-             measure={fit ? virtualizer.measureElement : undefined} />
+             measure={fit ? virtualizer.measureElement : undefined}
+             edit={gridOn && cellEditing ? {
+               spec: cellEditing, cursorField: cursor?.index === index ? cursor.field : null,
+               open: openCell?.index === index ? openCell : null,
+               onCell: (i, f) => setCursor({ index: i, field: f }), onStart: (i, f) => startEdit(i, f, null), onDone: finishEdit,
+             } : undefined}
+             check={selRem && row ? {
+               checked: selection!.selected.has(String(row.Id)), label: selection!.label(row),
+               onChange: (next) => selection!.onToggle([row], next),
+             } : selRem ? { checked: false, label: "", onChange: () => {} } : undefined} />
   );
   // Grup adı, ara toplamı olmayan baştaki kolonları kaplar (kesilmesin); sabit kolon varsa sabit bölgeyi aşmaz.
   const firstAgg = visible.findIndex((c) => aggregateOf(c, s).fn !== "none");
@@ -715,11 +935,13 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
         </div>
       )}
 
-      <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll">
-        <table className={`sc-table-grid${fit ? " sc-table-grid--fit" : ""}`} aria-rowcount={count + 1} aria-colcount={visible.length + (rowMenu ? 1 : 0)}
-               style={fit ? undefined : { width: `${visible.reduce((sum, c) => sum + width(c.field), rowMenu ? ROW_MENU_REM : 0)}rem` }}>
+      <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll" tabIndex={gridOn ? -1 : undefined}
+           onKeyDown={gridOn ? onGridKey : undefined} onPaste={gridOn ? onGridPaste : undefined}>
+        <table className={`sc-table-grid${fit ? " sc-table-grid--fit" : ""}`} aria-rowcount={count + 1} aria-colcount={visible.length + extraCols}
+               style={fit ? undefined : { width: `${visible.reduce((sum, c) => sum + width(c.field), (rowMenu ? ROW_MENU_REM : 0) + selRem)}rem` }}>
           {!fit && (
             <colgroup>
+              {selRem > 0 && <col style={{ width: `${SELECT_REM}rem` }} />}
               {visible.map((c) => <col key={c.field} style={{ width: `${width(c.field)}rem` }} />)}
               {rowMenu && <col style={{ width: `${ROW_MENU_REM}rem` }} />}
             </colgroup>
@@ -727,6 +949,11 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
           <thead>
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id} aria-rowindex={1}>
+                {selRem > 0 && (
+                  <th scope="col" className="sc-table-check is-pinned" style={{ left: 0 }}>
+                    <input type="checkbox" aria-label={T.selectLoaded} checked={allLoadedChecked} onChange={(e) => toggleLoaded(e.target.checked)} />
+                  </th>
+                )}
                 {group.headers.map((h) => {
                   const col = byField.get(h.column.id)!;
                   const i = s.order.indexOf(col.field);
@@ -745,6 +972,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
                         <button type="button" className="sc-table-sort" title={col.note ?? undefined}
                                 onClick={h.column.getToggleSortingHandler()} onKeyDown={(e) => onHeaderKey(col.field, e)}>
                           <span className="sc-table-label">{col.label}</span>
+                          {gridOn && cellEditing!.editableColumn(col) && <span className="sc-table-edit-mark" title={T.editableColumn} aria-label={T.editableColumn}>✎</span>}
                           {dir === "asc" && <ArrowUp aria-hidden="true" />}
                           {dir === "desc" && <ArrowDown aria-hidden="true" />}
                           {dir && multi && (
@@ -778,11 +1006,11 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
           </thead>
           <tbody>
             {status === "loading" && (
-              <tr className="sc-table-state"><td colSpan={visible.length + (rowMenu ? 1 : 0)}>{T.loading}</td></tr>
+              <tr className="sc-table-state"><td colSpan={visible.length + extraCols}>{T.loading}</td></tr>
             )}
             {status === "ready" && filtered === 0 && (
               <tr className="sc-table-state">
-                <td colSpan={visible.length + (rowMenu ? 1 : 0)}>
+                <td colSpan={visible.length + extraCols}>
                   {T.empty}
                   {s.filters.length > 0 && (
                     <> · <Button size="sm" variant="ghost" onClick={() => update((st) => ({ ...st, filters: [] }))}>{T.clearFilters}</Button></>

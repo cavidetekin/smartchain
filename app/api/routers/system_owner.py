@@ -22,6 +22,12 @@ class LabelChange(BaseModel):
     label: str = Field(max_length=40)  # K-88; boş: standart etiket
 
 
+class ManualChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    on: bool
+    confirm: bool = False  # kapatırken manuel değerlerin kaldırılması onaylandı (K-170)
+
+
 class LoginPolicyChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
     PasswordMinLength: int | None = None
@@ -43,6 +49,12 @@ def field_detail(table: str, field: str, user: CurrentUser = Depends(owner_read)
 def field_label(table: str, field: str, body: LabelChange, user: CurrentUser = Depends(owner_write),
                 session: Session = Depends(get_session)) -> dict:
     return field_definitions.set_label(session, user, table, field, body.label)
+
+
+@router.put("/field-definitions/{table}/{field}/manual", summary="Manuel aç / kapa (K-170); kapatırken manuel değer varsa 409, onayla kalkar")
+def field_manual(table: str, field: str, body: ManualChange, user: CurrentUser = Depends(owner_write),
+                 session: Session = Depends(get_session)) -> dict:
+    return field_definitions.set_manual(session, user, table, field, body.on, body.confirm)
 
 
 @router.get("/settings/login-policy", summary="Şifre ve oturum ayarları: değerler, varsayılanlar, sınırlar")

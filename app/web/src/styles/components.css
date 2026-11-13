@@ -180,8 +180,9 @@
 .sc-table-grid tbody td.is-wrap { padding-block: var(--space-1); overflow-wrap: anywhere; white-space: normal; }
 /* Veri satırı: üzerine gelince ve seçili (seçili baskın); grup satırı üzerine gelince değişmez */
 .sc-table-grid tr.sc-table-row { cursor: default; }
-.sc-table-grid tr.sc-table-row:hover td { background: var(--table-row-hover-bg); }
-.sc-table-grid tr.sc-table-row.is-selected td { background: var(--table-row-selected-bg); }
+/* Yalnız zemin rengi: hücrenin köşe işareti (arka plan görseli, K-172) satır vurgusunda da kalır */
+.sc-table-grid tr.sc-table-row:hover td { background-color: var(--table-row-hover-bg); }
+.sc-table-grid tr.sc-table-row.is-selected td { background-color: var(--table-row-selected-bg); }
 .sc-table-grid tr.is-placeholder td { background: var(--lead-50); }
 .sc-table-state td { padding: var(--space-4) var(--space-3); color: var(--text-muted); }
 .sc-table-pop { position: absolute; z-index: 40; width: max-content; min-width: 21.5385rem; max-width: calc(100vw - 2rem);
@@ -435,6 +436,7 @@
 .sc-idle-count { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-kpi);
   font-weight: var(--fw-medium); }
 
+.sc-user-version { margin-top: var(--space-1); padding-top: var(--space-2); border-top: 1px solid var(--line); color: var(--text-muted); font-size: var(--fs-xs); }
 .sc-user-who { display: flex; flex-direction: column; gap: 0.1538rem; padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--line); }
 .sc-user-note { font-size: var(--fs-sm); color: var(--text-muted); }
@@ -703,3 +705,31 @@ tr.is-clickable { cursor: pointer; }
 .sc-dialog--pull .sc-local-table-wrap { max-height: 62vh; }
 .sc-dialog--pull .sc-local-table td { max-width: none; }
 .sc-dialog--pull .sc-local-table td:last-child, .sc-dialog--pull .sc-local-table th:last-child { width: 1%; text-align: center; white-space: nowrap; }
+/* Hücre düzenleme standardı (K-172): düz metin; ✎ başlıkta, üzerine gelince ince çerçeve, imleç indigo çerçeve, düzenleyici hücreyi kaplar, taslak lila zemin */
+.sc-table-grid td.is-editable { cursor: cell; }
+.sc-table-grid td.is-editable:hover { box-shadow: inset 0 0 0 1px var(--lead-300); }
+.sc-table-grid td[data-cell]:focus { outline: none; }
+.sc-table-grid tr.sc-table-row td.is-cursor { box-shadow: inset 0 0 0 1px var(--indigo-300); background-color: var(--indigo-50); }
+.sc-table-scroll:focus { outline: none; }
+.sc-table-grid tr.sc-table-row td.is-draft { background-color: var(--violet-100); }  /* seçili ve üzerine gelinen satırda da lila */
+.sc-table-grid td.is-editing { padding: 0; }
+.sc-table-grid td.is-editing:not(.is-pinned) { position: relative; }
+.sc-cell-editor { position: absolute; inset: 0; width: 100%; height: 100%; box-sizing: border-box; margin: 0; padding: 0 var(--space-2);
+  border: 2px solid var(--indigo-500); border-radius: 0; background: var(--surface); color: inherit; font: inherit; outline: none; }
+.sc-table-edit-mark { flex: none; margin-left: 0.2308rem; color: var(--violet-700); font-weight: var(--fw-regular); }
+.sc-table-grid .sc-table-check { padding: 0; text-align: center; }
+/* Manuel değer (K-170, K-172): köşe işareti (mor; alttaki değer güncellendiyse hardal) metnin dışında, metni kaydırmaz; kaynak ipucu; geçersiz hücre.
+   Tekil kaldırma hücre menüsünden (sağ tık) ya da Delete ile; hücrede düğme yok. */
+.sc-table-grid td.sc-cell-manual { background-image: linear-gradient(225deg, var(--violet-700) 0 0.4615rem, transparent 0.4615rem); background-repeat: no-repeat; background-position: top right; }
+.sc-table-grid td.sc-cell-manual.is-changed { background-image: linear-gradient(225deg, var(--status-risk) 0 0.4615rem, transparent 0.4615rem); }
+.sc-table-grid tr.sc-table-row td.is-invalid { box-shadow: inset 0 0 0 2px var(--status-over); }  /* imleçte de kırmızı */
+.sc-cell-source { position: relative; display: block; min-width: 0; }
+.sc-cell-value { display: block; overflow: hidden; text-overflow: ellipsis; }
+.sc-cell-removed { color: var(--violet-700); font-style: italic; }
+/* İpuçlu onay kutusu satırı (ör. veri sözlüğünde pasif Manuel ve nedeni, K-170): sarmalayıcıyla da aynı iki kolonlu satır */
+.sc-field-rows > .sc-tip-anchor { display: block; }
+.sc-field-rows > .sc-tip-anchor > .sc-check { display: grid; grid-template-columns: var(--field-row-label) minmax(0, 1fr); align-items: center;
+  gap: var(--space-1) var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
+.sc-field-rows > .sc-tip-anchor > .sc-check > span { order: -1; color: var(--text-muted); font-size: var(--fs-base); }
+/* Pencere tablosundaki seçenek kutusu (ör. Veri yükle'de Yükleme modu): seçenek kesilmeyecek genişlikte (K-172) */
+.sc-local-table td select.sc-cell-input { width: auto; }

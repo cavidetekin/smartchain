@@ -107,9 +107,9 @@ describe("aç/kapa anahtarı (3.3 demosu)", () => {
 });
 
 describe("U-2: durum renkleri yalnız durum bileşenlerinde", () => {
-  // İzin verilen seçiciler: rozet, uyarı, doluluk, hücre işaretleri, form hatası, KPI durumu,
+  // İzin verilen seçiciler: rozet, uyarı, doluluk, hücre işaretleri (eksik; manuel değerin "güncellendi" köşesi ve geçersiz taslak, K-172), form hatası, KPI durumu,
   // geri alınamaz işlem butonu (K-85 istisnası), bağlantı noktası, şifre politikası kuralı (sağlanıyor / sağlanmıyor; 2.1).
-  const ALLOWED = /\.sc-warn-icon|\.sc-tag--(ok|risk|critical)|\.sc-alert--(ok|risk|error)|\.sc-occ--|\.sc-cell--shortage|\.sc-field(\.is-invalid|-error)|\.sc-kpi--(ok|risk|over)|\.sc-btn--danger|\.sc-dot|\.sc-policy-item\.is-(ok|fail)/;
+  const ALLOWED = /\.sc-warn-icon|\.sc-tag--(ok|risk|critical)|\.sc-alert--(ok|risk|error)|\.sc-occ--|\.sc-cell--shortage|\.sc-cell-manual\.is-changed|td\.is-invalid|\.sc-field(\.is-invalid|-error)|\.sc-kpi--(ok|risk|over)|\.sc-btn--danger|\.sc-dot|\.sc-policy-item\.is-(ok|fail)/;
 
   it.each(Object.entries(sheets))("%s", (_, css) => {
     const misuse = rules(css)

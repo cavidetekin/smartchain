@@ -7,7 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import { can, forbiddenReason } from "../auth/permissions";
 import { formatDateTime, serverDate } from "../format";
 import { tr } from "../i18n/tr";
-import { SelectCell, TextCell } from "../table/CellEditors";
+import { draftEditing } from "../table/cellEditing";
 import { DataTable, type RowMenuSpec } from "../table/DataTable";
 import { type LocalColumn, LocalTable } from "../table/LocalTable";
 import type { Row } from "../table/types";
@@ -187,21 +187,18 @@ export function Integration() {
     label: (row: Row) => T.rowMenu(String(row.Name)),
     onOpen: (row: Row, anchor: HTMLElement) => setMenu({ row, anchor }),
   }), []);
+  // Yöntem ve view: hücre düzenleme standardı (K-172), kutusuz; view yalnız SQL yönteminde
+  const isSql = (row: Row) => edits.get(String(row.Entity), "Method", String(row.Method)) === METHOD_SQL;
+  const cellEdit = useMemo(() => draftEditing(edits, (row) => String(row.Entity), {
+    Method: { label: (row) => T.methodOf(String(row.Name)), editable: () => isOwner, options: METHODS },
+    ViewName: { label: (row) => T.viewOf(String(row.Name)), editable: (row) => isOwner && isSql(row), placeholder: T.viewPlaceholder },
+  }), [edits, isOwner]);  // eslint-disable-line react-hooks/exhaustive-deps
   const cellRender = useMemo(() => ({
-    Method: (value: unknown, row: Row) => {
-      const key = String(row.Entity);
-      return <SelectCell label={T.methodOf(String(row.Name))} value={edits.get(key, "Method", String(value))} options={METHODS} editable={isOwner} changed={edits.changed(key, "Method")}
-                         onChange={(next) => edits.set(key, "Method", next, String(value))} />;
-    },
-    ViewName: (value: unknown, row: Row) => {
-      const key = String(row.Entity);
-      if (edits.get(key, "Method", String(row.Method)) !== METHOD_SQL) return "";
-      return <TextCell label={T.viewOf(String(row.Name))} value={edits.get(key, "ViewName", String(value ?? ""))} placeholder={T.viewPlaceholder} editable={isOwner} changed={edits.changed(key, "ViewName")}
-                       onChange={(next) => edits.set(key, "ViewName", next, String(value ?? ""))} />;
-    },
+    Method: cellEdit.cellRender.Method,
+    ViewName: (value: unknown, row: Row) => (isSql(row) ? cellEdit.cellRender.ViewName(value, row) : ""),
     ColumnMatch: (value: unknown, row: Row) => (value ? <FieldMatch text={String(value)} status={row.LastCheckStatus ? String(row.LastCheckStatus) : null} note={row.LastCheckMessage ? String(row.LastCheckMessage) : null} /> : ""),
     LastPullStatus: (value: unknown, row: Row) => <StateChip state={value ? String(value) : null} reason={row.LastPullMessage ? String(row.LastPullMessage) : null} />,
-  }), [isOwner, edits]);
+  }), [edits, cellEdit]);  // eslint-disable-line react-hooks/exhaustive-deps
   const needsView = (row: Row) => (row.ViewName ? ALLOWED : { allowed: false, reason: T.needsView });
   const testButton = (
     <Button variant="secondary" busy={busy} disabledReason={canTest ? (connection?.database ? null : T.needsDatabase) : forbiddenReason(91, "write")} onClick={() => void runTest()}>{T.test}</Button>
@@ -223,7 +220,8 @@ export function Integration() {
         {testButton}
         {connection && <p className="sc-muted">{T.account(connection.account)}</p>}
       </TopStrip>
-      <DataTable list="integration-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey}
+      <DataTable list="integration-entities" rowMenu={rowMenu} cellRender={cellRender} reloadKey={reloadKey} cellEditing={isOwner ? cellEdit.editing : undefined}
+                 cellClass={(field, row) => (cellEdit.changed(field, row) ? "is-draft" : undefined)}
                  toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void saveEdits()} onDiscard={edits.discard} disabledReason={flowLock} />} />
       <UnsavedGuard dirty={edits.dirty} />
       {menu && (

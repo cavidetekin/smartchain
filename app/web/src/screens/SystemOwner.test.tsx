@@ -19,9 +19,9 @@ const ROWS = [{ Id: 1, TableName: "Material", FieldName: "AdditionalText2", Disp
 
 const field = (extra: Partial<FieldDetail> = {}): FieldDetail => ({
   table: "Material", field: "AdditionalText2", label: "Müşteri grubu", standard_label: "Ek metin alanı 2", description: "Ek metin alanları", is_additional: true,
-  field_class: "Ana veri", value_priority: "ERP ezer", manual_overrides: true, editable_in_workspace: false, is_required: false,
-  if_empty: "yok", options: { field_class: ["Ana veri", "Parametre", "İşlem verisi"], value_priority: ["ERP ezer", "Kural ezer"] },
-  used_in_views: 0, used_in_rules: 0, ...extra,
+  field_class: "Ana veri", manual_overrides: true, editable_in_workspace: false, is_required: false,
+  if_empty: "yok", options: { field_class: ["Ana veri", "Parametre", "İşlem verisi"] },
+  used_in_views: 0, used_in_rules: 0, manual_reason: null, manual_count: 0, ...extra,
 });
 
 const POLICY: LoginPolicy = {
@@ -66,10 +66,10 @@ async function openField(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("ekran", () => {
-  it("başlık, sürüm, bölümler, tablo", async () => {
+  it("başlık (altında sürüm yok, K-172), bölümler, tablo", async () => {
     await openScreen();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Sistem ayarları");
-    expect(await screen.findByText("Sürüm 0.18.0")).toBeInTheDocument();
+    expect(screen.queryByText("Sürüm 0.18.0")).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Veri sözlüğü" })).toBeChecked();
     expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["Veri sözlüğü", "Giriş ve oturum", "Sistem sağlığı", "Zamanlanmış işler"]);
     expect(screen.getByRole("columnheader", { name: "Satır işlemleri" })).toBeInTheDocument();
@@ -91,7 +91,28 @@ describe("ekran", () => {
 });
 
 describe("alan penceresi", () => {
-  it("etiket düzenlenir, öteki alanlar pasif form öğesi; kaydedince tablo yenilenir", async () => {
+  it("Manuel kapatılırken manuel değer varsa uyarı; kaydet onayla gönderir (K-170)", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    await openScreen({
+      "/api/field-definitions/Material/AdditionalText2/manual": (_url: string, init?: RequestInit) => { sent.push(JSON.parse(String(init?.body))); return { body: field({ manual_overrides: false }) }; },
+      "/api/field-definitions/Material/AdditionalText2": { body: field({ manual_count: 3 }) },
+    });
+    const dialog = await openField(user);
+    await user.click(within(dialog).getByLabelText("Manuel"));
+    expect(dialog).toHaveTextContent("3 kayıtta manuel değer kaldırılacak.");
+    await user.click(within(dialog).getByRole("button", { name: "Kaydet ve manuel değerleri kaldır" }));
+    await waitFor(() => expect(sent).toEqual([{ on: false, confirm: true }]));
+  });
+
+  it("anahtar alanda Manuel pasif", async () => {
+    const user = userEvent.setup();
+    await openScreen({ "/api/field-definitions/Material/AdditionalText2": { body: field({ manual_overrides: false, manual_reason: "Anahtar alana manuel değer girilemez." }) } });
+    const dialog = await openField(user);
+    expect(within(dialog).getByLabelText("Manuel")).toBeDisabled();
+  });
+
+  it("etiket ve Manuel düzenlenir, öteki alanlar pasif form öğesi; kaydedince tablo yenilenir", async () => {
     const user = userEvent.setup();
     const m = await openScreen({ "/api/field-definitions/Material/AdditionalText2/label": { body: field({ label: "Yeni ad" }) } });
     const dialog = await openField(user);
@@ -102,9 +123,8 @@ describe("alan penceresi", () => {
     expect(fieldClass).toBeDisabled();
     expect(fieldClass).toHaveValue("Ana veri");
     expect(within(fieldClass).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ana veri", "Parametre", "İşlem verisi"]);
-    expect(within(dialog).getByLabelText("Değer önceliği")).toBeDisabled();
-    expect(within(dialog).getByLabelText("Değer önceliği")).toHaveValue("ERP ezer");
-    expect(within(dialog).getByLabelText("Manuel")).toBeDisabled();
+    expect(within(dialog).queryByLabelText("Değer önceliği")).not.toBeInTheDocument();   // öncelik sabit (K-172)
+    expect(within(dialog).getByLabelText("Manuel")).toBeEnabled();
     expect(within(dialog).getByLabelText("Manuel")).toBeChecked();
     expect(within(dialog).getByLabelText("Senaryo")).toBeDisabled();
     expect(within(dialog).getByLabelText("Senaryo")).not.toBeChecked();
@@ -112,7 +132,7 @@ describe("alan penceresi", () => {
     expect(within(dialog).getByLabelText("Boşsa")).toBeDisabled();
     expect(within(dialog).getByLabelText("Boşsa")).toHaveValue("yok");
     expect(within(dialog).getByLabelText("Etiket")).toBeEnabled();
-    expect(dialog.querySelectorAll(".sc-field-rows > *")).toHaveLength(7);
+    expect(dialog.querySelectorAll(".sc-field-rows > *")).toHaveLength(6);
     const save = within(dialog).getByRole("button", { name: "Kaydet" });
     expect(save).toBeDisabled();
 

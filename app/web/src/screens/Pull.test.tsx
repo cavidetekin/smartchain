@@ -2,6 +2,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { cellOf, openEditor, setCell } from "../table/testEditing";
 
 import { col, useTableTestSetup } from "../table/testBackend";
 import { DATA_VERSION, meAs, mockApi, renderApp, type Routes } from "../test/helpers";
@@ -65,11 +66,15 @@ describe("tablo içi düzenleme (K-132)", () => {
   it("anında kaydedilmez; Kaydet ve Vazgeç çıkar, Kaydet toplu yazar", async () => {
     const { user, fetchMock } = await open("System owner");
     expect(screen.queryByRole("button", { name: "Kaydet" })).not.toBeInTheDocument();
-    const select = screen.getByRole("combobox", { name: "Malzeme yöntemi" });
-    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Excel", "SQL"]);
-    await user.selectOptions(select, "Excel");
+    expect(screen.getByRole("columnheader", { name: /Yöntem/ })).toHaveTextContent("✎");   // kutu yok, başlıkta işaret (K-172)
+    expect(cellOf("Malzeme", "Yöntem").querySelector("select, input")).toBeNull();
+    const editor = await openEditor(user, cellOf("Malzeme", "Yöntem"));
+    expect(within(editor).getAllByRole("option").map((o) => o.textContent)).toEqual(["Excel", "SQL"]);
+    await user.selectOptions(editor, "Excel");
+    await user.keyboard("{Enter}");
+    expect(cellOf("Malzeme", "Yöntem")).toHaveClass("is-draft");
     expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(0);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Stok yöntemi" }), "SQL");
+    await setCell(user, "Stok", "Yöntem", "SQL");
     await user.click(screen.getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(1));
     expect(bodyOf(calls(fetchMock, "PUT", "/api/integration/entities")[0])).toEqual({ changes: [{ entity: "Material", method: "Excel" }, { entity: "Stock", method: "SQL" }] });
@@ -78,34 +83,33 @@ describe("tablo içi düzenleme (K-132)", () => {
 
   it("Vazgeç kaydedilmemişleri geri alır; değeri eskiye dönen hücre değişiklik sayılmaz", async () => {
     const { user, fetchMock } = await open("System owner");
-    const select = screen.getByRole("combobox", { name: "Malzeme yöntemi" });
-    await user.selectOptions(select, "Excel");
-    expect(select.className).toContain("is-edited");
+    await setCell(user, "Malzeme", "Yöntem", "Excel");
+    expect(cellOf("Malzeme", "Yöntem")).toHaveClass("is-draft");
     await user.click(screen.getByRole("button", { name: "Vazgeç" }));
-    expect(screen.getByRole("combobox", { name: "Malzeme yöntemi" })).toHaveValue("SQL");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Malzeme yöntemi" }), "Excel");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Malzeme yöntemi" }), "SQL");
+    expect(cellOf("Malzeme", "Yöntem")).toHaveTextContent("SQL");
+    await setCell(user, "Malzeme", "Yöntem", "Excel");
+    await setCell(user, "Malzeme", "Yöntem", "SQL");
     expect(screen.queryByRole("button", { name: "Kaydet" })).not.toBeInTheDocument();
     expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(0);
   });
 
   it("kayıt düşerse hata görünür, değişiklikler durur", async () => {
     const { user } = await open("System owner", { "/api/integration/entities": { status: 422, body: { error: { code: "integration_view_not_found", message: "View bulunamadı: X.", trace_id: "x", details: [] } } } });
-    await user.selectOptions(screen.getByRole("combobox", { name: "Malzeme yöntemi" }), "Excel");
+    await setCell(user, "Malzeme", "Yöntem", "Excel");
     await user.click(screen.getByRole("button", { name: "Kaydet" }));
     expect(await screen.findByText("View bulunamadı: X.")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Malzeme yöntemi" })).toHaveValue("Excel");
+    expect(cellOf("Malzeme", "Yöntem")).toHaveTextContent("Excel");
     expect(screen.getByRole("button", { name: "Vazgeç" })).toBeInTheDocument();
   });
 
   it("kaydedilmemiş değişiklikle ekrandan çıkınca uyarı", async () => {
     const { user } = await open("System owner");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Malzeme yöntemi" }), "Excel");
+    await setCell(user, "Malzeme", "Yöntem", "Excel");
     await user.click(screen.getByRole("link", { name: /Kullanıcılar/ }));
     const dialog = await screen.findByRole("dialog", { name: "Kaydedilmemiş değişiklikler var" });
     await user.click(within(dialog).getByRole("button", { name: "Vazgeç" }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Veri yükleme");
-    expect(screen.getByRole("combobox", { name: "Malzeme yöntemi" })).toHaveValue("Excel");
+    expect(cellOf("Malzeme", "Yöntem")).toHaveTextContent("Excel");
     await user.click(screen.getByRole("link", { name: /Kullanıcılar/ }));
     await user.click(within(await screen.findByRole("dialog", { name: "Kaydedilmemiş değişiklikler var" })).getByRole("button", { name: "Kaydetmeden çık" }));
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Kullanıcılar"));
@@ -116,7 +120,7 @@ describe("tablo içi düzenleme (K-132)", () => {
     const before = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(before);
     expect(before.defaultPrevented).toBe(false);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Malzeme yöntemi" }), "Excel");
+    await setCell(user, "Malzeme", "Yöntem", "Excel");
     const after = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(after);
     expect(after.defaultPrevented).toBe(true);
@@ -133,13 +137,13 @@ describe("yöntem ve çekim kolonları", () => {
 
   it("Admin yöntemi değiştiremez, çekim anahtarını değiştirir", async () => {
     await open("Admin");
-    expect(screen.queryByRole("combobox", { name: "Malzeme yöntemi" })).not.toBeInTheDocument();
+    expect(cellOf("Malzeme", "Yöntem")).not.toHaveClass("is-editable");
     expect(screen.getByRole("switch", { name: "Malzeme çekimi" })).toBeEnabled();
   });
 
   it("Key user ikisini yalnız görür; kaydet çıkmaz", async () => {
     await open("Key user");
-    expect(screen.queryByRole("combobox", { name: "Malzeme yöntemi" })).not.toBeInTheDocument();
+    expect(cellOf("Malzeme", "Yöntem")).not.toHaveClass("is-editable");
     expect(screen.getByRole("switch", { name: "Malzeme çekimi" })).toBeDisabled();
     expect(screen.getByText("SQL")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Kaydet" })).not.toBeInTheDocument();

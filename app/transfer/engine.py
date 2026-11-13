@@ -23,6 +23,7 @@ from app.validation import catalog as cat, engine as validation
 from app.validation.sqlkit import _key_part, present
 from db.models import metadata
 
+from . import manual
 from .groups import group_tables
 from .mapping import UNVERSIONED, RefColumn, TableMap, id_name, order, table_map
 
@@ -396,6 +397,7 @@ def transfer_table(session: Session, entity: str, run: Run) -> dict:
         _match(session, m, tmp)
         _new_ids(session, m, tmp)
         _self_refs(session, m, tmp)
+        manual.apply_versioned(session, m.entity, m.core, m.plain, tmp, OK)  # manuel değer korunur (K-170)
         _changed(session, m, tmp)
         counts = _counts(session, tmp)
         note = _guard_note(session, m, tmp)
@@ -413,9 +415,12 @@ def _transfer_location(session: Session, m: TableMap, run: Run) -> dict:
     p, t = m.prc, LOCATION
     ok = sa.and_(sa.func.coalesce(p.c.IsActive, sa.true()) == sa.true(), sa.func.coalesce(p.c.RowStatus, "") != ERROR_ROW)
     names = list(m.plain)
-    changed_cond = sa.or_(*[_differs(t.c[n], p.c[n]) for n in names if n != "Code"])
+    kept = manual.fields(session, "Location", names)  # manuel değer gelen değerin yerine (K-170)
+    incoming = {n: manual.location_value(n, t, p.c[n], t.c[n]) if n in kept else p.c[n] for n in names}
+    changed_cond = sa.or_(*[_differs(t.c[n], incoming[n]) for n in names if n != "Code"])
     changed = session.execute(sa.update(t).where(sa.exists().where(p.c.Code == t.c.Code, ok, changed_cond))
-                              .values({n: sa.select(p.c[n]).where(p.c.Code == t.c.Code, ok).limit(1).scalar_subquery() for n in names if n != "Code"})).rowcount
+                              .values({n: sa.select(incoming[n]).where(p.c.Code == t.c.Code, ok).limit(1).scalar_subquery() for n in names if n != "Code"})).rowcount
+    manual.location_underlying(session, kept, p, t, ok)
     sel = sa.select(*[p.c[n] for n in names], sa.literal(False)).where(ok, ~sa.exists().where(t.c.Code == p.c.Code))
     new = session.execute(sa.insert(t).from_select(names + ["IsSynthetic"], sel)).rowcount
     keep = sa.exists().where(p.c.Code == t.c.Code, sa.or_(ok, sa.func.coalesce(p.c.RowStatus, "") == ERROR_ROW), sa.func.coalesce(p.c.IsActive, sa.true()) == sa.true())

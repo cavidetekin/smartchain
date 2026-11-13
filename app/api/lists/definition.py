@@ -53,6 +53,8 @@ class ListDefinition:
     filter_only: tuple[str, ...] = ()
     # Hücrenin okunur biçimi (K-108): liste cevabı ve Excel aynı işlevden; süzme ve sıralama saklanan değerde.
     value_format: Mapping[str, Callable] = field(default_factory=dict)
+    # Manuel değer alınan core tablosu (K-170; ana veri ve işlem verisi): kolon bilgisinde manual, satırlarda hücre kaynağı (_sources)
+    manual_table: str | None = None
 
     @property
     def sa_table(self) -> sa.FromClause:
@@ -106,7 +108,7 @@ def _note(defn: ListDefinition, name: str, col: sa.ColumnElement, label: str) ->
     return text if text and text != label else None
 
 
-def columns(defn: ListDefinition, labels: dict[str, str], with_filter_only: bool = False) -> list[dict]:
+def columns(defn: ListDefinition, labels: dict[str, str], with_filter_only: bool = False, manual: frozenset[str] = frozenset()) -> list[dict]:
     """Kolonlar; labels: FieldDefinition.Label (alan → etiket). Etiketsiz ek alan listelenmez (K-88).
     with_filter_only: sorgu kurucusu için yalnız süzmede kullanılan alanlar da (kolon listesinde yoklar)."""
     table = defn.sa_table
@@ -128,5 +130,6 @@ def columns(defn: ListDefinition, labels: dict[str, str], with_filter_only: bool
             "aggregate": defn.aggregates.get(name),
             "default_visible": name in defn.default_visible,
             "note": _note(defn, name, col, label),
+            "manual": name in manual,  # manuel değer girilebilir (K-170); yetki ön yüzde fonksiyon 12'den
         })
     return out

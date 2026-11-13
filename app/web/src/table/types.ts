@@ -30,6 +30,8 @@ export interface ListColumn {
   /** Gruplamada varsayılan ara toplam (K-90). */
   aggregate: AggFn | null;
   default_visible: boolean;
+  /** Manuel değer girilebilir (veri sözlüğünde Manuel, K-170); yetki ekranda fonksiyon 12'den. */
+  manual?: boolean;
 }
 
 /** Dışa aktarım bilgisi (K-91): listenin adı, dosya adındaki kısa ad, anlık eşik ve üst sınır. */

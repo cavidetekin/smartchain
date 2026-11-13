@@ -379,7 +379,7 @@
     },
     {
       "no": 12,
-      "name": "Elle değer girme",
+      "name": "Manuel değer girme",
       "group": "B",
       "levels": {
         "System owner": "full",
@@ -390,7 +390,7 @@
     },
     {
       "no": 13,
-      "name": "Elle değeri kaldırma",
+      "name": "Manuel değeri kaldırma",
       "group": "B",
       "levels": {
         "System owner": "full",

@@ -513,7 +513,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Staging'in işlenmiş katmanı (`prc.*`; veri kuralları uygulanmış, `RowStatus`; K-140)
   - Hata eşiği (K-135)
   - Kural izi (`adm.DataRuleEffect`): hangi alanı hangi kural değiştirdi
-- **03:** Değerin kaynağı yazılır (K-148): ERP değeri `FieldValueSource.ErpValue`'ya, kaynağı ERP ya da kural (hangi kural, kural izinden). Elle değerin aktarımda korunması 6.2'de (fonksiyon 12, 13) elle değer girme ekranıyla birlikte gelir.
+- **03:** Değerin kaynağı yazılır (K-148): ERP değeri `FieldValueSource.ErpValue`'ya, kaynağı ERP ya da kural (hangi kural, kural izinden). Manuel değerin aktarımda korunması 6.2'de (fonksiyon 12, 13) manuel değer girme ekranıyla birlikte gelir.
 - **04:** Veri kuralları aktarımda çalışmaz: staging'de uygulanmıştır (fonksiyon 19, K-140); aktarım işlenmiş katmanı okur.
 - **05:** Türetilmiş alanlar hesaplanır: LLC, birim dönüşümleri. Boş alan boş kalır, anlamı BOŞSA kolonundadır (K-138).
 - **ÇIKTI**
@@ -528,7 +528,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Ya hep ya hiç: yükleme ortasında hata olursa geri alınır, önceki versiyon geçerli kalır.
-  - Elle değerin aktarımda korunması 6.2'de elle değer girme ekranıyla birlikte gelir (K-148); hangi alanların elle değiştirilebileceği orada konuşulur.
+  - Manuel değerin aktarımda korunması 6.2'de manuel değer girme ekranıyla birlikte gelir (K-148); hangi alanların elle değiştirilebileceği orada konuşulur.
   - Açık çalışmalar açıldıkları veri versiyonuna bağlı kalır; yayında (76) 'daha yeni veri var' uyarısı alırlar.
   - Hata eşiğini aşan tablo aktarılmaz, önceki versiyon kalır (K-135); veri aktarım raporunda oran ve eşikle tek satır not (K-151).
   - Yükleme sırasında ikinci yükleme ve çekim başlatılamaz.
@@ -550,7 +550,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F05 · A Veri alma · Çalışma prensibi 3/3</sub>
 
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Geçerli değer ve kaynağı:** FieldValueSource Her alan için kaynak (ERP ya da hangi kural) yazılır, K-148; elle değer 6.2
+- **Geçerli değer ve kaynağı:** FieldValueSource Her alan için kaynak (ERP ya da hangi kural) yazılır, K-148; manuel değer 6.2
 - **Kural sonuçları:** DataRuleEffect Kurallar staging'de çalışır (K-140); aktarım kural izini okur
 - **En alt seviye kodu (LLC):** Material Ürün ağacı değiştiyse yeniden hesaplanır
 - **Türetilmiş alanlar:** Birim dönüşümü Yeni ve değişen kayıtlar için
@@ -854,12 +854,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **10 · Ana veri görüntüleme:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
 - **11 · Değerin kaynağını gösterme:** Her alanın geçerli değerinin nereden geldiğini (ERP, kural, elle) ve ezilmiş değerleri göstermek; kullanıcı veriye güvenirken neyin kimin kararı olduğunu bilir.
-- **12 · Elle değer girme:** ERP'de olmayan ya da hatalı bir değeri kullanıcının eliyle düzeltmesi; alanın sözlük ayarına göre ERP ve kuralı ezerek ya da ezmeyerek, izlenebilir ve geri alınabilir biçimde.
-- **13 · Elle değeri kaldırma:** Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural ya da ERP) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
+- **12 · Manuel değer girme:** ERP'de olmayan ya da hatalı bir değeri kullanıcının eliyle düzeltmesi; alanın sözlük ayarına göre ERP ve kuralı ezerek ya da ezmeyerek, izlenebilir ve geri alınabilir biçimde.
+- **13 · Manuel değeri kaldırma:** Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural ya da ERP) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
 - **14 · Değişiklik geçmişi:** Bir kaydın alanlarının zaman içinde nasıl değiştiğini tek zaman çizgisinde göstermek: elle girişler, kural sonuçları ve ERP yüklemeleri; kim, ne zaman, eski ve yeni değer.
-- **15 · Excel ile toplu düzeltme (öneri):** Çok sayıda kaydı tek tek düzeltmek yerine filtrelenmiş listeyi Excel'e alıp düzeltmek ve değişen hücreleri elle değer olarak geri yüklemek; aynı izlenebilirlik ve geri alma ile.
+- **15 · Excel ile toplu düzeltme (öneri):** Çok sayıda kaydı tek tek düzeltmek yerine filtrelenmiş listeyi Excel'e alıp düzeltmek ve değişen hücreleri manuel değer olarak geri yüklemek; aynı izlenebilirlik ve geri alma ile.
 - **16 · Veri kuralı tanımlama:** ERP'den gelmeyen ya da ham değerden türeyen alanları kod bilmeden yazılan koşul–sonuç kurallarıyla tamamlamak; kurallar her partide staging'in işlenmiş katmanında çalışır (K-140, K-141).
-- **17 · Kural önizleme:** Faz 1 dışı (K-142). Bir kuralı kaydetmeden önce geçerli veri üzerinde deneyip hangi kayıtların nasıl değişeceğini, hangilerinin ERP ya da elle değer nedeniyle atlanacağını göstermek; yanlış kuralın veriyi bozmasını önlemek.
+- **17 · Kural önizleme:** Faz 1 dışı (K-142). Bir kuralı kaydetmeden önce geçerli veri üzerinde deneyip hangi kayıtların nasıl değişeceğini, hangilerinin ERP ya da manuel değer nedeniyle atlanacağını göstermek; yanlış kuralın veriyi bozmasını önlemek.
 - **18 · Kural sıralama ve aç / kapa:** Tablonun kurallarının çalışma sırasını belirlemek ve bir kuralı silmeden kapatmak; sonraki kural öncekinin sonucunu görür, aynı alanda sonuncu kazanır (K-141).
 - **19 · Kural uygulama:** Tablonun aktif kurallarını sırayla staging'in işlenmiş katmanında çalıştırmak; ham veri değişmez, her çalıştırma ham veriden başlar (K-140).
 - **20 · Veri kalitesi kontrolü:** Ana veri ve işlem verisini plan için gerekli tutarlılık kontrollerinden geçirip önem sırasıyla uyarı listesi üretmek; önceki listeyle karşılaştırıp neyin yeni, neyin kapandığını göstermek.
@@ -882,7 +882,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Tüm roller görüntüler (End user salt okunur) · düzenleme butonları Key user ve üstünde
   - Nereden: Ana veri ekranı (menü · Veri) · uyarı ve plan ekranlarından 'kaynağa git' bağlantıları
 - **01:** Sekme seçilir (varsayılan Kaynak); liste geçerli veri versiyonundan sayfa sayfa okunur (50 satır, kaydırdıkça devam).
-- **02:** Arama kod ve ad üzerinde anında çalışır; filtreler grup, tip, kritik ve değer kaynağına göre daraltır (ör. 'yalnız elle değer olanlar').
+- **02:** Arama kod ve ad üzerinde anında çalışır; filtreler grup, tip, kritik ve değer kaynağına göre daraltır (ör. 'yalnız manuel değer olanlar').
 - **GIRDI**
   - Geçerli veri versiyonu (ya da seçilen geçmiş versiyon, salt okunur)
   - Sekme (varlık), arama metni, filtreler (grup, tip, kritik, değer kaynağı, pasif kayıtlar)
@@ -920,7 +920,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![10 · Ana veri görüntüleme · Arama ve filtre](mockups/m24f-0379-10-ana-veri-goruntuleme-arama-ve-filtre.png)
 
 - **Anında arama:** Kod ve ad üzerinde yazdıkça daralır; filtre çipleri tek tıkla kaldırılır.
-- **Kaynak etiketine göre filtre:** 'Elle değer olanlar' gibi filtreler veri kalitesi takibini kolaylaştırır.
+- **Kaynak etiketine göre filtre:** 'Manuel değer olanlar' gibi filtreler veri kalitesi takibini kolaylaştırır.
 - **İlişkili kayıtlar:** Detay kartında rota, iş emri, duruş ve uyarı sayıları; tek tıkla gidilir.
 - **Klavye:** Ok tuşlarıyla satır, Enter ile detay, E ile düzenleme; altta ipucu.
 
@@ -939,6 +939,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - Her alanın geçerli değerinin nereden geldiğini (ERP, kural, elle) ve ezilmiş değerleri göstermek; kullanıcı veriye güvenirken neyin kimin kararı olduğunu bilir.
 
+- **Karar (6.2, K-170):** manuel değerli hücrede köşe işareti; kaynak ipucu yalnız değer ERP'den olduğu gibi gelmiyorsa çıkar: "Manuel değer: <değer> · <kişi> · <tarih saat>" ya da "Kural: <kural adı>"; alttaki değer güncellendiyse ikinci satır "ERP'den gelen değer güncellendi: a → b" ya da "Kural sonucu güncellendi (<kural adı>): a → b" (K-172); her tabloda süzülebilir "Manuel değer" kolonu (boş, "Var", "Var / ERP Güncellendi", "Var / Kural Güncellendi").
+- **Uygulama (6.2, K-170, K-172):** uygulandı.
+
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
@@ -948,7 +951,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Hücrede değerin yanında kısa etiket görünür: ERP, kural, elle, vars. Renk ile birlikte metin kullanılır; renk tek başına anlam taşımaz.
 - **GIRDI**
   - FieldValueSource: alan bazında kaynak (Source), kural numarası, saklanan ERP değeri
-  - ManualValue: elle değer, kim, ne zaman, geçerlilik
+  - ManualValue: manuel değer, kim, ne zaman, geçerlilik
   - FieldDefinition: alanın öncelik sırası ve BOŞSA anlamı (K-138)
 - **03:** Hücre üzerine gelince ipucu açılır: geçerli değer, elle giren ve tarih, kuralın adı ve ürettiği değer, ERP değeri ve alanın öncelik sırası; değer boşsa BOŞSA anlamı.
 - **04:** Filtre ile 'kaynağı elle olanlar', 'kuralla değişenler', 'boş kalanlar' listelenir; sağda dağılım görünür.
@@ -963,7 +966,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Kaynak bilgisi alan bazındadır; aynı kaydın alanları farklı kaynaktan gelebilir.
-  - ERP değeri ezilse de saklanır ve ipucunda gösterilir; elle değer kaldırılınca (13) geri döner.
+  - ERP değeri ezilse de saklanır ve ipucunda gösterilir; manuel değer kaldırılınca (13) geri döner.
   - Kural kaynaklı değerde kural numarası bağlantıdır; tıklayınca kural editörü (16) açılır.
   - Varsayılan değer yoktur (K-138); 'boş kalan' alanlar veri kalitesi için ipucudur, anlamı veri sözlüğündeki Boşsa'dır.
 - **HATA VE ISTISNA**
@@ -995,17 +998,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kalite ipucu:** Değeri boş kalan 5 kaynak için doğrudan liste bağlantısı.
 - **Aynı filtre her yerde:** Veri kalitesi ve toplu düzeltme ekranları aynı filtreyi kullanır.
 
-### 12 · Elle değer girme
+### 12 · Manuel değer girme
 <sub>24. Ekranlar ve fonksiyonlar · F12 · B Ana veri ve kurallar · Çalışma prensibi 1/3</sub>
 
 - ERP'de olmayan ya da hatalı bir değeri kullanıcının eliyle düzeltmesi; alanın sözlük ayarına göre ERP ve kuralı ezerek ya da ezmeyerek, izlenebilir ve geri alınabilir biçimde.
+
+- **Karar (6.2, K-170):** yalnız "Manuel: Evet" alanlara, Key user ve üstü, hücre içinde ve düzenleme çubuğuyla (K-132); kurulumda bütün alanlar Hayır; anahtar, ilişki ve sistem alanları Manuel olamaz; manuel > kural > ERP, aktarımda korunur, süresiz; yerinde güncelleme ve denetim izi; Excel'den yapıştırmada geçerli hücreler taslağa girer, manuel olmayan ya da geçersiz hücreler nedeniyle listelenir. Veri sözlüğünde 6.2'de yalnız Manuel düzenlenir; Değer önceliği sabit, Senaryo Aşama 8'de.
+- **Uygulama (6.2, K-170, K-172):** uygulandı. Hücre düzenleme standardı (docs/12): düz metin, ✎, çift tıklama, Enter, F2 ya da yazmaya başlama; yapıştırmada neden ve alan bazında özet; kaydetme ya hep ya hiç.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
   - Nereden: Ana veri hücresi (çift tık) · detay kartı 'Düzenle' · Veri kalitesi satırı 'Düzelt'
-- **01:** Hücre çift tık ya da detay kartta 'Düzenle': alan sözlükte elle değer alamıyorsa düzenleme kapalıdır ve ipucu nedenini yazar.
+- **01:** Hücre çift tık ya da detay kartta 'Düzenle': alan sözlükte manuel değer alamıyorsa düzenleme kapalıdır ve ipucu nedenini yazar.
 - **02:** Değer tipine göre giriş alanı açılır (sayı, açılır liste, tarih); aralık, zorunluluk ve birim anında kontrol edilir, hata satır altında kırmızı.
 - **GIRDI**
   - Kayıt ve alan; yeni değer (tip: sayı, liste, tarih, evet/hayır)
@@ -1021,12 +1027,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **06:** Türetilmiş alanlar hemen hesaplanır; veri kalitesi kontrolü bu kayıt için yeniden çalışır; plan otomatik değişmez (çalışmada yeniden hesap).
 - **07:** Geçerlilik tarihi verildiyse süre dolunca değer kurala ya da ERP'ye döner, geçmişe 'süresi doldu' kaydı düşer.
 
-### 12 · Elle değer girme · kurallar ve etkiler
+### 12 · Manuel değer girme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F12 · B Ana veri ve kurallar · Çalışma prensibi 2/3</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Yalnız veri sözlüğünde 'elle değer alabilir' alanlar; işlem verisi (sipariş miktarı, stok) elle değiştirilemez, ERP'de düzeltilir.
-  - Elle değer veri versiyonu açmaz; geçerli versiyon üzerinde elle katman olarak durur, sonraki yüklemelerde korunur (alan ayarı 'elle ezer' ise).
+  - Yalnız veri sözlüğünde 'manuel değer alabilir' alanlar; işlem verisi (sipariş miktarı, stok) elle değiştirilemez, ERP'de düzeltilir.
+  - Manuel değer veri versiyonu açmaz; geçerli versiyon üzerinde elle katman olarak durur, sonraki yüklemelerde korunur (alan ayarı 'elle ezer' ise).
   - Çalışmadaki geçici değişiklik (55) ayrıdır; ana veriyi değiştirmez. Buradaki değer kalıcıdır.
   - Aynı alanı iki kullanıcı değiştirirse son yazan uyarılır: 'Mert 2 dk önce %82 yaptı, üzerine yazılsın mı?'; sessizce ezme yok.
   - End user hücreyi düzenleyemez; sunucu da reddeder.
@@ -1039,79 +1045,82 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veri kalitesi uyarısı kapanabilir ya da yeni uyarı doğabilir.
   - Ana sayfa 'dünden bugüne' değişiklik sayısı.
   - Plan: çalışmada 'yeniden hesapla' gerekir; gece senaryoları yeni değerle çalışır.
-- **ÖRNEK:** Freze merkezi verimi kural 3 ile %80. Ekim ölçümü %85: elle değer girilir, ERP ve kuralı ezer. Haftalık net kapasite 180 → 191 sa; H46 doluluğu tahmini %108 → %101; 'düşük verim' uyarısı kapanır.
-- **AÇIK KONU:** Elle değer için varsayılan geçerlilik süresi olmalı mı (ör. 90 gün sonra hatırlatma)? Öneri: süresiz, ama 90 günü geçen elle değerler veri kalitesinde 'gözden geçir' uyarısı alsın.
+- **ÖRNEK:** Freze merkezi verimi kural 3 ile %80. Ekim ölçümü %85: manuel değer girilir, ERP ve kuralı ezer. Haftalık net kapasite 180 → 191 sa; H46 doluluğu tahmini %108 → %101; 'düşük verim' uyarısı kapanır.
+- **AÇIK KONU:** Manuel değer için varsayılan geçerlilik süresi olmalı mı (ör. 90 gün sonra hatırlatma)? Öneri: süresiz, ama 90 günü geçen manuel değerler veri kalitesinde 'gözden geçir' uyarısı alsın.
 
-### 12 · Elle değer girme · yeniden hesaplanacak alanlar
+### 12 · Manuel değer girme · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F12 · B Ana veri ve kurallar · Çalışma prensibi 3/3</sub>
 
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Geçerli değer ve kaynağı:** FieldValueSource Alan 'elle' olur; ERP ve kural değerleri saklanır
-- **Kural sonucu bu kayıtta:** DataRule → hedef alan Elle değer kuralı eziyorsa kural bu kayıtta uygulanmaz
+- **Kural sonucu bu kayıtta:** DataRule → hedef alan Manuel değer kuralı eziyorsa kural bu kayıtta uygulanmaz
 - **Türetilmiş kapasite:** Günlük kapasite × adet × verim → dönem kapasitesi Kaynak kapasite alanlarından biri değiştiyse hemen
 - **Veri kalitesi uyarısı:** Veri kalitesi listesi Bu kayıt ve alan için kontrol yeniden çalışır
 - **Doluluk ve plan:** CapacityLoad · PlanMetric · PlanWarning Otomatik değil: çalışmada yeniden hesap ya da gece senaryosu
 
-### 12 · Elle değer girme · Hücrede düzenleme
+### 12 · Manuel değer girme · Hücrede düzenleme
 <sub>24. Ekranlar ve fonksiyonlar · F12 · B Ana veri ve kurallar · Mockup 1/3</sub>
 
-![12 · Elle değer girme · Hücrede düzenleme](mockups/m24f-0388-12-elle-deger-girme-hucrede-duzenleme.png)
+![12 · Manuel değer girme · Hücrede düzenleme](mockups/m24f-0388-12-elle-deger-girme-hucrede-duzenleme.png)
 
 - **Çift tık ile düzenleme:** Hücre giriş alanına dönüşür; imleç ve odak halkası görünür.
 - **Davranış kutusu:** Değer ERP ve kuralı ezecek mi, alan ayarından okunup yanında yazar.
 - **Anında kontrol:** Aralık ve tip hücrede denetlenir; Enter kaydet, Esc vazgeç.
 - **Eşzamanlılık:** Aynı alana bakan başka kullanıcı varsa uyarı; sessiz ezme yok.
 
-### 12 · Elle değer girme · Etki önizlemesi ve onay
+### 12 · Manuel değer girme · Etki önizlemesi ve onay
 <sub>24. Ekranlar ve fonksiyonlar · F12 · B Ana veri ve kurallar · Mockup 2/3</sub>
 
-![12 · Elle değer girme · Etki önizlemesi ve onay](mockups/m24f-0389-12-elle-deger-girme-etki-onizlemesi-ve-onay.png)
+![12 · Manuel değer girme · Etki önizlemesi ve onay](mockups/m24f-0389-12-elle-deger-girme-etki-onizlemesi-ve-onay.png)
 
 - **Ne değişecek:** Eski ve yeni değer; türetilmiş kapasite ve tahmini doluluk etkisi.
 - **Geçerlilik tarihi:** İsteğe bağlı; süre dolunca değer kural ya da ERP'ye döner.
 - **Plan uyarısı:** Planın otomatik değişmediği, yeniden hesap gerektiği açıkça yazar.
 - **Kim ve ne zaman:** Pencere altında kaydeden ve zaman; denetim izine aynen gider.
 
-### 12 · Elle değer girme · Sonuç
+### 12 · Manuel değer girme · Sonuç
 <sub>24. Ekranlar ve fonksiyonlar · F12 · B Ana veri ve kurallar · Mockup 3/3</sub>
 
-![12 · Elle değer girme · Sonuç](mockups/m24f-0390-12-elle-deger-girme-sonuc.png)
+![12 · Manuel değer girme · Sonuç](mockups/m24f-0390-12-elle-deger-girme-sonuc.png)
 
 - **Etiket 'elle' oldu:** Hücrede elle etiketi; kural ve ERP değerleri ipucunda saklanır.
 - **Geçmiş satırı:** Detay kartında kim, ne zaman, eski ve yeni değer; kural kaynaklı eski satırlar da görünür.
 - **Yan etkiler bildirimde:** Türetilmiş kapasite güncellendi, 1 uyarı kapandı.
-- **Geri yol:** Elle değeri kaldır butonu (13) her zaman elinizin altında.
+- **Geri yol:** Manuel değeri kaldır butonu (13) her zaman elinizin altında.
 
-### 13 · Elle değeri kaldırma
+### 13 · Manuel değeri kaldırma
 <sub>24. Ekranlar ve fonksiyonlar · F13 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
 - Elle girilmiş bir değeri kaldırıp alanı öncelik sırasındaki bir sonraki kaynağa (kural ya da ERP) geri döndürmek; iz bırakarak ve geri alınabilir biçimde.
+
+- **Karar (6.2, K-170):** hücre menüsünden ya da seçili kayıtlarda toplu; değer kural ya da ERP'ye döner, denetim izine yazılır. Veri sözlüğünde Manuel kapatılınca "n kayıtta manuel değer kaldırılacak" uyarısı; onayla manuel değerler kalkar.
+- **Uygulama (6.2, K-170, K-172):** uygulandı. Tekil kaldırma hücre menüsünden (sağ tık, hücrenin tamamında) ya da seçili hücrede Delete; toplu kaldırma seçili kayıtlarda (seçim kutuları yalnız manuel alanı olan tabloda).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Detay kartı 'Elle değeri kaldır' · hücre menüsü · toplu: Excel ile toplu düzeltme (15) ya da elle değer listesi
-- **01:** 'Elle değeri kaldır' seçilir; onay penceresi şu anki elle değeri ve geri dönecek değeri kaynağıyla gösterir.
+  - Nereden: Detay kartı 'Manuel değeri kaldır' · hücre menüsü · toplu: Excel ile toplu düzeltme (15) ya da manuel değer listesi
+- **01:** 'Manuel değeri kaldır' seçilir; onay penceresi şu anki manuel değeri ve geri dönecek değeri kaynağıyla gösterir.
 - **02:** Etki önizlemesi: türetilmiş alanlar ve onaylı plandaki tahmini etki (ör. doluluk yükselir).
 - **GIRDI**
   - Kayıt, alan ve mevcut ManualValue
   - Öncelik sırasındaki sonraki değer (FieldValueSource: kural sonucu, ERP değeri)
 - **03:** Onaylanınca ManualValue kapatılır (ValidUntil = şimdi), silinmez; FieldValueSource yeni kaynağa göre güncellenir.
-- **04:** Türetilmiş alanlar ve bu kayıt için veri kalitesi kontrolü yeniden çalışır; denetim izine 'elle değer kaldırıldı' yazılır.
-- **05:** Bildirimde 'Geri al' bağlantısı: kaldırılan elle değer tek tıkla yeniden açılır (geçerliliği devam eder).
+- **04:** Türetilmiş alanlar ve bu kayıt için veri kalitesi kontrolü yeniden çalışır; denetim izine 'manuel değer kaldırıldı' yazılır.
+- **05:** Bildirimde 'Geri al' bağlantısı: kaldırılan manuel değer tek tıkla yeniden açılır (geçerliliği devam eder).
 - **ÇIKTI**
   - Kapatılmış ManualValue kaydı ve güncel FieldValueSource
   - Denetim izi satırı; detay kartında geçmiş
   - Türetilmiş alanlar
 
-### 13 · Elle değeri kaldırma · kurallar ve etkiler
+### 13 · Manuel değeri kaldırma · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F13 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
   - Geri dönülecek değer öncelik sırasıyla belirlenir: kural sonucu varsa kural, yoksa ERP.
   - Kaldırma silme değildir; geçmişte görünür ve geri alınabilir.
-  - Süresi dolan elle değerler aynı yolu otomatik izler (12).
+  - Süresi dolan manuel değerler aynı yolu otomatik izler (12).
   - Çalışmadaki geçici değişiklikler bu işlemden etkilenmez.
 - **HATA VE ISTISNA**
   - Geri dönülecek değer yoksa (kural yok, ERP gelmiyor): alan boş kalır (anlamı BOŞSA) ve zorunluysa veri kalitesi 'kritik' uyarı üretir; onayda uyarılır.
@@ -1127,20 +1136,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Doluluk ve plan:** CapacityLoad · PlanMetric Otomatik değil; çalışmada yeniden hesap
 - **ÖRNEK:** CNC torna 1 verimi elle %85; kaldırılınca kural 3'ün %80'i geçerli olur. Haftalık net kapasite 136 → 128 sa; H47 doluluğu tahmini %112 → %119. Bildirimden 'Geri al' ile %85'e dönülebilir.
 
-### 13 · Elle değeri kaldırma · Onay ve etki
+### 13 · Manuel değeri kaldırma · Onay ve etki
 <sub>24. Ekranlar ve fonksiyonlar · F13 · B Ana veri ve kurallar · Mockup 1/2</sub>
 
-![13 · Elle değeri kaldırma · Onay ve etki](mockups/m24f-0393-13-elle-degeri-kaldirma-onay-ve-etki.png)
+![13 · Manuel değeri kaldırma · Onay ve etki](mockups/m24f-0393-13-elle-degeri-kaldirma-onay-ve-etki.png)
 
 - **Geri dönecek değer:** Kaldırınca hangi değer ve hangi kaynak geçerli olacak, önceden görünür.
 - **Etki:** Kapasite ve tahmini doluluk; kullanıcı sonucu bilerek onaylar.
 - **Yıkıcı aksiyon rengi:** Kaldır butonu kiremit; vazgeç her zaman solunda.
-- **Silme değil kapatma:** Elle değerin geçmişte kalacağı ve geri alınabileceği yazar.
+- **Silme değil kapatma:** Manuel değerin geçmişte kalacağı ve geri alınabileceği yazar.
 
-### 13 · Elle değeri kaldırma · Sonuç ve geri al
+### 13 · Manuel değeri kaldırma · Sonuç ve geri al
 <sub>24. Ekranlar ve fonksiyonlar · F13 · B Ana veri ve kurallar · Mockup 2/2</sub>
 
-![13 · Elle değeri kaldırma · Sonuç ve geri al](mockups/m24f-0394-13-elle-degeri-kaldirma-sonuc-ve-geri-al.png)
+![13 · Manuel değeri kaldırma · Sonuç ve geri al](mockups/m24f-0394-13-elle-degeri-kaldirma-sonuc-ve-geri-al.png)
 
 - **Etiket değişti:** Hücrede 'kural' etiketi; değer %80.
 - **Geçmişte iz:** 'Elle kaldırıldı' satırı eski ve yeni değerle.
@@ -1151,6 +1160,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F14 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
 - Bir kaydın alanlarının zaman içinde nasıl değiştiğini tek zaman çizgisinde göstermek: elle girişler, kural sonuçları ve ERP yüklemeleri; kim, ne zaman, eski ve yeni değer.
+
+- **Karar (6.3, K-171):** detay kartının Geçmiş sekmesinde: tarih, veri numarası, alan, eski değer, yeni değer, kaynak (aktarım türü ya da Smartchain'de değiştiren kişi ve ekran). Kart "Detay ›" rozeti ya da satır menüsüyle açılır; denetim izinde "Kayda git" (K-108).
 
 #### NASIL ÇALIŞIR
 
@@ -1165,7 +1176,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veri versiyonları arasındaki alan farkları (ERP yüklemeleri)
   - Filtreler: alan, kaynak, kişi, tarih aralığı
 - **03:** Filtreler alan, kaynak, kişi ve tarihe göre daraltır; değişmeyen yükleme satırları varsayılan gizlidir.
-- **04:** 'Bu değere dön' eski değeri yeni bir elle değer olarak kaydeder (12 ile aynı yol, onaylı); eski kayıt değiştirilmez.
+- **04:** 'Bu değere dön' eski değeri yeni bir manuel değer olarak kaydeder (12 ile aynı yol, onaylı); eski kayıt değiştirilmez.
 - **05:** Liste Excel'e aktarılır; Admin tüm kayıtlar için denetim izi ekranına (98) geçer.
 - **ÇIKTI**
   - Zaman çizgisi görünümü (filtreli)
@@ -1178,7 +1189,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Geçmiş silinmez; ham veri temizliği ve versiyon sıkıştırması geçmişi etkilemez (sayısal özet kalır).
   - Kural kaynaklı değişikliklerde kural numarası bağlantıdır; kural silinmiş değil pasif olabilir.
-  - Geçmişe dönüş her zaman elle değer olarak yazılır; alan elle değer alamıyorsa seçenek pasif.
+  - Geçmişe dönüş her zaman manuel değer olarak yazılır; alan manuel değer alamıyorsa seçenek pasif.
   - End user geçmişi görmez; detay kartında yalnız geçerli değer.
 - **HATA VE ISTISNA**
   - Eski versiyonlarda alan bazlı fark yoksa (sıkıştırılmış) satır 'özet' olarak görünür.
@@ -1186,7 +1197,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Geçmişe dönüş: 12 ile aynı etkiler (türetilmiş alanlar, veri kalitesi, plan yeniden hesap).
   - Görüntüleme: yok.
-- **YENİDEN HESAPLANACAK ALANLAR:** Görüntüleme yeniden hesap gerektirmez. 'Bu değere dön' seçilirse 12 Elle değer girme ile aynı alanlar yeniden hesaplanır (FieldValueSource, türetilmiş kapasite, veri kalitesi; plan çalışmada).
+- **YENİDEN HESAPLANACAK ALANLAR:** Görüntüleme yeniden hesap gerektirmez. 'Bu değere dön' seçilirse 12 Manuel değer girme ile aynı alanlar yeniden hesaplanır (FieldValueSource, türetilmiş kapasite, veri kalitesi; plan çalışmada).
 - **ÖRNEK:** CNC torna 1: 01.10 ERP'den oluştu; 02.10 kural 1 ile Tip = Makine; 20.10 kural 3 ile Verim %80 ve Kritik = Evet; 21.10 Cavide elle %85; 23.10 elle kaldırıldı, %80'e döndü. Tek çizgide 8 satır.
 
 ### 14 · Değişiklik geçmişi · Zaman çizgisi
@@ -1196,7 +1207,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Üç kaynak tek çizgide:** Elle, kural ve ERP yüklemesi aynı listede; 'Kim' sütunu kural numarasını ya da versiyonu yazar.
 - **Filtreler:** Alan, kaynak, kişi ve tarih; değişmeyen yükleme satırları gizli.
-- **Bu değere dön:** Geçmişteki değer tek tıkla geri alınır; elle değer olarak kaydedilir.
+- **Bu değere dön:** Geçmişteki değer tek tıkla geri alınır; manuel değer olarak kaydedilir.
 - **Dışa aktarma:** Excel'e aktar ve tam denetim izine geçiş (Admin).
 
 ### 14 · Değişiklik geçmişi · Geçmişe dönüş onayı
@@ -1205,14 +1216,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![14 · Değişiklik geçmişi · Geçmişe dönüş onayı](mockups/m24f-0398-14-degisiklik-gecmisi-gecmise-donus-onayi.png)
 
 - **Seçilen ve şu anki değer:** Hangi değere dönüleceği ve kaynağı açıkça yazar.
-- **Yeni kayıt mantığı:** Eski kayıt değişmez; geri dönüş yeni elle değer olarak eklenir.
+- **Yeni kayıt mantığı:** Eski kayıt değişmez; geri dönüş yeni manuel değer olarak eklenir.
 - **Otomatik not:** Geçmişten dönüldüğü notu hazır gelir, değiştirilebilir.
 - **Aynı yol:** Kaydetme 12'deki onay ve etki kurallarını izler.
 
 ### 15 · Excel ile toplu düzeltme (öneri)
 <sub>24. Ekranlar ve fonksiyonlar · F15 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
-- Çok sayıda kaydı tek tek düzeltmek yerine filtrelenmiş listeyi Excel'e alıp düzeltmek ve değişen hücreleri elle değer olarak geri yüklemek; aynı izlenebilirlik ve geri alma ile.
+- Çok sayıda kaydı tek tek düzeltmek yerine filtrelenmiş listeyi Excel'e alıp düzeltmek ve değişen hücreleri manuel değer olarak geri yüklemek; aynı izlenebilirlik ve geri alma ile.
 
 - **Durum (K-167):** Sonraya bırakıldı; ilerleyen aşamalarda yeniden değerlendirilecek. Excel'le gelen veri Veri yükleme'den yüklenir.
 
@@ -1221,11 +1232,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
   - Nereden: Ana veri ekranı 'Excel ile toplu düzelt' · Veri kalitesi 'toplu düzelt' (seçili uyarılar)
-- **01:** 'Excel'e al': filtrelenmiş liste indirilir; elle değer alabilen alanlar düzenlenebilir, diğerleri gri ve kilitli; her hücrenin kaynak etiketi ve gizli kayıt anahtarı dosyadadır.
+- **01:** 'Excel'e al': filtrelenmiş liste indirilir; manuel değer alabilen alanlar düzenlenebilir, diğerleri gri ve kilitli; her hücrenin kaynak etiketi ve gizli kayıt anahtarı dosyadadır.
 - **02:** Kullanıcı Excel'de değerleri değiştirir (liste alanlarında açılır liste).
 - **GIRDI**
   - Kapsam: sekme ve filtre (ör. verimi boş kalan kaynaklar)
-  - Veri sözlüğü: hangi alanlar elle değer alabilir (düzenlenebilir), hangileri kilitli
+  - Veri sözlüğü: hangi alanlar manuel değer alabilir (düzenlenebilir), hangileri kilitli
   - Düzeltilmiş xlsx; gizli kayıt anahtarı ve kaynak etiketleri
 - **03:** Dosya geri yüklenir; sistem gizli anahtarla kayıtları eşler ve yalnız değişen hücreleri bulur (dosya değeri ≠ geçerli değer).
 - **04:** Ön kontrol: tip, aralık, kod listesi; hatalı hücreler listelenir ve atlanır.
@@ -1235,13 +1246,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Toplu işlem kaydı (numara, kullanıcı, dosya, N değişiklik) ve her hücre için ManualValue
   - Hata raporu xlsx
   - Türetilmiş alanlar ve veri kalitesi güncellemesi
-- **07:** Sonuç bildirimi ve 'Tümünü geri al': toplu işlemin tüm elle değerleri tek seferde kapatılır.
+- **07:** Sonuç bildirimi ve 'Tümünü geri al': toplu işlemin tüm manuel değerleri tek seferde kapatılır.
 
 ### 15 · Excel ile toplu düzeltme (öneri) · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F15 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Değişmeyen hücreler dokunulmaz; dosyadaki her hücre elle değer olmaz.
+  - Değişmeyen hücreler dokunulmaz; dosyadaki her hücre manuel değer olmaz.
   - Kilitli alanlar dosyada değiştirilse bile alınmaz, ön kontrolde 'kilitli alan' uyarısı.
   - Her hücre 12'deki kurallara tabidir (alan ayarı, aralık, çakışma); toplu işlem bu kuralları atlamaz.
   - Bir toplu işlemde en fazla 5.000 değişiklik (parametre); fazlası bölünür.
@@ -1260,7 +1271,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Türetilmiş kapasite:** Dönem kapasitesi Kapsamdaki kaynaklar için
 - **Veri kalitesi uyarıları:** Veri kalitesi listesi Kapsamdaki kayıtlar için kontrol yeniden
 - **Doluluk ve plan:** CapacityLoad · PlanMetric Otomatik değil; çalışmada yeniden hesap
-- **ÖRNEK:** Verimi boş kalan 5 kaynak Excel'e alınır, ölçüm değerleri girilir, geri yüklenir: 6 değişen hücre, 1 hatalı (olmayan takvim) atlanır, 5 elle değer toplu işlem #T-118 olarak kaydedilir.
+- **ÖRNEK:** Verimi boş kalan 5 kaynak Excel'e alınır, ölçüm değerleri girilir, geri yüklenir: 6 değişen hücre, 1 hatalı (olmayan takvim) atlanır, 5 manuel değer toplu işlem #T-118 olarak kaydedilir.
 - **AÇIK KONU:** Bu fonksiyon öneri. Alternatif: yalnız tek tek düzeltme (12) ve kurallar (16). Toplu düzeltme ilk kurulumda (ERP'de olmayan 40+ alan) zaman kazandırır.
 
 ### 15 · Excel ile toplu düzeltme (öneri) · Excel'e alma
@@ -1269,7 +1280,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![15 · Excel ile toplu düzeltme (öneri) · Excel'e alma](mockups/m24f-0401-15-excel-ile-toplu-duzeltme-oneri-excel-e-alma.png)
 
 - **Adım göstergesi:** Excel'e al → düzelt ve yükle → önizleme → sonuç.
-- **Düzenlenebilir / kilitli:** Hangi alanların elle değer alabildiği çiplerle; kilitliler gri.
+- **Düzenlenebilir / kilitli:** Hangi alanların manuel değer alabildiği çiplerle; kilitliler gri.
 - **Gizli anahtar:** Dosya kayıtları güvenle eşler; kaynak etiketleri de dosyada.
 - **Kapsam:** Filtre dosyaya yansır; yalnız ilgili satırlar.
 
@@ -1291,7 +1302,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Toplu işlem numarası:** Üst şeritte işlem numarası, kim, kaç değer; detay ve geri al.
 - **Hücreler 'elle' oldu:** Listede değişen hücreler elle etiketiyle.
 - **Yan etkiler:** Bildirimde kapasite ve kapanan uyarı sayısı.
-- **Tek seferde geri:** Toplu işlemin tüm elle değerleri birlikte kapatılabilir.
+- **Tek seferde geri:** Toplu işlemin tüm manuel değerleri birlikte kapatılabilir.
 
 ### 16 · Veri kuralı tanımlama
 <sub>24. Ekranlar ve fonksiyonlar · F16 · B Ana veri ve kurallar · Çalışma prensibi 1/2 (Geliştirme 4.1, K-140, K-141, K-142)</sub>
@@ -1329,7 +1340,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Editörde yalnız etiketi tanımlı ek alanlar listelenir; Koşul ve Sonuç metinleri güncel etiketle yazılır, etiket değişince yeniden üretilir (K-144).
   - Varsayılan kural yoktur; kurallar kurulumda projeye göre eklenir. Kural eklenir, silinir, pasif yapılır.
   - Kural ham veriyi değiştirmez; işlenmiş katmanda çalışır (K-140).
-  - Staging'de ERP–kural önceliği yoktur; elle değerin korunması aktarımın işidir (5.1).
+  - Staging'de ERP–kural önceliği yoktur; manuel değerin korunması aktarımın işidir (5.1).
   - Değer, Alan ya da Formül boş çıkarsa hücre değişmez; bölen sıfırsa o satırda sonuç boş sayılır.
 - **HATA VE ISTISNA**
   - Tip uyuşmazlığı (sabit hedefe uymuyor, alan türleri uyumsuz, formül tipe uymuyor): pencerede alanın altında mesaj, Kaydet pasif; sunucu da reddeder.
@@ -1359,7 +1370,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Faz 1 dışı (K-142):** Önizleme Faz 1'de yoktur; kural kaydedilir ve "Kuralları yeniden uygula" ile uygulanır, sonuç validasyonda ve Kayıtlar görünümündeki hücre izinde görünür. Aşağıdaki metin ve mockup ileriki faz için kayıttır; yetki matrisinde 17 kalır, hiçbir uç noktada kullanılmaz.
 
-- Bir kuralı kaydetmeden önce geçerli veri üzerinde deneyip hangi kayıtların nasıl değişeceğini, hangilerinin ERP ya da elle değer nedeniyle atlanacağını göstermek; yanlış kuralın veriyi bozmasını önlemek.
+- Bir kuralı kaydetmeden önce geçerli veri üzerinde deneyip hangi kayıtların nasıl değişeceğini, hangilerinin ERP ya da manuel değer nedeniyle atlanacağını göstermek; yanlış kuralın veriyi bozmasını önlemek.
 
 #### NASIL ÇALIŞIR
 
@@ -1367,7 +1378,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü
   - Nereden: Kural editörü 'Önizle' · kural listesinde satır menüsü 'Önizle' (mevcut kural için yeniden)
 - **01:** Koşullar geçerli veri üzerinde salt okunur çalıştırılır; hiçbir tablo yazılmaz.
-- **02:** Sonuç sayılarla özetlenir: eşleşen, değişecek, aynı kalacak, ERP ezer nedeniyle atlanacak, elle değer nedeniyle atlanacak.
+- **02:** Sonuç sayılarla özetlenir: eşleşen, değişecek, aynı kalacak, ERP ezer nedeniyle atlanacak, manuel değer nedeniyle atlanacak.
 - **GIRDI**
   - Kural taslağı (koşullar, sonuç, çakışma ayarları)
   - Geçerli veri versiyonu
@@ -1394,7 +1405,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yok; salt okunur.
   - Kural kaydında önizleme özeti.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; önizleme yazmaz.
-- **ÖRNEK:** 'Torna kodları makinedir' önizlemesi: 14 eşleşen; 12 değişir (2'sinde ERP değeri kural tarafından ezilir), 1 aynı kalır, 1'inde elle değer korunur. Sıra değişse sonuç aynı.
+- **ÖRNEK:** 'Torna kodları makinedir' önizlemesi: 14 eşleşen; 12 değişir (2'sinde ERP değeri kural tarafından ezilir), 1 aynı kalır, 1'inde manuel değer korunur. Sıra değişse sonuç aynı.
 
 ### 17 · Kural önizleme · Önizleme çekmecesi
 <sub>24. Ekranlar ve fonksiyonlar · F17 · B Ana veri ve kurallar · Mockup 1/1</sub>
@@ -1525,8 +1536,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Sistem (yükleme ve kural uygulaması sonunda, gece) · elle 'Şimdi kontrol et': Key user ve üstü
-  - Nereden: Tam ve kısmi aktarım (05 / 06), kural uygulama (19), elle değer (12, kayıt bazında) sonunda · Veri kalitesi ekranı
-- **01:** Tetik gelir; kapsam belirlenir: tam kontrol (yükleme, gece) ya da etkilenen kayıtlar (kural, elle değer).
+  - Nereden: Tam ve kısmi aktarım (05 / 06), kural uygulama (19), manuel değer (12, kayıt bazında) sonunda · Veri kalitesi ekranı
+- **01:** Tetik gelir; kapsam belirlenir: tam kontrol (yükleme, gece) ya da etkilenen kayıtlar (kural, manuel değer).
 - **02:** Ana veri kontrolleri çalışır: kaynak (takvimsiz, sıfır kapasite, birim uyumsuzluğu), malzeme (temin süresi, min parti, birim dönüşümü), ürün ağacı (döngü, pasif bileşen), rota (kaynak yok, süre 0, kapasite birimi ≠ tüketim birimi).
 - **GIRDI**
   - Geçerli veri versiyonu (tüm varlıklar ya da etkilenen kayıtlar)
@@ -1606,7 +1617,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05:** 'Ata': uyarı kişiye atanır, uyarı iş listesinde görünür; not eklenir.
 - **ÇIKTI**
   - Kapanan / atanmış / bilerek böyle uyarılar ve durum geçmişi
-  - Elle değer, kural uygulaması ya da atama kaydı (ilgili fonksiyonun çıktısı)
+  - Manuel değer, kural uygulaması ya da atama kaydı (ilgili fonksiyonun çıktısı)
   - Denetim izi
 - **06:** Toplu: aynı türden uyarılar seçilir (ör. 21 'temin süresi boş'), tek aksiyon uygulanır; sonuçta kapanan sayısı ve geri alma bağlantısı.
 
@@ -1661,7 +1672,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Kapanan satırlar üstte:** 21 kapanan ve 1 bilerek böyle, nedeniyle; liste yeniden sıralanır.
 - **Sayılar güncel:** Yüksek −22, bugün kapanan 23; ana sayfa aynı sayıları gösterir.
-- **Geri alınabilir:** Bildirimde geri alma bağlantısı (kural ayarı ya da elle değer).
+- **Geri alınabilir:** Bildirimde geri alma bağlantısı (kural ayarı ya da manuel değer).
 - **Kalanlar:** Kritik 2 uyarı 'bilerek böyle' kapatılamaz; düzeltme bekler.
 
 ### 99 · Malzeme blokajı
@@ -3811,7 +3822,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Dondurulmuş dönem hücresi değiştirilemez (63).
-  - Elle değer varsayılan olarak kilitlidir; model ona dokunmaz (A-14 önerisi, açık).
+  - Manuel değer varsayılan olarak kilitlidir; model ona dokunmaz (A-14 önerisi, açık).
   - Kapasite üstü değer engellenmez, uyarı verir; karar kullanıcınındır. Negatif ve boş değer engellenir.
   - Bir çalışmayı aynı anda yalnız sahibi düzenler; başka kullanıcı salt okunur açar.
   - Değişiklik kaydedilene kadar yalnız taslaktır; sayfa kapanırsa taslak tarayıcıda saklanır ve geri dönüşte sorulur (öneri).
@@ -3884,7 +3895,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - Ürün(ler) ve açık dönemler
   - Talep satırı; net talep seçeneğinde stok projeksiyonu
-  - Seçenekler: elle değerleri ez, sonucu kilitle, parti kurallarına yuvarla
+  - Seçenekler: manuel değerleri ez, sonucu kilitle, parti kurallarına yuvarla
 - **03:** 'Parti kurallarına yuvarla' açıksa minimum parti ve kat uygulanır (öneri); 'sonucu kilitle' açıksa hücreler elle-kilitli olur, kapalıysa modelin başlangıç değeri olarak işaretlenir.
 - **04:** Anlık etki (62): stok projeksiyonu düzleşir, kaynak şeridi yeniden hesaplanır; değişen hücreler sarı.
 - **05:** İşlem tek bir değişiklik olarak taslağa ve değişiklik izine girer; 'Geri al' tümünü birden geri alır.
@@ -3899,7 +3910,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Dondurulmuş dönem atlanır.
-  - Mevcut elle değerler yalnız 'ez' seçeneği açıksa değişir; aksi halde korunur ve sayısı yazılır.
+  - Mevcut manuel değerler yalnız 'ez' seçeneği açıksa değişir; aksi halde korunur ve sayısı yazılır.
   - Net talep eşitlemesi stok projeksiyonunu sıfıra çeker; güvenlik stoğu parametresi varsa onu hedefler (öneri).
   - Toplu kapsamda (tüm ürünler) işlem sayısı ve süre yazılır; 50 üründen fazlası için onay ikinci kez istenir.
 - **HATA VE ISTISNA**
@@ -3924,7 +3935,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![51 · Ürün bazlı · talebe eşitle · Seçenekler](mockups/m24f-0558-51-urun-bazli-talebe-esitle-secenekler.png)
 
 - **Kapsam ve tür:** Seçili ürün ya da tüm ürünler; talep ya da net talep (öneri).
-- **Elle değer kararı:** Mevcut elle değerlerin ezilip ezilmeyeceği ve sayısı açıkça sorulur.
+- **Manuel değer kararı:** Mevcut manuel değerlerin ezilip ezilmeyeceği ve sayısı açıkça sorulur.
 - **Kilit seçeneği:** Sonuç kilitli ya da modelin başlangıç noktası olarak işaretlenir.
 - **Etki sayısı:** Kaç hücrenin değişeceği ve tek işlemde geri alınabileceği yazılır.
 
@@ -4201,7 +4212,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - WorkspaceOverride kayıtları (kaynak, alan, değer, kim, zaman)
   - Değişiklik izi; anında hesaplanan dönem kapasitesi (CapacityLoad Gross / Downtime / Net)
   - Yeniden hesap işi ve plan çıktıları; yayında override'lar plan versiyonuyla saklanır
-- **06:** Kalıcı olması istenirse 'Ana veriye taşı' ile değer elle değer (12) olarak ana veriye yazılır (öneri); aksi halde çalışma silinince override da gider, yayınlanan planla birlikte saklanır.
+- **06:** Kalıcı olması istenirse 'Ana veriye taşı' ile değer manuel değer (12) olarak ana veriye yazılır (öneri); aksi halde çalışma silinince override da gider, yayınlanan planla birlikte saklanır.
 
 ### 55 · Geçici kaynak parametresi · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F55 · F Manuel planlama · Çalışma prensibi 2/3</sub>
@@ -4251,7 +4262,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Çalışma etiketi:** Geçici değerler 'çalışma' etiketiyle; ana veri değeri parantezde.
 - **Birleşik etki:** Duruş, fazla mesai ve 6. gün birlikte: H46 %110, H47 %81.
-- **Ana veriye taşı:** Kalıcı olması istenirse elle değer olarak ana veriye (öneri).
+- **Ana veriye taşı:** Kalıcı olması istenirse manuel değer olarak ana veriye (öneri).
 - **Tümünü geri al:** Üç değişiklik tek tıkla geri alınır; iz kalır.
 
 ### 55 · Geçici kaynak parametresi · Yeniden hesap sonucu
@@ -5011,7 +5022,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü · End user yalnız onaylı plandaki sonucu görür
   - Nereden: Öneriler ekranı (16) satır kararı ve çekmece · Malzeme planı eksik hücresinden · Pegging düğümünden
 - **01:** Satır seçilince çekmece açılır: hesaplanan ve yuvarlanmış miktar, tarih, tedarikçi/kaynak ve bu siparişin karşıladığı talepler.
-- **02:** Kullanıcı isterse yuvarlanmış miktarı ya da tarihi düzeltir; sistem minimum, kat ve temin süresi kontrolünü anında yapar, sonucu (fazla stok, geç teslim) yazar. Elle değer kilitlenir.
+- **02:** Kullanıcı isterse yuvarlanmış miktarı ya da tarihi düzeltir; sistem minimum, kat ve temin süresi kontrolünü anında yapar, sonucu (fazla stok, geç teslim) yazar. Manuel değer kilitlenir.
 - **GIRDI**
   - PlannedOrder: tür, malzeme, proje, hesaplanan miktar, yuvarlanmış miktar, tarih, tedarikçi ya da kaynak
   - Satın alma parametreleri: minimum, kat (parti), kutu; tedarikçi temin süresi
@@ -5066,7 +5077,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Çekmece:** Hesaplanan, yuvarlanmış, tarih, tedarikçi ve karşılanan talepler bir arada.
 - **Elle miktar:** Hücrede düzeltilir; kat ve minimum kontrolü anında, sonucu (fazla stok) yazar.
-- **Kilit:** Elle değer kilitlenir; model sonraki hesapta değiştiremez.
+- **Kilit:** Manuel değer kilitlenir; model sonraki hesapta değiştiremez.
 - **Üç karar:** Onayla birincil; beklet ve reddet ikincil buton.
 
 ### 66 · Planlı sipariş kararı · Reddetme
@@ -7320,7 +7331,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Lisans sayaçları:** License · Kullanıcılar ekranı Lisans yüklenince
 - **Saklama işleri:** Zamanlanmış işler Süre değişince sonraki çalışmada
 - **Uygulama (2.4, K-104, K-105):** Şimdilik veri sözlüğünde yalnız etiket düzenlenir; öteki alanlar pencerede pasif form öğesidir (liste, onay kutusu, metin kutusu), alan açıklaması salt okunurdur (`Description`, docs/02 AÇIKLAMA'dan); düzenleme, kilitler, etki sayısı ve "Şimdi uygula" 5.1'de. Değer önceliği sürüklenmez (docs/02 modeli). Şifre ve oturum ayarları bu ekrandadır. Motor ayarları 10.13'te, lisans 11.3'te, sürüm güncelleme 11.2'de.
-- **ÖRNEK:** Kaynak.Verim için öncelik elle > kural > ERP, Senaryo işaretli. İşçi sayısı 8 → 12: kuyruktaki 1 iş bitince servis yeniden başlar. Lisans 12 → 20 kullanıcı, 2027 sonuna kadar.
+- **ÖRNEK:** Kaynak.Verim için öncelik manuel > kural > ERP, Senaryo işaretli. İşçi sayısı 8 → 12: kuyruktaki 1 iş bitince servis yeniden başlar. Lisans 12 → 20 kullanıcı, 2027 sonuna kadar.
 
 ### 96 · Sistem ayarları · Veri sözlüğü alanı
 <sub>24. Ekranlar ve fonksiyonlar · F96 · K Yönetim ve sistem · Mockup 1/3</sub>
@@ -7442,7 +7453,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Görüntüleme: Admin ve üstü (tümü) · Key user: kendi kayıtları (öneri) · yazma: sistem (her değişiklikte)
   - Nereden: Yönetim menüsü 'Denetim izi' (Admin ve üstü) · kayıt ekranlarındaki 'Değişiklik geçmişi' · Raporlar 'Dışa aktarım izi'
-- **01:** Her yazma işlemi (elle değer, kural, parametre, yayın, uyarı kapatma, kullanıcı, ayar, dışa aktarım, giriş, iş iptali) aynı veritabanı işlemi içinde AuditLog'a yazılır; yazılamazsa işlem geri alınır.
+- **01:** Her yazma işlemi (manuel değer, kural, parametre, yayın, uyarı kapatma, kullanıcı, ayar, dışa aktarım, giriş, iş iptali) aynı veritabanı işlemi içinde AuditLog'a yazılır; yazılamazsa işlem geri alınır.
 - **02:** Toplu otomatik işlemler (yükleme, kural uygulama) tek özet kayıt (varlık, sayılar) bırakır; satır bazlı eski ve yeni değer veri versiyonlarında (07) tutulur.
 - **GIRDI**
   - AuditLog: UserId, At, Action, ObjectType, ObjectKey, OldValue, NewValue; bağlam (çalışma, plan hesabı, iş)

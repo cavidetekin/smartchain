@@ -1,4 +1,4 @@
-"""Veri sözlüğü (fonksiyon 96, K-104): alan okuma ve etiket. Öteki alanlar salt okunur, 5.1'de açılır.
+"""Veri sözlüğü (fonksiyon 96, K-104, K-170): alan okuma, etiket ve Manuel. Öteki alanlar salt okunur (Değer önceliği sabit, Senaryo Aşama 8).
 
 Görünüm ve kurallar alan adını saklar, etiketi değil: etiket değişince yalnız başlık değişir. Ek alanın etiketi silinince
 alan listeden kalkar, görünüm açılırken ayıklanır (views._clean); kayıt değişmediği için etiket dönünce görünüm de döner.
@@ -13,7 +13,7 @@ from db.dictionary import is_additional
 from ..errors import AppError
 from ..lists import FIELD_DEFINITIONS, LISTS
 from ..repositories import audit, field_definitions as repo
-from . import auth
+from . import auth, manual_values
 from .auth import CurrentUser
 
 LABEL_MAX = 40  # K-88
@@ -53,12 +53,11 @@ def detail(session: Session | None, table: str, field: str) -> dict:
         views, rules = _usage(session, table, field)
         return {"table": row["TableName"], "field": row["FieldName"], "label": row["Label"],
                 "standard_label": row["StandardLabel"], "description": row["Description"], "is_additional": is_additional(field),
-                "field_class": row["FieldClass"], "value_priority": row["ValuePriority"],
+                "field_class": row["FieldClass"],
                 "manual_overrides": row["ManualOverrides"], "editable_in_workspace": row["EditableInWorkspace"],
                 "is_required": row["IsRequired"], "if_empty": row["IfEmpty"],
-                "options": {"field_class": FIELD_DEFINITIONS.values["FieldClass"],
-                            "value_priority": FIELD_DEFINITIONS.values["ValuePriority"]},
-                "used_in_views": views, "used_in_rules": rules}
+                "options": {"field_class": FIELD_DEFINITIONS.values["FieldClass"]},
+                "used_in_views": views, "used_in_rules": rules, **manual_values.manual_info(session, table, field)}
 
     return auth._db(work)
 
@@ -79,6 +78,19 @@ def set_label(session: Session | None, actor: CurrentUser, table: str, field: st
         audit.write_audit(session, ACTION, actor.id, OBJECT, f"{table}.{field}", {"Label": value}, {"Label": row["Label"]})
         session.commit()
         return None
+
+    auth._db(work)
+    return detail(session, table, field)
+
+
+def set_manual(session: Session | None, actor: CurrentUser, table: str, field: str, on: bool, confirm: bool) -> dict:
+    """Manuel aç / kapa (K-170); kapanırken manuel değer varsa onay istenir (409 manual_values), onayla manuel değerler kalkar."""
+    session = auth._require(session)
+
+    def work():
+        _row(session, table, field)
+        manual_values.set_manual(session, actor, table, field, on, confirm)
+        session.commit()
 
     auth._db(work)
     return detail(session, table, field)

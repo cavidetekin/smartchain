@@ -68,7 +68,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **1 · Validasyon Tip, zorunlu alan, tekrar eden anahtar**
 - **Kod → Id eşleme Bilinmeyen kod: satır Hatalı, ana tabloya geçmez:** 2
-- **3 · Veri kuralları Eksik alanlar kural ya da elle değerle tamamlanır**
+- **3 · Veri kuralları Eksik alanlar kural ya da manuel değerle tamamlanır**
 - **4 · Versiyonlu yazma Değişen kayıtlar yeni veri versiyonuyla**
 - **Ek alanlar**
   - Ana veri · 10 alan
@@ -207,7 +207,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **DataRule:** Veri kuralı: 'X = … ise Alan = …'
 - **DataRuleCondition:** Kural koşulları (VE / VEYA)
 - **DataRuleEffect:** Kural izi: hücreyi son değiştiren kural ve ham değer (K-140)
-- **ManualValue:** Kayıt bazında elle girilen değer
+- **ManualValue:** Kayıt ve alan başına manuel değer; alttaki değer (ERP ya da kural) saklanır (K-170)
 - **FieldValueSource:** Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır)
 - **ImportBatch:** Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla
 - **ImportFinding:** Partinin bulguları (ön kontrol ve doğrulama)
@@ -1217,8 +1217,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | FieldName | nvarchar(60) | PK | Alan | Sistem | H | E |  |
 | FieldClass | nvarchar(15) |  | Ana veri \| Parametre \| İşlem verisi | Sistem | H | E |  |
 | EditableInWorkspace | bit |  | Çalışmada geçici değiştirilebilir mi | Sistem | H | E | 0 |
-| ValuePriority | nvarchar(10) |  | ERP ezer \| Kural ezer | Sistem | H | H | ERP ezer |
-| ManualOverrides | bit |  | Elle değer her şeyi ezer mi | Sistem | H | H | 1 |
+| ValuePriority | nvarchar(10) |  | Kullanılmıyor: öncelik sabit, manuel > kural > ERP (K-170) | Sistem | H | H | ERP ezer |
+| ManualOverrides | bit |  | Manuel: manuel değer girilebilir mi (K-170); kurulumda Hayır, System owner açar; anahtar, ilişki ve sistem alanlarında açılmaz | Sistem | H | H | 0 |
 | IfEmpty | nvarchar(60) |  | Boşsa: docs/02 BOŞSA'dan, geçişte güncellenir, System owner değiştirmez (K-138) | Sistem | H | H |  |
 | IsRequired | bit |  | Zorunlu mu | Sistem | H | H | 0 |
 | Label | nvarchar(100) |  | Ekranda görünen etiket; standart alanın etiketini ezer, ek alanda boşsa alan gösterilmez (K-88); en çok 40 karakter girilir | Sistem | H | H |  |
@@ -1288,18 +1288,24 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Veri yönetimi</sub>
 
 - Veri yönetimi · versiyonsuz · Faz 1
-- Kayıt bazında elle girilen değer.
+- Manuel değer (K-170): ana veri ve işlem verisinde kayıt ve alan başına; kuralı ve ERP'yi ezer, aktarımda korunur, süresi yoktur. Alttaki değer (ERP ya da kural sonucu) girişte ve her aktarımda saklanır; kaldırılınca hücreye son alttaki değer döner. Değerler alanın tipinden metne çevrilmiş hâldedir.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| TableName | nvarchar(60) |  | Tablo | Kullanıcı | H | E |  |
-| RecordKey | nvarchar(200) |  | Kaydın iş anahtarı | Kullanıcı | H | E |  |
-| FieldName | nvarchar(60) |  | Alan | Kullanıcı | H | E |  |
-| Value | nvarchar(200) |  | Değer | Kullanıcı | H | E |  |
-| ValidUntil | nvarchar(20) |  | Süresiz \| ERP değişene kadar \| tarih | Kullanıcı | H | H | Süresiz |
-| CreatedBy | int | FK | Giren kullanıcı | Sistem | H | H |  |
-| CreatedAt | datetime2 |  | Zaman | Sistem | H | H |  |
+| TableName | nvarchar(60) | UK | Tablo (core adı) | Sistem | H | E |  |
+| RecordKey | nvarchar(60) | UK | Kaydın kimliği: Id, bütün versiyonlarda aynı (K-63); birimde kod | Sistem | H | E |  |
+| FieldName | nvarchar(60) | UK | Alan | Sistem | H | E |  |
+| Value | nvarchar(200) |  | Manuel değer; boş olabilir (zorunlu olmayan alanda) | Kullanıcı | H | H |  |
+| BaseValue | nvarchar(200) |  | Manuel değer girildiğindeki alttaki değer | Sistem | H | H |  |
+| UnderlyingValue | nvarchar(200) |  | Son aktarımdaki alttaki değer; kaldırılınca hücreye döner | Sistem | H | H |  |
+| UnderlyingSource | nvarchar(10) |  | Alttaki değerin kaynağı: ERP \| Kural | Sistem | H | E | ERP |
+| UnderlyingRuleId | bigint |  | Alttaki değeri veren kural | Sistem | H | H |  |
+| IsBaseChanged | bit |  | Alttaki değer manuel değer girildiğinden beri güncellendi mi ("Var / ERP Güncellendi", "Var / Kural Güncellendi") | Sistem | H | E | 0 |
+| CreatedBy | int | FK | Giren kullanıcı | Sistem | H | E |  |
+| CreatedAt | datetime2 |  | Giriş zamanı | Sistem | H | E |  |
+| UpdatedBy | int | FK | Son değiştiren | Sistem | H | E |  |
+| UpdatedAt | datetime2 |  | Son değişiklik | Sistem | H | E |  |
 
 ### FieldValueSource
 <sub>21. Veri modeli · Veri yönetimi</sub>

@@ -75,6 +75,7 @@ export const tr = {
     passwordChanged: "Şifreniz değiştirildi.",
     fontSizeNotSaved: "Yazı boyutu kaydedilemedi.",
     logout: "Çıkış",
+    version: (version: string) => `Sürüm ${version}`,
   },
   // Yetki (fonksiyon 90; K-99, K-100)
   authz: {
@@ -429,6 +430,34 @@ export const tr = {
     lastTransfer: (when: string, kind: string) => `${when} · ${kind}`,
     newData: "Yeni veri",
   },
+  // Manuel değer (K-170, K-172)
+  manualValues: {
+    rule: (name: string) => `Kural: ${name}`,
+    ruleNo: (n: number) => `Kural ${n}`,
+    manual: (value: string, who: string, at: string) => `Manuel değer: ${value} · ${who} · ${at}`,
+    changedErp: (from: string, to: string) => `ERP'den gelen değer güncellendi: ${from} → ${to}`,
+    changedRule: (rule: string, from: string, to: string) => `Kural sonucu güncellendi${rule ? ` (${rule})` : ""}: ${from} → ${to}`,
+    empty: "boş",
+    cellLabel: (label: string) => `${label}: manuel değer`,
+    datePlaceholder: "gg.aa.yyyy",
+    cellMenu: (label: string) => `${label} hücre menüsü`,
+    removeOne: "Manuel değeri kaldır",
+    saved: (saved: number, removed: number) => [saved ? `${saved} manuel değer kaydedildi` : "", removed ? `${removed} manuel değer kaldırıldı` : ""].filter(Boolean).join(", ") + ".",
+    notSavedOne: (record: string, label: string, problem: string) => `Kaydedilmedi. ${record} · ${label}: ${problem}`,
+    notSavedMany: (n: number) => `Kaydedilmedi. ${n} hücrede geçersiz değer var.`,
+    failed: "Manuel değerler kaydedilemedi.",
+    problems: { number: "Sayı girilmeli.", integer: "Tam sayı girilmeli.", date: "Tarih girilmeli.", bool: "Evet ya da Hayır girilmeli.",
+                list: "Listedeki değerlerden biri girilmeli.", notManual: "Manuel değer girilemez." },
+    pasteSummary: (taken: number, rejected: number) => (rejected ? `${taken} hücre taslağa alındı, ${rejected} hücre alınmadı.` : `${taken} hücre taslağa alındı.`),
+    pasteReasons: { notManual: "Manuel değer girilemeyen alanlar", number: "Sayı olmayan değer", integer: "Tam sayı olmayan değer", date: "Tarih olmayan değer",
+                    bool: "Evet ya da Hayır olmayan değer", list: "Listede olmayan değer" },
+    pasteGroup: (reason: string, fields: string[], cells: number) => `${reason}: ${fields.join(", ")} (${cells} hücre).`,
+    pasteOutside: (cells: number) => `Tablonun dışında: ${cells} hücre.`,
+    select: (record: string) => `Seç: ${record}`,
+    removePicked: (n: number) => `Manuel değerleri kaldır (${n})`,
+    removePickedNone: "Seçili kayıtlarda manuel değer yok.",
+  },
+
   // Veri ekranlarının ortak bileşeni (Ana veri, İşlem verisi; K-168, K-169)
   dataScreen: {
     table: "Tablo",
@@ -522,7 +551,6 @@ export const tr = {
   // Sistem ayarları (ekran 25, fonksiyon 96; K-104, K-105, docs/12)
   systemOwner: {
     title: "Sistem ayarları",
-    version: (version: string) => `Sürüm ${version}`,
     sections: "Bölüm",
     dictionary: "Veri sözlüğü",
     policyTitle: "Giriş ve oturum",
@@ -534,10 +562,11 @@ export const tr = {
     usedWarning: (views: number, rules: number) =>
       `Bu alan ${views} görünümde${rules ? ` ve ${rules} kuralda` : ""} kullanılıyor. Etiket silinirse bu görünümlerde görünmez; etiket yeniden yazılınca geri gelir.`,
     removeLabel: "Etiketi sil",
+    removeManual: "Kaydet ve manuel değerleri kaldır",
+    manualRemoveWarning: (n: number) => `${n} kayıtta manuel değer kaldırılacak.`,
     save: "Kaydet",
     labelSaved: (key: string) => `Etiket kaydedildi · ${key}`,
     fieldClass: "Sınıf",
-    valuePriority: "Değer önceliği",
     manualOverrides: "Manuel",
     editableInWorkspace: "Senaryo",
     required: "Zorunlu",
@@ -815,6 +844,8 @@ export const tr = {
     unsavedTitle: "Kaydedilmemiş değişiklikler var",
     unsavedText: "Çıkarsanız bu değişiklikler kaybolur.",
     unsavedLeave: "Kaydetmeden çık",
+    selectLoaded: "Yüklenen satırların hepsini seç",
+    editableColumn: "Düzenlenebilir: çift tıklayın, Enter ya da yazmaya başlayın",
     rowActions: "Satır işlemleri",
     count: (filtered: string, total: string) => `${filtered} / ${total}`,
     countLabel: "Kayıt sayısı (gösterilen / toplam)",
