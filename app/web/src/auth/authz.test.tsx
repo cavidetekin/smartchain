@@ -21,9 +21,9 @@ describe("menü role göre (K-100)", () => {
   it.each([
     ["System owner", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Veri yükleme", "Kullanıcılar", "Sistem ayarları"], []],
     ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı", "Sistem ayarları"], []],  // K-164: yalnız Zamanlanmış işler sekmesi
-    ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Senaryolar", "Veri yükleme", "Gece senaryoları", "Denetim izi"], ["Kullanıcılar"]],
+    ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Senaryo karşılaştırma", "Veri yükleme", "Senaryolar", "Denetim izi"], ["Kullanıcılar"]],
     ["End user", ["Takip", "Veri"], ["Uyarılar", "Ana veri", "Veri kalitesi"],
-     ["Senaryolar", "Çalışma", "Veri yükleme", "Veri kuralları", "Validasyon kuralları", "Parametreler", "Gece senaryoları", "Kullanıcılar", "Denetim izi"]],  // K-142
+     ["Senaryo karşılaştırma", "Çalışma", "Veri yükleme", "Veri kuralları", "Validasyon kuralları", "Parametreler", "Senaryolar", "Kullanıcılar", "Denetim izi"]],  // K-142
   ])("%s", (role, expectedGroups, shown, hidden) => {
     mockApi();
     renderApp("/ana-sayfa", meAs(role));

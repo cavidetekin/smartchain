@@ -24,6 +24,8 @@ FIELD_LABELS = {
     "Value": "Değer", "Label": "Etiket", "Name": "Ad", "IsShared": "Paylaşılan", "Definition": "Tanım", "view_id": "Görünüm no",
     # Parametreler: hedefler (K-175)
     "Seq": "Sıra", "TimeBudgetSeconds": "Süre bütçesi (sn)", "TolerancePct": "Ödün payı (%)",
+    # Senaryolar (K-177)
+    "FollowsBase": "Baz'ı izler", "RunsNightly": "Gece çalışsın", "NightlyPriority": "Gece sırası", "plan_versions": "Plan versiyonu sayısı",
     # İş
     "status": "Durum", "cancel_reason": "İptal nedeni", "job_type": "İş türü", "requested_by": "İşi başlatan no", "channel": "Kanal", "job_id": "İş no",
     # Yetkisiz istek

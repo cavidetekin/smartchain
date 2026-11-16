@@ -157,7 +157,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Senaryo, çalışma ve yayın
 <sub>19. Mimari kararlar · Senaryo, çalışma ve yayın</sub>
 
-- **Senaryo:** Gece tanımlı listeden üretilen plan. Tanımı: veri versiyonu + senaryonun kendi parametreleri (K-175: parametre seti ayrı bir kavram değildir, her senaryo parametrelerinin tamamını taşır).
+- **Senaryo:** parametrelerinin tamamını taşıyan kayıt (K-175, K-177; `ScenarioDefinition`). Senaryonun bir veri versiyonuyla hesaplanmış planı "senaryo sonucu"dur (`planning.Scenario`); arayüzde "plan versiyonu". Gece akışı "Gece çalışsın" seçili senaryoları gece sırasıyla hesaplar.
 - **Çalışma:** Kullanıcının bir gece senaryosu üzerinde açtığı çalışma alanı. Senaryo üzerindeki değişiklikler yeni senaryo değil, çalışmadır.
 - **Yayın:** Onaylı plan sadece bir çalışmadan yayınlanır; değişiklik yapmadan da olur. Aynı anda tek geçerli onaylı plan; ERP'ye dönüş ondan. Yetki: Key user ve Admin.
 - **Saklama:** Yayınlanmayan senaryo ve çalışmalar bir sonraki gece akışında silinir. Onaylı plan versiyonları ve dayandıkları veri versiyonları hep kalır; silinen senaryoların özet metrikleri kısa süre tutulur.

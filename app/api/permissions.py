@@ -108,8 +108,8 @@ _NAMES = """
 24 Kapasite parametreleri
 25 Alokasyon ve öncelik kuralı
 26 Uyarı eşikleri
-27 Gece senaryo tanımı
-28 Senaryo sırası ve aç / kapa
+27 Senaryo yönetimi
+28 Gece çalışsın ve gece sırası
 29 Ön hesap
 30 MRP patlatma
 31 Model kurma

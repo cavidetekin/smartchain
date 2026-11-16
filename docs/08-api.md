@@ -607,7 +607,6 @@ Aktarım (tam ve kısmi) eşleşen satırda gelen değeri alttaki değer olarak 
 
 | Uç nokta | Yetki | Açıklama |
 |---|---|---|
-| `GET /api/scenarios/current` | 82 okuma | Bağlam çubuğundaki senaryo: `{"id", "name"}`; 7.1'de her zaman Baz |
 | `GET /api/parameters` | 22 okuma | `scenario`, `sections` (başlık, alt başlıklar, parametreler: `key`, `label`, `kind` bool \| choice \| int \| number, `options`, `min`, `max`, `nullable`, `enabled_when`, `hint`; tablo başlıklarında `table`), `unit_key`; `values` (anahtar → metin; Evet/Hayır "1"/"0"); `computed.fix_period_end` (kayıtlı sabit dönemin son günü, yoksa null) |
 | `PUT /api/parameters` | 22 yazma | `{"changes": {anahtar: değer}}`; yalnız değişenler yazılır, her biri denetim izine ("Parametre değişikliği"); biri geçersizse hiçbiri yazılmaz (422, `details` anahtar bazında) |
 | `GET /api/parameters/objectives` | 22 okuma | Hedefler sırasıyla (kapalılar sonda): `id`, `code`, `label`, `seq`, `seconds`, `tolerance`, `active`; `total_seconds` |
@@ -616,8 +615,27 @@ Aktarım (tam ve kısmi) eşleşen satırda gelen değeri alttaki değer olarak 
 | `POST /api/parameters/time-buckets/{eksen}/preview` | 23 okuma | Kaydedilmemiş dizinin tarihleri ve dönem listesi: `{"rows", "week_start"?, "plan_start"?}`; yazmaz; geçersiz dizide 422 |
 | `PUT /api/parameters/time-buckets/{eksen}` | 23 yazma | Dizi baştan yazılır: `{"rows": [{"bucket_type", "count", "span_unit"}]}`; denetim izine ("Dönem dizisi değişikliği": eski dizi → yeni dizi) |
 
-- **Senaryo:** 7.1'de bütün uçlar Baz senaryoyla çalışır; senaryo seçimi senaryo yönetimi adımında gelir.
+- **Senaryo:** bütün uçlar `scenario_id` sorgu parametresiyle çalışır (K-177); verilmezse kullanıcının senaryosu (hatırlanan, o da geçersizse Baz).
 - **Plan hesabı:** `submit_plan_run(…, scenario_definition_id=…)`; `planning.PlanRun.ScenarioDefinitionId` hesabın parametrelerini taşıyan senaryo tanımıdır (docs/09).
+
+## Senaryolar (ekran 07, fonksiyon 27, 28; K-177)
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| `scenarios` listesi (`/api/scenarios/columns · query · …`) | 27 okuma | Gece sırası, Senaryo, Model, Baz'ı izler, Gece çalışsın, Süre bütçesi (sn), Son çalışma, Aktif; satırda `IsBase`, `IsActive`, `LastRunStatus` |
+| `GET /api/scenarios/options` | 82 okuma | Bağlam çubuğunun listesi: aktif senaryolar (`id`, `name`, `is_base`), Baz başta |
+| `GET /api/scenarios/current` | 82 okuma | Kullanıcının senaryosu (`id`, `name`, `is_base`, `is_active`): `scenario_id` verilirse o (pasif de olabilir), yoksa hatırlanan, o da geçersizse Baz |
+| `PUT /api/scenarios/current` | 82 okuma | `{"id"}`: seçim kullanıcı bazında hatırlanır; denetim izine yazılmaz |
+| `PUT /api/scenarios/nightly` | 28 yazma | `{"rows": [{"id", "runs_nightly"}]}` listedeki sırasıyla: gece çalışanların sırası 1'den yazılır; pasif senaryo gece çalıştırılamaz (422) |
+| `POST /api/scenarios` | 27 yazma, Admin ve üstü | `{"name", "source_id", "follows_base"}`: var olan senaryodan kopya |
+| `PUT /api/scenarios/{id}` | 27 yazma, Admin ve üstü | `{"name"}`: yeniden adlandır |
+| `POST /api/scenarios/{id}/deactivate · activate · detach` | 27 yazma, Admin ve üstü | Pasif yap, aktif yap, Baz'dan ayır (geri alınamaz) |
+| `GET /api/scenarios/{id}/delete-info` | 27 yazma, Admin ve üstü | Silme onayının bilgisi: `plan_versions`, `deletable`, `reason` |
+| `DELETE /api/scenarios/{id}` | 27 yazma, Admin ve üstü | Parametreleri ve plan versiyonlarıyla siler; yayınlanmış planı varsa 422 `scenario_published` |
+
+- **İşlem bazında yetki:** yönetim işlemleri fonksiyon 27 yazma yetkisine ek olarak serviste Admin ve üstüne sınırlıdır (Key user 403; yeni fonksiyon numarası yok).
+- **Senaryoya bağlı uçlar** (`/api/parameters…`) senaryoyu `scenario_id` sorgu parametresiyle alır; verilmezse kullanıcının senaryosu. Baz'da yasak işlem 422 `base_scenario`, olmayan senaryo 404 `scenario_not_found`.
+- **Denetim izi ve iş listeleri:** `audit-log` listesinde `ScenarioName` ("Senaryo"); `job-queue` ve `job-runs` listelerinde `ScenarioName`, `/api/jobs` ve WebSocket iş mesajında `scenario_name` (plan hesabı işlerinde dolu).
 
 ## Zamanlanmış işler (ekran 25, fonksiyon 92, K-163, K-164)
 

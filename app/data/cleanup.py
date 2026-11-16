@@ -24,7 +24,7 @@ def _exec(conn: Connection, sql: str, **lists) -> None:
 
 
 def delete_plan_data(conn: Connection, data_version_ids: list[int]) -> None:
-    """Bu veri versiyonlarıyla açılmış senaryo, çalışma ve plan hesaplarını çıktılarıyla siler."""
+    """Bu veri versiyonlarıyla açılmış senaryo sonucu, çalışma ve plan hesaplarını çıktılarıyla siler."""
     if not data_version_ids:
         return
     dv = list(data_version_ids)
@@ -32,6 +32,21 @@ def delete_plan_data(conn: Connection, data_version_ids: list[int]) -> None:
     workspaces = _ids(conn, "SELECT Id FROM planning.Workspace WHERE ScenarioId IN :sc", sc=scenarios)
     runs = _ids(conn, "SELECT Id FROM planning.PlanRun WHERE DataVersionId IN :dv OR ScenarioId IN :sc "
                       "OR WorkspaceId IN :ws", dv=dv, sc=scenarios, ws=workspaces)
+    _delete(conn, scenarios, workspaces, runs)
+
+
+def delete_scenario_plans(conn: Connection, scenario_definition_id: int) -> int:
+    """Bir senaryonun plan versiyonlarını (plan hesapları, çıktıları, senaryo sonuçları, çalışmaları) siler (K-177). Silinen plan hesabı sayısı."""
+    sd = [scenario_definition_id]
+    scenarios = _ids(conn, "SELECT Id FROM planning.Scenario WHERE ScenarioDefinitionId IN :sd", sd=sd)
+    workspaces = _ids(conn, "SELECT Id FROM planning.Workspace WHERE ScenarioId IN :sc", sc=scenarios)
+    runs = _ids(conn, "SELECT Id FROM planning.PlanRun WHERE ScenarioDefinitionId IN :sd OR ScenarioId IN :sc "
+                      "OR WorkspaceId IN :ws", sd=sd, sc=scenarios, ws=workspaces)
+    _delete(conn, scenarios, workspaces, runs)
+    return len(runs)
+
+
+def _delete(conn: Connection, scenarios: list[int], workspaces: list[int], runs: list[int]) -> None:
     for t in OUTPUT_TABLES:
         _exec(conn, f"DELETE FROM planning.{t} WHERE PlanRunId IN :r", r=runs)
     _exec(conn, "DELETE FROM adm.SolverLog WHERE PlanRunId IN :r", r=runs)

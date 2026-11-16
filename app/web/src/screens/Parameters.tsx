@@ -1,4 +1,4 @@
-// Parametreler (ekran 06; fonksiyon 22, 23; K-175, docs/12): bağlam çubuğunda seçili senaryonun (7.1'de Baz) parametreleri. Şeritte ana başlıklar
+// Parametreler (ekran 06; fonksiyon 22, 23; K-175, K-177, docs/12): bağlam çubuğunda seçili senaryonun parametreleri. Şeritte ana başlıklar
 // (Model · Hedefler · Talep · Malzeme · Kapasite · Zaman · Plan kararlılığı); form başlıklarında solda alt başlıklar, sağda sıkı kart (Sistem
 // ayarları düzeni); tablo başlıklarında (Hedefler, Zaman › Ufuk ve dönemler) form içi tablo, Kaydet ve Vazgeç tablonun altında. Kaydedilmemiş
 // değişiklikle başlık, alt başlık ya da ekran değişirken uyarı (K-132). Başarılı kayıtta bildirim yok.
@@ -19,8 +19,14 @@ import { MenuItem, RowPopMenu } from "../ui/PopMenu";
 import { dropId } from "./DataRules";
 import { type Axis, type BucketPart, type BucketRow, type BucketsData, type ObjectiveRow, type ParamDef, type ParametersData, type ParamValues,
          parametersApi, type Period, type SubDef } from "./parametersApi";
+import { useShell } from "../shell/ShellContext";
 
 const T = tr.parameters;
+/** Seçili senaryonun uçları (K-177); ekran senaryo yüklendikten sonra çizilir (App `ScenarioBound`). */
+const useApi = () => {
+  const { scenario } = useShell();
+  return useMemo(() => parametersApi(scenario?.id ?? 0), [scenario?.id]);
+};
 const YES = "1";
 const NO = "0";
 const SEGMENT_MAX = 4;  // daha çok seçenek açılır listeyle (hafta başlangıcı)
@@ -37,6 +43,7 @@ function ParamForm({ title, params, data, canWrite, onSaved, onDirty, onValues }
   /** Taslak değerler (ör. raporlama ekseni anahtarı kaydetmeden ikinci tabloyu açar). */
   onValues?(values: ParamValues): void;
 }) {
+  const api = useApi();
   const [values, setValues] = useState<ParamValues>(data.values);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +73,7 @@ function ParamForm({ title, params, data, canWrite, onSaved, onDirty, onValues }
     setBusy(true);
     setError(null);
     try {
-      onSaved(await parametersApi.save(Object.fromEntries(changed.map((p) => [p.key, values[p.key]]))));
+      onSaved(await api.save(Object.fromEntries(changed.map((p) => [p.key, values[p.key]]))));
       setProblems({});
     } catch (e) {
       const found = problemsOf(e);
@@ -126,6 +133,7 @@ const DEFAULT_SECONDS = "60";
 const DEFAULT_TOLERANCE = "5";
 
 function Objectives({ canWrite, onDirty }: { canWrite: boolean; onDirty(dirty: boolean): void }) {
+  const api = useApi();
   const [saved, setSaved] = useState<ObjectiveRow[] | null>(null);
   const [rows, setRows] = useState<ObjectiveDraft[]>([]);
   const [busy, setBusy] = useState(false);
@@ -136,7 +144,7 @@ function Objectives({ canWrite, onDirty }: { canWrite: boolean; onDirty(dirty: b
   };
   useEffect(() => {
     const ctrl = new AbortController();
-    parametersApi.objectives(ctrl.signal).then((d) => load(d.rows)).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
+    api.objectives(ctrl.signal).then((d) => load(d.rows)).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
     return () => ctrl.abort();
   }, []);
 
@@ -183,7 +191,7 @@ function Objectives({ canWrite, onDirty }: { canWrite: boolean; onDirty(dirty: b
     setBusy(true);
     setError(null);
     try {
-      const d = await parametersApi.saveObjectives(rows.map((r) => ({ id: r.id, active: r.active, seconds: r.active ? secondsOf(r) : null, tolerance: r.active ? toleranceOf(r) : null })));
+      const d = await api.saveObjectives(rows.map((r) => ({ id: r.id, active: r.active, seconds: r.active ? secondsOf(r) : null, tolerance: r.active ? toleranceOf(r) : null })));
       load(d.rows);
     } catch (e) {
       setError(e instanceof ApiError && e.details.length ? `${T.notSaved} ${e.details[0].problem}` : errorText(e));
@@ -266,6 +274,7 @@ function PeriodList({ label, periods }: { label: string; periods: Period[] }) {
 function Buckets({ axis, label, periodsLabel, canWrite, onDirty }: {
   axis: Axis; label: string; periodsLabel: string; canWrite: boolean; onDirty(dirty: boolean): void;
 }) {
+  const api = useApi();
   const [saved, setSaved] = useState<BucketsData | null>(null);
   const [rows, setRows] = useState<BucketDraft[]>([]);
   const [parts, setParts] = useState<BucketPart[]>([]);
@@ -284,7 +293,7 @@ function Buckets({ axis, label, periodsLabel, canWrite, onDirty }: {
   };
   useEffect(() => {
     const ctrl = new AbortController();
-    parametersApi.buckets(axis, ctrl.signal).then(load).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
+    api.buckets(axis, ctrl.signal).then(load).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
     return () => ctrl.abort();
   }, [axis]);
 
@@ -310,7 +319,7 @@ function Buckets({ axis, label, periodsLabel, canWrite, onDirty }: {
     }
     const ctrl = new AbortController();
     const timer = setTimeout(() => {
-      parametersApi.preview(axis, current, ctrl.signal).then((d) => {
+      api.preview(axis, current, ctrl.signal).then((d) => {
         setParts(d.rows);
         setPeriods(d.periods);
         setProblems({});
@@ -342,7 +351,7 @@ function Buckets({ axis, label, periodsLabel, canWrite, onDirty }: {
     setBusy(true);
     setError(null);
     try {
-      load(await parametersApi.saveBuckets(axis, current));
+      load(await api.saveBuckets(axis, current));
     } catch (e) {
       const found = problemsOf(e);
       setProblems(found);
@@ -408,6 +417,7 @@ function Buckets({ axis, label, periodsLabel, canWrite, onDirty }: {
 
 export function Parameters() {
   const me = useAuth().me!;
+  const api = useApi();
   const canWrite = can(me, 22, "write");
   const { search, pathname } = useLocation();
   const navigate = useNavigate();
@@ -420,7 +430,7 @@ export function Parameters() {
   const [draft, setDraft] = useState<ParamValues>({});
   useEffect(() => {
     const ctrl = new AbortController();
-    parametersApi.read(ctrl.signal).then(setData).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
+    api.read(ctrl.signal).then(setData).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
     return () => ctrl.abort();
   }, []);
   const onDirty = useCallback((d: boolean) => setDirtyOf((s) => (Boolean(s.form) === d ? s : { ...s, form: d })), []);

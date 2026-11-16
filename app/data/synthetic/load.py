@@ -16,7 +16,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from db import models
 from ..cleanup import delete_plan_data
-from .dataset import FIELD_DEFINITIONS, LOCATION_CODE, SET_NAME, Dataset
+from .dataset import FIELD_DEFINITIONS, LOCATION_CODE, SCENARIOS, SET_NAME, Dataset
 
 log = logging.getLogger("smartchain.synthetic")
 
@@ -89,14 +89,14 @@ def _delete(conn: Connection) -> list[int]:
     # Baz'a bağlanan sentetik satırlar; Baz'ın parametreleri kalır
     for child in PARAM_ORDER:
         conn.execute(text(f"DELETE FROM param.[{child}] WHERE ScenarioDefinitionId IN (SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1)"))
-    # 0058 öncesinin sentetik seti pasif senaryo olarak kaldıysa o da gider
-    sets = [r[0] for r in conn.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE Name = :n AND IsSynthetic = 1 AND ISNULL(IsBase, 0) = 0"),
-                                       {"n": SET_NAME})]
+    # sentetik senaryolar (K-177) ve 0058 öncesinin pasif kalan sentetik seti
+    sets = [r[0] for r in conn.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE IsSynthetic = 1 AND ISNULL(IsBase, 0) = 0"))]
     if sets:
         in_sets = bindparam("p", expanding=True)
         for child in PARAM_CHILDREN:
             conn.execute(text(f"DELETE FROM param.[{child}] WHERE ScenarioDefinitionId IN :p").bindparams(in_sets),
                          {"p": sets})
+        conn.execute(text("UPDATE adm.AppUser SET ScenarioDefinitionId = NULL WHERE ScenarioDefinitionId IN :p").bindparams(in_sets), {"p": sets})
         conn.execute(text("DELETE FROM param.ScenarioDefinition WHERE Id IN :p").bindparams(in_sets), {"p": sets})
     if versions:
         conn.execute(text("DELETE FROM adm.DataVersion WHERE Id IN :v").bindparams(bindparam("v", expanding=True)),
@@ -182,6 +182,24 @@ def reset(engine: Engine, ds: Dataset, confirm) -> dict | None:
     return {**result, "removed_transfers": preview["versions"], "removed_rows": preview["rows"]}
 
 
+def _scenarios(conn: Connection, base_id: int) -> int:
+    """Sentetik senaryolar (docs/11, K-177): Baz'dan kopyalanır, parametre farkları yazılır; Baz gece 1. sırada çalışır. Baz'ın parametrelerine
+    dokunulmaz."""
+    from app.params import scenarios, service as params
+    conn.execute(text("UPDATE param.ScenarioDefinition SET RunsNightly = 1, NightlyPriority = 1 WHERE Id = :b"), {"b": base_id})
+    priority = 1
+    for name, follows, nightly, changes, divide in SCENARIOS:
+        row = scenarios.create_copy(conn, name, base_id, follows, synthetic=True)
+        params.save_settings(conn, row["Id"], changes)
+        if divide > 1:
+            conn.execute(text("UPDATE param.ObjectiveDefinition SET TimeBudgetSeconds = TimeBudgetSeconds / :n WHERE ScenarioDefinitionId = :s "
+                              "AND TimeBudgetSeconds IS NOT NULL"), {"n": divide, "s": row["Id"]})
+        if nightly:
+            priority += 1
+            conn.execute(text("UPDATE param.ScenarioDefinition SET RunsNightly = 1, NightlyPriority = :p WHERE Id = :s"), {"p": priority, "s": row["Id"]})
+    return len(SCENARIOS)
+
+
 def _load(conn: Connection, ds: Dataset) -> dict:
     """Yüklemenin gövdesi: önceki sentetik veriyi siler, temiz hâli yazar (çağıranın işleminde)."""
     removed = _delete(conn)
@@ -234,6 +252,7 @@ def _load(conn: Connection, ds: Dataset) -> dict:
         rows = _validate(table, rows)
         conn.execute(sa.insert(table), rows)
         counts[f"param.{name}"] = len(rows)
+    counts["param.ScenarioDefinition"] = _scenarios(conn, set_id)
     log.info("Sentetik veri yüklendi: veri versiyonu %s, lokasyon %s, senaryo %s (Baz)", version, location_id, set_id)
     return {"data_version_id": version, "location_id": location_id, "scenario_definition_id": set_id,
             "removed_versions": removed, "counts": counts}

@@ -40,6 +40,8 @@ SELECT j.Id, j.JobType, j.Summary, j.Channel, j.Priority, j.Status, j.RequestedB
        CASE WHEN u.Role = N'System owner' THEN :support ELSE COALESCE(u.FullName, u.UserName) END AS RequestedByName,
        CASE WHEN c.Role = N'System owner' THEN :support ELSE COALESCE(c.FullName, c.UserName) END AS CancelledByName,
        DATEDIFF(second, j.StartedAt, ISNULL(j.EndedAt, SYSUTCDATETIME())) AS DurationSeconds,
+       (SELECT d.Name FROM planning.PlanRun r JOIN param.ScenarioDefinition d ON d.Id = r.ScenarioDefinitionId
+        WHERE r.Id = TRY_CAST(JSON_VALUE(j.Payload, '$.plan_run_id') AS bigint)) AS ScenarioName,  -- plan hesabı işinde senaryo (K-177)
        CAST(CASE WHEN j.Status = :running
                   AND j.HeartbeatAt < DATEADD(second, -1 * :timeout, SYSUTCDATETIME())
                  THEN 1 ELSE 0 END AS bit) AS IsStale

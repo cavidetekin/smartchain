@@ -49,8 +49,17 @@ export function EditBar({ dirty, busy, onSave, onDiscard, disabledReason }: {
   );
 }
 
+let unsavedGuards = 0;
+/** Açık ekranda kaydedilmemiş değişiklik var mı (senaryo geçişi sormadan önce bakar, K-177). */
+export const hasUnsaved = () => unsavedGuards > 0;
+
 export function UnsavedGuard({ dirty }: { dirty: boolean }) {
   const T = tr.table;
+  useEffect(() => {
+    if (!dirty) return undefined;
+    unsavedGuards += 1;
+    return () => { unsavedGuards -= 1; };
+  }, [dirty]);
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname);
 
   useEffect(() => {

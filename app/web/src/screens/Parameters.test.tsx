@@ -52,7 +52,7 @@ function backend(values: Record<string, string | null> = VALUES) {
     return body;
   };
   mockApi({
-    "/api/scenarios/current": { body: { id: 1, name: "Baz" } },
+    "/api/scenarios/current": { body: { id: 1, name: "Baz", is_base: true, is_active: true } },
     "/api/parameters/objectives": (url: string, init?: RequestInit) => {
       if (init?.method !== "PUT") return { body: { rows: OBJECTIVES, total_seconds: 660 } };
       const rows = record(url, init).rows as { id: number; active: boolean; seconds: number | null; tolerance: number | null }[];

@@ -34,10 +34,13 @@ def _record_failure(session: Session, action: str, exc: Exception) -> None:
 
 
 def write_audit(session: Session, action: str, user_id: int | None, object_type: str | None = None,
-                object_key: str | None = None, new_value: dict | None = None, old_value: dict | None = None) -> None:
-    """Asıl işlemle aynı veritabanı işleminde yazılır (K-108); yazılamazsa işlem geri alınır, 503 audit_failed."""
+                object_key: str | None = None, new_value: dict | None = None, old_value: dict | None = None,
+                scenario: str | None = None) -> None:
+    """Asıl işlemle aynı veritabanı işleminde yazılır (K-108); yazılamazsa işlem geri alınır, 503 audit_failed.
+    scenario: senaryoya bağlı işlemde senaryonun adı (K-177; listede "Senaryo" kolonu); veri yönetimi işlemlerinde verilmez."""
     try:
         _insert(session, dict(
+            ScenarioName=scenario[:100] if scenario else None,
             UserId=user_id, At=sa.func.sysutcdatetime(), Action=action, ObjectType=object_type,
             ObjectKey=object_key[:200] if object_key else object_key,
             OldValue=json.dumps(old_value, ensure_ascii=False, default=str) if old_value is not None else None,

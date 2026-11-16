@@ -1,14 +1,17 @@
-// Bağlam çubuğu (U-17, docs/12): seçili senaryo (K-175; 7.1'de Baz, seçim senaryo yönetimi adımında), plan versiyonu / dönem (8.1), veri versiyonu,
+// Bağlam çubuğu (U-17, docs/12): senaryo seçici (K-177), plan versiyonu / dönem (8.1), veri versiyonu,
 // iş göstergesi, zamanlanmış iş çipi (K-163), kullanıcı.
-import { Database } from "lucide-react";
+import { Check, ChevronDown, Database } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { api, ApiError, type DataVersion, getJson, JOB_TRANSFER, type Job } from "../api/client";
+import { api, ApiError, type DataVersion, JOB_TRANSFER, type Job } from "../api/client";
 import { formatDateTime } from "../format";
 import { tr } from "../i18n/tr";
 import type { FontSize } from "../prefs";
 import { FlowAlertChip } from "./FlowStatus";
+import { RowPopMenu } from "../ui/PopMenu";
 import { JobIndicator } from "./JobIndicator";
+import { type ScenarioOption, scenarioApi } from "./scenarioApi";
+import { useShell } from "./ShellContext";
 import { useJobRefresh } from "./useJobRefresh";
 import { UserMenu } from "./UserMenu";
 
@@ -42,18 +45,39 @@ export function ContextBar({ fontSize, onFontSize, onJob }: Props) {
   );
 }
 
-/** Seçili senaryo (K-175): adı API'den; 7.1'de tek senaryo olduğu için tıklanmaz. Okunamazsa "—". */
+/** Senaryo seçici (K-177): "Senaryo: <ad> ▾". Tıklanınca aktif senaryoların listesi (Baz başta, seçili işaretli; pasif senaryo yok); seçilince
+ *  senaryoya bağlı açık ekran o senaryoyla yeniden yüklenir. Seçim kullanıcı bazında hatırlanır. */
 function ScenarioPill() {
-  const [name, setName] = useState<string | null>(null);
+  const { scenario, selectScenario, scenarioTick } = useShell();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [options, setOptions] = useState<ScenarioOption[]>([]);
   useEffect(() => {
+    if (!anchor) return undefined;
     const ctrl = new AbortController();
-    getJson<{ id: number; name: string }>("/api/scenarios/current", ctrl.signal).then((s) => setName(s.name)).catch(() => undefined);
+    scenarioApi.options(ctrl.signal).then(setOptions).catch(() => undefined);
     return () => ctrl.abort();
-  }, []);
+  }, [anchor, scenarioTick]);
+  if (!scenario) {
+    return <span className="sc-pill is-disabled" data-testid="scenario">{tr.context.scenario}: —</span>;
+  }
   return (
-    <span className={`sc-pill${name ? " is-current" : " is-disabled"}`} title={tr.context.scenarioHint} data-testid="scenario">
-      {tr.context.scenario}: {name ?? "—"}
-    </span>
+    <>
+      <button type="button" className="sc-pill sc-pill--button is-current" data-testid="scenario" aria-haspopup="menu" aria-expanded={Boolean(anchor)}
+              title={scenario.isActive ? tr.context.scenarioPick : tr.context.scenarioPassive} onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}>
+        {tr.context.scenario}: {scenario.name} <ChevronDown aria-hidden="true" />
+      </button>
+      {anchor && (
+        <RowPopMenu label={tr.context.scenarios} anchor={anchor} onClose={() => setAnchor(null)}>
+          {options.map((o) => (
+            <button key={o.id} type="button" role="menuitemradio" aria-checked={o.id === scenario.id} className="sc-popmenu-item sc-popmenu-item--check"
+                    onClick={() => { setAnchor(null); void selectScenario(o.id); }}>
+              <span>{o.is_base ? tr.scenarios.baseName(o.name) : o.name}</span>
+              {o.id === scenario.id && <Check aria-hidden="true" />}
+            </button>
+          ))}
+        </RowPopMenu>
+      )}
+    </>
   );
 }
 

@@ -194,7 +194,7 @@ def test_base_scenario_comes_with_start_values(db_engine, base, client, people):
     assert body["values"] == {p.key: p.default for p in cat.PARAMS}
     lot = next(p for s in body["sections"] for sub in s["subs"] for p in sub["params"] if p["key"] == "ProductionMinLot")
     assert lot["enabled_when"] == {"key": "ModelType", "value": "MILP"}
-    assert client.get("/api/scenarios/current", headers=auth(people[END_USER])).json() == {"id": base, "name": "Baz"}
+    assert client.get("/api/scenarios/current", headers=auth(people[END_USER])).json() == {"id": base, "name": "Baz", "is_base": True, "is_active": True}
 
 
 @pytest.mark.db

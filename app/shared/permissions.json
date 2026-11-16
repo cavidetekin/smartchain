@@ -544,7 +544,7 @@
     },
     {
       "no": 27,
-      "name": "Gece senaryo tanımı",
+      "name": "Senaryo yönetimi",
       "group": "C",
       "levels": {
         "System owner": "full",
@@ -555,7 +555,7 @@
     },
     {
       "no": 28,
-      "name": "Senaryo sırası ve aç / kapa",
+      "name": "Gece çalışsın ve gece sırası",
       "group": "C",
       "levels": {
         "System owner": "full",

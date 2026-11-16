@@ -42,6 +42,7 @@ SOURCE = sa.select(
             else_=sa.func.coalesce(USER.c.FullName, USER.c.UserName)).label("ActorName"),
     sa.case(*_type_whens, else_=AUDIT.c.ObjectType).label("ObjectTypeLabel"),
     sa.case((_about_owner, _text(SUPPORT_ACCOUNT)), (AUDIT.c.ObjectType == SETTING_TYPE, _setting_name), else_=AUDIT.c.ObjectKey).label("ObjectShown"),
+    AUDIT.c.ScenarioName,
     _masked(AUDIT.c.OldValue).label("OldText"),
     _masked(AUDIT.c.NewValue).label("NewText"),
     _masked(AUDIT.c.OldValue).label("OldValue"),
@@ -52,7 +53,7 @@ SOURCE = sa.select(
     sa.func.coalesce(USER.c.FullName, USER.c.UserName).label("RealActor"),
 ).select_from(AUDIT.outerjoin(USER, USER.c.Id == AUDIT.c.UserId)).subquery("al")
 
-FIELDS = ("At", "ActorName", "Action", "ObjectTypeLabel", "ObjectShown", "OldText", "NewText", "OldValue", "NewValue")
+FIELDS = ("At", "ActorName", "Action", "ScenarioName", "ObjectTypeLabel", "ObjectShown", "OldText", "NewText", "OldValue", "NewValue")
 
 
 def visible_to(role: str | None, user_id: int | None = None) -> sa.ColumnElement | None:
@@ -74,8 +75,8 @@ AUDIT_LOG = ListDefinition(
     fields=FIELDS,
     default_visible=tuple(f for f in FIELDS if f not in ("OldValue", "NewValue")),
     default_sort=(("At", "desc"),),
-    labels={"At": "Zaman", "ActorName": "Kullanıcı", "Action": "İşlem", "ObjectTypeLabel": "Nesne tipi", "ObjectShown": "Nesne",
+    labels={"At": "Zaman", "ActorName": "Kullanıcı", "Action": "İşlem", "ScenarioName": "Senaryo", "ObjectTypeLabel": "Nesne tipi", "ObjectShown": "Nesne",
             "OldText": "Eski değer", "NewText": "Yeni değer", "OldValue": "Eski değer (ham)", "NewValue": "Yeni değer (ham)"},
-    server_values=frozenset({"ActorName", "Action", "ObjectTypeLabel"}),
+    server_values=frozenset({"ActorName", "Action", "ObjectTypeLabel", "ScenarioName"}),
     value_format={"OldText": readable, "NewText": readable},
 )

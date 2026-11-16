@@ -150,6 +150,8 @@ export interface Job {
   id: number;
   job_type: string;
   summary?: string | null;
+  /** Plan hesabı işinde senaryonun adı; senaryodan bağımsız işlerde boş (K-177). */
+  scenario_name?: string | null;
   channel: string;
   status: string;
   requested_by?: number | null;

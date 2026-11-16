@@ -83,6 +83,9 @@ svg { width: var(--icon); height: var(--icon); flex: none; }
   white-space: nowrap; }
 .sc-pill.is-disabled { cursor: not-allowed; background: var(--lead-50); }
 .sc-pill.is-current { border-color: var(--indigo-100); color: var(--indigo-700); font-weight: var(--fw-semibold); }  /* seçili senaryo (K-175) */
+.sc-pill--button { display: inline-flex; align-items: center; gap: 0.2308rem; background: var(--surface); font: inherit; cursor: pointer; }  /* senaryo seçici (K-177) */
+.sc-pill--button:hover { background: var(--indigo-50); }
+.sc-pill--button svg { width: 0.9231rem; height: 0.9231rem; }
 /* Bağlam çubuğu çipleri (durum rozeti değildir; rozet: components.css .sc-tag) */
 .sc-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem; border: 1px solid var(--line);
   border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }

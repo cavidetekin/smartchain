@@ -48,14 +48,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### PARAMETRE
 
 - **06 · Parametreler:** Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, planlama ufku, plan kararlılığı (K-175).
-- **07 · Gece senaryo tanımları:** Hangi senaryolar gece çalışır; parametre seti, eksen ayarları, öncelik.
+- **07 · Senaryolar:** Senaryoların listesi ve yönetimi: yeni senaryo (kopyalayarak), gece çalışsın ve gece sırası, Baz'ı izler, pasif, silme (K-177).
 
 ### Ekran listesi
 <sub>24. Ekranlar ve fonksiyonlar · Ekran listesi · 2/4</sub>
 
 #### PLANLAMA
 
-- **08 · Senaryolar:** Gece senaryolarının listesi, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma.
+- **08 · Senaryo karşılaştırma:** Senaryoların plan versiyonları, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma.
 - **09 · Çalışma:** Bir senaryo üzerindeki çalışma alanı: özet metrikler, yapılan değişiklikler, yeniden hesap, yayın. 10–19 numaralı ekranlar bu bağlamda açılır.
 - **10 · Kaynak doluluk raporu:** Kaynak × dönem doluluğu; dünden farkı; detaya iniş.
 - **11 · Ürün bazlı planlama:** Ürün × dönem: talep, üretim, stok projeksiyonu, kümülatif eksik; üretim miktarı girilir.
@@ -140,8 +140,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### PARAMETRE (DEVAM)
 
 - **26 · Uyarı eşikleri:** Doluluk, gecikme, stok gibi eşik değerleri.
-- **27 · Gece senaryo tanımı:** Parametre seti, model tipi (LP ya da MILP), eksen ayarları, süre bütçesi.
-- **28 · Senaryo sırası ve aç / kapa:** Senaryo silinmeden bir gece devre dışı bırakılabilir.
+- **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo, yeniden adlandırma, pasif, silme, Baz'dan ayır; senaryo geçişi.
+- **28 · Gece çalışsın ve gece sırası:** Senaryonun gece akışında hesaplanıp hesaplanmayacağı ve sırası.
 
 #### PLANLAMA MOTORU (ARKA PLANDA)
 
@@ -302,8 +302,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Değerin kaynağı:** Her hücrede ERP, kural ya da elle etiketi görünür; varsayılan yoktur (K-138).
 - **Elle düzeltme:** Manuel değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
 - **İz:** Her değişiklik kim, ne zaman, eski ve yeni değerle geçmişte tutulur.
-- **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.10, K-167); ana veri ekranında yok.
-- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.4, K-167). Manuel değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
+- **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.11, K-167); ana veri ekranında yok.
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.5, K-167). Manuel değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
 - **Uygulama (6.2, K-170, K-172):** uygulandı. "Manuel: Evet" alanlarda manuel değer hücre içinde (Ana veri ve İşlem verisi); ilk kolon "Manuel değer", köşe işareti, kaynak ipucu yalnız manuel değer ve kural sonucunda.
 - **Karar (6.3, K-171, K-173):** detay kartı ("Detay ›" rozeti): Geçmiş ve İlişkili kayıtlar; İşlem verisi'nde yalnız Geçmiş. Denetim izinde "Kayda git".
 - **Uygulama (6.3, K-171, K-173):** uygulandı. Detay simgesi (›) tablonun en sağında dar kolonda; hücre menüsü Detay · Kopyala · Manuel değeri kaldır, Ctrl+C; kartın sekmeleri tek sıra: Geçmiş ve tablonun ilişkileri (boş ilişki pasif).
@@ -351,7 +351,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Mockup geçersiz (K-175):** parametre seti, set listesi ve sekmeleri yok. Güncel mockup `plans/7.1-mockups/parametreler.html`.
 - **Tek kavram senaryo:** ekran, bağlam çubuğunda seçili senaryonun parametrelerini gösterir; ekranda ayrıca senaryo seçimi yoktur. 7.1'de tek senaryo Baz'dır.
-- **Şerit:** yalnız ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.8'te).
+- **Şerit:** yalnız ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.9'te).
 - **Form başlıkları:** Sistem ayarları düzeni (docs/12): solda alt başlıklar, sağda sıkı kart, Kaydet ve Vazgeç kartın altında, 44×24 anahtarlar. Tek alt başlıklı başlıkta sol menü yok.
 - **Tablo başlıkları** (Hedefler, Planlama ufku › Ufuk ve dönemler): tablo standardının görünümü ve hücre düzenleme standardı; sıra sürüklenir; Kaydet ve Vazgeç tablonun altında, sağda.
 - **Hedefler:** Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%) · Aktif; altta toplam süre. Leksikografik: ağırlık yok.
@@ -360,18 +360,21 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yetki:** Key user ve üstü düzenler; End user görmez.
 - **Karar (7.1, K-175):** fonksiyon 22 ve 23; parametre listesi ve kurallar docs/06'da.
 - **Uygulama (7.1, K-175):** uygulandı. Baz senaryonun parametreleri (`/api/parameters`), hedefler, ufuk ve dönemler (dönem listesiyle), raporlama ekseni, sabit dönem; bağlam çubuğunda "Senaryo: Baz". Senaryo altyapısının kuralları K-176'da; senaryo yönetimi 7.3'te.
-### Gece senaryo tanımları
+### Senaryolar
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 07/25</sub>
 
 ![Gece senaryo tanımları](mockups/m24e-0316-gece-senaryo-tanimlari.png)
 
-- **Not (K-175):** senaryo yönetimi adımında yeniden yazılır; parametre seti kalktı, senaryo parametrelerini kendisi taşır. Liste mockup'ı `plans/7.1-mockups/senaryo-tanimlari.html`.
-- **Senaryo tanımı:** Her senaryo bir parametre seti, model tipi ve eksen ayarlarıyla tanımlanır.
-- **Eksenler:** Fazla mesai, fason, talep çarpanı, malzeme kısıtı gibi ayarlar senaryoya özel.
-- **Süre bütçesi:** Her senaryonun süre sınırı var; sıra ve paralellik motor ayarına uyar.
-- **Aç / kapat:** Tanım silinmeden bir gece devre dışı bırakılabilir.
-
-### Senaryolar
+- **Mockup geçersiz (K-177):** parametre seti, eksen anahtarları, süre bütçesi alanı ve tek gecelik atlama yok. Güncel mockup `plans/7.3-mockups/senaryo-yonetimi.html`.
+- **Liste (docs/12 tablo standardı):** Gece sırası · Senaryo · Model · Baz'ı izler · Gece çalışsın · Süre bütçesi (sn) · Son çalışma · Aktif. Şeridin solunda "Yeni senaryo". Baz adının yanında "*" ile; pasif senaryo soluk.
+- **Gece çalışsın:** kalıcı anahtar; kapalı senaryo yeniden açılana kadar gece hesaplanmaz. Gece sırası satır sürüklenerek, yalnız gece çalışanlar arasında. İkisi tablo içi düzenlemedir (Vazgeç ve Kaydet şeritte).
+- **⋯ ve sağ tık:** Parametreler · Kopyala · Yeniden adlandır · Baz'dan ayır · Pasif yap / Aktif yap · Sil. Baz silinemez, pasif yapılamaz, yeniden adlandırılamaz.
+- **Yeni senaryo:** her zaman var olan bir senaryodan kopyalanır: Senaryo adı · Kopyalanacak senaryo · Baz'ı izler.
+- **Senaryo geçişi:** bağlam çubuğundaki "Senaryo: <ad>" tıklanır; aktif senaryolar listelenir. Seçim kullanıcı bazında hatırlanır.
+- **Yetki:** yönetim işlemleri Admin ve üstü; gece ayarı ve parametreler Key user ve üstü; geçiş herkes; End user ekranı görmez.
+- **Karar (7.3, K-177):** fonksiyon 27 ve 28; kurallar docs/06'da.
+- **Uygulama (7.3, K-177):** uygulandı. Liste (`scenarios`), yönetim işlemleri (`/api/scenarios`), "Gece çalışsın" ve gece sırası, bağlam çubuğundan senaryo geçişi (kullanıcı bazında hatırlanır); Parametreler seçili senaryoyla açılır. Denetim izi ve iş listelerinde "Senaryo" kolonu.
+### Senaryo karşılaştırma
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 08/25</sub>
 
 ![Senaryolar](mockups/m24e-0317-senaryolar.png)

@@ -239,7 +239,7 @@ export function JobIndicator({ onJob }: { onJob?: (job: Job) => void }) {
   );
 
   const single = (j: Job) => {
-    const title = j.summary ?? j.job_type;
+    const title = [j.summary ?? j.job_type, j.scenario_name].filter(Boolean).join(" · ");  // plan hesabında senaryo adı (K-177)
     return (
       <li key={j.id} className="sc-job-card">
         <div className="sc-job-card-main">

@@ -537,6 +537,10 @@
 .sc-unit-value { display: flex; align-items: center; gap: var(--space-2); }
 .sc-unit-value .sc-input--number { width: 5rem; }
 .sc-period-list .sc-edit-grid-scroll { max-height: 24rem; overflow: auto; }
+/* Senaryolar (K-177): pasif senaryo soluk; seçicide seçili olan işaretli */
+.sc-table-grid tr.sc-table-row.is-off td { color: var(--text-muted); }
+.sc-popmenu-item--check { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.sc-popmenu-item--check svg { flex: none; width: 1rem; height: 1rem; color: var(--indigo-700); }
 .sc-settings-stack { display: flex; flex-direction: column; gap: var(--space-4); }
 .sc-settings-section--wide { width: 56rem; }  /* Hedefler: beş kolon */
 .sc-settings-section--grid > .sc-settings-card { overflow: hidden; }

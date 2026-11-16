@@ -20,6 +20,8 @@ export interface Screen {
   step: string;
   description: string;
   icon: LucideIcon;
+  /** Senaryoya bağlı ekran (K-177): seçili senaryonun verisini gösterir; senaryo değişince baştan yüklenir. */
+  scenarioBound?: boolean;
   /** Çalışma açık değilken gri ve kapalı (K-43, K-82). */
   requiresWorkspace?: boolean;
   /** Ekranı görme yetkisinin bağlı olduğu fonksiyon (K-100): okuma yetkisi yoksa menüde görünmez. */
@@ -49,8 +51,8 @@ export const SCREENS: Screen[] = [
   { no: "01", fn: 82, name: "Ana sayfa", path: "/ana-sayfa", group: null, step: "9.1", icon: House,
     description: "Gece akışının özeti, kritik uyarılar, dünden bugüne veride ve planda ne değişti." },
 
-  { no: "08", fn: 42, name: "Senaryolar", path: "/planlama/senaryolar", group: "planlama", step: "8.1", icon: Layers,
-    description: "Gece senaryolarının listesi, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma." },
+  { no: "08", fn: 42, name: "Senaryo karşılaştırma", path: "/planlama/senaryo-karsilastirma", group: "planlama", step: "8.1", icon: Layers,
+    description: "Senaryoların plan versiyonları, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma." },
   { no: "09", fn: 43, name: "Çalışma", path: "/planlama/calisma", group: "planlama", step: "8.2", icon: FlaskConical,
     description: "Bir senaryo üzerindeki çalışma alanı: özet metrikler, yapılan değişiklikler, yeniden hesap." },
   { ...W, no: "10", name: "Kaynak doluluk", path: "/planlama/calisma/kaynak-doluluk", step: "8.3", icon: Gauge,
@@ -94,10 +96,10 @@ export const SCREENS: Screen[] = [
   { no: "05", fn: 20, name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
     description: "Ana veri ve işlem verisi uyarıları; düzeltme listesi." },
 
-  { no: "06", fn: 22, name: "Parametreler", path: "/parametre/parametreler", group: "parametre", step: "7.1",
+  { no: "06", fn: 22, name: "Parametreler", path: "/parametre/parametreler", group: "parametre", step: "7.1", scenarioBound: true,
     icon: SlidersVertical, description: "Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, zaman, plan kararlılığı." },
-  { no: "07", fn: 27, name: "Gece senaryoları", path: "/parametre/gece-senaryolari", group: "parametre", step: "7.3",
-    icon: Moon, description: "Senaryo yönetimi: yeni senaryo, gece çalışsın, gece sırası." },
+  { no: "07", fn: 27, name: "Senaryolar", path: "/parametre/senaryolar", group: "parametre", step: "7.3",
+    icon: Moon, description: "Senaryoların listesi ve yönetimi: yeni senaryo, gece çalışsın ve gece sırası, Baz'ı izler." },
 
   { no: "22", fn: 88, name: "Kullanıcılar", path: "/yonetim/kullanicilar", group: "yonetim", step: "2.3", icon: Users,
     description: "Kullanıcı açma, kapatma, rol atama, şifre sıfırlama." },
@@ -112,6 +114,8 @@ export const SCREENS: Screen[] = [
 ];
 
 export const HOME = SCREENS[0];
+/** Parametreler ekranının adresi (Senaryolar ekranında "Parametreler"). */
+export const PARAMETERS_PATH = SCREENS.find((s) => s.no === "06")!.path;
 
 export function screensInGroup(group: GroupId): Screen[] {
   return SCREENS.filter((s) => s.group === group && !s.parent);

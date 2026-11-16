@@ -35,14 +35,18 @@ export interface BucketPreview { rows: BucketPart[]; start: string | null; end: 
 export interface BucketsData extends BucketPreview { bucket_types: string[]; span_units: string[] }
 export type Axis = "plan" | "rapor";
 
-export const parametersApi = {
-  read: (signal?: AbortSignal) => getJson<ParametersData>("/api/parameters", signal),
-  save: (changes: Record<string, string | boolean | number | null>) => sendJson<ParametersData>("PUT", "/api/parameters", { changes }),
-  objectives: (signal?: AbortSignal) => getJson<ObjectivesData>("/api/parameters/objectives", signal),
-  saveObjectives: (rows: { id: number; active: boolean; seconds: number | string | null; tolerance: number | string | null }[]) =>
-    sendJson<ObjectivesData>("PUT", "/api/parameters/objectives", { rows }),
-  buckets: (axis: Axis, signal?: AbortSignal) => getJson<BucketsData>(`/api/parameters/time-buckets/${axis}`, signal),
-  preview: (axis: Axis, rows: BucketRow[], signal?: AbortSignal) => postJson<BucketPreview>(`/api/parameters/time-buckets/${axis}/preview`, { rows }, signal),
-  saveBuckets: (axis: Axis, rows: BucketRow[]) => sendJson<BucketsData>("PUT", `/api/parameters/time-buckets/${axis}`, { rows }),
-  currentScenario: (signal?: AbortSignal) => getJson<{ id: number; name: string }>("/api/scenarios/current", signal),
+/** Senaryoya bağlı uçlar senaryoyu istekle alır (K-177): iki sekmede iki senaryo açıkken yanlış senaryoya yazılmaz. */
+export const parametersApi = (scenarioId: number) => {
+  const q = `?scenario_id=${scenarioId}`;
+  return {
+    read: (signal?: AbortSignal) => getJson<ParametersData>(`/api/parameters${q}`, signal),
+    save: (changes: Record<string, string | boolean | number | null>) => sendJson<ParametersData>("PUT", `/api/parameters${q}`, { changes }),
+    objectives: (signal?: AbortSignal) => getJson<ObjectivesData>(`/api/parameters/objectives${q}`, signal),
+    saveObjectives: (rows: { id: number; active: boolean; seconds: number | string | null; tolerance: number | string | null }[]) =>
+      sendJson<ObjectivesData>("PUT", `/api/parameters/objectives${q}`, { rows }),
+    buckets: (axis: Axis, signal?: AbortSignal) => getJson<BucketsData>(`/api/parameters/time-buckets/${axis}${q}`, signal),
+    preview: (axis: Axis, rows: BucketRow[], signal?: AbortSignal) => postJson<BucketPreview>(`/api/parameters/time-buckets/${axis}/preview${q}`, { rows }, signal),
+    saveBuckets: (axis: Axis, rows: BucketRow[]) => sendJson<BucketsData>("PUT", `/api/parameters/time-buckets/${axis}${q}`, { rows }),
+  };
 };
+export type ParametersApi = ReturnType<typeof parametersApi>;

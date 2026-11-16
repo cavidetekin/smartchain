@@ -39,7 +39,7 @@ describe("kenar menü", () => {
     // U-3: pasiflik yalnız renkle değil, kilit ikonuyla da gösterilir; açık ekranlarda kilit yok.
     expect(within(gantt as HTMLElement).getByTestId("lock")).toBeInTheDocument();
     expect(within(menu()).getAllByTestId("lock")).toHaveLength(10);
-    const senaryolar = within(menu()).getByRole("link", { name: /Senaryolar/ });
+    const senaryolar = within(menu()).getByRole("link", { name: /Senaryo karşılaştırma/ });
     expect(within(senaryolar).queryByTestId("lock")).toBeNull();
     await user.click(gantt);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana sayfa");
@@ -84,13 +84,13 @@ describe("daraltılmış menü", () => {
     const user = userEvent.setup();
     const { unmount } = renderApp();
     await user.click(screen.getByRole("button", { name: "Menüyü daralt" }));
-    expect(within(menu()).queryByText("Senaryolar")).toBeNull();
+    expect(within(menu()).queryByText("Senaryo karşılaştırma")).toBeNull();
     expect(within(menu()).getByRole("link", { name: "Ana sayfa" })).toHaveAttribute("title", "Ana sayfa");
     await user.hover(within(menu()).getByRole("button", { name: "Planlama" }));
     expect(within(menu()).queryByRole("menu")).toBeNull();  // yalnız basınca açılır
     await user.click(within(menu()).getByRole("button", { name: "Planlama" }));
     const panel = within(menu()).getByRole("menu", { name: "Planlama" });
-    expect(within(panel).getByRole("menuitem", { name: "Senaryolar" })).toBeInTheDocument();
+    expect(within(panel).getByRole("menuitem", { name: "Senaryo karşılaştırma" })).toBeInTheDocument();
     const yayin = within(panel).getByText("Yayın").closest("[aria-disabled]")!;
     expect(yayin).toHaveAttribute("aria-disabled", "true");
     expect(within(yayin as HTMLElement).getByTestId("lock")).toBeInTheDocument();
@@ -180,8 +180,8 @@ describe("daraltılmış menü", () => {
     within(menu()).getByRole("button", { name: "Planlama" }).focus();
     await user.keyboard("{Enter}");
     const panel = within(menu()).getByRole("menu", { name: "Planlama" });
-    expect(within(panel).getByRole("menuitem", { name: "Senaryolar" })).toHaveFocus();
-    expect(panel.querySelectorAll("a[role=menuitem]")).toHaveLength(2);  // Senaryolar, Çalışma; çalışmanın ekranları kilitli
+    expect(within(panel).getByRole("menuitem", { name: "Senaryo karşılaştırma" })).toHaveFocus();
+    expect(panel.querySelectorAll("a[role=menuitem]")).toHaveLength(2);  // Senaryo karşılaştırma, Çalışma; çalışmanın ekranları kilitli
     await user.click(within(panel).getByText("Yayın"));
     expect(within(menu()).getByRole("menu", { name: "Planlama" })).toBeInTheDocument();
   });
@@ -237,12 +237,26 @@ describe("bağlam çubuğu", () => {
     await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veriye ulaşılamıyor"));
   });
 
-  it("seçili senaryo adıyla (7.1'de Baz, tıklanmaz); plan versiyonu ve dönem yerleri pasif", async () => {
-    mockApi({ "/api/scenarios/current": { body: { id: 1, name: "Baz" } } });
+  it("senaryo seçici: adıyla düğme; liste aktif senaryolar, seçili işaretli; seçince senaryo değişir; plan versiyonu ve dönem pasif", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    mockApi({
+      "/api/scenarios/options": { body: { scenarios: [{ id: 1, name: "Baz", is_base: true }, { id: 2, name: "Fazla mesaili", is_base: false }] } },
+      "/api/scenarios/current": (_u: string, init?: RequestInit) => {
+        if (init?.method === "PUT") sent.push(JSON.parse(String(init.body)));
+        return { body: init?.method === "PUT" ? { id: 2, name: "Fazla mesaili", is_base: false, is_active: true } : { id: 1, name: "Baz", is_base: true, is_active: true } };
+      },
+    });
     renderApp();
-    await waitFor(() => expect(screen.getByTestId("scenario")).toHaveTextContent("Senaryo: Baz"));
-    expect(screen.getByTestId("scenario")).toHaveAttribute("title", "Senaryo seçimi senaryo yönetimi adımında gelir");
-    expect(screen.getByTestId("scenario").className).toContain("is-current");
+    const pill = await screen.findByRole("button", { name: /Senaryo: Baz/ });
+    await user.click(pill);
+    const items = within(screen.getByRole("menu", { name: "Senaryolar" })).getAllByRole("menuitemradio");
+    await waitFor(() => expect(within(screen.getByRole("menu", { name: "Senaryolar" })).getAllByRole("menuitemradio").map((i) => i.textContent)).toEqual(["Baz *", "Fazla mesaili"]));
+    expect(items.length).toBeGreaterThanOrEqual(0);
+    expect(within(screen.getByRole("menu", { name: "Senaryolar" })).getByRole("menuitemradio", { name: "Baz *" })).toHaveAttribute("aria-checked", "true");
+    await user.click(within(screen.getByRole("menu", { name: "Senaryolar" })).getByRole("menuitemradio", { name: "Fazla mesaili" }));
+    await waitFor(() => expect(screen.getByTestId("scenario")).toHaveTextContent("Senaryo: Fazla mesaili"));
+    expect(sent).toEqual([{ id: 2 }]);                                                       // seçim hatırlanır
     expect(screen.getByText("Plan versiyonu: —")).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByText("Dönem: —")).toHaveAttribute("title", "Plan versiyonu ve dönem seçimi 8.1'de gelir");
   });

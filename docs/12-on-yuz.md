@@ -82,7 +82,7 @@ Daraltılmış menü ve yandan açılan alt panel aynı renkleri kullanır.
 - **Bağlam çubuğu:**
   - **Veri versiyonu:** `GET /api/data-versions/current` → "Veri v35 · 27.10.2026 12:20". Veri yoksa "Veri yüklenmedi"; API cevap vermiyorsa "Sunucuya ulaşılamıyor"; API veritabanına bağlanamıyorsa (503) "Veriye ulaşılamıyor".
   - **İş göstergesi:** `GET /api/jobs` + `WS /api/ws`. Bağlantı koparsa 10 sn'de yeniden bağlanır, arada 30 sn'de bir sorgular (fonksiyon 48); kullanıcı "Bildirimler gecikebilir." görür, bağlıyken metin yoktur.
-  - **Senaryo:** seçili senaryonun adı ("Senaryo: Baz"; `GET /api/scenarios/current`). 7.1'de tek senaryo vardır, hap tıklanmaz; seçim senaryo yönetimi adımında gelir (K-175).
+  - **Senaryo:** "Senaryo: <ad> ▾" düğmesi (K-177). Tıklanınca aktif senaryoların listesi açılır (Baz başta, seçili olan işaretli; pasif senaryo yok); seçilince senaryoya bağlı açık ekran o senaryoyla baştan yüklenir, öteki ekranlar yerinde kalır. Seçim kullanıcı bazında hatırlanır. Kaydedilmemiş değişiklik varken seçim onay ister ("Kaydedilmemiş değişiklikler var"). Senaryolar ekranından açılan pasif senaryoda düğme o senaryonun adını gösterir.
   - **Plan versiyonu, dönem:** pasif yer tutucu (8.1).
 - **Boş ekranlar:** Her ekran "Bu ekran X adımında gelecek" yazan sayfayla açılır. Adım, `catalog.ts`'teki GELISTIRME_ADIMLARI eşlemesinden gelir.
 - **Kurulum:** Derlenmiş dosyalar paketin `web\` klasörüyle IIS köküne kopyalanır. `web.config` `/api`'yi API'ye yönlendirir, diğer adresleri `index.html`'e verir (tek sayfa uygulaması) ve `.woff2` türünü tanır (docs/10).
@@ -116,7 +116,7 @@ Durum renkleri yalnız durum gösterir; her zaman bir yazı, değer ya da ikonla
 
 - Her hücrede değer yazar (U-3); renk yalnız vurgudur.
 - Eşik, ekranda yazan yuvarlanmış değere uygulanır: %100,4 "%100" yazar ve risk rengindedir.
-- **Eşikler parametredir:** `occupancyLevel(değer, eşikler)` ve doluluk bileşenleri eşikleri alır. Varsayılan `{ low: 40, normal: 70, risk: 90, over: 100 }`. Eşikler müşteriye göre değişir; 7.8'te uyarı eşikleri ekranından (WarningDefinition, fonksiyon 26) gelir.
+- **Eşikler parametredir:** `occupancyLevel(değer, eşikler)` ve doluluk bileşenleri eşikleri alır. Varsayılan `{ low: 40, normal: 70, risk: 90, over: 100 }`. Eşikler müşteriye göre değişir; 7.9'te uyarı eşikleri ekranından (WarningDefinition, fonksiyon 26) gelir.
 - Lejant metinleri eşiklerden üretilir.
 
 ### Grafik serileri (U-5)
@@ -471,6 +471,20 @@ Parametre menüsünde, adres `/parametre/parametreler`; mockup `plans/7.1-mockup
 - **Kaydedilmemiş değişiklik:** başka alt başlığa, başlığa ya da ekrana geçişte uyarı (K-132). Başarılı kayıtta bildirim yok; hata alanın altında ya da hücre ipucunda.
 - **Yetki:** Key user ve üstü; End user'da ekran menüde yok.
 
+### Senaryolar (7.3, K-177; ekran 07, fonksiyon 27, 28)
+
+Parametre menüsünde, adres `/parametre/senaryolar`; mockup `plans/7.3-mockups/senaryo-yonetimi.html`. Planlama menüsündeki ekran 08'in adı "Senaryo karşılaştırma"dır.
+- **Liste:** ortak tablo (`scenarios`). Kolonlar: Gece sırası (tutamaç ve numara) · Senaryo (Baz adının yanında "*") · Model · Baz'ı izler (Baz'da boş) · Gece çalışsın (küçük anahtar) · Süre bütçesi (sn) · Son çalışma ("16.11.2026 02:31 · Bitti"; yoksa boş) · Aktif. Pasif senaryo satırı soluk. Bağlam çubuğunda seçili senaryo listede ayrıca işaretlenmez (zemin ve sol çizgi tablo standardındaki satır seçimine aittir); seçili senaryo yalnız bağlam çubuğunda görünür.
+- **Şerit:** solda "Yeni senaryo" (indigo; yalnız Admin ve üstünde görünür); sağda tablo içi düzenlemenin Vazgeç ve Kaydet'i ve standart simgeler.
+- **Tablo içi düzenleme (K-132):** "Gece çalışsın" anahtarı ve gece sırası (satır sürüklenir; yalnız gece çalışanlar arasında). Taslak lila; Kaydet toplu yazar. Pasif senaryoda anahtar pasif. Key user ve üstü.
+- **⋯ ve sağ tık:** Parametreler · Kopyala · Yeniden adlandır · Baz'dan ayır · Pasif yap (pasif senaryoda "Aktif yap") · Sil; sağ tıkta başta hücrenin Kopyala'sı. Key user'da yalnız Parametreler görünür (öteki öğeler Admin ve üstünde). Baz'da Yeniden adlandır, Pasif yap ve Sil pasif ve ipuçlu; Baz'dan ayır yalnız Baz'ı izleyen senaryoda etkin.
+- **Yeni senaryo penceresi:** Senaryo adı (zorunlu) · Kopyalanacak senaryo (açılır liste; varsayılan seçili senaryo, "Kopyala"da o satır) · Baz'ı izler (44×24 anahtar; kaynak Baz'ı izlemiyorsa kapalı gelir). Vazgeç / Kaydet (ad boşken pasif).
+- **Onay pencereleri (aynı kalıp: başlık "Senaryoyu … · <ad>", cümle "Bu senaryo …", sonra geri alınıp alınamadığı; düğmeler Vazgeç ve işlemin adı):**
+  - **Baz'dan ayır:** "Senaryoyu Baz'dan ayır · <ad>" · "Bu senaryo Baz'dan ayrılacak: Baz'daki değişiklikler artık yansımaz. Bu işlem geri alınamaz." · Vazgeç / Ayır.
+  - **Pasif yap:** "Senaryoyu pasif yap · <ad>" · "Bu senaryo pasif yapılacak: gece çalışmaz ve bağlam çubuğundaki listede görünmez. Bu işlem geri alınabilir." · Vazgeç / Pasif yap.
+  - **Sil:** "Senaryoyu sil · <ad>" · plan versiyonu yokken "Bu senaryo ve parametreleri silinecek. Bu işlem geri alınamaz.", varken "Bu senaryo, parametreleri ve <n> plan versiyonu silinecek. Bu işlem geri alınamaz." · Vazgeç / Sil. Yayınlanmış planı varsa Sil pasif ve nedeni yazılı.
+- **Başarılı işlemde bildirim yok** (liste yenilenir); hata bildirimi var.
+
 ### Veri kuralları (4.1, K-140, K-141, K-142; ekran 04, fonksiyon 16, 18, 19)
 
 Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyon kuralları ile aynı desende. Tablo kolonu görünür ve ilk kolondur; "Tümü"de liste Tablo, sonra Sıra'ya göre sıralıdır; Sıra her tabloda 1'den boşluksuzdur (K-144). Liste, "Kuralları yeniden uygula" işi bitince kendiliğinden yenilenir. Tablonun şeridinin solunda (bkz. Üst şerit, K-171): tablo seçimi ("Tümü" ya da tablo), "Yeni kural" (indigo; "Tümü"de "Yeni kural için önce bir tablo seçin." bildirimi) ve "Kuralları yeniden uygula" (mor). Ortak tablo: Sıra, Kural, Koşul (okunur cümle, alt satıra kayar), Sonuç (okunur cümle), Seçenek, Aktif (anahtar), Durum (her zaman dolu: soluk yeşil "Çalıştı" ve ipucunda son çalışma zamanı, kırmızı "Çalışmadı" ve ipucunda neden, gri "Pasif" ve gri "Uygulanmadı"; K-145); "Tümü"de Tablo kolonu. Satır menüsü: "Düzenle", "Sil" (onay penceresi). Key user salt okunur görür.
@@ -521,4 +535,5 @@ Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyo
 | Tablo standardı demosu 2: sağ tık her tabloda, Düzenle, şerit boşluğu, kopyalamada bildirim yok, çoklu seçim ve çoklu seçimde kart, görünüm seçicide yalnız ad | uygulandı (6.3, K-171) |
 | Veri kalitesi (ekran 05): Yüksek · Normal · Yok sayılan sekmeleri, durum çipleri (Yeni indigo yumuşak, Açık gri, Yok sayıldı sönük), Yok say penceresi, detay kartı Kayıt · Talep zinciri; Validasyon kuralları'nda Takip kolonu ve pencere anahtarı (K-174) | uygulandı (6.5, K-174) |
 | Parametreler (ekran 06): ana başlıklar şeritte, form başlıklarında Sistem ayarları düzeni (`SettingsForm`), form içi tablolar (`EditGrid`: Hedefler, Ufuk ve dönemler) ve altta Kaydet / Vazgeç, ufuk şeridi; bağlam çubuğunda "Senaryo: Baz" (K-175) | uygulandı (7.1, K-175) |
+| Senaryolar (ekran 07): liste, Yeni senaryo, satır menüsü, gece anahtarı ve sürükleme; bağlam çubuğunda senaryo geçişi ve hatırlama; denetim izi ve iş listesinde Senaryo kolonu (K-177) | uygulandı (7.3, K-177) |
 | Tablo standardı: sekmeler ve araç çubuğu tek şerit (simge düğmeler, ⚙ Tablo ayarları), kayıt sayısı tablonun altında, Diğer ▾; Ana veri, İşlem verisi, Sistem sağlığı, detay kartları, Validasyon çekmecesi | uygulandı (6.3, K-173) |

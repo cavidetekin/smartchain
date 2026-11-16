@@ -15,10 +15,12 @@ from .definition import ListDefinition
 JOB = metadata.tables["adm.Job"]
 USER = metadata.tables["adm.AppUser"]
 EVENT = metadata.tables["adm.SystemEvent"]
+RUN = metadata.tables["planning.PlanRun"]
+SCENARIO = metadata.tables["param.ScenarioDefinition"]
 
 SUPPORT_NAME = "Smartchain"
 STATUS_FIELDS = ("Status", "JobType", "Channel", "RequestedBy", "IsProtected", "Summary", "RequesterName", "QueuePosition")
-LABELS = {"Id": "No", "JobType": "Tür", "Summary": "İş", "Channel": "Kanal", "RequesterName": "Kullanıcı", "Status": "Durum", "QueuePosition": "Sıra",
+LABELS = {"Id": "No", "JobType": "Tür", "Summary": "İş", "ScenarioName": "Senaryo", "Channel": "Kanal", "RequesterName": "Kullanıcı", "Status": "Durum", "QueuePosition": "Sıra",
           "Progress": "İlerleme", "DurationSeconds": "Süre (sn)", "Attempt": "Deneme", "CreatedAt": "İstek zamanı",
           "StartedAt": "Başlangıç", "EndedAt": "Bitiş", "ErrorText": "Hata", "CancelReason": "İptal nedeni"}
 VALUES = {"JobType": list(JOB_TYPES), "Channel": list(CHANNELS), "Status": list(STATUSES)}
@@ -28,12 +30,21 @@ def _text(value: str) -> sa.ColumnElement:
     return sa.literal_column(f"N'{value}'", sa.Unicode)
 
 
+def scenario_name() -> sa.ColumnElement:
+    """Plan hesabı işinde senaryonun adı (iş → PlanRun → senaryo; K-177); senaryodan bağımsız işlerde (veri çekme, validasyon, aktarım, temizlik,
+    veri kalitesi) boş."""
+    run_id = sa.try_cast(sa.func.json_value(JOB.c.Payload, sa.literal_column("N'$.plan_run_id'")), sa.BigInteger)
+    return (sa.select(SCENARIO.c.Name).select_from(RUN.join(SCENARIO, SCENARIO.c.Id == RUN.c.ScenarioDefinitionId))
+            .where(RUN.c.Id == run_id).scalar_subquery())
+
+
 def _source(where: sa.ColumnElement, alias: str) -> sa.Subquery:
     position = sa.func.row_number().over(partition_by=(JOB.c.Channel, JOB.c.Status),
                                          order_by=(sa.func.isnull(JOB.c.Priority, 0).desc(), JOB.c.Id))
     return sa.select(
         JOB.c.Id, JOB.c.JobType, JOB.c.Summary, JOB.c.Channel, JOB.c.Status, JOB.c.RequestedBy, JOB.c.Progress, JOB.c.Attempt,
         JOB.c.CreatedAt, JOB.c.StartedAt, JOB.c.EndedAt, JOB.c.ErrorText, JOB.c.CancelReason,
+        scenario_name().label("ScenarioName"),
         sa.case((USER.c.Role == SYSTEM_OWNER, _text(SUPPORT_NAME)),
                 else_=sa.func.coalesce(USER.c.FullName, USER.c.UserName)).label("RequesterName"),
         sa.cast(sa.case((USER.c.Role == SYSTEM_OWNER, 1), else_=0), sa.Boolean).label("IsProtected"),
@@ -47,7 +58,7 @@ def _ended_within(part: str, amount: int) -> sa.ColumnElement:
     return JOB.c.EndedAt >= sa.func.dateadd(sa.text(part), -amount, sa.func.sysutcdatetime())
 
 
-JOB_QUEUE_FIELDS = ("Id", "JobType", "Summary", "Channel", "RequesterName", "Status", "QueuePosition", "Progress", "DurationSeconds", "Attempt", "CreatedAt")
+JOB_QUEUE_FIELDS = ("Id", "JobType", "Summary", "ScenarioName", "Channel", "RequesterName", "Status", "QueuePosition", "Progress", "DurationSeconds", "Attempt", "CreatedAt")
 JOB_QUEUE = ListDefinition(
     name="job-queue",
     table="adm.Job",
@@ -62,10 +73,10 @@ JOB_QUEUE = ListDefinition(
     default_sort=(("Id", "desc"),),
     labels=LABELS,
     values=VALUES,
-    server_values=frozenset({"RequesterName"}),
+    server_values=frozenset({"RequesterName", "ScenarioName"}),
 )
 
-JOB_RUNS_FIELDS = ("Id", "JobType", "Summary", "Channel", "RequesterName", "Status", "StartedAt", "EndedAt", "DurationSeconds", "Attempt", "ErrorText", "CancelReason")
+JOB_RUNS_FIELDS = ("Id", "JobType", "Summary", "ScenarioName", "Channel", "RequesterName", "Status", "StartedAt", "EndedAt", "DurationSeconds", "Attempt", "ErrorText", "CancelReason")
 JOB_RUNS = ListDefinition(
     name="job-runs",
     table="adm.Job",
@@ -79,7 +90,7 @@ JOB_RUNS = ListDefinition(
     default_sort=(("EndedAt", "desc"),),
     labels={**LABELS, "Status": "Sonuç"},
     values=VALUES,
-    server_values=frozenset({"RequesterName"}),
+    server_values=frozenset({"RequesterName", "ScenarioName"}),
 )
 
 EVENT_FIELDS = ("OccurredAt", "Component", "Message", "Resolution", "IsResolved", "JobId", "TraceId")

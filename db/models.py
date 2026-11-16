@@ -1502,9 +1502,10 @@ ScenarioDefinition = sa.Table(
     sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), nullable=True, comment="Lokasyon; Baz kurulumda veri gelmeden açıldığı için boş olabilir", info={'label': "Lokasyon", 'source': "ERP", 'workspace': False}),
     sa.Column("Name", sa.Unicode(100), nullable=False, comment="Senaryo adı", info={'label': "Senaryo adı", 'source': "Kullanıcı", 'workspace': False}),
     sa.Column("IsBase", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Baz senaryo: silinemez, pasif yapılamaz; tek kayıtta Evet", info={'label': "Baz senaryo", 'source': "Sistem", 'workspace': False, 'default': "0"}),
-    sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Aktif; pasif senaryo seçilemez ve çalışmaz (senaryo yönetimi adımı)", info={'label': "Aktif", 'source': "Kullanıcı", 'workspace': False, 'default': "1"}),
-    sa.Column("RunsNightly", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Gece çalışsın (senaryo yönetimi adımı)", info={'label': "Gece çalışsın", 'source': "Kullanıcı", 'workspace': False, 'default': "0"}),
-    sa.Column("NightlyPriority", sa.Integer(), nullable=True, comment="Gece çalışma sırası", info={'label': "Gece çalışma sırası", 'source': "Kullanıcı", 'workspace': False}),
+    sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Aktif; pasif senaryo bağlam çubuğundaki listede görünmez ve gece çalışmaz, parametreleri durur (K-177)", info={'label': "Aktif", 'source': "Kullanıcı", 'workspace': False, 'default': "1"}),
+    sa.Column("FollowsBase", sa.Boolean(), nullable=True, comment="Baz'ı izler: veri tablolarında Baz'ın değerlerini okur, yalnız farkını tutar (K-176); Baz'da boş; Hayır'a dönen senaryo yeniden bağlanmaz", info={'label': "Baz'ı izler", 'source': "Kullanıcı", 'workspace': False}),
+    sa.Column("RunsNightly", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Gece çalışsın: kapalı senaryo yeniden açılana kadar gece akışında hesaplanmaz (K-177)", info={'label': "Gece çalışsın", 'source': "Kullanıcı", 'workspace': False, 'default': "0"}),
+    sa.Column("NightlyPriority", sa.Integer(), nullable=True, comment="Gece sırası: gece çalışan senaryolar arasında 1'den boşluksuz; gece çalışmayanda boş", info={'label': "Gece sırası", 'source': "Kullanıcı", 'workspace': False}),
     sa.Column("IsSynthetic", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79)", info={'label': "Sentetik veri (geliştirme ve demo)", 'source': "Sistem", 'workspace': False, 'default': "0"}),
     sa.Index("UX_ScenarioDefinition_Name", "Name", unique=True),
     schema="param",
@@ -1521,7 +1522,7 @@ Scenario = sa.Table(
     sa.Column("CreatedAt", mssql.DATETIME2(), nullable=True, comment="Oluşma", info={'label': "Oluşma"}),
     sa.Column("Status", sa.Unicode(15), nullable=True, comment="Bitti | Kısmen | Hata", info={'values': ["Bitti", "Kısmen", "Hata"]}),
     schema="planning",
-    comment="Gece üretilen senaryo; bir sonraki gece akışında silinir.",
+    comment="Senaryo sonucu: bir senaryonun bir veri versiyonuyla hesaplanmış planı. Bir sonraki gece silinmez, saklanır; saklama süresi sistem ayarıdır (K-177; ekranda \"plan versiyonu\").",
 )
 
 Workspace = sa.Table(
@@ -1697,6 +1698,7 @@ AppUser = sa.Table(
     sa.Column("LastLoginAt", mssql.DATETIME2(), nullable=True, comment="Son başarılı giriş (UTC)", info={'label': "Son başarılı giriş (UTC)"}),
     sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Aktif", info={'label': "Aktif"}),
     sa.Column("FontSize", sa.Integer(), nullable=True, comment="Yazı boyutu tercihi, px: 12, 13, 14 ya da 16 (U-23); boşsa seçilmedi, standart 13 geçerli", info={'label': "Yazı boyutu tercihi, px: 12, 13, 14 ya da 16 (U-23)"}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), nullable=True, comment="Kullanıcının son seçtiği senaryo (K-177); boşsa, senaryo pasifse ya da silinmişse Baz açılır", info={'label': "Kullanıcının son seçtiği senaryo (K-177)"}),
     sa.Index("UX_AppUser_UserName", "UserName", unique=True),
     schema="adm",
     comment="Uygulama kullanıcısı (Faz 1'de yerel).",
@@ -1812,6 +1814,7 @@ AuditLog = sa.Table(
     sa.Column("ObjectKey", sa.Unicode(200), index=True, nullable=True, comment="Kayıt", info={'label': "Kayıt"}),
     sa.Column("OldValue", mssql.NVARCHAR(), nullable=True, comment="Önceki", info={'label': "Önceki"}),
     sa.Column("NewValue", mssql.NVARCHAR(), nullable=True, comment="Yeni", info={'label': "Yeni"}),
+    sa.Column("ScenarioName", sa.Unicode(100), nullable=True, comment="Senaryoya bağlı işlemde senaryonun adı (K-177); veri yönetimi işlemlerinde boş. Ad olarak saklanır: senaryo silinse de iz okunur", info={'label': "Senaryoya bağlı işlemde senaryonun adı (K-177)"}),
     schema="adm",
     comment="Kim, ne zaman, neyi değiştirdi; giriş kayıtları; kayıtlar silinemez (K-109).",
 )

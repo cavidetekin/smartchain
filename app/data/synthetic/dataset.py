@@ -15,6 +15,12 @@ SEED = 22  # MDD adım 22
 SET_NAME = "Sentetik v0"
 LOCATION_CODE = "ORM-01"
 HORIZON_WEEKS = 13
+# Sentetik senaryolar (docs/11, K-177): Baz'dan kopyalanır; ad, Baz'ı izler, gece çalışsın, parametre farkları, süre bütçesi böleni
+SCENARIOS = (
+    ("Fazla mesaili", True, True, {"UseOvertime": True}, 1),
+    ("Kısıtsız kapasite", True, True, {"ResourceConstraint": "Kısıtsız"}, 2),
+    ("MILP deneme", False, False, {"ModelType": "MILP", "ProductionMinLot": True, "ProductionLotMultiple": True}, 1),
+)
 HISTORY_DAYS = 21
 
 FINISHED = [  # kod, ad, kısa ad

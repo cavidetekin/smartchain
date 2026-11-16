@@ -123,13 +123,13 @@
 | `param.PriorityRule` | Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih). | Parametre |  | 4 |
 | `param.AllocationRule` | Kapasite alokasyonu: talep sınıfına kaynak (grubu) ve dönem bazında pay. | Parametre |  | 9 |
 | `param.WarningDefinition` | Uyarı tanımı, eşik ve önem seviyesi. | Parametre |  | 5 |
-| `param.ScenarioDefinition` | Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz. | Parametre |  | 8 |
+| `param.ScenarioDefinition` | Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz. | Parametre |  | 9 |
 
 ## `planning` · Senaryo, çalışma ve plan çıktıları (12 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `planning.Scenario` | Gece üretilen senaryo; bir sonraki gece akışında silinir. | Plan |  | 6 |
+| `planning.Scenario` | Senaryo sonucu: bir senaryonun bir veri versiyonuyla hesaplanmış planı. Bir sonraki gece silinmez, saklanır; saklama süresi sistem ayarıdır (K-177; ekranda "plan versiyonu"). | Plan |  | 6 |
 | `planning.Workspace` | Kullanıcının bir senaryo üzerindeki çalışması; yayınlanmazsa gece silinir. | Plan |  | 6 |
 | `planning.WorkspaceOverride` | Çalışmadaki geçici değişiklikler: parametreler ve çalışmada değiştirilebilir ana veri alanları. | Plan |  | 7 |
 | `planning.PlanRun` | Bir plan hesabı (senaryo ya da çalışma); bütün plan çıktıları buna bağlı. | Plan |  | 10 |
@@ -168,7 +168,7 @@
 | `adm.DataVersionEntity` | Aktarımda hangi tabloların aktarıldığı (kısmi aktarımda seçilen grupların tabloları). | Veri yönetimi |  | 8 |
 | `adm.RawCompare` | Dünden bugüne (K-160): tablo başına ham verinin son hâli ile önceki günün son hâlinin karşılaştırma özeti. Yükleme sonrası hesaplanır. | Veri yönetimi |  | 11 |
 | `adm.RawCompareRow` | Dünden bugüne (K-160): yeni gelen, gelmeyen ve güncellenen kayıtlar; güncellenen kayıtta değişen alan başına bir satır. Tablonun her hesabında yeniden yazılır. | Veri yönetimi |  | 8 |
-| `adm.AppUser` | Uygulama kullanıcısı (Faz 1'de yerel). | Sistem |  | 14 |
+| `adm.AppUser` | Uygulama kullanıcısı (Faz 1'de yerel). | Sistem |  | 15 |
 | `adm.UserSession` | Sunucu tarafı oturum (K-97). Tarayıcıdaki çerez rastgele bir anahtar taşır; tabloda yalnız anahtarın SHA-256 özeti durur. | Sistem |  | 9 |
 | `adm.PasswordHistory` | Kullanıcının önceki şifre özetleri (K-98): yeni şifre son `PasswordHistoryCount` şifreden farklı olmalı. | Sistem |  | 4 |
 | `adm.LoginThrottle` | Bilinmeyen, şifresiz ya da pasif hesap adına yapılan hatalı girişlerin sayacı (K-98). Gerçek hesaptaki sayaçla aynı davranır; giriş cevabından hesabın var olup olmadığı anlaşılmaz. | Sistem |  | 4 |
@@ -176,7 +176,7 @@
 | `adm.SolverLog` | Çözüm logu; ilk günden tutulur. | Sistem |  | 6 |
 | `adm.SystemEvent` | Sistem hataları ve sistem aksiyonu (K-106). Saklama `SystemEventRetentionDays`; motor servisi eskileri siler. | Sistem |  | 9 |
 | `adm.ServiceStatus` | Motor servisinin kalp atışı (K-106). Durum saklanmaz, okurken hesaplanır. | Sistem |  | 5 |
-| `adm.AuditLog` | Kim, ne zaman, neyi değiştirdi; giriş kayıtları; kayıtlar silinemez (K-109). | Sistem |  | 8 |
+| `adm.AuditLog` | Kim, ne zaman, neyi değiştirdi; giriş kayıtları; kayıtlar silinemez (K-109). | Sistem |  | 9 |
 | `adm.SystemSetting` | System owner'ın ayarları: çözücü, süre bütçeleri, işçi sayısı, eş zamanlı çalışma sınırı, saklama süreleri. | Sistem |  | 2 |
 | `adm.TableView` | Kayıtlı tablo görünümü (K-89): kolon seti ve sırası, genişlikler, sabitleme, sıralama, filtreler, gruplama. | Sistem |  | 8 |
 | `adm.TableViewDefault` | Kullanıcının bir liste için varsayılan görünümü (K-89). Satır yoksa liste tanımındaki "Standart" görünüm açılır. | Sistem |  | 3 |

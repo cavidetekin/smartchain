@@ -48,6 +48,7 @@ def to_public(job: dict) -> dict:
         "id": job["Id"],
         "job_type": job["JobType"],
         "summary": job["Summary"],
+        "scenario_name": job.get("ScenarioName"),  # plan hesabı işinde senaryonun adı; senaryodan bağımsız işlerde boş (K-177)
         "channel": job["Channel"],
         "priority": job["Priority"],
         "status": job["Status"],

@@ -375,7 +375,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.4). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5). Bu Smartchain alanları Kapasite yönetimi ekranında (7.4) girilir, güncel satırda yerinde güncellenir (yeni veri versiyonu açılmaz, izli; aktarım yeni versiyona taşır; K-167); ana veri ekranında salt okunur (K-168).
+- **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.5). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5). Bu Smartchain alanları Kapasite yönetimi ekranında (7.5) girilir, güncel satırda yerinde güncellenir (yeni veri versiyonu açılmaz, izli; aktarım yeni versiyona taşır; K-167); ana veri ekranında salt okunur (K-168).
 - **Tip:** `ResourceType` ERP'den ham değerdir; tip bayraklarla ifade edilir. `IsFurnace` ve `IsMold` yalnız sözleşmededir, Faz 1 planlamada kullanılmaz.
 - **İşçi:** İşçiler kaynaktır (`IsEmployee`), yetkinlikler kaynak grubudur (`IsCompetenceGroup`), işçi yetkinlikleri `ResourceGroupAssignment`'tadır.
 
@@ -1693,16 +1693,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LocationId | int | FK | Lokasyon; Baz kurulumda veri gelmeden açıldığı için boş olabilir |  | ERP | H | H |  |
 | Name | nvarchar(100) | UK | Senaryo adı |  | Kullanıcı | H | E |  |
 | IsBase | bit |  | Baz senaryo: silinemez, pasif yapılamaz; tek kayıtta Evet | Baz senaryo | Sistem | H | H | 0 |
-| IsActive | bit |  | Aktif; pasif senaryo seçilemez ve çalışmaz (senaryo yönetimi adımı) | Aktif | Kullanıcı | H | H | 1 |
-| RunsNightly | bit |  | Gece çalışsın (senaryo yönetimi adımı) | Gece çalışsın | Kullanıcı | H | H | 0 |
-| NightlyPriority | int |  | Gece çalışma sırası |  | Kullanıcı | H | H |  |
+| IsActive | bit |  | Aktif; pasif senaryo bağlam çubuğundaki listede görünmez ve gece çalışmaz, parametreleri durur (K-177) | Aktif | Kullanıcı | H | H | 1 |
+| FollowsBase | bit |  | Baz'ı izler: veri tablolarında Baz'ın değerlerini okur, yalnız farkını tutar (K-176); Baz'da boş; Hayır'a dönen senaryo yeniden bağlanmaz | Baz'ı izler | Kullanıcı | H | H |  |
+| RunsNightly | bit |  | Gece çalışsın: kapalı senaryo yeniden açılana kadar gece akışında hesaplanmaz (K-177) | Gece çalışsın | Kullanıcı | H | H | 0 |
+| NightlyPriority | int |  | Gece sırası: gece çalışan senaryolar arasında 1'den boşluksuz; gece çalışmayanda boş | Gece sırası | Kullanıcı | H | H |  |
 | IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) |  | Sistem | H | H | 0 |
 
 ### Scenario
 <sub>21. Veri modeli · Plan</sub>
 
 - Plan · versiyonsuz · Faz 1
-- Gece üretilen senaryo; bir sonraki gece akışında silinir.
+- Senaryo sonucu: bir senaryonun bir veri versiyonuyla hesaplanmış planı. Bir sonraki gece silinmez, saklanır; saklama süresi sistem ayarıdır (K-177; ekranda "plan versiyonu").
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -1925,6 +1926,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LastLoginAt | datetime2 |  | Son başarılı giriş (UTC) | Sistem | H | H |  |
 | IsActive | bit |  | Aktif | Kullanıcı | H | H | 1 |
 | FontSize | int |  | Yazı boyutu tercihi, px: 12, 13, 14 ya da 16 (U-23); boşsa seçilmedi, standart 13 geçerli | Kullanıcı | H | H |  |
+| ScenarioDefinitionId | int |  | Kullanıcının son seçtiği senaryo (K-177); boşsa, senaryo pasifse ya da silinmişse Baz açılır | Kullanıcı | H | H |  |
 
 - Giriş ve şifre kuralları fonksiyon 89'da ve K-98'de. Şifre ekranda, logda ve denetim izinde düz metin olarak hiç yer almaz.
 - Kilit süre dolunca kendiliğinden açılır; Admin elle açınca (K-101) `LockedUntil` boşalır ve sayaç sıfırlanır.
@@ -2071,6 +2073,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ObjectKey | nvarchar(200) | IX | Kayıt | Sistem | H | H |  |
 | OldValue | nvarchar(max) |  | Önceki | Sistem | H | H |  |
 | NewValue | nvarchar(max) |  | Yeni | Sistem | H | H |  |
+| ScenarioName | nvarchar(100) |  | Senaryoya bağlı işlemde senaryonun adı (K-177); veri yönetimi işlemlerinde boş. Ad olarak saklanır: senaryo silinse de iz okunur | Sistem | H | H |  |
 
 ### SystemSetting
 <sub>21. Veri modeli · Sistem</sub>

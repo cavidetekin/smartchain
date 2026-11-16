@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 
-import { api, emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job, VALIDATION_NOTIFY,
+import { api, ApiError, emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job, VALIDATION_NOTIFY,
   validationResultPath } from "../api/client";
 import { authApi } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
@@ -13,7 +13,10 @@ import { ContextBar } from "./ContextBar";
 import { type ExportItem, ExportToasts } from "./ExportToasts";
 import { FlowStatusProvider } from "./FlowStatus";
 import { ForbiddenNotice } from "./ForbiddenNotice";
-import { ShellContext, type TrackedExport } from "./ShellContext";
+import { hasUnsaved } from "../table/useTableEdits";
+import { ConfirmDialog } from "../ui";
+import { scenarioApi } from "./scenarioApi";
+import { ShellContext, type ShellScenario, type TrackedExport } from "./ShellContext";
 import { Sidebar } from "./Sidebar";
 
 /** Oturum kapısının (auth/AuthGate) içinde açılır; kullanıcı oturumdan gelir (K-97). */
@@ -96,13 +99,39 @@ export function Shell() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  // Seçili senaryo (K-177): girişte kullanıcının hatırlanan senaryosu (yoksa, pasifse ya da silindiyse Baz)
+  const [scenario, setScenario] = useState<ShellScenario | null>(null);
+  const [scenarioTick, setScenarioTick] = useState(0);
+  const [askScenario, setAskScenario] = useState<{ id: number; done(ok: boolean): void } | null>(null);
+  const loadScenario = useCallback(() => {
+    scenarioApi.current().then(setScenario).catch(() => undefined);
+    setScenarioTick((n) => n + 1);
+  }, []);
+  useEffect(() => loadScenario(), [loadScenario]);
+  const applyScenario = useCallback(async (id: number) => {
+    try {
+      setScenario(await scenarioApi.select(id));
+      return true;
+    } catch (e) {
+      emitNotice(e instanceof ApiError ? e.message : tr.context.scenarioFailed);
+      loadScenario();
+      return false;
+    }
+  }, [loadScenario]);
+  const selectScenario = useCallback((id: number) => {
+    if (scenario?.id === id) return Promise.resolve(true);
+    if (!hasUnsaved()) return applyScenario(id);
+    return new Promise<boolean>((done) => setAskScenario({ id, done }));  // kaydedilmemiş değişiklik: önce onay
+  }, [scenario, applyScenario]);
+  const refreshScenario = loadScenario;
+
   const changeFontSize = (size: FontSize) => {
     setFontSize(size);
     authApi.setFontSize(size).catch(() => emitNotice(tr.user.fontSizeNotSaved));
   };
 
   return (
-    <ShellContext.Provider value={{ userId, fontSize, setFontSize: changeFontSize, trackExport }}>
+    <ShellContext.Provider value={{ userId, fontSize, setFontSize: changeFontSize, trackExport, scenario, selectScenario, refreshScenario, scenarioTick }}>
     <FlowStatusProvider>
     <div className={`sc-shell${collapsed ? " is-collapsed" : ""}`}>
       <Sidebar
@@ -122,6 +151,11 @@ export function Shell() {
       <ExportToasts items={exports} onDismiss={dismissExport} checks={checks} onOpenCheck={openCheck} onDismissCheck={dismissCheck} />
       <ForbiddenNotice />
       <IdleWatch me={me} />
+      {askScenario && (
+        <ConfirmDialog title={tr.table.unsavedTitle} message={tr.table.unsavedText} confirmLabel={tr.table.unsavedLeave} danger
+                       onCancel={() => { askScenario.done(false); setAskScenario(null); }}
+                       onConfirm={() => { const ask = askScenario; setAskScenario(null); void applyScenario(ask.id).then(ask.done); }} />
+      )}
     </div>
     </FlowStatusProvider>
     </ShellContext.Provider>

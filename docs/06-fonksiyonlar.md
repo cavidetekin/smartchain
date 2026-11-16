@@ -879,7 +879,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
 
-- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim ve vardiya Kapasite yönetimi'nde (7.4, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim ve vardiya Kapasite yönetimi'nde (7.5, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
 
 #### NASIL ÇALIŞIR
 
@@ -1668,12 +1668,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.10; K-167)
+  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.11; K-167)
 - **01:** Malzeme seçilir, blokaj türü (üretim, satın alma ya da satış), başlangıç ve bitiş tarihi ile neden girilir.
 - **02:** Kayıt saklanır, iz bırakır; süresi biten blokaj kendiliğinden geçersiz olur, kayıt silinmez.
 - **GIRDI**
   - LocationCode, MaterialCode, HoldType, StartDate, EndDate, Reason
-- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.10'de açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
+- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.11'de açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
 - **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motorda uygulanışı Aşama 10.
 - **Uygulama (K-126):** Henüz uygulanmadı; yalnız tanım.
 
@@ -1743,11 +1743,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
 - **22 · Parametreler:** Senaryonun planlama parametrelerini ve hedeflerini yönetmek; her senaryo parametrelerinin tamamını taşır (K-175).
 - **23 · Zaman yapısı:** Senaryonun ufkunu ve dönem dizisini tanımlamak (dönem tipi, kapsam, kapsam birimi); tarihler plan başlangıcından hesaplanır. Parametreler ekranının Zaman başlığı (K-175).
-- **24 · Kapasite parametreleri:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.4, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
+- **24 · Kapasite parametreleri:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.5, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
 - **25 · Alokasyon ve öncelik kuralı:** Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
 - **26 · Uyarı eşikleri:** Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
-- **27 · Gece senaryo tanımı:** Her gece otomatik çalışacak senaryoları tanımlamak: hangi parametre seti, LP mi MILP mi, hangi eksenler açık (fazla mesai, fason, kaynak ve malzeme kısıtı, alokasyon, talep çarpanı, varsayımsal kaynak), süre bütçesi ve açıklama.
-- **28 · Senaryo sırası ve aç / kapa:** Gece senaryolarının çalışma sırasını belirlemek ve bir senaryoyu silmeden geçici olarak gece akışından çıkarmak; sabah hangi sonucun önce hazır olacağını ve gece yükünü yönetmek.
+- **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo açmak, yeniden adlandırmak, pasif yapmak, silmek, Baz'dan ayırmak; senaryolar arasında geçmek (K-177).
+- **28 · Gece çalışsın ve gece sırası:** Senaryonun gece akışında hesaplanıp hesaplanmayacağını ve gece çalışanların sırasını belirlemek (K-177).
 
 ### 22 · Parametreler
 <sub>24. Ekranlar ve fonksiyonlar · F22 · C Parametre · Geliştirme 7.1 (K-175)</sub>
@@ -1759,7 +1759,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (okuma ve yazma); End user ekranı görmez
   - Nereden: Parametreler ekranı (06); ekran bağlam çubuğunda seçili senaryonun parametrelerini gösterir, ekranda ayrıca senaryo seçimi yoktur
-- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.8'te eklenir).
+- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.9'te eklenir).
 - **02:** Form başlığında solda alt başlıklar, sağda sıkı kart; değer değişince Kaydet ve Vazgeç etkinleşir (kartın altında, sağda). Tek alt başlıklı başlıkta sol menü yoktur.
 - **03:** "Kaydet" yalnız değişen parametreleri yazar; biri geçersizse hiçbiri yazılmaz, sorun alanın altında gösterilir.
 - **04:** Kaydedilmemiş değişiklikle başka alt başlığa, başlığa ya da ekrana geçilirse uyarı çıkar (K-132).
@@ -1819,7 +1819,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Model:** üretim lot kuralları (minimum lot, lot katı, maksimum lot) yalnız MILP'te uygulanır; LP'de anahtarlar pasif ve gridir, değerleri korunur. Satın alma kararı modelde süreklidir; öneri sonradan sipariş lotuna yuvarlanır (K-27).
 - **Talep:** "Plana giren talep" alt başlığında talep tipleri ayrı ayrı açılır (Kesin sipariş, Teklif, Beklemedeki sipariş, Tahmin; K-60, K-127). "En fazla gecikebilecek gün" boşsa sınırsızdır.
 - **Malzeme:** güvenlik stoğu ve stok gün kapsamı ikisi de doluysa hangisinin geçerli olacağı (K-113); tedarikçi seçim kuralı (K-118); teyit tarihi boş açık arzda istenen tarih kullanılır; tarihi geçmiş açık arz bugüne çekilir ya da plana alınmaz.
-- **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.4).
+- **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.5).
 - **Plan kararlılığı:** sabit dönem değer ve birimdir (Gün, Hafta, Ay), ekranda tek satırda. Sınırı Planlama ufku'ndaki kapsam kuralıyla hesaplanır: plan başlangıcından başlar; Hafta ve Ay'da içinde bulunulan hafta ya da ay sayıya dahildir ve periyot takvim sınırında biter; 0 sabit dönem yok demektir. Kayıtlı değerin son günü alanın altında yazılır. Ayrıca açık iş emirleri (Sabit, Yalnız öteleme önerisi, Serbest), açık satın alma siparişleri ve "Sabitlenmiş kararlar korunsun" (planlamacının sabitlediği kararlar; docs'ta eski adı "kilit").
 - **Hedefler (leksikografik, ağırlık yok):** her hedef bir satırdır; sıra sürüklenir, motor aktif hedefleri sırayla çözer. Satır: Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%; üst hedeften verilebilecek en çok ödün, 0 = katı) · Aktif. Kapalı hedef çözülmez; sırası, süresi ve payı boştur, listenin sonunda durur. Altta toplam süre: senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır, ayrı bir senaryo süre parametresi yoktur. Süre 1 ya da daha büyük tam sayı, ödün payı 0–100; en az bir hedef aktiftir.
 - **Hedef listesi ve başlangıç değerleri** (sıra tablodaki sıradır):
@@ -1838,8 +1838,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PLAN_DEVIATION | Önceki plandan sapma |  |  | Hayır |
 | OVER_TARGET_LOAD | Hedef doluluğun üstü |  |  | Hayır |
 
-- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.5'te tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
-- **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.4). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
+- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.6'te tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
+- **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.5). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
 - **Hata durumları:** geçersiz değer (liste dışı seçenek, sayı olmayan değer, sınır dışı) kaydı durdurur; bilinmeyen anahtar reddedilir.
 - **YENİDEN HESAPLANACAK ALANLAR:** kayıt hesap başlatmaz; bir sonraki plan hesabı (gece ya da çalışma) yeni değerleri okur. Veri kalitesinin tahmin ufku bir sonraki kontrolde güncellenir.
 - **Uygulama (7.1, K-175):** uygulandı. `app/params/` (katalog, servis), `GET/PUT /api/parameters`, `GET/PUT /api/parameters/objectives`; geçiş 0058 (parametre seti kalktı, Baz açıldı). Motor `ScenarioParameters` ile okur (docs/09).
@@ -1887,9 +1887,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 24 · Kapasite parametreleri
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Çalışma prensibi 1/3</sub>
 
-- Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.4, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
+- Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.5, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
 
-- **Kapsam (K-167):** Kapasite yönetimi ekranına (7.4) döner: kaynak kapasitesi (günlük kapasite, paralel adet, kapasite kaynağı, takvim ataması, fason parametreleri; alt kartta duruşlar ve kapasite profili), takvim, vardiya tanımı ve planı, verim ve hedef doluluk, kişi sayısının kapasiteye dönüşümü. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
+- **Kapsam (K-167):** Kapasite yönetimi ekranına (7.5) döner: kaynak kapasitesi (günlük kapasite, paralel adet, kapasite kaynağı, takvim ataması, fason parametreleri; alt kartta duruşlar ve kapasite profili), takvim, vardiya tanımı ve planı, verim ve hedef doluluk, kişi sayısının kapasiteye dönüşümü. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
 
 #### NASIL ÇALIŞIR
 
@@ -2118,144 +2118,74 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Nerede görünür:** İş listesi, ana sayfa, planlama satırı, rapor; seçilebilir.
 - **Etki notu:** Bu değişiklikle kaç uyarının seviye değiştireceği.
 
-### 27 · Gece senaryo tanımı
-<sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Çalışma prensibi 1/2</sub>
+### 27 · Senaryo yönetimi
+<sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Geliştirme 7.3 (K-177)</sub>
 
-- **Not (K-175):** senaryo yönetimi adımında yeniden yazılır. Parametre seti kalktı: senaryo parametrelerinin tamamını kendisi taşır; yeni senaryo var olanı kopyalayarak açılır. Aşağıdaki "parametre seti" ifadeleri ve eksen ayarları o adımda güncellenecek.
-- Her gece otomatik çalışacak senaryoları tanımlamak: hangi parametre seti, LP mi MILP mi, hangi eksenler açık (fazla mesai, fason, kaynak ve malzeme kısıtı, alokasyon, talep çarpanı, varsayımsal kaynak), süre bütçesi ve açıklama.
+- Senaryoları yönetmek: kopyalayarak yeni senaryo açmak, yeniden adlandırmak, pasif yapmak, silmek, Baz'dan ayırmak; senaryolar arasında geçmek. Ekranda tek kavram "senaryo"dur: parametrelerinin tamamını taşıyan kayıt (K-175). Eski mockuplar (m24f-0461, 0462) geçersiz; güncel mockup `plans/7.3-mockups/senaryo-yonetimi.html`.
+
+#### NASIL ÇALIŞIR
+
+- **KIM VE NEREDEN**
+  - Kim: yeni senaryo, kopyalama, yeniden adlandırma, pasif / aktif, Baz'dan ayır ve silme Admin ve üstü; listeyi Key user da görür; senaryo geçişi herkes (End user dahil)
+  - Nereden: Senaryolar ekranı (07): şeritte "Yeni senaryo", satırın ⋯ menüsü ve sağ tık; geçiş bağlam çubuğundan
+- **01:** "Yeni senaryo" (ya da satırda "Kopyala"): Senaryo adı · Kopyalanacak senaryo · Baz'ı izler. Yeni senaryo her zaman var olan bir senaryodan kopyalanır; aktif, "Gece çalışsın" kapalı ve sırasız açılır.
+- **02:** "Parametreler": o senaryoyu seçer ve Parametreler ekranını açar (pasif senaryoda da; bağlam çubuğu adını gösterir).
+- **03:** "Yeniden adlandır": ad tekildir, en çok 100 karakter.
+- **04:** "Baz'dan ayır": onay penceresi ("Bu senaryo Baz'dan ayrılacak: Baz'daki değişiklikler artık yansımaz. Bu işlem geri alınamaz."). Yalnız Baz'ı izleyen senaryoda.
+- **05:** "Pasif yap": pasif senaryo bağlam çubuğundaki listede görünmez ve gece çalışmaz (gece anahtarı kapanır, sırası boşalır); parametreleri durur ve Senaryolar ekranından açılıp düzenlenebilir. "Aktif yap" geri alır.
+- **06:** "Sil": onay penceresi silinecek plan versiyonu sayısını söyler; senaryo parametreleri ve plan versiyonlarıyla (plan hesapları ve çıktıları) birlikte silinir.
+- **07:** Senaryo geçişi: bağlam çubuğundaki "Senaryo: <ad>" tıklanır, aktif senaryolar listelenir (Baz başta); seçilince senaryoya bağlı açık ekran o senaryonun verisini gösterir.
+- **GIRDI**
+  - Senaryo adı, kopyalanacak senaryo, "Baz'ı izler" seçimi
+  - Senaryonun plan versiyonları ve yayınlanmış planı
+- **ÇIKTI**
+  - ScenarioDefinition (ad, aktif, Baz'ı izler) ve senaryoya bağlı tabloların satırları
+  - Kullanıcının seçili senaryosu (AppUser.ScenarioDefinitionId)
+  - Denetim izi: "Senaryo oluşturuldu", "Senaryo adı değişti", "Senaryo pasif yapıldı", "Senaryo aktif yapıldı", "Senaryo Baz'dan ayrıldı", "Senaryo silindi"
+
+### 27 · Senaryo yönetimi · kurallar ve etkiler
+<sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Geliştirme 7.3 (K-177)</sub>
+
+- **Baz:** silinemez, pasif yapılamaz, yeniden adlandırılamaz; "Baz'ı izler" Baz'da boştur.
+- **Kopyalama (K-176 d, i):** ayar tabloları (parametreler, hedefler, planlama ufku, öncelik ve alokasyon kuralları) tam kopyalanır; "Baz'ı izler" seçimi taşınır. Veri tablolarında (Baz + fark: tedarikçi limitleri, verim, dönem limitleri, fazla mesai limitleri; 7.5'ten itibaren kapasite tabloları) kaynak Baz ise satır kopyalanmaz (Baz'ın satırları temel veridir, yeni senaryo onları Baz'dan okur), değilse kaynağın kendi satırları kopyalanır.
+- **Kayıt defteri:** senaryo kimliği taşıyan her tablo türüyle (Ayar ya da Veri) `app/params/scenario_tables.py`'dedir; kopyalama, silme ve ayırma bu listeyi dolaşır. Yeni tablo açan adım tablosunu buraya ekler; test modeldeki bütün senaryo tablolarının listede olduğunu doğrular.
+- **Baz'ı izler ve Baz'dan ayır (K-176 e):** seçim senaryoda saklanır. Ayırma tek yönlüdür; yeniden bağlama yoktur. Ayırmada (ve "Baz'ı izler: Hayır" ile açılan senaryoda) her veri tablosunun "Baz'ın o anki değerlerini tam kopyala" işlevi çağrılır. Fark yapısı ve çözümleme katmanı 7.5'te geldiği için 7.3'te seçim kaydedilir ve gösterilir; işlevler 7.5'te ve sonraki adımlarda bağlanır.
+- **Silme:** yayınlanmış planı (onaylı plan) olan senaryo silinemez, yalnız pasif yapılır. Silinen senaryoyu seçmiş kullanıcılar Baz'a düşer. Denetim izi senaryonun adını saklar; silinse de okunur.
+- **Seçili senaryo:** kullanıcı bazında hatırlanır; yeniden girişte son seçilen açılır, o senaryo pasifse ya da silindiyse Baz. Senaryoya bağlı uçlar senaryoyu istekle alır (`scenario_id`): iki sekmede iki senaryo açıkken yanlış senaryoya yazılmaz.
+- **Senaryoya bağlı ekranlar:** bugün Parametreler; sonraki adımlarda Kapasite yönetimi, Öncelik kuralları, Alokasyon, Pegging kuralları, Uyarı eşikleri, Tedarikçi limitleri, Malzeme blokajı ve plan ekranları. Geçişte bu ekranlar yeni senaryoyla baştan yüklenir; kaydedilmemiş değişiklik varsa geçiş onay ister.
+- **Smartchain'de girilen veri** (kapasite, limitler, blokaj) versiyonlanmaz ve plan hesabı için kopyası tutulmaz; eski planın çıktıları kendi değerlerini taşır, eski girdi değeri değişiklik geçmişinden okunur.
+- **Hata durumları:** boş ya da kullanılan ad; Baz'da yasak işlem; Baz'ı izlemeyen senaryoda ayırma; yayınlanmış planı olan senaryoda silme; Admin altında yönetim işlemi (403).
+- **YENİDEN HESAPLANACAK ALANLAR:** yönetim işlemleri hesap başlatmaz. Silme senaryonun plan versiyonlarını ve çıktılarını siler.
+- **Uygulama (7.3, K-177):** uygulandı. `app/params/scenarios.py`, `scenario_tables.py`; `/api/scenarios` uçları; liste `scenarios`; geçiş 0062.
+
+### 28 · Gece çalışsın ve gece sırası
+<sub>24. Ekranlar ve fonksiyonlar · F28 · C Parametre · Geliştirme 7.3 (K-177)</sub>
+
+- Senaryonun gece akışında hesaplanıp hesaplanmayacağını ve gece çalışanların sırasını belirlemek. Eski mockuplar (m24f-0463, 0464) geçersiz.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Gece senaryo tanımları ekranı '+ Senaryo ekle' · satır düzenleme · Senaryolar ekranından 'tanımı aç'
-- **01:** '+ Senaryo ekle': ad, parametre seti, model tipi seçilir; model tipi ipucu MILP'in ne zaman gerektiğini anlatır.
-- **02:** Eksen ayarları anahtarlarla: fazla mesai, fason, kaynak kısıtı, malzeme kısıtı, alokasyon; talep çarpanı; varsayımsal kaynak ekleme (ad, dönemden itibaren, kapasite).
+  - Nereden: Senaryolar ekranı, "Gece çalışsın" kolonundaki anahtar ve satırın sürüklenmesi
+- **01:** "Gece çalışsın" anahtarı açılır ya da kapatılır; değişiklik taslaktır (lila), şeritteki Kaydet ile yazılır.
+- **02:** Gece sırası satır sürüklenerek değişir; yalnız gece çalışanlar arasında. Anahtarı açılan senaryo sıranın sonuna girer, kapatılanın sırası boşalır.
+- **03:** "Kaydet" anahtarları ve sırayı toplu yazar; sıra 1'den boşluksuzdur. Her değişen senaryo denetim izine düşer ("Gece ayarı değişti").
 - **GIRDI**
-  - Parametre setleri (aktif olanlar)
-  - Model tipi: LP (sürekli) ya da MILP (üretim tarafı tamsayı); satın alma hep sürekli, son hesapta yuvarlanır
-  - Eksen ayarları, talep çarpanı, varsayımsal kaynak / dönem, süre bütçesi
-  - Gece penceresi ve paralellik (System owner ayarı)
-- **03:** Süre bütçesi girilir; sistem gece penceresi ve paralellikle toplam zamanlamayı hesaplar, sığmıyorsa uyarır.
-- **04:** Açıklama yazılır; 'Şimdi dene' (öneri) senaryoyu hesaplama kanalında tek seferlik çalıştırıp sonucu Senaryolar ekranına 'deneme' etiketiyle koyar.
-- **05:** 'Kaydet': ScenarioDefinition yazılır (set, eksenler, model, bütçe, sıra sona eklenir, aktif); denetim izi.
+  - Senaryoların "Gece çalışsın" seçimi ve listedeki sırası
 - **ÇIKTI**
-  - ScenarioDefinition kaydı (ParameterSetId, ModelType, ResourceConstraint, MaterialConstraint, eksen ayarları, NightlyPriority, IsActive, süre bütçesi)
-  - Zamanlama kontrolü sonucu
-  - Denetim izi
-- **06:** Yarın geceden itibaren akışta çalışır; sonuçları Senaryolar ekranında (42) diğerleriyle yan yana görünür.
+  - ScenarioDefinition.RunsNightly, NightlyPriority
 
-### 27 · Gece senaryo tanımı · kurallar ve etkiler
-<sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Çalışma prensibi 2/2</sub>
+### 28 · Gece çalışsın ve gece sırası · kurallar ve etkiler
+<sub>24. Ekranlar ve fonksiyonlar · F28 · C Parametre · Geliştirme 7.3 (K-177)</sub>
 
-- **KURALLAR VE SINIRLAR**
-  - Her senaryo tek parametre seti kullanır; aynı setle farklı eksen ayarları ayrı senaryolardır.
-  - Model tipi senaryoya özeldir; LP her zaman çözülür, MILP süre bütçesi içinde en iyi bulunan çözümü verir.
-  - Toplam süre bütçesi (paralellikle) gece penceresine sığmalı; sığmayan senaryo kaydedilir ama uyarılı; 06:00 sınırını aşan durdurulur.
-  - En fazla 10 aktif gece senaryosu (parametre).
-  - Varsayımsal kaynak yalnız senaryo içinde var olur; ana veriye yazılmaz.
-- **HATA VE ISTISNA**
-  - Parametre seti pasifse seçilemez; mevcut senaryo pasif sete bağlıysa listede uyarı.
-  - Süre bütçesi 5 dk altı ya da 240 dk üstü: hata.
-  - Aynı adla senaryo: uyarı.
-  - 'Şimdi dene' hesaplama kanalı doluysa (3 çalışma) kuyruğa alınır, kullanıcı bilgilendirilir.
-- **ETKISI VE TETIKLENENLER**
-  - Gece akışı planı (sıra ve zamanlama) güncellenir.
-  - Senaryolar ekranında yeni sütun.
-  - Sistem sağlığında tahmini gece yükü.
-- **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Gece akışı zamanlaması:** Job planı (gece kanalı) Senaryo eklenince / bütçe değişince hemen hesaplanır
-- **Senaryo sonucu:** Scenario · PlanRun · PlanMetric Bir sonraki gece (ya da 'Şimdi dene' ile hemen)
-- **Karşılaştırma tablosu:** Senaryolar ekranı Yeni senaryo sütunu sonuçla birlikte
-- **ÖRNEK:** 'Yeni hat (H50)': set Yeni hat · Montaj B, LP, kaynak kısıtı açık, varsayımsal Montaj hattı B H50'den itibaren, 45 dk. Zamanlama: 6 senaryo 2 paralel, bitiş ~01:00; 7. taslak 240 dk ile pencereyi zorlar.
-- **AÇIK KONU:** 'Şimdi dene' (gündüz tek seferlik çalıştırma) öneri. Hesaplama kanalı kapasitesini (3) paylaşır; çalışmaları yavaşlatabilir.
-
-### 27 · Gece senaryo tanımı · Senaryo formu
-<sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Mockup 1/2</sub>
-
-![27 · Gece senaryo tanımı · Senaryo formu](mockups/m24f-0456-27-gece-senaryo-tanimi-senaryo-formu.png)
-
-- **Üç temel seçim:** Parametre seti, model tipi (LP / MILP ipucuyla) ve eksen anahtarları.
-- **Varsayımsal kaynak:** Senaryoya özel kaynak ve dönem; ana veriye yazılmaz.
-- **Süre bütçesi:** Gece penceresi bilgisiyle; sığmazsa zamanlama kontrolü açılır.
-- **Şimdi dene:** Gündüz tek seferlik deneme (öneri); sonuç 'deneme' etiketiyle.
-
-### 27 · Gece senaryo tanımı · Zamanlama kontrolü
-<sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Mockup 2/2</sub>
-
-![27 · Gece senaryo tanımı · Zamanlama kontrolü](mockups/m24f-0457-27-gece-senaryo-tanimi-zamanlama-kontrolu.png)
-
-- **Senaryo başına pencere:** Sıra, bütçe ve paralellikle tahmini başlangıç–bitiş.
-- **Sığıyor mu:** Toplam bütçe, paralel süre ve tahmini bitiş; sınırı zorlayan satır sarı.
-- **06:00 kuralı:** Sınırı aşan senaryonun durdurulup en iyi çözümün saklandığı yazar.
-- **İki çıkış:** Bütçeyi düzelt (birincil) ya da yine de kaydet.
-
-### 28 · Senaryo sırası ve aç / kapa
-<sub>24. Ekranlar ve fonksiyonlar · F28 · C Parametre · Çalışma prensibi 1/2</sub>
-
-- **Not (K-175):** senaryo yönetimi adımında yeniden yazılır. Parametre seti kalktı: senaryo parametrelerinin tamamını kendisi taşır; yeni senaryo var olanı kopyalayarak açılır. Aşağıdaki "parametre seti" ifadeleri ve eksen ayarları o adımda güncellenecek.
-- Gece senaryolarının çalışma sırasını belirlemek ve bir senaryoyu silmeden geçici olarak gece akışından çıkarmak; sabah hangi sonucun önce hazır olacağını ve gece yükünü yönetmek.
-
-#### NASIL ÇALIŞIR
-
-- **KIM VE NEREDEN**
-  - Kim: Key user ve üstü
-  - Nereden: Gece senaryo tanımları ekranı · liste (sürükle-bırak, Alt + ok) · satırdaki aktif anahtarı
-- **01:** Liste sıra numarasıyla gelir; senaryo tutulup sürüklenir ya da Alt + ok ile taşınır; sağdaki gece zamanlaması anında yeniden hesaplanır (başlangıç, bitiş, paralel çiftler).
-- **02:** Aktif anahtarı kapatılınca onay: bu gece ne olur, tanımın korunduğu, gece akışının ne kadar kısalacağı; süre seçimi (yeniden açana kadar / yalnız bu gece) ve gerekçe.
-- **GIRDI**
-  - ScenarioDefinition listesi (NightlyPriority, IsActive, süre bütçesi, model)
-  - Gece penceresi ve paralellik (System owner ayarı)
-- **03:** 'Sırayı kaydet': NightlyPriority ve IsActive yazılır; denetim izine eski ve yeni sıra, kapatılan senaryo ve gerekçe.
-- **04:** Bir sonraki gece akışı yeni sıra ve aktiflikle çalışır; Senaryolar ekranında kapalı senaryonun sütunu 'bu gece çalışmadı' olarak görünür.
-- **ÇIKTI**
-  - Güncel NightlyPriority ve IsActive
-  - Gece zamanlaması tahmini
-  - Denetim izi
-- **05:** 'Yalnız bu gece' kapatılan senaryo ertesi gün otomatik açılır; ana sayfada not düşer.
-
-### 28 · Senaryo sırası ve aç / kapa · kurallar ve etkiler
-<sub>24. Ekranlar ve fonksiyonlar · F28 · C Parametre · Çalışma prensibi 2/2</sub>
-
-- **KURALLAR VE SINIRLAR**
-  - Baz senaryo her zaman 1. sıradadır ve kapatılamaz; onaylı planın kaynağıdır (öneri).
-  - En az bir senaryo aktif kalır.
-  - Sıra yalnız bitiş zamanını belirler; senaryolar birbirinin sonucunu kullanmaz, hepsi aynı veri versiyonuyla bağımsız çalışır.
-  - Kapalı senaryo tanımı, sırası ve ayarları korunur; silme ayrı işlemdir (27 içinde, kullanılmıyorsa).
-  - Paralellik System owner ayarıdır (varsayılan 2); burada değiştirilmez, zamanlamada dikkate alınır.
-- **HATA VE ISTISNA**
-  - Baz'ı taşıma ya da kapatma denemesi: engel ve açıklama.
-  - Sıra kaydedilirken başka kullanıcı değiştirdiyse çakışma; liste yenilenir.
-  - Tüm senaryolar kapatılmaya çalışılırsa son aktif senaryo kapatılamaz.
-- **ETKISI VE TETIKLENENLER**
-  - Gece akışı zamanlaması ve tahmini bitiş.
-  - Senaryolar ekranı sütun düzeni ve 'çalışmadı' işareti.
-  - Ana sayfa gece akışı satırları.
-- **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Gece akışı zamanlaması:** Job planı (gece kanalı) Sıra ve aktiflik değişince hemen
-- **Senaryo sonuçları:** Scenario · PlanRun Bir sonraki gece; kapalı senaryo için üretilmez
-- **Karşılaştırma tablosu:** Senaryolar ekranı Kapalı senaryo sütunu 'çalışmadı'
-- **ÖRNEK:** Kısıtlı malzeme 5. sıradan 2. sıraya: Baz ile paralel çalışır, sabah ilk sonuçlar birlikte hazır; tahmini bitiş 01:15. Fason açık bu hafta kapatılır: gece akışı 60 dk kısalır, tanım korunur.
-
-### 28 · Senaryo sırası ve aç / kapa · Sürükle-sırala
-<sub>24. Ekranlar ve fonksiyonlar · F28 · C Parametre · Mockup 1/2</sub>
-
-![28 · Senaryo sırası ve aç / kapa · Sürükle-sırala](mockups/m24f-0460-28-senaryo-sirasi-ve-ac-kapa-surukle-sirala.png)
-
-- **Sürükleme:** Taşınan satır işaretli; Baz sabit 1. sırada, pasif senaryo gri.
-- **Zamanlama anında:** Sağda gece zaman çizgisi yeni sıraya göre; paralel çiftler ve tahmini bitiş.
-- **Bağımsızlık notu:** Sıranın yalnız bitiş zamanını belirlediği, senaryoların birbirini kullanmadığı yazar.
-- **Kaydet:** Sıra taslaktır; 'Sırayı kaydet' ile geçerli olur.
-
-### 28 · Senaryo sırası ve aç / kapa · Kapatma onayı
-<sub>24. Ekranlar ve fonksiyonlar · F28 · C Parametre · Mockup 2/2</sub>
-
-![28 · Senaryo sırası ve aç / kapa · Kapatma onayı](mockups/m24f-0461-28-senaryo-sirasi-ve-ac-kapa-kapatma-onayi.png)
-
-- **Bu gece ne olur:** Senaryo çalışmaz, sütunu boş kalır, tanım korunur, akış kısalır.
-- **Süre seçimi:** Yeniden açana kadar ya da yalnız bu gece (otomatik açılır).
-- **Gerekçe:** İsteğe bağlı; denetim izine gider.
-- **Baz korunur:** Baz'ın kapatılamadığı ve en az bir senaryonun aktif kaldığı bilgi kutusunda.
+- **Kalıcı anahtar:** kapalı senaryo yeniden açılana kadar gece akışında hesaplanmaz; senaryo ve parametreleri durur. Tek gecelik atlama, süre ve neden sorusu yoktur.
+- **Baz** öteki senaryolar gibidir: gece anahtarı kapatılabilir, sırası değişebilir.
+- **Pasif senaryo** gece çalışmaz; anahtarı pasiftir.
+- **Süre bütçesi** senaryonun hedeflerinden gelir (aktif hedeflerin sürelerinin toplamı, fonksiyon 22); listede gösterilir, burada düzenlenmez.
+- **Gece akışı (10.11):** aktif ve "Gece çalışsın: Evet" senaryoları gece sırasıyla hesaplar (`nightly_scenarios()`); sıra yalnız bitiş zamanını etkiler. 7.3'te bu alanlar saklanır ve gösterilir; bugün zamanlanmış iş veri çekme, validasyon, aktarım ve temizlik adımlarından oluşur.
+- **Son çalışma:** senaryonun son plan hesabının bitiş zamanı ve durumu; plan hesabı yokken boş.
+- **Uygulama (7.3, K-177):** uygulandı. `PUT /api/scenarios/nightly`; `scenarios.save_nightly`, `nightly_scenarios`.
 
 ### D · Planlama motoru (arka planda)
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
