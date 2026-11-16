@@ -173,9 +173,43 @@ def check_downtime_and_absence(ds: Dataset) -> Check:
     return Check(5, "Bakım duruşu ve izin", down_ok and abs_ok, detail)
 
 
+def check_deep_warning(ds: Dataset) -> Check:
+    """6 (K-174): zincirin derininde tedarik süresi ikisi de boş; malzeme açık siparişli mamulün ağacında."""
+    mat = ds.get("Material", Code=d.DEEP_MATERIAL)
+    row = ds.get("MaterialSupplier", MaterialId=mat["Id"], SupplierId=ds.get("Supplier", Code=d.DEEP_SUPPLIER)["Id"])
+    children = _bom_children(ds)
+    parents = {c: p for p, kids in children.items() for c, _ in kids}
+    path, cur = [mat["Id"]], mat["Id"]
+    while cur in parents:
+        cur = parents[cur]
+        path.append(cur)
+    demanded = {r["MaterialId"] for r in open_firm_orders(ds)}
+    ok = row["FixedLeadTimeDays"] is None and row["VariableLeadTimeDays"] is None and len(path) >= 4 and path[-1] in demanded
+    return Check(6, "Zincirin derininde Yüksek uyarı", ok, " → ".join(ds.code("Material", m) for m in reversed(path)))
+
+
+def check_no_demand_warning(ds: Dataset) -> Check:
+    """7 (K-174): talebi olmayan malzemenin ağacında bileşen miktarı 0."""
+    mat = ds.get("Material", Code=d.NO_DEMAND_MATERIAL)
+    rows = [r for r in ds.rows("BOM") if r["MaterialId"] == mat["Id"]]
+    used = {r["MaterialId"] for r in ds.rows("SalesOrderLine")} | {r["MaterialId"] for r in ds.rows("Forecast")} | {r["ComponentMaterialId"] for r in ds.rows("BOM")}
+    ok = bool(rows) and any(r["Quantity"] == 0 for r in rows) and mat["Id"] not in used
+    return Check(7, "Talebi olmayan malzemede Normal uyarı", ok, f"{d.NO_DEMAND_MATERIAL} · {len(rows)} ağaç satırı")
+
+
+def check_past_due(ds: Dataset) -> Check:
+    """9 (K-174): teslim tarihi dün ve bugün olan açık siparişler; kritik ve kapasitesi boş kaynak."""
+    late = ds.get("SalesOrderLine", OrderNo=d.PAST_DUE_ORDER)
+    today = ds.get("SalesOrderLine", OrderNo=d.DUE_TODAY_ORDER)
+    res = ds.get("Resource", Code=d.NO_CAPACITY_RESOURCE)
+    ok = (late["RequestedDate"] < ds.generated_on and today["RequestedDate"] == ds.generated_on and late["OpenQuantity"] > 0
+          and res["IsCritical"] and res["DailyCapacity"] is None)
+    return Check(9, "Tarih geçince çıkan uyarı; kapasitesi tanımsız kaynak", ok, f"{d.PAST_DUE_ORDER} {late['RequestedDate']:%d.%m}, {d.DUE_TODAY_ORDER} bugün")
+
+
 def all_checks(ds: Dataset) -> list[Check]:
     return [check_bottleneck(ds), check_late_material(ds), check_supplier_limit(ds), check_impossible_due(ds),
-            check_downtime_and_absence(ds)]
+            check_downtime_and_absence(ds), check_deep_warning(ds), check_no_demand_warning(ds), check_past_due(ds)]
 
 
 def summary(ds: Dataset) -> dict:

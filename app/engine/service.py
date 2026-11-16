@@ -24,12 +24,13 @@ from sqlalchemy.orm import Session
 from app import __version__
 from app.flows import runner as flows
 from app.jobs import events, queue
-from app.jobs.constants import CHANNELS, TYPE_CLEANUP, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_TRANSFER, TYPE_VALIDATION
+from app.jobs.constants import CHANNELS, TYPE_CLEANUP, TYPE_EXPORT, TYPE_PRECHECK, TYPE_PULL, TYPE_QUALITY, TYPE_TRANSFER, TYPE_VALIDATION
 from app.jobs.settings import HEALTH_DEFAULTS, JobSettings, read_int_settings, read_settings
 from .export_job import export_process_main
 from .import_job import import_process_main
 from .pull_job import pull_process_main
 from .cleanup_job import cleanup_process_main
+from .quality_job import quality_process_main
 from .transfer_job import transfer_process_main
 from .validation_job import validation_process_main
 from .job import plan_run_id_of, process_main
@@ -41,6 +42,7 @@ log = logging.getLogger("smartchain.engine")
 STALE_CHECK_SECONDS = 15
 EXPORT_CLEANUP_SECONDS = 3600
 FLOW_TICK_SECONDS = 5  # zamanlayıcı turu (K-163)
+DAILY_TICK_SECONDS = 60  # gün dönümü denetimi: veri kalitesi (K-174)
 
 
 @dataclass
@@ -68,6 +70,7 @@ class EngineService:
         self._last_cleanup = 0.0
         self._last_beat = 0.0
         self._last_flow_tick = 0.0
+        self._last_daily_tick = 0.0
         self._db_lost = False  # döngü veritabanı hatasıyla düştü: bağlantı gelince çalışan zamanlanmış iş yarıda kesilmiş sayılır
         self.job_settings = job_settings or JobSettings()
         self.engine_settings = engine_settings or EngineSettings()
@@ -110,6 +113,18 @@ class EngineService:
         session.commit()
         self._last_flow_tick = time.monotonic()
 
+    def _daily_tick(self, session: Session) -> None:
+        """Gün dönümü (K-174): bugün henüz "Veri kalitesi" işi yoksa tam kapsamlı iş kuyruğa girer (tarihli kurallar veri gelmeden de bozulur)."""
+        if time.monotonic() - self._last_daily_tick < DAILY_TICK_SECONDS:
+            return
+        from datetime import datetime
+
+        from app import quality
+        self._last_daily_tick = time.monotonic()
+        if quality.daily_due(session, datetime.now()):
+            quality.enqueue(session, None, quality.TRIGGER_DAILY)
+            log.info("Gün dönümü: veri kalitesi işi kuyrukta")
+
     def _beat(self, session: Session) -> None:
         if time.monotonic() - self._last_beat >= self.engine_settings.heartbeat_seconds:
             events.service_beat(session)
@@ -141,6 +156,7 @@ class EngineService:
             for run in list(self.running.values()):
                 self._check(s, run)
             self._flow_tick(s)
+            self._daily_tick(s)
             for channel in self.channels:
                 while (job := queue.claim_next(s, channel, self.job_settings)) is not None:
                     self._spawn(s, job, channel)
@@ -148,7 +164,7 @@ class EngineService:
     def _spawn(self, session: Session, job: dict, channel: str) -> None:
         target = {TYPE_EXPORT: export_process_main, TYPE_PRECHECK: import_process_main, TYPE_PULL: pull_process_main,
                   TYPE_VALIDATION: validation_process_main, TYPE_TRANSFER: transfer_process_main,
-                  TYPE_CLEANUP: cleanup_process_main}.get(job["JobType"], process_main)
+                  TYPE_CLEANUP: cleanup_process_main, TYPE_QUALITY: quality_process_main}.get(job["JobType"], process_main)
         plan_run_id = plan_run_id_of(job["Payload"]) if target is process_main else None
         budget = self.engine_settings.time_budget(channel)
         process = self._ctx.Process(target=target, args=(job["Id"], job["Attempt"], int(budget)),

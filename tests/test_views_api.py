@@ -10,6 +10,7 @@ from app.api.main import create_app
 from app.api.services import lists as list_service
 
 from test_lists_api import api, query  # noqa: F401
+from testdb import SYNTHETIC_MATERIALS
 from auth_helpers import auth, delete_users, ensure_user
 
 pytestmark = pytest.mark.db
@@ -134,7 +135,7 @@ def test_relative_date_filter_is_stored_relative(api, users, db_engine, monkeypa
     filters = next(x for x in listed(api, users[0])["views"] if x["id"] == v["id"])["definition"]["filters"]
     load_day = updated.replace(tzinfo=timezone.utc).astimezone().date()
     monkeypatch.setattr(list_service, "today", lambda: load_day)
-    assert query(api, filters=filters)["filtered"] == 200
+    assert query(api, filters=filters)["filtered"] == SYNTHETIC_MATERIALS
     monkeypatch.setattr(list_service, "today", lambda: load_day + timedelta(weeks=3))
     assert query(api, filters=filters)["filtered"] == 0
 

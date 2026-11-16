@@ -56,6 +56,8 @@ export interface RuleDetail {
   severity: string;
   message: string;
   active: boolean;
+  /** Veri kalitesinde takip (K-174); yalnız Uyarı'da anlamlı. */
+  track: boolean;
   locked: boolean;
   /** Pencerede düzenlenir: kullanıcı kuralı ya da koşulu editörle ifade edilen hazır kural (K-139). */
   editable: boolean;
@@ -83,6 +85,8 @@ export interface RuleChange {
   delete?: boolean;
   /** İlk hâline döndür (hazır kural, K-139). */
   reset?: boolean;
+  /** Veri kalitesinde takip (K-174); yalnız Uyarı kuralında Evet olur. */
+  track?: boolean;
 }
 
 export const recordsList = (entity: string) => `validation-records-${entity}`;

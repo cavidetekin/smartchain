@@ -69,21 +69,34 @@ export function relationSlug(label: string): string {
   return label.toLocaleLowerCase("tr").replace(/[çğıöşüâîû]/g, (ch) => map[ch]).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-/** Ekranın adres sorgusu: sekme, çok tablolu sekmede tablo, açık kart (K-171). */
-export function screenQuery(tab: TabDef, table: TableDef, card: { id: string; tab: CardTab } | null): string {
+/** Ekranın adres sorgusu: sekme, çok tablolu sekmede tablo, açık kart (K-171), yalnız bir kaydı gösteren süzgeç (`yalniz`, K-174). */
+export function screenQuery(tab: TabDef, table: TableDef, card: { id: string; tab: CardTab } | null, only: string | null = null): string {
   return new URLSearchParams({
     sekme: tab.key, ...(tab.tables.length > 1 ? { tablo: table.slug } : {}),
     ...(card ? { kayit: card.id, kart: cardSlug(card.tab) } : {}),
+    ...(only ? { yalniz: only } : {}),
   }).toString();
 }
 
-/** Kaydın kartına giden adres (denetim izinde "Kayda git", ilişkili satırın rozeti; K-173); liste bilinmiyorsa null. */
-export function recordUrl(list: string, id: string | number, card: CardTab = HISTORY_TAB): string | null {
+function screenOf(list: string): { path: string; tab: TabDef; table: TableDef } | null {
   for (const screen of DATA_SCREENS) {
     for (const tab of screen.tabs) {
       const table = tab.tables.find((t) => t.list === list);
-      if (table) return `${screen.path}?${screenQuery(tab, table, { id: String(id), tab: card })}`;
+      if (table) return { path: screen.path, tab, table };
     }
   }
   return null;
+}
+
+/** Kaydın kartına giden adres (denetim izinde "Kayda git", ilişkili satırın rozeti; K-173): tablo bütün kayıtlarıyla, kayıt seçili ve kartı açık;
+ *  liste bilinmiyorsa null. */
+export function recordUrl(list: string, id: string | number, card: CardTab = HISTORY_TAB): string | null {
+  const at = screenOf(list);
+  return at ? `${at.path}?${screenQuery(at.tab, at.table, { id: String(id), tab: card })}` : null;
+}
+
+/** Yalnız o kaydı gösteren adres (Veri kalitesinde "Kayda git", K-174): tablo kaydın Id'siyle süzülü, kart kapalı; liste bilinmiyorsa null. */
+export function onlyRecordUrl(list: string, id: string | number): string | null {
+  const at = screenOf(list);
+  return at ? `${at.path}?${screenQuery(at.tab, at.table, null, String(id))}` : null;
 }

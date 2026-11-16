@@ -11,6 +11,7 @@ from app.api.main import create_app
 from app.api.services import lists as service
 
 from auth_helpers import token
+from testdb import SYNTHETIC_MATERIALS
 from conftest import FAKE_USER
 
 pytestmark = pytest.mark.db
@@ -23,7 +24,7 @@ def api(db_engine, test_users):
         synthetic, count = conn.execute(text(
             "SELECT TOP 1 v.IsSynthetic, (SELECT COUNT(*) FROM core.Material m WHERE m.VersionFrom <= v.Id "
             "AND (m.VersionTo IS NULL OR m.VersionTo >= v.Id)) FROM adm.DataVersion v ORDER BY v.Id DESC")).one()
-    if not synthetic or count != 200:
+    if not synthetic or count != SYNTHETIC_MATERIALS:
         pytest.skip("Sentetik v0 yüklü değil (python -m app.data.synthetic load)")
     client = TestClient(create_app(), raise_server_exceptions=False)
     client.cookies.set(COOKIE, token(test_users[0]))
@@ -73,18 +74,18 @@ def test_rows_carry_unit_decimals(api, db_engine):
 
 def test_counts_and_chunks_cover_all_rows_once(api):
     seen = []
-    for offset in range(0, 200, 70):
+    for offset in range(0, 202, 70):
         body = query(api, fields=["Code"], offset=offset, limit=70)
-        assert (body["total"], body["filtered"], body["offset"]) == (200, 200, offset)
+        assert (body["total"], body["filtered"], body["offset"]) == (202, 202, offset)
         seen += [r["Code"] for r in body["rows"]]
-    assert len(seen) == len(set(seen)) == 200
+    assert len(seen) == len(set(seen)) == 202
     assert seen == sorted(seen)
 
 
 def test_multi_sort(api):
     rows = all_rows(api, fields=["Code", "MaterialLevel"],
                     sort=[{"field": "MaterialLevel", "dir": "asc"}, {"field": "Code", "dir": "desc"}])
-    assert len(rows) == 200
+    assert len(rows) == 202  # 6.5: ALT-099 ve MAM-011 (K-174)
     levels = [r["MaterialLevel"] for r in rows]
     assert levels == sorted(levels, key=["Hammadde", "Nihai ürün", "Yarı mamul"].index)
     ham = [r["Code"] for r in rows if r["MaterialLevel"] == "Hammadde"]
@@ -103,9 +104,9 @@ def test_turkish_sort_and_case_insensitive_search(api):
 @pytest.mark.parametrize("flt, expected", [
     ({"field": "Name", "op": "starts_with", "value": "rulman"}, 6),
     ({"field": "Name", "op": "equals", "value": "rulman 6204-2rs"}, 1),
-    ({"field": "MaterialLevel", "op": "in", "values": ["Nihai ürün", "Yarı mamul"]}, 120),
-    ({"field": "IsSellable", "op": "in", "values": [True]}, 10),
-    ({"field": "AdditionalText1", "op": "equals", "value": "a"}, 10),
+    ({"field": "MaterialLevel", "op": "in", "values": ["Nihai ürün", "Yarı mamul"]}, 122),
+    ({"field": "IsSellable", "op": "in", "values": [True]}, 11),
+    ({"field": "AdditionalText1", "op": "equals", "value": "a"}, 11),
     ({"field": "SafetyStock", "op": "eq", "value": 20}, 6),
     ({"field": "SafetyStock", "op": "gt", "value": 0}, 6),
     ({"field": "StockCoverageDays", "op": "lt", "value": 3}, None),
@@ -114,7 +115,7 @@ def test_filter_operators(api, flt, expected):
     body = query(api, filters=[flt])
     if expected is not None:
         assert body["filtered"] == expected
-    assert body["total"] == 200 and len(body["rows"]) == min(body["filtered"], 100)
+    assert body["total"] == 202 and len(body["rows"]) == min(body["filtered"], 100)
     assert len(all_rows(api, filters=[flt])) == body["filtered"]
 
 
@@ -122,7 +123,7 @@ def test_not_contains_is_complement_of_contains(api):
     flt = {"field": "Code", "op": "contains", "value": "-01"}
     hit = query(api, filters=[flt])["filtered"]
     miss = query(api, filters=[{**flt, "op": "not_contains"}])["filtered"]
-    assert 0 < hit < 200 and hit + miss == 200
+    assert 0 < hit < 202 and hit + miss == 202
 
 
 def test_number_range_matches_database(api, db_engine):
@@ -150,7 +151,7 @@ def test_date_filters(api, db_engine, monkeypatch):
         updated = conn.execute(text("SELECT MAX(UpdatedAt) FROM core.Material WHERE VersionTo IS NULL")).scalar_one()
     local_day = updated.replace(tzinfo=timezone.utc).astimezone().date()
     day = local_day.isoformat()
-    assert query(api, filters=[{"field": "UpdatedAt", "op": "between", "from": day, "to": day}])["filtered"] == 200
+    assert query(api, filters=[{"field": "UpdatedAt", "op": "between", "from": day, "to": day}])["filtered"] == 202
     nxt = (local_day + timedelta(days=1)).isoformat()
     assert query(api, filters=[{"field": "UpdatedAt", "op": "between", "from": nxt}])["filtered"] == 0
 
@@ -158,9 +159,9 @@ def test_date_filters(api, db_engine, monkeypatch):
         monkeypatch.setattr(service, "today", lambda: today)
         return query(api, filters=[{"field": "UpdatedAt", "op": "relative", "value": value}])["filtered"]
 
-    assert relative("this_week", local_day) == 200
+    assert relative("this_week", local_day) == 202
     assert relative("this_week", local_day + timedelta(weeks=2)) == 0
-    assert relative("next_4_weeks", local_day - timedelta(weeks=3)) == 200
+    assert relative("next_4_weeks", local_day - timedelta(weeks=3)) == 202
     assert relative("next_4_weeks", local_day - timedelta(weeks=5)) == 0
 
 

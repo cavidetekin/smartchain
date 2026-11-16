@@ -13,7 +13,8 @@ useTableTestSetup();
 const EXPORT = { title: "x", file_slug: "x", sync_max_rows: 10000, max_rows: 500000, file_hours: 24 };
 const COLUMNS = [
   col("EntityLabel", "Tablo", "text", "list"), col("RuleName", "Kural", "text", "text"), col("ConditionText", "Koşul", "text", "text"),
-  col("Severity", "Sınıf", "text", "list"), col("Message", "Mesaj", "text", "text"), col("Kind", "Tür", "text", "list"), col("IsActive", "Aktif", "bool", "list"),
+  col("Severity", "Sınıf", "text", "list"), col("TrackQuality", "Takip", "bool", "list"), col("Message", "Mesaj", "text", "text"), col("Kind", "Tür", "text", "list"),
+  col("IsActive", "Aktif", "bool", "list"),
 ];
 const RULES = [
   { Id: 2, EntityName: "Material", EntityLabel: "Malzeme", RuleName: "Minimum lot maksimum lottan büyük", ConditionText: "Minimum lot > Maksimum lot", Severity: "Hata",
@@ -21,7 +22,7 @@ const RULES = [
   { Id: 4, EntityName: "Material", EntityLabel: "Malzeme", RuleName: "Liste dışı değer", ConditionText: "Değer listeli alanda liste dışı değer", Severity: "Bilgi",
     Message: "Smartchain değerlerinde yok.", Kind: "Hazır", IsActive: true, Code: "ALL.OUT_OF_LIST", Editable: false, IsCustomized: false },
   { Id: 3, EntityName: "Material", EntityLabel: "Malzeme", RuleName: "Lot kontrolü", ConditionText: "Minimum lot boş değil", Severity: "Uyarı", Message: "Lot",
-    Kind: "Kullanıcı", IsActive: true, Code: "KUL-1", Editable: true, IsCustomized: false },
+    Kind: "Kullanıcı", IsActive: true, Code: "KUL-1", Editable: true, IsCustomized: false, TrackQuality: false },
 ];
 const FIELDS: ConditionField[] = [
   { name: "MinLot", label: "Minimum lot", kind: "number", values: [] },
@@ -29,7 +30,7 @@ const FIELDS: ConditionField[] = [
   { name: "MaterialLevel", label: "Malzeme seviyesi", kind: "text", values: ["Hammadde", "Yarı mamul", "Nihai ürün"] },
 ];
 const DETAIL = { id: 2, entity: "Material", code: "MAT.MINLOT_MAXLOT", name: "Minimum lot maksimum lottan büyük", kind: "Hazır", check_type: "Mantıksal",
-                 severity: "Hata", message: "Minimum lot maksimum lottan büyük.", active: true, locked: false, editable: true, customized: false,
+                 severity: "Hata", message: "Minimum lot maksimum lottan büyük.", active: true, track: false, locked: false, editable: true, customized: false,
                  groups: [[{ field: "MinLot", operator: ">", value: null, compare_field: "MaxLot" }]], condition: "Minimum lot > Maksimum lot" };
 
 const saved = (changed: string[] = []) => (_url: string, init?: RequestInit) => (init?.method === "PUT" ? { body: { saved: 1, changed_entities: changed } } : { body: {} });
@@ -95,6 +96,26 @@ describe("ekran 27 · Validasyon kuralları", () => {
     await user.click(within(confirm).getByRole("button", { name: "Yeniden valide et" }));
     await waitFor(() => expect(calls().some((c) => c.method === "POST" && c.url === "/api/validation/Material/revalidate")).toBe(true));
     expect(screen.queryByText(/sıraya girdi/)).not.toBeInTheDocument();
+  });
+
+  it("Takip (K-174): yalnız Uyarı kuralında anahtar, toplu kaydedilir; pencerede Hata'da pasif, Uyarı'ya geçince açılır", async () => {
+    const user = userEvent.setup();
+    backend({ "/api/validation-rules": saved() });
+    renderApp("/veri/validasyon-kurallari", meAs("System owner"));
+    await screen.findByText(NAME, {}, { timeout: 5000 });
+    expect(screen.queryByRole("switch", { name: `${NAME} veri kalitesinde takip` })).not.toBeInTheDocument();   // Hata kuralında boş
+    const track = screen.getByRole("switch", { name: "Lot kontrolü veri kalitesinde takip" });
+    expect(track).not.toBeChecked();
+    await user.click(track);
+    await user.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(calls().find((c) => c.method === "PUT")?.body.changes).toEqual([{ id: 3, track: true }]));
+    await user.click(screen.getByRole("button", { name: `${NAME} işlemleri` }));
+    await user.click(await screen.findByRole("menuitem", { name: "Düzenle" }));
+    const dialog = await screen.findByRole("dialog");
+    const inDialog = within(dialog).getByRole("switch", { name: "Veri kalitesinde takip" });
+    expect(inDialog).toBeDisabled();                                                                    // Sınıf Hata
+    await user.click(within(dialog).getByRole("radio", { name: "Uyarı" }));
+    expect(within(dialog).getByRole("switch", { name: "Veri kalitesinde takip" })).toBeEnabled();
   });
 
   it("satır menüsü: hazır kural silinmez, ilk hâline döner; ifade edilemeyen hazır kural düzenlenmez", async () => {

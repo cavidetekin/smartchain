@@ -41,7 +41,7 @@ FIELD_LABELS = {
     # Excel yükleme (K-129)
     "mode": "Mod", "valid": "Geçerli satır", "errors": "Hatalı satır", "template_version": "Şablon sürümü", "file_name": "Dosya adı",
     # Validasyon ve validasyon kuralları (K-134, K-136)
-    "rule_name": "Kural", "severity": "Sınıf", "active": "Aktif", "message": "Mesaj", "condition": "Koşul", "deleted": "Silindi", "reset": "İlk hâline döndü", "error_threshold": "Hata eşiği (%)",
+    "rule_name": "Kural", "severity": "Sınıf", "active": "Aktif", "message": "Mesaj", "condition": "Koşul", "deleted": "Silindi", "reset": "İlk hâline döndü", "track": "Veri kalitesinde takip", "error_threshold": "Hata eşiği (%)",
     # Veri kuralları (K-141, K-142)
     "target_field": "Hedef alan", "result": "Sonuç", "apply_mode": "Seçenek", "order": "Sıra",
     # Zamanlanmış işler (K-163, K-164)
@@ -49,6 +49,8 @@ FIELD_LABELS = {
     "TransferGroups": "Aktarım grupları", "Cleanup": "Ham veri temizliği", "run": "Çalıştırma no",
     # Manuel değer ve veri sözlüğünde Manuel (K-170)
     "ManualOverrides": "Manuel",
+    # Veri kalitesi: yok say (K-174)
+    "warnings": "Uyarılar", "count": "Uyarı sayısı",
 }
 
 # Kodlu değerler; anahtara göre. Burada olmayan değer (ad, adres, serbest metin) olduğu gibi görünür.

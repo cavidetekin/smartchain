@@ -29,7 +29,7 @@ const VALIDATION_JOBS = [JOB_VALIDATION];
 
 interface Entity { table: string; name: string }
 interface Editing {
-  id?: number; entity: string; kind: string; name: string; message: string; severity: string; active: boolean; groups: ConditionRow[][];
+  id?: number; entity: string; kind: string; name: string; message: string; severity: string; active: boolean; track: boolean; groups: ConditionRow[][];
 }
 
 const errorText = (e: unknown) => (e instanceof ApiError ? e.message : T.saveFailed);
@@ -56,6 +56,21 @@ function SeverityPicker({ value, onChange }: { value: string; onChange(v: string
                   className={value === s ? `sc-tag--soft ${SEVERITY_CLASS[s]}` : undefined} onClick={() => onChange(s)}>{s}</button>
         ))}
       </div>
+    </div>
+  );
+}
+
+const WARNING = "Uyarı";
+
+/** "Veri kalitesinde takip" anahtarı (K-174): Sınıf'ın altında; yalnız Uyarı'da açılır, Hata ve Bilgi'de pasif ve gri. */
+function TrackSwitch({ severity, checked, onChange }: { severity: string; checked: boolean; onChange(v: boolean): void }) {
+  const on = severity === WARNING;
+  return (
+    <div className={`sc-field sc-field--inline${on ? "" : " is-disabled"}`}>
+      <span className="sc-field-label" id="rule-track">{T.trackLabel}</span>
+      <span title={on ? undefined : T.trackOnlyWarning}>
+        <SwitchCell label={T.trackLabel} checked={on && checked} editable={on} size="md" onToggle={onChange} />
+      </span>
     </div>
   );
 }
@@ -94,6 +109,7 @@ function RuleDialog({ editing, onClose, onSaved, onReset }: { editing: Editing; 
         ...(!builtin || name !== editing.name ? { name } : {}),
         ...(!builtin || message !== editing.message ? { message } : {}),
         ...(!builtin || groupsChanged ? { groups: draft.groups } : {}),
+        ...(!draft.id || draft.track !== editing.track ? { track: draft.severity === WARNING && draft.track } : {}),  // yalnız değişince (sınıf Hata'ya geçerse takip etkisiz kalır)
       };
       const r = await validationApi.save([change], []);
       onSaved(r.changed_entities);
@@ -118,6 +134,7 @@ function RuleDialog({ editing, onClose, onSaved, onReset }: { editing: Editing; 
         <TextField label={T.message} value={draft.message} required maxLength={400} onChange={(v) => setDraft({ ...draft, message: v })} />
       </div>
       <SeverityPicker value={draft.severity} onChange={(v) => setDraft({ ...draft, severity: v })} />
+      <TrackSwitch severity={draft.severity} checked={draft.track} onChange={(v) => setDraft({ ...draft, track: v })} />
       {fields.length > 0 && <ConditionEditor fields={fields} groups={draft.groups} onChange={(groups) => setDraft({ ...draft, groups })} />}
     </Dialog>
   );
@@ -176,7 +193,8 @@ export function ValidationRules() {
       const limits: { entity: string; value: string | null }[] = [];
       for (const [key, d] of Object.entries(edits.drafts)) {
         if (key.startsWith(`${THRESHOLD}:`)) limits.push({ entity: key.slice(THRESHOLD.length + 1), value: String(d.value ?? "") || null });
-        else changes.push({ id: Number(key), ...("Severity" in d ? { severity: String(d.Severity) } : {}), ...("IsActive" in d ? { active: Boolean(d.IsActive) } : {}) });
+        else changes.push({ id: Number(key), ...("Severity" in d ? { severity: String(d.Severity) } : {}), ...("IsActive" in d ? { active: Boolean(d.IsActive) } : {}),
+                            ...("TrackQuality" in d ? { track: Boolean(d.TrackQuality) } : {}) });
       }
       const r = await validationApi.save(changes, limits);
       edits.discard();
@@ -225,7 +243,7 @@ export function ValidationRules() {
     try {
       const rule = await validationApi.rule(Number(row.Id));
       setEditing({ id: rule.id, entity: rule.entity, kind: rule.kind, name: rule.name, message: rule.message, severity: rule.severity, active: rule.active,
-                   groups: rule.groups });
+                   track: rule.track, groups: rule.groups });
     } catch (e) {
       setError(errorText(e));
     }
@@ -237,6 +255,12 @@ export function ValidationRules() {
       const key = String(row.Id);
       return <SeverityCell label={T.severity(String(row.RuleName))} value={String(edits.get(key, "Severity", String(value)))} editable={canWrite}
                            changed={edits.changed(key, "Severity")} onChange={(next) => edits.set(key, "Severity", next, String(value))} />;
+    },
+    TrackQuality: (value: unknown, row: Row) => {  // yalnız Uyarı kuralında (K-174); sınıf taslakta değişirse de
+      const key = String(row.Id);
+      if (String(edits.get(key, "Severity", String(row.Severity))) !== WARNING) return null;
+      return <SwitchCell label={T.track(String(row.RuleName))} checked={edits.get(key, "TrackQuality", Boolean(value))} editable={canWrite}
+                         changed={edits.changed(key, "TrackQuality")} onToggle={(next) => edits.set(key, "TrackQuality", next, Boolean(value))} />;
     },
     IsActive: (value: unknown, row: Row) => {
       const key = String(row.Id);
@@ -272,7 +296,7 @@ export function ValidationRules() {
                      <StripText label={T.threshold} value={String(shownThreshold ?? "")} disabled={!entity || !canWrite} inputMode="decimal"
                                 onChange={(v) => edits.set(thresholdKey, "value", v, savedThreshold)} />
                      <Button variant="primary" disabledReason={writeReason}
-                             onClick={() => (entity ? setEditing({ entity, kind: KIND_USER, name: "", message: "", severity: "Uyarı", active: true, groups: [] }) : emitNotice(T.pickTable))}>{T.newRule}</Button>
+                             onClick={() => (entity ? setEditing({ entity, kind: KIND_USER, name: "", message: "", severity: WARNING, active: true, track: false, groups: [] }) : emitNotice(T.pickTable))}>{T.newRule}</Button>
                    </>
                  )} />
       <UnsavedGuard dirty={edits.dirty} />

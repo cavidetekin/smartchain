@@ -18,7 +18,7 @@ from app.integration.structural import has_key
 
 from . import conditions as cond
 from .conditions import Condition
-from .sqlkit import alias, current, label, nz, one, present, same, text
+from .sqlkit import alias, current, label, nz, one, present, same, text, today
 
 STRUCTURAL_KIND, BUILTIN_KIND, USER_KIND = "Yapısal", "Hazır", "Kullanıcı"
 KINDS = (STRUCTURAL_KIND, BUILTIN_KIND, USER_KIND)
@@ -27,6 +27,14 @@ CHECK_TYPES = (STRUCTURAL, LOGICAL, CROSS)
 ERROR, WARNING, INFO = "Hata", "Uyarı", "Bilgi"
 SEVERITIES = (ERROR, WARNING, INFO)
 NO_DATA = "Karşılaştırılacak veri yok"
+# Veri kalitesinde takip Hayır olan Uyarı kuralları (K-174, docs/06 F04 TAKİP): sorun ana tabloda kalsa da plan yanlış çıkmaz.
+UNTRACKED = frozenset({
+    "SO.ZERO_OPEN", "WO.ZERO_OPEN", "PO.ZERO_OPEN", "SO.DELIVERED", "PO.RECEIVED", "WOC.ISSUED", "WOO.CONFIRMED", "BP.PAID", "PC.MATERIAL",
+    "BOM.NO_VERSION", "RTG.NO_VERSION", "BOM.SINGLE_ALTERNATIVE", "SO.INACTIVE_CUSTOMER", "SO.NOT_SELLABLE", "PO.INACTIVE_MATERIAL",
+    "PO.INACTIVE_SUPPLIER", "PO.NO_SUPPLIER", "PO.REF_SUPPLIER", "WO.INACTIVE_MATERIAL", "WO.REF_VERSION", "WO.REWORK_NO_PARENT",
+    "WO.REF_PARENT_WORK_ORDER", "REF.REF_REFERENCE_VERSION", "PRJ.REF_PROJECT_GROUP", "LOC.NO_FLAG", "SO.REF_PROJECT", "WO.REF_PROJECT",
+    "WO.REF_CUSTOMER", "WO.REF_SALES_ORDER", "PO.REF_PROJECT", "PO.REF_CUSTOMER", "PO.REF_SALES_ORDER", "PO.REF_WORK_ORDER",
+})
 
 Where = Callable[[sa.Alias], sa.ColumnElement]
 Hit = tuple[int, str | None, str | None]  # StagingRowId, alan etiketi, değer
@@ -65,6 +73,11 @@ class RuleDef:
     def editable(self) -> bool:
         return self.groups is not None and self.kind == BUILTIN_KIND
 
+    @property
+    def tracked(self) -> bool:
+        """Veri kalitesinde takibin ilk değeri (K-174): Uyarı kuralında, Hayır listesinde değilse Evet."""
+        return self.severity == WARNING and self.kind == BUILTIN_KIND and self.code not in UNTRACKED
+
 
 def C(where: Where, field: str | None = None) -> Check:
     return Check(where, field)
@@ -76,7 +89,8 @@ def Q(field: str, operator: str, value=None, other: str | None = None) -> Condit
 
 
 def _today() -> sa.ColumnElement:
-    return sa.cast(sa.func.getdate(), sa.Date)
+    """Bugün; veri kalitesi geliştirme aracında verilen gün (K-174, sqlkit.today)."""
+    return today()
 
 
 def _flags_not_one(t, names: Iterable[str]) -> sa.ColumnElement:
@@ -416,6 +430,8 @@ TABLE_RULES: tuple[RuleDef, ...] = (
       "Açık miktar, sipariş eksi teslime eşit değil.",
       C(lambda t: sa.and_(t.c.OrderedQuantity.is_not(None), t.c.DeliveredQuantity.is_not(None),
                           sa.func.abs(t.c.OpenQuantity - (t.c.OrderedQuantity - t.c.DeliveredQuantity)) > 0.00005), "OpenQuantity")),
+    X("SO.PAST_DUE", "SalesOrderLine", "Teslim tarihi geçmiş açık satış siparişi", "Açık miktar > 0 ve İstek tarihi geçmişte", U, "Teslim tarihi:",
+      C(lambda t: sa.and_(t.c.OpenQuantity > 0, t.c.RequestedDate < _today()), "RequestedDate"), append_value=True),
     G("STK.LINE_NO_ORDER", "Stock", "Sipariş satırı var, sipariş no yok", H, "Sipariş satırı var, sipariş no yok.",
       [Q("SalesOrderLineNo", FILLED), Q("SalesOrderNo", EMPTY)]),
     G("STK.ACCEPT_DATE", "Stock", "Kabul tarihi kaliteye girişten önce", H, "Beklenen kabul tarihi kaliteye girişten önce.",
@@ -441,6 +457,8 @@ TABLE_RULES: tuple[RuleDef, ...] = (
       [Q("SalesOrderLineNo", FILLED), Q("SalesOrderNo", EMPTY)]),
     G("WO.OPEN_ORDERED", "WorkOrder", "Açık miktar iş emri miktarından büyük", U, "Açık miktar iş emri miktarından büyük.", [Q("OpenQuantity", GT, other="OrderedQuantity")]),
     G("WO.ZERO_OPEN", "WorkOrder", "Açık miktar sıfır", U, "Açık miktar sıfır.", [Q("OpenQuantity", EQ, 0)]),
+    X("WO.PAST_DUE", "WorkOrder", "Bitiş tarihi geçmiş açık iş emri", "Açık miktar > 0 ve Bitiş geçmişte", U, "Bitiş tarihi:",
+      C(lambda t: sa.and_(t.c.OpenQuantity > 0, t.c.DueDate < _today()), "DueDate"), append_value=True),
     X("WO.TYPE_FLAGS", "WorkOrder", "İş emri tipi tek değil", "Üretim, Fason, Yeniden işleme bayraklarından hiçbiri ya da birden fazlası Evet", U, "İş emrinin tek bir tipi olmalı.",
       C(lambda t: _flags_not_one(t, ("IsProduction", "IsSubcontract", "IsRework")), "IsProduction")),
     G("WO.REWORK_NO_PARENT", "WorkOrder", "Yeniden işlemenin orijinal iş emri yok", U, "Yeniden işlemenin orijinal iş emri yok.",
@@ -460,6 +478,9 @@ TABLE_RULES: tuple[RuleDef, ...] = (
     G("PO.SUBCON_NO_WO", "PurchaseOrderLine", "Fason siparişin iş emri yok", U, "Fason siparişin iş emri yok.", [Q("WorkOrderNo", EMPTY), Q("IsSubcontract", EQ, 1)]),
     G("PO.NO_SUPPLIER", "PurchaseOrderLine", "Tedarikçi yok", U, "Tedarikçi yok.", [Q("SupplierCode", EMPTY), Q("IsPurchaseRequest", NE, 1)]),
     G("PO.NO_DATE", "PurchaseOrderLine", "İstenen ve teyit tarihi yok", U, "İstenen ve teyit tarihi yok.", [Q("RequestedDate", EMPTY), Q("ConfirmedDate", EMPTY)]),
+    X("PO.PAST_DUE", "PurchaseOrderLine", "Tarihi geçmiş açık satın alma siparişi", "Açık miktar > 0 ve Tedarikçi teyit tarihi (boşsa İstenen tarih) geçmişte", U,
+      "Tarih geçmiş:", C(lambda t: sa.and_(t.c.OpenQuantity > 0, sa.func.coalesce(t.c.ConfirmedDate, t.c.RequestedDate) < _today()), "RequestedDate"),
+      append_value=True),
     G("PO.CUSTOM_NO_OWNER", "PurchaseOrderLine", "Özel takipli siparişin sahibi yok", U, "Özel takipli kaydın sahibi yok.", [Q("IsCustomTracked", EQ, 1), *OWNER]),
     G("PC.QTY", "ProductionConfirmation", "Teyit miktarı sıfır ya da negatif", H, "Teyit miktarı sıfırdan büyük olmalı.", [Q("ConfirmedQuantity", LE, 0)]),
     X("PC.MATERIAL", "ProductionConfirmation", "Malzeme iş emrininkinden farklı", "Malzeme, iş emrinin malzemesinden farklı", U, "Malzeme iş emrinin malzemesinden farklı.",

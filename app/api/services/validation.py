@@ -28,6 +28,7 @@ OBJECT_RULE, OBJECT_ENTITY = "ValidationRule", "IntegrationEntity"
 ACTION_REVALIDATE, ACTION_RULE, ACTION_THRESHOLD = "Yeniden validasyon", "Validasyon kuralı", "Hata eşiği"
 LOADED = ("Alındı", "Doğrulandı", "Yüklendi")
 MAX_NAME, MAX_MESSAGE = 200, 400
+TRACK_ONLY_WARNING = "Veri kalitesinde takip yalnız Uyarı kuralında açılır."
 
 
 def entity_of(table: str) -> contract.Entity:
@@ -124,6 +125,7 @@ def rule_detail(session: Session | None, rule_id: int) -> dict:
         rule = dict(row)
         return {"id": rule["Id"], "entity": rule["EntityName"], "code": rule["Code"], "name": rule["Name"], "kind": rule["Kind"],
                 "check_type": rule["CheckType"], "severity": rule["Severity"], "message": rule["Message"], "active": rule["IsActive"],
+                "track": bool(rule["TrackQuality"]),
                 "locked": rule["Kind"] == cat.STRUCTURAL_KIND, "editable": editable(rule), "customized": bool(rule["IsCustomized"]),
                 "groups": _groups_payload(groups_of(session, rule)), "condition": condition_text(session, rule)}
 
@@ -223,15 +225,20 @@ def save_rules(session: Session | None, user: CurrentUser, changes: list[dict], 
                 groups = _parse_groups(entity, change.get("groups"))
                 if session.execute(sa.select(RULE.c.Id).where(RULE.c.EntityName == entity, RULE.c.Name == name[:MAX_NAME])).first():
                     raise _bad("validation_rule_name_taken", "Bu adla kural var.", f"{name}: bu tabloda aynı adla kural var.")
+                track = bool(change.get("track", False))
+                if track and severity != cat.WARNING:
+                    raise _bad("validation", "Girilen bilgiler geçersiz.", TRACK_ONLY_WARNING)
                 new_id = session.execute(sa.insert(RULE).values(
                     EntityName=entity, Code=_next_code(session, entity), Name=name[:MAX_NAME], Kind=cat.USER_KIND, CheckType=cat.LOGICAL,
-                    Severity=severity, Message=message[:MAX_MESSAGE], IsActive=bool(change.get("active", True)), IsCustomized=False, UpdatedBy=user.id, UpdatedAt=now,
+                    Severity=severity, Message=message[:MAX_MESSAGE], IsActive=bool(change.get("active", True)), IsCustomized=False, TrackQuality=track,
+                    UpdatedBy=user.id, UpdatedAt=now,
                     ConditionText=conditions.sentence(entity, groups, texts.field_labels(session, entity))[:400])
                     .returning(RULE.c.Id)).scalar_one()
                 _write_conditions(session, new_id, groups)
                 audit.write_audit(session, ACTION_RULE, user.id, OBJECT_RULE, f"{entity_of(entity).name} · {name}",
                                   {"entity_name": entity_of(entity).name, "rule_name": name, "severity": severity, "message": message,
-                                   "condition": conditions.sentence(entity, groups, texts.field_labels(session, entity)), "active": bool(change.get("active", True))})
+                                   "condition": conditions.sentence(entity, groups, texts.field_labels(session, entity)), "active": bool(change.get("active", True)),
+                                   **({"track": True} if track else {})})
                 changed.add(entity)
                 continue
             row = session.execute(sa.select(RULE).where(RULE.c.Id == int(rule_id))).mappings().first()
@@ -259,7 +266,8 @@ def save_rules(session: Session | None, user: CurrentUser, changes: list[dict], 
                     raise _bad("validation", "Girilen bilgiler geçersiz.", f"{shown}: yalnız hazır kural ilk hâline döner.")
                 session.execute(sa.delete(CONDITION).where(CONDITION.c.ValidationRuleId == rule["Id"]))
                 session.execute(sa.update(RULE).where(RULE.c.Id == rule["Id"]).values(
-                    **engine.catalog_values(found), Severity=found.severity, IsActive=True, IsCustomized=False, UpdatedBy=user.id, UpdatedAt=now))
+                    **engine.catalog_values(found), Severity=found.severity, IsActive=True, IsCustomized=False, TrackQuality=found.tracked,
+                    UpdatedBy=user.id, UpdatedAt=now))
                 audit.write_audit(session, ACTION_RULE, user.id, OBJECT_RULE, shown, {"entity_name": entity_of(entity).name, "rule_name": found.title, "reset": True},
                                   {"rule_name": rule["Name"], "severity": rule["Severity"], "active": bool(rule["IsActive"]), "condition": condition_text(session, rule)})
                 changed.add(entity)
@@ -271,6 +279,10 @@ def save_rules(session: Session | None, user: CurrentUser, changes: list[dict], 
                 values["Severity"], old["severity"], new["severity"] = change["severity"], rule["Severity"], change["severity"]
             if "active" in change and bool(change["active"]) != bool(rule["IsActive"]):
                 values["IsActive"], old["active"], new["active"] = bool(change["active"]), bool(rule["IsActive"]), bool(change["active"])
+            if "track" in change and change["track"] is not None and bool(change["track"]) != bool(rule["TrackQuality"]):  # K-174
+                if change["track"] and values.get("Severity", rule["Severity"]) != cat.WARNING:
+                    raise _bad("validation", "Girilen bilgiler geçersiz.", f"{shown}: {TRACK_ONLY_WARNING}")
+                values["TrackQuality"], old["track"], new["track"] = bool(change["track"]), bool(rule["TrackQuality"]), bool(change["track"])
             if any(k in change for k in ("name", "message", "groups")) and editable(rule):
                 if rule["Kind"] == cat.BUILTIN_KIND and not rule["IsCustomized"]:  # ilk düzenleme: katalogdaki koşul veritabanına (K-139)
                     _write_conditions(session, rule["Id"], groups_of(session, rule))

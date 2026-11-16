@@ -1320,6 +1320,7 @@ ValidationRule = sa.Table(
     sa.Column("Kind", sa.Unicode(10), nullable=False, comment="Yapısal | Hazır | Kullanıcı", info={'values': ["Yapısal", "Hazır", "Kullanıcı"]}),
     sa.Column("CheckType", sa.Unicode(20), nullable=False, comment="Yapısal | Mantıksal | Tablolar arası", info={'values': ["Yapısal", "Mantıksal", "Tablolar arası"]}),
     sa.Column("Severity", sa.Unicode(10), nullable=False, comment="Hata | Uyarı | Bilgi", info={'values': ["Hata", "Uyarı", "Bilgi"]}),
+    sa.Column("TrackQuality", sa.Boolean(), nullable=False, server_default=sa.text("0"), comment="Veri kalitesinde takip (K-174): Uyarı kuralı yüklenmiş veride (`core`) çalışır, bulgusu veri kalitesi uyarısı olur; yalnız Uyarı'da anlamlı. İlk değer katalogdan, kullanıcıda kalır; \"İlk hâline döndür\" sıfırlar", info={'label': "Veri kalitesinde takip (K-174): Uyarı kuralı yüklenmiş veride (`core`) çalışır, bulgusu veri kalitesi uyarısı olur"}),
     sa.Column("Message", sa.Unicode(400), nullable=False, comment="Bulguda görünen mesaj", info={'label': "Bulguda görünen mesaj"}),
     sa.Column("ConditionText", sa.Unicode(400), nullable=True, comment="Koşulun okunur cümlesi; hazır kuralda katalogdan, kullanıcı kuralında kayıtta yazılır", info={'label': "Koşulun okunur cümlesi"}),
     sa.Column("IsActive", sa.Boolean(), nullable=False, comment="Aktif; yapısal kontrol kapatılamaz", info={'label': "Aktif"}),
@@ -1380,6 +1381,53 @@ ValidationFinding = sa.Table(
     sa.Column("RunId", sa.BigInteger(), nullable=False, comment="Bulguyu yazan çalışma", info={'label': "Bulguyu yazan çalışma"}),
     schema="adm",
     comment="Staging'in güncel hâlinin validasyon bulguları (K-134). Bir kural yeniden çalışınca o kuralın o tablodaki bulguları yenilenir; güncel hâlden çıkan satırın bulguları silinir. Ön kontrol bulguları `ImportFinding`'dedir.",
+)
+
+DataQualityWarning = sa.Table(
+    "DataQualityWarning", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
+    sa.Column("Source", sa.Unicode(12), nullable=False, comment="Kural | Smartchain", info={'values': ["Kural", "Smartchain"]}),
+    sa.Column("ValidationRuleId", sa.Integer(), index=True, nullable=True, comment="Kural; Smartchain kontrolünde boş", info={'label': "Kural"}),
+    sa.Column("CheckCode", sa.Unicode(60), nullable=False, comment="Kuralın kodu (MS.NO_LEADTIME, KUL-3) ya da Smartchain kontrolünün kodu (SC.RES_NO_CAPACITY)", info={'label': "Kuralın kodu (MS.NO_LEADTIME, KUL-3) ya da Smartchain kontrolünün kodu (SC.RES_NO_CAPACITY)"}),
+    sa.Column("EntityName", sa.Unicode(60), nullable=False, comment="Tablo (core adı)", info={'label': "Tablo (core adı)"}),
+    sa.Column("RecordKey", sa.Unicode(60), nullable=False, comment="Kaydın kimliği: Id (K-63); birimde kod", info={'label': "Kaydın kimliği: Id (K-63)"}),
+    sa.Column("RecordLabel", sa.Unicode(200), nullable=False, comment="Ekrandaki Kayıt: iş anahtarı alan etiketleriyle (ör. Malzeme: HAM-012 · Tedarikçi: TED-03)", info={'label': "Ekrandaki Kayıt: iş anahtarı alan etiketleriyle (ör. Malzeme: HAM-012 · Tedarikçi: TED-03)"}),
+    sa.Column("RuleName", sa.Unicode(200), nullable=False, comment="Kontrol: kuralın ya da Smartchain kontrolünün adı", info={'label': "Kontrol: kuralın ya da Smartchain kontrolünün adı"}),
+    sa.Column("Message", sa.Unicode(400), nullable=False, comment="Mesaj", info={'label': "Mesaj"}),
+    sa.Column("FixField", sa.Unicode(60), nullable=True, comment="Kural oluştur'un hedef alanı; boşsa Kural oluştur pasif", info={'label': "Kural oluştur'un hedef alanı"}),
+    sa.Column("Importance", sa.Unicode(10), nullable=False, comment="Yüksek | Normal (her kontrolde yeniden)", info={'values': ["Yüksek", "Normal"]}),
+    sa.Column("State", sa.Unicode(15), nullable=False, comment="Yeni | Açık | Yok sayıldı", info={'values': ["Yeni", "Açık", "Yok sayıldı"]}),
+    sa.Column("FirstSeenAt", mssql.DATETIME2(), nullable=False, comment="Tespit tarihi: uyarının ilk çıktığı kontrol (UTC)", info={'label': "Tespit tarihi: uyarının ilk çıktığı kontrol (UTC)"}),
+    sa.Column("LastSeenAt", mssql.DATETIME2(), nullable=False, comment="Son kontrolde görülme (UTC)", info={'label': "Son kontrolde görülme (UTC)"}),
+    sa.Column("IgnoreReason", sa.Unicode(400), nullable=True, comment="Yok sayma gerekçesi", info={'label': "Yok sayma gerekçesi"}),
+    sa.Column("IgnoredBy", sa.Integer(), sa.ForeignKey("adm.AppUser.Id"), nullable=True, comment="Yok sayan", info={'label': "Yok sayan"}),
+    sa.Column("IgnoredAt", mssql.DATETIME2(), nullable=True, comment="Yok sayma zamanı (UTC); sonrasında kayıt değişirse (FieldChange) uyarı yeniden Açık", info={'label': "Yok sayma zamanı (UTC)"}),
+    sa.Index("UX_DataQualityWarning_CheckCode_EntityName_RecordKey", "CheckCode", "EntityName", "RecordKey", unique=True),
+    schema="adm",
+    comment="Veri kalitesi uyarısı (K-174, ekran 05): yüklenmiş veride (`core`) takipli Uyarı kuralı ya da Smartchain verisi kontrolüyle bulunan sorun. Kimliği kural + kayıt; her kontrolde var olan uyarı devam eder, sorun kalkınca (yok sayılmış olsa da) silinir.",
+)
+
+DemandChain = sa.Table(
+    "DemandChain", metadata,
+    sa.Column("EntityName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Tablo (core adı)", info={'label': "Tablo (core adı)"}),
+    sa.Column("RecordId", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kaydın Id'si", info={'label': "Kaydın Id'si"}),
+    schema="adm",
+    comment="Talep zinciri kümesi (K-174): açık satış siparişi ve ufuktaki tahminden ulaşılan kayıtlar; her veri kalitesi kontrolünde baştan hesaplanır. Uyarının önemi buradan (kayıt ya da malzemesi kümedeyse Yüksek).",
+)
+
+DemandChainPath = sa.Table(
+    "DemandChainPath", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
+    sa.Column("WarningId", sa.BigInteger(), index=True, nullable=False, comment="Uyarı", info={'label': "Uyarı"}),
+    sa.Column("DemandEntity", sa.Unicode(60), nullable=False, comment="SalesOrderLine | Forecast", info={'values': ["SalesOrderLine", "Forecast"]}),
+    sa.Column("DemandId", sa.BigInteger(), nullable=False, comment="Talebin Id'si", info={'label': "Talebin Id'si"}),
+    sa.Column("DemandLabel", sa.Unicode(100), nullable=False, comment="Talep (SO-1182 / 1; MAM-001 · Ara 2026)", info={'label': "Talep (SO-1182 / 1"}),
+    sa.Column("DemandType", sa.Unicode(20), nullable=False, comment="Satış siparişi | Tahmin", info={'values': ["Satış siparişi", "Tahmin"]}),
+    sa.Column("MaterialPath", sa.Unicode(400), nullable=False, comment="Malzeme yolu (MAM-002 → ALT-001 → HAM-012)", info={'label': "Malzeme yolu (MAM-002 → ALT-001 → HAM-012)"}),
+    sa.Column("DemandDate", mssql.DATE(), nullable=False, comment="Talep tarihi (istek tarihi ya da tahmin dönemi)", info={'label': "Talep tarihi (istek tarihi ya da tahmin dönemi)"}),
+    sa.Column("OpenQuantity", sa.Numeric(18, 6), nullable=False, comment="Açık miktar", info={'label': "Açık miktar"}),
+    schema="adm",
+    comment="Detay kartının Talep zinciri sekmesi (K-174): kart açılınca uyarının kaydından yukarı çıkılarak bulunan talepler ve malzeme yolları; uyarı başına en çok 1.000 yol. Önbellektir: her veri kalitesi kontrolünde silinir.",
 )
 
 DataVersion = sa.Table(
@@ -1686,7 +1734,7 @@ LoginThrottle = sa.Table(
 Job = sa.Table(
     "Job", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği"}),
-    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Aktarım | Termin sorgusu | Dışa aktarım | Excel ön kontrol | Veri çekme | Validasyon | Temizlik …", info={'values': ["Gece senaryosu", "Çalışma", "Aktarım", "Termin sorgusu", "Dışa aktarım", "Excel ön kontrol", "Veri çekme", "Validasyon", "Temizlik"]}),
+    sa.Column("JobType", sa.Unicode(20), nullable=False, comment="Gece senaryosu | Çalışma | Aktarım | Termin sorgusu | Dışa aktarım | Excel ön kontrol | Veri çekme | Validasyon | Temizlik | Veri kalitesi …", info={'values': ["Gece senaryosu", "Çalışma", "Aktarım", "Termin sorgusu", "Dışa aktarım", "Excel ön kontrol", "Veri çekme", "Validasyon", "Temizlik", "Veri kalitesi"]}),
     sa.Column("Channel", sa.Unicode(15), nullable=False, comment="Gece | Hesaplama | Excel | Veri çekme | Veri işleme", info={'values': ["Gece", "Hesaplama", "Excel", "Veri çekme", "Veri işleme"]}),
     sa.Column("Priority", sa.Integer(), nullable=True, comment="Öncelik", info={'label': "Öncelik"}),
     sa.Column("Status", sa.Unicode(15), nullable=False, comment="Sırada | Çalışıyor | Bitti | Hata | İptal", info={'values': ["Sırada", "Çalışıyor", "Bitti", "Hata", "İptal"]}),

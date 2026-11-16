@@ -217,6 +217,7 @@ export const JOB_TRANSFER = "Aktarım";  // staging → core (K-153)
 /** "Sonucu aç": o aktarımın sonuç penceresi (ekran 02, K-153). */
 export const transferResultPath = (jobId: number) => `/veri/veri-yukleme?aktarim=${jobId}`;
 export const JOB_CLEANUP = "Temizlik";  // ham veri temizliği (K-156)
+export const JOB_QUALITY = "Veri kalitesi";  // yüklenmiş veride takipli kurallar ve talep zinciri (K-174)
 /** "Sonucu aç": Veri aktarım geçmişi çekmecesi; üstünde son temizliğin sonucu (K-156). */
 export const historyPath = "/veri/veri-yukleme?gecmis=1";
 export const flowHistoryPath = (flowId: number) => `/yonetim/sistem-ayarlari?sekme=zamanlanmis-isler&is=${flowId}`;  // K-164

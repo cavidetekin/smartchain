@@ -48,6 +48,16 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     for row in stg["UomConversion"]:  # temiz veri: M hiçbir malzemenin temel birimi değil
         if row["FromUom"] == "M":
             x.expect("UomConversion", row, ["UOM.NEW_UOM"])
+    # Veri kalitesi durumları (6.5, K-174; docs/11 durum 6–9): temiz verideki bilerek konmuş Uyarılar
+    for row in stg["MaterialSupplier"]:
+        if (row["MaterialCode"], row["SupplierCode"]) == (d.DEEP_MATERIAL, d.DEEP_SUPPLIER):
+            x.expect("MaterialSupplier", row, ["MS.NO_LEADTIME"])
+    for row in stg["BOM"]:
+        if row["MaterialCode"] == d.NO_DEMAND_MATERIAL:
+            x.expect("BOM", row, ["BOM.ZERO_QTY"])
+    for row in stg["SalesOrderLine"]:
+        if row["OrderNo"] == d.PAST_DUE_ORDER:
+            x.expect("SalesOrderLine", row, ["SO.PAST_DUE"])
 
     # Lokasyon
     x.add("Location", x.base("Location", Code=LOC), ["LOC.NO_FLAG"], Code="V-LOC-1", Name="Örnek lokasyon", IsFactory=False, IsDepot=False, IsSubcontractor=False)
@@ -231,7 +241,7 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     wo = x.base("WorkOrder", WorkOrderNo="WO-5001")
     w = lambda n, rules, **v: x.add("WorkOrder", wo, rules, WorkOrderNo=f"V-WO-{n}", **v)  # noqa: E731
     w(1, ["WO.QTY", "WO.ZERO_OPEN"], OrderedQuantity=0.0, OpenQuantity=0.0)
-    w(2, ["WO.START_DUE"], StartDate=date(2026, 12, 20), DueDate=date(2026, 12, 10))
+    w(2, ["WO.START_DUE"], StartDate=date(2099, 12, 20), DueDate=date(2099, 12, 10))  # uzak gelecek: WO.PAST_DUE tetiklenmesin
     w(3, ["WO.SELF_PARENT"], ParentWorkOrderNo="V-WO-3")
     w(4, ["WO.LINE_NO_ORDER"], SalesOrderNo=None)
     w(5, ["WO.OPEN_ORDERED"], OpenQuantity=20.0)
@@ -246,6 +256,7 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     w(14, ["WO.REF_CUSTOMER"], CustomerCode="V-YOK-CUS")
     w(15, ["WO.REF_SALES_ORDER"], SalesOrderNo="V-YOK-SO")
     w(16, ["WO.REF_PARENT_WORK_ORDER"], ParentWorkOrderNo="V-YOK-WO")
+    w(17, ["WO.PAST_DUE"], StartDate=date(2020, 1, 1), DueDate=date(2020, 1, 10))  # 6.5, K-174
     comp = x.base("WorkOrderComponent", WorkOrderNo="WO-5001")
     x.add("WorkOrderComponent", comp, ["WOC.ISSUED", "WOC.REF_WORK_ORDER"], WorkOrderNo="V-WO-C", IssuedQuantity=comp["RequiredQuantity"] + 1)
     x.add("WorkOrderComponent", comp, ["WOC.REF_MATERIAL"], MaterialCode="V-YOK-MAT")
@@ -275,6 +286,7 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     p(13, ["PO.REF_CUSTOMER"], CustomerCode="V-YOK-CUS")
     p(14, ["PO.REF_SALES_ORDER"], SalesOrderNo="V-YOK-SO")
     p(15, ["PO.REF_WORK_ORDER"], WorkOrderNo="V-YOK-WO")
+    p(16, ["PO.PAST_DUE"], RequestedDate=date(2020, 1, 10), ConfirmedDate=None)  # 6.5, K-174
 
     # Üretim gerçekleşmesi
     pc = x.base("ProductionConfirmation", WorkOrderNo="WO-5002")

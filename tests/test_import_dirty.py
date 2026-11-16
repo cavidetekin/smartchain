@@ -48,7 +48,7 @@ def uploaded(db_engine, tmp_path_factory):
 
 def test_every_file_is_read(uploaded):
     _, manifest, results, _, _ = uploaded
-    assert len(results) == 23
+    assert len(results) == 25  # tahmin ve benzetilen ürün de (K-174)
     for entity, s in results.items():
         assert s["read"] == manifest["files"][f"{entity}.xlsx"], entity
         assert s["template_version"] == s["current_version"], entity
@@ -64,13 +64,13 @@ def test_duplicate_matches_the_manifest(db_engine, uploaded):
     _, manifest, results, client, user = uploaded
     h4 = next(e for e in manifest["errors"] if e["code"] == "H4")
     s = results["Material"]
-    assert (s["read"], s["valid"], s["errors"]) == (214, 212, 2)  # 10 hazır kural örneği, 1 pasif ebeveyn yardımcısı ve 2 veri kuralı örneği dahil (docs/11)
+    assert (s["read"], s["valid"], s["errors"]) == (216, 214, 2)  # 6.5: ALT-099 ve MAM-011 (K-174); 10 hazır kural örneği, 1 pasif ebeveyn yardımcısı ve 2 veri kuralı örneği dahil (docs/11)
     body = {"fields": ["RowNo", "RowKey", "Message", "Severity"], "sort": [{"field": "RowNo", "dir": "asc"}],
             "filters": [{"field": "ImportBatchId", "op": "eq", "value": s["batch_id"]}, {"field": "Severity", "op": "in", "values": ["Hata"]}], "offset": 0, "limit": 10}
     rows = client.post("/api/import-findings/query", json=body, headers=auth(user)).json()["rows"]
     assert [r["RowNo"] for r in rows] == h4["rows"] and {r["Message"] for r in rows} == {h4["message"]} and rows[0]["RowKey"] == "ORM-01 · SAT-040"
     with db_engine.connect() as c:
-        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 212
+        assert c.execute(text("SELECT COUNT(*) FROM stg.Material")).scalar() == 214  # 6.5: +2 (K-174)
         assert c.execute(text("SELECT COUNT(*) FROM stg.Material WHERE Code = N'SAT-040'")).scalar() == 0
 
 

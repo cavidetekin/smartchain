@@ -55,7 +55,7 @@ def norm(v):
 def test_one_file_per_integration_entity_with_stg_headers(written):
     ds, out, manifest = written
     files = sorted(p.name for p in out.glob("*.xlsx"))
-    assert files == sorted([f"{e}.xlsx" for e in stg_entities()] + ["MaterialReference.xlsx", "Forecast.xlsx"]) and len(files) == 25  # yalnız örnekler (K-137, K-146)
+    assert files == sorted(f"{e}.xlsx" for e in stg_entities()) and len(files) == 25  # tahmin ve benzetilen ürün temiz hâlde de (K-174)
     for entity in stg_entities():
         header, data = read(out, entity, examples=True)
         assert header == [f.name for f in contract.fields(entity, labels_of(entity))]  # şablonla aynı (K-110)
@@ -139,7 +139,7 @@ def test_supplier_files(written):
     _, out, _ = written
     header, data = read(out, "MaterialSupplier")
     assert not {"LeadTimeDays", "QuotaPct", "MinOrderQty", "OrderMultiple", "MaxOrderQty"} & set(header)
-    assert {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["FixedLeadTimeDays"] is not None for r in data)
+    assert {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["FixedLeadTimeDays"] is not None for r in data if (r["MaterialCode"], r["SupplierCode"]) != (d.DEEP_MATERIAL, d.DEEP_SUPPLIER))  # durum 6 (K-174)
     assert {r["QuotaRatio"] for r in data if r["QuotaRatio"] is not None} == {0.3, 0.7} and {r["IsActive"] for r in data} == {1}
     _, suppliers = read(out, "Supplier")
     assert all(r["Country"] == "Türkiye" and r["City"] and r["IsActive"] == 1 for r in suppliers)

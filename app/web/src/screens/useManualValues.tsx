@@ -249,7 +249,7 @@ export function useManualValues(list: string, columns: ListColumn[] | null, onSa
       if (removes.length) await manualValuesApi.remove(list, removes);
       edits.discard();
       setPaste(null);
-      emitNotice(T.saved(changes.length, removes.length));
+      // Başarılı kayıtta bildirim yok: değer tabloda görünür, hücrenin işareti "Manuel değer"e döner (K-172)
       onSaved();
     } catch (e) {
       if (e instanceof ApiError && e.details.length) {

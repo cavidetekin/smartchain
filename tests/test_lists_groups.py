@@ -64,7 +64,7 @@ def groups(api, **body):
 @needs_db
 def test_two_levels_counts_match_rows(api):
     t = groups(api, group_by=["MaterialLevel", "MaterialGroup"])
-    assert sum(g["count"] for g in t["groups"]) == 200
+    assert sum(g["count"] for g in t["groups"]) == 202
     for g in t["groups"]:
         assert g["count"] == sum(ch["count"] for ch in g["children"])
         assert g["count"] == query(api, fields=["Code"], group_key=[{"field": "MaterialLevel", "value": g["key"][0]}])["filtered"]
@@ -72,7 +72,7 @@ def test_two_levels_counts_match_rows(api):
     rulman = next(ch for ch in ham["children"] if ch["key"] == ["Hammadde", "Rulman"])
     assert rulman["count"] == 6 and rulman["aggregates"]["SafetyStock"] == 120.0  # 6 × 20 ADET
     assert rulman["unit_decimals"]["SafetyStock"] == 0
-    assert (t["filtered"], t["total"]) == (200, 200)
+    assert (t["filtered"], t["total"]) == (202, 202)
 
 
 @needs_db
@@ -129,7 +129,7 @@ def test_empty_group_is_last_and_rows_read_by_null_key(api, db_engine):
 
 @needs_db
 @pytest.mark.parametrize("flt, expected", [
-    ({"field": "MaxStock", "op": "empty"}, 200),
+    ({"field": "MaxStock", "op": "empty"}, 202),
     ({"field": "StockCoverageDays", "op": "empty"}, 80),
     ({"field": "Name", "op": "empty"}, 0),
     ({"field": "UpdatedAt", "op": "empty"}, 0),

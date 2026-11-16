@@ -24,8 +24,8 @@ log = logging.getLogger("smartchain.synthetic")
 LOAD_ORDER = [
     "Calendar", "CalendarDay", "Shift", "ResourceGroup", "Supplier", "Customer", "ProjectGroup",
     "Project", "Material", "UomConversion", "Resource", "ResourceCapacityProfile", "ResourceDowntime", "ShiftPlan",
-    "ResourceGroupAssignment", "EmployeeAbsence", "ProductionVersion", "BOM", "Routing", "MaterialSupplier",
-    "SalesOrderLine", "Stock", "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "PurchaseOrderLine",
+    "ResourceGroupAssignment", "EmployeeAbsence", "ProductionVersion", "BOM", "Routing", "MaterialSupplier", "MaterialReference",
+    "SalesOrderLine", "Forecast", "Stock", "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "PurchaseOrderLine",
     "ProductionConfirmation",
 ]
 PARAM_ORDER = ["PlanningSetting", "TimeBucketDefinition", "PriorityRule", "SupplierLimit"]

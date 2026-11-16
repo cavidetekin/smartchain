@@ -142,6 +142,7 @@ def save(session: Session | None, actor: CurrentUser, list_name: str, changes: l
             raise AppError("validation", "Kaydedilmedi.", 422, problems)  # ya hep ya hiç (K-170)
         for key, field, value in parsed:
             _write(session, actor, tg, t, key, field, value)
+        _quality(session, actor, tg.table, {key for key, _, _ in parsed})
         session.commit()
         return {"saved": len(parsed)}
 
@@ -168,6 +169,17 @@ def _write(session: Session, actor: CurrentUser, tg: Target, t: sa.Table, key: s
     history.record(session, tg.table, key, field, old_text, text, history.MANUAL_SOURCE, actor.id)  # geçmiş (K-173)
     audit.write_audit(session, SAVE_ACTION, actor.id, OBJECT, f"{tg.title} · {_record_text(session, tg.table, t, key)}",
                       {"list": tg.list_name, "record": key, "field": field, "Value": value}, {"list": tg.list_name, "record": key, "field": field, "Value": old})
+
+
+def _quality(session: Session, actor: CurrentUser | None, table: str, keys: set[str]) -> None:
+    """Veri kalitesi (K-174): kaydın yok sayılmış uyarıları hemen Açık; o tablo için kontrol işi kuyruğa (aynı işlemde)."""
+    if not keys:
+        return
+    from app import quality
+    from app.quality.ignore import reopen_record
+    for key in keys:
+        reopen_record(session, table, str(key))
+    quality.enqueue(session, {table}, quality.TRIGGER_MANUAL, actor.id if actor else None, commit=False)
 
 
 def _restore(session: Session, actor: CurrentUser | None, tg: Target, t: sa.Table, rows: Iterable) -> int:
@@ -201,6 +213,7 @@ def remove(session: Session | None, actor: CurrentUser, list_name: str, items: l
                  for i in items]
         rows = session.execute(sa.select(MANUAL).where(MANUAL.c.TableName == tg.table, sa.or_(*conds))).all() if conds else []
         n = _restore(session, actor, tg, t, rows)
+        _quality(session, actor, tg.table, {r.RecordKey for r in rows})
         session.commit()
         return {"removed": n}
 
@@ -272,6 +285,7 @@ def set_manual(session: Session, actor: CurrentUser, table: str, field: str, on:
             _ensure_idle(session)
             list_name = next(d.name for d in BY_NAME.values() if d.table_name == table)
             _restore(session, actor, target(list_name), core_table(table), rows)
+            _quality(session, actor, table, {r.RecordKey for r in rows})
     session.execute(sa.update(FIELDS).where(FIELDS.c.TableName == table, FIELDS.c.FieldName == field).values(ManualOverrides=on))
     audit.write_audit(session, MANUAL_ACTION, actor.id, "FieldDefinition", f"{table}.{field}", {"ManualOverrides": on}, {"ManualOverrides": bool(current)})
     return None

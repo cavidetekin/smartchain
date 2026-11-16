@@ -1,0 +1,157 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Veri kalitesi · 6.5 mockup</title><style>
+:root{--ink:#1F2430;--mute:#6B7280;--line:#E3E6EB;--bg:#F6F7F9;--ind:#4F46E5;--indsoft:#EEF0FE;--head:#E8EAFB;--mor:#6D28D9;--lila:#EDE9FE}
+*{box-sizing:border-box}body{font-family:"Segoe UI",system-ui,sans-serif;margin:0;padding:20px;background:#D9DCE2;color:var(--ink);font-size:12.5px}
+.cap{max-width:1400px;margin:22px auto 6px;font-size:13px;color:#374151}
+.app{max-width:1400px;margin:0 auto;background:var(--bg);border-radius:10px;box-shadow:0 10px 30px #0002;display:grid;grid-template-columns:44px 1fr}
+.rail{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:12px;border-radius:10px 0 0 10px}
+.rail i{width:16px;height:16px;border-radius:4px;background:#C9CDD6;display:block}.rail i.on{background:var(--ind)}
+.main{min-width:0;padding-bottom:16px;position:relative}
+.ctx{display:flex;justify-content:space-between;padding:7px 16px;background:#fff;border-bottom:1px solid var(--line);border-radius:0 10px 0 0}
+.pill{border:1px solid var(--line);border-radius:14px;padding:2px 10px;color:var(--mute);margin-right:6px;font-size:11.5px}
+.title{padding:12px 20px 8px}.title h1{font-size:21px;margin:0}
+.body{padding:0 20px}
+.strip{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.strip .l,.strip .r{display:flex;align-items:center;gap:8px}
+.tabs{display:inline-flex;border:1px solid #CDD2DA;border-radius:8px;overflow:hidden;background:#fff}
+.tabs span{padding:5px 12px;font-weight:600;color:#374151;border-right:1px solid #E3E6EB;white-space:nowrap}.tabs span:last-child{border-right:0}
+.tabs span.on{background:var(--indsoft);color:var(--ind)}
+.sm .tabs span{padding:3px 10px;font-size:12px}
+.sel{border:1px solid #CDD2DA;border-radius:6px;padding:4px 9px;font-size:12px;white-space:nowrap;background:#fff;height:28px;display:inline-flex;align-items:center}
+.sm .sel{height:24px;padding:2px 8px;font-size:11.5px}
+.ic{width:28px;height:28px;border:1px solid #CDD2DA;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#374151;font-size:13px;background:#fff}
+.sm .ic{width:24px;height:24px;font-size:12px}
+.ic.pl{border:0;background:none;color:var(--mute)}
+.btn{height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:6px;font-weight:600;white-space:nowrap}
+.pri{background:var(--ind);color:#fff}.sec{background:var(--lila);color:var(--mor)}.ne{background:#fff;border:1px solid #CDD2DA;color:#374151}.gh{color:var(--ind)}
+.box{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table{border-collapse:collapse;width:100%}th{background:var(--head);text-align:left;font-weight:600;padding:6px 9px;font-size:11.5px;white-space:nowrap}
+td{padding:5px 9px;border-top:1px solid var(--line);white-space:nowrap}
+td.wr{white-space:normal}td.c,th.c{font-family:Inter,"Segoe UI",sans-serif}
+th.k{width:30px}
+tr.cur td{background:#F1F2FE}tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--ind)}
+.dots{color:var(--mute);font-weight:700;letter-spacing:1px}
+.chip{border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}.e{background:#FBDDD8;color:#A3311F}.w{background:#FBEFC8;color:#8A6510}.o{background:#DCF3E4;color:#1E7A43}.n{background:var(--indsoft);color:var(--ind)}.g{background:#EEF0F3;color:var(--mute)}
+.gap{height:10px}
+.rel{position:relative}
+.menu{position:absolute;background:#fff;border:1px solid #CDD2DA;border-radius:8px;box-shadow:0 10px 24px #0003;padding:4px;width:190px;z-index:5;font-size:12.5px}
+.menu div{padding:6px 10px;border-radius:5px}.menu div.on{background:var(--indsoft);color:var(--ind)}
+.menu .hd{color:var(--mute);font-size:11px;font-weight:600;padding:4px 10px 2px}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.dlg{position:absolute;background:#fff;border:1px solid #CDD2DA;border-radius:10px;box-shadow:0 14px 32px #0004;width:420px;z-index:6}
+.dlg .dh{padding:12px 16px;font-weight:700;font-size:14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.dlg .db{padding:14px 16px}
+.dlg .df{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--line)}
+.fl{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:10px 12px}
+.fl label{color:var(--ink)}
+.in{border:1px solid #CDD2DA;border-radius:6px;padding:5px 9px;background:#fff;min-height:28px;display:flex;align-items:center}
+.ta{min-height:70px;align-items:flex-start;color:var(--ink)}
+.seg{display:inline-flex;border:1px solid #CDD2DA;border-radius:7px;overflow:hidden}
+.seg span{padding:4px 12px;font-weight:600;color:var(--mute);border-right:1px solid #CDD2DA}.seg span:last-child{border-right:0}
+.seg span.on{background:var(--indsoft);color:var(--ind)}
+.tg{display:inline-block;width:44px;height:24px;border-radius:12px;background:var(--ind);position:relative}.tg:after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.tg.off{background:#D1D5DB}.tg.off:after{right:auto;left:3px}
+.tg.dis{background:#E5E7EB}.tg.dis:after{right:auto;left:3px;background:#F3F4F6}
+.dis-l{color:#9CA3AF}
+.tgs{display:inline-block;width:26px;height:14px;border-radius:7px;background:var(--ind);position:relative}.tgs:after{content:"";position:absolute;right:2px;top:2px;width:10px;height:10px;border-radius:50%;background:#fff}
+.tgs.off{background:#D1D5DB}.tgs.off:after{right:auto;left:2px}
+.cond{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#FAFAFC;color:#374151}
+.shade{position:absolute;inset:0;background:#1F243022;border-radius:10px;z-index:4}
+.note{max-width:1400px;margin:20px auto 0;background:#fff;border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.6}.note b{color:var(--mor)}
+.path{font-family:Inter,"Segoe UI",sans-serif}.path b{color:var(--ind);font-weight:600}
+</style></head><body>
+
+<!-- ================= 1 ================= -->
+<h2 class="cap">1 · Veri kalitesi: Yüksek · Normal · Yok sayılan sekmeleri şeridin solunda; Önem kolonu kalktı; ⋯ menü açık; seçili uyarının detay kartı "Talep zinciri" sekmesinde</h2>
+<div class="app"><div class="rail"><i></i><i class="on"></i><i></i><i></i><i></i></div><div class="main">
+<div class="ctx"><div><span class="pill">Senaryo: —</span><span class="pill">Plan versiyonu: —</span><span class="pill">Dönem: —</span></div><div><span class="pill">Veri v66 · 16.11.2026 02:14</span><span class="pill">İş yok</span><span class="pill">Key user</span></div></div>
+<div class="title"><h1>Veri kalitesi</h1></div>
+<div class="body">
+<div class="strip"><div class="l"><div class="tabs"><span class="on">Yüksek</span><span>Normal</span><span>Yok sayılan</span></div></div><div class="r"><span class="sel">Standart *</span><span class="ic">⇅</span><span class="ic">▤</span><span class="ic">▥</span><span class="ic"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8M4.5 6.8 8 10.3l3.5-3.5M3 13.5h10"/></svg></span><span class="ic">⚙</span></div></div>
+<div class="box rel" style="overflow:visible">
+<table>
+<tr><th>Durum</th><th>Tablo</th><th>Kayıt</th><th>Kural</th><th>Mesaj</th><th>İlk görülme</th><th class="k"></th></tr>
+<tr class="cur"><td><span class="chip n">Yeni</span></td><td>Malzeme tedarikçisi</td><td class="c">HAM-012 / TED-03</td><td>Tedarik süresi yok</td><td>Tedarik süresi yok: HAM-012 / TED-03</td><td class="c">16.11.2026</td><td class="dots">⋯</td></tr>
+<tr><td><span class="chip n">Yeni</span></td><td>Üretim versiyonu</td><td class="c">ALT-007 / V1</td><td>Aktif versiyonun geçerliliği bitmiş</td><td>Geçerlilik bitişi: 15.11.2026</td><td class="c">16.11.2026</td><td class="dots">⋯</td></tr>
+<tr><td><span class="chip g">Açık</span></td><td>Satış siparişi</td><td class="c">SO-1190 / 1</td><td>Teslim tarihi geçmiş açık satış siparişi</td><td>Teslim tarihi: 12.11.2026</td><td class="c">13.11.2026</td><td class="dots">⋯</td></tr>
+<tr><td><span class="chip g">Açık</span></td><td>Kaynak</td><td class="c">KYN-KYN-01</td><td>Kapasitesi tanımsız kaynak</td><td>Kapasite tanımsız: KYN-KYN-01</td><td class="c">12.11.2026</td><td class="dots">⋯</td></tr>
+<tr><td><span class="chip g">Açık</span></td><td>Ürün ağacı</td><td class="c">ALT-004 / HAM-020</td><td>Bileşen miktarı sıfır</td><td>Bileşen miktarı 0: HAM-020</td><td class="c">10.11.2026</td><td class="dots">⋯</td></tr>
+</table>
+<div class="menu" style="right:8px;top:62px"><div class="on">Detay</div><div>Kayda git</div><div>Kural oluştur</div><div>Yok say</div><hr><div>Kopyala</div></div>
+</div>
+<div class="gap"></div>
+<div class="strip sm"><div class="l"><div class="tabs"><span>Kayıt</span><span class="on">Talep zinciri</span></div></div><div class="r"><span class="sel">Standart *</span><span class="ic">⇅</span><span class="ic">▤</span><span class="ic">▥</span><span class="ic"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8M4.5 6.8 8 10.3l3.5-3.5M3 13.5h10"/></svg></span><span class="ic">⚙</span><span class="ic pl">⤢</span><span class="ic pl">✕</span></div></div>
+<div class="box"><table>
+<tr><th>Talep</th><th>Talep tipi</th><th>Malzeme yolu</th><th>Talep tarihi</th><th>Açık miktar</th></tr>
+<tr><td class="c">SO-1182 / 1</td><td>Satış siparişi</td><td class="path"><b>MAM-002</b> → ALT-001 → HAM-012</td><td class="c">24.11.2026</td><td class="c">14</td></tr>
+<tr><td class="c">SO-1203 / 1</td><td>Satış siparişi</td><td class="path"><b>MAM-006</b> → ALT-007 → ALT-004 → HAM-012</td><td class="c">01.12.2026</td><td class="c">20</td></tr>
+<tr><td class="c">MAM-001 · Ara 2026</td><td>Tahmin</td><td class="path"><b>MAM-001</b> → ALT-002 → HAM-012</td><td class="c">01.12.2026</td><td class="c">40</td></tr>
+</table></div>
+</div></div></div>
+
+<!-- ================= 2 ================= -->
+<h2 class="cap">2 · Normal sekmesi, toplu "Yok say": Ctrl/Shift ile 3 satır seçili, sağ tık → "Seçili 3 satır" → Yok say; gerekçe zorunlu</h2>
+<div class="app"><div class="rail"><i></i><i class="on"></i><i></i><i></i><i></i></div><div class="main">
+<div class="ctx"><div><span class="pill">Senaryo: —</span><span class="pill">Plan versiyonu: —</span><span class="pill">Dönem: —</span></div><div><span class="pill">Veri v66 · 16.11.2026 02:14</span><span class="pill">İş yok</span><span class="pill">Key user</span></div></div>
+<div class="title"><h1>Veri kalitesi</h1></div>
+<div class="body">
+<div class="strip"><div class="l"><div class="tabs"><span>Yüksek</span><span class="on">Normal</span><span>Yok sayılan</span></div></div><div class="r"><span class="sel">Standart *</span><span class="ic">⇅</span><span class="ic">▤</span><span class="ic">▥</span><span class="ic"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8M4.5 6.8 8 10.3l3.5-3.5M3 13.5h10"/></svg></span><span class="ic">⚙</span></div></div>
+<div class="box rel" style="overflow:visible">
+<table>
+<tr><th>Durum</th><th>Tablo</th><th>Kayıt</th><th>Kural</th><th>Mesaj</th><th>İlk görülme</th><th class="k"></th></tr>
+<tr class="cur"><td><span class="chip g">Açık</span></td><td>Stok</td><td class="c">HAM-031 / L-2210</td><td>Son kullanma tarihi geçmiş</td><td>Son kullanma: 30.10.2026</td><td class="c">10.11.2026</td><td class="dots">⋯</td></tr>
+<tr class="cur"><td><span class="chip g">Açık</span></td><td>Stok</td><td class="c">HAM-031 / L-2214</td><td>Son kullanma tarihi geçmiş</td><td>Son kullanma: 02.11.2026</td><td class="c">10.11.2026</td><td class="dots">⋯</td></tr>
+<tr class="cur"><td><span class="chip g">Açık</span></td><td>Stok</td><td class="c">HAM-033 / L-2190</td><td>Son kullanma tarihi geçmiş</td><td>Son kullanma: 28.10.2026</td><td class="c">10.11.2026</td><td class="dots">⋯</td></tr>
+<tr><td><span class="chip g">Açık</span></td><td>Malzeme tedarikçisi</td><td class="c">HAM-044</td><td>Kota toplamı 1 değil</td><td>Kota toplamı: 0,80</td><td class="c">10.11.2026</td><td class="dots">⋯</td></tr>
+<tr><td><span class="chip g">Açık</span></td><td>Rota</td><td class="c">ALT-008 / 20</td><td>Tüketim sıfır</td><td>Kaynak tüketimi 0: KYN-FRZ-01</td><td class="c">10.11.2026</td><td class="dots">⋯</td></tr>
+</table>
+<div class="menu" style="left:470px;top:90px"><div class="hd">Seçili 3 satır</div><div class="on">Yok say</div><div>Kopyala</div></div>
+<div class="dlg" style="left:760px;top:20px"><div class="dh"><span>Yok say · 3 uyarı</span><span style="color:var(--mute);font-weight:400">✕</span></div>
+<div class="db"><div class="fl" style="grid-template-columns:70px 1fr"><label>Gerekçe</label><div class="in ta">Numune lotları, üretimde kullanılmıyor.</div></div></div>
+<div class="df"><span class="btn ne">Vazgeç</span><span class="btn pri">Kaydet</span></div></div>
+</div>
+</div></div></div>
+
+<!-- ================= 3 ================= -->
+<h2 class="cap">3 · Validasyon kuralları: "Takip" kolonu eklenir; kural penceresinde "Veri kalitesinde takip" anahtarı (Uyarı'da açık, Hata'da pasif)</h2>
+<div class="app"><div class="rail"><i></i><i class="on"></i><i></i><i></i><i></i></div><div class="main">
+<div class="ctx"><div><span class="pill">Senaryo: —</span><span class="pill">Plan versiyonu: —</span><span class="pill">Dönem: —</span></div><div><span class="pill">Veri v66 · 16.11.2026 02:14</span><span class="pill">İş yok</span><span class="pill">System owner</span></div></div>
+<div class="title"><h1>Validasyon kuralları</h1></div>
+<div class="body">
+<div class="strip"><div class="l"><span class="sel">Tablo: Malzeme tedarikçisi ▾</span><span class="sel">Hata eşiği: %5</span><span class="btn pri">Yeni kural</span></div><div class="r"><span class="sel">Standart *</span><span class="ic">⇅</span><span class="ic">▤</span><span class="ic">▥</span><span class="ic"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8M4.5 6.8 8 10.3l3.5-3.5M3 13.5h10"/></svg></span><span class="ic">⚙</span></div></div>
+<div class="box rel" style="overflow:visible">
+<table>
+<tr><th>Tablo</th><th>Kural</th><th>Koşul</th><th>Sınıf</th><th>Takip</th><th>Mesaj</th><th>Tür</th><th>Aktif</th></tr>
+<tr class="cur"><td>Malzeme tedarikçisi</td><td>Tedarik süresi yok</td><td class="wr">Sabit tedarik süresi boş ve Değişken tedarik süresi boş</td><td><span class="chip w">Uyarı</span></td><td>Evet</td><td>Tedarik süresi yok: {kayıt}</td><td>Hazır</td><td><i class="tgs"></i></td></tr>
+<tr><td>Malzeme tedarikçisi</td><td>Kota toplamı 1 değil</td><td class="wr">Aynı malzeme ve lokasyonda dolu kota oranlarının toplamı 1 değil</td><td><span class="chip w">Uyarı</span></td><td>Evet</td><td>Kota toplamı: {değer}</td><td>Hazır</td><td><i class="tgs"></i></td></tr>
+<tr><td>Malzeme tedarikçisi</td><td>Tedarikçi pasif</td><td>Tedarikçi bulunuyor ama pasif</td><td><span class="chip w">Uyarı</span></td><td>Evet</td><td>Tedarikçi pasif: {kod}</td><td>Hazır</td><td><i class="tgs"></i></td></tr>
+<tr><td>Malzeme tedarikçisi</td><td>Malzeme bulunamadı</td><td>Malzeme kodu Malzeme tablosunda yok</td><td><span class="chip e">Hata</span></td><td></td><td>Malzeme bulunamadı: {kod}</td><td>Hazır</td><td><i class="tgs"></i></td></tr>
+<tr><td>Malzeme tedarikçisi</td><td>Minimum maksimumdan büyük</td><td>Minimum sipariş miktarı &gt; Maksimum sipariş miktarı</td><td><span class="chip e">Hata</span></td><td></td><td>Minimum maksimumdan büyük</td><td>Hazır</td><td><i class="tgs"></i></td></tr>
+<tr><td>Malzeme tedarikçisi</td><td>Uzun tedarik süresi</td><td>Sabit tedarik süresi &gt; 120</td><td><span class="chip w">Uyarı</span></td><td>Hayır</td><td>Tedarik süresi 120 günden uzun</td><td>Kullanıcı</td><td><i class="tgs off"></i></td></tr>
+</table>
+<div class="shade"></div>
+<div class="dlg" style="left:330px;top:10px;width:560px"><div class="dh"><span>Tedarik süresi yok</span><span style="display:flex;gap:10px;align-items:center;font-weight:400;font-size:12.5px">Aktif <i class="tg"></i> <span style="color:var(--mute)">✕</span></span></div>
+<div class="db"><div class="fl">
+<label>Kural adı</label><div class="in">Tedarik süresi yok</div>
+<label>Tablo</label><div class="in" style="color:var(--mute)">Malzeme tedarikçisi</div>
+<label>Sınıf</label><div><span class="seg"><span>Hata</span><span class="on">Uyarı</span></span></div>
+<label>Veri kalitesinde takip</label><div><i class="tg"></i></div>
+<label>Koşul</label><div class="cond">Sabit tedarik süresi (gün) <b>boş</b> &nbsp;VE&nbsp; Değişken tedarik süresi <b>boş</b></div>
+<label>Mesaj</label><div class="in">Tedarik süresi yok: {kayıt}</div>
+</div></div>
+<div class="df"><span class="btn gh" style="margin-right:auto">İlk hâline döndür</span><span class="btn ne">Vazgeç</span><span class="btn pri">Kaydet</span></div></div>
+</div>
+<div style="height:190px"></div>
+</div></div></div>
+
+<h2 class="cap">3b · Aynı pencerede Sınıf = Hata seçilince takip anahtarı pasif</h2>
+<div class="app" style="grid-template-columns:1fr;background:transparent;box-shadow:none"><div class="main" style="padding:0">
+<div class="dlg" style="position:relative;width:560px"><div class="dh"><span>Minimum maksimumdan büyük</span><span style="display:flex;gap:10px;align-items:center;font-weight:400;font-size:12.5px">Aktif <i class="tg"></i> <span style="color:var(--mute)">✕</span></span></div>
+<div class="db"><div class="fl">
+<label>Sınıf</label><div><span class="seg"><span class="on">Hata</span><span>Uyarı</span></span></div>
+<label class="dis-l">Veri kalitesinde takip</label><div><i class="tg dis"></i></div>
+</div></div>
+<div class="df"><span class="btn gh" style="margin-right:auto">İlk hâline döndür</span><span class="btn ne">Vazgeç</span><span class="btn pri">Kaydet</span></div></div>
+</div></div>
+
+<div class="note"><b>Veri kalitesi:</b> Kartlar ve sağ panel yok; tablo ekranı kaplar · Şeritte solda sekmeler, sağda standart simgeler · Varsayılan görünüm: sekmeler Yüksek · Normal · Yok sayılan (Ana sayfa özeti Yüksek sekmesini açar); Önem kolonu yok, sekme önemdir; sıralama Durum (Yeni önce) · Gerekçe kolonu gizli · ⋯ ve sağ tık: Detay, Kayda git, Kural oluştur, Yok say (yok sayılan satırda "Yok saymayı kaldır") · Durum: Yeni, Açık (Yok sayılan sekmesinde Yok sayıldı) · Detay kartı sekmeleri Kayıt, Talep zinciri; Talep zinciri sekmesi yalnız Yüksek sekmesinde · Kapanan uyarı silinir, listede görünmez.<br><b>Validasyon kuralları:</b> "Takip" kolonu yalnız Uyarı kurallarında dolu · Pencerede anahtar Sınıf'ın altında; Hata'da pasif ve gri · "İlk hâline döndür" takibi de katalogdaki hâline getirir.</div>
+</body></html>

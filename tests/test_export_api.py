@@ -108,7 +108,7 @@ def test_scope_all_rows_all_columns(api, user):
     r = export(api, user, filters=FILTERS, scope={"rows": "all", "columns": "all", "info_sheet": False, "keep_groups": False})
     wb, rows = sheet(r.content)
     assert wb.sheetnames == ["Veri", "Bilgi"]
-    assert len(rows) - 1 == 200  # sentetik v0: bütün malzemeler
+    assert len(rows) - 1 == 202  # sentetik v0: bütün malzemeler (6.5: 202)
     assert len(rows[0]) > len(FIELDS) and rows[0][: len(FIELDS)][0] == "Malzeme kodu"
 
 
@@ -139,7 +139,7 @@ def test_grouped_export_follows_group_tree(api, user):
     assert [int(g[0].rsplit(" · ", 1)[1].split()[0].replace(".", "")) for g in groups] == [e[1] for e in expected]
     leaf_expected = [e[1] for i, e in enumerate(expected) if e[0] == 1]
     assert [c[0] for c, e in zip(leaf_counts, expected) if e[0] == 1] == leaf_expected
-    assert sum(leaf_expected) == 200
+    assert sum(leaf_expected) == 202
 
 
 def test_trace_failure_gives_no_file(api, user, monkeypatch):
@@ -157,7 +157,7 @@ def test_validation_and_limits(api, user, db_engine):
     setting(db_engine, "ExportMaxRows", 10)
     r = export(api, user)
     assert r.status_code == 422 and r.json()["error"]["code"] == "export_too_large"
-    assert "200 satır" in r.json()["error"]["message"]
+    assert "202 satır" in r.json()["error"]["message"]
     assert audits(db_engine, user) == []
 
 

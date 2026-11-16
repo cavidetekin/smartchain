@@ -66,7 +66,8 @@ function useDetailMenu(open: (row: Row) => void) {
   ) : null;
   return { rowMenu, element };
 }
-interface Choice { tab: string; tables: Record<string, string>; card: Card | null }
+/** only: yalnız bu kaydı gösteren süzgeç (Veri kalitesinden Kayda git, K-174); adreste, tercihte değil. */
+interface Choice { tab: string; tables: Record<string, string>; card: Card | null; only?: string | null }
 
 function tableOf(tabs: TabDef[], choice: Choice): { tab: TabDef; table: TableDef } {
   const tab = tabs.find((t) => t.key === choice.tab) ?? tabs[0];
@@ -84,7 +85,7 @@ function initial(saved: DataScreenPrefs, tabs: TabDef[], search: string): Choice
   const list = (tab.tables.find((x) => x.list === tables[tab.key]) ?? tab.tables[0]).list;
   const id = params.get("kayit");
   const card = fromUrl ? (id ? { id, tab: cardOfSlug(params.get("kart")) ?? HISTORY_TAB } : null) : saved.cards?.[list] ?? null;
-  return { tab: tab.key, tables, card };
+  return { tab: tab.key, tables, card, only: fromUrl ? params.get("yalniz") : null };
 }
 
 export function DataScreen({ id, title, sections, tabs, countsUrl }: {
@@ -117,15 +118,15 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
 
   const { tab, table } = tableOf(tabs, choice);
   const manual = useManualValues(table.list, columns, () => setReloadKey((n) => n + 1));  // manuel değer (K-170)
-  const cardOf = (next: Omit<Choice, "card">): Card | null => prefs.dataScreen(id).cards?.[tableOf(tabs, { ...next, card: null }).table.list] ?? null;
-  const choose = (next: Omit<Choice, "card">) => {
-    const full = { ...next, card: cardOf(next) };  // tablo değişince o tablonun hatırlanan kartı
+  const cardOf = (next: Omit<Choice, "card" | "only">): Card | null => prefs.dataScreen(id).cards?.[tableOf(tabs, { ...next, card: null }).table.list] ?? null;
+  const choose = (next: Omit<Choice, "card" | "only">) => {
+    const full = { ...next, card: cardOf(next), only: null };  // tablo değişince o tablonun hatırlanan kartı; tek kayıt süzgeci kalkar
     if (manual.dirty) setPending(full);
     else setChoice(full);
   };
 
   // Adres ve hatırlanan seçim (kullanıcı başına). Adres dışarıdan değişince (geri tuşu, "Kayda git", ilişkili satırın rozeti) seçim adresten.
-  const query = screenQuery(tab, table, choice.card);
+  const query = screenQuery(tab, table, choice.card, choice.only ?? null);
   useEffect(() => {
     const saved = prefs.dataScreen(id);
     const cards = { ...(saved.cards ?? {}) };
@@ -159,6 +160,11 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
     </>
   );
 
+  // Yalnız bir kayıt (Veri kalitesinden Kayda git, K-174): tablo kaydın Id'siyle süzülü; "Bütün kayıtları göster" süzgeci kaldırır
+  const only = choice.only ?? null;
+  const onlyFilters = useMemo<ListFilter[] | undefined>(() => (only ? [{ field: "Id", op: "in", values: [only] }] : undefined), [only]);
+  const showAll = () => setChoice((c) => ({ ...c, only: null }));
+
   // Detay kartı
   const card = choice.card;
   const setCard = useCallback((next: Card | null) => setChoice((c) => ({ ...c, card: next })), []);
@@ -176,9 +182,14 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
           {manual.paste.details.length > 0 && manual.paste.details.join(" ")}
         </Alert>
       )}
+      {only && (
+        <Alert tone="info">
+          {T.onlyRecord} <button type="button" className="sc-link-btn" onClick={showAll}>{T.showAll}</button>
+        </Alert>
+      )}
       <RecordCardLayout screen={id} list={table.list} card={card} many={card && picked.length > 1 ? picked : null} onCard={setCard} onClose={() => setCard(null)}
                         master={(
-                          <DataTable key={table.list} list={table.list} fieldHints={HINTS} toolbarLead={lead} fitHeaders onColumns={setColumns} reloadKey={reloadKey}
+                          <DataTable key={`${table.list}:${only ?? ""}`} list={table.list} baseFilters={onlyFilters} fieldHints={HINTS} toolbarLead={lead} fitHeaders onColumns={setColumns} reloadKey={reloadKey}
                                      cellRender={manual.cellRender} cellWrap={manual.cellWrap} cellClass={manual.cellClass} toolbarActions={manual.editBar}
                                      cellEditing={manual.cellEditing} selectionMenu={manual.selectionMenu} onSelection={setPicked} rowMenu={detailMenu.rowMenu} rowProps={rowProps} cellMenu={manual.menuItems}
                                      selectedRowId={card ? (Number.isNaN(Number(card.id)) ? card.id : Number(card.id)) : undefined} />

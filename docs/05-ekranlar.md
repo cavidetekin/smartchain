@@ -332,11 +332,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Veri kalitesi](mockups/m24e-0314-veri-kalitesi.png)
 
-- **Önem sırası:** Plan sonucunu bozan sorunlar en üstte; kritik, yüksek, orta.
-- **Ana veri ve işlem verisi:** Rota, ağaç, malzeme hataları ile sipariş ve stok uyarıları aynı listede.
-- **Öneri ve aksiyon:** Her satırda önerilen düzeltme; kuralla toplu ya da elle tek tek.
-- **Dağılım:** Hangi veri alanında sorun yoğun, sağdaki özetten görülür.
-
+- **Mockup geçersiz (K-174):** kartlar, sağ panel, üç önem seviyesi ve satırdaki düğmeler yok. Güncel mockup `plans/6.5-mockups/veri-kalitesi.html`.
+- **Kaynak:** yüklenmiş verideki (`core`) sorunlar: validasyon kataloğunda "Veri kalitesinde takip: Evet" olan Uyarı kuralları ve Smartchain verisi kontrolleri (kapasitesi tanımsız kaynak, K-117). Validasyonda Hata alan satır burada yoktur (aktarılmamıştır).
+- **Şerit (docs/12):** solda sekmeler Yüksek · Normal · Yok sayılan, sağda standart simgeler; tablo ekranı kaplar. Ekran Yüksek sekmesiyle açılır; yok sayılan uyarı yalnız Yok sayılan sekmesinde.
+- **Önem:** Yüksek, sorunlu kayıt açık bir talebin (satış siparişi, tahmin) zincirindeyse; değilse Normal. Önem kolonu yoktur, sekme önemdir.
+- **Kolonlar:** Durum (Yeni · Açık; Yok sayılan sekmesinde Yok sayıldı) · Tablo · Kayıt · Mesaj · Tespit tarihi. Gizli: Kontrol (kuralın ya da Smartchain kontrolünün adı; gruplamak için) ve Gerekçe; Yok sayılan sekmesinin Standart görünümünde Gerekçe açık. Sıralama Durum (Yeni önce), sonra Tespit tarihi.
+- **Kayıt:** iş anahtarı alan etiketleriyle ("Malzeme: HAM-022 · Tedarikçi: TED-02", "Kaynak: T-05"); etiketler veri sözlüğünden (K-88).
+- **Kayda git:** kayıt Ana veri ya da İşlem verisi ekranında yalnız o kayıt süzülmüş açılır; "Bütün kayıtları göster" süzgeci kaldırır.
+- **⋯ ve sağ tık:** Detay · Kayda git · Kural oluştur · Yok say (Yok sayılan sekmesinde "Yok saymayı kaldır") · Kopyala; çoklu seçimde "Seçili n satır" grubunda Yok say. Yok say gerekçe ister.
+- **Detay kartı:** Kayıt · Talep zinciri (yalnız Yüksek sekmesinde): Talep · Talep tipi · Malzeme yolu · Talep tarihi · Açık miktar.
+- **Ana sayfa:** tek satır özet ("Veri kalitesi: 12 yüksek önemde uyarı, 3 yeni"); tıklayınca Yüksek sekmesi (9.1).
+- **Karar (6.5, K-174):** fonksiyon 20 ve 21; yaşam döngüsü ve ne zaman çalıştığı docs/06'da.
+- **Uygulama (6.5, K-174):** uygulandı. Uyarılar `data-quality-warnings`, Yok sayılan sekmesi `data-quality-ignored` listesi; Kayıt alan etiketleriyle; Kayda git süzülmüş (`yalniz=<Id>`); detay kartı Kayıt · Talep zinciri; Ana sayfa özeti API'si (`GET /api/data-quality/summary`) hazır, gösterimi 9.1'de.
 ### Parametre setleri
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 06/25</sub>
 

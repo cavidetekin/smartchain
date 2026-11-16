@@ -18,7 +18,7 @@ Hayali bir üreticinin ana verisi ve işlem verisi. Geliştirmede test zemini, s
 | Ne | Adet |
 |---|---|
 | Malzeme | ~200 |
-| Kaynak | 40 (15 tezgâh, 25 çalışan) |
+| Kaynak | 41 (16 tezgâh, 25 çalışan; `T-05` 6.5'te, K-174) |
 | Açık müşteri siparişi | 40 |
 | Müşteri | 3 |
 | Tedarikçi | 8 |
@@ -68,7 +68,8 @@ python -m app.data.synthetic check                                     # sayıla
 - **Yeniden yükleme:** Önce `ORM-01`'in veri versiyonlarına bağlı her şey silinir: ana tablo satırları, o versiyonlarla açılmış plan hesapları, senaryolar, çalışmalar ve "Sentetik v0" parametre seti. Hepsi tek işlemde yapılır.
 - **Güvenlik kilidi:** Sentetik kayıtlar `IsSynthetic = 1` taşır (DataVersion, Location, ParameterSet). Veritabanında sentetik olmayan bir kayıt varsa `load` ve `unload` hiçbir şey silmeden durur ve kayıtları adıyla yazar.
 - **Parametre seti "Sentetik v0":** ModelType LP, 13 haftalık zaman yapısı, öncelik kuralı ve tedarikçi limiti.
-- **Boş kalanlar:** Forecast (tahmin üretilmez), TransferOrder (tek lokasyon), MaterialReference (her üretilen malzemenin kendi versiyonu var); ek alanlar (K-59); yalnız Material.AdditionalText1 doludur: FieldDefinition etiketi "Malzeme sınıfı", değerler A / B / C (tablo bileşeni denemesi, 1.3).
+- **Tahmin ve benzetilen ürün (6.5, K-174):** `MAM-001` için gelecek iki ayın tahmini (ay başı, ufuk içinde); `MAM-011` kendi versiyonu olmayan mamuldür, `MAM-001`'in ağacı ve rotası benzetilen ürün satırıyla izlenir (talep zinciri ve veri kalitesi demosu).
+- **Boş kalanlar:** TransferOrder (tek lokasyon); ek alanlar (K-59); yalnız Material.AdditionalText1 doludur: FieldDefinition etiketi "Malzeme sınıfı", değerler A / B / C (tablo bileşeni denemesi, 1.3).
 - **Malzeme (K-113):** Üretim süresi tabloda değil, senaryoların iç hesabında kullanılır (`Dataset.lead_days`; K-12). `MAM-006` özel takipli, `SAT` grubunda marka ve kutu miktarları dolu, fason operasyonu olan malzemeler fasona verilebilir, rulmanlar ve `HAM-012` kritik. `ALT-013` (üretilen) ve `SAT-030` (satın alınan) stok tutulamaz: ikisinde de stok yok, temiz veride uyarı çıkmaz.
 - **Üretim versiyonu (K-114):** Her üretilen malzemede tek versiyon (`V1`, öncelik 1); `BOMCode` `B-<malzeme>`. Alternatif versiyon sentetik veride yok (A-40).
 - **Ürün ağacı (K-115):** Her ağaç tek versiyonda; ağaç kodu versiyonun `BOMCode`'u, sıra no 1. Alternatif bileşen sentetik veride yok (A-41).
@@ -92,6 +93,10 @@ python -m app.data.synthetic check                                     # sayıla
 | 3 | Tedarikçi limiti dolu | `TED-05` · `SAT-003` (rulman), üretim gününden 4 hafta sonraki ay için limit 400; `PO-2041` + `PO-2042` = 400 teyitli | Limit ayındaki teyitli sipariş = limit; aynı ayda ihtiyaç − stok > 0 |
 | 4 | İmkânsız termin | `SO-1040` (`MAM-010`, 20 adet) termini üretim günü + 2 iş günü; stok ve iş emri yok; üretim zinciri 10 iş günü | Termin < en erken tarih |
 | 5 | Bakım ve izin | `T-02` bakım hafta 2 Salı–Çarşamba · `W-007` izin hafta 3 · `W-015` rapor hafta 1 | Kayıtlar ufukta, var olan kaynak ve çalışanda |
+| 6 | Zincirin derininde Yüksek uyarı (6.5) | `HAM-022`'nin tedarikçi satırında sabit ve değişken tedarik süresi boş (MS.NO_LEADTIME); `HAM-022` açık siparişli `MAM-002`'nin üç seviye altında, iki yolda (MAM-002 → ALT-004 → PRC-011 → HAM-022 ve MAM-002 → ALT-005 → PRC-012 → HAM-022) | Uyarı Yüksek; talep zincirinde o siparişin yolu |
+| 7 | Talebi olmayan malzemede Normal uyarı (6.5) | `ALT-099` hiçbir talebin ağacında değil; ağacında bir bileşen miktarı 0 (BOM.ZERO_QTY) | Uyarı Normal |
+| 8 | Yok sayılıp kaydı değişince yeniden açılan (6.5) | Durum 6'nın kaydı; yok sayma ve değişiklik (manuel değer ya da yeni versiyon) test ve demo akışındadır | Yok sayıldı → Açık |
+| 9 | Tarih geçince çıkan uyarı (6.5) | `SO-1043` istek tarihi üretim günü − 1, açık; `SO-1044` istek tarihi üretim günü, açık · `T-05` kritik tezgâh, günlük kapasitesi boş (K-117); `T-04`'ün grubunda, rotada yok | SO-1043 bugün, SO-1044 ertesi gün SO.PAST_DUE; T-05 SC.RES_NO_CAPACITY (rotada olmadığı için Normal) |
 
 **Kirli hâl.** `data/synthetic/v0/kirli/` altında varlık başına bir Excel (25 dosya; benzetilen ürün ve tahmin yalnız hazır kural örnekleriyle) ve `beklenen-hatalar.json`; her gün yeniden üretilebildiği için git'e girmez.
 - **Sayfa düzeni (K-110):** şablon üreticisiyle yazılır (`app/integration/template.py`): 1. satır `stg` alan adı, veri 2. satırdan; Açıklama sayfası; gizli `_Surum` sayfasında tablo, sürüm, set, tohum ve üretim günü. Etiketsiz ek alan kolonu yoktur. Etiket veri setinden gelir, veritabanı gerekmez.

@@ -95,7 +95,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Alan grupları ve veri akışı
 <sub>21. Veri modeli · Genel görünüm</sub>
 
-- **Veri yönetimi  16 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataVersion
+- **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
 - **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** ParameterSet · PlanningSetting · PriorityRule · AllocationRule
@@ -209,6 +209,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **DataRuleEffect:** Kural izi: hücreyi son değiştiren kural ve ham değer (K-140)
 - **ManualValue:** Kayıt ve alan başına manuel değer; alttaki değer (ERP ya da kural) saklanır (K-170)
 - **FieldChange:** Alan değişikliği: kaydın geçmişi (aktarım, manuel değer, Smartchain girişi; K-173)
+- **DataQualityWarning:** Veri kalitesi uyarısı: yüklenmiş veride takipli kural ya da Smartchain kontrolüyle bulunan sorun (K-174)
+- **DemandChain:** Talep zinciri kümesi: açık talepten ulaşılan kayıtlar; uyarının önemi (K-174)
+- **DemandChainPath:** Talep zinciri yolları: detay kartı açılınca hesaplanan önbellek (K-174)
 - **FieldValueSource:** Geçerli değerin kaynağı ve ERP değeri (ezilse bile saklanır)
 - **ImportBatch:** Ham veri partisi: her yükleme parti numarası, zaman ve kaynakla
 - **ImportFinding:** Partinin bulguları (ön kontrol ve doğrulama)
@@ -1449,6 +1452,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Kind | nvarchar(10) |  | Yapısal \| Hazır \| Kullanıcı | Sistem | H | E |  |
 | CheckType | nvarchar(20) |  | Yapısal \| Mantıksal \| Tablolar arası | Sistem | H | E |  |
 | Severity | nvarchar(10) |  | Hata \| Uyarı \| Bilgi | Kullanıcı | H | E |  |
+| TrackQuality | bit |  | Veri kalitesinde takip (K-174): Uyarı kuralı yüklenmiş veride (`core`) çalışır, bulgusu veri kalitesi uyarısı olur; yalnız Uyarı'da anlamlı. İlk değer katalogdan, kullanıcıda kalır; "İlk hâline döndür" sıfırlar | Kullanıcı | H | E | 0 |
 | Message | nvarchar(400) |  | Bulguda görünen mesaj | Kullanıcı | H | E |  |
 | ConditionText | nvarchar(400) |  | Koşulun okunur cümlesi; hazır kuralda katalogdan, kullanıcı kuralında kayıtta yazılır | Sistem | H | H |  |
 | IsActive | bit |  | Aktif; yapısal kontrol kapatılamaz | Kullanıcı | H | E |  |
@@ -1515,6 +1519,61 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Message | nvarchar(400) |  | Sorun | Sistem | H | E |  |
 | RowKey | nvarchar(200) |  | Kaydın anahtarı | Sistem | H | H |  |
 | RunId | bigint | FK | Bulguyu yazan çalışma | Sistem | H | E |  |
+
+### DataQualityWarning
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Veri kalitesi uyarısı (K-174, ekran 05): yüklenmiş veride (`core`) takipli Uyarı kuralı ya da Smartchain verisi kontrolüyle bulunan sorun. Kimliği kural + kayıt; her kontrolde var olan uyarı devam eder, sorun kalkınca (yok sayılmış olsa da) silinir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| Source | nvarchar(12) |  | Kural \| Smartchain | Sistem | H | E |  |
+| ValidationRuleId | int | FK,IX | Kural; Smartchain kontrolünde boş | Sistem | H | H |  |
+| CheckCode | nvarchar(60) | UK | Kuralın kodu (MS.NO_LEADTIME, KUL-3) ya da Smartchain kontrolünün kodu (SC.RES_NO_CAPACITY) | Sistem | H | E |  |
+| EntityName | nvarchar(60) | UK | Tablo (core adı) | Sistem | H | E |  |
+| RecordKey | nvarchar(60) | UK | Kaydın kimliği: Id (K-63); birimde kod | Sistem | H | E |  |
+| RecordLabel | nvarchar(200) |  | Ekrandaki Kayıt: iş anahtarı alan etiketleriyle (ör. Malzeme: HAM-012 · Tedarikçi: TED-03) | Sistem | H | E |  |
+| RuleName | nvarchar(200) |  | Kontrol: kuralın ya da Smartchain kontrolünün adı | Sistem | H | E |  |
+| Message | nvarchar(400) |  | Mesaj | Sistem | H | E |  |
+| FixField | nvarchar(60) |  | Kural oluştur'un hedef alanı; boşsa Kural oluştur pasif | Sistem | H | H |  |
+| Importance | nvarchar(10) |  | Yüksek \| Normal (her kontrolde yeniden) | Sistem | H | E |  |
+| State | nvarchar(15) |  | Yeni \| Açık \| Yok sayıldı | Sistem | H | E |  |
+| FirstSeenAt | datetime2 |  | Tespit tarihi: uyarının ilk çıktığı kontrol (UTC) | Sistem | H | E |  |
+| LastSeenAt | datetime2 |  | Son kontrolde görülme (UTC) | Sistem | H | E |  |
+| IgnoreReason | nvarchar(400) |  | Yok sayma gerekçesi | Kullanıcı | H | H |  |
+| IgnoredBy | int | FK | Yok sayan | Sistem | H | H |  |
+| IgnoredAt | datetime2 |  | Yok sayma zamanı (UTC); sonrasında kayıt değişirse (FieldChange) uyarı yeniden Açık | Sistem | H | H |  |
+
+### DemandChain
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Talep zinciri kümesi (K-174): açık satış siparişi ve ufuktaki tahminden ulaşılan kayıtlar; her veri kalitesi kontrolünde baştan hesaplanır. Uyarının önemi buradan (kayıt ya da malzemesi kümedeyse Yüksek).
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| EntityName | nvarchar(60) | PK | Tablo (core adı) | Sistem | H | E |  |
+| RecordId | bigint | PK | Kaydın Id'si | Sistem | H | E |  |
+
+### DemandChainPath
+<sub>21. Veri modeli · Veri yönetimi</sub>
+
+- Veri yönetimi · versiyonsuz · Faz 1
+- Detay kartının Talep zinciri sekmesi (K-174): kart açılınca uyarının kaydından yukarı çıkılarak bulunan talepler ve malzeme yolları; uyarı başına en çok 1.000 yol. Önbellektir: her veri kalitesi kontrolünde silinir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
+| WarningId | bigint | IX | Uyarı | Sistem | H | E |  |
+| DemandEntity | nvarchar(60) |  | SalesOrderLine \| Forecast | Sistem | H | E |  |
+| DemandId | bigint |  | Talebin Id'si | Sistem | H | E |  |
+| DemandLabel | nvarchar(100) |  | Talep (SO-1182 / 1; MAM-001 · Ara 2026) | Sistem | H | E |  |
+| DemandType | nvarchar(20) |  | Satış siparişi \| Tahmin | Sistem | H | E |  |
+| MaterialPath | nvarchar(400) |  | Malzeme yolu (MAM-002 → ALT-001 → HAM-012) | Sistem | H | E |  |
+| DemandDate | date |  | Talep tarihi (istek tarihi ya da tahmin dönemi) | Sistem | H | E |  |
+| OpenQuantity | decimal(18,6) |  | Açık miktar | Sistem | H | E |  |
 
 ### stg.*
 <sub>21. Veri modeli · Veri yönetimi</sub>
@@ -1922,7 +1981,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Aktarım \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme \| Validasyon \| Temizlik … | Sistem | H | E |  |
+| JobType | nvarchar(20) |  | Gece senaryosu \| Çalışma \| Aktarım \| Termin sorgusu \| Dışa aktarım \| Excel ön kontrol \| Veri çekme \| Validasyon \| Temizlik \| Veri kalitesi … | Sistem | H | E |  |
 | Channel | nvarchar(15) |  | Gece \| Hesaplama \| Excel \| Veri çekme \| Veri işleme | Sistem | H | E |  |
 | Priority | int |  | Öncelik | Sistem | H | H |  |
 | Status | nvarchar(15) |  | Sırada \| Çalışıyor \| Bitti \| Hata \| İptal | Sistem | H | E |  |

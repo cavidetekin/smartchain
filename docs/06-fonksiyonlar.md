@@ -274,7 +274,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Validasyon yalnız okur; değer değiştirmez (değeri rules değiştirir). Yazdığı yalnız bulgu ve `RowStatus`'tur.
-  - Validasyon staging'in işlenmiş katmanına aittir, data quality aktarılmış veriye (20, Aşama 6). Ön kontrol bulguları partiye aittir (03); çekmece güncel hâlin validasyonunu gösterir.
+  - Validasyon staging'in işlenmiş katmanına aittir, veri kalitesi aktarılmış veriye (20, K-174): takipli Uyarı kuralları `core`'da yeniden çalışır; Hata satırı aktarılmadığı için veri kalitesinde görünmez. Ön kontrol bulguları partiye aittir (03); çekmece güncel hâlin validasyonunu gösterir.
   - Sınıf: Hata satırı aktarılmaz; Uyarı aktarılır; Bilgi yalnız bilgidir. Sınıf Validasyon kuralları ekranında (27) değiştirilir.
   - Hata oranı = Hata bulunan güncel kayıt / güncel kayıt (ön kontrol hesaba girmez). Eşik tablo başınadır, varsayılanı yoktur, boşsa kontrol edilmez (K-135); 3.4'te yalnız gösterilir, load'a etkisi 5.2'de.
   - Küme kuralları (döngü, toplam, çakışma) tablonun işlenmiş katmanına bakar.
@@ -297,176 +297,181 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Kod kataloğu bu tablodan yazılır (`app/validation/catalog.py`); test ikisini karşılaştırır. AD ekranda "Kural" kolonudur; KOD varsayılan görünümde gizlidir. SINIF katalogdaki sınıftır, Validasyon kuralları ekranında değişir. Tür: Yapısal (listede görünmez, arka planda çalışır), Mantıksal (tablo içi), Küme (tablo içi, tablonun bütün güncel hâline bakar), Tablolar arası (OKUNAN tabloya bakar).
 - **Birim dönüşümü alanları (ALL.UOM_CONVERSION):** BOM: ComponentUom · SalesOrderLine: Uom · Forecast: Uom · Stock: Uom · WorkOrder: Uom · WorkOrderComponent: Uom · PurchaseOrderLine: Uom. Malzeme alanı BOM'da ComponentMaterialCode, ötekilerde MaterialCode.
 - **Referans, pasif ebeveyn ve bütünlük (K-146):** REF ve INACTIVE kuralları docs/03 "İlişki haritası"ndan üretilir: zorunlu ilişki yoksa Hata, isteğe bağlı bağlantı doluysa ve yoksa Uyarı, "Zorunlu (doluysa)" (rota ve iş emri operasyonunda kaynak ve kaynak grubu; anahtarın parçası olan bağlantı, K-153) doluysa ve yoksa Hata, ebeveyn pasifse haritadaki sınıf. Ebeveyn aranırken işlenmiş katmanın bütün satırlarına bakılır (pasif ebeveyn de vardır); kontrol edilen satır pasifse hiçbir kurala girmez (K-145). Mesaj değerle: "Malzeme bulunamadı: MAM-099". OKUNAN'da "(boş olabilir)": o tablonun verisi yoksa kural atlanmaz.
+- **TAKİP (K-174):** "Veri kalitesinde takip" ilk değeri; yalnız Uyarı'da (Hata ve Bilgi'de boş). Evet olan kural yüklenmiş veride (`core`) de çalışır ve bulgusu veri kalitesi uyarısıdır (20). Ölçüt: sorun ana tabloda kaldıkça plan yanlış çıkar mı. Validasyon kuralları ekranında değişir; "İlk hâline döndür" bu tablodaki hâline getirir. 86 Uyarı kuralından 53'ü Evet.
+- **Uygulama (6.5, K-174):** uygulandı. `ValidationRule.TrackQuality` (geçiş 0056; ilk değerler katalogdan, `RuleDef.tracked`); Validasyon kuralları'nda Takip kolonu ve pencere anahtarı; üç tarihli kural (SO.PAST_DUE, WO.PAST_DUE, PO.PAST_DUE); test katalogu bu tablonun TAKİP kolonuyla karşılaştırır (Uyarı 86, Evet 53, Hayır 33).
 - **DÜZENLENİR (K-139):** "Evet": koşul editörle ifade edilir; ad, mesaj, koşul, sınıf ve aktiflik pencerede değişir, "İlk hâline döndür" bu tablodaki hâline getirir. "Sınıf, aktiflik": döngü, toplam, çakışma, bayrak sayımı, bugünle karşılaştırma, hesaplı fark ya da tablolar arası; yalnız sınıf ve aktiflik tablodan değişir. "Kilitli": yapısal kontrol.
 - **Negatif değer alanları (ALL.NEGATIVE):** Material: GoodsReceiptDays, SafetyStock, StockCoverageDays, MaxStock, MinLot, MaxLot, LotMultiple, QtyPerBox, QtyPerPallet, ScrapRatio, ShelfLifeDays · UomConversion: Factor · ProductionVersion: BaseQuantity · BOM: Quantity, ScrapRatio · Routing: Consumption, ResourceNumber, TransferQuantity, WaitingTimeHours, TransferTimeHours · MaterialReference: TimeFactor · EmployeeAbsence: HoursPerDay · MaterialSupplier: QuotaRatio, FixedLeadTimeDays, VariableLeadTimeDays, MinimumOrderQuantity, OrderLotSize, MaximumOrderQuantity · SalesOrderLine: OpenQuantity, OrderedQuantity, DeliveredQuantity · Forecast: Quantity · BorrowPayback: BorrowedQuantity, PaidBackQuantity · Stock: Quantity · WorkOrder: OrderedQuantity, OpenQuantity, CompletedQuantity, ScrapQuantity · WorkOrderComponent: RequiredQuantity, IssuedQuantity, UnitUsage, ScrapRatio · WorkOrderOperation: ResourceNumber, PlannedConsumption, ConfirmedConsumption, TransferQuantity, WaitingTimeHours, TransferTimeHours · PurchaseOrderLine: OpenQuantity, OrderedQuantity, ReceivedQuantity · ProductionConfirmation: ConfirmedQuantity. Dışarıda: RemainingOverTimeYear, RemainingOverTimeMonth, öncelik alanları, satır ve sıra numaraları, ek alanlar.
 
-| KOD | TABLO | AD | KOŞUL | SINIF | TÜR | DÜZENLENİR | OKUNAN |
-|---|---|---|---|---|---|---|---|
-| STR.TYPE | Hepsi | Tip uymuyor | Tip ya da sayı aralığı uymuyor | Hata | Yapısal | Kilitli |  |
-| STR.LENGTH | Hepsi | Metin alana sığmıyor | Metin alana sığmıyor | Hata | Yapısal | Kilitli |  |
-| STR.REQUIRED | Hepsi | Zorunlu alan boş | Zorunlu alan boş: "hata (satır atlanır)" ön kontrolde, "hata (kurallardan sonra)" validasyonda | Hata | Yapısal | Kilitli |  |
-| STR.DUPLICATE | Hepsi | Aynı kayıt birden fazla satırda | Aynı anahtar birden fazla satırda | Hata | Yapısal | Kilitli |  |
-| ALL.OUT_OF_LIST | Hepsi | Liste dışı değer | Değer listeli alanda liste dışı değer (K-110) | Bilgi | Mantıksal | Sınıf, aktiflik |  |
-| LOC.NO_FLAG | Location | Lokasyon tipi yok | Tesis ≠ Evet ve Depo ≠ Evet ve Fason deposu ≠ Evet | Uyarı | Mantıksal | Evet |  |
-| ALL.NEGATIVE | Hepsi | Negatif değer | Miktar, süre, gün, oran, saat ya da kat alanlarından biri < 0 | Hata | Mantıksal | Evet |  |
-| UOM.FACTOR | UomConversion | Çarpan sıfır ya da negatif | Çarpan ≤ 0 | Hata | Mantıksal | Evet |  |
-| UOM.SAME_UOM | UomConversion | Kaynak ve hedef birim aynı | Hedef birim = Kaynak birim | Hata | Mantıksal | Evet |  |
-| UOM.INVERSE | UomConversion | Ters dönüşümle tutarsız | A→B ve B→A tanımlı, çarpımları 1 değil | Uyarı | Küme | Sınıf, aktiflik |  |
-| UOM.NEW_UOM | UomConversion | Yeni birim | Birim kodu malzemelerin temel birimlerinde geçmiyor (K-112) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
-| ALL.RATIO_RANGE | Hepsi | Oran 0–1 dışında | Fire oranı ya da kota oranı < 0 veya > 1 | Hata | Mantıksal | Evet |  |
-| MAT.MINLOT_MAXLOT | Material | Minimum lot maksimum lottan büyük | Minimum lot > Maksimum lot | Hata | Mantıksal | Evet |  |
-| MAT.SAFETY_MAX | Material | Güvenlik stoğu maksimum stoktan büyük | Güvenlik stoğu > Maksimum stok | Uyarı | Mantıksal | Evet |  |
-| MAT.ZERO_PACK | Material | Lot katı, kutu ya da palet miktarı sıfır | Lot katı = 0 veya Kutu içi miktar = 0 veya Palet içi miktar = 0 | Uyarı | Mantıksal | Evet |  |
-| MAT.SUPPLY_CONFLICT | Material | Tedarik türü bayraklarla çelişiyor | Tedarik türü = Üretim ve Üretilebilir ≠ Evet veya Tedarik türü = Satın alma ve Satın alınabilir ≠ Evet veya Tedarik türü = Fason ve Fasona verilebilir ≠ Evet | Uyarı | Mantıksal | Evet |  |
-| MAT.NO_SUPPLY | Material | Aktif malzemenin tedarik yolu yok | Üretilebilir ≠ Evet ve Satın alınabilir ≠ Evet ve Fasona verilebilir ≠ Evet ve Aktif = Evet | Uyarı | Mantıksal | Evet |  |
-| MAT.SAFETY_COVERAGE | Material | Güvenlik stoğu hem miktar hem gün | Stok gün kapsamı boş değil ve Güvenlik stoğu boş değil | Bilgi | Mantıksal | Evet |  |
-| ALL.DATE_ORDER | Hepsi | Başlangıç bitişten sonra | Başlangıç tarihi > bitiş tarihi (geçerlilik ya da plan tarihleri) | Hata | Mantıksal | Evet |  |
-| PV.BASEQTY | ProductionVersion | Baz miktar sıfır ya da negatif | Baz miktar ≤ 0 | Hata | Mantıksal | Evet |  |
-| PV.BASEQTY_DIFFERS | ProductionVersion | Aynı ağaçta baz miktar farklı | Aynı ürün ağacını kullanan versiyonlarda baz miktar farklı (K-115) | Uyarı | Küme | Sınıf, aktiflik |  |
-| PV.EXPIRED | ProductionVersion | Aktif versiyonun geçerliliği bitmiş | Aktif versiyonun geçerlilik bitişi geçmişte | Uyarı | Mantıksal | Sınıf, aktiflik |  |
-| BOM.SELF | BOM | Bileşen üretilen malzemenin kendisi | Bileşen kodu = Üretilen malzeme kodu | Hata | Mantıksal | Evet |  |
-| BOM.CYCLE | BOM | Ürün ağacında döngü | Malzeme dolaylı olarak kendi bileşeni | Hata | Küme | Sınıf, aktiflik |  |
-| BOM.ZERO_QTY | BOM | Bileşen miktarı sıfır | Bileşen miktarı = 0 | Uyarı | Mantıksal | Evet |  |
-| BOM.PRIORITY_NO_GROUP | BOM | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Mantıksal | Evet |  |
-| BOM.SINGLE_ALTERNATIVE | BOM | Alternatif grupta tek satır | Alternatif grupta tek satır | Uyarı | Küme | Sınıf, aktiflik |  |
-| RTG.NO_RESOURCE | Routing | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata | Mantıksal | Evet |  |
-| RTG.RESOURCE_NUMBER | Routing | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata | Mantıksal | Evet |  |
-| RTG.ZERO_CONSUMPTION | Routing | Tüketim sıfır | Kaynak tüketimi = 0 | Uyarı | Mantıksal | Evet |  |
-| RTG.PRIORITY_NO_GROUP | Routing | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Mantıksal | Evet |  |
-| RTG.NOT_MEMBER | Routing | Kaynak, kaynak grubunun üyesi değil | Kaynak, yazılan kaynak grubunun üyesi değil (K-116) | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
-| RTG.GROUP_UNIT | Routing | Kaynak grubunda kapasite birimleri farklı | Yazılan kaynak grubundaki kaynakların kapasite birimi farklı (K-116) | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment, Resource |
-| RTG.SUBCON_RESOURCE | Routing | Fason operasyonun kaynağı fason değil | Fason operasyon = Evet ama kaynak fason değil | Uyarı | Tablolar arası | Sınıf, aktiflik | Resource |
-| REF.SELF | MaterialReference | Malzeme kendisine benzetilmiş | Referans ürün = Benzetilen ürün | Hata | Mantıksal | Evet |  |
-| REF.CYCLE | MaterialReference | Referans zincirinde döngü | Referans zincirinde döngü | Hata | Küme | Sınıf, aktiflik |  |
-| REF.TIMEFACTOR | MaterialReference | Süre çarpanı sıfır ya da negatif | Süre çarpanı ≤ 0 | Hata | Mantıksal | Evet |  |
-| RG.NO_TYPE | ResourceGroup | Grup tipi yok | Kaynak grubu ≠ Evet ve Yetkinlik grubu ≠ Evet | Uyarı | Mantıksal | Evet |  |
-| RES.TYPE_FLAGS | Resource | Kaynak tipi tek değil | İşçi, Makine, Fırın, Kalıp, Diğer, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
-| RES.SUBCON_CONFLICT | Resource | Fason bayrağı fasoncuyla çelişiyor | Fasoncu boş ve Fason = Evet veya Fasoncu boş değil ve Fason ≠ Evet | Uyarı | Mantıksal | Evet |  |
-| RES.MONTH_YEAR | Resource | Aylık kalan fazla mesai yıllıktan büyük | Aylık kalan fazla mesai (saat) > Yıllık kalan fazla mesai (saat) | Uyarı | Mantıksal | Evet |  |
-| RES.PHASE1_UNUSED | Resource | Fırın ya da kalıp Faz 1'de kullanılmaz | Fırın = Evet veya Kalıp = Evet | Bilgi | Mantıksal | Evet |  |
-| RGA.COMPETENCE_NOT_EMPLOYEE | ResourceGroupAssignment | Yetkinlik grubunda işçi olmayan kaynak | Yetkinlik grubuna işçi olmayan kaynak atanmış | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroup, Resource |
-| ABS.HOURS | EmployeeAbsence | Günlük izin saati 0–24 dışında | Günlük saat ≤ 0 veya Günlük saat > 24 | Hata | Mantıksal | Evet |  |
-| ABS.NOT_EMPLOYEE | EmployeeAbsence | İzin kaydının kaynağı işçi değil | Kaynak işçi değil | Uyarı | Tablolar arası | Sınıf, aktiflik | Resource |
-| ABS.OVERLAP | EmployeeAbsence | İzinler çakışıyor | Aynı kişinin izinleri çakışıyor | Uyarı | Küme | Sınıf, aktiflik |  |
-| MS.MIN_MAX | MaterialSupplier | Minimum sipariş maksimumdan büyük | Minimum sipariş miktarı > Maksimum sipariş miktarı | Hata | Mantıksal | Evet |  |
-| MS.LOT | MaterialSupplier | Sipariş katı sıfır ya da negatif | Sipariş katı ≤ 0 | Hata | Mantıksal | Evet |  |
-| MS.NO_BASIS | MaterialSupplier | Tedarik süresi var, süre esası yok | Tedarik süresi esası boş ve Sabit tedarik süresi (gün) boş değil veya Tedarik süresi esası boş ve Değişken tedarik süresi boş değil | Hata | Mantıksal | Evet |  |
-| MS.NO_LEADTIME | MaterialSupplier | Tedarik süresi yok | Sabit tedarik süresi (gün) boş ve Değişken tedarik süresi boş | Uyarı | Mantıksal | Evet |  |
-| MS.QUOTA_SUM | MaterialSupplier | Kota toplamı 1 değil | Aynı malzeme ve lokasyonda dolu kota oranlarının toplamı 1 değil | Uyarı | Küme | Sınıf, aktiflik |  |
-| SO.ZERO_OPEN | SalesOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Mantıksal | Evet |  |
-| SO.DELIVERED | SalesOrderLine | Teslim edilen sipariş miktarından büyük | Teslim edilen miktar > Sipariş miktarı | Uyarı | Mantıksal | Evet |  |
-| SO.OPEN_MISMATCH | SalesOrderLine | Açık miktar sipariş eksi teslime eşit değil | Açık miktar ≠ Sipariş miktarı − Teslim edilen miktar (üçü de doluysa) | Uyarı | Mantıksal | Sınıf, aktiflik |  |
-| STK.LINE_NO_ORDER | Stock | Sipariş satırı var, sipariş no yok | Sahip sipariş satırı boş değil ve Sahip sipariş no boş | Hata | Mantıksal | Evet |  |
-| STK.ACCEPT_DATE | Stock | Kabul tarihi kaliteye girişten önce | Beklenen kabul tarihi < Kaliteye giriş tarihi | Hata | Mantıksal | Evet |  |
-| STK.STATUS_FLAGS | Stock | Stok durumu tek değil | Kullanılabilir, Kalitede, Bloke bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
-| STK.QUALITY_NO_DATE | Stock | Kalitedeki stokun kabul tarihi yok | Beklenen kabul tarihi boş ve Kalitede = Evet | Uyarı | Mantıksal | Evet |  |
-| STK.EXPIRED | Stock | Son kullanma tarihi geçmiş | Kullanılabilir stokta son kullanma tarihi geçmiş | Uyarı | Mantıksal | Sınıf, aktiflik |  |
-| STK.NON_STOCKABLE | Stock | Stok tutulamaz malzemede stok | Stok tutulamaz malzemede stok kaydı (K-113) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| STK.CUSTOM_NO_OWNER | Stock | Özel takipli stokun sahibi yok | Özel takip = Evet ve Sahip proje boş ve Sahip müşteri boş ve Sahip sipariş no boş | Uyarı | Mantıksal | Evet |  |
-| STK.ZERO_QTY | Stock | Stok miktarı sıfır | Miktar = 0 | Bilgi | Mantıksal | Evet |  |
-| BP.SAME_PROJECT | BorrowPayback | Ödünç veren ve alan proje aynı | Ödünç alan proje = Ödünç veren proje | Hata | Mantıksal | Evet |  |
-| BP.QTY | BorrowPayback | Ödünç miktarı sıfır ya da negatif | Ödünç miktarı ≤ 0 | Hata | Mantıksal | Evet |  |
-| BP.DUE_DATE | BorrowPayback | Geri ödeme tarihi ödünçten önce | Geri ödeme tarihi < Ödünç tarihi | Hata | Mantıksal | Evet |  |
-| BP.PAID | BorrowPayback | Geri ödenen ödünçten fazla | Geri ödenen miktar > Ödünç miktarı | Uyarı | Mantıksal | Evet |  |
-| WO.QTY | WorkOrder | İş emri miktarı sıfır ya da negatif | İş emri miktarı ≤ 0 | Hata | Mantıksal | Evet |  |
-| WO.START_DUE | WorkOrder | Başlangıç bitişten sonra | Başlangıç > Bitiş | Hata | Mantıksal | Evet |  |
-| WO.SELF_PARENT | WorkOrder | İş emri kendisinin yeniden işlemesi | Yeniden işlemede orijinal iş emri = İş emri no | Hata | Mantıksal | Evet |  |
-| WO.LINE_NO_ORDER | WorkOrder | Sipariş satırı var, sipariş no yok | Bağlı sipariş satır no boş değil ve Bağlı sipariş no (ayraç) boş | Hata | Mantıksal | Evet |  |
-| WO.OPEN_ORDERED | WorkOrder | Açık miktar iş emri miktarından büyük | Açık miktar > İş emri miktarı | Uyarı | Mantıksal | Evet |  |
-| WO.ZERO_OPEN | WorkOrder | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Mantıksal | Evet |  |
-| WO.TYPE_FLAGS | WorkOrder | İş emri tipi tek değil | Üretim, Fason, Yeniden işleme bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
-| WO.REWORK_NO_PARENT | WorkOrder | Yeniden işlemenin orijinal iş emri yok | Yeniden işlemede orijinal iş emri boş ve Yeniden işleme = Evet | Uyarı | Mantıksal | Evet |  |
-| WO.CUSTOM_NO_OWNER | WorkOrder | Özel takipli iş emrinin sahibi yok | Özel takip = Evet ve Proje (ayraç) boş ve Müşteri boş ve Bağlı sipariş no (ayraç) boş | Uyarı | Mantıksal | Evet |  |
-| WOC.ISSUED | WorkOrderComponent | Çekilen gereken miktardan fazla | Çekilen miktar > Gereken miktar | Uyarı | Mantıksal | Evet |  |
-| WOO.NO_RESOURCE | WorkOrderOperation | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata | Mantıksal | Evet |  |
-| WOO.RESOURCE_NUMBER | WorkOrderOperation | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata | Mantıksal | Evet |  |
-| WOO.CONFIRMED | WorkOrderOperation | Teyit edilen tüketim planlanandan fazla | Teyit edilen tüketim > Planlanan tüketim | Uyarı | Mantıksal | Evet |  |
-| PO.ZERO_OPEN | PurchaseOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Mantıksal | Evet |  |
-| PO.RECEIVED | PurchaseOrderLine | Teslim alınan sipariş miktarından büyük | Teslim alınan miktar > Sipariş miktarı | Uyarı | Mantıksal | Evet |  |
-| PO.TYPE_FLAGS | PurchaseOrderLine | Sipariş tipi tek değil | Satın alma talebi, Satın alma, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Mantıksal | Sınıf, aktiflik |  |
-| PO.SUBCON_NO_WO | PurchaseOrderLine | Fason siparişin iş emri yok | Fasonda bağlı iş emri boş ve Fason = Evet | Uyarı | Mantıksal | Evet |  |
-| PO.NO_SUPPLIER | PurchaseOrderLine | Tedarikçi yok | Tedarikçi boş ve Satın alma talebi ≠ Evet | Uyarı | Mantıksal | Evet |  |
-| PO.NO_DATE | PurchaseOrderLine | İstenen ve teyit tarihi yok | İstenen tarih boş ve Tedarikçi teyit tarihi boş | Uyarı | Mantıksal | Evet |  |
-| PO.CUSTOM_NO_OWNER | PurchaseOrderLine | Özel takipli siparişin sahibi yok | Özel takip = Evet ve Proje boş ve Müşteri boş ve Bağlı sipariş no boş | Uyarı | Mantıksal | Evet |  |
-| PC.QTY | ProductionConfirmation | Teyit miktarı sıfır ya da negatif | Teyit miktarı ≤ 0 | Hata | Mantıksal | Evet |  |
-| PC.MATERIAL | ProductionConfirmation | Malzeme iş emrininkinden farklı | Malzeme, iş emrinin malzemesinden farklı | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| ALL.REF_LOCATION | Hepsi | Lokasyon bulunamadı | Lokasyon kodu Lokasyon tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Location |
-| ALL.UOM_CONVERSION | Hepsi | Birim dönüşümü yok | Birim dolu, malzemenin temel biriminden farklı ve dönüşüm yok (malzemeye özel ya da genel, iki yönden biri; K-112) | Hata | Tablolar arası | Sınıf, aktiflik | Material, UomConversion |
-| UOM.REF_MATERIAL | UomConversion | Malzeme bulunamadı | Malzeme kodu dolu ve Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| PV.REF_MATERIAL | ProductionVersion | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| PV.INACTIVE_MATERIAL | ProductionVersion | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
-| PV.REF_BOM | ProductionVersion | Ürün ağacı bulunamadı | Ürün ağacı kodu Ürün ağacı tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | BOM |
-| PV.REF_ROUTE | ProductionVersion | Rota bulunamadı | Rota kodu Rota tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Routing |
-| BOM.REF_MATERIAL | BOM | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| BOM.REF_COMPONENT | BOM | Bileşen bulunamadı | Bileşen kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| BOM.INACTIVE_COMPONENT | BOM | Bileşen pasif | Bileşen bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| RTG.REF_RESOURCE | Routing | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
-| RTG.INACTIVE_RESOURCE | Routing | Kaynak pasif | Kaynak bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Resource |
-| RTG.REF_RESOURCE_GROUP | Routing | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
-| REF.REF_MATERIAL | MaterialReference | Benzetilen ürün bulunamadı | Benzetilen ürün kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| REF.REF_REFERENCE_MATERIAL | MaterialReference | Referans ürün bulunamadı | Referans ürün kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| REF.REF_REFERENCE_VERSION | MaterialReference | Referans versiyon bulunamadı | Referans versiyon kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
-| RES.REF_SUBCONTRACTOR | Resource | Fasoncu bulunamadı | Fasoncu kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
-| RGA.REF_RESOURCE_GROUP | ResourceGroupAssignment | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
-| RGA.REF_RESOURCE | ResourceGroupAssignment | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
-| ABS.REF_RESOURCE | EmployeeAbsence | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
-| MS.REF_MATERIAL | MaterialSupplier | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| MS.REF_SUPPLIER | MaterialSupplier | Tedarikçi bulunamadı | Tedarikçi kodu Tedarikçi tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Supplier |
-| MS.INACTIVE_SUPPLIER | MaterialSupplier | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
-| PRJ.REF_PROJECT_GROUP | Project | Proje grubu bulunamadı | Proje grubu kodu dolu ve Proje grubu tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProjectGroup |
-| SO.REF_CUSTOMER | SalesOrderLine | Müşteri bulunamadı | Müşteri kodu Müşteri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Customer |
-| SO.INACTIVE_CUSTOMER | SalesOrderLine | Müşteri pasif | Müşteri bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
-| SO.REF_MATERIAL | SalesOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| SO.INACTIVE_MATERIAL | SalesOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| SO.REF_PROJECT | SalesOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
-| FC.REF_MATERIAL | Forecast | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| FC.INACTIVE_MATERIAL | Forecast | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| FC.REF_CUSTOMER | Forecast | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Customer |
-| FC.REF_PROJECT | Forecast | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
-| STK.REF_MATERIAL | Stock | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| STK.INACTIVE_MATERIAL | Stock | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi | Tablolar arası | Sınıf, aktiflik | Material |
-| STK.REF_PROJECT | Stock | Sahip proje bulunamadı | Sahip proje kodu dolu ve Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
-| STK.REF_CUSTOMER | Stock | Sahip müşteri bulunamadı | Sahip müşteri kodu dolu ve Müşteri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Customer |
-| STK.REF_SALES_ORDER | Stock | Sahip sipariş satırı bulunamadı | Sahip sipariş satırı dolu ve Satış siparişi tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
-| BP.REF_MATERIAL | BorrowPayback | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| BP.REF_LENDING_PROJECT | BorrowPayback | Ödünç veren proje bulunamadı | Ödünç veren proje kodu Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
-| BP.REF_BORROWING_PROJECT | BorrowPayback | Ödünç alan proje bulunamadı | Ödünç alan proje kodu Proje tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Project |
-| WO.REF_MATERIAL | WorkOrder | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| WO.INACTIVE_MATERIAL | WorkOrder | Üretilen malzeme pasif | Üretilen malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| WO.REF_VERSION | WorkOrder | Üretim versiyonu bulunamadı | Üretim versiyonu kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
-| WO.REF_PROJECT | WorkOrder | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
-| WO.REF_CUSTOMER | WorkOrder | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
-| WO.REF_SALES_ORDER | WorkOrder | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
-| WO.REF_PARENT_WORK_ORDER | WorkOrder | Orijinal iş emri bulunamadı | Orijinal iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| WOC.REF_WORK_ORDER | WorkOrderComponent | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| WOC.REF_MATERIAL | WorkOrderComponent | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| WOO.REF_WORK_ORDER | WorkOrderOperation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| WOO.REF_RESOURCE | WorkOrderOperation | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Resource |
-| WOO.REF_RESOURCE_GROUP | WorkOrderOperation | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
-| PO.REF_MATERIAL | PurchaseOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| PO.INACTIVE_MATERIAL | PurchaseOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| PO.REF_SUPPLIER | PurchaseOrderLine | Tedarikçi bulunamadı | Tedarikçi kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
-| PO.INACTIVE_SUPPLIER | PurchaseOrderLine | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Tablolar arası | Sınıf, aktiflik | Supplier |
-| PO.REF_PROJECT | PurchaseOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Project |
-| PO.REF_CUSTOMER | PurchaseOrderLine | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Customer |
-| PO.REF_SALES_ORDER | PurchaseOrderLine | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
-| PO.REF_WORK_ORDER | PurchaseOrderLine | Bağlı iş emri bulunamadı | Bağlı iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| PC.REF_WORK_ORDER | ProductionConfirmation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| PC.REF_MATERIAL | ProductionConfirmation | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata | Tablolar arası | Sınıf, aktiflik | Material |
-| MAT.NO_VERSION | Material | Üretilen malzemenin aktif versiyonu yok | Tedarik türü = Üretim; aktif (Aktif = Evet) üretim versiyonu ve benzetilen ürün kaydı yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion, MaterialReference (boş olabilir) |
-| MAT.NO_SUPPLIER | Material | Satın alınan malzemenin aktif tedarikçisi yok | Tedarik türü = Satın alma; kaydı ve tedarikçisi aktif malzeme tedarikçisi yok | Uyarı | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Supplier (boş olabilir) |
-| MAT.NO_SUBCONTRACTOR | Material | Fason malzemenin fason tedarikçisi yok | Tedarik türü = Fason; tedarikçisi fasoncu (Fasoncu mu = Evet) ve aktif olan aktif malzeme tedarikçisi yok | Uyarı | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Supplier |
-| BOM.NO_VERSION | BOM | Ağaç hiçbir versiyonda kullanılmıyor | Ürün ağacı kodu aynı malzemenin hiçbir üretim versiyonunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
-| BOM.OPERATION_NOT_IN_ROUTE | BOM | Bileşenin operasyonu rotada yok | Operasyon no dolu ve ağacı kullanan bir versiyonun rotasında bu operasyon yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion, Routing |
-| RTG.NO_VERSION | Routing | Rota hiçbir versiyonda kullanılmıyor | Rota kodu hiçbir üretim versiyonunda yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
-| REF.NO_VERSION | MaterialReference | Referans ürünün aktif versiyonu yok | Referans ürün bulunuyor ve aktif (Aktif = Evet) üretim versiyonu yok | Uyarı | Tablolar arası | Sınıf, aktiflik | Material, ProductionVersion |
-| RG.NO_RESOURCE | ResourceGroup | Kaynak grubunda kaynak yok | Gruba atanmış kaynak yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
-| RES.UNUSED | Resource | Kaynak hiçbir rotada ve grupta yok | Kaynak hiçbir rota satırında ve kaynak grubu atamasında geçmiyor | Bilgi | Tablolar arası | Sınıf, aktiflik | Routing, ResourceGroupAssignment (boş olabilir) |
-| SUP.NO_MATERIAL | Supplier | Tedarikçi hiçbir malzemeye bağlı değil | Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynağın fasoncusu değil | Bilgi | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Resource (boş olabilir) |
-| SO.NOT_SELLABLE | SalesOrderLine | Malzeme satılabilir değil | Malzemenin Satılabilir alanı Evet değil | Uyarı | Tablolar arası | Sınıf, aktiflik | Material |
-| WO.NO_STRUCTURE | WorkOrder | İş emrinin versiyonu ve kendi yapısı yok | Üretim versiyonu boş ya da bulunamadı; iş emrinin bileşeni ve operasyonu yok | Uyarı | Tablolar arası | Sınıf, aktiflik | ProductionVersion (boş olabilir), WorkOrderComponent (boş olabilir), WorkOrderOperation (boş olabilir) |
-| WOC.OPERATION_NOT_IN_WO | WorkOrderComponent | Bileşenin operasyonu iş emrinde yok | Operasyon no dolu, iş emrinin operasyonları var ve bu operasyon aralarında yok | Uyarı | Tablolar arası | Sınıf, aktiflik | WorkOrderOperation |
-| PO.SUPPLIER_NOT_LISTED | PurchaseOrderLine | Tedarikçi malzemenin tedarikçilerinde yok | Fason olmayan siparişte tedarikçi bulunuyor ve bu malzemenin malzeme tedarikçisi kayıtlarında yok | Bilgi | Tablolar arası | Sınıf, aktiflik | Supplier, MaterialSupplier |
+| KOD | TABLO | AD | KOŞUL | SINIF | TAKİP | TÜR | DÜZENLENİR | OKUNAN |
+|---|---|---|---|---|---|---|---|---|
+| STR.TYPE | Hepsi | Tip uymuyor | Tip ya da sayı aralığı uymuyor | Hata |  | Yapısal | Kilitli |  |
+| STR.LENGTH | Hepsi | Metin alana sığmıyor | Metin alana sığmıyor | Hata |  | Yapısal | Kilitli |  |
+| STR.REQUIRED | Hepsi | Zorunlu alan boş | Zorunlu alan boş: "hata (satır atlanır)" ön kontrolde, "hata (kurallardan sonra)" validasyonda | Hata |  | Yapısal | Kilitli |  |
+| STR.DUPLICATE | Hepsi | Aynı kayıt birden fazla satırda | Aynı anahtar birden fazla satırda | Hata |  | Yapısal | Kilitli |  |
+| ALL.OUT_OF_LIST | Hepsi | Liste dışı değer | Değer listeli alanda liste dışı değer (K-110) | Bilgi |  | Mantıksal | Sınıf, aktiflik |  |
+| LOC.NO_FLAG | Location | Lokasyon tipi yok | Tesis ≠ Evet ve Depo ≠ Evet ve Fason deposu ≠ Evet | Uyarı | Hayır | Mantıksal | Evet |  |
+| ALL.NEGATIVE | Hepsi | Negatif değer | Miktar, süre, gün, oran, saat ya da kat alanlarından biri < 0 | Hata |  | Mantıksal | Evet |  |
+| UOM.FACTOR | UomConversion | Çarpan sıfır ya da negatif | Çarpan ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| UOM.SAME_UOM | UomConversion | Kaynak ve hedef birim aynı | Hedef birim = Kaynak birim | Hata |  | Mantıksal | Evet |  |
+| UOM.INVERSE | UomConversion | Ters dönüşümle tutarsız | A→B ve B→A tanımlı, çarpımları 1 değil | Uyarı | Evet | Küme | Sınıf, aktiflik |  |
+| UOM.NEW_UOM | UomConversion | Yeni birim | Birim kodu malzemelerin temel birimlerinde geçmiyor (K-112) | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Material |
+| ALL.RATIO_RANGE | Hepsi | Oran 0–1 dışında | Fire oranı ya da kota oranı < 0 veya > 1 | Hata |  | Mantıksal | Evet |  |
+| MAT.MINLOT_MAXLOT | Material | Minimum lot maksimum lottan büyük | Minimum lot > Maksimum lot | Hata |  | Mantıksal | Evet |  |
+| MAT.SAFETY_MAX | Material | Güvenlik stoğu maksimum stoktan büyük | Güvenlik stoğu > Maksimum stok | Uyarı | Evet | Mantıksal | Evet |  |
+| MAT.ZERO_PACK | Material | Lot katı, kutu ya da palet miktarı sıfır | Lot katı = 0 veya Kutu içi miktar = 0 veya Palet içi miktar = 0 | Uyarı | Evet | Mantıksal | Evet |  |
+| MAT.SUPPLY_CONFLICT | Material | Tedarik türü bayraklarla çelişiyor | Tedarik türü = Üretim ve Üretilebilir ≠ Evet veya Tedarik türü = Satın alma ve Satın alınabilir ≠ Evet veya Tedarik türü = Fason ve Fasona verilebilir ≠ Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| MAT.NO_SUPPLY | Material | Aktif malzemenin tedarik yolu yok | Üretilebilir ≠ Evet ve Satın alınabilir ≠ Evet ve Fasona verilebilir ≠ Evet ve Aktif = Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| MAT.SAFETY_COVERAGE | Material | Güvenlik stoğu hem miktar hem gün | Stok gün kapsamı boş değil ve Güvenlik stoğu boş değil | Bilgi |  | Mantıksal | Evet |  |
+| ALL.DATE_ORDER | Hepsi | Başlangıç bitişten sonra | Başlangıç tarihi > bitiş tarihi (geçerlilik ya da plan tarihleri) | Hata |  | Mantıksal | Evet |  |
+| PV.BASEQTY | ProductionVersion | Baz miktar sıfır ya da negatif | Baz miktar ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| PV.BASEQTY_DIFFERS | ProductionVersion | Aynı ağaçta baz miktar farklı | Aynı ürün ağacını kullanan versiyonlarda baz miktar farklı (K-115) | Uyarı | Evet | Küme | Sınıf, aktiflik |  |
+| PV.EXPIRED | ProductionVersion | Aktif versiyonun geçerliliği bitmiş | Aktif versiyonun geçerlilik bitişi geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| BOM.SELF | BOM | Bileşen üretilen malzemenin kendisi | Bileşen kodu = Üretilen malzeme kodu | Hata |  | Mantıksal | Evet |  |
+| BOM.CYCLE | BOM | Ürün ağacında döngü | Malzeme dolaylı olarak kendi bileşeni | Hata |  | Küme | Sınıf, aktiflik |  |
+| BOM.ZERO_QTY | BOM | Bileşen miktarı sıfır | Bileşen miktarı = 0 | Uyarı | Evet | Mantıksal | Evet |  |
+| BOM.PRIORITY_NO_GROUP | BOM | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Evet | Mantıksal | Evet |  |
+| BOM.SINGLE_ALTERNATIVE | BOM | Alternatif grupta tek satır | Alternatif grupta tek satır | Uyarı | Hayır | Küme | Sınıf, aktiflik |  |
+| RTG.NO_RESOURCE | Routing | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata |  | Mantıksal | Evet |  |
+| RTG.RESOURCE_NUMBER | Routing | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata |  | Mantıksal | Evet |  |
+| RTG.ZERO_CONSUMPTION | Routing | Tüketim sıfır | Kaynak tüketimi = 0 | Uyarı | Evet | Mantıksal | Evet |  |
+| RTG.PRIORITY_NO_GROUP | Routing | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Evet | Mantıksal | Evet |  |
+| RTG.NOT_MEMBER | Routing | Kaynak, kaynak grubunun üyesi değil | Kaynak, yazılan kaynak grubunun üyesi değil (K-116) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
+| RTG.GROUP_UNIT | Routing | Kaynak grubunda kapasite birimleri farklı | Yazılan kaynak grubundaki kaynakların kapasite birimi farklı (K-116) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment, Resource |
+| RTG.SUBCON_RESOURCE | Routing | Fason operasyonun kaynağı fason değil | Fason operasyon = Evet ama kaynak fason değil | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Resource |
+| REF.SELF | MaterialReference | Malzeme kendisine benzetilmiş | Referans ürün = Benzetilen ürün | Hata |  | Mantıksal | Evet |  |
+| REF.CYCLE | MaterialReference | Referans zincirinde döngü | Referans zincirinde döngü | Hata |  | Küme | Sınıf, aktiflik |  |
+| REF.TIMEFACTOR | MaterialReference | Süre çarpanı sıfır ya da negatif | Süre çarpanı ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| RG.NO_TYPE | ResourceGroup | Grup tipi yok | Kaynak grubu ≠ Evet ve Yetkinlik grubu ≠ Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| RES.TYPE_FLAGS | Resource | Kaynak tipi tek değil | İşçi, Makine, Fırın, Kalıp, Diğer, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| RES.SUBCON_CONFLICT | Resource | Fason bayrağı fasoncuyla çelişiyor | Fasoncu boş ve Fason = Evet veya Fasoncu boş değil ve Fason ≠ Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| RES.MONTH_YEAR | Resource | Aylık kalan fazla mesai yıllıktan büyük | Aylık kalan fazla mesai (saat) > Yıllık kalan fazla mesai (saat) | Uyarı | Evet | Mantıksal | Evet |  |
+| RES.PHASE1_UNUSED | Resource | Fırın ya da kalıp Faz 1'de kullanılmaz | Fırın = Evet veya Kalıp = Evet | Bilgi |  | Mantıksal | Evet |  |
+| RGA.COMPETENCE_NOT_EMPLOYEE | ResourceGroupAssignment | Yetkinlik grubunda işçi olmayan kaynak | Yetkinlik grubuna işçi olmayan kaynak atanmış | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroup, Resource |
+| ABS.HOURS | EmployeeAbsence | Günlük izin saati 0–24 dışında | Günlük saat ≤ 0 veya Günlük saat > 24 | Hata |  | Mantıksal | Evet |  |
+| ABS.NOT_EMPLOYEE | EmployeeAbsence | İzin kaydının kaynağı işçi değil | Kaynak işçi değil | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Resource |
+| ABS.OVERLAP | EmployeeAbsence | İzinler çakışıyor | Aynı kişinin izinleri çakışıyor | Uyarı | Evet | Küme | Sınıf, aktiflik |  |
+| MS.MIN_MAX | MaterialSupplier | Minimum sipariş maksimumdan büyük | Minimum sipariş miktarı > Maksimum sipariş miktarı | Hata |  | Mantıksal | Evet |  |
+| MS.LOT | MaterialSupplier | Sipariş katı sıfır ya da negatif | Sipariş katı ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| MS.NO_BASIS | MaterialSupplier | Tedarik süresi var, süre esası yok | Tedarik süresi esası boş ve Sabit tedarik süresi (gün) boş değil veya Tedarik süresi esası boş ve Değişken tedarik süresi boş değil | Hata |  | Mantıksal | Evet |  |
+| MS.NO_LEADTIME | MaterialSupplier | Tedarik süresi yok | Sabit tedarik süresi (gün) boş ve Değişken tedarik süresi boş | Uyarı | Evet | Mantıksal | Evet |  |
+| MS.QUOTA_SUM | MaterialSupplier | Kota toplamı 1 değil | Aynı malzeme ve lokasyonda dolu kota oranlarının toplamı 1 değil | Uyarı | Evet | Küme | Sınıf, aktiflik |  |
+| SO.ZERO_OPEN | SalesOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Hayır | Mantıksal | Evet |  |
+| SO.DELIVERED | SalesOrderLine | Teslim edilen sipariş miktarından büyük | Teslim edilen miktar > Sipariş miktarı | Uyarı | Hayır | Mantıksal | Evet |  |
+| SO.OPEN_MISMATCH | SalesOrderLine | Açık miktar sipariş eksi teslime eşit değil | Açık miktar ≠ Sipariş miktarı − Teslim edilen miktar (üçü de doluysa) | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| SO.PAST_DUE | SalesOrderLine | Teslim tarihi geçmiş açık satış siparişi | Açık miktar > 0 ve İstek tarihi geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| STK.LINE_NO_ORDER | Stock | Sipariş satırı var, sipariş no yok | Sahip sipariş satırı boş değil ve Sahip sipariş no boş | Hata |  | Mantıksal | Evet |  |
+| STK.ACCEPT_DATE | Stock | Kabul tarihi kaliteye girişten önce | Beklenen kabul tarihi < Kaliteye giriş tarihi | Hata |  | Mantıksal | Evet |  |
+| STK.STATUS_FLAGS | Stock | Stok durumu tek değil | Kullanılabilir, Kalitede, Bloke bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| STK.QUALITY_NO_DATE | Stock | Kalitedeki stokun kabul tarihi yok | Beklenen kabul tarihi boş ve Kalitede = Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| STK.EXPIRED | Stock | Son kullanma tarihi geçmiş | Kullanılabilir stokta son kullanma tarihi geçmiş | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| STK.NON_STOCKABLE | Stock | Stok tutulamaz malzemede stok | Stok tutulamaz malzemede stok kaydı (K-113) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material |
+| STK.CUSTOM_NO_OWNER | Stock | Özel takipli stokun sahibi yok | Özel takip = Evet ve Sahip proje boş ve Sahip müşteri boş ve Sahip sipariş no boş | Uyarı | Evet | Mantıksal | Evet |  |
+| STK.ZERO_QTY | Stock | Stok miktarı sıfır | Miktar = 0 | Bilgi |  | Mantıksal | Evet |  |
+| BP.SAME_PROJECT | BorrowPayback | Ödünç veren ve alan proje aynı | Ödünç alan proje = Ödünç veren proje | Hata |  | Mantıksal | Evet |  |
+| BP.QTY | BorrowPayback | Ödünç miktarı sıfır ya da negatif | Ödünç miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| BP.DUE_DATE | BorrowPayback | Geri ödeme tarihi ödünçten önce | Geri ödeme tarihi < Ödünç tarihi | Hata |  | Mantıksal | Evet |  |
+| BP.PAID | BorrowPayback | Geri ödenen ödünçten fazla | Geri ödenen miktar > Ödünç miktarı | Uyarı | Hayır | Mantıksal | Evet |  |
+| WO.QTY | WorkOrder | İş emri miktarı sıfır ya da negatif | İş emri miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| WO.START_DUE | WorkOrder | Başlangıç bitişten sonra | Başlangıç > Bitiş | Hata |  | Mantıksal | Evet |  |
+| WO.SELF_PARENT | WorkOrder | İş emri kendisinin yeniden işlemesi | Yeniden işlemede orijinal iş emri = İş emri no | Hata |  | Mantıksal | Evet |  |
+| WO.LINE_NO_ORDER | WorkOrder | Sipariş satırı var, sipariş no yok | Bağlı sipariş satır no boş değil ve Bağlı sipariş no (ayraç) boş | Hata |  | Mantıksal | Evet |  |
+| WO.OPEN_ORDERED | WorkOrder | Açık miktar iş emri miktarından büyük | Açık miktar > İş emri miktarı | Uyarı | Evet | Mantıksal | Evet |  |
+| WO.ZERO_OPEN | WorkOrder | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Hayır | Mantıksal | Evet |  |
+| WO.TYPE_FLAGS | WorkOrder | İş emri tipi tek değil | Üretim, Fason, Yeniden işleme bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| WO.PAST_DUE | WorkOrder | Bitiş tarihi geçmiş açık iş emri | Açık miktar > 0 ve Bitiş geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| WO.REWORK_NO_PARENT | WorkOrder | Yeniden işlemenin orijinal iş emri yok | Yeniden işlemede orijinal iş emri boş ve Yeniden işleme = Evet | Uyarı | Hayır | Mantıksal | Evet |  |
+| WO.CUSTOM_NO_OWNER | WorkOrder | Özel takipli iş emrinin sahibi yok | Özel takip = Evet ve Proje (ayraç) boş ve Müşteri boş ve Bağlı sipariş no (ayraç) boş | Uyarı | Evet | Mantıksal | Evet |  |
+| WOC.ISSUED | WorkOrderComponent | Çekilen gereken miktardan fazla | Çekilen miktar > Gereken miktar | Uyarı | Hayır | Mantıksal | Evet |  |
+| WOO.NO_RESOURCE | WorkOrderOperation | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata |  | Mantıksal | Evet |  |
+| WOO.RESOURCE_NUMBER | WorkOrderOperation | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata |  | Mantıksal | Evet |  |
+| WOO.CONFIRMED | WorkOrderOperation | Teyit edilen tüketim planlanandan fazla | Teyit edilen tüketim > Planlanan tüketim | Uyarı | Hayır | Mantıksal | Evet |  |
+| PO.ZERO_OPEN | PurchaseOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Hayır | Mantıksal | Evet |  |
+| PO.RECEIVED | PurchaseOrderLine | Teslim alınan sipariş miktarından büyük | Teslim alınan miktar > Sipariş miktarı | Uyarı | Hayır | Mantıksal | Evet |  |
+| PO.TYPE_FLAGS | PurchaseOrderLine | Sipariş tipi tek değil | Satın alma talebi, Satın alma, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| PO.SUBCON_NO_WO | PurchaseOrderLine | Fason siparişin iş emri yok | Fasonda bağlı iş emri boş ve Fason = Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| PO.NO_SUPPLIER | PurchaseOrderLine | Tedarikçi yok | Tedarikçi boş ve Satın alma talebi ≠ Evet | Uyarı | Hayır | Mantıksal | Evet |  |
+| PO.NO_DATE | PurchaseOrderLine | İstenen ve teyit tarihi yok | İstenen tarih boş ve Tedarikçi teyit tarihi boş | Uyarı | Evet | Mantıksal | Evet |  |
+| PO.PAST_DUE | PurchaseOrderLine | Tarihi geçmiş açık satın alma siparişi | Açık miktar > 0 ve Tedarikçi teyit tarihi (boşsa İstenen tarih) geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| PO.CUSTOM_NO_OWNER | PurchaseOrderLine | Özel takipli siparişin sahibi yok | Özel takip = Evet ve Proje boş ve Müşteri boş ve Bağlı sipariş no boş | Uyarı | Evet | Mantıksal | Evet |  |
+| PC.QTY | ProductionConfirmation | Teyit miktarı sıfır ya da negatif | Teyit miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| PC.MATERIAL | ProductionConfirmation | Malzeme iş emrininkinden farklı | Malzeme, iş emrinin malzemesinden farklı | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| ALL.REF_LOCATION | Hepsi | Lokasyon bulunamadı | Lokasyon kodu Lokasyon tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Location |
+| ALL.UOM_CONVERSION | Hepsi | Birim dönüşümü yok | Birim dolu, malzemenin temel biriminden farklı ve dönüşüm yok (malzemeye özel ya da genel, iki yönden biri; K-112) | Hata |  | Tablolar arası | Sınıf, aktiflik | Material, UomConversion |
+| UOM.REF_MATERIAL | UomConversion | Malzeme bulunamadı | Malzeme kodu dolu ve Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| PV.REF_MATERIAL | ProductionVersion | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| PV.INACTIVE_MATERIAL | ProductionVersion | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Material |
+| PV.REF_BOM | ProductionVersion | Ürün ağacı bulunamadı | Ürün ağacı kodu Ürün ağacı tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | BOM |
+| PV.REF_ROUTE | ProductionVersion | Rota bulunamadı | Rota kodu Rota tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Routing |
+| BOM.REF_MATERIAL | BOM | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| BOM.REF_COMPONENT | BOM | Bileşen bulunamadı | Bileşen kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| BOM.INACTIVE_COMPONENT | BOM | Bileşen pasif | Bileşen bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material |
+| RTG.REF_RESOURCE | Routing | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
+| RTG.INACTIVE_RESOURCE | Routing | Kaynak pasif | Kaynak bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Resource |
+| RTG.REF_RESOURCE_GROUP | Routing | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| REF.REF_MATERIAL | MaterialReference | Benzetilen ürün bulunamadı | Benzetilen ürün kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| REF.REF_REFERENCE_MATERIAL | MaterialReference | Referans ürün bulunamadı | Referans ürün kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| REF.REF_REFERENCE_VERSION | MaterialReference | Referans versiyon bulunamadı | Referans versiyon kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| RES.REF_SUBCONTRACTOR | Resource | Fasoncu bulunamadı | Fasoncu kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Supplier |
+| RGA.REF_RESOURCE_GROUP | ResourceGroupAssignment | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| RGA.REF_RESOURCE | ResourceGroupAssignment | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
+| ABS.REF_RESOURCE | EmployeeAbsence | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
+| MS.REF_MATERIAL | MaterialSupplier | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| MS.REF_SUPPLIER | MaterialSupplier | Tedarikçi bulunamadı | Tedarikçi kodu Tedarikçi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Supplier |
+| MS.INACTIVE_SUPPLIER | MaterialSupplier | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Supplier |
+| PRJ.REF_PROJECT_GROUP | Project | Proje grubu bulunamadı | Proje grubu kodu dolu ve Proje grubu tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProjectGroup |
+| SO.REF_CUSTOMER | SalesOrderLine | Müşteri bulunamadı | Müşteri kodu Müşteri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Customer |
+| SO.INACTIVE_CUSTOMER | SalesOrderLine | Müşteri pasif | Müşteri bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
+| SO.REF_MATERIAL | SalesOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| SO.INACTIVE_MATERIAL | SalesOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material |
+| SO.REF_PROJECT | SalesOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
+| FC.REF_MATERIAL | Forecast | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| FC.INACTIVE_MATERIAL | Forecast | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material |
+| FC.REF_CUSTOMER | Forecast | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Customer |
+| FC.REF_PROJECT | Forecast | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
+| STK.REF_MATERIAL | Stock | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| STK.INACTIVE_MATERIAL | Stock | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Material |
+| STK.REF_PROJECT | Stock | Sahip proje bulunamadı | Sahip proje kodu dolu ve Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
+| STK.REF_CUSTOMER | Stock | Sahip müşteri bulunamadı | Sahip müşteri kodu dolu ve Müşteri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Customer |
+| STK.REF_SALES_ORDER | Stock | Sahip sipariş satırı bulunamadı | Sahip sipariş satırı dolu ve Satış siparişi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| BP.REF_MATERIAL | BorrowPayback | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| BP.REF_LENDING_PROJECT | BorrowPayback | Ödünç veren proje bulunamadı | Ödünç veren proje kodu Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
+| BP.REF_BORROWING_PROJECT | BorrowPayback | Ödünç alan proje bulunamadı | Ödünç alan proje kodu Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
+| WO.REF_MATERIAL | WorkOrder | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| WO.INACTIVE_MATERIAL | WorkOrder | Üretilen malzeme pasif | Üretilen malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
+| WO.REF_VERSION | WorkOrder | Üretim versiyonu bulunamadı | Üretim versiyonu kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| WO.REF_PROJECT | WorkOrder | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
+| WO.REF_CUSTOMER | WorkOrder | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
+| WO.REF_SALES_ORDER | WorkOrder | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| WO.REF_PARENT_WORK_ORDER | WorkOrder | Orijinal iş emri bulunamadı | Orijinal iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOC.REF_WORK_ORDER | WorkOrderComponent | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOC.REF_MATERIAL | WorkOrderComponent | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| WOO.REF_WORK_ORDER | WorkOrderOperation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOO.REF_RESOURCE | WorkOrderOperation | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
+| WOO.REF_RESOURCE_GROUP | WorkOrderOperation | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| PO.REF_MATERIAL | PurchaseOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| PO.INACTIVE_MATERIAL | PurchaseOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
+| PO.REF_SUPPLIER | PurchaseOrderLine | Tedarikçi bulunamadı | Tedarikçi kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Supplier |
+| PO.INACTIVE_SUPPLIER | PurchaseOrderLine | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Supplier |
+| PO.REF_PROJECT | PurchaseOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
+| PO.REF_CUSTOMER | PurchaseOrderLine | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
+| PO.REF_SALES_ORDER | PurchaseOrderLine | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| PO.REF_WORK_ORDER | PurchaseOrderLine | Bağlı iş emri bulunamadı | Bağlı iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| PC.REF_WORK_ORDER | ProductionConfirmation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| PC.REF_MATERIAL | ProductionConfirmation | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
+| MAT.NO_VERSION | Material | Üretilen malzemenin aktif versiyonu yok | Tedarik türü = Üretim; aktif (Aktif = Evet) üretim versiyonu ve benzetilen ürün kaydı yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion, MaterialReference (boş olabilir) |
+| MAT.NO_SUPPLIER | Material | Satın alınan malzemenin aktif tedarikçisi yok | Tedarik türü = Satın alma; kaydı ve tedarikçisi aktif malzeme tedarikçisi yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Supplier (boş olabilir) |
+| MAT.NO_SUBCONTRACTOR | Material | Fason malzemenin fason tedarikçisi yok | Tedarik türü = Fason; tedarikçisi fasoncu (Fasoncu mu = Evet) ve aktif olan aktif malzeme tedarikçisi yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Supplier |
+| BOM.NO_VERSION | BOM | Ağaç hiçbir versiyonda kullanılmıyor | Ürün ağacı kodu aynı malzemenin hiçbir üretim versiyonunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| BOM.OPERATION_NOT_IN_ROUTE | BOM | Bileşenin operasyonu rotada yok | Operasyon no dolu ve ağacı kullanan bir versiyonun rotasında bu operasyon yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion, Routing |
+| RTG.NO_VERSION | Routing | Rota hiçbir versiyonda kullanılmıyor | Rota kodu hiçbir üretim versiyonunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
+| REF.NO_VERSION | MaterialReference | Referans ürünün aktif versiyonu yok | Referans ürün bulunuyor ve aktif (Aktif = Evet) üretim versiyonu yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material, ProductionVersion |
+| RG.NO_RESOURCE | ResourceGroup | Kaynak grubunda kaynak yok | Gruba atanmış kaynak yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
+| RES.UNUSED | Resource | Kaynak hiçbir rotada ve grupta yok | Kaynak hiçbir rota satırında ve kaynak grubu atamasında geçmiyor | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Routing, ResourceGroupAssignment (boş olabilir) |
+| SUP.NO_MATERIAL | Supplier | Tedarikçi hiçbir malzemeye bağlı değil | Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynağın fasoncusu değil | Bilgi |  | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Resource (boş olabilir) |
+| SO.NOT_SELLABLE | SalesOrderLine | Malzeme satılabilir değil | Malzemenin Satılabilir alanı Evet değil | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
+| WO.NO_STRUCTURE | WorkOrder | İş emrinin versiyonu ve kendi yapısı yok | Üretim versiyonu boş ya da bulunamadı; iş emrinin bileşeni ve operasyonu yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion (boş olabilir), WorkOrderComponent (boş olabilir), WorkOrderOperation (boş olabilir) |
+| WOC.OPERATION_NOT_IN_WO | WorkOrderComponent | Bileşenin operasyonu iş emrinde yok | Operasyon no dolu, iş emrinin operasyonları var ve bu operasyon aralarında yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | WorkOrderOperation |
+| PO.SUPPLIER_NOT_LISTED | PurchaseOrderLine | Tedarikçi malzemenin tedarikçilerinde yok | Fason olmayan siparişte tedarikçi bulunuyor ve bu malzemenin malzeme tedarikçisi kayıtlarında yok | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Supplier, MaterialSupplier |
 
 - Müşteri ve Proje grubu: yalnız ortak kurallar (lokasyondan bağımsızdırlar; tablolar arası kural yoktur).
 - **Uygulama (4.4, K-146):** referans, pasif ebeveyn ve bütünlük kuralları Tablolar arası adımda çalışır; her biri tek `INSERT … SELECT … WHERE [NOT] EXISTS`.
@@ -520,7 +525,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yeni veri versiyonu (DataVersion + tüm varlıklar için DataVersionEntity)
   - Güncel ana veri ve işlem verisi; FieldValueSource (değer kaynağı)
   - Veri kalitesi uyarıları; veri aktarım geçmişi ve denetim izi kaydı
-- **06:** Veri kalitesi kontrolü (20) yeni versiyon üzerinde çalışır; uyarılar listeye düşer.
+- **06:** Veri kalitesi kontrolü (20) ayrı iş olarak yeni versiyon üzerinde çalışır; uyarılar listeye düşer (K-174).
 - **07:** Versiyon kapatılır (önceki versiyonun geçerliliği biter); gece akışında senaryolar bu versiyonla başlar. Elle yüklemede sonuç bildirimi ve geçmiş kaydı.
 
 ### 05 · Tam aktarım · kurallar ve etkiler
@@ -536,7 +541,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veritabanı hatası: işlem geri alınır, ana sayfa ve Sistem sağlığı kaydı; ham veri partisi yeniden kullanılabilir.
   - Kural hatası aktarımı etkilemez: kurallar staging'de çalışır, çalışamayan kural "Çalışmadı" olur (K-141).
   - Süre aşımı (parametre, öneri 30 dk): işlem geri alınır, destek paketi için log.
-  - Yükleme sonrası veri kalitesi kontrolü çökerse yükleme geçerli kalır, kontrol 'tamamlanmadı' işaretlenir.
+  - Yükleme sonrası veri kalitesi kontrolü çökerse yükleme geçerli kalır; "Veri kalitesi" işi Hatalı olur, Sistem sağlığına düşer (K-174).
 - **ETKISI VE TETIKLENENLER**
   - Gece akışında senaryolar (40) başlar.
   - Açık çalışmalarda 'yeni veri var' bildirimi.
@@ -554,7 +559,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kural sonuçları:** DataRuleEffect Kurallar staging'de çalışır (K-140); aktarım kural izini okur
 - **En alt seviye kodu (LLC):** Material Ürün ağacı değiştiyse yeniden hesaplanır
 - **Türetilmiş alanlar:** Birim dönüşümü Yeni ve değişen kayıtlar için
-- **Veri kalitesi uyarıları:** Veri kalitesi listesi Yeni versiyon üzerinde baştan üretilir; kapatılanlar kapalı kalır
+- **Veri kalitesi uyarıları:** Veri kalitesi listesi Yeni versiyon üzerinde yeniden değerlendirilir: var olan uyarı devam eder, sorunu kalkan uyarı (yok sayılmış olsa da) silinir, yok sayılan uyarının kaydı değiştiyse yeniden Açık olur (K-174)
 - **Dünden bugüne farkı:** Ana sayfa Önceki versiyonla karşılaştırma
 - **Plan:** Senaryolar · çalışmalar Otomatik değil: gece senaryoları yeni versiyonla çalışır, açık çalışma eski versiyonda kalır
 
@@ -606,7 +611,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hata eşiği, kural izi (05 ile aynı)
 - **03:** Yeni veri versiyonu 'kısmi' olarak açılır; DataVersionEntity'ye aktarılan varlıklar yazılır.
 - **04:** Seçilen grupların tabloları 05'teki adımlarla yazılır (yeni, değişen; güncel hâlde olmayan ve `IsActive` = Hayır kayıt kapatılır; değerin kaynağı).
-- **05:** Türetilmiş alanlar yalnız aktarılan tablolarda ve onlara bağlı alanlarda hesaplanır; veri kalitesi kontrolü aynı kapsamda. Veri kuralları staging'de uygulanmıştır (K-140).
+- **05:** Türetilmiş alanlar yalnız aktarılan tablolarda ve onlara bağlı alanlarda hesaplanır; veri kalitesi kontrolü aynı kapsamda (kapsamdaki tablolar ve onları okuyan kurallar; önem bütün uyarılarda yeniden hesaplanır, K-174). Veri kuralları staging'de uygulanmıştır (K-140).
 - **ÇIKTI**
   - Kısmi veri versiyonu (DataVersion.LoadType = kısmi, DataVersionEntity)
   - Seçilen gruplarda güncel veri ve değer kaynağı; ana verisi aktarılmadığı için bekleyen satır sayısı (K-151)
@@ -1024,7 +1029,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - ManualValue kaydı ve güncel FieldValueSource
   - Denetim izi (AuditLog) satırı; detay kartında geçmiş
   - Türetilmiş alanlar (kapasite) ve ilgili veri kalitesi uyarılarının durumu
-- **06:** Türetilmiş alanlar hemen hesaplanır; veri kalitesi kontrolü bu kayıt için yeniden çalışır; plan otomatik değişmez (çalışmada yeniden hesap).
+- **06:** Türetilmiş alanlar hemen hesaplanır; veri kalitesi kontrolü o tabloda yeniden çalışır (ayrı iş), kaydın yok sayılmış uyarıları hemen Açık olur (K-174); plan otomatik değişmez (çalışmada yeniden hesap).
 - **07:** Geçerlilik tarihi verildiyse süre dolunca değer kurala ya da ERP'ye döner, geçmişe 'süresi doldu' kaydı düşer.
 
 ### 12 · Manuel değer girme · kurallar ve etkiler
@@ -1107,7 +1112,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kayıt, alan ve mevcut ManualValue
   - Öncelik sırasındaki sonraki değer (FieldValueSource: kural sonucu, ERP değeri)
 - **03:** Onaylanınca ManualValue kapatılır (ValidUntil = şimdi), silinmez; FieldValueSource yeni kaynağa göre güncellenir.
-- **04:** Türetilmiş alanlar ve bu kayıt için veri kalitesi kontrolü yeniden çalışır; denetim izine 'manuel değer kaldırıldı' yazılır.
+- **04:** Türetilmiş alanlar yeniden hesaplanır, veri kalitesi kontrolü o tabloda yeniden çalışır (K-174); denetim izine 'manuel değer kaldırıldı' yazılır.
 - **05:** Bildirimde 'Geri al' bağlantısı: kaldırılan manuel değer tek tıkla yeniden açılır (geçerliliği devam eder).
 - **ÇIKTI**
   - Kapatılmış ManualValue kaydı ve güncel FieldValueSource
@@ -1532,150 +1537,127 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 20 · Veri kalitesi kontrolü
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
-- Ana veri ve işlem verisini plan için gerekli tutarlılık kontrollerinden geçirip önem sırasıyla uyarı listesi üretmek; önceki listeyle karşılaştırıp neyin yeni, neyin kapandığını göstermek.
+- Yüklenmiş veride (`core`) planı bozan sorunları bulup veri kalitesi uyarısı olarak tutmak: önem (Yüksek, Normal) talep zincirinden, durum (Yeni, Açık, Yok sayıldı) önceki kontrolle eşleştirmeden (K-174).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Sistem (yükleme ve kural uygulaması sonunda, gece) · elle 'Şimdi kontrol et': Key user ve üstü
-  - Nereden: Tam ve kısmi aktarım (05 / 06), kural uygulama (19), manuel değer (12, kayıt bazında) sonunda · Veri kalitesi ekranı
-- **01:** Tetik gelir; kapsam belirlenir: tam kontrol (yükleme, gece) ya da etkilenen kayıtlar (kural, manuel değer).
-- **02:** Ana veri kontrolleri çalışır: kaynak (takvimsiz, sıfır kapasite, birim uyumsuzluğu), malzeme (temin süresi, min parti, birim dönüşümü), ürün ağacı (döngü, pasif bileşen), rota (kaynak yok, süre 0, kapasite birimi ≠ tüketim birimi).
+  - Kim: Sistem; ayrı iş ("Veri kalitesi", Veri işleme kanalı)
+  - Nereden: tam ve kısmi aktarım (05 / 06) sonunda · manuel değer girme ve kaldırma (12, 13) sonunda, o tabloda · aktarım olmasa da günde bir kez gün dönümünde (tarihli kurallar veri gelmeden de bozulur)
+- **01:** Kapsam belirlenir: aktarımda aktarılan tablolar ve onları okuyan kurallar, manuel değerde o tablo, gün dönümünde hepsi.
+- **02:** Takipli kurallar çalışır: validasyon kataloğunda "Veri kalitesinde takip: Evet" olan aktif Uyarı kuralları (kullanıcı kuralları dahil) `core`'un güncel satırlarında; kural metni validasyondakiyle aynıdır. `core`'da kodu kaybolan "bağlı kayıt bulunamadı" kuralı (RES.REF_SUBCONTRACTOR) işlenmiş staging'de çalışır, bulgu kaydın `core` karşılığına bağlanır.
 - **GIRDI**
-  - Geçerli veri versiyonu (tüm varlıklar ya da etkilenen kayıtlar)
-  - Uyarı tanımları (WarningDefinition): kontrol, eşik, önem, aktif
-  - Önceki uyarı listesi ve durumları (açık, kapandı, bilerek böyle, atanmış)
-- **03:** İşlem verisi kontrolleri: sipariş (geçmiş tarih, müşteri yok), stok (negatif, lotsuz proje stoğu), iş emri (rotasız, bitiş geçmişte), proje (ayrılmış stok > ihtiyaç).
-- **04:** Her bulgu uyarı tanımından önem ve öneri alır; kayıt ve alanla birlikte yazılır.
-- **05:** Önceki listeyle eşleştirme: aynı kayıt + kontrol → 'açık' (ilk görülme tarihi korunur), yeni bulgu → 'yeni', artık bulunmayan → 'kapandı'; 'bilerek böyle' işaretliler süresi dolmadıkça yeniden açılmaz.
+  - Güncel veri versiyonu (`core`)
+  - Takipli Uyarı kuralları (ValidationRule.TrackQuality) ve Smartchain verisi kontrolleri
+  - Önceki uyarılar ve durumları; yok saymadan sonraki kayıt değişiklikleri (FieldChange, K-173)
+  - Açık talep: açık satış siparişi (aktif, açık miktarı > 0; teklif ve beklemede dahil), varsayılan parametre setinin ufkundaki tahmin
+- **03:** Smartchain verisi kontrolleri çalışır: kapasitesi tanımsız kaynak (aktif ve kritik, günlük kapasite boş; K-117). Aşama 7 ekranları kendi kontrollerini ekler.
+- **04:** Talep zinciri kümesi baştan hesaplanır (tek geçiş, seviye seviye): talebin malzemesi; her seviyede aktif üretim versiyonları, ağaç satırları ve bileşenleri (alternatifler dahil), rota satırları, rotadaki kaynak ve kaynak grupları, malzeme tedarikçileri; kendi ağacı olmayan üründe benzetilen ürünün ağacı ve rotası; açık iş emirlerinin bileşen ve operasyonları. Uyarının kaydı ya da malzemesi kümedeyse Yüksek, değilse Normal.
+- **05:** Eşleştirme (kimlik kural + kayıt): ilk kez çıkan → Yeni; önceden olan → Açık (tespit tarihi korunur); Yok sayıldı korunur, kaydı yok saymadan sonra değiştiyse (ERP'den yeni versiyon ya da manuel değer) Açık olur; çıkmayan uyarı **silinir**, yok sayılmış olsa da (kapandı durumu ve geçmiş yok; aynı sorun yeniden çıkarsa Yeni gelir).
 - **ÇIKTI**
-  - Veri kalitesi uyarı listesi (durum, önem, kategori, kayıt, sorun, öneri, ilk görülme)
-  - Değişim özeti: yeni, kapanan, açık, bilerek böyle
-  - Ana sayfa ve uyarı iş listesi (20. ekran) için kaynak
-- **06:** Özet sayılar (kritik, yüksek, orta), dağılım ve 'dünden bugüne' güncellenir; ana sayfaya yansır; kritik yeni uyarı varsa bildirim.
+  - Veri kalitesi uyarıları (DataQualityWarning): durum, önem, tablo, kayıt, kontrol, mesaj, tespit tarihi, gerekçe
+  - Talep zinciri kümesi (DemandChain)
+  - Ana sayfa özeti (yüksek önemde uyarı ve yeni sayısı)
+- **06:** Detay kartı açılınca Talep zinciri o kayıttan yukarı (nerede kullanılıyor) çıkılarak bulunur; uyarı başına en çok 1.000 yol.
+
+- **Uygulama (6.5, K-174):** uygulandı. `app/quality/` (kontrol `run.py`, talep zinciri `chain.py`, Smartchain kontrolleri `checks.py`); kurallar `core`'un `prc` biçimli izdüşümünde (`sqlkit.core_layer`), RES.REF_SUBCONTRACTOR işlenmiş staging'de iş anahtarıyla; iş tipi "Veri kalitesi" (Veri işleme kanalı, öncelik −1, kuyrukta bekleyenle birleşir) aktarımdan, manuel değerden sonra ve gün dönümünde; tablolar `adm.DataQualityWarning`, `adm.DemandChain`, `adm.DemandChainPath` (geçiş 0056, 0057). Ölçüm (202 malzeme): planlar hazırken 2,1 sn, soğukken 8,8 sn (4,3 sn sorgu derlemesi); iyileştirme Bekleyen kontroller'de.
 
 ### 20 · Veri kalitesi kontrolü · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Kontroller ve eşikler uyarı tanımlarıyla parametriktir; kod değişikliği gerektirmez.
-  - Kapanan uyarı silinmez; 'kapandı' olarak 90 gün görünür, sonra arşiv.
-  - 'Bilerek böyle' işareti gerekçe ve süre ister; süre dolunca uyarı yeniden değerlendirilir.
-  - Kritik: plan hesabını bozar (döngü, eksik kaynak); yüksek: planı etkiler; orta: kontrol edilmeli. Sınıf tanımdan gelir.
-  - Kontrol yazmaz; yalnız uyarı listesini günceller.
+  - Ayrı kural listesi yoktur; kontrol listesi validasyon kurallarının "Takip" ayarı ve Smartchain verisi kontrolleridir. Kural pasifleşir ya da takip kapanırsa uyarıları sonraki kontrolde silinir.
+  - Önem her kontrolde yeniden hesaplanır; talebi gelen malzemenin uyarısı kendiliğinden Yüksek olur. Güvenlik stoğu zincir başlatmaz.
+  - Sorun kalkınca uyarı silinir, yok sayılmış uyarı da; yok saymanın süresi yoktur, kayıt değişene kadar geçerlidir.
+  - Kontrol yalnız uyarıları yazar; veriyi değiştirmez.
 - **HATA VE ISTISNA**
-  - Bir kontrol grubu hata verirse diğerleri devam eder; grup 'kontrol edilemedi' işaretlenir, Sistem sağlığına düşer.
-  - Süre 2 dk'yı aşarsa (parametre) arka planda sürer, bitince bildirim.
-  - Uyarı tanımı pasifse o kontrol atlanır; açık uyarıları 'tanım pasif' notuyla kapanır.
+  - Kontrol çökerse aktarım geçerli kalır; iş Hatalı olur, Sistem sağlığına düşer; uyarılar önceki hâlinde kalır.
+  - Aynı anda tek kontrol çalışır; kuyrukta bekleyen varsa yenisi eklenmez.
 - **ETKISI VE TETIKLENENLER**
-  - Ana sayfa 'kritik uyarılar' ve 'dünden bugüne'.
-  - Uyarı iş listesi (83) ana veri ve işlem verisi kategorileri.
-  - Kritik yeni uyarıda bildirim (ekran ve ana sayfa).
+  - Veri kalitesi ekranı (05) ve Ana sayfa özeti (9.1).
+  - Ayrı bildirim (e-posta, açılır) yok.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Uyarı listesi:** Veri kalitesi uyarıları Kapsamdaki kayıtlar için baştan üretilir, eşleştirilir
-- **Özet sayılar ve dağılım:** Veri kalitesi ekranı · ana sayfa Her kontrolde
-- **Uyarı iş listesi:** Uyarılar ekranı (ana veri, işlem verisi kategorileri) Yeni ve kapanan uyarılar yansır
-- **Plan:** — Kontrol planı değiştirmez; kritik uyarı plan hesabını engelleyebilir (motor kuralı)
-- **ÖRNEK:** Kural uygulaması sonrası kontrol 38 sn: 3 yeni (kural 2 fırınları ton yapınca rota tüketim birimi uyumsuz), 23 kapanan (21'i kural 7 ile temin süresi). Açık 44, bilerek böyle 4.
+- **Uyarılar:** Veri kalitesi Kapsamdaki kurallar ve tablolar için eşleştirilir; önem bütün uyarılarda
+- **Talep zinciri:** DemandChain Her kontrolde baştan; yollar (DemandChainPath) silinir, kart açılınca yeniden
+- **Plan:** — Kontrol planı değiştirmez
+- **ÖRNEK:** Aktarımdan sonra kontrol: HAM-012'nin tedarikçi satırında iki tedarik süresi boş (MS.NO_LEADTIME). HAM-012, SO-1182'nin ağacında (MAM-002 → ALT-001 → HAM-012): uyarı Yüksek, Yeni. Ertesi gün aynı sorun sürüyor: Açık. Tedarikçi satırına manuel değer girilince sorun kalkar, uyarı silinir.
 
 ### 20 · Veri kalitesi kontrolü · Kontrol çalışıyor
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Mockup 1/2</sub>
 
 ![20 · Veri kalitesi kontrolü · Kontrol çalışıyor](mockups/m24f-0421-20-veri-kalitesi-kontrolu-kontrol-calisiyor.png)
 
-- **Kontrol grupları:** Ana veri ve işlem verisi grupları; her grubun kontrolleri ve kayıt sayısı.
-- **İlerleme ve bulgu:** Biten grupta bulgu sayısı; çalışan satır vurgulu, üstte şerit.
-- **Tetik ve kapsam:** Neden çalıştığı (kural uygulaması) ve tam / kısmi kapsam akışta.
-- **Parametrik:** Kontroller uyarı tanımlarından gelir; bilerek böyle olanlar yeniden açılmaz.
+- **Mockup geçersiz (K-174):** kontrol ayrı iştir, ilerlemesi iş panelindedir; kontrol grupları ve bilerek böyle yoktur.
 
 ### 20 · Veri kalitesi kontrolü · Değişim özeti
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Mockup 2/2</sub>
 
 ![20 · Veri kalitesi kontrolü · Değişim özeti](mockups/m24f-0422-20-veri-kalitesi-kontrolu-degisim-ozeti.png)
 
-- **Yeni / kapandı / açık:** Durum çipi ilk sütunda; neden sütunu kapanmayı ya da açılmayı açıklar.
-- **Dünden bugüne:** Sağda sayılar: yeni, kapanan, açık kalan, bilerek böyle.
-- **Bağlantı:** Yeni uyarının nedeni (kural 2) yazar; kullanıcı kök nedene gider.
-- **Filtre çipleri:** Değişenler varsayılan; tüm açık, bilerek böyle ve kapananlar ayrı görünüm.
+- **Mockup geçersiz (K-174):** kapanan uyarı silinir, değişim özeti ve sağdaki sayılar yoktur; durum Yeni · Açık · Yok sayıldı. Güncel mockup `plans/6.5-mockups/veri-kalitesi.html`.
 
 ### 21 · Kalite düzeltme aksiyonu
 <sub>24. Ekranlar ve fonksiyonlar · F21 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
 
-- Veri kalitesi uyarısından doğrudan düzeltmeye geçmek: kayda gidip elle düzeltmek, önerilen kuralı uygulamak, uyarıyı gerekçeyle 'bilerek böyle' kapatmak ya da kişiye atamak; tek tek ya da toplu.
+- Veri kalitesi uyarısından düzeltmeye geçmek: kaydı açmak, eksik alanı dolduracak veri kuralını başlatmak ya da uyarıyı gerekçeyle yok saymak; tek tek ya da toplu (K-174).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü (End user listeyi görür, aksiyon alamaz)
-  - Nereden: Veri kalitesi ekranı satır aksiyonları · uyarı iş listesi (83) ana veri kategorisi · toplu seçim araç çubuğu
-- **01:** Satırdaki aksiyon seçilir. 'Düzelt': ilgili ana veri kaydı detay kartıyla açılır, alan odaklı; kaydedince (12) uyarı için kontrol yeniden çalışır.
-- **02:** 'Uygula': önerilen kural (ya da kural ayarı) önizlemeyle gösterilir; onayda kural uygulanır (19) ve etkilenen uyarılar kapanır.
+  - Kim: Yok say ve Yok saymayı kaldır: Key user ve üstü (21 yazma); Kural oluştur: Veri kurallarını düzenleyebilenler (16 yazma); End user listeyi ve kartı görür
+  - Nereden: Veri kalitesi ekranında satırın ⋯ menüsü ve sağ tık; çoklu seçimde "Seçili n satır" grubu
+- **01:** "Detay": detay kartı açılır (Kayıt; Yüksek sekmesinde Talep zinciri).
+- **02:** "Kayda git": Ana veri ya da İşlem verisi ekranında tablo yalnız o kayıtla süzülmüş gelir ("Bütün kayıtları göster" süzgeci kaldırır); düzeltme manuel değerle (12) yapılır.
 - **GIRDI**
-  - Uyarı satırı (kayıt, alan, sorun, öneri)
-  - Önerilen aksiyon türü: düzelt, uygula (kural), göster, bilerek böyle, ata
-  - Toplu seçim (aynı kontrol türünden uyarılar)
-- **03:** 'Göster': kaynağa gider (rota, ağaç, sipariş); ERP'de düzeltilmesi gereken sorunlarda 'ERP'de düzelt' notu ve yükleme sonrası kontrol.
-- **04:** 'Bilerek böyle': gerekçe (zorunlu), süre ve sorumlu; uyarı kapanır, süre boyunca yeniden açılmaz; denetim izi.
-- **05:** 'Ata': uyarı kişiye atanır, uyarı iş listesinde görünür; not eklenir.
+  - Uyarı (kural, kayıt, alan)
+  - Yok sayma gerekçesi
+  - Çoklu seçim
+- **03:** "Kural oluştur": Veri kuralları ekranı o tablo ve alanla yeni kural penceresini açar (19). Boş alan türü sorunlarda anlamlıdır; ötekinde pasif, nedeni ipucunda.
+- **04:** "Yok say": gerekçe zorunlu; seçilen bütün uyarılara aynı gerekçe yazılır; uyarı Yok sayılan sekmesine geçer; denetim izi. Kayıt değişene kadar geçerli (ERP'den yeni versiyon ya da manuel değer); süre yok.
+- **05:** "Yok saymayı kaldır": uyarı Açık olur, Yüksek ya da Normal sekmesine döner; denetim izi.
 - **ÇIKTI**
-  - Kapanan / atanmış / bilerek böyle uyarılar ve durum geçmişi
-  - Manuel değer, kural uygulaması ya da atama kaydı (ilgili fonksiyonun çıktısı)
+  - Uyarının durumu ve gerekçesi
   - Denetim izi
-- **06:** Toplu: aynı türden uyarılar seçilir (ör. 21 'temin süresi boş'), tek aksiyon uygulanır; sonuçta kapanan sayısı ve geri alma bağlantısı.
+- **06:** Kişiye atama ve "ERP'de düzelt" yoktur; düzeltme kaynağında (ERP) ya da Smartchain'de manuel değer ve veri kuralıyla yapılır, sonraki kontrolde uyarı kalkar.
+
+- **Uygulama (6.5, K-174):** uygulandı. `POST /api/data-quality/ignore` (gerekçe zorunlu, toplu) ve `unignore`; denetim izine "Veri kalitesi: uyarı yok sayıldı" / "yok sayma kaldırıldı"; manuel değer kaydında yok sayılan uyarı hemen Açık; Kural oluştur Veri kuralları'nı `?tablo=&alan=&yeni=1` ile açar.
 
 ### 21 · Kalite düzeltme aksiyonu · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F21 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
 
 - **KURALLAR VE SINIRLAR**
   - Aksiyon doğrudan veriyi değiştirmez; düzeltme 12, 15 ya da 19 üzerinden yapılır ve onların kurallarına uyar.
-  - 'Bilerek böyle' gerekçesiz kapatılamaz; süre en fazla 365 gün.
-  - Kritik uyarı 'bilerek böyle' kapatılamaz (plan hesabını bozar); yalnız düzeltilir (öneri).
-  - Toplu aksiyon aynı kontrol türüyle sınırlıdır; karışık seçimde buton pasif.
+  - Yok say gerekçesiz yapılamaz; süre yoktur; sorun kalkınca yok sayılan uyarı da silinir.
+  - Toplu Yok say her uyarıya uygulanır (önem ve kuraldan bağımsız).
 - **HATA VE ISTISNA**
-  - Kayıt artık yoksa (ERP'de silinmiş) 'Düzelt' pasif, uyarı sonraki kontrolde kapanır.
-  - Kural uygulama hatası: uyarı açık kalır, hata bildirimi.
-  - Atanan kullanıcı kapalıysa atama reddedilir.
+  - Kayıt artık yoksa Kayda git uyarı verir; uyarı sonraki kontrolde silinir.
 - **ETKISI VE TETIKLENENLER**
-  - 12 / 15 / 19'un etkileri (değer kaynağı, türetilmiş alanlar).
-  - Uyarı listesi ve özet sayılar; ana sayfa.
-  - Uyarı iş listesi atama ve not.
+  - Uyarının durumu; Ana sayfa özeti.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Uyarı durumu:** Veri kalitesi uyarıları Aksiyon sonrası ilgili kayıt için kontrol yeniden çalışır
-- **Geçerli değer ve kaynağı:** FieldValueSource Düzelt ya da uygula seçildiyse (12 / 19)
-- **Türetilmiş alanlar:** Kapasite, LLC Düzeltilen alana göre
-- **Özet sayılar:** Veri kalitesi · ana sayfa Her aksiyonda
-- **Plan:** Senaryolar · çalışmalar Otomatik değil; düzeltme plan girdisini değiştirdiyse yeniden hesap
-- **ÖRNEK:** 'Temin süresi boş' 21 malzeme toplu seçilir, 'Uygula' ile kural 7 doldurur: 21 uyarı kapanır. K-22'de 'minimum parti > talep' tedarikçi şartı: gerekçeyle 90 gün 'bilerek böyle'.
+- **Uyarı durumu:** Veri kalitesi Yok say ve kaldır anında
+- **Plan:** Senaryolar · çalışmalar Otomatik değil
+- **ÖRNEK:** Normal sekmesinde numune lotlarının "Son kullanma tarihi geçmiş" üç uyarısı seçilir, sağ tık → Seçili 3 satır → Yok say, gerekçe "Numune lotları, üretimde kullanılmıyor.": üçü Yok sayılan sekmesine geçer. Lotlardan biri ERP'de değişince o uyarı yeniden Açık olur.
 
 ### 21 · Kalite düzeltme aksiyonu · Önerilen kuralı uygula
 <sub>24. Ekranlar ve fonksiyonlar · F21 · B Ana veri ve kurallar · Mockup 1/3</sub>
 
 ![21 · Kalite düzeltme aksiyonu · Önerilen kuralı uygula](mockups/m24f-0425-21-kalite-duzeltme-aksiyonu-onerilen-kurali-uygula.png)
 
-- **Etkilenen kayıtlar:** Kuralın dolduracağı malzemeler ve değer önceden görünür.
-- **İki seçenek:** Kuralla toplu ya da Excel ile elle; tedarikçi bazında farklıysa ikincisi.
-- **Neden hâlâ boş:** Kuralın neden dolduramadığı (ayar) açıklanır; aksiyon ayarı düzeltir.
-- **Sayı butonda:** Uygula butonu kaç kaydı etkileyeceğini yazar.
+- **Mockup geçersiz (K-174):** öneri ve önizleme yok; "Kural oluştur" Veri kuralları'nın yeni kural penceresini açar.
 
 ### 21 · Kalite düzeltme aksiyonu · Bilerek böyle
 <sub>24. Ekranlar ve fonksiyonlar · F21 · B Ana veri ve kurallar · Mockup 2/3</sub>
 
 ![21 · Kalite düzeltme aksiyonu · Bilerek böyle](mockups/m24f-0426-21-kalite-duzeltme-aksiyonu-bilerek-boyle.png)
 
-- **Gerekçe zorunlu:** Kapatma gerekçesi yazılmadan buton pasif; denetim izine gider.
-- **Süreli:** 90 gün sonra kontrol uyarıyı yeniden değerlendirir.
-- **Sorumlu:** Kimin kabul ettiği kayda yazılır.
-- **Plan etkisi:** Değerin plan hesabında olduğu gibi kullanılacağı not kutusunda.
+- **Mockup geçersiz (K-174):** "Yok say" penceresinde yalnız Gerekçe vardır (süre ve sorumlu yok).
 
 ### 21 · Kalite düzeltme aksiyonu · Sonuç
 <sub>24. Ekranlar ve fonksiyonlar · F21 · B Ana veri ve kurallar · Mockup 3/3</sub>
 
 ![21 · Kalite düzeltme aksiyonu · Sonuç](mockups/m24f-0427-21-kalite-duzeltme-aksiyonu-sonuc.png)
 
-- **Kapanan satırlar üstte:** 21 kapanan ve 1 bilerek böyle, nedeniyle; liste yeniden sıralanır.
-- **Sayılar güncel:** Yüksek −22, bugün kapanan 23; ana sayfa aynı sayıları gösterir.
-- **Geri alınabilir:** Bildirimde geri alma bağlantısı (kural ayarı ya da manuel değer).
-- **Kalanlar:** Kritik 2 uyarı 'bilerek böyle' kapatılamaz; düzeltme bekler.
+- **Mockup geçersiz (K-174):** kapanan uyarı listede görünmez; geri alma "Yok saymayı kaldır"dır.
 
 ### 99 · Malzeme blokajı
 <sub>24. Ekranlar ve fonksiyonlar · F99 · B Ana veri ve kurallar · Çalışma prensibi</sub>
@@ -3913,7 +3895,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KURALLAR VE SINIRLAR**
   - Dondurulmuş dönem atlanır.
   - Mevcut manuel değerler yalnız 'ez' seçeneği açıksa değişir; aksi halde korunur ve sayısı yazılır.
-  - Net talep eşitlemesi stok projeksiyonunu sıfıra çeker; güvenlik stoğu parametresi varsa onu hedefler (öneri).
+  - Net talep eşitlemesi stok projeksiyonunu sıfıra çeker; güvenlik stoğu parametresi varsa onu hedefler (öneri). "Güvenlik stoğu için üretim/satın alma yapılsın mı" Aşama 10 motor parametresidir; bu satırla birlikte orada karara bağlanır (K-174).
   - Toplu kapsamda (tüm ürünler) işlem sayısı ve süre yazılır; 50 üründen fazlası için onay ikinci kez istenir.
 - **HATA VE ISTISNA**
   - Talep satırı boş ürün: atlanır, bilgi mesajı.

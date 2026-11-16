@@ -65,6 +65,7 @@ def run_transfer_job(job_id: int, attempt: int) -> None:
             if queue.finish(session, job_id, attempt, progress=f"{display_name(payload)} bitti · v{result['data_version']}", commit=False):
                 session.commit()
                 log.info("Aktarım işi %s bitti · v%s", job_id, result["data_version"])
+                _enqueue_quality(db, result["data_version"], payload.get("user_id"))
             else:
                 session.rollback()
                 log.warning("İş %s (deneme %s) artık bu sürecin değil", job_id, attempt)
@@ -73,6 +74,18 @@ def run_transfer_job(job_id: int, attempt: int) -> None:
             session.rollback()
             with Session(db) as s:
                 queue.fail(s, job_id, attempt, f"{display_name(payload)} tamamlanamadı; önceki veri versiyonu geçerli. Destek için iş numarası: {job_id}")
+
+
+def _enqueue_quality(db, version: int, user_id: int | None) -> None:
+    """Aktarımdan sonra veri kalitesi (K-174): aktarılan tablolar (kısmi aktarımda kapsamdakiler). Kuyruğa koyamazsa aktarım geçerli kalır."""
+    from app import quality
+    entity = metadata.tables["adm.DataVersionEntity"]
+    try:
+        with Session(db) as s:
+            tables = set(s.execute(sa.select(entity.c.EntityName).where(entity.c.DataVersionId == version, entity.c.NewCount.is_not(None))).scalars())
+            quality.enqueue(s, tables, quality.TRIGGER_TRANSFER, user_id)
+    except Exception:
+        log.exception("Aktarım v%s: veri kalitesi işi kuyruğa konamadı", version)
 
 
 def transfer_process_main(job_id: int, attempt: int, _time_budget_seconds: int) -> None:

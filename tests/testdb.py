@@ -18,7 +18,7 @@ OVERRIDE = "SMARTCHAIN_TEST_DB_URL"
 SUFFIX = "_test"
 # Ad yanlışsa uygulama buna bağlanır: koşu zaten başlamaz, geliştirme bağlantısına düşülmez.
 NOWHERE = "mssql+pyodbc://@127.0.0.1,1/Reddedildi_test?driver=ODBC+Driver+18+for+SQL+Server&trusted_connection=yes"
-SYNTHETIC_MATERIALS = 200
+SYNTHETIC_MATERIALS = 202  # 6.5'te ALT-099 ve MAM-011 (K-174)
 
 
 class WrongTestDatabase(Exception):
@@ -113,6 +113,9 @@ def clear_leftovers(engine: Engine) -> None:
             c.execute(sa.text("DELETE FROM adm.DataVersion WHERE Id = :v"), {"v": version})
         c.execute(sa.text("DELETE FROM core.Location WHERE Code = N'TEST-ENG'"))
         c.execute(sa.text("DELETE FROM adm.Job"))
+        c.execute(sa.text("DELETE FROM adm.DemandChainPath"))  # veri kalitesi (K-174)
+        c.execute(sa.text("DELETE FROM adm.DataQualityWarning"))
+        c.execute(sa.text("DELETE FROM adm.DemandChain"))
         c.execute(sa.text("DELETE FROM adm.ValidationFinding"))  # doğrulama (K-134): kural tanımları kalır, kullanıcı kuralları ve eşikler silinir
         c.execute(sa.text("DELETE FROM adm.ValidationRun"))
         c.execute(sa.text("DELETE FROM adm.ValidationRuleCondition"))

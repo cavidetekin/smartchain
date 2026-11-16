@@ -17,6 +17,7 @@ from app.api.services import export as export_service, lists as list_service
 
 from test_export_api import user  # noqa: F401  (iz satırlarını temizleyen deneme kullanıcısı)
 from test_lists_api import all_rows, api, query  # noqa: F401
+from testdb import SYNTHETIC_MATERIALS
 from test_views_api import create, listed, users  # noqa: F401
 from auth_helpers import auth
 
@@ -80,7 +81,7 @@ def test_text_rules_on_list_field_and_in(api):
 def test_always_rule_marks_every_row_including_empty(api, field):
     """"Her zaman": koşulsuz kolon biçimi, her tipte; boş hücreler dahil bütün satırlarda tutar."""
     rows = all_rows(api, fields=["Code", field], rules=[rule(field, op="always")])
-    assert len(rows) == 200 and all(r["_rules"] == [0] for r in rows)
+    assert len(rows) == SYNTHETIC_MATERIALS and all(r["_rules"] == [0] for r in rows)
     if field == "SafetyStock":
         assert any(r[field] in (None, "") for r in rows)  # boş hücre de var ve o da işaretli
 
@@ -343,7 +344,7 @@ def test_excel_always_rule_formats_every_cell(api, user):  # noqa: F811
                  json={"fields": ["Code", "SafetyStock"], "rules": rules, "group_by": ["MaterialLevel"]})
     wb = load_workbook(io.BytesIO(r.content))
     data = [row for row in wb["Veri"].iter_rows(min_row=2) if row[0].value and not str(row[0].value).endswith(" satır")]
-    assert len(data) == 200
+    assert len(data) == SYNTHETIC_MATERIALS
     assert all(row[1].fill.fgColor.rgb == "FFEEF0FB" and row[1].font.b for row in data)
     assert any(row[1].value is None for row in data)  # boş hücre de boyalı
     assert dict(wb["Bilgi"].iter_rows(values_only=True))["Koşullu biçim"] == "Güvenlik stoğu: kolon biçimi → zemin #eef0fb, kalın"

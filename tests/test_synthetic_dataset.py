@@ -16,7 +16,7 @@ gen = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gen)
 
 DAY = date(2026, 10, 27)
-EMPTY = {"Forecast", "TransferOrder", "MaterialReference"}  # docs/11: tahmin üretilmez; tek lokasyon; her üretilen malzemenin kendi versiyonu var
+EMPTY = {"TransferOrder"}  # docs/11: tek lokasyon (tahmin ve benzetilen ürün 6.5'ten beri dolu, K-174)
 LOADER_FILLS = {"VersionFrom", "VersionTo", "ImportBatchId", "UpdatedAt", "IsSynthetic"}
 
 
@@ -28,7 +28,7 @@ def ds():
 def test_sizes_match_docs(ds):
     sm = s.summary(ds)
     assert 190 <= sm["Malzeme"] <= 210
-    assert sm["Kaynak"] == 40 and sm["Çalışan"] == 25 and sm["Açık kesin sipariş"] == 40
+    assert sm["Kaynak"] == 41 and sm["Çalışan"] == 25 and sm["Açık kesin sipariş"] == 42  # 6.5: T-05, SO-1043 ve SO-1044 (K-174)
     assert sm["Müşteri"] == 3 and sm["Tedarikçi"] == 8 and 23 <= sm["Çalışan"] <= 27
     assert ds.horizon_end == ds.start + timedelta(weeks=13, days=-1)
     assert ds.start.weekday() == 0 and ds.start <= DAY < ds.start + timedelta(days=7)  # hafta 1 (K-79)
@@ -110,7 +110,7 @@ def test_bom_is_acyclic_with_three_or_four_levels(ds):
     def depth(mid, seen=()):
         assert mid not in seen, "ağaçta döngü"
         return 1 + max([depth(c, seen + (mid,)) for c, _ in children.get(mid, [])] or [0])
-    finished = [m for m in ds.rows("Material") if m["MaterialLevel"] == "Nihai ürün"]
+    finished = [m for m in ds.rows("Material") if m["MaterialLevel"] == "Nihai ürün" and m["Code"] != d.REFERENCE_PRODUCT]  # benzetilen ürünün ağacı yok
     assert len(finished) == 10 and {depth(m["Id"]) for m in finished} <= {3, 4} and max(
         depth(m["Id"]) for m in finished) == 4
 
@@ -118,8 +118,9 @@ def test_bom_is_acyclic_with_three_or_four_levels(ds):
 def test_every_produced_material_has_version_and_route(ds):
     pv = {p["MaterialId"]: p for p in ds.rows("ProductionVersion")}
     routes = {r["RouteCode"] for r in ds.rows("Routing")}
+    referenced = {r["MaterialId"] for r in ds.rows("MaterialReference")}  # benzetilen ürün başkasının versiyonuyla üretilir (K-174)
     for m in ds.rows("Material"):
-        if m["IsProducible"]:
+        if m["IsProducible"] and m["Id"] not in referenced:
             assert m["Id"] in pv and pv[m["Id"]]["RouteCode"] in routes, m["Code"]
         if m["IsPurchasable"]:
             assert any(x["MaterialId"] == m["Id"] for x in ds.rows("MaterialSupplier")), m["Code"]
@@ -140,7 +141,7 @@ def test_dates_shift_with_generation_day(ds):
     later = generate(DAY + timedelta(days=7))
     for name, rows in ds.tables.items():
         for a, b in zip(rows, later.rows(name)):
-            if (name, a.get("PurchaseOrderNo")) in MONTH_BOUND:
+            if (name, a.get("PurchaseOrderNo")) in MONTH_BOUND or name == "Forecast":  # tahmin dönemi ay başı (K-174)
                 continue
             for k, v in a.items():
                 if isinstance(v, (date, datetime)):

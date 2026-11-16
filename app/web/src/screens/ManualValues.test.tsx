@@ -1,6 +1,6 @@
 // Manuel değer (K-170, K-172): hücre düzenleme standardı (düz metin, ✎, çift tıklama / Enter / yazmaya başlama, ok tuşları, Esc), düzenleme
 // çubuğu, köşe işareti ve kaynak ipucu (yalnız manuel ve kural), hücre menüsünden, Delete ile ve seçili kayıtlarda toplu kaldırma, Excel'den
-// yapıştırma özeti, kaydetme hata mesajı, fareyle kaydırma ve klavye birlikte; manuel alanı olmayan tabloda imleç ve seçim yok; End user düzenleyemez.
+// yapıştırma özeti, başarılı kayıtta bildirim olmaması, kaydetme hata mesajı, fareyle kaydırma ve klavye birlikte; manuel alanı olmayan tabloda imleç ve seçim yok; End user düzenleyemez.
 import { act, createEvent, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -74,6 +74,8 @@ describe("hücre düzenleme standardı", () => {
     await waitFor(() => expect(cellOf("MUS-C", "Müşteri adı")).toHaveClass("is-cursor"));
     await user.click(within(toolbar()).getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(sent).toEqual([{ url: "/api/manual-values", body: { list: "master-customer", changes: [{ id: "2", field: "Name", value: "Batı Pompa" }] } }]));
+    await waitFor(() => expect(cellOf("MUS-B", "Müşteri adı")).not.toHaveClass("is-draft"));
+    expect(screen.queryByText(/manuel değer kaydedildi/i)).toBeNull();                          // başarılı kayıtta bildirim yok (K-172)
   });
 
   it("tıklamak seçer; ok tuşlarıyla gezilir; yazmaya başlamak açar, Esc vazgeçer; seçenekli alanda liste", async () => {

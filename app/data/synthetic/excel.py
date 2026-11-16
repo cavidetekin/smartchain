@@ -17,7 +17,7 @@ from .examples import add_examples
 from .rules import DEMO_RULES
 from .dataset import Dataset
 
-EMPTY_ENTITIES = {"Forecast", "MaterialReference"}  # docs/11: temiz hâlde yok (tahmin üretilmez; her üretilen malzemenin kendi versiyonu var); kirli hâlde yalnız örnekler
+EMPTY_ENTITIES: set[str] = set()  # docs/11: 6.5'ten beri tahmin ve benzetilen ürün de temiz hâlde (K-174)
 
 
 def stg_entities() -> list[str]:
@@ -38,6 +38,8 @@ def _resolvers(ds: Dataset) -> dict:
         "LocationCode": lambda r: d.LOCATION_CODE,
         "MaterialCode": lambda r: c("Material", r["MaterialId"]),
         "ComponentMaterialCode": lambda r: c("Material", r["ComponentMaterialId"]),
+        "ReferenceMaterialCode": lambda r: c("Material", r["ReferenceMaterialId"]),
+        "ReferenceProductionVersionCode": lambda r: c("ProductionVersion", r.get("ReferenceProductionVersionId")),
         "SupplierCode": lambda r: c("Supplier", r.get("SupplierId")),
         "CustomerCode": lambda r: c("Customer", r.get("CustomerId")),
         "ProjectCode": lambda r: c("Project", r.get("ProjectId")),

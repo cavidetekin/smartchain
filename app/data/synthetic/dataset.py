@@ -47,6 +47,13 @@ MAINTENANCE_RESOURCE, LEAVE_WORKER, SICK_WORKER = "T-02", "W-007", "W-015"
 NON_STOCKABLE = ("ALT-013", "SAT-030")   # stok tutulamaz (K-113): üretilen ve satın alınan; ikisinde de stok yok
 ISOLATED_MATERIAL = "SAT-040"   # yalnız Material'da geçer (kirli hâlde tekrar eden anahtar, H4)
 NO_ROUTE_PART = "PRC-033"       # kirli hâlde rotası çıkarılır (H1)
+# Veri kalitesi durumları (6.5, K-174; docs/11 durum 6–9): generate'in sonunda eklenir, mevcut satırların Id'leri ve tohum sırası değişmez
+DEEP_MATERIAL, DEEP_SUPPLIER = "HAM-022", "TED-02"       # 6: tedarik süresi ikisi de boş, MAM-002'nin üç seviye altında
+NO_DEMAND_MATERIAL = "ALT-099"                            # 7: hiçbir talebin ağacında değil; ağacında bileşen miktarı 0
+PAST_DUE_ORDER, DUE_TODAY_ORDER = "SO-1043", "SO-1044"    # 9: teslim tarihi dün / bugün, açık
+NO_CAPACITY_RESOURCE = "T-05"                             # 9: kritik, günlük kapasitesi boş (K-117)
+FORECAST_PRODUCT = "MAM-001"                              # tahmin: gelecek iki ay
+REFERENCE_PRODUCT, REFERENCE_SOURCE = "MAM-011", "MAM-001"  # kendi versiyonu yok; MAM-001'in ağacı ve rotası izlenir
 
 FIRST_NAMES = ["Ahmet", "Ayşe", "Mehmet", "Fatma", "Mustafa", "Zeynep", "Ali", "Elif", "Hasan", "Emine", "Hüseyin",
                "Hatice", "İbrahim", "Merve", "Murat", "Selin", "Emre", "Derya", "Burak", "Gamze", "Kemal", "Esra",
@@ -143,6 +150,7 @@ def generate(on: date | None = None, seed: int = SEED) -> Dataset:
     _stock(b, rng)
     _work_orders(b, rng)
     _purchase_orders(b, rng)
+    _quality(b)
     _params(b)
     ds.tables = {k: v for k, v in b.t.items() if not k.startswith("param.")}
     ds.params = {k.split(".", 1)[1]: v for k, v in b.t.items() if k.startswith("param.")}
@@ -618,6 +626,58 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
     po(b.id("Material", "SAT-020"), 300, ds.day(2, 1), ds.day(2, 1), supplier_of[b.id("Material", "SAT-020")])  # PO-2060 (H3)
 
 
+def _copy(b: _Builder, table: str, row: dict, **values) -> dict:
+    """Var olan satırın kopyası (yeni Id ile)."""
+    data = {k: v for k, v in row.items() if k not in ("Id", "BusinessKey")}
+    return b.add(table, **{**data, **values})
+
+
+def _first_of_month(d: date, months_ahead: int) -> date:
+    m = d.month - 1 + months_ahead
+    return date(d.year + m // 12, m % 12 + 1, 1)
+
+
+def _quality(b: _Builder) -> None:
+    """Veri kalitesi durumları (6.5, K-174, docs/11 durum 6–9) ve talep zinciri için tahmin ve benzetilen ürün."""
+    ds = b.ds
+    on = ds.generated_on
+    # 6: zincirin derininde tedarik süresi ikisi de boş (MS.NO_LEADTIME)
+    for row in b.t["MaterialSupplier"]:
+        if row["MaterialId"] == b.id("Material", DEEP_MATERIAL) and row["SupplierId"] == b.id("Supplier", DEEP_SUPPLIER):
+            row["FixedLeadTimeDays"] = None
+            row["VariableLeadTimeDays"] = None
+    # 7: talebi olmayan yarı mamul, ağacında bileşen miktarı 0 (BOM.ZERO_QTY)
+    alt = b.find("Material", "ALT-004")
+    new_alt = _copy(b, "Material", alt, Code=NO_DEMAND_MATERIAL, Name="Yedek montaj (talebi yok)")
+    pv_src = next(r for r in b.t["ProductionVersion"] if r["MaterialId"] == alt["Id"])
+    pv = _copy(b, "ProductionVersion", pv_src, MaterialId=new_alt["Id"], BOMCode=f"B-{NO_DEMAND_MATERIAL}", RouteCode=f"R-{NO_DEMAND_MATERIAL}")
+    bom_src = next(r for r in b.t["BOM"] if r["MaterialId"] == alt["Id"])
+    _copy(b, "BOM", bom_src, MaterialId=new_alt["Id"], Code=pv["BOMCode"], ComponentMaterialId=b.id("Material", "HAM-001"), Quantity=0.0)
+    for row in [r for r in b.t["Routing"] if r["RouteCode"] == pv_src["RouteCode"]]:
+        _copy(b, "Routing", row, RouteCode=pv["RouteCode"])
+    # 9: teslim tarihi geçmiş ve bugün olan açık siparişler (SO.PAST_DUE: dün olan bugün, bugün olan yarın)
+    so_src = next(r for r in b.t["SalesOrderLine"] if r["Type"] == "Kesin")
+    for no, when in ((PAST_DUE_ORDER, on - timedelta(days=1)), (DUE_TODAY_ORDER, on)):
+        _copy(b, "SalesOrderLine", so_src, OrderNo=no, LineNo=1, LineItemNo=0, MaterialId=b.id("Material", "MAM-004"), ProjectId=None,
+              IsCustomTracked=False, OpenQuantity=5.0, OrderedQuantity=5.0, DeliveredQuantity=0.0, RequestedDate=when, ConfirmedDate=None)
+    # 9: kritik, günlük kapasitesi boş tezgâh (K-117); rotada kullanılmaz
+    t04 = b.find("Resource", "T-04")
+    t05 = _copy(b, "Resource", t04, Code=NO_CAPACITY_RESOURCE, Name="Torna T-05 (kapasitesi tanımsız)", DailyCapacity=None)
+    for row in [r for r in b.t["ResourceGroupAssignment"] if r["ResourceId"] == t04["Id"]]:  # T-04'ün grubunda (talep zincirinde)
+        _copy(b, "ResourceGroupAssignment", row, ResourceId=t05["Id"])
+    # Tahmin: gelecek iki ay (ay başı), planlama ufku içinde
+    for months, qty in ((1, 40.0), (2, 30.0)):
+        b.add("Forecast", LocationId=1, MaterialId=b.id("Material", FORECAST_PRODUCT), CustomerId=None, ProjectId=None,
+              Period=_first_of_month(on, months), Type="Tahmin", Quantity=qty, Uom=None, DeliveryPoint="Başı", IsActive=True)
+    # Benzetilen ürün: kendi versiyonu olmayan mamul, MAM-001'in ağacı ve rotasıyla; tahmini var
+    src = b.find("Material", REFERENCE_SOURCE)
+    ref = _copy(b, "Material", src, Code=REFERENCE_PRODUCT, Name="Pompa gövdesi PG-80 özel (benzetilen)")
+    b.add("MaterialReference", LocationId=1, MaterialId=ref["Id"], ReferenceMaterialId=src["Id"], ReferenceProductionVersionId=None,
+          ValidFrom=None, ValidTo=None, TimeFactor=None)
+    b.add("Forecast", LocationId=1, MaterialId=ref["Id"], CustomerId=None, ProjectId=None, Period=_first_of_month(on, 1), Type="Tahmin",
+          Quantity=10.0, Uom=None, DeliveryPoint="Başı", IsActive=True)
+
+
 def _subcon_work_order(b, resource_code: str) -> int | None:
     """Fason siparişin bağlı iş emri (PO.SUBCON_NO_WO, K-137): o fason kaynağı kullanan operasyonu olan iş emri, yoksa fason operasyonu olan ilk iş emri."""
     fason = {b.id("Resource", c) for c in ("F-ISIL", "F-KAPLA")}
@@ -685,6 +745,9 @@ def _business_keys(ds: Dataset) -> None:
         "WorkOrderComponent": lambda r: f"{LOCATION_CODE}|{wo(r['WorkOrderId'])}|{c('Material', r['MaterialId'])}|{_iso(r['OperationNo'])}|{_iso(r['SequenceNo'])}",
         "WorkOrderOperation": lambda r: f"{LOCATION_CODE}|{wo(r['WorkOrderId'])}|{r['OperationNo']}|{r['SequenceNo']}",
         "PurchaseOrderLine": lambda r: f"{LOCATION_CODE}|{r['PurchaseOrderNo']}|{r['LineNo']}",  # K-125
+        "Forecast": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{c('Customer', r['CustomerId']) or ''}|"
+                          f"{c('Project', r['ProjectId']) or ''}|{_iso(r['Period'])}|{r['Type'] or ''}",  # 6.5
+        "MaterialReference": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{c('Material', r['ReferenceMaterialId'])}|{_iso(r['ValidFrom'])}",
         "ProductionConfirmation": lambda r: f"{LOCATION_CODE}|{r['ConfirmationNo']}",
     }
     for table, rows in ds.tables.items():

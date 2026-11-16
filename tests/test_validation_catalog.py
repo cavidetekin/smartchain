@@ -19,14 +19,14 @@ MAY_BE_EMPTY = " (boş olabilir)"
 
 
 def docs_rules() -> list[dict]:
-    start = DOCS06.index("| KOD | TABLO | AD | KOŞUL | SINIF | TÜR | DÜZENLENİR | OKUNAN |")
+    start = DOCS06.index("| KOD | TABLO | AD | KOŞUL | SINIF | TAKİP | TÜR | DÜZENLENİR | OKUNAN |")
     rows = []
     for line in DOCS06[start:].splitlines()[2:]:
         if not line.startswith("|"):
             break
-        code, table, name, condition, severity, kind, editable, reads = [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", line.strip()[1:-1])]
+        code, table, name, condition, severity, track, kind, editable, reads = [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", line.strip()[1:-1])]
         read = [r.strip() for r in reads.split(",") if r.strip()]
-        rows.append(dict(code=code, table=table, name=name, condition=condition, severity=severity, kind=kind, editable=editable,
+        rows.append(dict(code=code, table=table, name=name, condition=condition, severity=severity, track=track, kind=kind, editable=editable,
                          reads=tuple(r.removesuffix(MAY_BE_EMPTY) for r in read),
                          may_be_empty=tuple(r.removesuffix(MAY_BE_EMPTY) for r in read if r.endswith(MAY_BE_EMPTY))))
     return rows
@@ -55,6 +55,21 @@ def test_every_documented_rule_is_in_the_catalog():
             if d["reads"]:  # tablolar arası ortak kural: koşul ve okunan her tabloda aynı
                 assert {(r.condition, r.reads, r.may_be_empty) for r in found} == {(d["condition"], d["reads"], d["may_be_empty"])}, d["code"]
             assert {r.kind for r in found} == {cat.STRUCTURAL_KIND if d["kind"] == "Yapısal" else cat.BUILTIN_KIND}, d["code"]
+
+
+def test_quality_tracking_matches_docs():
+    """TAKİP (K-174): Uyarı'da Evet/Hayır, öteki sınıflarda boş; katalog (RuleDef.tracked) ile birebir. 86 Uyarı kuralından 53'ü Evet, 33'ü Hayır."""
+    rows = docs_rules()
+    for d in rows:
+        assert d["track"] in (("Evet", "Hayır") if d["severity"] == "Uyarı" else ("",)), d["code"]
+    by_code: dict[str, set[bool]] = {}
+    for r in cat.catalog():
+        by_code.setdefault(r.code, set()).add(r.tracked)
+    for d in rows:
+        assert by_code[d["code"]] == {d["track"] == "Evet"}, d["code"]
+    warn = [d for d in rows if d["severity"] == "Uyarı"]
+    assert (len(warn), sum(d["track"] == "Evet" for d in warn), sum(d["track"] == "Hayır" for d in warn)) == (86, 53, 33)
+    assert {d["code"] for d in warn if d["track"] == "Hayır"} == cat.UNTRACKED
 
 
 def test_catalog_has_nothing_undocumented():

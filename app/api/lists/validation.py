@@ -91,6 +91,8 @@ def _editable() -> sa.ColumnElement:
 
 _rules_source = (sa.select(RULE.c.Id, RULE.c.EntityName, RULE.c.Code, RULE.c.Name.label("RuleName"), RULE.c.IsCustomized, _editable(),
                            RULE.c.ConditionText, RULE.c.Severity, RULE.c.Message, RULE.c.Kind, RULE.c.CheckType, RULE.c.IsActive,
+                           # Veri kalitesinde takip (K-174): yalnız Uyarı kuralında dolu
+                           sa.case((RULE.c.Severity == cat.WARNING, RULE.c.TrackQuality), else_=sa.null()).label("TrackQuality"),
                            sa.case(*[(RULE.c.EntityName == e.table, e.name) for e in ENTITIES], else_=RULE.c.EntityName).label("EntityLabel"),
                            sa.case(*[(RULE.c.EntityName == e.table, i) for i, e in enumerate(ENTITIES, 1)], else_=99).label("EntityOrder"))
                  .where(RULE.c.Kind != cat.STRUCTURAL_KIND)  # yapısal kontroller görünmez, çalışır (K-139)
@@ -99,12 +101,12 @@ _rules_source = (sa.select(RULE.c.Id, RULE.c.EntityName, RULE.c.Code, RULE.c.Nam
 VALIDATION_RULES = ListDefinition(
     name="validation-rules", table="adm.ValidationRule", title="Validasyon kuralları", file_slug="validasyon-kurallari", function=100, versioned=False,
     source=_rules_source,
-    fields=("EntityLabel", "RuleName", "ConditionText", "Severity", "Message", "Kind", "CheckType", "IsActive", "EntityOrder", "EntityName", "Code"),
-    default_visible=("EntityLabel", "RuleName", "ConditionText", "Severity", "Message", "Kind", "CheckType", "IsActive"),  # Kontrol türü açık (K-146)
+    fields=("EntityLabel", "RuleName", "ConditionText", "Severity", "TrackQuality", "Message", "Kind", "CheckType", "IsActive", "EntityOrder", "EntityName", "Code"),
+    default_visible=("EntityLabel", "RuleName", "ConditionText", "Severity", "TrackQuality", "Message", "Kind", "CheckType", "IsActive"),  # Kontrol türü açık (K-146)
     default_sort=(("EntityOrder", "asc"), ("Code", "asc")),
     key_fields=("Id", "EntityName", "Kind", "Severity", "IsActive", "Code", "IsCustomized", "Editable"),
     labels={"EntityLabel": "Tablo", "RuleName": "Kural", "ConditionText": "Koşul", "Severity": "Sınıf", "Message": "Mesaj", "Kind": "Tür",
-            "IsActive": "Aktif", "CheckType": "Kontrol türü", "EntityOrder": "Yükleme sırası", "EntityName": "Teknik tablo adı", "Code": "Kod"},
+            "IsActive": "Aktif", "TrackQuality": "Takip", "CheckType": "Kontrol türü", "EntityOrder": "Yükleme sırası", "EntityName": "Teknik tablo adı", "Code": "Kod"},
     values={"Severity": SEVERITIES, "Kind": list(cat.KINDS), "CheckType": list(cat.CHECK_TYPES), "EntityLabel": [e.name for e in ENTITIES]},
 )
 

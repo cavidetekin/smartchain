@@ -29,6 +29,7 @@ class RuleChange(BaseModel):
     groups: list[list[dict]] | None = None
     delete: bool | None = None
     reset: bool | None = None
+    track: bool | None = None  # veri kalitesinde takip (K-174); yalnız Uyarı'da
 
 
 class Threshold(BaseModel):

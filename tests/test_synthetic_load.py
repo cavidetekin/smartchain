@@ -71,7 +71,7 @@ def test_load_writes_every_table(db_engine, ds, loaded):
         ms = c.execute(text("SELECT MIN(LocationId), MIN(BusinessKey), MAX(QuotaRatio) FROM core.MaterialSupplier WHERE VersionFrom = :v"), {"v": v}).one()
         assert ms[0] == loaded["location_id"] and ms[1].startswith(f"{d.LOCATION_CODE}|") and float(ms[2]) == 0.7  # K-118; ikinci tedarikçi %30, birinci %70 (MS.QUOTA_SUM, K-137)
         people = c.execute(text("SELECT COUNT(*), SUM(CAST(IsEmployee AS int)) FROM core.Resource WHERE VersionFrom = :v"), {"v": v}).one()
-        assert tuple(people) == (40, 25)  # K-117: işçiler kaynak
+        assert tuple(people) == (41, 25)  # K-117: işçiler kaynak; 6.5: T-05 (K-174)
         links = c.execute(text("SELECT COUNT(*) FROM core.ResourceGroupAssignment WHERE VersionFrom = :v"), {"v": v}).scalar()
         assert links >= 25 + 13 and c.execute(text("SELECT COUNT(*) FROM core.EmployeeAbsence WHERE VersionFrom = :v"), {"v": v}).scalar() == 3
         labor = c.execute(text("SELECT COUNT(*), MIN(ResourceNumber) FROM core.Routing WHERE VersionFrom = :v AND ResourceId IS NULL AND ResourceGroupId IS NOT NULL AND ResourceRole = N'Secondary'"), {"v": v}).one()

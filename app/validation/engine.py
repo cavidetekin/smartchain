@@ -74,7 +74,8 @@ _synced = False
 
 def sync_rules(session: Session, force: bool = False) -> dict[str, int]:
     """Yapısal ve hazır kurallar katalogdan (K-137, K-139): eksik eklenir; özelleştirilmemiş kuralın adı, mesajı ve koşul metni güncellenir;
-    sınıf ve aktiflik kullanıcıda kalır. Katalogdan kalkan hazır kural bulgularıyla silinir. Commit eder."""
+    sınıf, aktiflik ve veri kalitesinde takip kullanıcıda kalır (yeni kuralda takip katalogdan, K-174). Katalogdan kalkan hazır kural bulgularıyla silinir.
+    Commit eder."""
     global _synced
     if _synced and not force:
         return {"added": 0, "updated": 0, "removed": 0}
@@ -90,7 +91,8 @@ def sync_rules(session: Session, force: bool = False) -> dict[str, int]:
         if old is not None and old.IsCustomized:  # düzenlenmiş hazır kural: ad, mesaj ve koşul kullanıcıda (K-139)
             values = {"Kind": r.kind, "CheckType": r.check_type}
         if old is None:
-            session.execute(sa.insert(RULE).values(EntityName=r.table, Code=r.code, Severity=r.severity, IsActive=True, IsCustomized=False, **values))
+            session.execute(sa.insert(RULE).values(EntityName=r.table, Code=r.code, Severity=r.severity, IsActive=True, IsCustomized=False,
+                                                   TrackQuality=r.tracked, **values))
             added += 1
         elif any(getattr(old, k) != v for k, v in values.items()):
             session.execute(sa.update(RULE).where(RULE.c.Id == old.Id).values(**values))

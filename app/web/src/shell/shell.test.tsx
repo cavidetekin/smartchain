@@ -48,9 +48,9 @@ describe("kenar menü", () => {
   it("ekrana tıklayınca boş sayfası ve adımı açılır", async () => {
     const user = userEvent.setup();
     renderApp();
-    await user.click(within(menu()).getByRole("link", { name: /Veri kalitesi/ }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Veri kalitesi");
-    expect(screen.getByText("Bu ekran 6.5 adımında gelecek.")).toBeInTheDocument();
+    await user.click(within(menu()).getByRole("link", { name: /Uyarılar/ }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Uyarılar");
+    expect(screen.getByText("Bu ekran 9.2 adımında gelecek.")).toBeInTheDocument();
   });
 });
 
@@ -198,9 +198,9 @@ describe("daraltılmış menü", () => {
 
 describe("sayfalar", () => {
   it("her ekran kendi adresinde açılır", () => {
-    renderApp("/veri/veri-kalitesi");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Veri kalitesi");
-    expect(screen.getByText("Bu ekran 6.5 adımında gelecek.")).toBeInTheDocument();
+    renderApp("/takip/uyarilar");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Uyarılar");
+    expect(screen.getByText("Bu ekran 9.2 adımında gelecek.")).toBeInTheDocument();
   });
 
   it("kök adres Ana sayfa'ya, bilinmeyen adres 'Sayfa bulunamadı'", () => {

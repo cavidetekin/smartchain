@@ -4,6 +4,7 @@
 // uygulanmaz: "Kurallar yeniden uygulansın mı?" ve şeritte "Kuralları yeniden uygula".
 import { GripVertical } from "lucide-react";
 import { type DragEvent, type HTMLAttributes, useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 
 import { ApiError, emitNotice, JOB_VALIDATION } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -201,7 +202,11 @@ export function DataRules() {
   const orderReason = can(me, 18, "write") ? flowLock : forbiddenReason(18, "write");
   const applyReason = can(me, 19, "write") ? flowLock : forbiddenReason(19, "write");
   const [entities, setEntities] = useState<Entity[]>([]);
-  const [entity, setEntity] = useState(ALL);
+  // Veri kalitesinden "Kural oluştur" (K-174): ?tablo=…&alan=…&yeni=1 → o tablo seçili, yeni kural penceresi hedef alanla açık
+  const { search, pathname } = useLocation();
+  const navigate = useNavigate();
+  const asked = new URLSearchParams(search);
+  const [entity, setEntity] = useState(asked.get("tablo") ?? ALL);
   const edits = useTableEdits();
   const [ids, setIds] = useState<string[]>([]);
   const [order, setOrder] = useState<string[] | null>(null);
@@ -215,6 +220,13 @@ export function DataRules() {
   const [ask, setAsk] = useState<string[] | "all" | null>(null);
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
   useJobRefresh(VALIDATION_JOBS, refresh);  // "Kuralları yeniden uygula" bitince Durum güncellenir (K-143)
+  useEffect(() => {
+    const table = asked.get("tablo");
+    if (asked.get("yeni") !== "1" || !table) return;
+    if (!writeReason) setEditing({ entity: table, name: "", target: asked.get("alan") ?? "", result: emptyResult(), mode: MODE_ONLY_EMPTY, active: true, groups: [] });
+    else emitNotice(writeReason);
+    navigate(`${pathname}?${new URLSearchParams({ tablo: table }).toString()}`, { replace: true });  // geri gelince pencere yeniden açılmasın
+  }, [search]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const ctrl = new AbortController();

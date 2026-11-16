@@ -48,6 +48,10 @@ def run_validations(engine, limit: int = 200) -> list[int]:
             job = queue.claim_next(s, CHANNEL_PROCESSING, JobSettings(limit_processing=100))
         if job is None:
             return done
+        if job["JobType"] == "Veri kalitesi":  # aktarım ve manuel değerin bıraktığı kontrol işi (K-174): validasyon değil, kapatılır
+            with Session(engine) as s:
+                queue.finish(s, job["Id"], job["Attempt"], progress="test: atlandı")
+            continue
         run_validation_job(job["Id"], job["Attempt"])
         done.append(job["Id"])
     raise AssertionError("Validasyon işleri bitmedi")

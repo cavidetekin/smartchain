@@ -588,6 +588,21 @@ Uygulandı (6.2, K-170, K-172).
 
 Aktarım (tam ve kısmi) eşleşen satırda gelen değeri alttaki değer olarak saklar, yerine manuel değeri koyar; yalnız manuel değer farkı yeni versiyon açmaz. Uygulanıyor (6.2).
 
+## Veri kalitesi (ekran 05, fonksiyon 20, 21; K-174)
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| `data-quality-warnings` listesi (`/api/data-quality-warnings/columns · query · values · ids`) | 20 okuma | Uyarılar, liste sözleşmesiyle; sekmeler `Importance` ve `State` süzgeciyle (yalnız süzmede). Kolonlar Durum, Tablo, Kayıt, Mesaj, Tespit tarihi; gizli Kontrol (`RuleName`) ve Gerekçe; satırda Kayda git hedefi (`TargetList`: kaydın listesi, Id süzgeciyle; `RecordKey`) ve `FixField` |
+| `data-quality-ignored` listesi | 20 okuma | Yok sayılan sekmesi: `data-quality-warnings` ile aynı kaynak ve süzgeçler; Standart görünümde Gerekçe açık, görünümleri ayrı |
+| `POST /api/data-quality/ignore` | 21 yazma | Yok say: `{"ids": [..], "reason": ".."}`; gerekçe zorunlu (boşsa 422); denetim izine |
+| `POST /api/data-quality/unignore` | 21 yazma | Yok saymayı kaldır: `{"ids": [..]}` → Açık; denetim izine |
+| `POST /api/data-quality/{id}/demand-chain` | 20 okuma | Talep zincirini hesaplar ve `DemandChainPath`'e yazar (önbellek): `{"count", "truncated"}`; en çok 1.000 yol |
+| `data-quality-demand-chain` listesi | 20 okuma | Talep zinciri: süzgeç `WarningId`; Talep, Talep tipi, Malzeme yolu, Talep tarihi, Açık miktar |
+| `GET /api/data-quality/summary` | 20 okuma | Ana sayfa özeti: `{"high", "high_new"}` (yok sayılan hariç) |
+
+- **İş:** "Veri kalitesi" (Veri işleme kanalı). Aktarım işinin sonunda (aktarılan tablolar), manuel değer girme ve kaldırmadan sonra (o tablo) ve engine servisinde gün dönümünde (hepsi) kuyruğa girer; kuyrukta bekleyen varsa yenisi eklenmez, kapsamı birleşir. Öncelik −1: aynı kanalda bekleyen aktarım ve validasyon işlerinden sonra alınır. Geliştirme aracı: `python -m app.quality run [--gun YYYY-MM-DD]` (verilen günle tam kontrol; ürün işlevi değildir).
+- **Validasyon kuralları:** `PUT /api/validation-rules` değişikliğinde `track` (Evet/Hayır; yalnız Uyarı'da yazılır), `reset` takibi katalogdaki hâline getirir; `validation-rules` listesinde `TrackQuality` (Takip).
+
 ## Zamanlanmış işler (ekran 25, fonksiyon 92, K-163, K-164)
 
 | Uç nokta | Yetki | Açıklama |
