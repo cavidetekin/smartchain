@@ -23,7 +23,7 @@ describe("menü role göre (K-100)", () => {
     ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı", "Sistem ayarları"], []],  // K-164: yalnız Zamanlanmış işler sekmesi
     ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Senaryolar", "Veri yükleme", "Gece senaryoları", "Denetim izi"], ["Kullanıcılar"]],
     ["End user", ["Takip", "Veri"], ["Uyarılar", "Ana veri", "Veri kalitesi"],
-     ["Senaryolar", "Çalışma", "Veri yükleme", "Veri kuralları", "Validasyon kuralları", "Parametre setleri", "Gece senaryoları", "Kullanıcılar", "Denetim izi"]],  // K-142
+     ["Senaryolar", "Çalışma", "Veri yükleme", "Veri kuralları", "Validasyon kuralları", "Parametreler", "Gece senaryoları", "Kullanıcılar", "Denetim izi"]],  // K-142
   ])("%s", (role, expectedGroups, shown, hidden) => {
     mockApi();
     renderApp("/ana-sayfa", meAs(role));

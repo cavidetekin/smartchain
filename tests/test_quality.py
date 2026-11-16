@@ -286,7 +286,9 @@ def test_go_to_record_filters_every_target_list(eng, people):
         assert body["filtered"] == 1 and str(body["rows"][0]["Id"]) == value, (target, body["filtered"])
     check(eng)
     w = [x for x in warning(eng, "MS.NO_LEADTIME") if x["RecordKey"] == str(deep_supplier_row(eng))][0]
-    row = client.post("/api/data-quality-warnings/query", headers=end, json={"filters": [{"field": "Id", "op": "in", "values": [str(w["Id"])]}]}).json()["rows"][0]
+    found = client.post("/api/data-quality-warnings/query", headers=end, json={"filters": [{"field": "Id", "op": "in", "values": [str(w["Id"])]}]})
+    assert found.status_code == 200, found.text
+    row = found.json()["rows"][0]
     assert row["TargetList"] == "master-material-supplier"
     hit = client.post("/api/master-material-supplier/query", headers=end, json={
         "fields": ["MaterialCode", "SupplierCode"], "filters": [{"field": "Id", "op": "in", "values": [row["RecordKey"]]}]}).json()
@@ -310,7 +312,9 @@ def test_validation_rule_tracking(eng, people):
     rid = _sql(eng, "SELECT Id FROM adm.ValidationRule WHERE Code = N'MS.NO_LEADTIME'").scalar_one()
     hata = _sql(eng, "SELECT TOP 1 Id FROM adm.ValidationRule WHERE Severity = N'Hata' AND Kind = N'Hazır'").scalar_one()
     try:
-        assert client.get(f"/api/validation-rules/{rid}", headers=owner).json()["track"] is True
+        first = client.get(f"/api/validation-rules/{rid}", headers=owner)
+        assert first.status_code == 200, first.text
+        assert first.json()["track"] is True
         assert client.put("/api/validation-rules", headers=key, json={"changes": [{"id": rid, "track": False}], "thresholds": []}).status_code == 403
         assert client.put("/api/validation-rules", headers=owner, json={"changes": [{"id": rid, "track": False}], "thresholds": []}).status_code == 200
         assert _sql(eng, "SELECT TrackQuality FROM adm.ValidationRule WHERE Id = :i", i=rid).scalar_one() is False

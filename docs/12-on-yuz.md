@@ -82,7 +82,8 @@ Daraltılmış menü ve yandan açılan alt panel aynı renkleri kullanır.
 - **Bağlam çubuğu:**
   - **Veri versiyonu:** `GET /api/data-versions/current` → "Veri v35 · 27.10.2026 12:20". Veri yoksa "Veri yüklenmedi"; API cevap vermiyorsa "Sunucuya ulaşılamıyor"; API veritabanına bağlanamıyorsa (503) "Veriye ulaşılamıyor".
   - **İş göstergesi:** `GET /api/jobs` + `WS /api/ws`. Bağlantı koparsa 10 sn'de yeniden bağlanır, arada 30 sn'de bir sorgular (fonksiyon 48); kullanıcı "Bildirimler gecikebilir." görür, bağlıyken metin yoktur.
-  - **Senaryo, plan versiyonu, dönem:** pasif yer tutucu (8.1).
+  - **Senaryo:** seçili senaryonun adı ("Senaryo: Baz"; `GET /api/scenarios/current`). 7.1'de tek senaryo vardır, hap tıklanmaz; seçim senaryo yönetimi adımında gelir (K-175).
+  - **Plan versiyonu, dönem:** pasif yer tutucu (8.1).
 - **Boş ekranlar:** Her ekran "Bu ekran X adımında gelecek" yazan sayfayla açılır. Adım, `catalog.ts`'teki GELISTIRME_ADIMLARI eşlemesinden gelir.
 - **Kurulum:** Derlenmiş dosyalar paketin `web\` klasörüyle IIS köküne kopyalanır. `web.config` `/api`'yi API'ye yönlendirir, diğer adresleri `index.html`'e verir (tek sayfa uygulaması) ve `.woff2` türünü tanır (docs/10).
 
@@ -115,7 +116,7 @@ Durum renkleri yalnız durum gösterir; her zaman bir yazı, değer ya da ikonla
 
 - Her hücrede değer yazar (U-3); renk yalnız vurgudur.
 - Eşik, ekranda yazan yuvarlanmış değere uygulanır: %100,4 "%100" yazar ve risk rengindedir.
-- **Eşikler parametredir:** `occupancyLevel(değer, eşikler)` ve doluluk bileşenleri eşikleri alır. Varsayılan `{ low: 40, normal: 70, risk: 90, over: 100 }`. Eşikler müşteriye göre değişir; 7.5'te uyarı eşikleri ekranından (WarningDefinition, fonksiyon 26) gelir.
+- **Eşikler parametredir:** `occupancyLevel(değer, eşikler)` ve doluluk bileşenleri eşikleri alır. Varsayılan `{ low: 40, normal: 70, risk: 90, over: 100 }`. Eşikler müşteriye göre değişir; 7.8'te uyarı eşikleri ekranından (WarningDefinition, fonksiyon 26) gelir.
 - Lejant metinleri eşiklerden üretilir.
 
 ### Grafik serileri (U-5)
@@ -151,7 +152,7 @@ Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. M
 | StripSelect, StripText | tablonun şeridinde etiketli seçim ve kutu (bkz. Üst şerit; K-171) |
 | MasterDetail | ana tablo ve detay kartı: kapatma, ayraç, ilk dolu sekme (bkz. Ana–detay düzeni) |
 | OccupancyCell, OccupancyLegend | doluluk hücresi ve lejantı (eşikler parametre) |
-| Hücre işaretleri | manuel değişiklik (indigo çerçeve, U-4/U-16), dondurulmuş (gri ve kilit), kümülatif eksik (kiremit yazı); tablo 1.3'te kullanır |
+| Hücre işaretleri | manuel değişiklik (indigo çerçeve, U-4/U-16), sabit dönem (gri ve kilit), kümülatif eksik (kiremit yazı); tablo 1.3'te kullanır |
 
 **Örnek sayfa:** `/stil`. Menüde yoktur (ekran değildir); bütün renkleri ve bileşenleri dört yazı boyutunda gösterir; geliştirme ve gözden geçirme içindir.
 
@@ -457,6 +458,19 @@ Veri menüsünde Veri kuralları ve Validasyon kurallarından sonra, adres `/ver
 - **Kayda git:** Ana veri ya da İşlem verisi ekranı, tablo yalnız o kayıtla süzülmüş, kart kapalı (`onlyRecordUrl`, adreste `yalniz=<Id>`). Tablonun üstünde bilgi satırı "Yalnız Veri kalitesinden açılan kayıt gösteriliyor." ve "Bütün kayıtları göster" (bağlantı düğmesi); sekme ya da tablo değişince süzgeç kalkar. Denetim izinin "Kayda git"i değişmedi: kayıt seçili, kartı açık, tablo bütün kayıtlarıyla (`recordUrl`).
 - **Kural oluştur:** Veri kuralları ekranı, yeni kural penceresi o tablo ve hedef alanla açık (`/veri/veri-kurallari?tablo=…&alan=…&yeni=1`).
 
+### Parametreler (7.1, K-175; ekran 06, fonksiyon 22, 23)
+
+Parametre menüsünde, adres `/parametre/parametreler`; mockup `plans/7.1-mockups/parametreler.html`. Ekran bağlam çubuğunda seçili senaryonun parametrelerini gösterir; ekranda senaryo seçimi yoktur.
+- **Şerit:** yalnız ana başlıklar (sekme): Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı; adreste `?sekme=…&bolum=…`. Şeridin sağı boştur.
+- **Form başlıkları:** Sistem ayarları düzeni (ortak bileşen `ui/SettingsForm.tsx`): solda alt başlıklar, sağda sıkı kart; alan adı solda, değer sağda. Seçenekli parametre parçalı seçimdir (`Segment`; yedi günlük hafta başlangıcı açılır liste), Evet/Hayır 44×24 anahtar, sayı kutusu dar. Açıklama alan adının ipucundadır. Tek alt başlıklı başlıkta (Kapasite, Plan kararlılığı) sol menü çıkmaz. LP'de üretim lot anahtarları pasif ve gridir.
+- **Form içi tablolar** (Hedefler; Planlama ufku › Ufuk ve dönemler ve Raporlama ekseni): `ui/EditGrid.tsx`. Ortak tablonun görünümü (başlık zemini, satır yüksekliği, sayı sağa yaslı) ve hücre düzenleme standardı (düz metin, başlıkta ✎, çift tıklama / Enter / F2 / yazmaya başlama, Enter alt hücre, Tab sağ hücre, Esc vazgeç, değişen hücre lila). Sıra veridir: satır tutamaçtan sürüklenir; sıralama, filtre, görünüm ve Excel araçları yoktur, tablo tamamı yüklü küçük bir listedir. **Kaydet ve Vazgeç tablonun altında, sağda** (kartlardaki yerinde). Genel kural: alt başlıklı form sayfalarının içindeki tablolarda düğmeler altta, sağda; bağımsız tablo ekranlarında bugünkü gibi şeritte (K-175).
+- **Hedefler:** Sıra · Hedef · Süre bütçesi (sn) ✎ · Ödün payı (%) ✎ · Aktif (küçük anahtar). Kapalı hedef soluk, sırası ve değerleri boş, listenin sonunda. Altta "Toplam" satırı (aktif hedeflerin süresi).
+- **Ufuk ve dönemler:** "Satır ekle" (indigo) tablonun üstünde; Sıra · Dönem tipi ✎ · Kapsam ✎ · Kapsam birimi ✎ · Başlangıç · Bitiş · ⋯ (Sil). Başlangıç ve Bitiş salt okunur; taslak değiştikçe sunucudan yeniden hesaplanır (`…/preview`). Altta ufuk şeridi: parça genişliği gün sayısıyla orantılı, üzerinde "3 ay · haftalık" gibi etiket. Şeridin altında **dönem listesi**: hesaplanan dönemlerin salt okunur tablosu (Dönem · Başlangıç · Bitiş · Dönem tipi · Gün sayısı; aynı form içi tablo, ✎ ve imleç yok; uzun listede kart içinde kayar). Taslak değiştikçe kaydetmeden güncellenir.
+- **Raporlama ekseni:** "Raporlama ekseni planla aynı" anahtarı; kapatılınca aynı yapıda ikinci tablo (ve dönem listesi) kaydetmeden hemen açılır, açılınca hemen kapanır; anahtarın ve tablonun kaydı kendi Kaydet'iyledir.
+- **Değer ve birim** (sabit dönem): tek satırda dar sayı kutusu ve parçalı birim seçimi (`UnitRow`); altında bilgi satırı ("Sabit dönemin son günü: …", yalnız kayıtlı değer gösterilirken).
+- **Kaydedilmemiş değişiklik:** başka alt başlığa, başlığa ya da ekrana geçişte uyarı (K-132). Başarılı kayıtta bildirim yok; hata alanın altında ya da hücre ipucunda.
+- **Yetki:** Key user ve üstü; End user'da ekran menüde yok.
+
 ### Veri kuralları (4.1, K-140, K-141, K-142; ekran 04, fonksiyon 16, 18, 19)
 
 Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyon kuralları ile aynı desende. Tablo kolonu görünür ve ilk kolondur; "Tümü"de liste Tablo, sonra Sıra'ya göre sıralıdır; Sıra her tabloda 1'den boşluksuzdur (K-144). Liste, "Kuralları yeniden uygula" işi bitince kendiliğinden yenilenir. Tablonun şeridinin solunda (bkz. Üst şerit, K-171): tablo seçimi ("Tümü" ya da tablo), "Yeni kural" (indigo; "Tümü"de "Yeni kural için önce bir tablo seçin." bildirimi) ve "Kuralları yeniden uygula" (mor). Ortak tablo: Sıra, Kural, Koşul (okunur cümle, alt satıra kayar), Sonuç (okunur cümle), Seçenek, Aktif (anahtar), Durum (her zaman dolu: soluk yeşil "Çalıştı" ve ipucunda son çalışma zamanı, kırmızı "Çalışmadı" ve ipucunda neden, gri "Pasif" ve gri "Uygulanmadı"; K-145); "Tümü"de Tablo kolonu. Satır menüsü: "Düzenle", "Sil" (onay penceresi). Key user salt okunur görür.
@@ -506,4 +520,5 @@ Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyo
 | Detay kartı: detay simgesi, hücre menüsü (Detay · Kopyala · Manuel değeri kaldır) ve Ctrl+C, tek sıra sekmeler (Geçmiş ve ilişkiler; Ana veri, İşlem verisi); denetim izinde "Kayda git" | uygulandı (6.3, K-171, K-173) |
 | Tablo standardı demosu 2: sağ tık her tabloda, Düzenle, şerit boşluğu, kopyalamada bildirim yok, çoklu seçim ve çoklu seçimde kart, görünüm seçicide yalnız ad | uygulandı (6.3, K-171) |
 | Veri kalitesi (ekran 05): Yüksek · Normal · Yok sayılan sekmeleri, durum çipleri (Yeni indigo yumuşak, Açık gri, Yok sayıldı sönük), Yok say penceresi, detay kartı Kayıt · Talep zinciri; Validasyon kuralları'nda Takip kolonu ve pencere anahtarı (K-174) | uygulandı (6.5, K-174) |
+| Parametreler (ekran 06): ana başlıklar şeritte, form başlıklarında Sistem ayarları düzeni (`SettingsForm`), form içi tablolar (`EditGrid`: Hedefler, Ufuk ve dönemler) ve altta Kaydet / Vazgeç, ufuk şeridi; bağlam çubuğunda "Senaryo: Baz" (K-175) | uygulandı (7.1, K-175) |
 | Tablo standardı: sekmeler ve araç çubuğu tek şerit (simge düğmeler, ⚙ Tablo ayarları), kayıt sayısı tablonun altında, Diğer ▾; Ana veri, İşlem verisi, Sistem sağlığı, detay kartları, Validasyon çekmecesi | uygulandı (6.3, K-173) |

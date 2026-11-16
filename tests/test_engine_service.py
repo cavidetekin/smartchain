@@ -26,7 +26,7 @@ def service(db_engine, budget=120, grace=60):
 
 def submit(session, env):
     return submit_plan_run(session, data_version_id=env["data_version_id"],
-                           parameter_set_id=env["parameter_set_id"], requested_by=env["user_id"])
+                           scenario_definition_id=env["scenario_definition_id"], requested_by=env["user_id"])
 
 
 def run_until_done(svc, session, job_id, timeout=60, each=None):
@@ -136,7 +136,7 @@ def test_job_runs_in_own_process(db_engine, db_session, plan_env):
 
 def test_heartbeat_from_service_keeps_long_job_alive(db_engine, db_session, plan_env):
     """Hesap kalp atışı eşiğinden (2 sn) çok uzun sürer (6 × 1 sn); servis kalp atışı yazdığı için takılmış sayılmaz."""
-    set_fake(db_engine, plan_env["parameter_set_id"], step=1)
+    set_fake(db_engine, plan_env["scenario_definition_id"], step=1)
     plan_run_id, job_id = submit(db_session, plan_env)
     requeued = []
     with Session(db_engine) as watcher:  # API'nin izleyicisi gibi
@@ -148,7 +148,7 @@ def test_heartbeat_from_service_keeps_long_job_alive(db_engine, db_session, plan
 
 
 def test_time_budget_kills_process(db_engine, db_session, plan_env):
-    set_fake(db_engine, plan_env["parameter_set_id"], step=5)
+    set_fake(db_engine, plan_env["scenario_definition_id"], step=5)
     plan_run_id, job_id = submit(db_session, plan_env)
     started = time.monotonic()
     job = run_until_done(service(db_engine, budget=1, grace=1), db_session, job_id)
@@ -159,7 +159,7 @@ def test_time_budget_kills_process(db_engine, db_session, plan_env):
 
 
 def test_crash_requeues_then_fails(db_engine, db_session, plan_env):
-    set_fake(db_engine, plan_env["parameter_set_id"], mode="crash")
+    set_fake(db_engine, plan_env["scenario_definition_id"], mode="crash")
     _, job_id = submit(db_session, plan_env)
     job = run_until_done(service(db_engine), db_session, job_id)
     assert job["Status"] == STATUS_FAILED and job["Attempt"] == JOBS.max_attempts
@@ -167,7 +167,7 @@ def test_crash_requeues_then_fails(db_engine, db_session, plan_env):
 
 
 def test_engine_error_fails_job_and_plan_run(db_engine, db_session, plan_env):
-    set_fake(db_engine, plan_env["parameter_set_id"], mode="error")
+    set_fake(db_engine, plan_env["scenario_definition_id"], mode="error")
     plan_run_id, job_id = submit(db_session, plan_env)
     job = run_until_done(service(db_engine), db_session, job_id)
     assert job["Status"] == STATUS_FAILED and "Model kurulamadı" in job["ErrorText"]

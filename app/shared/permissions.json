@@ -489,7 +489,7 @@
     },
     {
       "no": 22,
-      "name": "Parametre seti",
+      "name": "Parametreler",
       "group": "C",
       "levels": {
         "System owner": "full",
@@ -918,7 +918,7 @@
     },
     {
       "no": 61,
-      "name": "Kilitleme ve kilit kaldırma",
+      "name": "Sabitleme ve sabitlemeyi kaldırma",
       "group": "F",
       "levels": {
         "System owner": "full",
@@ -940,7 +940,7 @@
     },
     {
       "no": 63,
-      "name": "Dondurulmuş dönem koruması",
+      "name": "Sabit dönem koruması",
       "group": "F",
       "levels": {
         "System owner": "full",

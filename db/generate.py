@@ -70,7 +70,7 @@ REF_TARGET = {
     "LocationId": "Location", "FromLocationId": "Location", "ToLocationId": "Location",
     "MaterialId": "Material", "ComponentMaterialId": "Material",
     "PlanRunId": "PlanRun", "CurrentPlanRunId": "PlanRun",
-    "ResourceId": "Resource", "ParameterSetId": "ParameterSet", "ProjectId": "Project",
+    "ResourceId": "Resource", "ProjectId": "Project",
     "LendingProjectId": "Project", "BorrowingProjectId": "Project",
     "WorkOrderId": "WorkOrder", "ParentWorkOrderId": "WorkOrder", "SupplierId": "Supplier",
     "ResourceGroupId": "ResourceGroup", "WorkspaceId": "Workspace", "DataVersionId": "DataVersion",

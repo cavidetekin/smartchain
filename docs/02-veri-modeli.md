@@ -98,7 +98,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
 - **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
-- **Parametre  6 tablo:** ParameterSet · PlanningSetting · PriorityRule · AllocationRule
+- **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · AllocationRule
 - yükleme
 - **Talep  3 tablo:** Customer · SalesOrderLine · Forecast
 - **Arz ve stok  8 tablo:** Stock · BorrowPayback · WorkOrder · PurchaseOrderLine · TransferOrder
@@ -191,9 +191,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### PARAMETRE
 
-- **ParameterSet:** Parametre seti
-- **PlanningSetting:** Genel planlama parametreleri (anahtar–değer)
-- **TimeBucketDefinition:** Zaman yapısı: planlama ufku ve dinamik bucket dizisi
+- **PlanningSetting:** Senaryonun planlama parametreleri (anahtar–değer)
+- **TimeBucketDefinition:** Zaman yapısı: senaryonun ufuk ve dönem dizisi (plan ve raporlama ekseni)
+- **ObjectiveDefinition:** Senaryonun hedefleri: sıra, süre bütçesi, ödün payı (leksikografik)
 - **PriorityRule:** Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih)
 - **AllocationRule:** Kapasite alokasyonu: talep sınıfına kaynak (grubu) ve dönem bazında pay
 - **WarningDefinition:** Uyarı tanımı, eşik ve önem seviyesi
@@ -229,7 +229,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### PLAN
 
-- **ScenarioDefinition:** Gece senaryosu tanımı: parametre seti + eksen ayarları
+- **ScenarioDefinition:** Senaryo tanımı; parametrelerinin tamamını kendisi taşır (K-175)
 - **Scenario:** Gece üretilen senaryo
 - **Workspace:** Kullanıcının bir senaryo üzerindeki çalışması
 - **WorkspaceOverride:** Çalışmadaki geçici değişiklikler: parametreler ve çalışmada değiştirilebilir ana veri alanları
@@ -375,7 +375,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.3). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5). Bu Smartchain alanları Kapasite yönetimi ekranında (7.3) girilir, güncel satırda yerinde güncellenir (yeni veri versiyonu açılmaz, izli; aktarım yeni versiyona taşır; K-167); ana veri ekranında salt okunur (K-168).
+- **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.4). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5). Bu Smartchain alanları Kapasite yönetimi ekranında (7.4) girilir, güncel satırda yerinde güncellenir (yeni veri versiyonu açılmaz, izli; aktarım yeni versiyona taşır; K-167); ana veri ekranında salt okunur (K-168).
 - **Tip:** `ResourceType` ERP'den ham değerdir; tip bayraklarla ifade edilir. `IsFurnace` ve `IsMold` yalnız sözleşmededir, Faz 1 planlamada kullanılmaz.
 - **İşçi:** İşçiler kaynaktır (`IsEmployee`), yetkinlikler kaynak grubudur (`IsCompetenceGroup`), işçi yetkinlikleri `ResourceGroupAssignment`'tadır.
 
@@ -443,7 +443,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| ParameterSetId | int | FK | Parametre seti | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo | Smartchain (parametre) | H | E |  |
 | ResourceId | bigint | FK | Kaynak | Smartchain (parametre) | H | E |  |
 | ValidFrom | date |  | Başlangıç | Smartchain (parametre) | H | E |  |
 | ValidTo | date |  | Bitiş | Smartchain (parametre) | H | E |  |
@@ -458,7 +458,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| ParameterSetId | int | FK | Parametre seti | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo | Smartchain (parametre) | H | E |  |
 | ResourceId | bigint | FK | Kaynak | Smartchain (parametre) | H | E |  |
 | ValidFrom | date |  | Başlangıç | Smartchain (parametre) | H | E |  |
 | ValidTo | date |  | Bitiş | Smartchain (parametre) | H | E |  |
@@ -538,7 +538,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| ParameterSetId | int | FK | Parametre seti | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo | Smartchain (parametre) | H | E |  |
 | ShiftPlanId | bigint | FK | Vardiya planı | Smartchain (parametre) | H | E |  |
 | MaxOvertimeHours | decimal(9,2) |  | Dönem başına en fazla fazla mesai (saat) | Smartchain (parametre) | E | E |  |
 
@@ -656,7 +656,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ParameterSetId | int | FK | Parametre seti |  | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
 | SupplierId | bigint | FK | Tedarikçi |  | Smartchain (parametre) | H | E |  |
 | MaterialId | bigint | FK | Malzeme; boşsa tedarikçinin bütün malzemeleri (yalnız kapalı dönem) |  | Smartchain (parametre) | H | H |  |
 | ValidFrom | date |  | Başlangıç |  | Smartchain (parametre) | H | E |  |
@@ -1126,28 +1126,15 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-### ParameterSet
-<sub>21. Veri modeli · Parametre</sub>
-
-- Parametre · versiyonsuz · Faz 1
-- Parametre seti; gece senaryoları farklı setlerle çalışır.
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | int | PK | Set kimliği | Sistem | H | E |  |
-| Name | nvarchar(100) |  | Set adı | Kullanıcı | H | E |  |
-| IsDefault | bit |  | Varsayılan set | Kullanıcı | H | H | 0 |
-| IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) | Sistem | H | H | 0 |
-
 ### PlanningSetting
 <sub>21. Veri modeli · Parametre</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Genel planlama parametreleri (anahtar–değer); ör. model tipi, fazla mesai dahil mi, fix dönem, toleranslar, MRP öncelik ve kısıt ayarları.
+- Senaryonun planlama parametreleri (anahtar–değer; K-175). Anahtarlar, tipleri, seçenekleri ve başlangıç değerleri docs/06 fonksiyon 22'deki tabloda (`app/params/catalog.py`).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
-| ParameterSetId | int | PK,FK | Parametre seti |  | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | PK,FK | Senaryo |  | Smartchain (parametre) | H | E |  |
 | SettingKey | nvarchar(60) | PK | Parametre adı | Parametre adı | Smartchain (parametre) | H | E |  |
 | Value | nvarchar(200) |  | Değer |  | Smartchain (parametre) | E | E |  |
 
@@ -1155,14 +1142,33 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Parametre</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Zaman yapısı: planlama ufku ve dinamik bucket dizisi.
+- Zaman yapısı: senaryonun ufuk ve dönem dizisi. Kullanıcı tarih girmez; her satır bir parçadır: dönem tipi (dönemlerin büyüklüğü) ve kapsam (parçanın ne kadar sürdüğü). Başlangıç ve bitiş plan başlangıcına göre hesaplanır (fonksiyon 23, K-175). Raporlama ekseni ayrı diziyse `Axis` = Rapor satırları. Dönem tipleri ve kapsam birimleri iki eksende aynıdır; kapsam birimi dönem tipinden küçük olamaz (çeyrek ve yıl dönem tipinde Ay da olabilir).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
-| ParameterSetId | int | PK,FK | Parametre seti |  | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | PK,FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| Axis | nvarchar(10) | PK | Plan \| Rapor | Eksen | Smartchain (parametre) | H | E | Plan |
 | Seq | int | PK | Sıra |  | Smartchain (parametre) | H | E |  |
 | BucketType | nvarchar(10) |  | Gün \| Hafta \| Ay \| Çeyrek \| Yıl | Dönem tipi | Smartchain (parametre) | H | E |  |
-| Count | int |  | Bu tipten kaç bucket | Dönem sayısı | Smartchain (parametre) | H | E |  |
+| Count | int |  | Kapsam: parçanın kapsam birimi cinsinden uzunluğu | Kapsam | Smartchain (parametre) | H | E |  |
+| SpanUnit | nvarchar(10) |  | Gün \| Hafta \| Ay \| Çeyrek \| Yıl | Kapsam birimi | Smartchain (parametre) | H | E |  |
+
+### ObjectiveDefinition
+<sub>21. Veri modeli · Parametre</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Senaryonun hedefleri (leksikografik, ağırlık yok; K-175): motor hedefleri sırayla çözer. Senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK,UK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| Code | nvarchar(30) | UK | Hedefin kodu (UNMET_DEMAND, LATENESS, UNMET_FORECAST…; fonksiyon 22) | Hedef | Smartchain (parametre) | H | E |  |
+| PriorityGroup | int | UK | Sipariş öncelik grubu; boş = bütün siparişler (gruplar öncelik kuralları adımında) | Öncelik grubu | Smartchain (parametre) | H | H |  |
+| Seq | int |  | Çözüm sırası; aktif hedeflerde 1'den boşluksuz, kapalı hedefte boş | Sıra | Smartchain (parametre) | H | H |  |
+| TimeBudgetSeconds | int |  | Süre bütçesi (sn); kapalı hedefte boş | Süre bütçesi | Smartchain (parametre) | H | H |  |
+| TolerancePct | decimal(5,2) |  | Ödün payı (%): üst hedeften verilebilecek en çok ödün; 0 = katı | Ödün payı | Smartchain (parametre) | H | H |  |
+| IsActive | bit |  | Kapalı hedef çözülmez | Aktif | Smartchain (parametre) | H | H | 1 |
 
 ### PriorityRule
 <sub>21. Veri modeli · Parametre</sub>
@@ -1172,7 +1178,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
-| ParameterSetId | int | PK,FK | Parametre seti |  | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | PK,FK | Senaryo |  | Smartchain (parametre) | H | E |  |
 | Seq | int | PK | Sıra |  | Smartchain (parametre) | H | E |  |
 | Criterion | nvarchar(30) |  | Kriter |  | Smartchain (parametre) | E | E |  |
 | Direction | nvarchar(10) |  | Artan \| Azalan | Yön | Smartchain (parametre) | H | H | Artan |
@@ -1186,7 +1192,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ParameterSetId | int | FK | Parametre seti |  | Smartchain (parametre) | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
 | DemandClass | nvarchar(100) |  | Talep sınıfı tanımı (müşteri, proje, ürün grubu) | Talep sınıfı | Smartchain (parametre) | H | E |  |
 | ResourceId | bigint | FK | Kaynak |  | Smartchain (parametre) | H | H |  |
 | ResourceGroupId | bigint | FK | Kaynak grubu |  | Smartchain (parametre) | H | H |  |
@@ -1679,19 +1685,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Plan</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Gece senaryosu tanımı: parametre seti + eksen ayarları.
+- Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
 | Id | int | PK | Tanım kimliği |  | Sistem | H | E |  |
-| LocationId | int | FK | Lokasyon |  | ERP | H | E |  |
-| Name | nvarchar(100) |  | Senaryo adı |  | Kullanıcı | H | E |  |
-| ParameterSetId | int | FK | Parametre seti |  | Kullanıcı | H | E |  |
-| ResourceConstraint | nvarchar(15) |  | Kısıtsız \| Kısıtlı \| Kısmi | Kaynak kısıtı | Kullanıcı | H | H | Kısıtlı |
-| MaterialConstraint | bit |  | Malzeme kısıtı |  | Kullanıcı | H | H | 1 |
-| ModelType | nvarchar(5) |  | LP \| MILP | Model tipi | Kullanıcı | H | H | LP |
-| NightlyPriority | int |  | Gece çalışma önceliği |  | Kullanıcı | H | H |  |
-| IsActive | bit |  | Gece çalışsın mı |  | Kullanıcı | H | H | 1 |
+| LocationId | int | FK | Lokasyon; Baz kurulumda veri gelmeden açıldığı için boş olabilir |  | ERP | H | H |  |
+| Name | nvarchar(100) | UK | Senaryo adı |  | Kullanıcı | H | E |  |
+| IsBase | bit |  | Baz senaryo: silinemez, pasif yapılamaz; tek kayıtta Evet | Baz senaryo | Sistem | H | H | 0 |
+| IsActive | bit |  | Aktif; pasif senaryo seçilemez ve çalışmaz (senaryo yönetimi adımı) | Aktif | Kullanıcı | H | H | 1 |
+| RunsNightly | bit |  | Gece çalışsın (senaryo yönetimi adımı) | Gece çalışsın | Kullanıcı | H | H | 0 |
+| NightlyPriority | int |  | Gece çalışma sırası |  | Kullanıcı | H | H |  |
+| IsSynthetic | bit |  | Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79) |  | Sistem | H | H | 0 |
 
 ### Scenario
 <sub>21. Veri modeli · Plan</sub>
@@ -1751,7 +1756,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ScenarioId | bigint | FK | Senaryo | Sistem | H | H |  |
 | WorkspaceId | bigint | FK | Çalışma | Sistem | H | H |  |
 | DataVersionId | bigint | FK | Veri versiyonu | Sistem | H | E |  |
-| ParameterSetId | int | FK | Parametre seti | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo tanımı: hesabın parametreleri | Sistem | H | E |  |
 | EngineUsed | nvarchar(20) |  | LP \| MILP \| Kurallı \| Kısıtsız MRP | Sistem | H | H |  |
 | Solver | nvarchar(20) |  | Çözücü | Sistem | H | H |  |
 | StartedAt | datetime2 |  | Başlangıç | Sistem | H | H |  |

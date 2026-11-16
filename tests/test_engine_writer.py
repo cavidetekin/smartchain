@@ -4,7 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.engine.fake import FakeEngine
-from app.engine.interface import EngineInput, ParameterSetData, PlanRunInfo
+from app.engine.interface import EngineInput, PlanRunInfo, ScenarioParameters
 from app.engine.job import run_plan_job
 from app.engine.submit import submit_plan_run
 from app.engine.writer import JobNoLongerOwned, PlanRunPublished, write_result
@@ -25,14 +25,14 @@ def counts(session, plan_run_id):
 
 def submit_and_claim(session, env, job_settings):
     plan_run_id, job_id = submit_plan_run(session, data_version_id=env["data_version_id"],
-                                          parameter_set_id=env["parameter_set_id"], requested_by=env["user_id"])
+                                          scenario_definition_id=env["scenario_definition_id"], requested_by=env["user_id"])
     job = queue.claim_next(session, CHANNEL_INTERACTIVE, job_settings)
     assert job["Id"] == job_id
     return plan_run_id, job
 
 
 def fake_result():
-    inp = EngineInput(PlanRunInfo(1, 1, 1), ParameterSetData(1, "x", {}), None, 180)
+    inp = EngineInput(PlanRunInfo(1, 1, 1), ScenarioParameters(1, "x", {}), None, 180)
     return FakeEngine().run(inp, lambda s: None)
 
 
@@ -98,10 +98,9 @@ def test_unknown_column_rolls_back(db_session, plan_env, job_settings):
 
 
 def publish(session, env, plan_run_id):
-    p = {"l": env["location_id"], "ps": env["parameter_set_id"], "dv": env["data_version_id"], "u": env["user_id"],
-         "pr": plan_run_id}
-    sd = session.execute(text("INSERT INTO param.ScenarioDefinition (LocationId, Name, ParameterSetId) "
-                              "OUTPUT inserted.Id VALUES (:l, N'Motor testi', :ps)"), p).scalar_one()
+    p = {"l": env["location_id"], "dv": env["data_version_id"], "u": env["user_id"], "pr": plan_run_id}
+    sd = session.execute(text("INSERT INTO param.ScenarioDefinition (LocationId, Name, IsBase, IsActive, IsSynthetic) "
+                              "OUTPUT inserted.Id VALUES (:l, N'Motor testi', 0, 0, 1)"), p).scalar_one()
     sc = session.execute(text("INSERT INTO planning.Scenario (ScenarioDefinitionId, DataVersionId) "
                               "OUTPUT inserted.Id VALUES (:sd, :dv)"), {**p, "sd": sd}).scalar_one()
     ws = session.execute(text("INSERT INTO planning.Workspace (ScenarioId, OwnerUserId, Status) "

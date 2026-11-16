@@ -139,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"DURDU: {exc}", file=sys.stderr)
         return 2
     print(f"Sentetik v0 yüklendi: veri versiyonu {r['data_version_id']}, lokasyon {r['location_id']}, "
-          f"parametre seti {r['parameter_set_id']}; {sum(r['counts'].values())} satır"
+          f"Baz senaryo {r['scenario_definition_id']}; {sum(r['counts'].values())} satır"
           + (f"; silinen eski versiyonlar {r['removed_versions']}" if r["removed_versions"] else ""))
     _print_check(ds)
     return 0

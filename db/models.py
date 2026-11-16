@@ -255,7 +255,7 @@ ResourceDowntime = sa.Table(
 ResourceEfficiency = sa.Table(
     "ResourceEfficiency", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), nullable=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ValidTo", mssql.DATE(), nullable=False, comment="Bitiş", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
@@ -268,7 +268,7 @@ ResourceEfficiency = sa.Table(
 ResourcePeriodLimit = sa.Table(
     "ResourcePeriodLimit", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), nullable=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ValidTo", mssql.DATE(), nullable=False, comment="Bitiş", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
@@ -357,7 +357,7 @@ EmployeeAbsence = sa.Table(
 OvertimeLimit = sa.Table(
     "OvertimeLimit", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), nullable=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ShiftPlanId", sa.BigInteger(), index=True, nullable=False, comment="Vardiya planı", info={'label': "Vardiya planı", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("MaxOvertimeHours", sa.Numeric(9, 2), nullable=False, comment="Dönem başına en fazla fazla mesai (saat)", info={'label': "Dönem başına en fazla fazla mesai (saat)", 'source': "Smartchain (parametre)", 'workspace': True}),
     schema="param",
@@ -488,7 +488,7 @@ MaterialSupplier = sa.Table(
 SupplierLimit = sa.Table(
     "SupplierLimit", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), nullable=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("SupplierId", sa.BigInteger(), index=True, nullable=False, comment="Tedarikçi", info={'label': "Tedarikçi", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("MaterialId", sa.BigInteger(), index=True, nullable=True, comment="Malzeme; boşsa tedarikçinin bütün malzemeleri (yalnız kapalı dönem)", info={'label': "Malzeme", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
@@ -1043,41 +1043,48 @@ ProductionConfirmation = sa.Table(
     comment="Üretim gerçekleşmeleri: iş emri bazında stoğa girişler.",
 )
 
-ParameterSet = sa.Table(
-    "ParameterSet", metadata,
-    sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Set kimliği", info={'label': "Set kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("Name", sa.Unicode(100), nullable=False, comment="Set adı", info={'label': "Set adı", 'source': "Kullanıcı", 'workspace': False}),
-    sa.Column("IsDefault", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Varsayılan set", info={'label': "Varsayılan set", 'source': "Kullanıcı", 'workspace': False, 'default': "0"}),
-    sa.Column("IsSynthetic", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79)", info={'label': "Sentetik veri (geliştirme ve demo)", 'source': "Sistem", 'workspace': False, 'default': "0"}),
-    schema="param",
-    info={'field_class': "Parametre"},
-    comment="Parametre seti; gece senaryoları farklı setlerle çalışır.",
-)
-
 PlanningSetting = sa.Table(
     "PlanningSetting", metadata,
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), primary_key=True, autoincrement=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("SettingKey", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Parametre adı", info={'label': "Parametre adı", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("Value", sa.Unicode(200), nullable=False, comment="Değer", info={'label': "Değer", 'source': "Smartchain (parametre)", 'workspace': True}),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Genel planlama parametreleri (anahtar–değer); ör. model tipi, fazla mesai dahil mi, fix dönem, toleranslar, MRP öncelik ve kısıt ayarları.",
+    comment="Senaryonun planlama parametreleri (anahtar–değer; K-175). Anahtarlar, tipleri, seçenekleri ve başlangıç değerleri docs/06 fonksiyon 22'deki tabloda (`app/params/catalog.py`).",
 )
 
 TimeBucketDefinition = sa.Table(
     "TimeBucketDefinition", metadata,
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), primary_key=True, autoincrement=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Axis", sa.Unicode(10), primary_key=True, autoincrement=False, server_default=sa.text("N'Plan'"), comment="Plan | Rapor", info={'label': "Eksen", 'values': ["Plan", "Rapor"], 'source': "Smartchain (parametre)", 'workspace': False, 'default': "Plan"}),
     sa.Column("Seq", sa.Integer(), primary_key=True, autoincrement=False, comment="Sıra", info={'label': "Sıra", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("BucketType", sa.Unicode(10), nullable=False, comment="Gün | Hafta | Ay | Çeyrek | Yıl", info={'label': "Dönem tipi", 'values': ["Gün", "Hafta", "Ay", "Çeyrek", "Yıl"], 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("Count", sa.Integer(), nullable=False, comment="Bu tipten kaç bucket", info={'label': "Dönem sayısı", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Count", sa.Integer(), nullable=False, comment="Kapsam: parçanın kapsam birimi cinsinden uzunluğu", info={'label': "Kapsam", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("SpanUnit", sa.Unicode(10), nullable=False, comment="Gün | Hafta | Ay | Çeyrek | Yıl", info={'label': "Kapsam birimi", 'values': ["Gün", "Hafta", "Ay", "Çeyrek", "Yıl"], 'source': "Smartchain (parametre)", 'workspace': False}),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Zaman yapısı: planlama ufku ve dinamik bucket dizisi.",
+    comment="Zaman yapısı: senaryonun ufuk ve dönem dizisi. Kullanıcı tarih girmez; her satır bir parçadır: dönem tipi (dönemlerin büyüklüğü) ve kapsam (parçanın ne kadar sürdüğü). Başlangıç ve bitiş plan başlangıcına göre hesaplanır (fonksiyon 23, K-175). Raporlama ekseni ayrı diziyse `Axis` = Rapor satırları. Dönem tipleri ve kapsam birimleri iki eksende aynıdır; kapsam birimi dönem tipinden küçük olamaz (çeyrek ve yıl dönem tipinde Ay da olabilir).",
+)
+
+ObjectiveDefinition = sa.Table(
+    "ObjectiveDefinition", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Code", sa.Unicode(30), nullable=False, comment="Hedefin kodu (UNMET_DEMAND, LATENESS, UNMET_FORECAST…; fonksiyon 22)", info={'label': "Hedef", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("PriorityGroup", sa.Integer(), nullable=True, comment="Sipariş öncelik grubu; boş = bütün siparişler (gruplar öncelik kuralları adımında)", info={'label': "Öncelik grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Seq", sa.Integer(), nullable=True, comment="Çözüm sırası; aktif hedeflerde 1'den boşluksuz, kapalı hedefte boş", info={'label': "Sıra", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("TimeBudgetSeconds", sa.Integer(), nullable=True, comment="Süre bütçesi (sn); kapalı hedefte boş", info={'label': "Süre bütçesi", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("TolerancePct", sa.Numeric(5, 2), nullable=True, comment="Ödün payı (%): üst hedeften verilebilecek en çok ödün; 0 = katı", info={'label': "Ödün payı", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Kapalı hedef çözülmez", info={'label': "Aktif", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Index("UX_ObjectiveDefinition_ScenarioDefinitionId_Code_PriorityGroup", "ScenarioDefinitionId", "Code", "PriorityGroup", unique=True),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Senaryonun hedefleri (leksikografik, ağırlık yok; K-175): motor hedefleri sırayla çözer. Senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır.",
 )
 
 PriorityRule = sa.Table(
     "PriorityRule", metadata,
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), primary_key=True, autoincrement=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("Seq", sa.Integer(), primary_key=True, autoincrement=False, comment="Sıra", info={'label': "Sıra", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("Criterion", sa.Unicode(30), nullable=False, comment="Kriter", info={'label': "Kriter", 'source': "Smartchain (parametre)", 'workspace': True}),
     sa.Column("Direction", sa.Unicode(10), nullable=True, server_default=sa.text("N'Artan'"), comment="Artan | Azalan", info={'label': "Yön", 'values': ["Artan", "Azalan"], 'source': "Smartchain (parametre)", 'workspace': False, 'default': "Artan"}),
@@ -1089,7 +1096,7 @@ PriorityRule = sa.Table(
 AllocationRule = sa.Table(
     "AllocationRule", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), nullable=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("DemandClass", sa.Unicode(100), nullable=False, comment="Talep sınıfı tanımı (müşteri, proje, ürün grubu)", info={'label': "Talep sınıfı", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak grubu", info={'label': "Kaynak grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
@@ -1492,17 +1499,17 @@ RawCompareRow = sa.Table(
 ScenarioDefinition = sa.Table(
     "ScenarioDefinition", metadata,
     sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=True, comment="Tanım kimliği", info={'label': "Tanım kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), nullable=False, comment="Lokasyon", info={'label': "Lokasyon", 'source': "ERP", 'workspace': False}),
+    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), nullable=True, comment="Lokasyon; Baz kurulumda veri gelmeden açıldığı için boş olabilir", info={'label': "Lokasyon", 'source': "ERP", 'workspace': False}),
     sa.Column("Name", sa.Unicode(100), nullable=False, comment="Senaryo adı", info={'label': "Senaryo adı", 'source': "Kullanıcı", 'workspace': False}),
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), nullable=False, comment="Parametre seti", info={'label': "Parametre seti", 'source': "Kullanıcı", 'workspace': False}),
-    sa.Column("ResourceConstraint", sa.Unicode(15), nullable=True, server_default=sa.text("N'Kısıtlı'"), comment="Kısıtsız | Kısıtlı | Kısmi", info={'label': "Kaynak kısıtı", 'values': ["Kısıtsız", "Kısıtlı", "Kısmi"], 'source': "Kullanıcı", 'workspace': False, 'default': "Kısıtlı"}),
-    sa.Column("MaterialConstraint", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Malzeme kısıtı", info={'label': "Malzeme kısıtı", 'source': "Kullanıcı", 'workspace': False, 'default': "1"}),
-    sa.Column("ModelType", sa.Unicode(5), nullable=True, server_default=sa.text("N'LP'"), comment="LP | MILP", info={'label': "Model tipi", 'values': ["LP", "MILP"], 'source': "Kullanıcı", 'workspace': False, 'default': "LP"}),
-    sa.Column("NightlyPriority", sa.Integer(), nullable=True, comment="Gece çalışma önceliği", info={'label': "Gece çalışma önceliği", 'source': "Kullanıcı", 'workspace': False}),
-    sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Gece çalışsın mı", info={'label': "Gece çalışsın mı", 'source': "Kullanıcı", 'workspace': False, 'default': "1"}),
+    sa.Column("IsBase", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Baz senaryo: silinemez, pasif yapılamaz; tek kayıtta Evet", info={'label': "Baz senaryo", 'source': "Sistem", 'workspace': False, 'default': "0"}),
+    sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Aktif; pasif senaryo seçilemez ve çalışmaz (senaryo yönetimi adımı)", info={'label': "Aktif", 'source': "Kullanıcı", 'workspace': False, 'default': "1"}),
+    sa.Column("RunsNightly", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Gece çalışsın (senaryo yönetimi adımı)", info={'label': "Gece çalışsın", 'source': "Kullanıcı", 'workspace': False, 'default': "0"}),
+    sa.Column("NightlyPriority", sa.Integer(), nullable=True, comment="Gece çalışma sırası", info={'label': "Gece çalışma sırası", 'source': "Kullanıcı", 'workspace': False}),
+    sa.Column("IsSynthetic", sa.Boolean(), nullable=True, server_default=sa.text("0"), comment="Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79)", info={'label': "Sentetik veri (geliştirme ve demo)", 'source': "Sistem", 'workspace': False, 'default': "0"}),
+    sa.Index("UX_ScenarioDefinition_Name", "Name", unique=True),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Gece senaryosu tanımı: parametre seti + eksen ayarları.",
+    comment="Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo \"Baz\" gelir; silinemez, pasif yapılamaz.",
 )
 
 Scenario = sa.Table(
@@ -1548,7 +1555,7 @@ PlanRun = sa.Table(
     sa.Column("ScenarioId", sa.BigInteger(), sa.ForeignKey("planning.Scenario.Id", use_alter=True), nullable=True, comment="Senaryo", info={'label': "Senaryo"}),
     sa.Column("WorkspaceId", sa.BigInteger(), sa.ForeignKey("planning.Workspace.Id", use_alter=True), nullable=True, comment="Çalışma", info={'label': "Çalışma"}),
     sa.Column("DataVersionId", sa.BigInteger(), sa.ForeignKey("adm.DataVersion.Id"), nullable=False, comment="Veri versiyonu", info={'label': "Veri versiyonu"}),
-    sa.Column("ParameterSetId", sa.Integer(), sa.ForeignKey("param.ParameterSet.Id"), nullable=False, comment="Parametre seti", info={'label': "Parametre seti"}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo tanımı: hesabın parametreleri", info={'label': "Senaryo tanımı: hesabın parametreleri"}),
     sa.Column("EngineUsed", sa.Unicode(20), nullable=True, comment="LP | MILP | Kurallı | Kısıtsız MRP", info={'values': ["LP", "MILP", "Kurallı", "Kısıtsız MRP"]}),
     sa.Column("Solver", sa.Unicode(20), nullable=True, comment="Çözücü", info={'label': "Çözücü"}),
     sa.Column("StartedAt", mssql.DATETIME2(), nullable=True, comment="Başlangıç", info={'label': "Başlangıç"}),

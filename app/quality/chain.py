@@ -38,34 +38,10 @@ def active(t) -> sa.ColumnElement:
     return sa.or_(t.c.IsActive.is_(None), t.c.IsActive == sa.true()) if "IsActive" in t.c else sa.true()
 
 
-def _add_months(d: date, n: int) -> date:
-    m = d.month - 1 + n
-    y, m = d.year + m // 12, m % 12 + 1
-    last = (date(y + (m // 12), m % 12 + 1, 1) - timedelta(days=1)).day
-    return date(y, m, min(d.day, last))
-
-
 def horizon(session: Session, day: date) -> tuple[date, date | None]:
-    """Tahminin zinciri başlattığı aralık: bu ayın başı ile varsayılan parametre setinin planlama ufkunun sonu (zaman yapısı); set yoksa üst sınır yok."""
-    ps, tb = metadata.tables["param.ParameterSet"], metadata.tables["param.TimeBucketDefinition"]
-    start = day.replace(day=1)
-    set_id = session.execute(sa.select(ps.c.Id).where(ps.c.IsDefault == sa.true()).order_by(ps.c.Id).limit(1)).scalar()
-    if set_id is None:
-        return start, None
-    end = day
-    for kind, count in session.execute(sa.select(tb.c.BucketType, tb.c.Count).where(tb.c.ParameterSetId == set_id).order_by(tb.c.Seq)).all():
-        n = int(count or 0)
-        if kind == "Gün":
-            end += timedelta(days=n)
-        elif kind == "Hafta":
-            end += timedelta(weeks=n)
-        elif kind == "Ay":
-            end = _add_months(end, n)
-        elif kind == "Çeyrek":
-            end = _add_months(end, 3 * n)
-        elif kind == "Yıl":
-            end = _add_months(end, 12 * n)
-    return start, end
+    """Tahminin zinciri başlattığı aralık: bu ayın başı ile Baz senaryonun planlama ufkunun sonu (fonksiyon 23, K-175); dizi yoksa üst sınır yok."""
+    from app.params import service as params
+    return day.replace(day=1), params.horizon_end(session, day)
 
 
 def open_orders(so) -> sa.ColumnElement:

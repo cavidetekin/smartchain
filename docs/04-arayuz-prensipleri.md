@@ -59,7 +59,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Örnek ekran: manuel planlama](mockups/m23-0292-ornek-ekran-manuel-planlama.png)
 
-- **Bucket bazlı giriş:** Planlamacı ürün × hafta miktarını yazar; dondurulmuş bucket gri ve kilitli.
+- **Bucket bazlı giriş:** Planlamacı ürün × hafta miktarını yazar; sabit dönemdeki bucket gri ve kilitli.
 - **Manuel değişiklik (U-4):** Değişen hücre indigo çerçeveyle işaretlenir, sayaç başlıkta görünür.
 - **Kümülatif eksik (U-2):** Talebe göre eksik kalan haftalar kiremit renkte gösterilir.
 - **Anlık kaynak etkisi:** Her değişiklikte doluluk yeniden hesaplanır; kaydet yalnızca etkilenen kısmı yeniden planlar.

@@ -76,7 +76,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [x] 6.1 Ana veri ekranı (03, fn 10) ve İşlem verisi ekranı (29, fn 102) · K-167, K-168, K-169 · yalnız aktarılan veri, salt okunur (giriş, yeni kayıt, silme yok; manuel değer 6.2, Smartchain verisi Aşama 7) · tablo seçimi araç çubuğunun başında açılır liste, kayıt sayılarıyla (tek tablolu sekmede yok) · Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) · varsayılan sekme Malzeme, son sekme ve tablo hatırlanır · Ana veri sekmeleri: · demo bulguları: K-169 (Aktif süzgeci kalktı, Standart görünümde aktarılan bütün alanlar ve yana kaydırma, başlığı kesmeyen kolon genişliği, İşlem verisi ekranı 29 ve fonksiyon 102); bileşen birimi boşken temel birimin ondalığı (K-168); görsel kontrol uygun
   - [x] Malzeme: Malzeme · Benzetilen ürün
   - [x] Ürün ağacı ve rota: Üretim versiyonu · Ürün ağacı (`ScrapRatio` yüzde, K-113) · Rota
-  - [x] Kaynak: Kaynak (Smartchain alanları salt okunur; girişi 7.3'te) · Kaynak grubu · Grup ataması
+  - [x] Kaynak: Kaynak (Smartchain alanları salt okunur; girişi 7.4'te) · Kaynak grubu · Grup ataması
   - [x] Tedarikçi ve müşteri: Tedarikçi · Malzeme tedarikçisi (`QuotaRatio` yüzde, K-113, K-118) · Müşteri
   - [x] Lokasyon ve birim: Lokasyon · Birim (ad ve ondalık veri kuralıyla ya da "Manuel: Evet" ile, 6.2; K-112) · Birim dönüşümü
   - İşlem verisi sekmeleri (aktarım grupları, K-150):
@@ -94,13 +94,20 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 
 ## Aşama 7 · Parametreler
 
-- [ ] 7.1 Parametre seti (22) · tedarikçi seçim kuralı seçilir: en kısa tedarik süresi ya da `Priority` (K-118) · `SafetyStock` ile `StockCoverageDays` ikisi de doluysa hangisinin geçerli olacağı (büyük olan, yalnız miktar, yalnız gün…) motor parametresi olarak burada seçilir (K-113)
-- [ ] 7.2 Zaman yapısı (23)
-- [ ] 7.3 Kapasite yönetimi (ekran, fonksiyon 24) · K-167 · bağımsız ekran: kaynak kapasitesi (günlük kapasite, paralel adet, kapasite kaynağı, takvim ataması, fason parametreleri; alt kartta duruşlar ve kapasite profili), takvim (alt kartta günler, "Günleri oluştur"), vardiya tanımı ve vardiya planı, verim ve hedef doluluk, kişi sayısının kapasiteye dönüşümü · kayıt yeni veri versiyonu açmaz, yerinde güncellenir ve izlenir; bu tablolar versiyonsuz olur (şema geçişi ve sentetik yüklemenin uyarlanması bu adımda) · menüde Parametre grubunda (öneri) · `ShiftPlan.ResourceGroupId` boşsa anlamı (BOŞSA, K-138) vardiya ekranında kararlaştırılır; tablo ekrandan girilir, staging'de yok (K-117) · verim ve hedef doluluk burada tanımlanır, entegre edilmez; vardiyadaki kişi sayısının işçi kaynaklarının kapasitesine nasıl dönüşeceği burada netleşir (K-117)
-- [ ] 7.4 Alokasyon ve öncelik kuralı (25)
-- [ ] 7.5 Uyarı eşikleri (26)
-- [ ] 7.6 Gece senaryo tanımları ekranı (07) · tanım, sıra ve aç/kapa (27, 28)
-- [ ] 7.7 Malzeme blokajı (99) · K-126, K-167 · ayrı ekran (menüde Parametre grubunda, öneri); tablo bu adımda açılır (versiyonsuz, yerinde güncellenir, izli); motorda uygulanışı Aşama 10
+- [x] 7.1 Parametreler (ekran 06; 22, 23; eski 7.2 Zaman yapısı dahil) · K-175 · tek kavram senaryo: parametre seti kalkar, her senaryo parametrelerinin tamamını taşır; 7.1'de tek senaryo Baz · başlıklar Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı · hedefler leksikografik (sıra, süre bütçesi, ödün payı) · zaman: dönem tipi, kapsam, kapsam birimi; tarihler hesaplanır · tedarikçi seçim kuralı (K-118) ve güvenlik stoğu / stok gün kapsamı seçimi (K-113) burada · bağlam çubuğunda "Senaryo: Baz" · uygulandı (sürüm 0.37.0; geçiş 0058–0060)
+- [x] 7.2 Senaryo altyapısı tasarımı (yalnız tasarım) · K-176 · `core` senaryolaşmaz; Smartchain'de girilen veri `param`'da senaryo kimliğiyle; veri "Baz + fark" (alan düzeyinde, tek kademe), ayarlar tam kopya; "Baz'ı izler"; "Geçerli" alanı; tek çözümleme katmanı · kod ve şema değişikliği yok, uygulaması izleyen adımlarda
+- [ ] 7.3 Senaryo yönetimi (ekran 07; 27, 28; eski 7.6 "Gece senaryo tanımları") · kopyalayarak yeni senaryo, yeniden adlandırma, pasif, silme, "Gece çalışsın" anahtarı, gece sırası, senaryolar arası geçiş (bağlam çubuğu), "Baz'ı izler" ve "Baz'dan ayır" (K-176) · liste mockup'ı `plans/7.1-mockups/senaryo-tanimlari.html` · parametre şeması 7.1'de hazır (K-175)
+- [ ] 7.4 Kapasite yönetimi (ekran, fonksiyon 24) · K-167 · bağımsız ekran: kaynak kapasitesi (günlük kapasite, paralel adet, kapasite kaynağı, takvim ataması, fason parametreleri; alt kartta duruşlar ve kapasite profili), takvim (alt kartta günler, "Günleri oluştur"), vardiya tanımı ve vardiya planı, verim ve hedef doluluk, kişi sayısının kapasiteye dönüşümü · kayıt yeni veri versiyonu açmaz, yerinde güncellenir ve izlenir; bu tablolar versiyonsuz olur (şema geçişi ve sentetik yüklemenin uyarlanması bu adımda) · menüde Parametre grubunda (öneri) · `ShiftPlan.ResourceGroupId` boşsa anlamı (BOŞSA, K-138) vardiya ekranında kararlaştırılır; tablo ekrandan girilir, staging'de yok (K-117) · verim ve hedef doluluk burada tanımlanır, entegre edilmez; vardiyadaki kişi sayısının işçi kaynaklarının kapasitesine nasıl dönüşeceği burada netleşir (K-117) · fazla mesai limitleri, fason limitleri ve kısıtsız kaynak dönem limiti de bu ekranda: parametre değil veri (K-175) · şema taşıması (kapasite alanları `core.Resource`'tan `param`'da kendi tablosuna; kapasite profili, duruş ve vardiya planı `param`'a; takvim ve vardiya tanımı senaryosuz ortak) ve çözümleme katmanı bu adımda (K-176)
+- [ ] 7.5 Öncelik kuralları (25) · önce tasarım (Fable 5.2 ile) · parametrelerden bağımsız ekran · öncelik grupları tanımlanınca Hedefler'deki "Karşılanmayan talep" ve "Gecikme" satırları grup başına çoğalır (7.1, `ObjectiveDefinition.PriorityGroup`)
+- [ ] 7.6 Alokasyon (25) · önce tasarım (Fable 5.2 ile) · allocation key (A-39)
+- [ ] 7.7 Pegging kuralları (25) · önce tasarım (Fable 5.2 ile)
+- [ ] 7.8 Uyarı eşikleri (26) · Parametreler ekranına "Uyarı eşikleri" başlığı olarak eklenir · veri kalitesi kontrolünün eşiği yoktur (K-174)
+- [ ] 7.9 Tedarikçi limitleri · ayrı veri giriş ekranı (parametre değil, K-175); `SupplierLimit` senaryoya bağlı, "Baz + fark" (K-176)
+- [ ] 7.10 Malzeme blokajı (99) · K-126, K-167 · ayrı ekran (menüde Parametre grubunda, öneri); tablo bu adımda açılır (versiyonsuz, yerinde güncellenir, izli); motorda uygulanışı Aşama 10 · "Baz + fark" (K-176)
+
+Yeri belli olmayanlar: talep değişikliği fonksiyonu (senaryoda sipariş miktarı ya da tarihi; ilk `core` fark tablosu ihtiyacı, K-176).
+
+Notlar (K-175): Talep çarpanı parametre değildir; sipariş üzerinde bir fonksiyon olarak ayrıca konuşulacak. Tahmin tüketimi ileriki faz. Performans işleri ve Aşama 10 (motor) Fable 5.2 ile yapılacak. Aşama 7 adımları 16.11.2026'da yeniden numaralandı (eski 7.3 → 7.4, 7.4 → 7.5–7.7, 7.5 → 7.8, 7.6 → 7.3, 7.7 → 7.10); docs'taki atıflar güncellendi.
 
 ## Aşama 8 · Plan ekranları (fikstürle)
 
@@ -112,7 +119,7 @@ Takvimden bağımsız, sırayla ilerleyen kontrol listesi. Her adım konuşulur,
 - [ ] 8.5 Kaynak bazlı planlama (12) · 52–55
 - [ ] 8.6 Sipariş bazlı planlama (13) · 56–58
 - [ ] 8.7 Gantt (14) · 59, 60
-- [ ] 8.8 Kilit ve dondurulmuş dönem (61, 63) · A-14 kararı
+- [ ] 8.8 Sabitleme ve sabit dönem (61, 63) · A-14 kararı
 - [ ] 8.9 Malzeme planı (15) · 64, 65
 - [ ] 8.10 Öneriler (16) · 66–69
 - [ ] 8.11 Pegging ve gecikme nedeni (17) · 70, 71
@@ -177,7 +184,7 @@ Konuşulup bilerek ertelenen işler. Sırası gelen adımın planında ele alın
 
 - **Excel ile toplu düzeltme (fonksiyon 15, eski 6.4):** ilerleyen aşamalarda yeniden değerlendirilecek; Excel'le gelen veri Veri yükleme'den yüklenir (K-167).
 - **Kayıt sonrası başarı bildirimleri:** Kullanıcılar, Sistem sağlığı, Zamanlanmış işler ve Sistem ayarlarındaki başarı bildirimleri tablo standardı turunda topluca kararlaştırılacak; Veri kalitesindeki "n uyarı yok sayıldı." kalır (6.5, K-172).
-- **Akış yapısı kurulumda ayarlanır (5.6'da fonksiyon 92 madde madde gözden geçirilir):** gece akışının yapısını (hangi adımlar, sıra, bağımlılık, başlangıç saati, günler, bitiş sınırı, adım hata verirse devam / dur) kurulumda System owner ayarlar; hangi senaryoların çalışacağı müşterinin kararıdır (7.6, fonksiyon 27, 28). Docs'taki "zincir sırası değiştirilemez" ve sabit değerler (22:00 çekim, 06:00 bitiş, 2 paralel senaryo, hafta sonu açık, Pazar 03:00 temizlik, 22:00–06:00 arası yasaklar) varsayılan olmama prensibine göre düzeltilir. Bakılacaklar: adımların iş türü olarak tanımlanması, zorunlu ön koşullar (ör. doğrulama çekimden sonra), birden fazla akış (ör. gün ortası kısmi yükleme), yetki (K-100).
+- **Akış yapısı kurulumda ayarlanır (5.6'da fonksiyon 92 madde madde gözden geçirilir):** gece akışının yapısını (hangi adımlar, sıra, bağımlılık, başlangıç saati, günler, bitiş sınırı, adım hata verirse devam / dur) kurulumda System owner ayarlar; hangi senaryoların çalışacağı müşterinin kararıdır (7.3, fonksiyon 27, 28). Docs'taki "zincir sırası değiştirilemez" ve sabit değerler (22:00 çekim, 06:00 bitiş, 2 paralel senaryo, hafta sonu açık, Pazar 03:00 temizlik, 22:00–06:00 arası yasaklar) varsayılan olmama prensibine göre düzeltilir. Bakılacaklar: adımların iş türü olarak tanımlanması, zorunlu ön koşullar (ör. doğrulama çekimden sonra), birden fazla akış (ör. gün ortası kısmi yükleme), yetki (K-100).
 - **Çoklu dosya ile Excel yükleme (5.5'te ele alınır):** pencerede birden fazla dosya seçilir; her dosyanın tablosu şablondaki teknik addan anlaşılır, hepsi tek listede ön kontrol edilir. Her dosya yine tek tabloya karşılık gelir; docs/06 fonksiyon 03'teki "tek dosya tek varlık" buna göre düzeltilir.
 - **Malzeme bazlı ikame:** ağaçtan bağımsız ikame tablosu şimdilik yok; ağaç içi alternatif `BOM.AlternativeGroup` (A-41), ağaç bazlı alternatif ayrı ağaç kodu ve üretim versiyonu (A-40) ile çözülür (K-115).
 - **Yapılandırılabilir grafik (9.3'te ele alınır):** grafik, gruplanmış tablonun başka bir çizimi olarak liste altyapısının (K-87, K-90) üstüne kurulur: X ekseni gruplanan alan, değer toplanan alan ve toplam tipi, seri ikinci gruplama; tipler çubuk, yığılmış çubuk, çizgi, çubuk + çizgi (pasta yok). Görünümle kaydedilir (K-89), Excel'e gerçek grafik olarak taşınır; seri renkleri 1.2'deki sırayla, kırmızı ve kiremit seri rengi olmaz. Kullanıcı kendi grafiğini kurar, kurulumda hazır görünümler bırakılır; End user da kurabilir (K-99). Gantt, kapasite doluluk, pegging gibi planlama ekranlarının görselleri sabittir, yapılandırılmaz. Kütüphane pakete gömülü, internetsiz. Ana sayfanın küçük grafikleri (9.1) aynı altyapıyı kullanır.

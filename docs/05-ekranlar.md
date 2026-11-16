@@ -47,7 +47,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### PARAMETRE
 
-- **06 · Parametre setleri:** Verim, dönem üst limitleri, fazla mesai limitleri, alokasyon, öncelik kuralı, zaman yapısı, uyarı eşikleri, genel planlama ayarları.
+- **06 · Parametreler:** Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, planlama ufku, plan kararlılığı (K-175).
 - **07 · Gece senaryo tanımları:** Hangi senaryolar gece çalışır; parametre seti, eksen ayarları, öncelik.
 
 ### Ekran listesi
@@ -61,7 +61,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **11 · Ürün bazlı planlama:** Ürün × dönem: talep, üretim, stok projeksiyonu, kümülatif eksik; üretim miktarı girilir.
 - **12 · Kaynak bazlı planlama:** Kaynak × dönem: yükü taşıma, alternatif kaynağa ya da fasona aktarma, kaynak parametrelerini geçici değiştirme.
 - **13 · Sipariş bazlı planlama:** Sipariş satırları, planlanan tarih, gecikme ve nedeni; öncelik, hedef tarih, koruma, manuel pegging.
-- **14 · Gantt (bucket bazlı):** Kaynak ya da sipariş satırlı; dönem sınırına oturan sürükle-bırak, bölme, kilitleme.
+- **14 · Gantt (bucket bazlı):** Kaynak ya da sipariş satırlı; dönem sınırına oturan sürükle-bırak, bölme, sabitleme.
 
 ### Ekran listesi
 <sub>24. Ekranlar ve fonksiyonlar · Ekran listesi · 3/4</sub>
@@ -129,8 +129,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### PARAMETRE
 
-- **22 · Parametre seti:** Oluşturma, kopyalama, düzenleme, silme.
-- **23 · Zaman yapısı:** Ufuk, günlük, haftalık, aylık bucket, dondurulmuş dönem, takvim.
+- **22 · Parametreler:** Senaryonun parametreleri ve hedefleri.
+- **23 · Zaman yapısı:** Ufuk ve dönem dizisi, raporlama ekseni, takvim ayarları (Parametreler › Planlama ufku).
 - **24 · Kapasite parametreleri:** Verim, dönem üst limitleri, fazla mesai limitleri.
 - **25 · Alokasyon ve öncelik kuralı:** Ölçüt, yön, ağırlık; MRP ve model aynı kuralı kullanır.
 
@@ -192,9 +192,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **58 · Manuel pegging:** Belirli stok ya da arz belirli siparişe bağlanır.
 - **59 · Gantt · sürükle-bırak:** Çubuk başka bucket'a ya da başka kaynağa bırakılır.
 - **60 · Gantt · bölme ve birleştirme:** İş emri miktarla bölünür ya da birleştirilir.
-- **61 · Kilitleme ve kilit kaldırma:** Hücre, iş emri ya da sipariş kilitlenir; model kilitli olana dokunmaz.
+- **61 · Sabitleme ve sabitlemeyi kaldırma:** Hücre, iş emri ya da sipariş sabitlenir; model sabitlenmiş olana dokunmaz.
 - **62 · Anlık etki önizlemesi:** Değişiklik yapılırken kaynak yükü hemen güncellenir.
-- **63 · Dondurulmuş dönem koruması:** Dondurulmuş bucket'ta değişiklik engellenir.
+- **63 · Sabit dönem koruması:** Sabit dönemdeki bucket'ta değişiklik engellenir.
 
 ### Fonksiyon listesi
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon listesi · 6/8</sub>
@@ -302,8 +302,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Değerin kaynağı:** Her hücrede ERP, kural ya da elle etiketi görünür; varsayılan yoktur (K-138).
 - **Elle düzeltme:** Manuel değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
 - **İz:** Her değişiklik kim, ne zaman, eski ve yeni değerle geçmişte tutulur.
-- **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.7, K-167); ana veri ekranında yok.
-- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.3, K-167). Manuel değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
+- **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.10, K-167); ana veri ekranında yok.
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ve vardiya ana veride değil, Kapasite yönetimi'nde (7.4, K-167). Manuel değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
 - **Uygulama (6.2, K-170, K-172):** uygulandı. "Manuel: Evet" alanlarda manuel değer hücre içinde (Ana veri ve İşlem verisi); ilk kolon "Manuel değer", köşe işareti, kaynak ipucu yalnız manuel değer ve kural sonucunda.
 - **Karar (6.3, K-171, K-173):** detay kartı ("Detay ›" rozeti): Geçmiş ve İlişkili kayıtlar; İşlem verisi'nde yalnız Geçmiş. Denetim izinde "Kayda git".
 - **Uygulama (6.3, K-171, K-173):** uygulandı. Detay simgesi (›) tablonun en sağında dar kolonda; hücre menüsü Detay · Kopyala · Manuel değeri kaldır, Ctrl+C; kartın sekmeleri tek sıra: Geçmiş ve tablonun ilişkileri (boş ilişki pasif).
@@ -344,21 +344,28 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Ana sayfa:** tek satır özet ("Veri kalitesi: 12 yüksek önemde uyarı, 3 yeni"); tıklayınca Yüksek sekmesi (9.1).
 - **Karar (6.5, K-174):** fonksiyon 20 ve 21; yaşam döngüsü ve ne zaman çalıştığı docs/06'da.
 - **Uygulama (6.5, K-174):** uygulandı. Uyarılar `data-quality-warnings`, Yok sayılan sekmesi `data-quality-ignored` listesi; Kayıt alan etiketleriyle; Kayda git süzülmüş (`yalniz=<Id>`); detay kartı Kayıt · Talep zinciri; Ana sayfa özeti API'si (`GET /api/data-quality/summary`) hazır, gösterimi 9.1'de.
-### Parametre setleri
+### Parametreler
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 06/25</sub>
 
 ![Parametre setleri](mockups/m24e-0315-parametre-setleri.png)
 
-- **Set mantığı:** Parametreler setler halinde tutulur; her senaryo bir set kullanır.
-- **Sekmeler:** Verim, dönem limitleri, fazla mesai, alokasyon, öncelik, zaman yapısı, eşikler.
-- **Zaman yapısı:** Günlük, haftalık, aylık bucket ve dondurulmuş dönem burada belirlenir.
-- **Öncelik tek yerde:** Öncelik kuralı ölçüt, yön ve ağırlıkla tanımlanır; MRP ve model aynı kuralı kullanır.
-
+- **Mockup geçersiz (K-175):** parametre seti, set listesi ve sekmeleri yok. Güncel mockup `plans/7.1-mockups/parametreler.html`.
+- **Tek kavram senaryo:** ekran, bağlam çubuğunda seçili senaryonun parametrelerini gösterir; ekranda ayrıca senaryo seçimi yoktur. 7.1'de tek senaryo Baz'dır.
+- **Şerit:** yalnız ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.8'te).
+- **Form başlıkları:** Sistem ayarları düzeni (docs/12): solda alt başlıklar, sağda sıkı kart, Kaydet ve Vazgeç kartın altında, 44×24 anahtarlar. Tek alt başlıklı başlıkta sol menü yok.
+- **Tablo başlıkları** (Hedefler, Planlama ufku › Ufuk ve dönemler): tablo standardının görünümü ve hücre düzenleme standardı; sıra sürüklenir; Kaydet ve Vazgeç tablonun altında, sağda.
+- **Hedefler:** Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%) · Aktif; altta toplam süre. Leksikografik: ağırlık yok.
+- **Planlama ufku:** yalnız dönem tipi, kapsam ve kapsam birimi girilir; Başlangıç ve Bitiş hesaplanan sonuçtur; altta ufku gösteren şerit ve hesaplanan dönemlerin salt okunur listesi (Dönem · Başlangıç · Bitiş · Dönem tipi · Gün sayısı). Raporlama ekseni "planla aynı" kapatılınca ikinci tablo kaydetmeden açılır.
+- **Plan kararlılığı:** sabit dönem değer ve birimle (Gün, Hafta, Ay) tek satırda; altında son günü.
+- **Yetki:** Key user ve üstü düzenler; End user görmez.
+- **Karar (7.1, K-175):** fonksiyon 22 ve 23; parametre listesi ve kurallar docs/06'da.
+- **Uygulama (7.1, K-175):** uygulandı. Baz senaryonun parametreleri (`/api/parameters`), hedefler, ufuk ve dönemler (dönem listesiyle), raporlama ekseni, sabit dönem; bağlam çubuğunda "Senaryo: Baz". Senaryo altyapısının kuralları K-176'da; senaryo yönetimi 7.3'te.
 ### Gece senaryo tanımları
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 07/25</sub>
 
 ![Gece senaryo tanımları](mockups/m24e-0316-gece-senaryo-tanimlari.png)
 
+- **Not (K-175):** senaryo yönetimi adımında yeniden yazılır; parametre seti kalktı, senaryo parametrelerini kendisi taşır. Liste mockup'ı `plans/7.1-mockups/senaryo-tanimlari.html`.
 - **Senaryo tanımı:** Her senaryo bir parametre seti, model tipi ve eksen ayarlarıyla tanımlanır.
 - **Eksenler:** Fazla mesai, fason, talep çarpanı, malzeme kısıtı gibi ayarlar senaryoya özel.
 - **Süre bütçesi:** Her senaryonun süre sınırı var; sıra ve paralellik motor ayarına uyar.
@@ -401,7 +408,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Dört satır:** Her ürün için talep, üretim, stok projeksiyonu ve kümülatif eksik.
 - **Üretim girilir:** Üretim hücresi değiştirilir; manuel değer kilitlenir ve model ona dokunmaz.
-- **Dondurulmuş dönem:** İlk bucket gri ve kilitli; değiştirilemez.
+- **Sabit dönem:** İlk bucket gri ve kilitli; değiştirilemez.
 - **Anlık etki:** Alttaki kaynak şeridi değişiklikle birlikte güncellenir; kaydedince yeniden çözülür.
 
 ### Kaynak bazlı planlama
@@ -431,7 +438,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Bucket bazlı:** Çubuklar dönem sınırına oturur; saat düzeyinde çizelgeleme yok.
 - **Sürükle-bırak:** Çubuk başka haftaya ya da başka kaynağa bırakılır; etki hemen görünür.
-- **Böl ve kilitle:** İş emri miktarla bölünür; kilitli çubuğu model taşımaz.
+- **Böl ve sabitle:** İş emri miktarla bölünür; sabitlenmiş çubuğu model taşımaz.
 - **İki görünüm:** Satırlar kaynak ya da sipariş olabilir; dört planlama görünümü aynı planı değiştirir.
 
 ### Malzeme planı

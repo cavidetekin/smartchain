@@ -26,7 +26,7 @@ SUPPLY_PLANNED_ORDER = "Planlı sipariş"
 class PlanRunInfo:
     id: int
     data_version_id: int
-    parameter_set_id: int
+    scenario_definition_id: int  # senaryo tanımı: hesabın parametreleri (K-175)
     scenario_id: int | None = None
     workspace_id: int | None = None
 
@@ -34,8 +34,19 @@ class PlanRunInfo:
 @dataclass(frozen=True)
 class TimeBucket:
     seq: int
-    bucket_type: str  # Gün | Hafta | Ay | Çeyrek | Yıl
-    count: int
+    bucket_type: str  # dönem tipi: Gün | Hafta | Ay (raporlama ekseninde ayrıca Çeyrek | Yıl)
+    count: int        # kapsam
+    span_unit: str = ""  # kapsam birimi: Gün | Hafta | Ay (takvim kuralları app/params/horizon.py)
+
+
+@dataclass(frozen=True)
+class Objective:
+    """Leksikografik hedef (K-175): motor aktif hedefleri sırayla çözer."""
+    seq: int
+    code: str
+    priority_group: int | None
+    time_budget_seconds: int
+    tolerance_pct: float  # üst hedeften verilebilecek en çok ödün; 0 = katı
 
 
 @dataclass(frozen=True)
@@ -46,11 +57,14 @@ class PriorityRule:
 
 
 @dataclass(frozen=True)
-class ParameterSetData:
-    id: int
+class ScenarioParameters:
+    """Senaryonun parametrelerinin tamamı (K-175): her senaryo kendi parametrelerini taşır."""
+    id: int    # ScenarioDefinition.Id
     name: str
-    settings: dict[str, str] = field(default_factory=dict)  # PlanningSetting: SettingKey → Value
-    time_buckets: tuple[TimeBucket, ...] = ()
+    settings: dict[str, str] = field(default_factory=dict)  # PlanningSetting: SettingKey → Value (katalog başlangıç değerleriyle tamamlanmış)
+    time_buckets: tuple[TimeBucket, ...] = ()    # plan ekseni
+    report_buckets: tuple[TimeBucket, ...] = ()  # raporlama ekseni (planla aynıysa plan dizisi)
+    objectives: tuple[Objective, ...] = ()       # aktif hedefler, sırasıyla
     priority_rules: tuple[PriorityRule, ...] = ()
     allocation_rules: tuple[dict, ...] = ()  # AllocationRule satırları (alan adları docs/02)
 
@@ -68,7 +82,7 @@ class PlanningData(Protocol):
 @dataclass(frozen=True)
 class EngineInput:
     plan_run: PlanRunInfo
-    parameters: ParameterSetData
+    parameters: ScenarioParameters
     data: PlanningData
     time_budget_seconds: int
 

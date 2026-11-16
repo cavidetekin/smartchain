@@ -98,6 +98,9 @@ def pytest_terminal_summary(terminalreporter):
 # --- Veritabanı testleri (işaret: db): yerel SQL Server'da Smartchain_test (K-103; docs/08 "Testler") ---
 # Geliştirme veritabanına dokunulmaz; zincir arayüz, API ve motor açıkken de çalışır.
 
+_run_lock = None  # koşu kilidinin bağlantısı; süreç bitene kadar açık
+
+
 @pytest.fixture(scope="session")
 def db_engine():
     """Oturumda bir kez: veritabanı yoksa açılır, ad doğrulanır, şema güncellenir, artıklar silinir, sentetik veri kurulur."""
@@ -107,10 +110,14 @@ def db_engine():
         testdb.ensure_database(TEST_DB_URL, get_settings().db_connect_timeout)
         engine = get_engine()
         testdb.verify_connected(engine)
+        global _run_lock
+        _run_lock = testdb.acquire_run_lock(engine)  # aynı test veritabanında ikinci koşu baştan durur (oturum başlangıcı ötekinin verisini siler)
+        if _run_lock is None:
+            raise testdb.TestRunBusy(testdb.BUSY)
         testdb.upgrade_schema()
         testdb.clear_leftovers(engine)
         testdb.ensure_synthetic(engine)
-    except testdb.WrongTestDatabase as exc:
+    except (testdb.WrongTestDatabase, testdb.TestRunBusy) as exc:
         pytest.exit(str(exc), returncode=2)
     except Exception as exc:
         pytest.skip(f"Test veritabanı hazırlanamadı (SQL Server'a bağlanılamadı ya da yetki yok): {exc}")
@@ -182,14 +189,17 @@ def engine_refs(db_engine, test_users):
         loc = s.execute(text("SELECT Id FROM core.Location WHERE Code = N'TEST-ENG'")).scalar_one()
         dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType, IsSynthetic) "
                             "OUTPUT inserted.Id VALUES (:l, SYSUTCDATETIME(), N'Tam', 1)"), {"l": loc}).scalar_one()
-        ps = s.execute(text("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id "
-                            "VALUES (N'Motor testi', 1)")).scalar_one()
+        # motor testlerinin senaryo tanımı: pasif ve sentetik; parametreleri (sahte motor ayarları) kendisinde (K-175)
+        s.execute(text("DELETE FROM param.PlanningSetting WHERE ScenarioDefinitionId IN (SELECT Id FROM param.ScenarioDefinition WHERE Name = N'Motor testi · parametreler')"))
+        s.execute(text("DELETE FROM param.ScenarioDefinition WHERE Name = N'Motor testi · parametreler'"))
+        ps = s.execute(text("INSERT INTO param.ScenarioDefinition (Name, IsBase, IsActive, IsSynthetic) OUTPUT inserted.Id "
+                            "VALUES (N'Motor testi · parametreler', 0, 0, 1)")).scalar_one()
         s.commit()
-    yield {"location_id": loc, "data_version_id": dv, "parameter_set_id": ps, "user_id": test_users[0]}
+    yield {"location_id": loc, "data_version_id": dv, "scenario_definition_id": ps, "user_id": test_users[0]}
     _clear_plan_runs(db_engine, dv)
     with db_engine.begin() as c:
-        c.execute(text("DELETE FROM param.PlanningSetting WHERE ParameterSetId = :p"), {"p": ps})
-        c.execute(text("DELETE FROM param.ParameterSet WHERE Id = :p"), {"p": ps})
+        c.execute(text("DELETE FROM param.PlanningSetting WHERE ScenarioDefinitionId = :p"), {"p": ps})
+        c.execute(text("DELETE FROM param.ScenarioDefinition WHERE Id = :p"), {"p": ps})
         c.execute(text("DELETE FROM adm.DataVersion WHERE Id = :d"), {"d": dv})
         c.execute(text("DELETE FROM core.Location WHERE Id = :l"), {"l": loc})
 
@@ -206,16 +216,16 @@ def _clear_plan_runs(engine, data_version_id):
 def plan_env(db_engine, engine_refs, clean_jobs):
     """Her motor testi temiz PlanRun ve iş tablosuyla başlar; sahte motor ayarları sıfırlanır."""
     _clear_plan_runs(db_engine, engine_refs["data_version_id"])
-    set_fake(db_engine, engine_refs["parameter_set_id"])
+    set_fake(db_engine, engine_refs["scenario_definition_id"])
     yield engine_refs
     _clear_plan_runs(db_engine, engine_refs["data_version_id"])
 
 
-def set_fake(engine, parameter_set_id, step=0, mode="normal"):
+def set_fake(engine, scenario_definition_id, step=0, mode="normal"):
     """Sahte motorun PlanningSetting ayarları (docs/09)."""
     from sqlalchemy import text
     with engine.begin() as c:
-        c.execute(text("DELETE FROM param.PlanningSetting WHERE ParameterSetId = :p"), {"p": parameter_set_id})
+        c.execute(text("DELETE FROM param.PlanningSetting WHERE ScenarioDefinitionId = :p"), {"p": scenario_definition_id})
         for k, v in {"ModelType": "LP", "FakeEngineStepSeconds": str(step), "FakeEngineMode": mode}.items():
-            c.execute(text("INSERT INTO param.PlanningSetting (ParameterSetId, SettingKey, Value) VALUES (:p, :k, :v)"),
-                      {"p": parameter_set_id, "k": k, "v": v})
+            c.execute(text("INSERT INTO param.PlanningSetting (ScenarioDefinitionId, SettingKey, Value) VALUES (:p, :k, :v)"),
+                      {"p": scenario_definition_id, "k": k, "v": v})

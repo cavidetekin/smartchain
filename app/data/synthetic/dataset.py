@@ -1,6 +1,6 @@
 """Sentetik veri seti v0'ın tek tanımı (docs/11, K-78, K-79). Bellekte üretir; veritabanına ve dosyaya dokunmaz.
 
-Satırlar ana tabloların (core.*) alan adlarıyla; Id'ler tablo başına 1'den. LocationId = 1 ve ParameterSetId = 1
+Satırlar ana tabloların (core.*) alan adlarıyla; Id'ler tablo başına 1'den. LocationId = 1 ve ScenarioDefinitionId = 1
 yer tutucudur, yükleyici gerçek Id'yi yazar. Versiyon alanlarını (VersionFrom …) yükleyici ekler; BusinessKey burada.
 
 Tarihler üretim gününe göre: hafta 1, üretim gününün Pazartesi'siyle başlar (K-79). Rastgelelik yalnız ad, miktar
@@ -694,18 +694,15 @@ def limit_month(ds: Dataset) -> tuple[date, date]:
     return first, nxt - timedelta(days=1)
 
 
-# --- Parametre seti ---
+# --- Senaryoya bağlı satırlar (Baz senaryoya yüklenir, K-175) ---
 
 def _params(b: _Builder) -> None:
     ds = b.ds
-    b.add("param.ParameterSet", Name=SET_NAME, IsDefault=False)
-    b.add("param.PlanningSetting", with_id=False, ParameterSetId=1, SettingKey="ModelType", Value="LP")
-    b.add("param.TimeBucketDefinition", with_id=False, ParameterSetId=1, Seq=1, BucketType="Hafta", Count=HORIZON_WEEKS)
     for seq, (criterion, direction) in enumerate([("Dönem", "Artan"), ("Müşteri önceliği", "Artan"),
                                                   ("Proje önceliği", "Artan"), ("Teslim tarihi", "Artan")], 1):
-        b.add("param.PriorityRule", with_id=False, ParameterSetId=1, Seq=seq, Criterion=criterion, Direction=direction)
+        b.add("param.PriorityRule", with_id=False, ScenarioDefinitionId=1, Seq=seq, Criterion=criterion, Direction=direction)
     first, last = limit_month(ds)
-    b.add("param.SupplierLimit", ParameterSetId=1, SupplierId=b.id("Supplier", LIMIT_SUPPLIER),
+    b.add("param.SupplierLimit", ScenarioDefinitionId=1, SupplierId=b.id("Supplier", LIMIT_SUPPLIER),
           MaterialId=b.id("Material", LIMIT_MATERIAL), ValidFrom=first, ValidTo=last, UpperLimit=float(LIMIT_QTY))
 
 

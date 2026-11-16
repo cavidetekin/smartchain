@@ -11,4 +11,6 @@ export { Checkbox, ChoiceCards, DateField, NumberField, RadioGroup, SearchField,
 export { OccupancyCell, OccupancyLegend } from "./Occupancy";
 export { DEFAULT_THRESHOLDS, legendLabels, occupancyLevel, type OccupancyLevel, type OccupancyThresholds } from "./occupancyScale";
 export { OverflowTabs, type TabOption } from "./OverflowTabs";
+export { ChoiceRow, SettingsCard, SettingsFoot, SettingsLayout, type SettingsSection, SwitchRow, UnitRow } from "./SettingsForm";
+export { EditGrid, type GridColumn, GridSeq } from "./EditGrid";
 export { StripSelect, StripText } from "./StripField";

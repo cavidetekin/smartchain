@@ -381,7 +381,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
-- **Entegre edilmeyenler (K-117):** Günlük kapasite, paralel adet, kapasite kaynağı, verim, hedef doluluk, fason parametreleri, takvim, vardiya, kaynak duruşları ve kapasite profili entegre edilmez; Smartchain ekranlarında tanımlanır (6.1 Kaynak sekmesi, 7.3 Kapasite parametreleri). `core`'da kalır.
+- **Entegre edilmeyenler (K-117):** Günlük kapasite, paralel adet, kapasite kaynağı, verim, hedef doluluk, fason parametreleri, takvim, vardiya, kaynak duruşları ve kapasite profili entegre edilmez; Smartchain ekranlarında tanımlanır (6.1 Kaynak sekmesi, 7.4 Kapasite parametreleri). `core`'da kalır.
 
 ### stg.ResourceGroup
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>

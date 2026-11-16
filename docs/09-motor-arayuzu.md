@@ -13,9 +13,9 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 
 | Parça | İçerik |
 |---|---|
-| `EngineInput` | `plan_run` (PlanRunInfo), `parameters` (ParameterSetData), `data` (PlanningData), `time_budget_seconds` |
-| `PlanRunInfo` | Id, DataVersionId, ParameterSetId, ScenarioId, WorkspaceId |
-| `ParameterSetData` | Set adı; PlanningSetting (anahtar → değer); TimeBucketDefinition dizisi; PriorityRule sırası; AllocationRule satırları |
+| `EngineInput` | `plan_run` (PlanRunInfo), `parameters` (ScenarioParameters), `data` (PlanningData), `time_budget_seconds` |
+| `PlanRunInfo` | Id, DataVersionId, ScenarioDefinitionId (hesabın parametrelerini taşıyan senaryo tanımı, K-175), ScenarioId, WorkspaceId |
+| `ScenarioParameters` | Senaryonun parametrelerinin tamamı (K-175; 7.1'de `ParameterSetData`'nın yerini aldı): senaryo adı; `settings` (PlanningSetting anahtar → değer, katalogdaki başlangıç değerleriyle tamamlanmış; docs/06 fonksiyon 22); `time_buckets` (plan ekseni: dönem tipi, kapsam, kapsam birimi; takvim kuralları fonksiyon 23, hesap `app/params/horizon.py`); `report_buckets` (raporlama ekseni; planla aynıysa plan dizisi); `objectives` (aktif hedefler sırasıyla: kod, öncelik grubu, süre bütçesi, ödün payı); PriorityRule sırası; AllocationRule satırları |
 | `PlanningData` | Salt okunur veri erişimi: `read(table, columns)` PlanRun'un veri versiyonundaki `core.*` satırlarını verir. Versiyonlu tabloda `VersionFrom ≤ v` ve `VersionTo` boş ya da `≥ v`; versiyonsuz tabloda tümü. Yalnız `core` okunur (K-58); tablo ve alan adları docs/02'ye göre doğrulanır. Sahte motor kullanmaz; gerçek motor ön hesapta (29) bununla okur. |
 | `Engine.run(input, progress)` | `PlanResult` döndürür; veritabanına yazmaz. `progress(adım)` her adım geçişinde çağrılır. İş diliyle hata: `EngineError` (mesaj kullanıcıya gösterilir). |
 | `PlanResult` | EngineUsed (LP \| MILP \| Kurallı \| Kısıtsız MRP), Solver, Status (Bitti \| Kısmen); tablo başına satırlar (PlannedOrder, SupplyRecommendation, DemandFulfillment, CapacityLoad, Pegging, PlanWarning) docs/02 alan adlarıyla; metrikler (PlanMetric); SolverLog. |
@@ -64,8 +64,8 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.
-- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) WarningDefinition'da yoksa geliştirme ve testte `ensure_fixture_warning_definitions` ekler; tanımlar 7.5'te ekrandan gelir.
-- EngineUsed parametre setindeki `ModelType`'tır (yoksa LP), Solver `Sahte`.
+- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) WarningDefinition'da yoksa geliştirme ve testte `ensure_fixture_warning_definitions` ekler; tanımlar 7.8'te ekrandan gelir.
+- EngineUsed senaryonun `ModelType` parametresidir (yoksa LP), Solver `Sahte`.
 - Sahte motora özel PlanningSetting anahtarları (gerçek motor okumaz):
 
 | Anahtar | Değer | Ne |

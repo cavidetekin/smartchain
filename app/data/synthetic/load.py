@@ -28,9 +28,10 @@ LOAD_ORDER = [
     "SalesOrderLine", "Forecast", "Stock", "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "PurchaseOrderLine",
     "ProductionConfirmation",
 ]
-PARAM_ORDER = ["PlanningSetting", "TimeBucketDefinition", "PriorityRule", "SupplierLimit"]
-PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "PriorityRule", "AllocationRule", "ResourceEfficiency",
+PARAM_ORDER = ["PriorityRule", "SupplierLimit"]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
+PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "ResourceEfficiency",
                   "ResourcePeriodLimit", "OvertimeLimit", "SupplierLimit"]
+NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
 
 
 class SyntheticLockError(RuntimeError):
@@ -55,8 +56,8 @@ def non_synthetic(conn: Connection) -> list[str]:
     found = []
     for code, id_ in conn.execute(text("SELECT Code, Id FROM core.Location WHERE ISNULL(IsSynthetic, 0) = 0")):
         found.append(f"lokasyon {code} (Id {id_})")
-    for name, id_ in conn.execute(text("SELECT Name, Id FROM param.ParameterSet WHERE ISNULL(IsSynthetic, 0) = 0")):
-        found.append(f"parametre seti '{name}' (Id {id_})")
+    for name, id_ in conn.execute(text("SELECT Name, Id FROM param.ScenarioDefinition WHERE ISNULL(IsSynthetic, 0) = 0 AND ISNULL(IsBase, 0) = 0")):
+        found.append(f"senaryo '{name}' (Id {id_})")
     for (id_,) in conn.execute(text("SELECT Id FROM adm.DataVersion WHERE ISNULL(IsSynthetic, 0) = 0")):
         found.append(f"veri versiyonu {id_}")
     return found
@@ -85,20 +86,23 @@ def _delete(conn: Connection) -> list[int]:
                          {"v": versions})
         conn.execute(text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId IN :v").bindparams(in_versions),
                      {"v": versions})
-    sets = [r[0] for r in conn.execute(text("SELECT Id FROM param.ParameterSet WHERE Name = :n AND IsSynthetic = 1"),
+    # Baz'a bağlanan sentetik satırlar; Baz'ın parametreleri kalır
+    for child in PARAM_ORDER:
+        conn.execute(text(f"DELETE FROM param.[{child}] WHERE ScenarioDefinitionId IN (SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1)"))
+    # 0058 öncesinin sentetik seti pasif senaryo olarak kaldıysa o da gider
+    sets = [r[0] for r in conn.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE Name = :n AND IsSynthetic = 1 AND ISNULL(IsBase, 0) = 0"),
                                        {"n": SET_NAME})]
     if sets:
         in_sets = bindparam("p", expanding=True)
         for child in PARAM_CHILDREN:
-            conn.execute(text(f"DELETE FROM param.[{child}] WHERE ParameterSetId IN :p").bindparams(in_sets),
+            conn.execute(text(f"DELETE FROM param.[{child}] WHERE ScenarioDefinitionId IN :p").bindparams(in_sets),
                          {"p": sets})
-        conn.execute(text("DELETE FROM param.ScenarioDefinition WHERE ParameterSetId IN :p").bindparams(in_sets),
-                     {"p": sets})
-        conn.execute(text("DELETE FROM param.ParameterSet WHERE Id IN :p").bindparams(in_sets), {"p": sets})
+        conn.execute(text("DELETE FROM param.ScenarioDefinition WHERE Id IN :p").bindparams(in_sets), {"p": sets})
     if versions:
         conn.execute(text("DELETE FROM adm.DataVersion WHERE Id IN :v").bindparams(bindparam("v", expanding=True)),
                      {"v": versions})
     if loc is not None:
+        conn.execute(text("UPDATE param.ScenarioDefinition SET LocationId = NULL WHERE LocationId = :l AND IsBase = 1"), {"l": loc})
         conn.execute(text("DELETE FROM param.ScenarioDefinition WHERE LocationId = :l"), {"l": loc})
         conn.execute(text("DELETE FROM core.Location WHERE Id = :l"), {"l": loc})
     return versions
@@ -137,8 +141,8 @@ def reset_preview(conn: Connection) -> dict:
         refuse = "Bu veritabanında sentetik veri yok; sıfırlama yalnız sentetik veriyle kurulmuş geliştirme ve demo veritabanında çalışır."
     elif conn.execute(text("SELECT COUNT(*) FROM adm.DataVersion WHERE IsPinned = 1 AND ISNULL(IsSynthetic, 0) = 0")).scalar():
         refuse = "Onaylı plana bağlı (sabitlenmiş) veri versiyonu var; sıfırlanmaz."
-    elif conn.execute(text("SELECT COUNT(*) FROM param.ParameterSet WHERE ISNULL(IsSynthetic, 0) = 0")).scalar():
-        refuse = "Sentetik olmayan parametre seti var; sıfırlanmaz."
+    elif conn.execute(text("SELECT COUNT(*) FROM param.ScenarioDefinition WHERE ISNULL(IsSynthetic, 0) = 0 AND ISNULL(IsBase, 0) = 0")).scalar():
+        refuse = "Baz dışında sentetik olmayan senaryo var; sıfırlanmaz."
     rows = 0
     if transfers:
         param = bindparam("v", expanding=True)
@@ -221,16 +225,15 @@ def _load(conn: Connection, ds: Dataset) -> dict:
         conn.execute(sa.insert(_table("DataVersionEntity", "adm")).values(
             DataVersionId=version, EntityName=name, ImportBatchId=None))
 
-    ps = _table("ParameterSet", "param")
-    meta = ds.params["ParameterSet"][0]
-    set_id = conn.execute(sa.insert(ps).values(Name=meta["Name"], IsDefault=meta["IsDefault"], IsSynthetic=True)
-                          .returning(ps.c.Id)).scalar_one()
+    set_id = conn.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar()
+    if set_id is None:
+        raise SyntheticLockError(NO_BASE)
     for name in PARAM_ORDER:
         table = _table(name, "param")
-        rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ParameterSetId": set_id} for r in ds.params[name]]
+        rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ScenarioDefinitionId": set_id} for r in ds.params[name]]
         rows = _validate(table, rows)
         conn.execute(sa.insert(table), rows)
         counts[f"param.{name}"] = len(rows)
-    log.info("Sentetik veri yüklendi: veri versiyonu %s, lokasyon %s, parametre seti %s", version, location_id, set_id)
-    return {"data_version_id": version, "location_id": location_id, "parameter_set_id": set_id,
+    log.info("Sentetik veri yüklendi: veri versiyonu %s, lokasyon %s, senaryo %s (Baz)", version, location_id, set_id)
+    return {"data_version_id": version, "location_id": location_id, "scenario_definition_id": set_id,
             "removed_versions": removed, "counts": counts}

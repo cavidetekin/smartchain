@@ -8,11 +8,10 @@ import { ApiError, emitNotice } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { can } from "../auth/permissions";
 import { tr } from "../i18n/tr";
-import { SwitchCell } from "../table/CellEditors";
 import { DataTable, type FieldHints } from "../table/DataTable";
 import { useRowMenu } from "../table/rowMenu";
 import { UnsavedGuard } from "../table/useTableEdits";
-import { Alert, Button, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, TextField, Tooltip } from "../ui";
+import { Alert, Checkbox, ConfirmDialog, Dialog, NumberField, Segment, SelectField, SettingsCard, SettingsLayout, SwitchRow, TextField, Tooltip } from "../ui";
 import { ScheduledJobs } from "./ScheduledJobs";
 import { type FieldDetail, type PolicyValues, systemOwnerApi } from "./systemOwnerApi";
 
@@ -201,43 +200,21 @@ function SettingsTab({ label, sections, labels, read, write, crossCheck, onDirty
   };
 
   if (!data) return error ? <Alert tone="error">{error}</Alert> : null;
-  const form = (
-    <div className="sc-settings-section">
-      <section className="sc-settings-card" aria-label={section.title}>
-        <div className="sc-field-rows">
+  return (
+    <>
+      <SettingsLayout label={label} sections={sections} current={section.key} onSelect={go}>
+        <SettingsCard title={section.title} dirty={dirty} busy={busy} invalid={invalid} error={error} onDiscard={discard} onSave={() => void save()}>
           {section.keys.map((key) => (
             <NumberField key={key} label={labels[key]} value={values[key] as number | null} error={problem(key)}
                          tip={data.optional?.includes(key) ? T.optionalEmpty : undefined}
                          onChange={(v) => setValues((s) => ({ ...s, [key]: v }))} />
           ))}
           {section.checkbox && (  // Evet/Hayır ayarı anahtardır (K-165)
-            <div className="sc-field sc-switch-row">
-              <span className="sc-field-label">{labels[section.checkbox]}</span>
-              <SwitchCell label={labels[section.checkbox]} checked={Boolean(values[section.checkbox])} editable size="md"
-                          onToggle={(v) => setValues((s) => ({ ...s, [section.checkbox as string]: v }))} />
-            </div>
+            <SwitchRow label={labels[section.checkbox]} checked={Boolean(values[section.checkbox])}
+                       onToggle={(v) => setValues((s) => ({ ...s, [section.checkbox as string]: v }))} />
           )}
-        </div>
-        <footer className="sc-settings-foot">
-          <Button variant="ghost" disabled={!dirty || busy} onClick={discard}>{T.discard}</Button>
-          <Button variant="primary" busy={busy} disabled={!dirty || invalid} onClick={() => void save()}>{T.save}</Button>
-        </footer>
-      </section>
-      {error && <Alert tone="error">{error}</Alert>}
-    </div>
-  );
-  return (
-    <>
-      {sections.length > 1 ? (
-        <div className="sc-settings-body">
-          <nav className="sc-settings-nav" aria-label={T.subMenu(label)}>
-            {sections.map((s) => (
-              <button key={s.key} type="button" aria-current={s.key === section.key ? "true" : undefined} onClick={() => go(s.key)}>{s.title}</button>
-            ))}
-          </nav>
-          {form}
-        </div>
-      ) : form}
+        </SettingsCard>
+      </SettingsLayout>
       {pending && <UnsavedConfirm onStay={() => setPending(null)} onLeave={() => { discard(); setCurrent(pending); setPending(null); }} />}
     </>
   );

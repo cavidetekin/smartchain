@@ -47,15 +47,15 @@ def demo_refs(session: Session, step: float) -> dict:
     if dv is None:
         dv = q("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType, IsSynthetic) OUTPUT inserted.Id "
                "VALUES (:l, SYSUTCDATETIME(), N'Tam', 1)", l=loc).scalar_one()
-    ps = q("SELECT TOP 1 Id FROM param.ParameterSet WHERE Name = N'Demo · sahte motor'").scalar()
+    ps = q("SELECT TOP 1 Id FROM param.ScenarioDefinition WHERE Name = N'Demo · sahte motor'").scalar()  # demo senaryosu (pasif, sentetik; K-175)
     if ps is None:
-        ps = q("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id VALUES (N'Demo · sahte motor', 1)").scalar_one()
-    q("DELETE FROM param.PlanningSetting WHERE ParameterSetId = :p", p=ps)
+        ps = q("INSERT INTO param.ScenarioDefinition (Name, IsBase, IsActive, IsSynthetic) OUTPUT inserted.Id VALUES (N'Demo · sahte motor', 0, 0, 1)").scalar_one()
+    q("DELETE FROM param.PlanningSetting WHERE ScenarioDefinitionId = :p", p=ps)
     for k, v in {"ModelType": "LP", "FakeEngineStepSeconds": str(step), "FakeEngineMode": "normal"}.items():
-        q("INSERT INTO param.PlanningSetting (ParameterSetId, SettingKey, Value) VALUES (:p, :k, :v)", p=ps, k=k, v=v)
+        q("INSERT INTO param.PlanningSetting (ScenarioDefinitionId, SettingKey, Value) VALUES (:p, :k, :v)", p=ps, k=k, v=v)
     q("DELETE FROM adm.Job WHERE RequestedBy = :u", u=user)  # önceki demo işleri
     session.commit()
-    return {"user": user, "data_version": dv, "parameter_set": ps}
+    return {"user": user, "data_version": dv, "scenario_definition": ps}
 
 
 def run_service(db, job_ids: list[int], stop: threading.Event) -> None:
@@ -110,7 +110,7 @@ async def main() -> None:
     await asyncio.wait_for(ready.wait(), 10)
 
     with Session(db) as s:
-        submitted = [submit_plan_run(s, data_version_id=refs["data_version"], parameter_set_id=refs["parameter_set"],
+        submitted = [submit_plan_run(s, data_version_id=refs["data_version"], scenario_definition_id=refs["scenario_definition"],
                                      requested_by=refs["user"]) for _ in range(args.runs)]
     print(f"{len(submitted)} plan hesabı gönderildi: PlanRun {[r for r, _ in submitted]}")
 

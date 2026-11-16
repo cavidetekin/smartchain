@@ -2,12 +2,12 @@
 import pytest
 
 from app.engine.fake import FakeEngine, load_fixture
-from app.engine.interface import STAGES, EngineError, EngineInput, ParameterSetData, PlanRunInfo
+from app.engine.interface import STAGES, EngineError, EngineInput, PlanRunInfo, ScenarioParameters
 
 
 def make_input(**settings):
-    return EngineInput(plan_run=PlanRunInfo(id=1, data_version_id=1, parameter_set_id=1),
-                       parameters=ParameterSetData(id=1, name="Deneme", settings=settings),
+    return EngineInput(plan_run=PlanRunInfo(id=1, data_version_id=1, scenario_definition_id=1),
+                       parameters=ScenarioParameters(id=1, name="Deneme", settings=settings),
                        data=None, time_budget_seconds=180)
 
 

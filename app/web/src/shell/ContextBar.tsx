@@ -1,8 +1,9 @@
-// Bağlam çubuğu (U-17, docs/12): senaryo / plan versiyonu / dönem (8.1), veri versiyonu, iş göstergesi, zamanlanmış iş çipi (K-163), kullanıcı.
+// Bağlam çubuğu (U-17, docs/12): seçili senaryo (K-175; 7.1'de Baz, seçim senaryo yönetimi adımında), plan versiyonu / dönem (8.1), veri versiyonu,
+// iş göstergesi, zamanlanmış iş çipi (K-163), kullanıcı.
 import { Database } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { api, ApiError, type DataVersion, JOB_TRANSFER, type Job } from "../api/client";
+import { api, ApiError, type DataVersion, getJson, JOB_TRANSFER, type Job } from "../api/client";
 import { formatDateTime } from "../format";
 import { tr } from "../i18n/tr";
 import type { FontSize } from "../prefs";
@@ -24,7 +25,8 @@ export function ContextBar({ fontSize, onFontSize, onJob }: Props) {
   return (
     <header className="sc-context">
       <div className="sc-context-left">
-        {[tr.context.scenario, tr.context.planVersion, tr.context.bucket].map((label) => (
+        <ScenarioPill />
+        {[tr.context.planVersion, tr.context.bucket].map((label) => (
           <span key={label} className="sc-pill is-disabled" title={tr.context.notYet} aria-disabled="true">
             {label}: —
           </span>
@@ -37,6 +39,21 @@ export function ContextBar({ fontSize, onFontSize, onJob }: Props) {
         <UserMenu fontSize={fontSize} onFontSize={onFontSize} />
       </div>
     </header>
+  );
+}
+
+/** Seçili senaryo (K-175): adı API'den; 7.1'de tek senaryo olduğu için tıklanmaz. Okunamazsa "—". */
+function ScenarioPill() {
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    getJson<{ id: number; name: string }>("/api/scenarios/current", ctrl.signal).then((s) => setName(s.name)).catch(() => undefined);
+    return () => ctrl.abort();
+  }, []);
+  return (
+    <span className={`sc-pill${name ? " is-current" : " is-disabled"}`} title={tr.context.scenarioHint} data-testid="scenario">
+      {tr.context.scenario}: {name ?? "—"}
+    </span>
   );
 }
 

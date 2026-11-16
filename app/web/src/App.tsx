@@ -6,6 +6,7 @@ import type { Me } from "./auth/authApi";
 import { AuditLog } from "./screens/AuditLog";
 import { DataLoad } from "./screens/DataLoad";
 import { DataQuality } from "./screens/DataQuality";
+import { Parameters } from "./screens/Parameters";
 import { DataRules } from "./screens/DataRules";
 import { RawCompare } from "./screens/RawCompare";
 import { ValidationRules } from "./screens/ValidationRules";
@@ -26,7 +27,7 @@ import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
 
 /** Yazılmış ekranlar; öteki ekranlar boş sayfasını gösterir. */
-const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "03": <MasterData />, "29": <TransactionData />, "28": <RawCompare />, "04": <DataRules />, "05": <DataQuality />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
+const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "03": <MasterData />, "29": <TransactionData />, "28": <RawCompare />, "04": <DataRules />, "05": <DataQuality />, "06": <Parameters />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
 
 /** initialMe yalnız testlerde verilir; verilmezse oturum açılışta sunucuya sorulur. */
 export function App({ initialMe }: { initialMe?: Me | null }) {

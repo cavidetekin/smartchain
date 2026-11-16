@@ -117,13 +117,13 @@
 | `param.ResourcePeriodLimit` | Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın kapasite birimi. | Parametre |  | 6 |
 | `param.OvertimeLimit` | Fazla mesai üst limiti (vardiya ve dönem bazında). | Parametre |  | 4 |
 | `param.SupplierLimit` | Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66). | Parametre |  | 7 |
-| `param.ParameterSet` | Parametre seti; gece senaryoları farklı setlerle çalışır. | Parametre |  | 4 |
-| `param.PlanningSetting` | Genel planlama parametreleri (anahtar–değer); ör. model tipi, fazla mesai dahil mi, fix dönem, toleranslar, MRP öncelik ve kısıt ayarları. | Parametre |  | 3 |
-| `param.TimeBucketDefinition` | Zaman yapısı: planlama ufku ve dinamik bucket dizisi. | Parametre |  | 4 |
+| `param.PlanningSetting` | Senaryonun planlama parametreleri (anahtar–değer; K-175). Anahtarlar, tipleri, seçenekleri ve başlangıç değerleri docs/06 fonksiyon 22'deki tabloda (`app/params/catalog.py`). | Parametre |  | 3 |
+| `param.TimeBucketDefinition` | Zaman yapısı: senaryonun ufuk ve dönem dizisi. Kullanıcı tarih girmez; her satır bir parçadır: dönem tipi (dönemlerin büyüklüğü) ve kapsam (parçanın ne kadar sürdüğü). Başlangıç ve bitiş plan başlangıcına göre hesaplanır (fonksiyon 23, K-175). Raporlama ekseni ayrı diziyse `Axis` = Rapor satırları. Dönem tipleri ve kapsam birimleri iki eksende aynıdır; kapsam birimi dönem tipinden küçük olamaz (çeyrek ve yıl dönem tipinde Ay da olabilir). | Parametre |  | 6 |
+| `param.ObjectiveDefinition` | Senaryonun hedefleri (leksikografik, ağırlık yok; K-175): motor hedefleri sırayla çözer. Senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır. | Parametre |  | 8 |
 | `param.PriorityRule` | Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih). | Parametre |  | 4 |
 | `param.AllocationRule` | Kapasite alokasyonu: talep sınıfına kaynak (grubu) ve dönem bazında pay. | Parametre |  | 9 |
 | `param.WarningDefinition` | Uyarı tanımı, eşik ve önem seviyesi. | Parametre |  | 5 |
-| `param.ScenarioDefinition` | Gece senaryosu tanımı: parametre seti + eksen ayarları. | Parametre |  | 9 |
+| `param.ScenarioDefinition` | Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz. | Parametre |  | 8 |
 
 ## `planning` · Senaryo, çalışma ve plan çıktıları (12 tablo)
 

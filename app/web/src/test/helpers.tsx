@@ -35,6 +35,7 @@ export const meAs = (role: string, extra: Partial<Me> = {}): Me => ({ ...ME, rol
 export function mockApi(routes: Routes = {}) {
   const all: Routes = {
     "/api/data-versions/current": { body: DATA_VERSION },
+    "/api/scenarios/current": { body: { id: 1, name: "Baz" } },
     "/api/jobs": { body: { jobs: [], counters: {} } },
     "/api/auth/me": { body: ME },
     "/api/auth/activity": { body: { idle_seconds_left: 1800 } },

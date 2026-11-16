@@ -103,7 +103,7 @@ _NAMES = """
 19 Kural uygulama
 20 Veri kalitesi kontrolü
 21 Kalite düzeltme aksiyonu
-22 Parametre seti
+22 Parametreler
 23 Zaman yapısı
 24 Kapasite parametreleri
 25 Alokasyon ve öncelik kuralı
@@ -142,9 +142,9 @@ _NAMES = """
 58 Manuel pegging
 59 Gantt · sürükle-bırak
 60 Gantt · bölme ve birleştirme
-61 Kilitleme ve kilit kaldırma
+61 Sabitleme ve sabitlemeyi kaldırma
 62 Anlık etki önizlemesi
-63 Dondurulmuş dönem koruması
+63 Sabit dönem koruması
 64 Malzeme planı
 65 Eksik filtresi
 66 Planlı sipariş kararı

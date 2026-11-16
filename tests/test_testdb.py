@@ -114,3 +114,15 @@ def test_wrong_database_stops_before_any_test(name):
 def test_wrong_database_stops_without_database_tests_too():
     r = run_pytest(url("Smartchain"), "tests/test_health.py", "-m", "not db")
     assert r.returncode == 2, (r.stdout + r.stderr).decode("utf-8", "replace")
+
+
+@pytest.mark.db
+def test_second_run_on_the_same_test_database_stops(db_engine):
+    """Aynı test veritabanında aynı anda tek koşu: bu koşu kilidi tutarken ikinci bir kilit alınamaz ve ikinci pytest süreci hiçbir test
+    çalıştırmadan durur (oturum başlangıcı ötekinin deneme hesaplarını silmesin)."""
+    assert testdb.acquire_run_lock(db_engine) is None
+    r = run_pytest(db_engine.url.render_as_string(hide_password=False), "tests/test_users_api.py::test_unknown_user")
+    out = (r.stdout + r.stderr).decode("utf-8", "replace")
+    assert r.returncode == 2, out
+    assert "başka bir test koşusu sürüyor" in out
+    assert " passed" not in out and " failed" not in out

@@ -94,10 +94,10 @@ export const SCREENS: Screen[] = [
   { no: "05", fn: 20, name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
     description: "Ana veri ve işlem verisi uyarıları; düzeltme listesi." },
 
-  { no: "06", fn: 22, name: "Parametre setleri", path: "/parametre/parametre-setleri", group: "parametre", step: "7.1",
-    icon: SlidersVertical, description: "Verim, dönem üst limitleri, fazla mesai limitleri, alokasyon, öncelik kuralı." },
-  { no: "07", fn: 27, name: "Gece senaryoları", path: "/parametre/gece-senaryolari", group: "parametre", step: "7.6",
-    icon: Moon, description: "Hangi senaryolar gece çalışır; parametre seti, eksen ayarları, öncelik." },
+  { no: "06", fn: 22, name: "Parametreler", path: "/parametre/parametreler", group: "parametre", step: "7.1",
+    icon: SlidersVertical, description: "Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, zaman, plan kararlılığı." },
+  { no: "07", fn: 27, name: "Gece senaryoları", path: "/parametre/gece-senaryolari", group: "parametre", step: "7.3",
+    icon: Moon, description: "Senaryo yönetimi: yeni senaryo, gece çalışsın, gece sırası." },
 
   { no: "22", fn: 88, name: "Kullanıcılar", path: "/yonetim/kullanicilar", group: "yonetim", step: "2.3", icon: Users,
     description: "Kullanıcı açma, kapatma, rol atama, şifre sıfırlama." },

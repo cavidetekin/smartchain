@@ -237,10 +237,14 @@ describe("bağlam çubuğu", () => {
     await waitFor(() => expect(screen.getByTestId("data-version")).toHaveTextContent("Veriye ulaşılamıyor"));
   });
 
-  it("senaryo, plan versiyonu ve dönem yerleri pasif", () => {
+  it("seçili senaryo adıyla (7.1'de Baz, tıklanmaz); plan versiyonu ve dönem yerleri pasif", async () => {
+    mockApi({ "/api/scenarios/current": { body: { id: 1, name: "Baz" } } });
     renderApp();
-    expect(screen.getByText("Senaryo: —")).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText("Dönem: —")).toHaveAttribute("title", "Senaryo ve dönem seçimi 8.1'de gelir");
+    await waitFor(() => expect(screen.getByTestId("scenario")).toHaveTextContent("Senaryo: Baz"));
+    expect(screen.getByTestId("scenario")).toHaveAttribute("title", "Senaryo seçimi senaryo yönetimi adımında gelir");
+    expect(screen.getByTestId("scenario").className).toContain("is-current");
+    expect(screen.getByText("Plan versiyonu: —")).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Dönem: —")).toHaveAttribute("title", "Plan versiyonu ve dönem seçimi 8.1'de gelir");
   });
 });
 

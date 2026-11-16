@@ -96,6 +96,32 @@ def upgrade_schema() -> None:
     command.upgrade(Config(str(ROOT / "db" / "alembic.ini")), "head")
 
 
+RUN_LOCK = "smartchain:pytest-run"
+
+
+class TestRunBusy(RuntimeError):
+    """Aynı test veritabanında başka bir pytest koşusu sürüyor."""
+
+    __test__ = False
+
+
+BUSY = ("Testler durdu: bu test veritabanında başka bir test koşusu sürüyor. Oturum başlangıcı deneme hesaplarını ve artıkları sildiği için iki koşu "
+        "birbirinin verisini bozar (401 ve eksik satır hataları); önceki koşu bitince yeniden deneyin.")
+
+
+def acquire_run_lock(engine: Engine):
+    """Test veritabanında aynı anda tek pytest koşusu: oturum boyu tutulan uygulama kilidi. Kilit alındıysa bağlantıyı (koşu bitene kadar açık
+    tutulur), başka koşu sürüyorsa None döndürür."""
+    conn = engine.connect()
+    got = conn.exec_driver_sql(
+        f"DECLARE @r int; EXEC @r = sp_getapplock @Resource = N'{RUN_LOCK}', @LockMode = N'Exclusive', @LockOwner = N'Session', @LockTimeout = 0; SELECT @r").scalar()
+    conn.commit()
+    if got is None or got < 0:
+        conn.close()
+        return None
+    return conn
+
+
 def clear_leftovers(engine: Engine) -> None:
     """Yarıda kesilen koşunun artıkları: işler, ayarlar, motor testi satırları, deneme hesapları."""
     from app.data.cleanup import delete_plan_data
@@ -105,10 +131,9 @@ def clear_leftovers(engine: Engine) -> None:
             "SELECT Id FROM adm.DataVersion WHERE LocationId IN (SELECT Id FROM core.Location WHERE Code = N'TEST-ENG')"))]
         if versions:
             delete_plan_data(c, versions)
-        c.execute(sa.text("DELETE FROM param.ScenarioDefinition WHERE Name = N'Motor testi'"))
-        c.execute(sa.text("DELETE s FROM param.PlanningSetting s JOIN param.ParameterSet p ON p.Id = s.ParameterSetId "
-                          "WHERE p.Name = N'Motor testi'"))
-        c.execute(sa.text("DELETE FROM param.ParameterSet WHERE Name = N'Motor testi'"))
+        c.execute(sa.text("DELETE s FROM param.PlanningSetting s JOIN param.ScenarioDefinition p ON p.Id = s.ScenarioDefinitionId "
+                          "WHERE p.Name LIKE N'Motor testi%'"))
+        c.execute(sa.text("DELETE FROM param.ScenarioDefinition WHERE Name LIKE N'Motor testi%'"))
         for version in versions:
             c.execute(sa.text("DELETE FROM adm.DataVersion WHERE Id = :v"), {"v": version})
         c.execute(sa.text("DELETE FROM core.Location WHERE Code = N'TEST-ENG'"))

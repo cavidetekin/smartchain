@@ -22,6 +22,8 @@ FIELD_LABELS = {
     "reason": "Neden", "remaining_attempts": "Kalan deneme", "source": "Kaynak", "address": "IP adresi", "user_agent": "Tarayıcı",
     # Ayar, etiket, görünüm
     "Value": "Değer", "Label": "Etiket", "Name": "Ad", "IsShared": "Paylaşılan", "Definition": "Tanım", "view_id": "Görünüm no",
+    # Parametreler: hedefler (K-175)
+    "Seq": "Sıra", "TimeBudgetSeconds": "Süre bütçesi (sn)", "TolerancePct": "Ödün payı (%)",
     # İş
     "status": "Durum", "cancel_reason": "İptal nedeni", "job_type": "İş türü", "requested_by": "İşi başlatan no", "channel": "Kanal", "job_id": "İş no",
     # Yetkisiz istek

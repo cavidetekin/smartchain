@@ -269,7 +269,7 @@ def test_bom_fields_in_the_dictionary(db_engine):
 
 @pytest.mark.db
 def test_production_version_fields_in_the_dictionary(db_engine):
-    """K-114: yeni alanlar etiketleriyle sözlükte; IsDefault yok; ParameterSet.IsDefault durur."""
+    """K-114: yeni alanlar etiketleriyle sözlükte; IsDefault yok."""
     with db_engine.connect() as c:
         rows = {r.FieldName: r for r in c.execute(text("SELECT FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName = N'ProductionVersion'"))}
         critical = c.execute(text("SELECT StandardLabel, IfEmpty FROM adm.FieldDefinition WHERE TableName = N'Material' AND FieldName = N'IsCritical'")).one()
@@ -277,7 +277,7 @@ def test_production_version_fields_in_the_dictionary(db_engine):
     assert {n: rows[n].StandardLabel for n in ("Name", "Type", "IsActive", "Priority", "BOMCode")} == {
         "Name": "Versiyon adı", "Type": "Versiyon tipi", "IsActive": "Aktif", "Priority": "Öncelik", "BOMCode": "Ürün ağacı kodu"}
     assert rows["BOMCode"].IsRequired and rows["LocationId"].IsRequired and rows["IsActive"].IfEmpty == "hata (kurallardan sonra)"
-    assert ("ParameterSet", "IsDefault") in EXPECTED
+    assert not [k for k in EXPECTED if k[0] == "ParameterSet"]  # parametre seti kalktı (K-175)
 
 
 @pytest.mark.db

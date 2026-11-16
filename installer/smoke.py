@@ -90,12 +90,11 @@ def check_engine(timeout: int) -> str:
                              "VALUES (:c, N'Kurulum testi', N'Tesis', 1, 1)"), {"c": TEST_LOCATION}).scalar_one()
         dv = s.execute(text("INSERT INTO adm.DataVersion (LocationId, CreatedAt, LoadType, IsSynthetic) OUTPUT inserted.Id "
                             "VALUES (:l, SYSUTCDATETIME(), N'Tam', 1)"), {"l": loc}).scalar_one()
-        ps = s.execute(text("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id "
-                            "VALUES (N'Kurulum testi', 1)")).scalar_one()
+        ps = s.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar_one()  # Baz senaryo kurulumla gelir (K-175)
         s.commit()
         run_id = job_id = None
         try:
-            run_id, job_id = submit_plan_run(s, data_version_id=dv, parameter_set_id=ps)
+            run_id, job_id = submit_plan_run(s, data_version_id=dv, scenario_definition_id=ps)
             deadline = time.monotonic() + timeout
             status = None
             while time.monotonic() < deadline:
@@ -121,7 +120,6 @@ def check_engine(timeout: int) -> str:
                 s.execute(text("DELETE FROM planning.PlanRun WHERE Id = :r"), p)
             if job_id:
                 s.execute(text("DELETE FROM adm.Job WHERE Id = :j"), p)
-            s.execute(text("DELETE FROM param.ParameterSet WHERE Id = :ps"), p)
             s.execute(text("DELETE FROM adm.DataVersion WHERE Id = :dv"), p)
             s.execute(text("DELETE FROM core.Location WHERE Id = :l"), p)
             s.commit()

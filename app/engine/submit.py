@@ -7,16 +7,16 @@ from app.jobs.constants import CHANNEL_INTERACTIVE, CHANNEL_NIGHT, TYPE_NIGHT_SC
 from .interface import RUN_QUEUED
 
 
-def submit_plan_run(session: Session, *, data_version_id: int, parameter_set_id: int,
+def submit_plan_run(session: Session, *, data_version_id: int, scenario_definition_id: int,
                     requested_by: int | None = None, channel: str = CHANNEL_INTERACTIVE,
                     scenario_id: int | None = None, workspace_id: int | None = None,
                     priority: int | None = None) -> tuple[int, int]:
-    """(plan_run_id, job_id) döndürür."""
+    """(plan_run_id, job_id) döndürür. scenario_definition_id: hesabın parametrelerini taşıyan senaryo tanımı (K-175)."""
     try:
         plan_run_id = session.execute(text(
-            "INSERT INTO planning.PlanRun (ScenarioId, WorkspaceId, DataVersionId, ParameterSetId, Status) "
+            "INSERT INTO planning.PlanRun (ScenarioId, WorkspaceId, DataVersionId, ScenarioDefinitionId, Status) "
             "OUTPUT inserted.Id VALUES (:sc, :ws, :dv, :ps, :st)"),
-            {"sc": scenario_id, "ws": workspace_id, "dv": data_version_id, "ps": parameter_set_id,
+            {"sc": scenario_id, "ws": workspace_id, "dv": data_version_id, "ps": scenario_definition_id,
              "st": RUN_QUEUED}).scalar_one()
         job_type = TYPE_NIGHT_SCENARIO if channel == CHANNEL_NIGHT else TYPE_WORKSPACE
         job_id = queue.enqueue(session, job_type, channel, requested_by, {"plan_run_id": plan_run_id}, priority)

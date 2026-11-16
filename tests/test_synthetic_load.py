@@ -25,7 +25,7 @@ def snapshot(engine):
     with engine.connect() as c:
         return {t: c.execute(text(f"SELECT COUNT(*) FROM core.[{t}]")).scalar() for t in LOAD_ORDER + ["Location"]} | {
             "DataVersion": c.execute(text("SELECT COUNT(*) FROM adm.DataVersion")).scalar(),
-            "ParameterSet": c.execute(text("SELECT COUNT(*) FROM param.ParameterSet")).scalar()}
+            "ScenarioDefinition": c.execute(text("SELECT COUNT(*) FROM param.ScenarioDefinition")).scalar()}
 
 
 @pytest.fixture(scope="module")
@@ -94,18 +94,18 @@ def test_load_writes_every_table(db_engine, ds, loaded):
             bad = c.execute(text(f"SELECT COUNT(*) FROM core.[{t}] WHERE VersionFrom = :v AND (BusinessKey IS NULL "
                                  "OR VersionTo IS NOT NULL OR ImportBatchId IS NOT NULL)"), {"v": v}).scalar()
             assert bad == 0, t
-        ps = c.execute(text("SELECT Name, IsSynthetic FROM param.ParameterSet WHERE Id = :p"),
-                       {"p": loaded["parameter_set_id"]}).one()
-        assert ps.Name == d.SET_NAME and ps.IsSynthetic
-        limit = c.execute(text("SELECT UpperLimit FROM param.SupplierLimit WHERE ParameterSetId = :p"),
-                          {"p": loaded["parameter_set_id"]}).scalar()
+        ps = c.execute(text("SELECT Name, IsBase, IsSynthetic FROM param.ScenarioDefinition WHERE Id = :p"),
+                       {"p": loaded["scenario_definition_id"]}).one()
+        assert ps.Name == "Baz" and ps.IsBase and not ps.IsSynthetic  # sentetik satırlar Baz'a bağlanır, Baz sentetik değildir (K-175)
+        limit = c.execute(text("SELECT UpperLimit FROM param.SupplierLimit WHERE ScenarioDefinitionId = :p"),
+                          {"p": loaded["scenario_definition_id"]}).scalar()
         assert limit == d.LIMIT_QTY
 
 
 def test_reload_replaces_previous_version_and_its_plans(db_engine, ds, loaded):
     old = loaded["data_version_id"]
     with Session(db_engine) as s:
-        run_id, _ = submit_plan_run(s, data_version_id=old, parameter_set_id=loaded["parameter_set_id"])
+        run_id, _ = submit_plan_run(s, data_version_id=old, scenario_definition_id=loaded["scenario_definition_id"])
     again = load(db_engine, ds)
     assert again["removed_versions"] == [old] and again["data_version_id"] != old
     with db_engine.connect() as c:
@@ -120,8 +120,8 @@ def test_reload_replaces_previous_version_and_its_plans(db_engine, ds, loaded):
 
 
 LOCK_CASES = {
-    "ParameterSet": ("INSERT INTO param.ParameterSet (Name, IsSynthetic) OUTPUT inserted.Id VALUES (N'Gerçek set', 0)",
-                     "DELETE FROM param.ParameterSet WHERE Id = :id", "parametre seti 'Gerçek set'"),
+    "ScenarioDefinition": ("INSERT INTO param.ScenarioDefinition (Name, IsBase, IsSynthetic) OUTPUT inserted.Id VALUES (N'Gerçek senaryo', 0, 0)",
+                           "DELETE FROM param.ScenarioDefinition WHERE Id = :id", "senaryo 'Gerçek senaryo'"),
     "Location": ("INSERT INTO core.Location (Code, Name, Type, IsActive, IsSynthetic) OUTPUT inserted.Id "
                  "VALUES (N'GERCEK-01', N'Gerçek fabrika', N'Tesis', 1, 0)",
                  "DELETE FROM core.Location WHERE Id = :id", "lokasyon GERCEK-01"),

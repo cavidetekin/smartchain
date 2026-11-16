@@ -82,6 +82,7 @@ svg { width: var(--icon); height: var(--icon); flex: none; }
 .sc-pill { padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; color: var(--text-muted);
   white-space: nowrap; }
 .sc-pill.is-disabled { cursor: not-allowed; background: var(--lead-50); }
+.sc-pill.is-current { border-color: var(--indigo-100); color: var(--indigo-700); font-weight: var(--fw-semibold); }  /* seçili senaryo (K-175) */
 /* Bağlam çubuğu çipleri (durum rozeti değildir; rozet: components.css .sc-tag) */
 .sc-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem; border: 1px solid var(--line);
   border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }

@@ -37,7 +37,7 @@ def test_sizes_match_docs(ds):
 def test_every_core_table_filled_except_documented(ds):
     core = {t.name for t in models.metadata.sorted_tables if t.schema == "core"}
     assert {t for t in core if not ds.rows(t)} == EMPTY
-    assert set(ds.params) == {"ParameterSet", "PlanningSetting", "TimeBucketDefinition", "PriorityRule", "SupplierLimit"}
+    assert set(ds.params) == {"PriorityRule", "SupplierLimit"}  # Baz senaryoya bağlanır; parametreler Baz'ın kendisinde (K-175)
 
 
 def test_values_fit_schema(ds):
@@ -49,7 +49,7 @@ def test_values_fit_schema(ds):
         for r in rows:
             problems += [f"{name}.{k}: bilinmeyen alan" for k in r if k not in table.c]
             problems += [f"{name}.{k}: zorunlu alan boş" for k in required if r.get(k) is None
-                         and not (k == "Id" and name.startswith("param.")) and k != "ParameterSetId"]
+                         and not (k == "Id" and name.startswith("param.")) and k != "ScenarioDefinitionId"]
             for k, v in r.items():
                 size = getattr(table.c[k].type, "length", None) if k in table.c else None
                 if isinstance(v, str) and size and len(v) > size:
