@@ -154,6 +154,7 @@ Pakete giren bütün bileşenler yeniden dağıtılabilir. Lisans metinlerinin p
 | Lucide ikonları (lucide-react) | 1.62 | ISC |
 | TanStack Table, TanStack Virtual (@tanstack/react-table, @tanstack/react-virtual) | 9.3 · 3.14 | MIT |
 | Instrument Sans, Inter (@fontsource) | 5.3 | OFL-1.1 |
+| Apache ECharts (echarts) ve çizim altyapısı zrender; tablonun grafiği (K-178) | 6.1 | Apache-2.0 · BSD-3-Clause |
 | ODBC Driver 18 for SQL Server, Visual C++ yeniden dağıtılabilir, IIS URL Rewrite 2.1, IIS ARR 3.0 | — | Microsoft lisansları; yeniden dağıtım ürünle birlikte kurulum amacıyla |
 
 ## Kaldırma

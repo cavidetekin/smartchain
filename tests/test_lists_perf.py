@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.lists import MATERIALS
 from app.api.lists.request import (
-    FilterItem, GroupsRequest, QueryRequest, RuleSpec, SortItem, ValuesRequest,
+    ChartRequest, FilterItem, GroupsRequest, QueryRequest, RuleSpec, SortItem, ValuesRequest,
 )
 from app.api.services import lists as service
 
@@ -126,3 +126,27 @@ def test_rules_first_chunk_under_target(big_session):
     ms = median_ms(lambda: service.query(big_session, MATERIALS, req))
     print(f"\nkurallı sorgu (50.000 satır, 10 kural, ilk parça + sayılar): ortanca {ms:.0f} ms (kuralsız {plain:.0f} ms)")
     assert ms < TARGET_MS
+
+
+# --- grafik (K-178): toplama ucu; ölçümler Aşama 7 sonundaki performans işinde koşulur ---
+
+CHARTS = {
+    "kategori + kırılım": {"x": {"field": "MaterialGroup"}, "split": "MaterialLevel",
+                           "series": [{"id": "a", "field": "SafetyStock", "fn": "sum"}, {"id": "n", "fn": "count"}]},
+    "haftalık dönem + iki seri": {"x": {"field": "UpdatedAt", "bucket": "week"},
+                                  "series": [{"id": "a", "field": "SafetyStock", "fn": "avg"}, {"id": "b", "field": "SafetyStock", "fn": "max"}]},
+    "filtreli, çok kategorili": {"x": {"field": "Name"}, "series": [{"id": "a", "field": "SafetyStock", "fn": "sum"}],
+                                 "filters": [{"field": "Name", "op": "contains", "value": "e"}, {"field": "SafetyStock", "op": "between", "min": 50, "max": 450},
+                                             {"field": "MaterialGroup", "op": "in", "values": ["Çubuk", "Levha", "Rulman", "Conta"]}]},
+}
+
+
+@pytest.mark.parametrize("name", list(CHARTS))
+def test_chart_under_target(big_session, name):
+    req = ChartRequest.model_validate(CHARTS[name])
+    out = service.chart(big_session, MATERIALS, req)
+    assert out["rows"] > ROWS / 10
+    ms = median_ms(lambda: service.chart(big_session, MATERIALS, req))
+    print(f"\ngrafik ({name}): ortanca {ms:.0f} ms")
+    assert ms < TARGET_MS
+

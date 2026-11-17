@@ -273,6 +273,34 @@ Cevap: `{"rows": [{"Id": 7, "Code": "…", …, "_unit_decimals": 3}], "offset":
 - **Grubun satırları:** `query` isteğine `"group_key": [{"field": "MaterialLevel", "value": "Hammadde"}, …]` eklenir (değer `null` ise boş); parça kuralı aynıdır (K-87).
 - Kolonlar cevabında her kolon varsayılan türü taşır: `aggregate: "sum" | "avg" | … | null`.
 
+### Grafik · `POST /api/<liste>/chart` (K-178)
+
+Tablonun grafiği için toplama. Listeyi okuma yetkisiyle çalışır (`query` ile aynı); filtre, veri versiyonu ve satır kapsamı `query` ile birebir aynıdır (aynı filtreyle `rows` = `query`'nin `filtered` değeri).
+
+```json
+{"filters": [], "x": {"field": "RequestedDate", "bucket": "week"}, "split": "CustomerCode", "order": "value",
+ "series": [{"id": "s1", "field": "OpenQuantity", "fn": "sum"}, {"id": "s2", "fn": "count"}],
+ "limit": 30, "scenario_id": 1}
+```
+
+- `x.field`: tarih ya da tarih-saat alanı (`bucket` zorunlu: `day | week | month | quarter | year`) ya da metin, liste, Evet/Hayır, tam sayı alanı (kategori; `bucket` yok). Saat kırılımı yoktur. Tarih-saat alanı (UTC) API sunucusunun yerel gününe indirgenir: gün sınırı tarih filtresindekiyle aynıdır (bir günün çubuğu, o günün filtresindeki satırlardır); gece yarısına yakın kayıt, sunucuyla aynı saat dilimindeki arayüzde göründüğü güne düşer.
+- `week`: hafta, senaryonun `WeekStart` parametresindeki günle başlar (`scenario_id` verilmezse kullanıcının seçili senaryosu, K-177). Cevapta `week_start`.
+- `split`: isteğe bağlı kırılım alanı (kategori). `order`: kategori ekseninde `value` (ilk serinin değeri, azalan) ya da `name`; tarih ekseni her zaman eskiden yeniye.
+- `series`: 1–8 seri; `fn`: `sum | avg | min | max` (sayısal `field` ister) ya da `count` (satır sayısı; `field` yok).
+
+```json
+{"x": {"kind": "date", "bucket": "week", "values": [{"key": "2026-11-16", "label": null}], "other": false},
+ "split": {"field": "CustomerCode", "values": [{"key": "MUS-004", "label": "MUS-004"}, {"key": null, "label": null}], "other": true},
+ "series": [{"id": "s1", "data": [[1200.0, null], [300.0, 80.0]], "mixed_units": false}],
+ "rows": 840, "week_start": "Pazartesi"}
+```
+
+- `series[].data`: kırılım × yatay eksen matrisi (kırılım yoksa tek satır). Tarih ekseninde `key` dönemin ilk günüdür ve aradaki boş dönemler de gelir (`sum` ve `count` 0, ötekiler `null`). Kategori `key`'i değerin kendisidir; `null` boş değerdir. Evet/Hayır alanında `label` "Evet" / "Hayır".
+- **Sınırlar:** kategori ekseninde en büyük `limit` değer (1–30; verilmezse 30; panelde "Gösterilecek değer sayısı"), kırılımda en büyük 11; kalanı son sırada "Diğer" olur (`other: true`) ve kalan satırlardan yeniden hesaplanır. Büyüklük ilk serinin değerine göredir. Dönem sayısı 400'ü aşarsa 422 `too_many_periods`; seri × kırılım 24'ü aşarsa kırılım değerleri 24'e sığacak kadar kısaltılır.
+- `mixed_units`: birimden ondalıklı alanda katkı veren satırlarda birden çok birim varsa seri `mixed_units: true` ve verisi `null` döner; `count` bu kurala girmez (gruplamayla aynı kural, K-88, K-90).
+- Hatalar: alan yoksa ya da tipe uymuyorsa 422 `validation`; veri versiyonu yoksa 404 `no_data_version`.
+- **Performans hedefi:** 50.000 satırda ortanca 300 ms altında (kategori + kırılım; haftalık dönem + iki seri; filtreli ve çok kategorili). Ölçümler `tests/test_lists_perf.py`'de; koşusu Aşama 7 sonundaki performans işinde.
+
 ### Görünümler (K-89)
 
 Kullanıcı oturumdan gelir (K-97).
@@ -299,6 +327,19 @@ Kullanıcı oturumdan gelir (K-97).
 
 - `columns` görünen alanlar, görünen sırada; `width` rem (boşsa tipin varsayılanı). `pinned` soldan sabit kolon sayısı. `aggregates` kullanıcının varsayılandan farklı seçtiği ara toplam türleri (K-90).
 - Göreli tarih filtresi göreli saklanır; görünüm açıldığı günün haftasına göre çalışır.
+- `chart` (isteğe bağlı, K-178): tablonun grafiği. Anahtar yoksa grafik kapalıdır (eski görünümler değişmeden çalışır; geçiş yok).
+  `{"v": 1, "open": true, "layout": "split" | "full", "height": 0.45, "x": {"field", "bucket"}, "split": null, "order": "value" | "name",
+  "limit": 30, "series": [{"id", "field", "fn", "type": "bar" | "line" | "smooth" | "step" | "area", "axis": "primary" | "secondary",
+  "color": "#4F5BD5" | null, "labels": {"show", "decimals", "zero"}, "threshold": {"value", "color", "line"} | null}],
+  "bars": {"mode": "group" | "stack" | "percent", "horizontal", "totals", "width": "thin" | "medium" | "thick"},
+  "axes": {"x": {"title"}, "primary": {"title", "min", "max", "unit", "grid"}, "secondary": {…}},
+  "ref_lines": [{"id", "kind": "value" | "avg" | "min" | "max", "value", "series", "name", "color", "show_name", "show_value"}],
+  "legend": {"show", "position": "top" | "bottom" | "right"}, "title", "title_align": "left" | "center" | "right",
+  "title_size": "small" | "medium" | "large"}`. Varsayılanlar: `labels.zero` Hayır (0 değerinin etiketi çıkmaz), `threshold.line` Hayır (eşik çizgisi
+  çizilmez), `bars.totals` Hayır, `bars.width` medium (çubuk genişliği: İnce · Orta · Kalın; bütün çubuk serileri için ortak), `show_name` ve `show_value` Evet, `title_align` left, `title_size` medium, `limit` 30. Ayar panelinin açık ya da
+  kapalı olması saklanmaz.
+  Kaydederken alanlar, toplama ve tip adları, renk kodları (`#RRGGBB`) ve sınırlar doğrulanır (422). Açılırken artık olmayan alana bağlı seri atılır
+  (`warnings`); yatay eksenin alanı ya da bütün seriler gitmişse grafik atılır.
 - `rules`: koşullu biçim kuralları, sıralı (aşağıda "Koşullu biçim kuralları"). Açılırken artık olmayan alana ya da karşılaştırılan alana bakan kural atılır, `warnings`'te yazar.
 - Kaydederken alanlar ve filtreler liste tanımına göre doğrulanır (422). Açılırken artık olmayan alanlar atılır, `warnings`'te yazar.
 - Hatalar: sahibi değilse 403 `view_not_owner`; aynı adda görünüm varsa 409 `view_name_taken`; görünüm yoksa 404 `view_not_found`; kullanıcı yoksa 404 `user_not_found`.
@@ -379,6 +420,7 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `GET /api/data-versions/current` | En son veri versiyonu: Id, lokasyon kodu, oluşma zamanı, tam/kısmi, sentetik mi. Yoksa 404 `no_data_version`; veritabanına bağlanılamazsa 503 `database_unavailable`. Bağlam çubuğunun veri versiyonu (docs/12). | uygulandı (1.1) |
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87): Ana veri ekranının Malzeme tablosu (6.1) ve tablo bileşeni denemesi (`/tablo`). | uygulandı (1.3) |
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
+| `POST /api/<liste>/chart` · görünümde `chart` | Tablonun grafiği için toplama; grafik ayarları görünümle saklanır (K-178) | uygulandı (7.4a) |
 | `POST /api/materials/export` · `GET /api/exports/{job_id}/file` | Excel'e aktarım: anlık ya da arka planda (K-91, K-93) | uygulandı (1.5) |
 | `query`'de `rules` | Koşullu biçim kuralları: satır başına tutan kurallar (K-95) | uygulandı (1.6) |
 | `WS /api/ws` | Anlık bildirim kanalı (fonksiyon 48). Oturumla açılır; oturum yoksa el sıkışma reddedilir (403). | uygulandı (0.4; oturum 2.1) |

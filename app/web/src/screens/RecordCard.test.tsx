@@ -107,7 +107,8 @@ describe("detay kartı", () => {
     expect(within(strip.querySelector(".sc-table-toolbar-main") as HTMLElement).getByRole("radiogroup", { name: "Kart bölümleri" })).toBeInTheDocument();
     const tools = strip.querySelector(".sc-table-tools") as HTMLElement;
     expect(within(tools).getAllByRole("button").map((b) => b.getAttribute("aria-label")).slice(-2)).toEqual(["Büyüt", "Kapat"]);
-        expect(await within(pane).findByText("Manuel değer · Ayşe Planlama")).toBeInTheDocument();
+    expect(await within(pane).findByText("Manuel değer · Ayşe Planlama")).toBeInTheDocument();
+    expect(within(pane).getByRole("button", { name: "Grafik" })).toBeInTheDocument();                                  // detay kartı sekmesinde de grafik (K-178); tablo yüklenince
     expect(within(pane).getByText("Kayıt oluştu")).toBeInTheDocument();
     await waitFor(() => expect(history.at(-1)?.body).toMatchObject({ filters: [{ field: "TableName", values: ["Customer"] }, { field: "RecordKey", values: ["1"] }] }));
     expect(rowOf("MUS-A")).toHaveClass("is-selected");

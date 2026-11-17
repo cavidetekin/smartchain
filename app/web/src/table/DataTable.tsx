@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns3, Download, Ellipsis, FoldVertical, Funnel,
+  ArrowDown, ArrowUp, ChartColumn, ChevronDown, ChevronRight, Columns3, Download, Ellipsis, FoldVertical, Funnel,
   FunnelX,
   ListCollapse, Rows3, UnfoldVertical,
 } from "lucide-react";
@@ -34,7 +34,9 @@ import { FilterMenu, valueLabel } from "./filters";
 import { GroupPanel } from "./GroupPanel";
 import { RuleDialog } from "./RuleDialog";
 import { RuledValue } from "./RuleIcon";
+import { clampHeight, defaultChart, DEFAULT_HEIGHT } from "../ui/chart/chartModel";
 import { type CellEditing, type EditorSpec, type PasteCell, parseClipboard } from "./cellEditing";
+import { ChartPane } from "./ChartPane";
 import {
   activeRules, cellFormat, describeRule, formatStyle, newRuleId, RULE_OPS, ruleKind, toRequestRule,
 } from "./rules";
@@ -565,6 +567,36 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const request: ListRequest | null = useMemo(() => (ready ? {
     fields: s.order, sort: s.sort, filters: [...fixed, ...s.filters], ...(active.length ? { rules: active.map(toRequestRule) } : {}),
   } : null), [ready, requestKey]); // requestKey alanları, sıralamayı, filtreleri ve kuralları taşır
+  // Grafik (K-178): tablonun filtresini çizer; açık ya da kapalı olması, düzeni ve yüksekliği görünümün parçasıdır
+  const chartFilters = useMemo(() => [...fixed, ...s.filters], [fixed, JSON.stringify(s.filters)]);  // eslint-disable-line react-hooks/exhaustive-deps
+  const chartOpen = Boolean(s.chart?.open);
+  const chartFull = s.chart?.layout === "full";
+  const chartPossible = useMemo(() => Boolean(columns && defaultChart(columns, s.order)), [columns, s.order]);
+  const baselineChart = views.baseline?.chart ?? null;
+  const [chartFresh, setChartFresh] = useState(false);  // varsayılan grafik yeni kuruldu: çizilemiyorsa (karışık birim) Adet'e döner
+  const toggleChart = () => update((st) => {
+    if (!st.chart) setChartFresh(true);
+    if (st.chart?.open) return { ...st, chart: baselineChart ? { ...st.chart, open: false } : null };  // görünümde grafik yoksa kapatınca iz kalmaz
+    return { ...st, chart: st.chart ? { ...st.chart, open: true } : defaultChart(columns ?? [], st.order) };
+  });
+  const setChartHeight = (ratio: number) => update((st) => (st.chart ? { ...st, chart: { ...st.chart, height: clampHeight(ratio) } } : st));
+  const onChartSplit = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    const pane = rootRef.current?.querySelector<HTMLElement>(".sc-chart-pane");
+    const scroll = scrollRef.current;
+    if (!pane || !scroll) return;
+    const move = (ev: globalThis.MouseEvent) => {
+      const top = pane.getBoundingClientRect().top;
+      const bottom = scroll.getBoundingClientRect().bottom;
+      if (bottom > top) setChartHeight((ev.clientY - top) / (bottom - top));
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  };
   const grouped = s.groupBy.length > 0;
   const flat = useListQuery(list, grouped ? null : request, chunkSize);
   const aggKey = JSON.stringify(requestAggregates(columns ?? [], s));
@@ -1090,6 +1122,8 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
               <button type="button" className="sc-tool-btn" aria-label={T.exportButton} title={T.exportButton}
                       onClick={() => setExporting(true)}><Download aria-hidden="true" /></button>
             )}
+            <button type="button" className={`sc-tool-btn${chartOpen ? " is-on" : ""}`} aria-label={tr.chart.chart} title={chartOpen ? tr.chart.close : tr.chart.chart}
+                    aria-pressed={chartOpen} disabled={!chartOpen && !chartPossible} onClick={toggleChart}><ChartColumn aria-hidden="true" /></button>
           </ViewBar>
           {toolbarEnd}
           {panel === "group" && (
@@ -1129,7 +1163,25 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
           <MenuActions items={menu.items} onDone={() => setMenu(null)} end={false} />
         </RowPopMenu>
       )}
+      {chartOpen && s.chart && (
+        <>
+          <ChartPane list={list} columns={columns} filters={chartFilters} chart={s.chart} reloadKey={reloadKey} style={chartFull ? { flex: "1 1 0" } : { flex: `${s.chart.height} 1 0` }}
+                     fresh={chartFresh} onSettled={() => setChartFresh(false)}
+                     onChange={(chart) => update((st) => ({ ...st, chart }))} onClose={toggleChart} />
+          {!chartFull && (
+            <div role="separator" aria-orientation="horizontal" aria-label={tr.chart.resize} tabIndex={0} className="sc-md-splitter sc-chart-splitter"
+                 aria-valuenow={Math.round(s.chart.height * 100)} aria-valuemin={15} aria-valuemax={85}
+                 onMouseDown={onChartSplit} onDoubleClick={() => setChartHeight(DEFAULT_HEIGHT)}
+                 onKeyDown={(e) => {
+                   if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+                   e.preventDefault();
+                   setChartHeight((s.chart?.height ?? DEFAULT_HEIGHT) + (e.key === "ArrowDown" ? 0.05 : -0.05));
+                 }} />
+          )}
+        </>
+      )}
       <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll" tabIndex={-1}
+           style={chartOpen && s.chart ? (chartFull ? { display: "none" } : { flex: `${1 - s.chart.height} 1 0` }) : undefined}
            onKeyDown={(e) => { if (!onSelectKey(e) && !onCopyKey(e) && gridOn) onGridKey(e); }} onPaste={gridOn ? onGridPaste : undefined}>
         <table className={`sc-table-grid${fit ? " sc-table-grid--fit" : ""}`} aria-rowcount={count + 1} aria-colcount={visible.length + extraCols}
                style={fit ? undefined : { width: `${visible.reduce((sum, c) => sum + width(c.field), (rowMenu ? ROW_MENU_REM : 0) + selRem)}rem` }}>

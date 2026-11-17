@@ -1,4 +1,5 @@
 // Tablo durumu ve kayıtlı görünüm içeriği (K-89, docs/08 "Görünümler"). Saf işlevler: dönüşüm, karşılaştırma, taşıma.
+import { type ChartConfig, fitChart, normalizeChart } from "../ui/chart/chartModel";
 import type { AggSpec, ColumnType, FormatRule, ListColumn, ListFilter, SortItem, ViewDefinition } from "./types";
 
 export interface TableState {
@@ -16,6 +17,8 @@ export interface TableState {
   aggregates: Record<string, AggSpec>;
   /** Koşullu biçim kuralları, sıralı; üstteki kazanır (U-24, K-95). */
   rules: FormatRule[];
+  /** Tablonun grafiği (K-178): ayarları, açık ya da kapalı olması, düzeni ve yüksekliği görünümün parçasıdır; yoksa null. */
+  chart: ChartConfig | null;
 }
 
 /** Tipin varsayılan genişliği (rem; 13 px'te 180 / 120 / 140 / 100 px). */
@@ -31,7 +34,7 @@ export const clampWidth = (rem: number) => Math.min(MAX_WIDTH_REM, Math.max(MIN_
 /** "Standart" görünüm: liste tanımındaki varsayılan alanlar ve sunucunun varsayılan sıralaması (K-89). */
 export function standardState(columns: ListColumn[]): TableState {
   return { order: columns.filter((c) => c.default_visible).map((c) => c.field), widths: {}, pinned: 0, sort: [],
-           filters: [], groupBy: [], aggregates: {}, rules: [] };
+           filters: [], groupBy: [], aggregates: {}, rules: [], chart: null };
 }
 
 export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): TableState {
@@ -47,6 +50,7 @@ export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): Tabl
     groupBy: def.group_by.filter((g) => known.has(g)),
     aggregates: Object.fromEntries(Object.entries(def.aggregates ?? {}).filter(([f]) => known.has(f))),
     rules: (def.rules ?? []).filter((r) => known.has(r.field) && (!r.condition.field_ref || known.has(r.condition.field_ref))),
+    chart: def.chart ? fitChart(normalizeChart(def.chart), columns) : null,
   };
 }
 
@@ -60,6 +64,7 @@ export function toDefinition(s: TableState): ViewDefinition {
     group_by: s.groupBy,
     aggregates: s.aggregates,
     rules: s.rules,
+    ...(s.chart ? { chart: s.chart } : {}),
   };
 }
 
@@ -76,6 +81,7 @@ function normalize(def: ViewDefinition): string {
     aggregates: Object.entries(def.aggregates ?? {}).sort(([a], [b]) => a.localeCompare(b))
       .map(([f, a]) => [f, a.fn, a.weight ?? null]),
     rules: (def.rules ?? []).map((r) => [r.id, r.field, r.enabled, clean(r.condition as ListFilter), clean(r.format as ListFilter)]),
+    chart: def.chart ? normalizeChart(def.chart) : null,
   });
 }
 

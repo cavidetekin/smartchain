@@ -4,6 +4,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect } from "vitest";
 
 import { mockApi, mockSocket, renderApp, type Reply } from "../test/helpers";
+import type { ChartData, ChartRequest } from "../ui/chart/chartModel";
 import type {
   ExportInfo, ExportRequest, GroupNode, GroupsResponse, ListColumn, QueryRequest, RuleSpec, SavedView, ViewDefinition,
   ViewsResponse,
@@ -39,8 +40,22 @@ export interface Calls {
   exports: { url: string; body: ExportRequest }[];
   ids: unknown[];
   downloads: string[];
+  charts: ChartRequest[];
 }
-export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [], ids: [] };
+export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [], ids: [], charts: [] };
+
+/** Sahte grafik cevabı (K-178): üç dönem ya da üç kategori; kırılım varsa iki parça; her seri 10, 20, 30 (ikinci parça 1, 2, 3). */
+export function chartData(req: ChartRequest, extra: Partial<ChartData> = {}): ChartData {
+  const date = req.x.bucket !== null;
+  const values = date ? ["2026-09-01", "2026-10-01", "2026-11-01"].map((key) => ({ key, label: null }))
+    : ["Hammadde", "Yarı mamul", "Nihai ürün"].map((key) => ({ key, label: key }));
+  const split = req.split ? { field: req.split, values: [{ key: "Çubuk", label: "Çubuk" }, { key: "Levha", label: "Levha" }], other: false } : null;
+  return {
+    x: { kind: date ? "date" : "category", bucket: req.x.bucket, values, other: false }, split,
+    series: req.series.map((s, i) => ({ id: s.id, data: split ? [[10 + i, 20 + i, 30 + i], [1, 2, 3]] : [[10 + i, 20 + i, 30 + i]], mixed_units: false })),
+    rows: 60, week_start: "Pazartesi", ...extra,
+  };
+}
 
 /** Kural sorgularını bekleten kapı: açık değilse kurallı sorgu cevabı kapı açılana kadar gelmez. */
 export const ruleGate = { hold: false, release: () => {} };
@@ -99,9 +114,11 @@ export interface BackendOptions {
   groups?: GroupNode[];
   /** Excel'e aktarım cevabı (varsayılan: anlık dosya, 200). */
   exportReply?: Reply;
+  /** Grafik cevabı (varsayılan: chartData). */
+  chart?: (req: ChartRequest) => Reply | Promise<Reply>;
 }
 
-export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100, views, groups = [], exportReply }:
+export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100, views, groups = [], exportReply, chart }:
                         BackendOptions = {}) {
   for (const list of Object.values(calls)) list.length = 0;  // yerinde: testler diziyi önceden tutabilir
   ruleGate.hold = false;
@@ -145,6 +162,11 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
         rows.forEach((row) => Object.assign(row, { _rules: body.rules!.map((r, i) => (evalRule(row, r) ? i : -1)).filter((i) => i >= 0) }));
       }
       return { body: { rows, offset: body.offset, filtered: inGroup ?? filtered, total } };
+    },
+    "/api/materials/chart": async (_url, init): Promise<Reply> => {
+      const body = JSON.parse(String(init?.body)) as ChartRequest;
+      calls.charts.push(body);
+      return chart ? chart(body) : { body: chartData(body) };
     },
     "/api/materials/ids": (_url, init): Reply => {   // çoklu seçimde Ctrl + A (K-171)
       calls.ids.push(JSON.parse(String(init?.body)));

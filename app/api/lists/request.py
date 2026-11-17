@@ -127,6 +127,119 @@ class ValuesRequest(BaseModel):
     filters: list[FilterItem] = []
 
 
+# --- Grafik (K-178, docs/08 "Grafik") ------------------------------------------------------------------------------
+
+ChartBucket = Literal["day", "week", "month", "quarter", "year"]  # saat kırılımı yok
+ChartFn = Literal["sum", "avg", "min", "max", "count"]
+CHART_MAX_SERIES = 8
+CHART_MAX_REF_LINES = 6
+CHART_MAX_CATEGORIES = 30  # kategori ekseninde gösterilecek değer sayısının üst sınırı ve varsayılanı
+COLOR = r"^#[0-9A-Fa-f]{6}$"
+
+
+class ChartAxis(BaseModel):
+    field: str
+    bucket: ChartBucket | None = None  # tarih alanında zorunlu, kategori alanında yok
+
+
+class ChartSeriesSpec(BaseModel):
+    id: str = Field(min_length=1, max_length=20)
+    field: str | None = None  # "count" (satır sayısı) alan istemez
+    fn: ChartFn
+
+
+class ChartRequest(BaseModel):
+    filters: list[FilterItem] = []
+    x: ChartAxis
+    split: str | None = None
+    order: Literal["value", "name"] = "value"  # kategori ekseninde; tarih ekseni eskiden yeniye
+    series: list[ChartSeriesSpec] = Field(min_length=1, max_length=CHART_MAX_SERIES)
+    limit: int = Field(default=CHART_MAX_CATEGORIES, ge=1, le=CHART_MAX_CATEGORIES)  # kategori ekseninde en büyük kaç değer; kalanı "Diğer"
+    scenario_id: int | None = None  # hafta başlangıcı bu senaryonun parametresinden (verilmezse kullanıcının seçili senaryosu)
+
+
+class ChartLabels(BaseModel):
+    show: bool = False
+    decimals: int = Field(default=0, ge=0, le=4)
+    zero: bool = False  # "Sıfır değerleri göster": kapalıyken 0 değerinin etiketi çıkmaz
+
+
+class ChartThreshold(BaseModel):
+    value: float
+    color: str = Field(pattern=COLOR)
+    line: bool = False  # "Eşik çizgisini göster": kapalıyken yalnız eşik üstü renk uygulanır
+
+
+class ChartSeries(ChartSeriesSpec):
+    """Görünümdeki seri: toplama ve görünüş ayarları."""
+    type: Literal["bar", "line", "smooth", "step", "area"] = "bar"  # smooth: eğimli (monoton) çizgi
+    axis: Literal["primary", "secondary"] = "primary"
+    color: str | None = Field(default=None, pattern=COLOR)  # boşsa paletten sırayla
+    labels: ChartLabels = ChartLabels()
+    threshold: ChartThreshold | None = None
+
+
+class ChartBars(BaseModel):
+    mode: Literal["group", "stack", "percent"] = "group"
+    horizontal: bool = False
+    totals: bool = False  # yığılmışta çubuğun üstünde toplam
+    width: Literal["thin", "medium", "thick"] = "medium"  # çubuk genişliği: bütün çubuk serileri için ortak
+
+
+class ChartValueAxis(BaseModel):
+    title: str = Field(default="", max_length=60)
+    min: float | None = None
+    max: float | None = None
+    unit: str = Field(default="", max_length=20)
+    grid: bool = True
+
+
+class ChartCategoryAxis(BaseModel):
+    title: str = Field(default="", max_length=60)
+
+
+class ChartAxes(BaseModel):
+    x: ChartCategoryAxis = ChartCategoryAxis()
+    primary: ChartValueAxis = ChartValueAxis()
+    secondary: ChartValueAxis = ChartValueAxis(grid=False)
+
+
+class ChartRefLine(BaseModel):
+    id: str = Field(min_length=1, max_length=20)
+    kind: Literal["value", "avg", "min", "max"]
+    value: float | None = None   # kind "value"
+    series: str | None = None    # öteki türlerde serinin kimliği
+    name: str = Field(default="", max_length=40)
+    color: str | None = Field(default=None, pattern=COLOR)
+    show_name: bool = True
+    show_value: bool = True
+
+
+class ChartLegend(BaseModel):
+    show: bool = True
+    position: Literal["top", "bottom", "right"] = "top"
+
+
+class ChartDefinition(BaseModel):
+    """Tablonun grafiği, görünümün parçası (K-178). Anahtar yoksa grafik kapalıdır."""
+    v: Literal[1] = 1
+    open: bool = True
+    layout: Literal["split", "full"] = "split"
+    height: float = Field(default=0.45, ge=0.15, le=0.85)  # bölünmüş görünümde grafiğin payı
+    x: ChartAxis
+    split: str | None = None
+    order: Literal["value", "name"] = "value"
+    limit: int = Field(default=CHART_MAX_CATEGORIES, ge=1, le=CHART_MAX_CATEGORIES)
+    series: list[ChartSeries] = Field(min_length=1, max_length=CHART_MAX_SERIES)
+    bars: ChartBars = ChartBars()
+    axes: ChartAxes = ChartAxes()
+    ref_lines: list[ChartRefLine] = Field(default=[], max_length=CHART_MAX_REF_LINES)
+    legend: ChartLegend = ChartLegend()
+    title: str = Field(default="", max_length=80)
+    title_align: Literal["left", "center", "right"] = "left"
+    title_size: Literal["small", "medium", "large"] = "medium"
+
+
 # --- Kayıtlı görünüm (K-89, docs/08 "Görünümler") ---------------------------------------------------------------
 
 MIN_WIDTH_REM, MAX_WIDTH_REM = 4.0, 60.0
@@ -147,6 +260,7 @@ class ViewDefinition(BaseModel):
     group_by: list[str] = Field(default=[], max_length=4)
     aggregates: dict[str, AggSpec] = {}  # varsayılandan farklı seçilen ara toplam türleri (K-90)
     rules: list[FormatRule] = Field(default=[], max_length=MAX_RULES)  # koşullu biçim, sıralı (K-95)
+    chart: ChartDefinition | None = None  # tablonun grafiği (K-178); yoksa grafik kapalı
 
 
 class ViewCreate(BaseModel):

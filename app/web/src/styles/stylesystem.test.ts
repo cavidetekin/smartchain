@@ -174,6 +174,10 @@ describe("tablo renkleri (K-85, docs/12; bütün tablolar ortak)", () => {
 describe("U-5: grafik serileri", () => {
   const series = [1, 2, 3, 4, 5, 6].map((i) => `chart-${i}`);
 
+  it("altıdan sonra aynı sıranın açık tonları (K-178)", () => {
+    expect([7, 8, 9, 10, 11, 12].map((i) => token(`chart-${i}`))).toEqual(["#9aa2e8", "#7fb5b2", "#d9b65c", "#a0a5ae", "#c08fba", "#bfa07e"]);
+  });
+
   it("sıra indigo, petrol, hardal, kurşun, erik, kahve", () => {
     expect(series.map(token)).toEqual(["#4f5bd5", "#2e7d7a", "#b8860b", "#5a606b", "#8e4585", "#8a6440"]);
   });

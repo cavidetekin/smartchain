@@ -698,7 +698,7 @@ describe("araç çubuğu düzeni (U-22, docs/12)", () => {
     expect(within(tools).getByRole("combobox", { name: "Görünüm" })).toHaveAttribute("aria-label", "Görünüm");
     expect(within(tools).queryByText("Görünüm")).toBeNull();
     const buttons = within(tools).getAllByRole("button");
-    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual(["Sıralamayı temizle", "Grupla", "Alanlar (7/10)", "Excel'e aktar", "Tablo ayarları"]);
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual(["Sıralamayı temizle", "Grupla", "Alanlar (7/10)", "Excel'e aktar", "Grafik", "Tablo ayarları"]);
     expect(buttons.every((b) => b.textContent === "" && b.getAttribute("title") === b.getAttribute("aria-label"))).toBe(true);
     expect(toolbar.querySelector(".sc-table-count")).toBeNull();
     expect(root().querySelector(".sc-table-footer")).toBeNull();

@@ -15,9 +15,10 @@ from sqlalchemy.orm import Session
 
 from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, field_title
+from ..lists import chart as chart_query
 from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
-    AggSpec, DefaultViewRequest, FilterItem, FormatRule, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
+    AggSpec, ChartDefinition, DefaultViewRequest, FilterItem, FormatRule, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
 )
 from ..repositories import audit, lists as list_repo, views as repo
 from ..permissions import ADMIN, SYSTEM_OWNER, Access
@@ -71,7 +72,51 @@ def _problems(b: Builder, d: ViewDefinition) -> list[dict]:
         problems += exc.details
     if len({r.id for r in d.rules}) != len(d.rules):
         problems.append({"field": "definition.rules", "problem": "Kural kimlikleri tekil olmalı"})
+    if d.chart is not None:  # tablonun grafiği (K-178)
+        problems += chart_query.problems(b, d.chart.x, d.chart.split, d.chart.series, "definition.chart.")
+        ids = {s.id for s in d.chart.series}
+        for i, line in enumerate(d.chart.ref_lines):
+            if line.kind == "value" and line.value is None:
+                problems.append({"field": f"definition.chart.ref_lines.{i}.value", "problem": "Değer girilmeli"})
+            elif line.kind != "value" and line.series not in ids:
+                problems.append({"field": f"definition.chart.ref_lines.{i}.series", "problem": "Seri seçilmeli"})
     return problems
+
+
+def _clean_chart(b: Builder, raw, gone, warnings: list[str]) -> dict | None:
+    """Kayıtlı grafik bugünkü listeye uydurulur (K-178): alanı kalkan seri ve kırılım atılır; yatay eksen ya da bütün seriler gittiyse grafik atılır."""
+    try:
+        chart = ChartDefinition.model_validate(raw)
+    except ValidationError:
+        warnings.append("Grafik artık geçerli değil; görünümden çıkarıldı.")
+        return None
+    data = chart.model_dump(mode="json")
+    series = []
+    for s in data["series"]:
+        if s["fn"] == "count" or s["field"] in b.columns:
+            series.append(s)
+        else:
+            gone(s["field"])
+    if data["split"] is not None and data["split"] not in b.columns:
+        gone(data["split"])
+        data["split"] = None
+    if data["x"]["field"] not in b.columns:
+        gone(data["x"]["field"])
+        series = []
+    if not series:
+        warnings.append("Grafiğin alanları artık listede yok; grafik görünümden çıkarıldı.")
+        return None
+    kept = {s["id"] for s in series}
+    data["series"] = series
+    data["ref_lines"] = [r for r in data["ref_lines"] if r["kind"] == "value" or r["series"] in kept]
+    try:
+        check = ChartDefinition.model_validate(data)
+        if chart_query.problems(b, check.x, check.split, check.series):
+            raise ValueError
+    except (ValidationError, ValueError):
+        warnings.append("Grafik artık geçerli değil; görünümden çıkarıldı.")
+        return None
+    return data
 
 
 def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
@@ -134,6 +179,10 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
                 warnings.append(f"'{title(r.get('field'))}' biçim kuralı artık geçerli değil; görünümden çıkarıldı.")
     definition = {"v": 1, "columns": columns, "pinned": min(int(data.get("pinned", 0)), len(columns)),
                   "sort": sort, "filters": filters, "group_by": group_by, "aggregates": aggregates, "rules": rules}
+    if data.get("chart"):  # anahtar yoksa grafik kapalı (eski görünümler değişmeden okunur)
+        chart = _clean_chart(b, data["chart"], gone, warnings)
+        if chart is not None:
+            definition["chart"] = chart
     return definition, warnings
 
 

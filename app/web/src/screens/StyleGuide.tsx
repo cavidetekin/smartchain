@@ -1,17 +1,37 @@
 // Stil örnekleri (/stil; K-85, docs/12). Ekran değildir, menüde yer almaz. Renk değerleri tokens.css'ten okunur.
 import { Download, Lock, RefreshCw, Save, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { formatNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { FONT_SIZES } from "../prefs";
 import { useShell } from "../shell/ShellContext";
+import type { ListColumn } from "../table/types";
+import { type ChartConfig, type ChartData, defaultChart, newSeries } from "../ui/chart/chartModel";
+import { buildOption, THRESHOLD_COLOR } from "../ui/chart/chartOption";
 import {
   Alert, Badge, Button, Card, Checkbox, DateField, KpiCard, NumberField, OccupancyCell, OccupancyLegend, RadioGroup,
   SearchField, Segment, SelectField, TextareaField, TextField, type OccupancyThresholds,
 } from "../ui";
 
 const T = tr.style;
+const Chart = lazy(() => import("../ui/chart/Chart"));
+
+/** Örnek grafik (K-178, docs/12 "Grafik standardı"): çubuk + çizgi (ikincil eksen), eşik üstü renk ve ortalama çizgisi. */
+const CHART_COLUMNS: ListColumn[] = [
+  { field: "Week", label: "Hafta", type: "date", filter: "date", values: null, values_from_server: false, decimals: null, decimals_from_unit: false, percent: false, aggregate: null, default_visible: true },
+  { field: "Open", label: "Açık miktar", type: "number", filter: "number", values: null, values_from_server: false, decimals: 0, decimals_from_unit: false, percent: false, aggregate: "sum", default_visible: true },
+];
+const CHART_DATA: ChartData = {
+  x: { kind: "date", bucket: "week", values: ["2026-11-02", "2026-11-09", "2026-11-16", "2026-11-23", "2026-11-30", "2026-12-07"].map((key) => ({ key, label: null })), other: false },
+  split: null, rows: 240, week_start: "Pazartesi",
+  series: [{ id: "s1", data: [[420, 510, 640, 380, 590, 500]], mixed_units: false }, { id: "s2", data: [[12, 15, 21, 9, 17, 14]], mixed_units: false }],
+};
+const CHART_CONFIG: ChartConfig = {
+  ...defaultChart(CHART_COLUMNS, ["Week", "Open"])!, x: { field: "Week", bucket: "week" },
+  series: [{ ...newSeries("s1", "Open", "sum"), threshold: { value: 600, color: THRESHOLD_COLOR, line: true } }, { ...newSeries("s2", null, "count", "line"), axis: "secondary" }],
+  ref_lines: [{ id: "r1", kind: "avg", value: null, series: "s1", name: "", color: null, show_name: true, show_value: true }],
+};
 const ALT_THRESHOLDS: OccupancyThresholds = { low: 30, normal: 60, risk: 85, over: 95 };
 const OCC_SAMPLE = [38, 44, 72, 86, 92, 100.4, 104, 112];
 
@@ -40,6 +60,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function StyleGuide() {
   const { fontSize, setFontSize } = useShell();
+  const chartOption = useMemo(() => buildOption(CHART_CONFIG, CHART_DATA, CHART_COLUMNS, { fontSize }).option, [fontSize]);
   const [qty, setQty] = useState<number | null>(1234.5);
   const [date, setDate] = useState<Date | null>(new Date(2026, 9, 27));
   const [text, setText] = useState("Baz senaryo");
@@ -196,6 +217,17 @@ export function StyleGuide() {
               <span key={name} className="sc-chart-swatch"><span className={`sc-chart-${i + 1}`} />{i + 1}. {name}</span>
             ))}
           </div>
+          <div className="sc-row">
+            {[7, 8, 9, 10, 11, 12].map((i) => (
+              <span key={i} className="sc-chart-swatch"><span className={`sc-chart-${i}`} />{i}. {T.chartLight}</span>
+            ))}
+          </div>
+          <div className="sc-chart-sample">
+            <Suspense fallback={<p className="sc-muted">{tr.chart.loading}</p>}>
+              <Chart option={chartOption} label={T.chartSample} />
+            </Suspense>
+          </div>
+          <p className="sc-muted">{T.chartNote}</p>
         </Section>
       </div>
     </section>

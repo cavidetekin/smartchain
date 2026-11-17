@@ -6358,7 +6358,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Filtreler: dönem, kaynak grubu, müşteri, proje; sütun seçimi, sıralama
   - Kullanıcı rolü
 - **03:** Filtre ve gruplama paneli: dönem, müşteri, proje, kaynak grubu; sütun seçimi ve sıralama. Rapor bazında son filtre hatırlanır.
-- **04:** Görünüm: tablo, isteğe bağlı grafik (doluluk ısı haritası, gecikme çubuğu); hücreden detaya geçiş (pegging, sipariş, kaynak).
+- **04:** Görünüm: tablo, isteğe bağlı grafik; hücreden detaya geçiş (pegging, sipariş, kaynak). Grafik, ortak tablonun grafiğidir (7.4, K-178; docs/12 "Grafik standardı"): rapora özel grafik bileşeni yoktur, kullanıcı rapor tablosunun grafiğini kendisi ayarlar ve görünümle kaydeder. Uygulama: 7.4a uygulandı (her tabloda grafik, ayar paneli, görünümle kaydetme). 7.4b'ye kalanlar: hesaplamada "Adet" yerine "Say" ve yeni hesaplama "Benzersiz say" (seçilen alandaki farklı değer sayısı; metin alanlarında da çalışır) · çizgi serilerinde çizgi biçimi (Düz · Kesikli) · grafikten tabloya seçim (çubuğa tıklayınca dönem, kırılım varsa parça seçilir; yeniden tıklayınca kalkar; birden fazla seçilebilir; seçilenler canlı kalır, ötekiler solar, grafik daralmaz; alttaki tablo yalnız seçilenlerin kayıtlarını gösterir; filtre şeridinde "Grafik seçimi: 3 dönem ✕" çipi; seçim geçicidir, görünüme kaydedilmez) · zaman ekseninde iniş çıkış · yakınlaştırma kaydırıcısı · küçük çoğullar · dışa aktarma (görsel ve veri; Excel'e grafik) · pasta, halka ve dağılım grafiği.
 - **05:** Başlıkta kaynak ve zaman damgası sabittir: 'Onaylı plan v14 · veri v231 · hesap 22.10 17:40'.
 - **06:** Aksiyonlar: Excel'e aktar (86), yazdır / PDF (öneri), aynı filtrelerle bağlantıyı kopyala (öneri).
 - **ÇIKTI**

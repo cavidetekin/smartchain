@@ -8,8 +8,11 @@ from sqlalchemy.orm import Session
 from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, columns as column_list
 from ..lists.query import DEFAULT_UNIT_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
+from ..lists import chart as chart_query
 from ..lists.groups import build_tree
-from ..lists.request import GroupsRequest, IdsRequest, QueryRequest, ValuesRequest
+from ..lists.request import ChartRequest, GroupsRequest, IdsRequest, QueryRequest, ValuesRequest
+from app.params import scenarios as scenario_service, service as params
+from app.params.horizon import week_start_index
 from app.manual import manual_fields
 
 from ..repositories import data_versions, export as export_repo, lists as repo
@@ -139,3 +142,27 @@ def groups(session: Session | None, defn: ListDefinition, req: GroupsRequest, ro
         tree["filtered"] = sum(g["count"] for g in tree["groups"])
         return tree
     return _run(session, work)
+
+
+def week_start(session: Session, user_id: int | None, scenario_id: int | None) -> str:
+    """Hafta başlangıcı: isteğin senaryosunun (verilmezse kullanıcının seçili senaryosunun) Planlama ufku ayarı; senaryo yoksa Pazartesi (K-178)."""
+    try:
+        scenario = scenario_service.resolve(session, user_id, scenario_id)
+    except scenario_service.ScenarioError:
+        return "Pazartesi"
+    return params.read_settings(session, scenario["Id"]).get("WeekStart") or "Pazartesi"
+
+
+def chart(session: Session | None, defn: ListDefinition, req: ChartRequest, role: str | None = None, user_id: int | None = None) -> dict:
+    """Tablonun grafiği için toplama (K-178): listeyle aynı filtre, versiyon ve satır kapsamı."""
+    def work():
+        b = _builder(session, defn, role, user_id)
+        start = week_start(session, user_id, req.scenario_id) if req.x.bucket == "week" else "Pazartesi"
+        leaves = repo.fetch_rows(session, chart_query.query(b, req, week_start_index(start)))
+        try:
+            out = chart_query.assemble(b, req, leaves, start)
+        except chart_query.TooManyPeriods as exc:
+            raise AppError("too_many_periods", chart_query.TOO_MANY_PERIODS, 422) from exc
+        return {**out, "x": {**out["x"], "values": [{**v, "key": _json(v["key"])} for v in out["x"]["values"]]}}
+    return _run(session, work)
+

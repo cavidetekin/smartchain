@@ -1,5 +1,6 @@
 // Liste sorgu sözleşmesi (K-87, docs/08 "Liste sorgusu"): sunucuyla birebir.
 import { ensureOk, fileNameFrom, getJson, postJson, sendJson } from "../api/client";
+import type { ChartConfig, ChartData, ChartRequest } from "../ui/chart/chartModel";
 
 export type ColumnType = "text" | "integer" | "number" | "bool" | "date" | "datetime";
 export type FilterType = "text" | "list" | "number" | "date";
@@ -183,6 +184,8 @@ export interface ViewDefinition {
   aggregates?: Record<string, AggSpec>;
   /** Koşullu biçim kuralları, sıralı: üstteki kazanır (K-95). */
   rules?: FormatRule[];
+  /** Tablonun grafiği (K-178); yoksa grafik kapalı. */
+  chart?: ChartConfig | null;
 }
 
 export interface SavedView {
@@ -239,6 +242,8 @@ export function listApi(list: string) {
     groups: (body: { group_by: string[]; fields: string[]; aggregates: Record<string, AggSpec>; filters: ListFilter[];
                      sort: SortItem[] }, signal?: AbortSignal) =>
       postJson<GroupsResponse>(`${base}/groups`, body, signal),
+    /** Tablonun grafiği için toplama (K-178): listeyle aynı filtre ve yetki. */
+    chart: (body: ChartRequest, signal?: AbortSignal) => postJson<ChartData>(`${base}/chart`, body, signal),
     // Kullanıcı oturumdan gelir (K-97).
     views: (signal?: AbortSignal) => getJson<ViewsResponse>(`${base}/views`, signal),
     createView: (body: { name: string; is_shared: boolean; definition: ViewDefinition }) =>

@@ -61,6 +61,13 @@
   --chart-4: var(--lead-600);        /* kurşun */
   --chart-5: #8e4585;                /* erik */
   --chart-6: #8a6440;                /* kahve */
+  /* Altıdan sonraki seriler: aynı sıranın açık tonları (K-178); dolgu rengidir, 3:1 şartı ilk altı renk için */
+  --chart-7: #9aa2e8;
+  --chart-8: #7fb5b2;
+  --chart-9: #d9b65c;
+  --chart-10: #a0a5ae;
+  --chart-11: #c08fba;
+  --chart-12: #bfa07e;
 
   /* Form alanları (mockup m24f-0757) */
   --field-bg: #ffffff;

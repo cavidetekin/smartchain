@@ -141,6 +141,7 @@ describe("ekran 06 · Parametreler", () => {
   it("Hedefler: hücre düzenleme, toplam, kapatma, sürükleme; Kaydet tablonun altında ve sırayla gönderir", async () => {
     const { user, sent } = await open("/parametre/parametreler?sekme=hedefler");
     const table = await screen.findByRole("table", { name: "Hedefler" });
+    expect(screen.queryByRole("button", { name: "Grafik" })).toBeNull();                                               // form içi hafif tabloda grafik yok (K-178)
     const rows = () => within(table).getAllByRole("row").slice(1, -1).map((r) => r.querySelectorAll("td")[1].textContent);
     expect(rows()).toEqual(["Karşılanmayan talep", "Gecikme", "Fazla mesai", "Önceki plandan sapma"]);
     expect(within(table).getByRole("columnheader", { name: /Süre bütçesi/ })).toHaveTextContent("✎");

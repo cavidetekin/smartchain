@@ -42,7 +42,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | %40–69 | %70–89 | risk | aşırı yük | olumlu bilgi |
 | Yazı tipleri  Instrument Sans (metin) · Inter, eşit genişlikte rakamlar (sayı, tarih, kod; K-86) |  |  |  | Grafik serileri sabit sıradadır |
 |  |  |  |  | U-5 |
-|  |  |  |  | İndigo, petrol, hardal, kurşun, erik, kahve. Her seri beyaz zeminde en az 3:1. Kiremit ve kırmızı hiçbir zaman seri rengi olmaz; durum rengidir. |
+|  |  |  |  | İndigo, petrol, hardal, kurşun, erik, kahve; altıdan sonra aynı sıranın açık tonları. İlk altı renk beyaz zeminde en az 3:1. Kiremit ve kırmızı durum rengidir: varsayılan sırada yoktur; kullanıcı kendi grafiğinde rengi koşullu biçimlendirmedeki renk seçiciyle serbestçe seçer (K-178). |
 
 ### Örnek ekran: kaynak doluluk raporu
 <sub>23. Arayüz prensipleri · 2/7</sub>
