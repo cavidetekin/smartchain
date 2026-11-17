@@ -139,6 +139,9 @@ CHART_MAX_SELECTION = 200   # grafik seçiminde en çok öğe
 CHART_MAX_SERIES = 8
 CHART_MAX_REF_LINES = 6
 CHART_MAX_CATEGORIES = 30  # kategori ekseninde gösterilecek değer sayısının üst sınırı ve varsayılanı
+CHART_MAX_POINTS = 2000    # dağılımda en çok nokta; aşımda eşit aralıklı örnekleme (K-179)
+CHART_IMAGE_MAX_CHARS = 2_000_000  # grafik görseli (PNG, base64): en çok 1,5 MB
+ChartKind = Literal["xy", "pie", "donut", "scatter"]  # grafik türü (K-179): çubuk ve çizgi, pasta, halka, dağılım
 COLOR = r"^#[0-9A-Fa-f]{6}$"
 
 
@@ -162,12 +165,14 @@ class ChartWithin(BaseModel):
 class ChartSelectionItem(BaseModel):
     x: Any = None  # dönemin ilk günü (ISO) ya da kategori değeri; null boş değer
     p: Any = None  # kırılım değeri (kırılım yoksa verilmez)
+    f: Any = None  # küçük grafiğin değeri ("Küçük grafiklere böl" yoksa verilmez)
 
 
 class ChartSelection(BaseModel):
     """Grafikte seçilen çubukların ve inilen dönemin kayıtları (K-179); tablo sorgularına eklenir. Koşul toplama sorgusuyla aynı ifadelerle kurulur."""
     x: ChartAxis
     split: str | None = None
+    facet: str | None = None  # küçük grafiklere bölen alan (K-179)
     items: list[ChartSelectionItem] = Field(default=[], max_length=CHART_MAX_SELECTION)
     within: list[ChartWithin] = Field(default=[], max_length=4)
     scenario_id: int | None = None
@@ -181,6 +186,7 @@ class ChartRequest(BaseModel):
     series: list[ChartSeriesSpec] = Field(min_length=1, max_length=CHART_MAX_SERIES)
     limit: int = Field(default=CHART_MAX_CATEGORIES, ge=1, le=CHART_MAX_CATEGORIES)  # kategori ekseninde en büyük kaç değer; kalanı "Diğer"
     within: list[ChartWithin] = Field(default=[], max_length=4)  # iniş (K-179): yalnız bu dönemin satırları
+    facet: str | None = None  # küçük grafiklere böl (K-179): kategori alanı; en büyük 12 değer + "Diğer"
     scenario_id: int | None = None  # hafta başlangıcı bu senaryonun parametresinden (verilmezse kullanıcının seçili senaryosu)
 
 
@@ -248,10 +254,45 @@ class ChartLegend(BaseModel):
     position: Literal["top", "bottom", "right"] = "top"
 
 
+class ChartPie(BaseModel):
+    label: Literal["value", "percent", "none"] = "percent"  # dilim etiketi
+
+
+class ChartScatter(BaseModel):
+    """Dağılım (K-179): iki sayısal alan, satır başına nokta; isteğe bağlı renk kırılımı."""
+    x: str
+    y: str
+    color: str | None = None
+    point_color: str | None = Field(default=None, pattern=COLOR)  # renk kırılımı yokken noktaların rengi; boşsa paletten
+
+
+class PointsRequest(BaseModel):
+    filters: list[FilterItem] = []
+    x: str
+    y: str
+    color: str | None = None
+    limit: int = Field(default=CHART_MAX_POINTS, ge=1, le=CHART_MAX_POINTS)
+
+
+class ChartExportRequest(BaseModel):
+    """Grafiğin verisi Excel'e (K-179): toplanmış veri (ya da dağılımın noktaları), Bilgi sayfası ve görsel."""
+    kind: ChartKind = "xy"
+    chart: ChartRequest | None = None      # çubuk ve çizgi, pasta, halka
+    points: PointsRequest | None = None    # dağılım
+    image: str | None = Field(default=None, max_length=CHART_IMAGE_MAX_CHARS)  # PNG, base64; "Grafik" sayfası
+    title: str = Field(default="", max_length=80)
+
+
+class ChartExportLogRequest(BaseModel):
+    """Görsel (PNG) tarayıcıda üretilir; sunucuya yalnız iz kaydı gider (K-179)."""
+    kind: ChartKind = "xy"
+
+
 class ChartDefinition(BaseModel):
     """Tablonun grafiği, görünümün parçası (K-178). Anahtar yoksa grafik kapalıdır."""
     v: Literal[1] = 1
     open: bool = True
+    kind: ChartKind = "xy"  # grafik türü (K-179); anahtar yoksa çubuk ve çizgi
     layout: Literal["split", "full"] = "split"
     height: float = Field(default=0.45, ge=0.15, le=0.85)  # bölünmüş görünümde grafiğin payı
     x: ChartAxis
@@ -266,6 +307,10 @@ class ChartDefinition(BaseModel):
     title: str = Field(default="", max_length=80)
     title_align: Literal["left", "center", "right"] = "left"
     title_size: Literal["small", "medium", "large"] = "medium"
+    facet: str | None = None  # küçük grafiklere böl (K-179)
+    facet_scale: Literal["shared", "own"] = "shared"
+    pie: ChartPie = ChartPie()
+    scatter: ChartScatter | None = None
 
 
 # --- Kayıtlı görünüm (K-89, docs/08 "Görünümler") ---------------------------------------------------------------
@@ -331,6 +376,7 @@ class ExportRequest(BaseModel):
     rules: list[FormatRule] = Field(default=[], max_length=MAX_RULES)  # aktif ve görünen kolonların kuralları
     scope: ExportScope = ExportScope()
     chart_selection: ChartSelection | None = None      # "ekrandaki filtrelerle" kapsamında grafik seçimi de uygulanır (K-179)
+    chart_image: str | None = Field(default=None, max_length=CHART_IMAGE_MAX_CHARS)  # "Grafiği ekle": PNG (base64), "Grafik" sayfası
 
 
 for _model in (QueryRequest, GroupsRequest, IdsRequest):  # ChartSelection dosyada sonra tanımlı

@@ -11,9 +11,10 @@ import sqlalchemy as sa
 
 from .definition import column_type
 from .query import PARALLEL_HINT, Builder, ListQueryError, turkish_upper
-from .request import CHART_MAX_DISTINCT, ChartAxis, ChartRequest, ChartSelection, ChartSeriesSpec, ChartWithin
+from .request import CHART_MAX_DISTINCT, ChartAxis, ChartRequest, ChartScatter, ChartSelection, ChartSeriesSpec, ChartWithin, PointsRequest
 
 MAX_SPLIT = 11        # kırılımda en büyük 11 + "Diğer"
+MAX_FACETS = 12       # küçük grafiklerde en büyük 12 + "Diğer" (K-179)
 MAX_PERIODS = 400
 MAX_DRAWN = 24        # seri × kırılım
 TOO_MANY_PERIODS = "Dönem sayısı çok fazla; daha büyük bir dönem seçin."
@@ -34,7 +35,7 @@ def tr_key(text: str) -> list[int]:
     return [TR_ORDER.get(ch, 1000 + ord(ch)) for ch in folded]
 
 
-def problems(b: Builder, x: ChartAxis, split: str | None, series: list[ChartSeriesSpec], where: str = "") -> list[dict]:
+def problems(b: Builder, x: ChartAxis, split: str | None, series: list[ChartSeriesSpec], where: str = "", facet: str | None = None) -> list[dict]:
     """Alan, dönem ve toplama doğrulaması; istek ve kayıtlı görünüm aynı kuralla (422)."""
     out: list[dict] = []
 
@@ -58,6 +59,12 @@ def problems(b: Builder, x: ChartAxis, split: str | None, series: list[ChartSeri
             out.append({"field": f"{where}split", "problem": f"{split} kırılım olamaz"})
         if split == x.field:
             out.append({"field": f"{where}split", "problem": "Kırılım yatay eksenle aynı alan olamaz"})
+    if facet is not None:  # küçük grafiklere böl (K-179)
+        kind = kind_of(facet, f"{where}facet")
+        if kind is not None and kind not in CATEGORY_KINDS:
+            out.append({"field": f"{where}facet", "problem": f"{facet} küçük grafiklere bölemez"})
+        if facet in (x.field, split):
+            out.append({"field": f"{where}facet", "problem": "Küçük grafik alanı yatay eksenle ya da kırılımla aynı olamaz"})
     if len({s.id for s in series}) != len(series):
         out.append({"field": f"{where}series", "problem": "Seri kimlikleri tekil olmalı"})
     for i, s in enumerate(series):
@@ -96,7 +103,7 @@ def inside(start: date, bucket: str, within: list[ChartWithin]) -> bool:
 def selection_clause(b: Builder, sel: ChartSelection, week_start: int) -> sa.ColumnElement:
     """Grafik seçiminin koşulu (K-179): öğeler "ya da" ile; kırılımda her öğe dönem ve parça. Toplama sorgusuyla aynı ifadeler, böylece bir çubuğun
     değeri ile bu koşulla dönen satırlar birebir tutar. "Diğer" seçilemez."""
-    found = problems(b, sel.x, sel.split, [], "chart_selection.")
+    found = problems(b, sel.x, sel.split, [], "chart_selection.", sel.facet)
     if not sel.items and not sel.within:
         found.append({"field": "chart_selection.items", "problem": "Seçim boş olamaz"})
     if any(w.bucket and column_type(b.table.c[sel.x.field]) not in DATE_KINDS for w in sel.within if sel.x.field in b.columns):
@@ -105,6 +112,7 @@ def selection_clause(b: Builder, sel: ChartSelection, week_start: int) -> sa.Col
         raise ListQueryError(found)
     xe = x_expr(b, sel.x, week_start)
     pe = b.group_expr(b.table.c[sel.split]) if sel.split else None
+    fe = b.group_expr(b.table.c[sel.facet]) if sel.facet else None
 
     def match(expr, key, as_date: bool, where: str):
         if key == OTHER and not isinstance(key, bool):
@@ -125,6 +133,8 @@ def selection_clause(b: Builder, sel: ChartSelection, week_start: int) -> sa.Col
         parts = [match(xe, item.x, sel.x.bucket is not None, f"chart_selection.items.{i}.x")]
         if pe is not None:
             parts.append(match(pe, item.p, False, f"chart_selection.items.{i}.p"))
+        if fe is not None:
+            parts.append(match(fe, item.f, False, f"chart_selection.items.{i}.f"))
         items.append(sa.and_(*parts))
     if found:
         raise ListQueryError(found)
@@ -137,7 +147,8 @@ def distinct_query(b: Builder, req: ChartRequest, s: ChartSeriesSpec, week_start
     t = b.table
     col = t.c[s.field]
     value = turkish_upper(col) if column_type(col) == "text" else col
-    cols = [x_expr(b, req.x, week_start).label("x")] + ([b.group_expr(t.c[req.split]).label("p")] if req.split else []) + [value.label("v")]
+    cols = ([x_expr(b, req.x, week_start).label("x")] + ([b.group_expr(t.c[req.split]).label("p")] if req.split else [])
+            + ([b.group_expr(t.c[req.facet]).label("f")] if req.facet else []) + [value.label("v")])
     where = [*b.where(req.filters), *within_clauses(b, req.x.field, req.within, week_start), sa.not_(b.is_empty(col))]
     return sa.select(*cols).where(b.base_clause(), *where).distinct()
 
@@ -168,7 +179,7 @@ def next_period(start: date, bucket: str) -> date:
 
 
 def query(b: Builder, req: ChartRequest, week_start: int) -> sa.Select:
-    found = problems(b, req.x, req.split, req.series)
+    found = problems(b, req.x, req.split, req.series, facet=req.facet)
     if found:
         raise ListQueryError(found)
     where = [*b.where(req.filters), *within_clauses(b, req.x.field, req.within, week_start)]
@@ -176,13 +187,15 @@ def query(b: Builder, req: ChartRequest, week_start: int) -> sa.Select:
     cols = [x_expr(b, req.x, week_start).label("x")]
     if req.split:
         cols.append(b.group_expr(t.c[req.split]).label("p"))
+    if req.facet:
+        cols.append(b.group_expr(t.c[req.facet]).label("f"))
     with_unit = bool(b.defn.unit_field) and any(unit_relevant(b, s) for s in req.series)
     if with_unit:
         cols.append(t.c[b.defn.unit_field].label("u"))
     fields = list(dict.fromkeys(s.field for s in req.series if s.fn not in NOT_MEASURED))
     cols += [t.c[f].label(f"c{i}") for i, f in enumerate(fields)]
     inner = sa.select(*cols).where(b.base_clause(), *where).subquery()
-    keys = [inner.c.x] + ([inner.c.p] if req.split else []) + ([inner.c.u] if with_unit else [])
+    keys = [inner.c.x] + ([inner.c.p] if req.split else []) + ([inner.c.f] if req.facet else []) + ([inner.c.u] if with_unit else [])
     measures = [sa.func.count().label("n")]
     for i, _ in enumerate(fields):
         c = inner.c[f"c{i}"]
@@ -301,25 +314,40 @@ def assemble(b: Builder, req: ChartRequest, leaves: list[dict], week_start_name:
         p_of = lambda leaf: leaf.get("p") if leaf.get("p") in keep_p else OTHER  # noqa: E731
         split = {"field": req.split, "values": [_value(k, column_type(b.table.c[req.split])) for k in ps], "other": p_other}
 
+    # küçük grafikler (K-179): en büyük 12 değer + "Diğer"; yatay eksen ve kırılım ortak
+    facets = None
+    f_of = lambda leaf: None  # noqa: E731
+    fs: list = [None]
+    if req.facet:
+        keys = ranked(lambda leaf: leaf.get("f"))
+        f_other = len(keys) > MAX_FACETS
+        kept = keys[:MAX_FACETS]
+        fs = kept + ([OTHER] if f_other else [])
+        keep_f = set(kept)
+        f_of = lambda leaf: leaf.get("f") if leaf.get("f") in keep_f else OTHER  # noqa: E731
+        facets = {"field": req.facet, "values": [_value(k, column_type(b.table.c[req.facet])) for k in fs], "other": f_other}
+
     xi = {k: i for i, k in enumerate(xs)}
     pi = {k: i for i, k in enumerate(ps)}
+    fi = {k: i for i, k in enumerate(fs)}
+    shape = (lambda grid: grid) if req.facet else (lambda grid: grid[0])  # küçük grafik varsa veri: küçük grafik × kırılım × yatay eksen
     series = []
     for s, is_mixed in zip(req.series, mixed):
         if is_mixed:
             series.append({"id": s.id, "data": None, "mixed_units": True})
             continue
         if s.fn == "distinct":  # gösterilen değere ya da "Diğer"e eşlenmiş kümeler: "Diğer" kalan satırlardaki farklı değer sayısı
-            sets = [[set() for _ in xs] for _ in ps]
+            sets = [[[set() for _ in xs] for _ in ps] for _ in fs]
             for r in distinct.get(s.id, []):
-                sets[pi[p_of(r)]][xi[x_of(r)]].add(r["v"])
-            series.append({"id": s.id, "data": [[len(c) for c in row] for row in sets], "mixed_units": False})
+                sets[fi[f_of(r)]][pi[p_of(r)]][xi[x_of(r)]].add(r["v"])
+            series.append({"id": s.id, "data": shape([[[len(c) for c in row] for row in grid] for grid in sets]), "mixed_units": False})
             continue
-        cells = [[_Cell() for _ in xs] for _ in ps]
+        cells = [[[_Cell() for _ in xs] for _ in ps] for _ in fs]
         for leaf in leaves:
-            cells[pi[p_of(leaf)]][xi[x_of(leaf)]].add(*measures(leaf, s))
-        series.append({"id": s.id, "data": [[c.value(s.fn) for c in row] for row in cells], "mixed_units": False})
+            cells[fi[f_of(leaf)]][pi[p_of(leaf)]][xi[x_of(leaf)]].add(*measures(leaf, s))
+        series.append({"id": s.id, "data": shape([[[c.value(s.fn) for c in row] for row in grid] for grid in cells]), "mixed_units": False})
     return {"x": {"kind": "date" if is_date else "category", "bucket": req.x.bucket, "values": [_value(k, xkind) for k in xs], "other": x_other},
-            "split": split, "series": series, "rows": sum(leaf["n"] for leaf in leaves), "week_start": week_start_name}
+            "split": split, "facets": facets, "series": series, "rows": sum(leaf["n"] for leaf in leaves), "week_start": week_start_name}
 
 
 def _value(key, kind: str) -> dict:
@@ -330,3 +358,90 @@ def _value(key, kind: str) -> dict:
     if isinstance(key, (date, datetime)):
         return {"key": _as_date(key).isoformat(), "label": None}
     return {"key": key, "label": None if key is None else str(key)}
+
+
+# --- Dağılım (K-179): satır başına nokta ---------------------------------------------------------------------------
+
+def scatter_problems(b: Builder, sc: ChartScatter | PointsRequest, where: str = "") -> list[dict]:
+    out: list[dict] = []
+    for name, at in ((sc.x, "x"), (sc.y, "y")):
+        if name not in b.columns:
+            out.append({"field": f"{where}{at}", "problem": f"Bilinmeyen alan: {name}"})
+        elif column_type(b.table.c[name]) not in NUMERIC_KINDS:
+            out.append({"field": f"{where}{at}", "problem": f"{name} sayı alanı değil"})
+    if sc.color is not None:
+        if sc.color not in b.columns:
+            out.append({"field": f"{where}color", "problem": f"Bilinmeyen alan: {sc.color}"})
+        elif column_type(b.table.c[sc.color]) not in CATEGORY_KINDS:
+            out.append({"field": f"{where}color", "problem": f"{sc.color} renk kırılımı olamaz"})
+    return out
+
+
+def _points_where(b: Builder, req: PointsRequest) -> list[sa.ColumnElement]:
+    t = b.table
+    return [*b.where(req.filters), t.c[req.x].is_not(None), t.c[req.y].is_not(None)]
+
+
+def points_summary_query(b: Builder, req: PointsRequest) -> sa.Select:
+    """Renk değeri (ve birim) başına satır sayısı: toplam nokta, renk sırası ve birim karışıklığı buradan."""
+    found = scatter_problems(b, req)
+    if found:
+        raise ListQueryError(found)
+    t = b.table
+    cols = []
+    if req.color:
+        cols.append(b.group_expr(t.c[req.color]).label("c"))
+    if b.defn.unit_field and (req.x in b.defn.unit_decimals or req.y in b.defn.unit_decimals):
+        cols.append(t.c[b.defn.unit_field].label("u"))
+    inner = sa.select(*cols, sa.literal(1).label("one")).where(b.base_clause(), *_points_where(b, req)).subquery()
+    keys = [inner.c[c.name] for c in cols]
+    return sa.select(*keys, sa.func.count().label("n")).group_by(*keys)
+
+
+def label_field(b: Builder) -> str | None:
+    """Noktanın ipucundaki kayıt adı: listenin varsayılan sırasındaki ilk metin alanı (ör. sipariş no, malzeme kodu); yoksa görünür ilk metin alanı."""
+    is_text = lambda f: f in b.columns and column_type(b.table.c[f]) == "text"  # noqa: E731
+    ordered = next((f for f, _ in b.defn.default_sort if is_text(f)), None)
+    return ordered or next((f for f, c in b.columns.items() if c["default_visible"] and is_text(f)), None)
+
+
+def points_query(b: Builder, req: PointsRequest, rows: int) -> sa.Select:
+    """Noktalar, listenin varsayılan sırasıyla. Satır sayısı sınırı aşıyorsa eşit aralıkla örneklenir (ilk N değil): tam `limit` nokta."""
+    t = b.table
+    name = label_field(b)
+    rn = sa.func.row_number().over(order_by=b.order_by([]))
+    cols = [t.c[req.x].label("x"), t.c[req.y].label("y"), rn.label("rn")]
+    if req.color:
+        cols.append(b.group_expr(t.c[req.color]).label("c"))
+    if name:
+        cols.append(t.c[name].label("name"))
+    inner = sa.select(*cols).where(b.base_clause(), *_points_where(b, req)).subquery()
+    q = sa.select(*[c for c in inner.c if c.name != "rn"]).order_by(inner.c.rn)
+    if rows > req.limit:
+        q = q.where((sa.cast(inner.c.rn, sa.BigInteger) * req.limit) % rows < req.limit)
+    return q
+
+
+def points_summary(b: Builder, req: PointsRequest, summary: list[dict]) -> dict:
+    """Özetten: satır sayısı, renk değerleri (en büyük 11 + "Diğer", satır sayısına göre) ve birimi karışık eksenler."""
+    rows = sum(r["n"] for r in summary)
+    units = {r.get("u") for r in summary} if summary and "u" in summary[0] else set()
+    mixed = {axis: len(units) > 1 and getattr(req, axis) in b.defn.unit_decimals for axis in ("x", "y")}
+    colors = None
+    kept: list = []
+    if req.color:
+        counts: dict = {}
+        for r in summary:
+            counts[r["c"]] = counts.get(r["c"], 0) + r["n"]
+        keys = sorted(counts, key=lambda k: (-counts[k], k is None, tr_key("" if k is None else k)))
+        other = len(keys) > MAX_SPLIT + 1
+        kept = keys[:MAX_SPLIT] if other else keys
+        colors = {"field": req.color, "values": [_value(k, column_type(b.table.c[req.color])) for k in kept + ([OTHER] if other else [])], "other": other}
+    return {"rows": rows, "mixed_units": mixed, "colors": colors, "kept": kept}
+
+
+def assemble_points(req: PointsRequest, info: dict, found: list[dict]) -> dict:
+    index = {k: i for i, k in enumerate(info["kept"])}
+    other = len(info["kept"])
+    points = [[float(r["x"]), float(r["y"]), index.get(r.get("c"), other) if req.color else 0, r.get("name")] for r in found]
+    return {"points": points, "colors": info["colors"], "rows": info["rows"], "shown": len(points), "mixed_units": info["mixed_units"]}

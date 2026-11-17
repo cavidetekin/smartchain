@@ -1,4 +1,5 @@
-// Grafiğin ayar paneli (K-178, docs/12 "Grafik standardı"): Veri · Seriler · Çubuklar · Eksenler · Referans çizgileri · Görünüm. Panel açıldığında
+// Grafiğin ayar paneli (K-178, K-179; docs/12 "Grafik standardı"): Veri · Seriler · Çubuklar · Eksenler · Referans çizgileri · Görünüm; bölümler grafik
+// türüne göre gelir (pastada Çubuklar, Eksenler ve Referans çizgileri; dağılımda Seriler, Çubuklar ve Referans çizgileri yoktur). Panel açıldığında
 // bütün bölümler kapalıdır. Her değişiklik anında grafiğe yansır; panelde Kaydet yoktur (kalıcılık görünümün Kaydet'iyle). Alan listeleri tablonun
 // bütün alanlarıdır (gizli alanlar dahil). Renkler koşullu biçimlendirmedeki renk seçiciyle seçilir (ui/ColorPicker).
 import { ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react";
@@ -10,9 +11,9 @@ import type { ListColumn } from "../../table/types";
 import { ColorPicker } from "../ColorPicker";
 import { NumberField, Segment, SelectField, TextField } from "../fields";
 import {
-  type AxisSide, type BarMode, type BarWidth, BUCKETS, CATEGORY_LIMITS, type ChartBucket, type ChartConfig, type ChartFn, type ChartSeries, FNS, isDateField,
-  type LegendPosition, type LineStyle, MAX_DISTINCT, MAX_REF_LINES, MAX_SERIES, newSeries, nextId, numericFields, type RefKind, type RefLine, SERIES_TYPES, type SeriesType,
-  splitFields, type TitleAlign, type TitleSize, type ValueAxis, withSeriesFn, withXField, xFields,
+  type AxisSide, type BarMode, type BarWidth, BUCKETS, CATEGORY_LIMITS, type ChartBucket, type ChartConfig, type ChartFn, type ChartKind, type ChartSeries, colorFields,
+  facetFields, type FacetScale, FNS, isDateField, isPie, KINDS, type LegendPosition, type LineStyle, MAX_DISTINCT, MAX_REF_LINES, MAX_SERIES, newSeries, nextId, numericFields,
+  type PieLabel, type RefKind, type RefLine, SERIES_TYPES, type SeriesType, splitFields, type TitleAlign, type TitleSize, type ValueAxis, withKind, withSeriesFn, withXField, xFields,
 } from "./chartModel";
 import { PALETTE, seriesLabel, THRESHOLD_COLOR } from "./chartOption";
 
@@ -44,8 +45,10 @@ function Toggle({ label, checked, onToggle }: { label: string; checked: boolean;
   );
 }
 
-function SeriesEditor({ s, auto, columns, distinctFull, onChange }: {
+function SeriesEditor({ s, auto, columns, distinctFull, pie, onChange }: {
   s: ChartSeries; auto: string; columns: ListColumn[];
+  /** Pasta ve halkada seri yalnız hesaplama, alan ve etiket ayarı taşır (tip, eksen, renk ve eşik çubuk ve çizgi grafiğine aittir). */
+  pie?: boolean;
   /** Grafikte en çok üç "Benzersiz say" serisi olur: dolduysa başka seride seçilemez. */
   distinctFull: boolean;
   onChange(next: ChartSeries): void;
@@ -60,26 +63,26 @@ function SeriesEditor({ s, auto, columns, distinctFull, onChange }: {
         <SelectField label={T.field} value={s.field ?? ""} onChange={(field) => onChange({ ...s, field })}
                      options={(s.fn === "distinct" ? columns : numeric).map((c) => ({ value: c.field, label: c.label }))} />
       )}
-      <SelectField label={T.type} value={s.type} onChange={(type) => onChange({ ...s, type: type as SeriesType })}
-                   options={SERIES_TYPES.map((t) => ({ value: t, label: T.types[t] }))} />
-      {s.type !== "bar" && (
+      {!pie && <SelectField label={T.type} value={s.type} onChange={(type) => onChange({ ...s, type: type as SeriesType })}
+                            options={SERIES_TYPES.map((t) => ({ value: t, label: T.types[t] }))} />}
+      {!pie && s.type !== "bar" && (
         <Segment<LineStyle> label={T.lineStyle} value={s.line} onChange={(line) => onChange({ ...s, line })}
                             options={[{ value: "solid", label: T.lineStyles.solid }, { value: "dashed", label: T.lineStyles.dashed }]} />
       )}
-      <Segment<AxisSide> label={T.axis} value={s.axis} onChange={(axis) => onChange({ ...s, axis })}
-                         options={[{ value: "primary", label: T.primary }, { value: "secondary", label: T.secondary }]} />
-      <ColorPicker label={T.color} value={s.color ?? undefined} emptyLabel={T.colorAuto} emptyColor={auto} onChange={(color) => onChange({ ...s, color: color ?? null })} />
-      <Toggle label={T.dataLabels} checked={s.labels.show} onToggle={(show) => onChange({ ...s, labels: { ...s.labels, show } })} />
-      {s.labels.show && (
+      {!pie && <Segment<AxisSide> label={T.axis} value={s.axis} onChange={(axis) => onChange({ ...s, axis })}
+                                  options={[{ value: "primary", label: T.primary }, { value: "secondary", label: T.secondary }]} />}
+      {!pie && <ColorPicker label={T.color} value={s.color ?? undefined} emptyLabel={T.colorAuto} emptyColor={auto} onChange={(color) => onChange({ ...s, color: color ?? null })} />}
+      {!pie && <Toggle label={T.dataLabels} checked={s.labels.show} onToggle={(show) => onChange({ ...s, labels: { ...s.labels, show } })} />}
+      {(pie || s.labels.show) && (
         <>
           <SelectField label={T.decimals} value={String(s.labels.decimals)} onChange={(v) => onChange({ ...s, labels: { ...s.labels, decimals: Number(v) } })}
                        options={[0, 1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))} />
           <Toggle label={T.showZero} checked={s.labels.zero} onToggle={(zero) => onChange({ ...s, labels: { ...s.labels, zero } })} />
         </>
       )}
-      <NumberField label={T.thresholdValue} value={s.threshold?.value ?? null} decimals={2}
-                   onChange={(value) => onChange({ ...s, threshold: value === null ? null : { value, color: s.threshold?.color ?? THRESHOLD_COLOR, line: s.threshold?.line ?? false } })} />
-      {s.threshold && (
+      {!pie && <NumberField label={T.thresholdValue} value={s.threshold?.value ?? null} decimals={2}
+                   onChange={(value) => onChange({ ...s, threshold: value === null ? null : { value, color: s.threshold?.color ?? THRESHOLD_COLOR, line: s.threshold?.line ?? false } })} />}
+      {!pie && s.threshold && (
         <>
           <ColorPicker label={T.thresholdColor} value={s.threshold.color} emptyLabel={T.colorAuto} emptyColor={THRESHOLD_COLOR}
                        onChange={(color) => onChange({ ...s, threshold: { ...s.threshold!, color: color ?? THRESHOLD_COLOR } })} />
@@ -112,6 +115,12 @@ export function ChartPanel({ chart, columns, onChange }: { chart: ChartConfig; c
   const [drag, setDrag] = useState<string | null>(null);
   const byField = new Map(columns.map((c) => [c.field, c]));
   const xCol = byField.get(chart.x.field);
+  const pie = isPie(chart);
+  const scatter = chart.kind === "scatter" && chart.scatter !== null;
+  const xy = !pie && !scatter;
+  const numeric = numericFields(columns);
+  const setScatter = (patch: Partial<NonNullable<ChartConfig["scatter"]>>) => onChange({ ...chart, scatter: { ...chart.scatter!, ...patch } });
+  const kindTip = [isDateField(xCol) ? T.pieOnlyCategory : null, numeric.length ? null : T.scatterNeedsNumbers].filter(Boolean).join(" ") || undefined;
   const hasBars = chart.series.some((s) => s.type === "bar");
   const hasSecondary = chart.series.some((s) => s.axis === "secondary");
   const section = (key: SectionKey) => ({ id: `${base}-${key}`, open: open[key], onToggle: () => setOpen((o) => ({ ...o, [key]: !o[key] })) });
@@ -140,24 +149,53 @@ export function ChartPanel({ chart, columns, onChange }: { chart: ChartConfig; c
   return (
     <aside className="sc-chart-panel" aria-label={T.settings}>
       <Section title={T.sections.data} {...section("data")}>
-        <SelectField label={T.xField} value={chart.x.field} options={xFields(columns).map((c) => ({ value: c.field, label: c.label }))}
-                     onChange={(f) => { const col = byField.get(f); if (col) onChange(withXField(chart, col)); }} />
-        {isDateField(xCol) ? (
+        <SelectField label={T.kind} value={chart.kind} tip={kindTip} onChange={(k) => onChange(withKind(chart, k as ChartKind, columns))}
+                     options={KINDS.map((k) => ({ value: k, label: T.kinds[k],
+                                                  disabled: k === "scatter" ? numeric.length === 0 : (k === "pie" || k === "donut") && isDateField(xCol) }))} />
+        {scatter && (
+          <>
+            <SelectField label={T.scatterX} value={chart.scatter!.x} options={numeric.map((c) => ({ value: c.field, label: c.label }))} onChange={(x) => setScatter({ x })} />
+            <SelectField label={T.scatterY} value={chart.scatter!.y} options={numeric.map((c) => ({ value: c.field, label: c.label }))} onChange={(y) => setScatter({ y })} />
+            <SelectField label={T.scatterColor} value={chart.scatter!.color ?? ""} onChange={(f) => setScatter({ color: f || null })}
+                         options={[{ value: "", label: T.none }, ...colorFields(columns).map((c) => ({ value: c.field, label: c.label }))]} />
+            {chart.scatter!.color === null && (
+              <ColorPicker label={T.pointColor} value={chart.scatter!.point_color ?? undefined} emptyLabel={T.colorAuto} emptyColor={PALETTE[0]}
+                           onChange={(color) => setScatter({ point_color: color ?? null })} />
+            )}
+          </>
+        )}
+        {!scatter && <SelectField label={pie ? T.sliceField : T.xField} value={chart.x.field}
+                                  options={xFields(columns).filter((c) => !pie || !isDateField(c)).map((c) => ({ value: c.field, label: c.label }))}
+                                  onChange={(f) => { const col = byField.get(f); if (col) onChange(withXField(chart, col)); }} />}
+        {scatter ? null : isDateField(xCol) ? (
           <SelectField label={T.bucket} value={chart.x.bucket ?? "month"} options={BUCKETS.map((b) => ({ value: b, label: T.buckets[b] }))}
                        onChange={(b) => onChange({ ...chart, x: { ...chart.x, bucket: b as ChartBucket } })} />
         ) : (
           <>
             <Segment<"value" | "name"> label={T.order} value={chart.order} onChange={(order) => onChange({ ...chart, order })}
                                       options={[{ value: "value", label: T.orderValue }, { value: "name", label: T.orderName }]} />
-            <SelectField label={T.limit} help={T.limitTip} value={String(chart.limit)} onChange={(v) => onChange({ ...chart, limit: Number(v) })}
+            <SelectField label={pie ? T.sliceLimit : T.limit} help={pie ? undefined : T.limitTip} value={String(chart.limit)} onChange={(v) => onChange({ ...chart, limit: Number(v) })}
                          options={[...new Set([...CATEGORY_LIMITS, chart.limit])].sort((a, b) => a - b).map((n) => ({ value: String(n), label: String(n) }))} />
           </>
         )}
-        <SelectField label={T.split} value={chart.split ?? ""} onChange={(f) => onChange({ ...chart, split: f || null })}
-                     options={[{ value: "", label: T.none }, ...splitFields(columns, chart.x.field).map((c) => ({ value: c.field, label: c.label }))]} />
+        {xy && <SelectField label={T.split} value={chart.split ?? ""} onChange={(f) => onChange({ ...chart, split: f || null, facet: chart.facet === f ? null : chart.facet })}
+                            options={[{ value: "", label: T.none }, ...splitFields(columns, chart.x.field).map((c) => ({ value: c.field, label: c.label }))]} />}
+        {!scatter && (
+          <SelectField label={T.facet} value={chart.facet ?? ""} onChange={(f) => onChange({ ...chart, facet: f || null })}
+                       options={[{ value: "", label: T.none }, ...facetFields(columns, chart.x.field, pie ? null : chart.split).map((c) => ({ value: c.field, label: c.label }))]} />
+        )}
+        {xy && chart.facet !== null && (
+          <Segment<FacetScale> label={T.facetScale} value={chart.facet_scale} onChange={(facet_scale) => onChange({ ...chart, facet_scale })}
+                               options={[{ value: "shared", label: T.facetScales.shared }, { value: "own", label: T.facetScales.own }]} />
+        )}
+        {pie && (
+          <Segment<PieLabel> label={T.pieLabel} value={chart.pie.label} onChange={(label) => onChange({ ...chart, pie: { label } })}
+                             options={[{ value: "value", label: T.pieLabels.value }, { value: "percent", label: T.pieLabels.percent }, { value: "none", label: T.pieLabels.none }]} />
+        )}
       </Section>
 
-      <Section title={T.sections.series} count={chart.series.length} {...section("series")}>
+      {!scatter && <Section title={T.sections.series} count={chart.series.length} {...section("series")}>
+        {pie && chart.series.length > 1 && <p className="sc-chart-note">{T.pieOneSeries}</p>}
         <ul className="sc-chart-series">
           {chart.series.map((s, i) => {
             const name = seriesLabel(s, byField);
@@ -174,16 +212,16 @@ export function ChartPanel({ chart, columns, onChange }: { chart: ChartConfig; c
                   <button type="button" className="sc-tool-btn" aria-label={T.removeSeries(name)} title={T.removeSeries(name)} disabled={chart.series.length === 1}
                           onClick={() => setSeries(chart.series.filter((x) => x.id !== s.id))}><Trash2 aria-hidden="true" /></button>
                 </div>
-                {isOpen && <SeriesEditor s={s} auto={PALETTE[i % PALETTE.length]} columns={columns} distinctFull={chart.series.filter((x) => x.fn === "distinct").length >= MAX_DISTINCT} onChange={(next) => setSeries(chart.series.map((x) => (x.id === s.id ? next : x)))} />}
+                {isOpen && <SeriesEditor s={s} auto={PALETTE[i % PALETTE.length]} columns={columns} pie={pie} distinctFull={chart.series.filter((x) => x.fn === "distinct").length >= MAX_DISTINCT} onChange={(next) => setSeries(chart.series.map((x) => (x.id === s.id ? next : x)))} />}
               </li>
             );
           })}
         </ul>
         <button type="button" className="sc-chart-add" disabled={chart.series.length >= MAX_SERIES} title={chart.series.length >= MAX_SERIES ? T.maxSeries(MAX_SERIES) : undefined}
                 onClick={addSeries}><Plus aria-hidden="true" /> {T.addSeries}</button>
-      </Section>
+      </Section>}
 
-      <Section title={T.sections.bars} {...section("bars")}>
+      {xy && <Section title={T.sections.bars} {...section("bars")}>
         {!hasBars && <p className="sc-chart-note">{T.noBars}</p>}
         <Segment<BarMode> label={T.barMode} value={chart.bars.mode} onChange={(mode) => onChange({ ...chart, bars: { ...chart.bars, mode } })}
                           options={[{ value: "group", label: T.barModes.group }, { value: "stack", label: T.barModes.stack }, { value: "percent", label: T.barModes.percent }]} />
@@ -191,22 +229,22 @@ export function ChartPanel({ chart, columns, onChange }: { chart: ChartConfig; c
                            options={[{ value: "thin", label: T.barWidths.thin }, { value: "medium", label: T.barWidths.medium }, { value: "thick", label: T.barWidths.thick }]} />
         {chart.bars.mode === "stack" && <Toggle label={T.totals} checked={chart.bars.totals} onToggle={(totals) => onChange({ ...chart, bars: { ...chart.bars, totals } })} />}
         <Toggle label={T.horizontal} checked={chart.bars.horizontal} onToggle={(horizontal) => onChange({ ...chart, bars: { ...chart.bars, horizontal } })} />
-      </Section>
+      </Section>}
 
-      <Section title={T.sections.axes} {...section("axes")}>
+      {!pie && <Section title={T.sections.axes} {...section("axes")}>
         <TextField label={T.xTitle} value={chart.axes.x.title} maxLength={60} onChange={(title) => onChange({ ...chart, axes: { ...chart.axes, x: { ...chart.axes.x, title } } })} />
-        <div className="sc-field sc-field--inline sc-chart-toggle" title={isDateField(xCol) ? undefined : T.zoomOnlyTime}>
+        {xy && <div className="sc-field sc-field--inline sc-chart-toggle" title={isDateField(xCol) ? undefined : T.zoomOnlyTime}>
           <span className="sc-field-label">{T.zoom}</span>
           <SwitchCell label={T.zoom} checked={chart.axes.x.zoom && isDateField(xCol)} editable={isDateField(xCol)} size="md"
                       onToggle={(zoom) => onChange({ ...chart, axes: { ...chart.axes, x: { ...chart.axes.x, zoom } } })} />
-        </div>
-        <AxisEditor title={T.primaryAxis} axis={chart.axes.primary} onChange={(primary) => onChange({ ...chart, axes: { ...chart.axes, primary } })} />
-        {hasSecondary && (
+        </div>}
+        <AxisEditor title={scatter ? T.yAxis : T.primaryAxis} axis={chart.axes.primary} onChange={(primary) => onChange({ ...chart, axes: { ...chart.axes, primary } })} />
+        {xy && hasSecondary && (
           <AxisEditor title={T.secondaryAxis} axis={chart.axes.secondary} onChange={(secondary) => onChange({ ...chart, axes: { ...chart.axes, secondary } })} />
         )}
-      </Section>
+      </Section>}
 
-      <Section title={T.sections.refs} count={chart.ref_lines.length} {...section("refs")}>
+      {xy && <Section title={T.sections.refs} count={chart.ref_lines.length} {...section("refs")}>
         {chart.ref_lines.map((r) => (
           <fieldset key={r.id} className="sc-chart-fieldset">
             <legend>{r.name || T.refKind[r.kind]}</legend>
@@ -228,7 +266,7 @@ export function ChartPanel({ chart, columns, onChange }: { chart: ChartConfig; c
           </fieldset>
         ))}
         <button type="button" className="sc-chart-add" disabled={chart.ref_lines.length >= MAX_REF_LINES} onClick={addRef}><Plus aria-hidden="true" /> {T.addRef}</button>
-      </Section>
+      </Section>}
 
       <Section title={T.sections.look} {...section("look")}>
         <TextField label={T.title} value={chart.title} maxLength={80} onChange={(title) => onChange({ ...chart, title })} />

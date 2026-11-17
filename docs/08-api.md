@@ -287,6 +287,7 @@ Tablonun grafiği için toplama. Listeyi okuma yetkisiyle çalışır (`query` i
 - `week`: hafta, senaryonun `WeekStart` parametresindeki günle başlar (`scenario_id` verilmezse kullanıcının seçili senaryosu, K-177). Cevapta `week_start`.
 - `split`: isteğe bağlı kırılım alanı (kategori). `order`: kategori ekseninde `value` (ilk serinin değeri, azalan) ya da `name`; tarih ekseni her zaman eskiden yeniye.
 - `series`: 1–8 seri; `fn`: `sum | avg | min | max` (sayısal `field` ister), `count` (satır sayısı; `field` yok; arayüzde "Say") ya da `distinct` ("Benzersiz say", K-179: `field`'daki farklı değer sayısı; listenin bütün alanları; boş değer sayılmaz; metinde Türkçe ve büyük/küçük harf duyarsız; en çok 3 seri). `distinct` ayrı sorguyla sayılır: "Diğer" kalan satırlardaki farklı değer sayısıdır; birim karışıklığı kuralına girmez.
+- `facet` (isteğe bağlı, K-179 küçük çoğullar): kategori alanı (yatay eksen ve kırılımdan farklı). Cevapta `facets: {"field", "values", "other"}` (en büyük 12 değer + "Diğer", ilk serinin değerine göre) ve `series[].data` küçük grafik × kırılım × yatay eksen olur; `facet` yoksa `facets` `null`, `data` kırılım × yatay eksen kalır. Yatay eksen ve kırılım değerleri bütün küçük grafiklerde ortaktır.
 - `within` (isteğe bağlı, K-179 iniş): `[{"bucket": "month", "keys": ["2026-11-01", "2027-01-01"]}]`; her adım bir düzey ve o düzeyde inilen dönem(ler)dir (en çok 200). Grafik yalnız bu dönemlerin (iç içe adımlarda hepsini sağlayan) satırlarını toplar; boşluk doldurma yalnız inilen dönemlerin içinde yapılır (bitişik olmayan dönemlerin arası çizilmez). Dönem, toplamadaki ifadeyle bulunur (hafta başlangıcı ve gün sınırı aynı).
 
 ```json
@@ -302,6 +303,33 @@ Tablonun grafiği için toplama. Listeyi okuma yetkisiyle çalışır (`query` i
 - Hatalar: alan yoksa ya da tipe uymuyorsa 422 `validation`; veri versiyonu yoksa 404 `no_data_version`.
 - **Performans hedefi:** 50.000 satırda ortanca 300 ms altında (kategori + kırılım; haftalık dönem + iki seri; filtreli ve çok kategorili). Ölçümler `tests/test_lists_perf.py`'de; koşusu Aşama 7 sonundaki performans işinde.
 
+### Dağılım noktaları · `POST /api/<liste>/chart/points` (K-179)
+
+Dağılım grafiğinin noktaları: satır başına bir nokta. Yetki, filtre, veri versiyonu ve satır kapsamı `chart` ucuyla aynıdır.
+
+```json
+{"filters": [], "x": "OrderedQuantity", "y": "OpenQuantity", "color": "CustomerCode", "limit": 2000}
+```
+
+```json
+{"points": [[120.0, 40.0, 0, "SO-1001"]], "colors": {"field": "CustomerCode", "values": [{"key": "MUS-A", "label": "MUS-A"}], "other": false},
+ "rows": 8450, "shown": 2000, "mixed_units": {"x": false, "y": false}, "label_field": "OrderNo"}
+```
+
+- `x`, `y`: sayısal alanlar; ikisinden biri boş olan satır nokta olmaz. `color`: isteğe bağlı kategori alanı; en büyük 11 değer + "Diğer" (satır sayısına göre); noktanın üçüncü öğesi `colors.values` içindeki sırasıdır (renk yoksa 0). Dördüncü öğe kaydın adıdır (`label_field`: listenin varsayılan sırasındaki ilk metin alanı; yoksa görünür ilk metin alanı).
+- `limit` (1–2.000; verilmezse 2.000): `rows` bunu aşarsa satırlar listenin varsayılan sırasıyla **eşit aralıkla** örneklenir (ilk N değil) ve tam `limit` nokta döner; `shown` gösterilen nokta sayısıdır.
+- `mixed_units`: bir eksendeki alan birimden ondalıklıysa ve satırlarda birden çok birim varsa o eksen `true` olur ve nokta dönmez (`points` boş).
+- Hatalar: alan yoksa ya da tipe uymuyorsa 422 `validation`.
+
+### Grafiğin dışa aktarımı · `POST /api/<liste>/chart/export` ve `chart/export-log` (K-179)
+
+Excel'e aktarma yetkisiyle (fonksiyon 86; End user dahil).
+
+- `POST /api/<liste>/chart/export`: `{"kind": "xy" | "pie" | "donut" | "scatter", "chart": <chart isteği>, "points": <points isteği>, "image": "<PNG, base64>", "title": "…"}` (`scatter` için `points`, ötekiler için `chart` zorunlu). Cevap Excel dosyası (200; adı `Content-Disposition`'da: `smartchain_<liste>_grafik_veri-v35_<zaman>.xlsx`). Sayfalar: **Veri** (toplanmış veri: satırlar yatay eksen, kolonlar seriler ve parçalar; küçük grafik varsa başta onun kolonu; birimi karışık seri yazılmaz; dağılımda gösterilen noktalar: kayıt adı, iki değer, renk değeri), **Bilgi** (liste, kaynak, grafik türü, eksenler, seriler, filtreler, kim, ne zaman, sürüm) ve `image` verildiyse **Grafik** (görsel; düzenlenebilir Excel grafiği yok). Toplanmış veri küçüktür; her zaman anlık döner.
+- `POST /api/<liste>/chart/export-log`: `{"kind": "xy"}` → `{"file_name": "smartchain_<liste>_grafik_veri-v35_<zaman>.png"}`. Görsel tarayıcıda üretilir; bu uç yalnız izi yazar ve dosya adını verir. Arayüz dosyayı ancak bu cevap gelince indirir (iz yazılamazsa dosya inmez).
+- `image` ve tablonun dışa aktarımındaki `chart_image`: PNG, base64 (`data:` öneki olabilir), en çok 1,5 MB. PNG değilse ya da okunamıyorsa 422 `chart_image_invalid`; büyükse 422 `chart_image_too_large`.
+- İz: ikisi de `adm.AuditLog`'a "Dışa aktarım" olarak yazılır (ObjectType liste adı, ObjectKey dosya adı, NewValue JSON: `chart` (türün adı: Çubuk ve çizgi, Pasta, Halka, Dağılım), `format` (`xlsx` | `png`), veri versiyonu; Excel'de ayrıca filtreler, satır sayısı, boyut, süre).
+
 ### Grafik seçimi · `chart_selection` (K-179)
 
 Grafikte seçilen çubukların (ve inilen dönemin) kayıtları. `POST /api/<liste>/query`, `/groups`, `/ids` ve `/export` isteklerine isteğe bağlı eklenir; `/values`'a (filtre menüsünün değer listesi) eklenmez.
@@ -312,6 +340,7 @@ Grafikte seçilen çubukların (ve inilen dönemin) kayıtları. `POST /api/<lis
                      "within": [{"bucket": "month", "keys": ["2026-11-01"]}], "scenario_id": 1}}
 ```
 
+- `facet` (isteğe bağlı): küçük grafiklere bölen alan; verilirse her öğe küçük grafiğin değerini de taşır (`f`; "Diğer" seçilemez).
 - `x`, `split`: grafiğin yatay ekseni ve kırılımı (`chart` isteğindeki gibi). `items`: seçilen öğeler; `x` dönemin ilk günü ya da kategori değeri, `p` kırılım değeri (kırılım yoksa verilmez); `null` boş değerdir. Öğeler "ya da" ile birleşir; kırılımda her öğe dönem **ve** parçadır. En çok 200 öğe.
 - `within`: inilen dönem(ler); `items` boşsa yalnız bu dönem süzülür. `items` ve `within` birlikte boş olamaz (422).
 - Koşul, `chart` ucunun toplama sorgusuyla aynı ifadelerle kurulur (dönem hesabı, hafta başlangıcı, gün sınırı, boş değer): bir çubuğun değeri ile bu seçimle dönen satır sayısı birebir tutar. "Diğer" seçilemez (anahtarı kabul edilmez, 422).
@@ -344,7 +373,7 @@ Kullanıcı oturumdan gelir (K-97).
 - `columns` görünen alanlar, görünen sırada; `width` rem (boşsa tipin varsayılanı). `pinned` soldan sabit kolon sayısı. `aggregates` kullanıcının varsayılandan farklı seçtiği ara toplam türleri (K-90).
 - Göreli tarih filtresi göreli saklanır; görünüm açıldığı günün haftasına göre çalışır.
 - `chart` (isteğe bağlı, K-178): tablonun grafiği. Anahtar yoksa grafik kapalıdır (eski görünümler değişmeden çalışır; geçiş yok).
-  `{"v": 1, "open": true, "layout": "split" | "full", "height": 0.45, "x": {"field", "bucket"}, "split": null, "order": "value" | "name",
+  `{"v": 1, "open": true, "kind": "xy" | "pie" | "donut" | "scatter", "layout": "split" | "full", "height": 0.45, "x": {"field", "bucket"}, "split": null, "order": "value" | "name",
   "limit": 30, "series": [{"id", "field", "fn", "type": "bar" | "line" | "smooth" | "step" | "area", "line": "solid" | "dashed", "axis": "primary" | "secondary",
   "color": "#4F5BD5" | null, "labels": {"show", "decimals", "zero"}, "threshold": {"value", "color", "line"} | null}],
   "bars": {"mode": "group" | "stack" | "percent", "horizontal", "totals", "width": "thin" | "medium" | "thick"},
@@ -402,6 +431,7 @@ Liste filtresinin seçenekleri: `{"field": "MaterialGroup", "search": "döv", "f
  "scope": {"rows": "filtered", "columns": "visible"}}
 ```
 
+- `chart_image` (isteğe bağlı, K-179 "Grafiği ekle"): grafiğin görseli (PNG, base64; en çok 1,5 MB); dosyaya "Grafik" sayfası eklenir. Arka planda hazırlanan dosyada görsel işin içinde taşınır. İzde `chart_image: true`.
 - `scope.rows`: `filtered` (ekrandaki filtrelerle) ya da `all` (filtresiz); `scope.columns`: `visible` (`fields`, ekrandaki sırayla) ya da `all` (listenin bütün alanları: önce görünenler, sonra diğerleri). Gruplama ve ara toplamlar istekteki gibi (ekrandaki gibi) her zaman yazılır; Bilgi sayfası her dosyada vardır (K-91).
 - Satır sayısı `ExportSyncMaxRows` (10.000) ve altıysa **200**: dosya gövdede (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`), adı `Content-Disposition`'da.
 - Üstüyse **202** `{"job_id": 81, "file_name": "…", "rows": 142000}`: iş "Excel" kanalında (K-93, K-129). İlerleme ve bitiş WebSocket iş mesajlarıyla gelir; iş sonucu `{"file_name", "size", "rows"}`.
@@ -438,6 +468,8 @@ Dosya: veri sayfası (başlık dondurulur, otomatik filtre; kolon genişlikleri 
 | `GET /api/materials/columns` · `POST /api/materials/query` · `POST /api/materials/values` | Malzeme listesi, liste sorgu sözleşmesiyle (K-87): Ana veri ekranının Malzeme tablosu (6.1) ve tablo bileşeni denemesi (`/tablo`). | uygulandı (1.3) |
 | `POST /api/materials/groups` · `/api/materials/views…` | Gruplama ve ara toplam (K-90), kayıtlı görünümler (K-89) | uygulandı (1.4) |
 | `POST /api/<liste>/chart` · görünümde `chart` | Tablonun grafiği için toplama; grafik ayarları görünümle saklanır (K-178) | uygulandı (7.4a) |
+| `POST /api/<liste>/chart/points` | Dağılım grafiğinin noktaları; en çok 2.000, aşımda eşit aralıklı örnekleme (K-179) | uygulandı (7.4c) |
+| `POST /api/<liste>/chart/export` · `chart/export-log` | Grafiğin verisi Excel'e (Veri, Bilgi, Grafik sayfaları); görsel (PNG) indirmesinin izi ve dosya adı (K-179) | uygulandı (7.4c) |
 | `POST /api/materials/export` · `GET /api/exports/{job_id}/file` | Excel'e aktarım: anlık ya da arka planda (K-91, K-93) | uygulandı (1.5) |
 | `query`'de `rules` | Koşullu biçim kuralları: satır başına tutan kurallar (K-95) | uygulandı (1.6) |
 | `WS /api/ws` | Anlık bildirim kanalı (fonksiyon 48). Oturumla açılır; oturum yoksa el sıkışma reddedilir (403). | uygulandı (0.4; oturum 2.1) |

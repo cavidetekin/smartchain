@@ -559,7 +559,7 @@
 .sc-chart-pane.is-narrow .sc-chart-trail { left: 7.6923rem; max-width: calc(100% - 9rem); }
 .sc-chart-menu-anchor { position: fixed; width: 1px; height: 1px; pointer-events: none; }
 .sc-chart-canvas { cursor: default; }
-.sc-chart-body { position: relative; display: flex; flex: 1; min-height: 0; padding-top: 1.8462rem; }
+.sc-chart-body { position: relative; display: flex; flex: 1; min-height: 0; padding-top: 1.8462rem; overflow-x: hidden; overflow-y: auto; }  /* küçük grafikler sığmazsa bölme kaydırılır */
 .sc-chart-body.is-stale { opacity: 0.45; }
 .sc-chart-body > .sc-alert { align-self: flex-start; width: 100%; }
 .sc-chart-canvas { flex: 1; min-width: 0; min-height: 0; }

@@ -7,7 +7,8 @@ sayfası: kaynak, filtreler, kim, ne zaman, sürüm. Her hücre CellFormat, say�
 
 Metin her zaman metin olarak yazılır: "=" ile başlayan değer formüle, adres bağlantıya çevrilmez (formül enjeksiyonu yok).
 """
-from collections.abc import Callable, Mapping
+import io
+from collections.abc import Callable, Iterable, Mapping
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import BinaryIO
@@ -29,6 +30,61 @@ WORKBOOK_OPTIONS = {
     "strings_to_urls": False,       # adres metni bağlantı olmaz
     "strings_to_numbers": False,
 }
+
+
+def write_info(wb: Workbook, fmts: "_Formats", pairs: list[tuple[str, str]]) -> None:
+    """Bilgi sayfası: kaynak, filtreler, kim, ne zaman, sürüm."""
+    ws = wb.add_worksheet("Bilgi")
+    ws.set_column(0, 0, 22)
+    ws.set_column(1, 1, 90)
+    key = fmts.get(CellFormat(bold=True, color=formats.header_format().color), None)
+    ws.write_string(0, 0, "Alan")
+    ws.write_string(0, 1, "Değer")
+    for n, (k, v) in enumerate(pairs, start=1):
+        ws.write_string(n, 0, k, key)
+        ws.write_string(n, 1, v)
+
+
+def write_image(wb: Workbook, image: bytes) -> None:
+    """"Grafik" sayfası (K-179): grafik görsel olarak (PNG, ekrandaki ayarla; 2× çözünürlük yarı ölçekle yerleşir). Düzenlenebilir Excel grafiği yok."""
+    ws = wb.add_worksheet("Grafik")
+    ws.hide_gridlines(2)
+    ws.insert_image(1, 1, "grafik.png", {"image_data": io.BytesIO(image), "x_scale": 0.5, "y_scale": 0.5})
+
+
+def write_chart_workbook(target: "str | BinaryIO", header: list[str], rows: Iterable[list], number_formats: list[str | None],
+                         info: list[tuple[str, str]], image: bytes | None) -> int:
+    """Grafiğin verisi (K-179): "Veri" (toplanmış veri ya da dağılımın noktaları), "Bilgi" ve görsel verildiyse "Grafik" sayfası.
+    Sayılar sayı, dönemler tarih; metin her zaman metin. Yazılan satır sayısını döndürür."""
+    wb = Workbook(target, WORKBOOK_OPTIONS)
+    ws = wb.add_worksheet("Veri")
+    fmts = _Formats(wb)
+    head = fmts.get(formats.header_format(), None)
+    for i, title in enumerate(header):
+        ws.set_column(i, i, 20)
+        ws.write_string(0, i, title, head)
+    ws.freeze_panes(1, 0)
+    styles = [fmts.get(None, nf) for nf in number_formats]
+    day = fmts.get(None, "dd.mm.yyyy")
+    written = 0
+    for r, row in enumerate(rows, start=1):
+        for c, v in enumerate(row):
+            if v is None:
+                continue
+            if isinstance(v, str):
+                ws.write_string(r, c, v)
+            elif isinstance(v, (datetime, date)):
+                ws.write_datetime(r, c, v, day)
+            else:
+                ws.write_number(r, c, v, styles[c])
+        written += 1
+    if header:
+        ws.autofilter(0, 0, written, len(header) - 1)
+    write_info(wb, fmts, info)
+    if image is not None:
+        write_image(wb, image)
+    wb.close()
+    return written
 
 
 def width_chars(rem: float | None) -> float:
@@ -81,6 +137,7 @@ class XlsxWriter:
         self.formats = _Formats(self.wb)
         self.rows = 0
         self.info: list[tuple[str, str]] | None = None
+        self.image: bytes | None = None  # "Grafiği ekle" (K-179): "Grafik" sayfası
         # 1.6 (U-24): satır ve değere göre ek biçim; 1.5'te yok
         self.cell_format = cell_format
         # Kolon başına sabit veri biçimi (birim ondalığına bağlı olanlar satırda seçilir)
@@ -166,13 +223,7 @@ class XlsxWriter:
         if self.columns:
             self.ws.autofilter(0, 0, max(0, self.rows - 1), len(self.columns) - 1)
         if self.info is not None:
-            ws = self.wb.add_worksheet("Bilgi")
-            ws.set_column(0, 0, 22)
-            ws.set_column(1, 1, 90)
-            key = self.formats.get(CellFormat(bold=True, color=formats.header_format().color), None)
-            ws.write_string(0, 0, "Alan")
-            ws.write_string(0, 1, "Değer")
-            for n, (k, v) in enumerate(self.info, start=1):
-                ws.write_string(n, 0, k, key)
-                ws.write_string(n, 1, v)
+            write_info(self.wb, self.formats, self.info)
+        if self.image is not None:
+            write_image(self.wb, self.image)
         self.wb.close()

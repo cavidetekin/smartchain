@@ -568,8 +568,9 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const [chartPick, setChartPick] = useState<ChartPick>(NO_PICK);
   const selectionKey = JSON.stringify(chartSelection(s.chart, chartPick, scenario?.id) ?? null);
   const chartSel = useMemo(() => JSON.parse(selectionKey) as ReturnType<typeof chartSelection> | null ?? undefined, [selectionKey]);
-  const pickResetKey = JSON.stringify([list, fixed, s.filters, s.chart?.x.field, s.chart?.x.bucket, s.chart?.split, Boolean(s.chart?.open), views.currentId]);
-  useEffect(() => setChartPick(NO_PICK), [pickResetKey]);  // filtre, yatay eksen, dönem, kırılım ya da görünüm değişince ve grafik kapanınca temizlenir
+  const pickResetKey = JSON.stringify([list, fixed, s.filters, s.chart?.x.field, s.chart?.x.bucket, s.chart?.split, s.chart?.kind, s.chart?.facet, Boolean(s.chart?.open), views.currentId]);
+  const chartImage = useRef<(() => Promise<string | null>) | null>(null);  // "Grafiği ekle" (K-179): çizilmiş grafiğin görseli
+  useEffect(() => setChartPick(NO_PICK), [pickResetKey]);  // filtre, yatay eksen, dönem, kırılım, tür, küçük grafik alanı ya da görünüm değişince ve grafik kapanınca temizlenir
   const requestKey = JSON.stringify([s.order, s.sort, s.filters, fixed, active.map(toRequestRule), selectionKey]);
   const request: ListRequest | null = useMemo(() => (ready ? {
     fields: s.order, sort: s.sort, filters: [...fixed, ...s.filters], ...(active.length ? { rules: active.map(toRequestRule) } : {}),
@@ -611,13 +612,14 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     if (chartPick.items.length) {
       const C = tr.chart;
       const dated = chartPick.drill.length > 0 || s.chart.x.bucket !== null;
-      const unit = s.chart.split ? C.selectionUnits.part : dated ? C.selectionUnits.period : C.selectionUnits.value;
-      const n = s.chart.split ? chartPick.items.length : new Set(chartPick.items.map((i) => i.x)).size;
+      const parts = Boolean(s.chart.facet) || (Boolean(s.chart.split) && s.chart.kind === "xy");  // kırılımda ve küçük grafiklerde her öğe bir parça
+      const unit = parts ? C.selectionUnits.part : dated ? C.selectionUnits.period : C.selectionUnits.value;
+      const n = parts ? chartPick.items.length : new Set(chartPick.items.map((i) => i.x)).size;
       return { label: C.selectionChip(n, unit), clearLabel: C.clearSelection, clear: () => setChartPick((p) => ({ ...p, items: [] })) };
     }
     const last = chartPick.drill[chartPick.drill.length - 1];
     return { label: tr.chart.drillChip(last.keys.length === 1 ? bucketLabel(last.keys[0], last.bucket) : tr.chart.periods(last.keys.length)), clearLabel: tr.chart.clearDrill, clear: () => setChartPick(NO_PICK) };
-  }, [chartPick, s.chart?.open, s.chart?.split, s.chart?.x.bucket]);
+  }, [chartPick, s.chart?.open, s.chart?.split, s.chart?.x.bucket, s.chart?.facet, s.chart?.kind]);
   const grouped = s.groupBy.length > 0;
   const flat = useListQuery(list, grouped ? null : request, chunkSize);
   const aggKey = JSON.stringify(requestAggregates(columns ?? [], s));
@@ -934,12 +936,19 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   });
 
   /** Ekrandaki görünüm durumu + kapsam (K-91): anlık dosya iner, arka plandaki iş bildirimle izlenir. */
-  const runExport = async (scope: ExportScope) => {
+  const runExport = async (scope: ExportScope, withChart = false) => {
+    let chartPng: string | undefined;
+    if (withChart) {  // "Grafiği ekle" (K-179): görsel tarayıcıda üretilir, dosyaya "Grafik" sayfası olarak girer
+      const url = await chartImage.current?.().catch(() => null);
+      if (!url) throw new Error(T.exportChartFailed);
+      chartPng = url.split(",")[1];
+    }
     const result = await listApi(list).export({
       fields: s.order, widths: s.widths, sort: s.sort, filters: [...fixed, ...s.filters], group_by: s.groupBy, aggregates,
       scope: fixed.length ? { ...scope, rows: "filtered" } : scope,  // "Tümü" sabit filtreyi aşmaz
       rules: active,
       ...(chartSel ? { chart_selection: chartSel } : {}),  // "ekrandaki filtrelerle" kapsamında grafik seçimi de (K-179)
+      ...(chartPng ? { chart_image: chartPng } : {}),
     });
     if (result.kind === "file") saveBlob(result.blob, result.fileName);
     else trackExport({ jobId: result.job_id, title: exportInfo?.title ?? list, fileName: result.file_name, rows: result.rows });
@@ -1195,6 +1204,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
         <>
           <ChartPane list={list} columns={columns} filters={chartFilters} chart={s.chart} reloadKey={reloadKey} style={chartFull ? { flex: "1 1 0" } : { flex: `${s.chart.height} 1 0` }}
                      fresh={chartFresh} onSettled={() => setChartFresh(false)} pick={chartPick} onPick={setChartPick}
+                     canExport={Boolean(exportInfo)} imageRef={chartImage}
                      onChange={(chart) => update((st) => ({ ...st, chart }))} onClose={toggleChart} />
           {!chartFull && (
             <div role="separator" aria-orientation="horizontal" aria-label={tr.chart.resize} tabIndex={0} className="sc-md-splitter sc-chart-splitter"
@@ -1317,7 +1327,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
 
       {exporting && exportInfo && (
         <ExportDialog info={exportInfo} filtered={filtered} total={fixed.length ? filtered : total} visibleColumns={visible.length}
-                      allColumns={columns.length} hasFilters={s.filters.length > 0}
+                      allColumns={columns.length} hasFilters={s.filters.length > 0} chart={Boolean(chartOpen && chartImage.current)}
                       onClose={() => setExporting(false)} onExport={runExport} />
       )}
 

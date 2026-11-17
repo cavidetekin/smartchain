@@ -172,16 +172,17 @@ export function DateField({ label, help, error, required, value, onChange, ...re
   );
 }
 
-export function SelectField({ label, help, error, required, options, value, onChange, ...rest }:
+export function SelectField({ label, help, error, required, tip, options, value, onChange, ...rest }:
   Omit<SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange"> & FieldProps & {
-    options: { value: string; label: string }[]; value: string; onChange(v: string): void;
+    /** disabled: seçilemeyen seçenek (nedeni alanın ipucunda, `tip`). */
+    options: { value: string; label: string; disabled?: boolean }[]; value: string; onChange(v: string): void;
   }) {
   const id = useId();
   return (
-    <Field {...{ label, help, error, required, id }}>
+    <Field {...{ label, help, error, required, tip, id }}>
       <select id={id} className="sc-input sc-select" value={value} required={required} aria-invalid={Boolean(error)}
               onChange={(e) => onChange(e.target.value)} {...rest}>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
       </select>
     </Field>
   );

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { formatNumber } from "../format";
 import { tr } from "../i18n/tr";
-import { Alert, Dialog, RadioGroup } from "../ui";
+import { Alert, Checkbox, Dialog, RadioGroup } from "../ui";
 import type { ExportInfo, ExportScope } from "./types";
 
 const T = tr.table;
@@ -20,19 +20,22 @@ export function exportFileName(slug: string, version: number | null, now: Date):
   return `smartchain_${slug}_${version ? `veri-v${version}` : "veri"}_${stamp}.xlsx`;
 }
 
-export function ExportDialog({ info, filtered, total, visibleColumns, allColumns, hasFilters, onClose, onExport }: {
+export function ExportDialog({ info, filtered, total, visibleColumns, allColumns, hasFilters, chart = false, onClose, onExport }: {
   info: ExportInfo;
   filtered: number;
   total: number;
   visibleColumns: number;
   allColumns: number;
   hasFilters: boolean;
+  /** Grafik açık ve çizilmişse "Grafiği ekle" kutusu çıkar (K-179): dosyaya "Grafik" sayfası (görsel) eklenir. */
+  chart?: boolean;
   onClose(): void;
   /** Hata fırlatırsa pencere açık kalır, mesaj içinde görünür. */
-  onExport(scope: ExportScope): Promise<void>;
+  onExport(scope: ExportScope, withChart: boolean): Promise<void>;
 }) {
   const [scope, setScope] = useState<ExportScope>({ rows: "filtered", columns: "visible" });
   const [version, setVersion] = useState<number | null>(null);
+  const [withChart, setWithChart] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +54,7 @@ export function ExportDialog({ info, filtered, total, visibleColumns, allColumns
     setBusy(true);
     setError(null);
     try {
-      await onExport(scope);
+      await onExport(scope, chart && withChart);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
@@ -79,6 +82,7 @@ export function ExportDialog({ info, filtered, total, visibleColumns, allColumns
           {exportFileName(info.file_slug, version, new Date())}
         </output>
       </div>
+      {chart && <Checkbox label={T.exportChart} checked={withChart} onChange={setWithChart} />}
       {tooLarge && <Alert tone="risk">{T.exportTooLarge(formatNumber(rows), formatNumber(info.max_rows))}</Alert>}
       {error && <Alert tone="error" title={T.exportError}>{error}</Alert>}
     </Dialog>

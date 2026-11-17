@@ -4,7 +4,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect } from "vitest";
 
 import { mockApi, mockSocket, renderApp, type Reply } from "../test/helpers";
-import type { ChartData, ChartRequest } from "../ui/chart/chartModel";
+import type { ChartData, ChartRequest, PointsData, PointsRequest } from "../ui/chart/chartModel";
 import type {
   ExportInfo, ExportRequest, GroupNode, GroupsResponse, ListColumn, QueryRequest, RuleSpec, SavedView, ViewDefinition,
   ViewsResponse,
@@ -41,8 +41,22 @@ export interface Calls {
   ids: unknown[];
   downloads: string[];
   charts: ChartRequest[];
+  /** Dağılım noktaları, grafik Excel'i ve görsel izi istekleri (K-179). */
+  points: PointsRequest[];
+  chartExports: Record<string, unknown>[];
+  chartLogs: Record<string, unknown>[];
 }
-export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [], ids: [], charts: [] };
+export const calls: Calls = { queries: [], values: [], groups: [], views: [], exports: [], downloads: [], ids: [], charts: [], points: [], chartExports: [], chartLogs: [] };
+export const CHART_FILE = "smartchain_malzeme_grafik_veri-v35_2026-11-17_1706";
+
+/** Sahte dağılım cevabı (K-179): üç nokta; renk kırılımı varsa iki değer. */
+export function pointsData(req: PointsRequest, extra: Partial<PointsData> = {}): PointsData {
+  return {
+    points: [[1, 10, 0, "M-1"], [2, 20, req.color ? 1 : 0, "M-2"], [3, 30, 0, "M-3"]],
+    colors: req.color ? { field: req.color, values: [{ key: "Çubuk", label: "Çubuk" }, { key: "Levha", label: "Levha" }], other: false } : null,
+    rows: 3, shown: 3, mixed_units: { x: false, y: false }, label_field: "Code", ...extra,
+  };
+}
 
 /** Sahte grafik cevabı (K-178): üç dönem ya da üç kategori; kırılım varsa iki parça; her seri 10, 20, 30 (ikinci parça 1, 2, 3). */
 export function chartData(req: ChartRequest, extra: Partial<ChartData> = {}): ChartData {
@@ -50,9 +64,12 @@ export function chartData(req: ChartRequest, extra: Partial<ChartData> = {}): Ch
   const values = date ? ["2026-09-01", "2026-10-01", "2026-11-01"].map((key) => ({ key, label: null }))
     : ["Hammadde", "Yarı mamul", "Nihai ürün"].map((key) => ({ key, label: key }));
   const split = req.split ? { field: req.split, values: [{ key: "Çubuk", label: "Çubuk" }, { key: "Levha", label: "Levha" }], other: false } : null;
+  // küçük grafik istenirse iki küçük grafik: ikincisinin değerleri iki katı
+  const facets = req.facet ? { field: req.facet, values: [{ key: true, label: "Evet" }, { key: false, label: "Hayır" }], other: false } : null;
+  const grid = (i: number, k: number) => (split ? [[10 + i, 20 + i, 30 + i].map((v) => v * k), [1, 2, 3].map((v) => v * k)] : [[10 + i, 20 + i, 30 + i].map((v) => v * k)]);
   return {
-    x: { kind: date ? "date" : "category", bucket: req.x.bucket, values, other: false }, split,
-    series: req.series.map((s, i) => ({ id: s.id, data: split ? [[10 + i, 20 + i, 30 + i], [1, 2, 3]] : [[10 + i, 20 + i, 30 + i]], mixed_units: false })),
+    x: { kind: date ? "date" : "category", bucket: req.x.bucket, values, other: false }, split, facets,
+    series: req.series.map((s, i) => ({ id: s.id, data: facets ? [grid(i, 1), grid(i, 2)] : grid(i, 1), mixed_units: false })),
     rows: 60, week_start: "Pazartesi", ...extra,
   };
 }
@@ -116,9 +133,11 @@ export interface BackendOptions {
   exportReply?: Reply;
   /** Grafik cevabı (varsayılan: chartData). */
   chart?: (req: ChartRequest) => Reply | Promise<Reply>;
+  /** Dağılım cevabı (varsayılan: pointsData). */
+  points?: (req: PointsRequest) => Reply | Promise<Reply>;
 }
 
-export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100, views, groups = [], exportReply, chart }:
+export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 100, views, groups = [], exportReply, chart, points }:
                         BackendOptions = {}) {
   for (const list of Object.values(calls)) list.length = 0;  // yerinde: testler diziyi önceden tutabilir
   ruleGate.hold = false;
@@ -167,6 +186,19 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
       const body = JSON.parse(String(init?.body)) as ChartRequest;
       calls.charts.push(body);
       return chart ? chart(body) : { body: chartData(body) };
+    },
+    "/api/materials/chart/points": async (_url, init): Promise<Reply> => {
+      const body = JSON.parse(String(init?.body)) as PointsRequest;
+      calls.points.push(body);
+      return points ? points(body) : { body: pointsData(body) };
+    },
+    "/api/materials/chart/export-log": (_url, init): Reply => {
+      calls.chartLogs.push(JSON.parse(String(init?.body)));
+      return { body: { file_name: `${CHART_FILE}.png` } };
+    },
+    "/api/materials/chart/export": (_url, init): Reply => {
+      calls.chartExports.push(JSON.parse(String(init?.body)));
+      return { body: "xlsx", headers: { "Content-Disposition": `attachment; filename*=UTF-8''${CHART_FILE}.xlsx` } };
     },
     "/api/materials/ids": (_url, init): Reply => {   // çoklu seçimde Ctrl + A (K-171)
       calls.ids.push(JSON.parse(String(init?.body)));

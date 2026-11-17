@@ -4,12 +4,14 @@ Ekranda ne görünüyorsa o aktarılır: aynı liste sözleşmesi (K-87) ve grup
 aşmıyorsa dosya hemen döner; aşıyorsa "Excel" kanalında iş olarak kuyruğa girer (motor servisi üretir).
 Her aktarım AuditLog'a yazılır; iz yazılamazsa dosya verilmez.
 """
+import base64
+import binascii
 import io
 import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy.exc import DBAPIError
@@ -23,11 +25,12 @@ from ..errors import DB_UNAVAILABLE, AppError
 from ..export import describe
 from ..export import formats
 from ..export.formats import CellFormat
-from ..export.writer import XlsxWriter
+from ..export.writer import XlsxWriter, write_chart_workbook
 from ..lists import LISTS, ListDefinition
 from ..lists.groups import build_tree
 from ..lists.query import UNIT, Builder, ListQueryError
-from ..lists.request import ExportRequest
+from ..lists import chart as chart_query
+from ..lists.request import ChartExportLogRequest, ChartExportRequest, ExportRequest
 from ..repositories import data_versions, export as repo, lists as list_repo, views as view_repo
 from ..settings import get_settings
 from . import lists as list_service
@@ -51,6 +54,7 @@ class Plan:
     file_name: str
     version: dict | None
     info: list[tuple[str, str]] = field(default_factory=list)
+    image: bytes | None = None  # "Grafiği ekle" (K-179)
 
 
 def export_path(job_id: int) -> Path:
@@ -62,6 +66,35 @@ def _now_local() -> datetime:
 
 
 BUCKETS = {"day": "Gün", "week": "Hafta", "month": "Ay", "quarter": "Çeyrek", "year": "Yıl"}
+KINDS = {"xy": "Çubuk ve çizgi", "pie": "Pasta", "donut": "Halka", "scatter": "Dağılım"}
+FNS = {"sum": "Toplam", "avg": "Ortalama", "min": "En düşük", "max": "En yüksek", "count": "Say", "distinct": "Benzersiz say"}
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+IMAGE_MAX_BYTES = 1_500_000
+
+
+def decode_image(text: str | None) -> bytes | None:
+    """Grafik görseli (PNG, base64; "data:" öneki olabilir): en çok 1,5 MB. Başka içerik kabul edilmez."""
+    if not text:
+        return None
+    try:
+        data = base64.b64decode(text.split(",", 1)[-1], validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise AppError("chart_image_invalid", "Grafik görseli okunamadı.", 422) from exc
+    if not data.startswith(PNG_MAGIC):
+        raise AppError("chart_image_invalid", "Grafik görseli okunamadı.", 422)
+    if len(data) > IMAGE_MAX_BYTES:
+        raise AppError("chart_image_too_large", "Grafik görseli en çok 1,5 MB olabilir.", 422)
+    return data
+
+
+def _source(version: dict | None) -> str:
+    return (f"Veri versiyonu v{version['Id']} · {version['LocationCode']} · "
+            f"{version['CreatedAt'].replace(tzinfo=timezone.utc).astimezone():%d.%m.%Y %H:%M}" if version else "Güncel kayıtlar")
+
+
+def _file_name(defn: ListDefinition, version: dict | None, ext: str, part: str = "") -> str:
+    version_part = f"veri-v{version['Id']}_" if version else ""
+    return f"smartchain_{defn.file_slug or defn.name}_{part}{version_part}{_now_local():%Y-%m-%d_%H%M}.{ext}"
 
 
 def _describe_selection(sel, labels: dict) -> str:
@@ -93,17 +126,14 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
     b.where(filters)  # doğrulama (422)
     b.rule_columns(rules)
     rows = list_repo.fetch_count(session, b.filtered_query(filters) if filters or b.selection is not None else b.total_query())
-    stamp = _now_local().strftime("%Y-%m-%d_%H%M")
-    version_part = f"veri-v{version['Id']}_" if version else ""
-    file_name = f"smartchain_{defn.file_slug or defn.name}_{version_part}{stamp}.xlsx"
+    image = decode_image(req.chart_image)  # 422: iş kuyruğa girmeden
+    file_name = _file_name(defn, version, "xlsx")
     labels = {f: c["label"] for f, c in b.columns.items()}
     columns = [b.columns[f] for f in fields]
 
     info = [
         ("Liste", defn.title or defn.name),
-        ("Kaynak", f"Veri versiyonu v{version['Id']} · {version['LocationCode']} · "
-                   f"{version['CreatedAt'].replace(tzinfo=timezone.utc).astimezone():%d.%m.%Y %H:%M}"
-                   if version else "Güncel kayıtlar"),
+        ("Kaynak", _source(version)),
         ("Satırlar", f"{'Filtrelenmiş' if req.scope.rows == 'filtered' else 'Tümü (filtresiz)'} · {describe.tr_number(rows, 0)}"),
         ("Kolonlar", f"{'Görünen' if req.scope.columns == 'visible' else 'Tümü'} · {len(columns)}: "
                      + ", ".join(c["label"] for c in columns)),
@@ -125,7 +155,7 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
         ("Smartchain", __version__),
         ("Not", "Dosya sisteme geri yüklenemez; yükleme şablonu ayrıdır."),
     ]
-    return Plan(defn, b, columns, fields, filters, group_by, specs, rules, rows, file_name, version, info)
+    return Plan(defn, b, columns, fields, filters, group_by, specs, rules, rows, file_name, version, info, image)
 
 
 def rule_formatter(rules: list) -> Callable | None:
@@ -181,6 +211,7 @@ def write(session: Session, plan: Plan, req: ExportRequest, target, progress: Ca
     finally:
         result.close()  # hata ya da yarıda kesilme olsa da imleç kapanır, bağlantı serbest kalır (docs/08)
     writer.info_sheet(plan.info)  # her dosyada (K-91)
+    writer.image = plan.image     # "Grafiği ekle" (K-179): "Grafik" sayfası
     writer.save()
     return written
 
@@ -223,7 +254,7 @@ def _details(plan: Plan, req: ExportRequest, rows: int, size: int, seconds: floa
     return {"list": plan.defn.name, "title": plan.defn.title, "data_version": plan.version["Id"] if plan.version else None,
             "scope": req.scope.model_dump(), "columns": plan.fields, "filters": dict(plan.info).get("Filtreler"),
             "sort": [s.model_dump() for s in req.sort], "group_by": plan.group_by, "rows": rows, "size": size,
-            "seconds": round(seconds, 2), "background": job_id is not None, "job_id": job_id}
+            "seconds": round(seconds, 2), "background": job_id is not None, "job_id": job_id, "chart_image": plan.image is not None}
 
 
 def start(session: Session | None, defn: ListDefinition, user_id: int, req: ExportRequest) -> dict:
@@ -255,6 +286,151 @@ def start(session: Session | None, defn: ListDefinition, user_id: int, req: Expo
         return {"file": data, "file_name": plan.file_name}
     except ListQueryError as exc:
         raise AppError("validation", "Girilen bilgiler geçersiz.", 422, exc.details) from exc
+    except DBAPIError as exc:
+        session.rollback()
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
+
+
+# --- Grafiğin dışa aktarımı (K-179) -------------------------------------------------------------------------------
+
+def _key_text(v: dict):
+    """Eksen, kırılım ya da küçük grafik değeri: "Diğer", "(Boş)", Evet / Hayır ya da değerin kendisi."""
+    if v["key"] == chart_query.OTHER and not isinstance(v["key"], bool):
+        return "Diğer"
+    if v["key"] is None:
+        return "(Boş)"
+    return v["label"] if v["label"] is not None else v["key"]
+
+
+def _chart_table(b: Builder, req: ChartExportRequest, data: dict, labels: dict) -> tuple[list[str], list[list], list[str | None], list[str]]:
+    """Toplanmış veri: satırlar yatay eksen (küçük grafik varsa başta onun kolonu), kolonlar seriler ve parçalar. Birimi karışık seri yazılmaz."""
+    c = req.chart
+    is_date = data["x"]["kind"] == "date"
+    header = [labels.get(c.x.field, c.x.field) + (f" ({BUCKETS[c.x.bucket]})" if c.x.bucket else "")]
+    number_formats: list[str | None] = [None]
+    splits = data["split"]["values"] if data["split"] else [None]
+    facets = data["facets"]["values"] if data.get("facets") else [None]
+    cols, skipped = [], []
+    for s, got in zip(c.series, data["series"]):
+        name = FNS["count"] if s.fn == "count" else f"{labels.get(s.field, s.field)} · {FNS[s.fn]}"
+        if got["mixed_units"] or got["data"] is None:
+            skipped.append(name)
+            continue
+        decimals = 0 if s.fn in ("count", "distinct") else (b.columns[s.field].get("decimals") or 2) + (1 if s.fn == "avg" else 0)
+        if s.fn not in ("count", "distinct") and b.columns[s.field]["type"] == "integer":
+            decimals = 1 if s.fn == "avg" else 0
+        for pi, p in enumerate(splits):
+            cols.append((got["data"], pi))
+            header.append(name if p is None else f"{_key_text(p)} · {name}" if len(c.series) > 1 else str(_key_text(p)))
+            number_formats.append(formats.number_format(decimals))
+    if facets != [None]:
+        header.insert(0, labels.get(c.facet, c.facet))
+        number_formats.insert(0, None)
+    rows = []
+    for fi, f in enumerate(facets):
+        for xi, x in enumerate(data["x"]["values"]):
+            key = x["key"]
+            first = date.fromisoformat(key[:10]) if is_date and isinstance(key, str) and key != chart_query.OTHER else _key_text(x)
+            row = [first if isinstance(first, (date, str)) else str(first)]
+            for grid, pi in cols:
+                row.append((grid[fi] if f is not None else grid)[pi][xi])
+            rows.append(([str(_key_text(f))] if f is not None else []) + row)
+    return header, rows, number_formats, skipped
+
+
+def _points_table(b: Builder, req: ChartExportRequest, data: dict, labels: dict) -> tuple[list[str], list[list], list[str | None]]:
+    """Dağılımın gösterilen noktaları: kayıt adı, iki değer ve (varsa) renk değeri."""
+    p = req.points
+    name = data.get("label_field")
+    header = [labels.get(name, "Kayıt") if name else "Kayıt", labels.get(p.x, p.x), labels.get(p.y, p.y)] + ([labels.get(p.color, p.color)] if p.color else [])
+    colors = [str(_key_text(v)) for v in data["colors"]["values"]] if data["colors"] else []
+    rows = [[r[3], r[0], r[1]] + ([colors[r[2]] if r[2] < len(colors) else "Diğer"] if p.color else []) for r in data["points"]]
+    dec = lambda f: formats.number_format(0 if b.columns[f]["type"] == "integer" else b.columns[f].get("decimals") or 2)  # noqa: E731
+    return header, rows, [None, dec(p.x), dec(p.y)] + ([None] if p.color else [])
+
+
+def _chart_context(session: Session, defn: ListDefinition, user_id: int):
+    if not view_repo.user_exists(session, user_id):
+        raise AppError("user_not_found", "Kullanıcı bulunamadı.", 404)
+    role = repo.user_role(session, user_id)
+    b = list_service._builder(session, defn, role, user_id)
+    version = data_versions.read_current(session) if defn.versioned else None
+    return role, b, version
+
+
+def start_chart(session: Session | None, defn: ListDefinition, user_id: int, req: ChartExportRequest) -> dict:
+    """Grafiğin verisi Excel'e (K-179): {"file": bytes, "file_name"}. Toplanmış veri küçüktür; hep anlık. İz yazılamazsa dosya verilmez."""
+    if session is None:
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
+    scatter = req.kind == "scatter"
+    if (req.points if scatter else req.chart) is None:
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, [{"field": "points" if scatter else "chart", "problem": "Grafik isteği verilmeli"}])
+    try:
+        role, b, version = _chart_context(session, defn, user_id)
+        image = decode_image(req.image)
+        labels = {f: c["label"] for f, c in b.columns.items()}
+        t0 = time.perf_counter()
+        skipped: list[str] = []
+        if scatter:
+            data = list_service.points(session, defn, req.points, role, user_id)
+            header, rows, number_formats = _points_table(b, req, data, labels)
+            filters = req.points.filters
+            what = [("Yatay eksen", labels.get(req.points.x, req.points.x)), ("Dikey eksen", labels.get(req.points.y, req.points.y)),
+                    ("Renk kırılımı", labels.get(req.points.color, req.points.color) if req.points.color else "yok"),
+                    ("Noktalar", f"{describe.tr_number(data['rows'], 0)} kayıttan {describe.tr_number(data['shown'], 0)} nokta")]
+        else:
+            c = req.chart
+            data = list_service.chart(session, defn, c, role, user_id)
+            header, rows, number_formats, skipped = _chart_table(b, req, data, labels)
+            filters = c.filters
+            what = [("Yatay eksen", header[1 if c.facet else 0]), ("Kırılım", labels.get(c.split, c.split) if c.split else "yok"),
+                    ("Küçük grafikler", labels.get(c.facet, c.facet) if c.facet else "yok"),
+                    ("Seriler", ", ".join(FNS["count"] if s.fn == "count" else f"{labels.get(s.field, s.field)} · {FNS[s.fn]}" for s in c.series)),
+                    *([("Çizilmeyen seriler", ", ".join(skipped) + " (birimler karışık)")] if skipped else []),
+                    ("Satırlar", describe.tr_number(data["rows"], 0))]
+        info = [
+            ("Liste", defn.title or defn.name),
+            ("Kaynak", _source(version)),
+            ("Grafik", KINDS[req.kind] + (f" · {req.title}" if req.title else "")),
+            *what,
+            ("Filtreler", "; ".join(describe.describe_filter(f.model_dump(by_alias=True, exclude_none=True), labels.get(f.field, f.field),
+                                                             b.columns.get(f.field, {}).get("decimals"),
+                                                             b.columns.get(f.field, {}).get("percent", False))
+                                    for f in filters) or "yok"),
+            ("Dışa aktaran", repo.user_name(session, user_id) or f"#{user_id}"),
+            ("Zaman", f"{_now_local():%d.%m.%Y %H:%M}"),
+            ("Smartchain", __version__),
+            ("Not", "Dosya sisteme geri yüklenemez; yükleme şablonu ayrıdır."),
+        ]
+        file_name = _file_name(defn, version, "xlsx", "grafik_")
+        buf = io.BytesIO()
+        written = write_chart_workbook(buf, header, rows, number_formats, info, image)
+        content = buf.getvalue()
+        repo.write_audit(session, user_id, defn.name, file_name, {
+            "list": defn.name, "title": defn.title, "data_version": version["Id"] if version else None, "chart": KINDS[req.kind], "format": "xlsx",
+            "filters": dict(info)["Filtreler"], "rows": written, "size": len(content), "seconds": round(time.perf_counter() - t0, 2),
+            "background": False, "job_id": None, "chart_image": image is not None})
+        session.commit()
+        return {"file": content, "file_name": file_name}
+    except ListQueryError as exc:
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, exc.details) from exc
+    except DBAPIError as exc:
+        session.rollback()
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
+
+
+def log_chart_image(session: Session | None, defn: ListDefinition, user_id: int, req: ChartExportLogRequest) -> dict:
+    """Görsel (PNG) tarayıcıda üretilir; burada yalnız iz yazılır ve dosya adı verilir (K-179). İz yazılamazsa ad dönmez, dosya inmez."""
+    if session is None:
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
+    try:
+        _, _, version = _chart_context(session, defn, user_id)
+        file_name = _file_name(defn, version, "png", "grafik_")
+        repo.write_audit(session, user_id, defn.name, file_name, {
+            "list": defn.name, "title": defn.title, "data_version": version["Id"] if version else None, "chart": KINDS[req.kind], "format": "png",
+            "background": False, "job_id": None})
+        session.commit()
+        return {"file_name": file_name}
     except DBAPIError as exc:
         session.rollback()
         raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc

@@ -4,8 +4,10 @@ import { useEffect, useRef } from "react";
 
 import { type ChartEvent, type ChartInstance, createChart } from "./echarts";
 
-export default function Chart({ option, label, onPick, onMenu }: {
+export default function Chart({ option, label, minHeight, onPick, onMenu }: {
   option: Record<string, unknown>; label: string;
+  /** Çizimin en küçük yüksekliği (küçük grafikler): bölme bundan kısaysa kaydırılır. */
+  minHeight?: number;
   onPick?(seriesIndex: number, dataIndex: number): void;
   onMenu?(seriesIndex: number, dataIndex: number, x: number, y: number): void;
 }) {
@@ -38,5 +40,5 @@ export default function Chart({ option, label, onPick, onMenu }: {
     chart.current?.setOption(option, { notMerge: true });  // her değişiklikte baştan: silinen seri ekranda kalmaz
   }, [option]);
 
-  return <div ref={box} className="sc-chart-canvas" role="img" aria-label={label} data-testid="chart-canvas" onContextMenu={(e) => e.preventDefault()} />;
+  return <div ref={box} className="sc-chart-canvas" role="img" aria-label={label} data-testid="chart-canvas" style={minHeight ? { minHeight } : undefined} onContextMenu={(e) => e.preventDefault()} />;
 }

@@ -10,7 +10,7 @@ from ..lists.definition import ListDefinition, columns as column_list
 from ..lists.query import DEFAULT_UNIT_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists import chart as chart_query
 from ..lists.groups import build_tree
-from ..lists.request import ChartRequest, ChartSelection, GroupsRequest, IdsRequest, QueryRequest, ValuesRequest
+from ..lists.request import ChartRequest, ChartSelection, GroupsRequest, IdsRequest, PointsRequest, QueryRequest, ValuesRequest
 from app.params import scenarios as scenario_service, service as params
 from app.params.horizon import week_start_index
 from app.manual import manual_fields
@@ -182,3 +182,16 @@ def chart(session: Session | None, defn: ListDefinition, req: ChartRequest, role
         return {**out, "x": {**out["x"], "values": [{**v, "key": _json(v["key"])} for v in out["x"]["values"]]}}
     return _run(session, work)
 
+
+def points(session: Session | None, defn: ListDefinition, req: PointsRequest, role: str | None = None, user_id: int | None = None) -> dict:
+    """Dağılım grafiğinin noktaları (K-179): listeyle aynı filtre, versiyon ve satır kapsamı; en çok `limit` nokta, aşımda eşit aralıklı örnekleme.
+    Bir eksendeki alanın birimi karışıksa nokta dönmez."""
+    def work():
+        b = _builder(session, defn, role, user_id)
+        info = chart_query.points_summary(b, req, repo.fetch_rows(session, chart_query.points_summary_query(b, req)))
+        found = [] if any(info["mixed_units"].values()) or not info["rows"] else repo.fetch_rows(session, chart_query.points_query(b, req, info["rows"]))
+        out = chart_query.assemble_points(req, info, found)
+        if out["colors"]:
+            out["colors"]["values"] = [{**v, "key": _json(v["key"])} for v in out["colors"]["values"]]
+        return {**out, "label_field": chart_query.label_field(b)}
+    return _run(session, work)

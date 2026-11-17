@@ -73,7 +73,13 @@ def _problems(b: Builder, d: ViewDefinition) -> list[dict]:
     if len({r.id for r in d.rules}) != len(d.rules):
         problems.append({"field": "definition.rules", "problem": "Kural kimlikleri tekil olmalı"})
     if d.chart is not None:  # tablonun grafiği (K-178)
-        problems += chart_query.problems(b, d.chart.x, d.chart.split, d.chart.series, "definition.chart.")
+        problems += chart_query.problems(b, d.chart.x, d.chart.split, d.chart.series, "definition.chart.", d.chart.facet)
+        if d.chart.kind in ("pie", "donut") and d.chart.x.bucket is not None:  # pasta ve halka yalnız kategori ekseninde (K-179)
+            problems.append({"field": "definition.chart.kind", "problem": "Pasta ve halka yalnız kategori ekseninde çizilir"})
+        if d.chart.kind == "scatter" and d.chart.scatter is None:
+            problems.append({"field": "definition.chart.scatter", "problem": "Dağılımın alanları seçilmeli"})
+        if d.chart.scatter is not None:
+            problems += chart_query.scatter_problems(b, d.chart.scatter, "definition.chart.scatter.")
         ids = {s.id for s in d.chart.series}
         for i, line in enumerate(d.chart.ref_lines):
             if line.kind == "value" and line.value is None:
@@ -103,6 +109,21 @@ def _clean_chart(b: Builder, raw, gone, warnings: list[str]) -> dict | None:
     if data["x"]["field"] not in b.columns:
         gone(data["x"]["field"])
         series = []
+    if data["facet"] is not None and data["facet"] not in b.columns:
+        gone(data["facet"])
+        data["facet"] = None
+    sc = data["scatter"]
+    if sc is not None:
+        if sc["color"] is not None and sc["color"] not in b.columns:
+            gone(sc["color"])
+            sc["color"] = None
+        lost = [f for f in (sc["x"], sc["y"]) if f not in b.columns]
+        if lost:  # dağılımın ekseni gitti: grafik çubuk ve çizgiye döner
+            for f in lost:
+                gone(f)
+            data["scatter"] = None
+            if data["kind"] == "scatter":
+                data["kind"] = "xy"
     if not series:
         warnings.append("Grafiğin alanları artık listede yok; grafik görünümden çıkarıldı.")
         return None
@@ -111,7 +132,7 @@ def _clean_chart(b: Builder, raw, gone, warnings: list[str]) -> dict | None:
     data["ref_lines"] = [r for r in data["ref_lines"] if r["kind"] == "value" or r["series"] in kept]
     try:
         check = ChartDefinition.model_validate(data)
-        if chart_query.problems(b, check.x, check.split, check.series):
+        if chart_query.problems(b, check.x, check.split, check.series, facet=check.facet):
             raise ValueError
     except (ValidationError, ValueError):
         warnings.append("Grafik artık geçerli değil; görünümden çıkarıldı.")

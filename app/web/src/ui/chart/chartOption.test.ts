@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 import { col, COLUMNS } from "../../table/testBackend";
 import {
   type ChartConfig, type ChartData, chartRequest, chartSelection, defaultChart, effectiveBucket, finerBuckets, fitChart, newSeries, normalizeChart, OTHER_KEY,
-  withSeriesFn, withXField,
+  type PointsData, pointsRequest, samePick, withKind, withSeriesFn, withXField,
 } from "./chartModel";
-import { bucketLabel, buildOption, isEmptyData, keyLabel, PALETTE, seriesLabel, THRESHOLD_COLOR } from "./chartOption";
+import { bucketLabel, buildOption, buildScatter, facetColumns, isEmptyData, keyLabel, niceCeil, PALETTE, seriesLabel, THRESHOLD_COLOR } from "./chartOption";
 
 type Opt = Record<string, any>;  // eslint-disable-line @typescript-eslint/no-explicit-any
 const base = (patch: Partial<ChartConfig> = {}): ChartConfig => ({ ...defaultChart(COLUMNS, ["MaterialLevel", "StockCoverageDays"])!, ...patch });
@@ -346,3 +346,165 @@ describe("çizim seçenekleri", () => {
     expect(isEmptyData(data())).toBe(false);
   });
 });
+
+describe("küçük çoğullar, pasta ve halka, dağılım (K-179)", () => {
+  const facetData = (patch: Partial<ChartData> = {}) => data({
+    facets: { field: "IsSellable", values: [{ key: true, label: "Evet" }, { key: false, label: "Hayır" }, { key: OTHER_KEY, label: null }], other: true },
+    series: [{ id: "s1", data: [[[10, 20, 30]], [[1, 2, 3]], [[5, 0, 80]]], mixed_units: false }], ...patch });
+  const box = { width: 1000, height: 500 };
+
+  it("sütun sayısı alana göre 1–4; ortak ölçeğin ucu yuvarlak sayı", () => {
+    expect([facetColumns(13, 1400), facetColumns(13, 1000), facetColumns(13, 700), facetColumns(13, 400), facetColumns(2, 1400)]).toEqual([4, 3, 2, 1, 2]);
+    expect([niceCeil(80), niceCeil(81), niceCeil(230), niceCeil(0.3), niceCeil(0)]).toEqual([100, 100, 250, 0.5, 0]);
+  });
+
+  it("küçük grafikler: değer başına ızgara, eksen ve başlık; gösterge ortak; ortak ölçekte eksen aynı aralıkta, ayrı ölçekte serbest; kaydırıcı yok", () => {
+    const zoomed = { ...base({ facet: "IsSellable" }), axes: { ...base().axes, x: { title: "Eksen", zoom: true } } };
+    const o = build(zoomed, facetData(), box);
+    expect(o.grid).toHaveLength(3);
+    expect(o.title.slice(1).map((t: Opt) => t.text)).toEqual(["Evet", "Hayır", "Diğer"]);
+    expect(o.xAxis).toHaveLength(3);
+    expect(o.yAxis).toHaveLength(3);
+    expect(o.series.map((x: Opt) => [x.xAxisIndex, x.yAxisIndex, x.data.map((d: Opt) => d.value)])).toEqual([[0, 0, [10, 20, 30]], [1, 1, [1, 2, 3]], [2, 2, [5, 0, 80]]]);
+    expect(o.legend.data).toEqual(["Stok gün kapsamı · Toplam"]);                                                   // seri adı bir kez
+    expect(o.yAxis.map((a: Opt) => [a.min, a.max])).toEqual([[0, 100], [0, 100], [0, 100]]);                        // ortak ölçek: en büyük 80 → 100
+    expect(o.xAxis[0].name).toBeUndefined();                                                                        // küçük grafikte eksen başlığı yazılmaz
+    expect(o.dataZoom).toBeUndefined();
+    expect(o.grid[0].width).toBeLessThan(box.width / 3);                                                            // 1000 px: üç sütun
+    expect(o.grid[1].left).toBeGreaterThan(o.grid[0].left + o.grid[0].width);
+    // her küçük grafik kendi kutusunda: çerçeveler birbirine değmez, çizim ve başlık kutunun içinde
+    const frames = o.graphic.map((g: Opt) => g.shape);
+    expect(o.graphic.map((g: Opt) => [g.type, g.silent, g.style.fill, g.shape.r > 0])).toEqual(Array(3).fill(["rect", true, "none", true]));
+    expect(frames[1].x - (frames[0].x + frames[0].width)).toBeGreaterThanOrEqual(10);
+    frames.forEach((f: Opt, i: number) => {
+      expect(o.grid[i].left).toBeGreaterThan(f.x);
+      expect(o.grid[i].left + o.grid[i].width).toBeLessThan(f.x + f.width);
+      expect(o.title[i + 1].top).toBeGreaterThan(f.y);
+      expect(o.grid[i].top + o.grid[i].height).toBeLessThan(f.y + f.height);
+    });
+    expect(build(base(), data(), box).graphic).toBeUndefined();                                                     // küçük grafik yoksa kutu yok
+    const own = build({ ...zoomed, facet_scale: "own" }, facetData(), box);
+    expect(own.yAxis.map((a: Opt) => a.max)).toEqual([undefined, undefined, undefined]);
+    const narrow = build(zoomed, facetData(), { width: 500, height: 600 });
+    expect(new Set(narrow.grid.map((g: Opt) => g.left)).size).toBe(1);                                              // dar alanda tek sütun
+    const short = buildOption(zoomed, facetData(), COLUMNS, { width: 500, height: 200 });                           // alan kısa: çizim uzar, bölme kaydırılır
+    expect(short.minHeight).toBeGreaterThan(3 * 150);
+    expect((short.option as Opt).grid[2].top + (short.option as Opt).grid[2].height).toBeLessThanOrEqual(short.minHeight!);
+    expect(buildOption(base(), data(), COLUMNS, box).minHeight).toBeUndefined();                                    // küçük grafik yoksa en küçük yükseklik yok
+    const stacked = build({ ...two({ bars: { mode: "stack", horizontal: false, totals: false, width: "medium" } }), facet: "IsSellable" },
+                          data({ facets: facetData().facets, series: [{ id: "s1", data: [[[10, 20, 30]], [[1, 2, 3]], [[5, 0, 80]]], mixed_units: false },
+                                                                    { id: "s2", data: [[[30, 20, 0]], [[1, 1, 1]], [[5, 0, 60]]], mixed_units: false }] }), box);
+    expect(stacked.yAxis[0].max).toBe(200);                                                                         // yığılmışta kategori toplamı: 80 + 60 → 200
+    expect(new Set(stacked.series.map((x: Opt) => x.stack)).size).toBe(3);                                          // her küçük grafik kendi yığınında
+  });
+
+  it("küçük grafikte seçim: öğe küçük grafiğin değerini taşır; Diğer küçük grafiği seçilemez; seçilmeyenler solar", () => {
+    const built = buildOption(base({ facet: "IsSellable" }), facetData(), COLUMNS, { ...box, selected: [{ x: "B", f: false }] });
+    expect([built.hit(0, 1), built.hit(1, 1), built.hit(2, 1)]).toEqual([{ x: "B", f: true }, { x: "B", f: false }, "other"]);
+    const o = built.option as Opt;
+    expect(o.series.map((x: Opt) => x.data[1].itemStyle.opacity)).toEqual([0.35, undefined, 0.35]);
+    expect(samePick({ x: "B", f: true }, { x: "B", f: false })).toBe(false);
+  });
+
+  it("pasta ve halka: yalnız ilk seri; dilimler yatay eksenin değerleri; Diğer gri; etiket Değer, Yüzde ya da Yok; halkanın içi boş", () => {
+    const d = data({ x: { kind: "category", bucket: null, values: [{ key: "A", label: "A" }, { key: "B", label: "B" }, { key: OTHER_KEY, label: null }], other: true },
+                     series: [{ id: "s1", data: [[10, 30, 60]], mixed_units: false }, { id: "s2", data: [[1, 1, 1]], mixed_units: false }] });
+    const o = build(two({ kind: "pie" }), d, box);
+    expect(o.series).toHaveLength(1);
+    expect([o.series[0].type, o.series[0].radius[0]]).toEqual(["pie", 0]);
+    expect(o.series[0].data.map((x: Opt) => [x.name, x.value])).toEqual([["A", 10], ["B", 30], ["Diğer", 60]]);
+    expect(o.series[0].data[2].itemStyle.color).not.toBe(o.series[0].data[0].itemStyle.color);
+    expect(o.series[0].data[0].itemStyle.color).toBe(PALETTE[0]);
+    expect(o.legend.data).toEqual(["A", "B", "Diğer"]);
+    expect(o.xAxis).toBeUndefined();
+    expect(o.series[0].label.formatter({ dataIndex: 1 })).toBe("%30,0");                                           // varsayılan Yüzde
+    const value = build(two({ kind: "pie", pie: { label: "value" }, legend: { show: false, position: "top" } }), d, box);
+    expect(value.series[0].label.formatter({ dataIndex: 1 })).toBe("B 30");                                         // gösterge kapalıyken ad da
+    expect(build(two({ kind: "pie", pie: { label: "none" } }), d, box).series[0].label.show).toBe(false);
+    const donut = build(two({ kind: "donut" }), d, box);
+    expect(donut.series[0].radius[0]).toBeGreaterThan(0);
+    expect(o.tooltip.formatter({ seriesIndex: 0, dataIndex: 2, marker: "" })).toContain("60,00 (%60,0)");
+  });
+
+  it("pasta: negatif dilim çizilmez ve uyarı çıkar; sıfır dilim yalnız Sıfır değerleri göster açıkken; seçim ve Diğer; karışık birim", () => {
+    const d = data({ x: { kind: "category", bucket: null, values: [{ key: "A", label: "A" }, { key: "B", label: "B" }, { key: "C", label: "C" }, { key: OTHER_KEY, label: null }], other: true },
+                     series: [{ id: "s1", data: [[10, -5, 0, 20]], mixed_units: false }] });
+    const built = buildOption(base({ kind: "pie" }), d, COLUMNS, { ...box, selected: [{ x: "A" }] });
+    const o = built.option as Opt;
+    expect(o.series[0].data.map((x: Opt) => x.name)).toEqual(["A", "Diğer"]);
+    expect(built.notes).toEqual(["Negatif değerli 1 dilim çizilmedi."]);
+    expect([built.hit(0, 0), built.hit(0, 1), built.hit(0, 5)]).toEqual([{ x: "A" }, "other", null]);
+    expect(o.series[0].data.map((x: Opt) => x.itemStyle.opacity)).toEqual([undefined, 0.35]);
+    const zero = build(base({ kind: "pie", series: [{ ...newSeries("s1", "StockCoverageDays", "sum"), labels: { show: false, decimals: 0, zero: true } }] }), d, box);
+    expect(zero.series[0].data.map((x: Opt) => x.name)).toEqual(["A", "C", "Diğer"]);
+    const mixed = buildOption(base({ kind: "pie" }), data({ series: [{ id: "s1", data: null, mixed_units: true }] }), COLUMNS, box);
+    expect([mixed.mixed, (mixed.option as Opt).series]).toEqual([["Stok gün kapsamı · Toplam"], []]);
+  });
+
+  it("küçük grafiklerde pasta: değer başına bir pasta, başlığıyla; seçilen dilim küçük grafiğin değerini taşır", () => {
+    const built = buildOption(base({ kind: "donut", facet: "IsSellable" }), facetData(), COLUMNS, box);
+    const o = built.option as Opt;
+    expect(o.series.map((x: Opt) => x.type)).toEqual(["pie", "pie", "pie"]);
+    expect(o.title.slice(1).map((t: Opt) => t.text)).toEqual(["Evet", "Hayır", "Diğer"]);
+    expect(o.series[2].data.map((x: Opt) => x.name)).toEqual(["A", "C"]);                                           // sıfır dilim yok
+    expect(new Set(o.series.map((x: Opt) => x.center[0])).size).toBe(3);
+    expect(o.graphic).toHaveLength(3);                                                                              // pastada da kutu
+    o.series.forEach((x: Opt, i: number) => {
+      const f = o.graphic[i].shape;
+      expect([o.title[i + 1].textAlign, o.title[i + 1].left]).toEqual(["center", x.center[0]]);                    // başlık kutunun üstünde ortalı
+      expect(x.center[1] - x.radius[1]).toBeGreaterThan(o.title[i + 1].top);
+      expect(x.center[1] - x.radius[1] - o.title[i + 1].top).toBeLessThan(60);                                      // başlık grafiğe yakın
+      expect(x.center[1] + x.radius[1]).toBeLessThan(f.y + f.height);
+    });
+    expect([built.hit(1, 2), built.hit(2, 1)]).toEqual([{ x: "C", f: false }, "other"]);
+  });
+
+  it("dağılım: satır başına nokta; renk kırılımında değer başına seri ve Diğer gri; ipucu, eksen adları, uyarılar", () => {
+    const sc = base({ kind: "scatter", scatter: { x: "SafetyStock", y: "StockCoverageDays", color: null, point_color: "#112233" } });
+    const pts: PointsData = { points: [[1, 10, 0, "M-1"], [2, 20, 0, "M-2"]], colors: null, rows: 2, shown: 2, mixed_units: { x: false, y: false }, label_field: "Code" };
+    const one = buildScatter(sc, pts, COLUMNS);
+    const o = one.option as Opt;
+    expect(o.series).toHaveLength(1);
+    expect([o.series[0].type, o.series[0].itemStyle.color, o.series[0].data]).toEqual(["scatter", "#112233", [[1, 10, 0], [2, 20, 1]]]);
+    expect([o.xAxis.name, o.yAxis.name, o.xAxis.type]).toEqual(["Güvenlik stoğu", "Stok gün kapsamı", "value"]);
+    expect(o.tooltip.formatter({ seriesIndex: 0, data: [2, 20, 1], marker: "" })).toContain("M-2");
+    expect([one.notes, one.hit(0, 0)]).toEqual([[], null]);                                                          // seçim yok
+    const coloured = buildScatter({ ...sc, scatter: { ...sc.scatter!, color: "MaterialGroup" } }, {
+      ...pts, points: [[1, 10, 0, "M-1"], [2, 20, 1, "M-2"], [3, 30, 2, "M-3"]], rows: 8450, shown: 2000,
+      colors: { field: "MaterialGroup", values: [{ key: "Çubuk", label: "Çubuk" }, { key: null, label: null }, { key: OTHER_KEY, label: null }], other: true } }, COLUMNS);
+    const c = coloured.option as Opt;
+    expect(c.series.map((x: Opt) => [x.name, x.data.length])).toEqual([["Çubuk", 1], ["(Boş)", 1], ["Diğer", 1]]);
+    expect(c.series[0].itemStyle.color).toBe(PALETTE[0]);
+    expect(c.series[2].itemStyle.color).not.toBe(PALETTE[2]);
+    expect(coloured.notes).toEqual(["8.450 kayıttan 2.000'i gösteriliyor."]);
+    const mixed = buildScatter(sc, { ...pts, points: [], shown: 0, mixed_units: { x: true, y: false } }, COLUMNS);
+    expect(mixed.notes).toEqual(["Farklı birimler aynı eksende gösterilemez: Güvenlik stoğu. Birime göre filtreleyin."]);   // örnekleme notu çıkmaz
+    const same = buildScatter({ ...sc, scatter: { ...sc.scatter!, y: "SafetyStock" } }, { ...pts, points: [], shown: 0, mixed_units: { x: true, y: true } }, COLUMNS);
+    expect(same.notes).toEqual(["Farklı birimler aynı eksende gösterilemez: Güvenlik stoğu. Birime göre filtreleyin."]);    // aynı alan bir kez yazılır
+  });
+
+  it("model: tür ve küçük grafik isteğe ve seçime yansır; pasta tarih ekseninde seçilemez; eski kayıt çubuk ve çizgi okunur", () => {
+    const c = two({ split: "MaterialGroup", facet: "IsSellable" });
+    expect(chartRequest(c, []).facet).toBe("IsSellable");
+    const pie = chartRequest({ ...c, kind: "pie" }, []);
+    expect([pie.split, pie.series.map((s) => s.id), pie.facet]).toEqual([null, ["s1"], "IsSellable"]);              // kırılım yok, yalnız ilk seri
+    expect(chartSelection(c, { items: [{ x: "A", p: "Çubuk", f: true }], drill: [] })).toEqual(
+      { x: { field: "MaterialLevel", bucket: null }, split: "MaterialGroup", facet: "IsSellable", items: [{ x: "A", p: "Çubuk", f: true }], within: [] });
+    expect(chartSelection({ ...c, kind: "pie" }, { items: [{ x: "A", f: true }], drill: [] })?.items).toEqual([{ x: "A", f: true }]);
+    expect(chartSelection({ ...c, kind: "scatter", scatter: { x: "SafetyStock", y: "StockCoverageDays", color: null, point_color: null } }, { items: [{ x: "A" }], drill: [] })).toBeUndefined();
+    const scatter = withKind(c, "scatter", COLUMNS);
+    expect([scatter.kind, scatter.scatter]).toEqual(["scatter", { x: "SafetyStock", y: "StockCoverageDays", color: null, point_color: null }]);
+    expect(pointsRequest(scatter, [])).toEqual({ filters: [], x: "SafetyStock", y: "StockCoverageDays", color: null, limit: 2000 });
+    expect(withKind(c, "scatter", COLUMNS.filter((col) => col.type !== "number")).kind).toBe("xy");                 // sayısal alan yoksa tür değişmez
+    const dated = { ...c, x: { field: "UpdatedAt", bucket: "month" as const } };
+    expect(withKind(dated, "pie", COLUMNS).kind).toBe("xy");                                                        // tarih ekseninde pasta seçilemez
+    const back = withXField({ ...c, kind: "donut", facet: "UpdatedAt" }, COLUMNS.find((col) => col.field === "UpdatedAt")!);
+    expect([back.kind, back.facet]).toEqual(["xy", null]);                                                          // tarih alanı seçilince çubuk ve çizgiye döner
+    const old = normalizeChart({ x: { field: "MaterialLevel", bucket: null }, series: [newSeries("s1", null, "count")] });
+    expect([old.kind, old.facet, old.facet_scale, old.pie, old.scatter]).toEqual(["xy", null, "shared", { label: "percent" }, null]);
+    expect(normalizeChart({ ...old, kind: "scatter", scatter: null }).kind).toBe("xy");                             // alanları olmayan dağılım çizilemez
+    const fitted = fitChart({ ...scatter, facet: "Yok", scatter: { ...scatter.scatter!, x: "Yok" } }, COLUMNS)!;
+    expect([fitted.kind, fitted.scatter, fitted.facet]).toEqual(["xy", null, null]);
+  });
+});
+

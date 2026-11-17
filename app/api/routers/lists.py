@@ -10,7 +10,7 @@ from ..deps import require
 from ..permissions import Access
 from ..lists import LISTS, ListDefinition
 from ..lists.request import (
-    ChartRequest, DefaultViewRequest, ExportRequest, GroupsRequest, IdsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
+    ChartExportLogRequest, ChartExportRequest, ChartRequest, DefaultViewRequest, ExportRequest, PointsRequest, GroupsRequest, IdsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
 )
 from ..services import export, lists as service, views
 from ..services.auth import CurrentUser
@@ -37,6 +37,21 @@ def list_router(defn: ListDefinition) -> APIRouter:
     @router.post("/chart", summary=f"{defn.table}: tablonun grafiği için toplama (K-178)")
     def chart(body: ChartRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
         return service.chart(session, defn, body, user.role, user.id)
+
+    @router.post("/chart/points", summary=f"{defn.table}: dağılım grafiğinin noktaları (K-179)")
+    def chart_points(body: PointsRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
+        return service.points(session, defn, body, user.role, user.id)
+
+    @router.post("/chart/export", response_model=None, summary=f"{defn.name}: grafiğin verisi Excel'e (Veri, Bilgi, Grafik sayfaları; K-179)")
+    def chart_export(body: ChartExportRequest, user: CurrentUser = Depends(export_access),
+                     session: Session = Depends(get_session, scope="function")) -> Response:
+        out = export.start_chart(session, defn, user.id, body)
+        return Response(out["file"], media_type=export.XLSX, headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(out['file_name'])}"})
+
+    @router.post("/chart/export-log", summary=f"{defn.name}: grafik görseli (PNG) indirmesinin izi ve dosya adı (K-179)")
+    def chart_export_log(body: ChartExportLogRequest, user: CurrentUser = Depends(export_access), session: Session = Depends(get_session)) -> dict:
+        return export.log_chart_image(session, defn, user.id, body)
 
     @router.post("/ids", summary=f"{defn.table}: filtredeki satırların kimlikleri (çoklu seçim, K-171)")
     def ids(body: IdsRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:

@@ -4,10 +4,11 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { calls, chartData, lastQuery, openTable, savedView, useTableTestSetup } from "./testBackend";
+import { calls, CHART_FILE, chartData, lastQuery, openTable, pointsData, savedView, useTableTestSetup } from "./testBackend";
 
-const drawn = vi.hoisted(() => ({ options: [] as Record<string, any>[], disposed: 0, handlers: {} as Record<string, (p: unknown) => void> }));  // eslint-disable-line @typescript-eslint/no-explicit-any
+const drawn = vi.hoisted(() => ({ options: [] as Record<string, any>[], images: [] as { option: Record<string, any>; width: number; height: number }[], disposed: 0, handlers: {} as Record<string, (p: unknown) => void> }));  // eslint-disable-line @typescript-eslint/no-explicit-any
 vi.mock("../ui/chart/echarts", () => ({
+  renderPng: async (option: Record<string, unknown>, width: number, height: number) => { drawn.images.push({ option, width, height }); return "data:image/png;base64,iVBORw0KGgo="; },
   createChart: () => ({ setOption: (o: Record<string, unknown>) => { drawn.options.push(o); }, resize: () => {}, dispose: () => { drawn.disposed += 1; },
                         on: (event: string, handler: (p: unknown) => void) => { drawn.handlers[event] = handler; } }),
 }));
@@ -17,7 +18,7 @@ const rightClickPart = (seriesIndex: number, dataIndex: number) =>
   act(() => drawn.handlers.contextmenu({ componentType: "series", seriesIndex, dataIndex, event: { event: { clientX: 120, clientY: 90 } } }));
 
 useTableTestSetup();
-beforeEach(() => { drawn.options.length = 0; drawn.disposed = 0; });
+beforeEach(() => { drawn.options.length = 0; drawn.images.length = 0; drawn.disposed = 0; });
 
 const last = () => drawn.options[drawn.options.length - 1];
 const lastChart = () => calls.charts[calls.charts.length - 1];
@@ -29,6 +30,7 @@ const CHART = {
   series: [{ id: "s1", field: "StockCoverageDays", fn: "avg" as const, type: "line" as const, line: "solid" as const, axis: "primary" as const, color: "#2E7D7A", labels: { show: true, decimals: 1, zero: false }, threshold: null }],
   bars: { mode: "group" as const, horizontal: false, totals: false, width: "medium" as const }, axes: { x: { title: "", zoom: false }, primary: { title: "", min: null, max: null, unit: "", grid: true }, secondary: { title: "", min: null, max: null, unit: "", grid: false } },
   ref_lines: [], legend: { show: true, position: "top" as const }, title: "Seviye", title_align: "left" as const, title_size: "medium" as const,
+  kind: "xy" as const, facet: null, facet_scale: "shared" as const, pie: { label: "percent" as const }, scatter: null,
 };
 const settings = () => within(pane()).getByRole("button", { name: "Grafik ayarları" });
 /** Ayar panelini açar (her açılışta kapalı gelir) ve istenen bölümleri genişletir (hepsi kapalı gelir). */
@@ -419,5 +421,147 @@ describe("tablonun grafiği (K-178)", () => {
     await user.click(within(pane()).getByRole("button", { name: "Yeniden dene" }));
     await waitFor(() => expect(calls.charts.length).toBe(before + 1));
     expect(await within(pane()).findByText("Farklı birimler toplanamaz: Güvenlik stoğu · Toplam. Birime göre filtreleyin ya da hesaplamayı Say yapın.")).toBeInTheDocument();
+  });
+});
+
+describe("tür, küçük grafikler ve dışa aktarma (K-179)", () => {
+  let saved: string[] = [];
+  beforeEach(() => {
+    saved = [];
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) { saved.push(this.download); });
+  });
+  const headings = (panel: HTMLElement) => within(panel).getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+
+  it("Tür: pasta ve halka tarih ekseninde seçilemez; pastada kırılım gitmez, yalnız ilk seri istenir, bölümler türe göre gelir; dilim etiketi", async () => {
+    const user = await openChart();
+    const panel = await openPanel(user, "Veri");
+    const kind = within(panel).getByRole("combobox", { name: "Tür" });
+    expect(within(kind).getAllByRole("option").map((o) => [o.textContent, (o as HTMLOptionElement).disabled]))
+      .toEqual([["Çubuk ve çizgi", false], ["Pasta", true], ["Halka", true], ["Dağılım", false]]);                 // yatay eksen tarih
+    expect(kind).toHaveValue("xy");
+    expect(screen.getAllByText("Pasta ve halka yalnız kategori ekseninde çizilir.").length).toBeGreaterThan(0);    // nedeni ipucunda
+    await user.selectOptions(within(panel).getByRole("combobox", { name: "Yatay eksen" }), "MaterialLevel");
+    await user.selectOptions(within(panel).getByRole("combobox", { name: "Kırılım" }), "MaterialGroup");
+    await user.click(within(panel).getByRole("button", { name: /^Seriler/ }));
+    await user.click(within(panel).getByRole("button", { name: "Seri ekle" }));
+    await waitFor(() => expect(lastChart()).toMatchObject({ split: "MaterialGroup", series: [{ id: "s1" }, { id: "s2" }] }));
+    await user.selectOptions(kind, "pie");
+    await waitFor(() => expect(last().series[0].type).toBe("pie"));
+    await waitFor(() => expect(lastChart().series).toHaveLength(1));                                             // yalnız ilk seri istenir
+    expect(lastChart()).toMatchObject({ x: { field: "MaterialLevel", bucket: null }, split: null, series: [{ id: "s1" }] });   // kırılım yok
+    expect(last().series[0].data.map((d: { name: string }) => d.name)).toEqual(["Hammadde", "Yarı mamul", "Nihai ürün"]);
+    expect(headings(panel)).toEqual(["Veri", "Seriler2", "Görünüm"]);                                              // Çubuklar, Eksenler, Referans çizgileri yok
+    expect(within(panel).getByText("Pastada tek seri bulunur.")).toBeInTheDocument();
+    expect(within(panel).getByRole("combobox", { name: "Dilimler" })).toHaveValue("MaterialLevel");
+    expect(within(panel).queryByRole("combobox", { name: "Kırılım" })).toBeNull();
+    const label = within(panel).getByRole("radiogroup", { name: "Dilim etiketi" });
+    expect(within(label).getAllByRole("radio").map((r) => [r.textContent, r.getAttribute("aria-checked")])).toEqual([["Değer", "false"], ["Yüzde", "true"], ["Yok", "false"]]);
+    const before = calls.charts.length;
+    await user.click(within(label).getByRole("radio", { name: "Yok" }));
+    await waitFor(() => expect(last().series[0].label.show).toBe(false));
+    await user.selectOptions(kind, "donut");
+    await waitFor(() => expect(last().series[0].radius[0]).toBeGreaterThan(0));
+    expect(calls.charts.length).toBe(before);                                                                     // görünüş ayarı yeniden sormaz
+    expect(within(within(panel).getByRole("combobox", { name: "Dilimler" })).queryByRole("option", { name: "Son değişiklik zamanı" })).toBeNull();   // pastada tarih alanı yok
+    await user.selectOptions(within(panel).getByRole("combobox", { name: "Dilimler" }), "IsSellable");
+    await waitFor(() => expect(lastChart().x.field).toBe("IsSellable"));
+    expect(screen.getByRole("img", { name: "Kaydedilmemiş değişiklik" })).toBeInTheDocument();                     // tür görünümün parçası
+  });
+
+  it("küçük grafiklere böl: istekte facet; değer başına küçük grafik; ölçek seçimi; seçilen parça küçük grafiğin değerini taşır ve tablo süzülür", async () => {
+    const user = userEvent.setup();
+    await openTable({ views: { views: [savedView(7, "Seviye", { chart: CHART })], default_view_id: 7 } });
+    await waitFor(() => expect(last()?.xAxis.data).toEqual(["Hammadde", "Yarı mamul", "Nihai ürün"]));
+    const panel = await openPanel(user, "Veri");
+    expect(within(panel).queryByRole("radiogroup", { name: "Ölçek" })).toBeNull();
+    const facet = within(panel).getByRole("combobox", { name: "Küçük grafiklere böl" });
+    expect(within(facet).queryByRole("option", { name: "Malzeme seviyesi" })).toBeNull();                          // yatay eksen alanı olmaz
+    await user.selectOptions(facet, "IsSellable");
+    await waitFor(() => expect(lastChart().facet).toBe("IsSellable"));
+    await waitFor(() => expect(last().grid).toHaveLength(2));
+    expect(last().title.slice(1).map((t: { text: string }) => t.text)).toEqual(["Evet", "Hayır"]);
+    expect(last().yAxis.map((a: { max: number }) => a.max)).toEqual([100, 100]);                                    // ortak ölçek: en büyük 60 → 100
+    await user.click(within(within(panel).getByRole("radiogroup", { name: "Ölçek" })).getByRole("radio", { name: "Ayrı ölçek" }));
+    await waitFor(() => expect(last().yAxis.map((a: { max?: number }) => a.max)).toEqual([undefined, undefined]));
+    clickPart(1, 0);
+    await waitFor(() => expect(lastQuery().chart_selection).toEqual(
+      { x: { field: "MaterialLevel", bucket: null }, split: null, facet: "IsSellable", items: [{ x: "Hammadde", f: false }], within: [] }));
+    expect(screen.getByTestId("chart-chip")).toHaveTextContent("Grafik seçimi: 1 parça");
+    await user.selectOptions(facet, "");                                                                           // küçük grafik alanı değişince seçim temizlenir
+    await waitFor(() => expect(lastQuery().chart_selection).toBeUndefined());
+    await waitFor(() => expect(lastChart().facet).toBeUndefined());
+  });
+
+  it("dağılım: noktalar ayrı uçtan; iki sayısal alan ve renk kırılımı; örnekleme uyarısı; seçim yok; bölümler", async () => {
+    const user = await openChart({ points: (req) => ({ body: pointsData(req, req.color ? { rows: 8450, shown: 2000 } : {}) }) });
+    const panel = await openPanel(user, "Veri");
+    await user.selectOptions(within(panel).getByRole("combobox", { name: "Tür" }), "scatter");
+    await waitFor(() => expect(calls.points).toHaveLength(1));
+    expect(calls.points[0]).toEqual({ filters: [], x: "SafetyStock", y: "StockCoverageDays", color: null, limit: 2000 });
+    await waitFor(() => expect(last().series[0].type).toBe("scatter"));
+    expect(last().series[0].data).toEqual([[1, 10, 0], [2, 20, 1], [3, 30, 2]]);
+    expect(headings(panel)).toEqual(["Veri", "Eksenler", "Görünüm"]);
+    expect(within(panel).queryByRole("combobox", { name: "Yatay eksen" })).toBeNull();
+    expect(within(panel).queryByRole("combobox", { name: "Küçük grafiklere böl" })).toBeNull();
+    expect(within(panel).getByRole("button", { name: /^Nokta rengi/ })).toBeInTheDocument();                       // renk seçici
+    clickPart(0, 1);
+    expect(screen.queryByTestId("chart-chip")).toBeNull();                                                        // dağılımda seçim yok
+    await user.selectOptions(within(panel).getByRole("combobox", { name: "Dikey eksen alanı" }), "SafetyStock");
+    await waitFor(() => expect(calls.points[calls.points.length - 1].y).toBe("SafetyStock"));
+    await user.selectOptions(within(panel).getByRole("combobox", { name: "Renk kırılımı" }), "MaterialGroup");
+    await waitFor(() => expect(calls.points[calls.points.length - 1].color).toBe("MaterialGroup"));
+    await waitFor(() => expect(last().series.map((x: { name: string }) => x.name)).toEqual(["Çubuk", "Levha"]));
+    expect(within(panel).queryByRole("button", { name: /^Nokta rengi/ })).toBeNull();
+    expect(await within(pane()).findByText("8.450 kayıttan 2.000'i gösteriliyor.")).toBeInTheDocument();
+    await user.selectOptions(within(panel).getByRole("combobox", { name: "Tür" }), "xy");
+    await waitFor(() => expect(last().series[0].type).toBe("bar"));
+    expect(within(pane()).queryByText(/gösteriliyor/)).toBeNull();
+  });
+
+  it("dışa aktar menüsü: Görsel (PNG) iz kaydından sonra iner, seçim soluklaştırması görsele girmez; Veri (Excel) grafiğin isteğini ve görseli taşır", async () => {
+    const user = await openChart();
+    await waitFor(() => expect(last()?.xAxis.data).toHaveLength(3));
+    const names = within(pane().querySelector(".sc-chart-head") as HTMLElement).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
+    expect(names).toEqual(["Grafiği dışa aktar", "Grafik ayarları", "Tam ekran", "Grafiği kapat"]);
+    clickPart(0, 1);
+    await waitFor(() => expect(last().series[0].data[0].itemStyle.opacity).toBe(0.35));
+    await user.click(within(pane()).getByRole("button", { name: "Grafiği dışa aktar" }));
+    const menu = await screen.findByRole("menu", { name: "Grafiği dışa aktar" });
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Görsel (PNG)", "Veri (Excel)"]);
+    await user.click(within(menu).getByRole("menuitem", { name: "Görsel (PNG)" }));
+    await waitFor(() => expect(saved).toEqual([`${CHART_FILE}.png`]));
+    expect(calls.chartLogs).toEqual([{ kind: "xy" }]);
+    expect(drawn.images).toHaveLength(1);
+    expect(drawn.images[0].width).toBeGreaterThanOrEqual(720);
+    expect(drawn.images[0].option.series[0].data[0].itemStyle.opacity).toBeUndefined();                           // seçim görsele girmez
+    await user.click(within(pane()).getByRole("button", { name: "Grafiği dışa aktar" }));
+    await user.click(within(await screen.findByRole("menu", { name: "Grafiği dışa aktar" })).getByRole("menuitem", { name: "Veri (Excel)" }));
+    await waitFor(() => expect(saved).toEqual([`${CHART_FILE}.png`, `${CHART_FILE}.xlsx`]));
+    expect(calls.chartExports).toEqual([{ kind: "xy", chart: lastChart(), image: "iVBORw0KGgo=", title: "" }]);
+  });
+
+  it("tablonun Excel'ine Grafiği ekle: kutu grafik açık ve çizilmişken çıkar; işaretlenince istek görseli taşır", async () => {
+    const user = userEvent.setup();
+    await openTable();
+    await user.click(screen.getByRole("button", { name: "Excel'e aktar" }));
+    let dialog = await screen.findByRole("dialog", { name: "Excel'e aktar · Malzeme listesi" });
+    expect(within(dialog).queryByRole("checkbox", { name: "Grafiği ekle" })).toBeNull();                           // grafik kapalı
+    await user.click(within(dialog).getByRole("button", { name: "Vazgeç" }));
+    await user.click(chartButton());
+    await waitFor(() => expect(last()?.xAxis.data).toHaveLength(3));
+    await user.click(screen.getByRole("button", { name: "Excel'e aktar" }));
+    dialog = await screen.findByRole("dialog", { name: "Excel'e aktar · Malzeme listesi" });
+    expect(within(dialog).getByRole("checkbox", { name: "Grafiği ekle" })).not.toBeChecked();
+    await user.click(within(dialog).getByRole("button", { name: "İndir" }));
+    await waitFor(() => expect(calls.exports).toHaveLength(1));
+    expect(calls.exports[0].body.chart_image).toBeUndefined();                                                    // işaretlenmedi: görsel gitmez
+    await user.click(screen.getByRole("button", { name: "Excel'e aktar" }));
+    dialog = await screen.findByRole("dialog", { name: "Excel'e aktar · Malzeme listesi" });
+    await user.click(within(dialog).getByRole("checkbox", { name: "Grafiği ekle" }));
+    await user.click(within(dialog).getByRole("button", { name: "İndir" }));
+    await waitFor(() => expect(calls.exports).toHaveLength(2));
+    expect(calls.exports[1].body.chart_image).toBe("iVBORw0KGgo=");
+    expect(drawn.images).toHaveLength(1);
   });
 });

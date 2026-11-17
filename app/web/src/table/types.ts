@@ -1,6 +1,6 @@
 // Liste sorgu sözleşmesi (K-87, docs/08 "Liste sorgusu"): sunucuyla birebir.
 import { ensureOk, fileNameFrom, getJson, postJson, sendJson } from "../api/client";
-import type { ChartConfig, ChartData, ChartRequest, ChartSelection } from "../ui/chart/chartModel";
+import type { ChartConfig, ChartData, ChartKind, ChartRequest, ChartSelection, PointsData, PointsRequest } from "../ui/chart/chartModel";
 
 export type ColumnType = "text" | "integer" | "number" | "bool" | "date" | "datetime";
 export type FilterType = "text" | "list" | "number" | "date";
@@ -70,6 +70,8 @@ export interface ExportRequest {
   scope: ExportScope;
   /** Grafik seçimi (K-179): "ekrandaki filtrelerle" kapsamında uygulanır. */
   chart_selection?: ChartSelection;
+  /** "Grafiği ekle" (K-179): grafiğin görseli (PNG, base64); dosyaya "Grafik" sayfası eklenir. */
+  chart_image?: string;
 }
 
 /** Anlık: dosya gövdede (200). Arka plan: iş (202), bitince bildirim. */
@@ -249,6 +251,15 @@ export function listApi(list: string) {
       postJson<GroupsResponse>(`${base}/groups`, body, signal),
     /** Tablonun grafiği için toplama (K-178): listeyle aynı filtre ve yetki. */
     chart: (body: ChartRequest, signal?: AbortSignal) => postJson<ChartData>(`${base}/chart`, body, signal),
+    /** Dağılım grafiğinin noktaları (K-179): en çok 2.000; aşımda eşit aralıklı örnekleme. */
+    points: (body: PointsRequest, signal?: AbortSignal) => postJson<PointsData>(`${base}/chart/points`, body, signal),
+    /** Grafiğin verisi Excel'e (K-179): Veri, Bilgi ve Grafik sayfaları. */
+    chartExport: async (body: { kind: ChartKind; chart?: ChartRequest; points?: PointsRequest; image?: string; title: string }) => {
+      const r = await ensureOk(await fetch(`${base}/chart/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+      return { blob: await r.blob(), fileName: fileNameFrom(r.headers.get("Content-Disposition"), "smartchain_grafik.xlsx") };
+    },
+    /** Görsel (PNG) indirmesinin izi ve dosya adı (K-179): görsel tarayıcıda üretilir. */
+    chartExportLog: (body: { kind: ChartKind }) => postJson<{ file_name: string }>(`${base}/chart/export-log`, body),
     // Kullanıcı oturumdan gelir (K-97).
     views: (signal?: AbortSignal) => getJson<ViewsResponse>(`${base}/views`, signal),
     createView: (body: { name: string; is_shared: boolean; definition: ViewDefinition }) =>
