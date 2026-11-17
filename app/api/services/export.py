@@ -61,6 +61,19 @@ def _now_local() -> datetime:
     return datetime.now()
 
 
+BUCKETS = {"day": "Gün", "week": "Hafta", "month": "Ay", "quarter": "Çeyrek", "year": "Yıl"}
+
+
+def _describe_selection(sel, labels: dict) -> str:
+    """Bilgi sayfasındaki "Grafik seçimi" satırı (K-179): eksen, öğe sayısı ve inilen dönem."""
+    axis = labels.get(sel.x.field, sel.x.field) + (f" ({BUCKETS[sel.x.bucket]})" if sel.x.bucket else "")
+    parts = [f"{axis}: {len(sel.items)} öğe"] if sel.items else [axis]
+    if sel.split and sel.items:
+        parts.append(f"kırılım {labels.get(sel.split, sel.split)}")
+    parts += [f"{BUCKETS[w.bucket]} {', '.join(f'{k:%d.%m.%Y}' for k in w.keys)}" for w in sel.within]
+    return " · ".join(parts)
+
+
 def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportRequest) -> Plan:
     # Rol kayıttan: arka plan işinde de işi başlatanın görebildiği satırlar (row_scope, K-101).
     b = list_service._builder(session, defn, repo.user_role(session, user_id), user_id)
@@ -75,9 +88,11 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
     group_by = req.group_by
     specs = b.aggregate_specs(fields, req.aggregates) if group_by else {}
     rules = [r for r in req.rules if r.enabled and r.field in fields]  # pasifler ve aktarılmayan kolonlar yok (K-95)
+    if req.scope.rows == "filtered":  # grafik seçimi de "ekrandaki filtrelerle" kapsamındadır (K-179)
+        list_service.apply_selection(session, b, req.chart_selection, user_id)
     b.where(filters)  # doğrulama (422)
     b.rule_columns(rules)
-    rows = list_repo.fetch_count(session, b.filtered_query(filters) if filters else b.total_query())
+    rows = list_repo.fetch_count(session, b.filtered_query(filters) if filters or b.selection is not None else b.total_query())
     stamp = _now_local().strftime("%Y-%m-%d_%H%M")
     version_part = f"veri-v{version['Id']}_" if version else ""
     file_name = f"smartchain_{defn.file_slug or defn.name}_{version_part}{stamp}.xlsx"
@@ -96,6 +111,7 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
                                                          b.columns.get(f.field, {}).get("decimals"),
                                                          b.columns.get(f.field, {}).get("percent", False))
                                 for f in filters) or "yok"),
+        *([("Grafik seçimi", _describe_selection(req.chart_selection, labels))] if b.selection is not None else []),
         ("Sıralama", describe.describe_sort([s.model_dump() for s in req.sort], labels) or "liste varsayılanı"),
         ("Gruplama", " › ".join(labels.get(g, g) for g in group_by) or "yok"),
         ("Ara toplamlar", describe.describe_aggregates({f: s.model_dump(exclude_none=True) for f, s in specs.items()}, labels) or "yok"),

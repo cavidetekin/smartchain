@@ -5,7 +5,7 @@ import { tr } from "../../i18n/tr";
 import type { ListColumn } from "../../table/types";
 import { suggestText } from "../contrast";
 import { tokenColor } from "../palette";
-import { type AxisSide, type ChartBucket, type ChartConfig, type ChartData, type ChartKey, type ChartSeries, OTHER_KEY } from "./chartModel";
+import { type AxisSide, type ChartBucket, type ChartConfig, type ChartData, type ChartKey, type ChartSeries, OTHER_KEY, type PickItem, samePick } from "./chartModel";
 
 const T = tr.chart;
 
@@ -22,6 +22,9 @@ const GRID = tokenColor("lead-100");
 const SURFACE = tokenColor("surface");
 const BAND = tokenColor("lead-50");  // üstüne gelinen dönemin bandı: çok açık gri
 const RADIUS = 3;  // çubuğun üst köşesi (px)
+const ZOOM_FILL = tokenColor("indigo-100");  // kaydırıcıda seçili aralık
+const ZOOM_SIZE = 24;  // kaydırıcının kalınlığı (px): içindeki veri silueti seçilecek kadar belirgin
+const DIM = 0.35;  // seçim varken seçilmeyenlerin saydamlığı (K-179)
 const TITLE_SCALE = { small: 1, medium: 1.15, large: 1.4 } as const;
 /** Çubuk genişliği (K-178): kategori aralığında bırakılan boşluk ve üst sınır (yazı boyutunun katı). Genişlik kategori sayısıyla ölçeklenir; kademe oranı belirler. */
 export const BAR_WIDTH = { thin: { gap: "55%", max: 5 }, medium: { gap: "34%", max: 8 }, thick: { gap: "16%", max: 12 } } as const;
@@ -61,7 +64,7 @@ export function seriesLabel(s: Pick<ChartSeries, "field" | "fn">, byField: Map<s
 
 /** Serinin ondalığı: alanınki (birimden ondalıklıda 2); ortalamada bir fazla; adette 0. */
 export function seriesDecimals(s: Pick<ChartSeries, "field" | "fn">, byField: Map<string, ListColumn>): number {
-  if (s.fn === "count") return 0;
+  if (s.fn === "count" || s.fn === "distinct") return 0;
   const col = byField.get(s.field ?? "");
   const base = col?.type === "integer" ? 0 : col?.decimals ?? 2;
   return s.fn === "avg" ? Math.min(4, base + 1) : base;
@@ -69,16 +72,19 @@ export function seriesDecimals(s: Pick<ChartSeries, "field" | "fn">, byField: Ma
 
 export const isEmptyData = (data: ChartData) => data.rows === 0 || data.x.values.length === 0;
 
-interface Drawn { s: ChartSeries; name: string; color: string; raw: (number | null)[]; shown: (number | null)[]; decimals: number; bar: boolean }
+interface Drawn { s: ChartSeries; name: string; color: string; raw: (number | null)[]; shown: (number | null)[]; decimals: number; bar: boolean; p: ChartKey | null }
 interface LayoutParams { rect: { width: number; height: number }; labelRect: { width: number; height: number } }
 
 export interface BuiltChart {
   option: Record<string, unknown>;
   /** Birimi karışık olduğu için çizilmeyen serilerin adları. */
   mixed: string[];
+  /** Tıklanan parçanın öğesi (K-179): yatay eksen değeri ve kırılım varsa parça; "Diğer" için "other" (seçilemez), toplam etiketi için null. */
+  hit(seriesIndex: number, dataIndex: number): PickItem | "other" | null;
 }
 
-export function buildOption(config: ChartConfig, data: ChartData, columns: ListColumn[], opts: { narrow?: boolean; fontSize?: number } = {}): BuiltChart {
+export function buildOption(config: ChartConfig, data: ChartData, columns: ListColumn[],
+                            opts: { narrow?: boolean; fontSize?: number; selected?: PickItem[] } = {}): BuiltChart {
   const byField = new Map(columns.map((c) => [c.field, c]));
   const size = Math.round((opts.fontSize ?? 13) * 0.92);
   const horizontal = config.bars.horizontal;
@@ -98,7 +104,7 @@ export function buildOption(config: ChartConfig, data: ChartData, columns: ListC
       const raw = got.data![pi] ?? [];
       const name = p === null ? label : config.series.length > 1 ? `${keyLabel(p)} · ${label}` : keyLabel(p);
       const color = p === null ? s.color ?? PALETTE[si % PALETTE.length] : PALETTE[drawn.length % PALETTE.length];
-      drawn.push({ s, name, color, raw, shown: raw, decimals: seriesDecimals(s, byField), bar: s.type === "bar" });
+      drawn.push({ s, name, color, raw, shown: raw, decimals: seriesDecimals(s, byField), bar: s.type === "bar", p });
     });
   });
 
@@ -125,6 +131,19 @@ export function buildOption(config: ChartConfig, data: ChartData, columns: ListC
   const sideDecimals = (side: AxisSide) => Math.max(0, ...drawn.filter((d) => d.s.axis === side).map((d) => d.decimals));
   const where = (v: number) => (horizontal ? { xAxis: v } : { yAxis: v });
   const lineLabel = (text: string, color: string) => ({ show: Boolean(text), formatter: text, color, position: "insideEndTop", fontFamily: NUM_FONT, fontSize: size });
+
+  // Seçim (K-179): seçilenler canlı, ötekiler soluk; grafik daralmaz
+  const selected = opts.selected ?? [];
+  const itemOf = (d: Drawn, j: number): PickItem | null => {
+    const x = data.x.values[j];
+    if (!x || x.key === OTHER_KEY || d.p?.key === OTHER_KEY) return null;  // "Diğer" seçilemez
+    return d.p === null ? { x: x.key } : { x: x.key, p: d.p.key };
+  };
+  const faded = (d: Drawn, j: number) => {
+    if (!selected.length) return false;
+    const item = itemOf(d, j);
+    return !item || !selected.some((s) => samePick(s, item));
+  };
 
   const refs = config.ref_lines.map((r) => {
     const host = drawn.findIndex((d) => (r.kind === "value" ? true : d.s.id === r.series));
@@ -178,7 +197,8 @@ export function buildOption(config: ChartConfig, data: ChartData, columns: ListC
         ...common, type: "bar", ...barSize, barGap: "8%", ...(stacked ? { stack: d.s.axis } : {}),
         data: d.shown.map((v, j) => ({
           value: v,
-          itemStyle: { ...(above(j) ? { color: th!.color } : {}), borderRadius: !stacked || top.get(`${d.s.axis}:${j}`) === i ? corner : 0 },
+          itemStyle: { ...(above(j) ? { color: th!.color } : {}), borderRadius: !stacked || top.get(`${d.s.axis}:${j}`) === i ? corner : 0,
+                       ...(faded(d, j) ? { opacity: DIM } : {}) },
           ...(inside && above(j) ? { label: { color: suggestText(th!.color, STRONG) } } : {}),
         })),
       };
@@ -187,15 +207,19 @@ export function buildOption(config: ChartConfig, data: ChartData, columns: ListC
       ...common, type: "line",
       ...(d.s.type === "smooth" ? { smooth: true, smoothMonotone: "x" } : { smooth: false }),  // eğimli çizgi monoton: veri aralığının dışına taşmaz
       ...(d.s.type === "step" ? { step: "end" } : {}), ...(d.s.type === "area" ? { areaStyle: { opacity: 0.2 } } : {}),
-      lineStyle: { width: 2 }, symbol: "circle", symbolSize: 5, connectNulls: false,
-      data: d.shown.map((v, j) => (above(j) ? { value: v, symbolSize: 9, itemStyle: { color: th!.color, borderColor: d.color, borderWidth: 2 } } : { value: v })),
+      lineStyle: { width: 2, type: d.s.line === "dashed" ? "dashed" : "solid" }, symbol: "circle", symbolSize: selected.length ? 7 : 5, connectNulls: false,
+      data: d.shown.map((v, j) => ({
+        value: v,
+        ...(above(j) ? { symbolSize: 9, itemStyle: { color: th!.color, borderColor: d.color, borderWidth: 2, ...(faded(d, j) ? { opacity: DIM } : {}) } }
+          : faded(d, j) ? { itemStyle: { opacity: DIM } } : {}),
+      })),
     };
   });
 
   // Yığılmışta "Toplamı göster": yığının üstünde toplam (görünmez sıfır yükseklikli parça taşır; göstergede ve ipucunda yer almaz)
   if (config.bars.totals && config.bars.mode === "stack") {
     for (const side of sides) {
-      const bars = drawn.filter((d) => d.bar && d.s.axis === side);
+      const bars = drawn.filter((d) => d.bar && d.s.axis === side && d.s.fn !== "distinct");  // Benzersiz say toplanmaz (K-179)
       if (!bars.length) continue;
       const totals = cats.map((_, j) => bars.reduce((sum, d) => sum + (d.raw[j] ?? 0), 0));
       const dec = Math.max(0, ...bars.map((d) => d.s.labels.decimals));  // toplam, seri etiketlerinin ondalığıyla
@@ -231,6 +255,7 @@ export function buildOption(config: ChartConfig, data: ChartData, columns: ListC
     };
   });
 
+  const zoom = config.axes.x.zoom && data.x.kind === "date";  // yakınlaştırma kaydırıcısı yalnız zaman ekseninde (K-179)
   const titleSize = Math.round(size * TITLE_SCALE[config.title_size]);
   const titleRoom = config.title ? titleSize * 1.9 : 0;
   const legendAt = config.legend.position === "right" && opts.narrow ? "bottom" : config.legend.position;
@@ -264,13 +289,19 @@ export function buildOption(config: ChartConfig, data: ChartData, columns: ListC
     title: { show: Boolean(config.title), text: config.title, top: 0, left: config.title_align,
              textStyle: { color: STRONG, fontFamily: TEXT_FONT, fontSize: titleSize, fontWeight: 600 } },
     grid: {
-      containLabel: true, left: 8, right: withLegend && legendAt === "right" ? 150 : 16,
+      containLabel: true, left: 8, right: (withLegend && legendAt === "right" ? 150 : 16) + (zoom && horizontal ? ZOOM_SIZE + 8 : 0),
       top: titleRoom + (withLegend && legendAt === "top" ? size * 2.2 : 0) + (values.some((v) => v.name) ? size * 1.8 : 8) + 4,
-      bottom: (withLegend && legendAt === "bottom" ? size * 2.4 : 0) + (config.axes.x.title && !horizontal ? size * 1.6 : 0) + 6,
+      bottom: (withLegend && legendAt === "bottom" ? size * 2.4 : 0) + (config.axes.x.title && !horizontal ? size * 1.6 : 0) + 6 + (zoom && !horizontal ? ZOOM_SIZE + 10 : 0),
     },
     legend, tooltip,
     xAxis: horizontal ? values : category, yAxis: horizontal ? category : values,
     series,
+    ...(zoom ? { dataZoom: [{ type: "slider", [horizontal ? "yAxisIndex" : "xAxisIndex"]: 0, showDetail: false, brushSelect: false, filterMode: "empty", throttle: 30,  // "empty": dikey eksen bütün verinin aralığında sabit kalır
+                             
+                              ...(horizontal ? { right: 4, width: ZOOM_SIZE } : { bottom: withLegend && legendAt === "bottom" ? size * 2.4 : 4, height: ZOOM_SIZE }),
+                              dataBackground: { lineStyle: { color: TEXT, width: 1, opacity: 1 }, areaStyle: { color: LINE, opacity: 1 } },
+                              selectedDataBackground: { lineStyle: { color: PALETTE[0], width: 1, opacity: 1 }, areaStyle: { color: PALETTE[0], opacity: 0.55 } },
+                              borderColor: LINE, fillerColor: `${ZOOM_FILL}73`, backgroundColor: SURFACE, /* dolgu yarı saydam: alttaki veri silueti görünür */ handleStyle: { color: SURFACE, borderColor: PALETTE[0] }, moveHandleSize: 4 }] } : {}),
   };
-  return { option, mixed };
+  return { option, mixed, hit: (seriesIndex, dataIndex) => (seriesIndex < drawn.length ? itemOf(drawn[seriesIndex], dataIndex) ?? "other" : null) };
 }

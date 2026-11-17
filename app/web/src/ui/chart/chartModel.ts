@@ -3,7 +3,9 @@
 import type { ColumnType, ListColumn, ListFilter } from "../../table/types";
 
 export type ChartBucket = "day" | "week" | "month" | "quarter" | "year";   // saat kırılımı yok
-export type ChartFn = "sum" | "avg" | "min" | "max" | "count";
+/** count: "Say" (satır sayısı; alan istemez). distinct: "Benzersiz say" (alandaki farklı değer sayısı; listenin bütün alanları; K-179). */
+export type ChartFn = "sum" | "avg" | "min" | "max" | "count" | "distinct";
+export type LineStyle = "solid" | "dashed";
 export type SeriesType = "bar" | "line" | "smooth" | "step" | "area";   // smooth: eğimli (monoton) çizgi
 export type AxisSide = "primary" | "secondary";
 export type BarMode = "group" | "stack" | "percent";
@@ -19,6 +21,8 @@ export interface ChartSeries {
   field: string | null;
   fn: ChartFn;
   type: SeriesType;
+  /** Çizgi biçimi (K-179): çizgi ve alan tiplerinde. */
+  line: LineStyle;
   axis: AxisSide;
   /** Boşsa paletten sırayla. */
   color: string | null;
@@ -45,7 +49,8 @@ export interface ChartConfig {
   series: ChartSeries[];
   /** totals: yığılmışta çubuğun üstünde toplam. width: çubuk genişliği, bütün çubuk serileri için ortak. */
   bars: { mode: BarMode; horizontal: boolean; totals: boolean; width: BarWidth };
-  axes: { x: { title: string }; primary: ValueAxis; secondary: ValueAxis };
+  /** x.zoom: yakınlaştırma kaydırıcısı (yalnız zaman ekseninde; konumu saklanmaz). */
+  axes: { x: { title: string; zoom: boolean }; primary: ValueAxis; secondary: ValueAxis };
   ref_lines: RefLine[];
   legend: { show: boolean; position: LegendPosition };
   title: string;
@@ -71,7 +76,9 @@ export const MIN_HEIGHT = 0.15;
 export const MAX_HEIGHT = 0.85;
 export const DEFAULT_HEIGHT = 0.45;
 export const BUCKETS: ChartBucket[] = ["day", "week", "month", "quarter", "year"];
-export const FNS: ChartFn[] = ["sum", "avg", "min", "max", "count"];
+export const FNS: ChartFn[] = ["sum", "avg", "min", "max", "count", "distinct"];
+export const MAX_DISTINCT = 3;
+export const MAX_SELECTION = 200;
 export const SERIES_TYPES: SeriesType[] = ["bar", "line", "smooth", "step", "area"];
 export const MAX_CATEGORIES = 30;
 export const CATEGORY_LIMITS = [5, 10, 15, 20, 30];
@@ -92,7 +99,7 @@ export const clampHeight = (ratio: number) => Math.min(MAX_HEIGHT, Math.max(MIN_
 const valueAxis = (grid: boolean): ValueAxis => ({ title: "", min: null, max: null, unit: "", grid });
 
 export function newSeries(id: string, field: string | null, fn: ChartFn, type: SeriesType = "bar"): ChartSeries {
-  return { id, field, fn, type, axis: "primary", color: null, labels: { show: false, decimals: 0, zero: false }, threshold: null };
+  return { id, field, fn, type, line: "solid", axis: "primary", color: null, labels: { show: false, decimals: 0, zero: false }, threshold: null };
 }
 
 /** Kullanılmayan kısa kimlik: s1, s2… (r1… referans çizgisi). */
@@ -116,7 +123,7 @@ export function defaultChart(columns: ListColumn[], order: string[]): ChartConfi
     x: { field: x.field, bucket: isDateField(x) ? "month" : null }, split: null, order: "value", limit: MAX_CATEGORIES,
     series: [value ? newSeries("s1", value.field, "sum") : newSeries("s1", null, "count")],
     bars: { mode: "group", horizontal: false, totals: false, width: "medium" },
-    axes: { x: { title: "" }, primary: valueAxis(true), secondary: valueAxis(false) },
+    axes: { x: { title: "", zoom: false }, primary: valueAxis(true), secondary: valueAxis(false) },
     ref_lines: [], legend: { show: true, position: "top" }, title: "", title_align: "left", title_size: "medium",
   };
 }
@@ -130,11 +137,11 @@ export function normalizeChart(raw: Partial<ChartConfig> & Pick<ChartConfig, "x"
     x: { field: raw.x.field, bucket: raw.x.bucket ?? null }, split: raw.split ?? null, order: raw.order === "name" ? "name" : "value",
     limit: Math.min(MAX_CATEGORIES, Math.max(1, raw.limit ?? MAX_CATEGORIES)),
     series: raw.series.map((s) => ({
-      id: s.id, field: s.field ?? null, fn: s.fn, type: s.type ?? "bar", axis: s.axis ?? "primary", color: s.color ?? null,
+      id: s.id, field: s.field ?? null, fn: s.fn, type: s.type ?? "bar", line: s.line === "dashed" ? "dashed" : "solid", axis: s.axis ?? "primary", color: s.color ?? null,
       labels: { show: s.labels?.show ?? false, decimals: s.labels?.decimals ?? 0, zero: s.labels?.zero ?? false },
       threshold: s.threshold ? { value: s.threshold.value, color: s.threshold.color, line: s.threshold.line ?? false } : null })),
     bars: { mode: raw.bars?.mode ?? "group", horizontal: raw.bars?.horizontal ?? false, totals: raw.bars?.totals ?? false, width: raw.bars?.width ?? "medium" },
-    axes: { x: { title: raw.axes?.x?.title ?? "" }, primary: axis(raw.axes?.primary, true), secondary: axis(raw.axes?.secondary, false) },
+    axes: { x: { title: raw.axes?.x?.title ?? "", zoom: raw.axes?.x?.zoom ?? false }, primary: axis(raw.axes?.primary, true), secondary: axis(raw.axes?.secondary, false) },
     ref_lines: (raw.ref_lines ?? []).map((r) => ({ id: r.id, kind: r.kind, value: r.value ?? null, series: r.series ?? null, name: r.name ?? "", color: r.color ?? null,
                                                     show_name: r.show_name ?? true, show_value: r.show_value ?? true })),
     legend: { show: raw.legend?.show ?? true, position: raw.legend?.position ?? "top" },
@@ -160,16 +167,61 @@ export interface ChartRequest {
   order: "value" | "name";
   series: { id: string; field: string | null; fn: ChartFn }[];
   limit: number;
+  /** İniş (K-179): yalnız bu dönem(ler)in satırları. */
+  within?: { bucket: ChartBucket; keys: string[] }[];
   scenario_id?: number;
 }
 
-/** Sunucu isteği: yalnız veriyi değiştiren ayarlar (tip, renk, etiket, eksen sınırı gibi görünüş ayarları istek atmaz). */
-export function chartRequest(chart: ChartConfig, filters: ListFilter[], scenarioId?: number): ChartRequest {
+/** Grafikte seçilen öğe (K-179): yatay eksen değeri (dönemin ilk günü ya da kategori; null boş) ve kırılım varsa parça. */
+export interface PickItem { x: string | number | boolean | null; p?: string | number | boolean | null }
+/** İniş adımı: `bucket` düzeyindeki `keys` dönem(ler)inin içine, `to` dönemiyle inildi (birden fazla dönem seçiliyken de inilir). */
+export interface DrillStep { bucket: ChartBucket; keys: string[]; to: ChartBucket }
+/** Grafik seçimi ve iniş: geçicidir, görünüme kaydedilmez. */
+export interface ChartPick { items: PickItem[]; drill: DrillStep[] }
+export const NO_PICK: ChartPick = { items: [], drill: [] };
+export const hasPick = (pick: ChartPick) => pick.items.length > 0 || pick.drill.length > 0;
+export const samePick = (a: PickItem, b: PickItem) => a.x === b.x && (a.p ?? null) === (b.p ?? null);
+
+/** Bulunulan dönemden ince dönemler (iniş; ara düzey atlanabilir): Yıl → Çeyrek → Ay → Hafta → Gün. */
+export function finerBuckets(bucket: ChartBucket | null): ChartBucket[] {
+  const order: ChartBucket[] = ["year", "quarter", "month", "week", "day"];
+  return bucket ? order.slice(order.indexOf(bucket) + 1) : [];
+}
+
+/** İnişle geçerli dönem: son iniş adımının dönemi; iniş yoksa görünümün kayıtlı dönemi. */
+export const effectiveBucket = (chart: ChartConfig, pick: ChartPick): ChartBucket | null =>
+  (pick.drill.length ? pick.drill[pick.drill.length - 1].to : chart.x.bucket);
+
+/** Tablo sorgularına eklenen grafik seçimi (docs/08 `chart_selection`); seçim ve iniş yoksa undefined. */
+export interface ChartSelection {
+  x: { field: string; bucket: ChartBucket | null };
+  split: string | null;
+  items: PickItem[];
+  within: { bucket: ChartBucket; keys: string[] }[];
+  scenario_id?: number;
+}
+export function chartSelection(chart: ChartConfig | null, pick: ChartPick, scenarioId?: number): ChartSelection | undefined {
+  if (!chart || !chart.open || !hasPick(pick)) return undefined;
+  const bucket = effectiveBucket(chart, pick);
+  const weekly = bucket === "week" || pick.drill.some((d) => d.bucket === "week");
   return {
-    filters, x: chart.x, split: chart.split, order: chart.order,
+    x: { field: chart.x.field, bucket }, split: chart.split,
+    items: pick.items.map((i) => (chart.split ? { x: i.x, p: i.p ?? null } : { x: i.x })),
+    within: pick.drill.map((d) => ({ bucket: d.bucket, keys: d.keys })),
+    ...(scenarioId !== undefined && weekly ? { scenario_id: scenarioId } : {}),
+  };
+}
+
+/** Sunucu isteği: yalnız veriyi değiştiren ayarlar (tip, renk, etiket, eksen sınırı gibi görünüş ayarları istek atmaz). */
+export function chartRequest(chart: ChartConfig, filters: ListFilter[], scenarioId?: number, drill: DrillStep[] = []): ChartRequest {
+  const bucket = drill.length ? drill[drill.length - 1].to : chart.x.bucket;
+  const weekly = bucket === "week" || drill.some((d) => d.bucket === "week");
+  return {
+    filters, x: { field: chart.x.field, bucket }, split: chart.split, order: chart.order,
     series: chart.series.map((s) => ({ id: s.id, field: s.fn === "count" ? null : s.field, fn: s.fn })),
     limit: chart.limit,
-    ...(scenarioId !== undefined && chart.x.bucket === "week" ? { scenario_id: scenarioId } : {}),
+    ...(drill.length ? { within: drill.map((d) => ({ bucket: d.bucket, keys: d.keys })) } : {}),
+    ...(scenarioId !== undefined && weekly ? { scenario_id: scenarioId } : {}),
   };
 }
 
@@ -179,9 +231,14 @@ export function withXField(chart: ChartConfig, col: ListColumn): ChartConfig {
            split: chart.split === col.field ? null : chart.split };
 }
 
-/** Toplama değişince alan uyar: "adet" alansızdır; ötekilerde sayısal alan gerekir. */
+/** Hesaplama değişince alan uyar: "Say" alansızdır; "Benzersiz say" her alanda çalışır; ötekilerde sayısal alan gerekir. */
 export function withSeriesFn(s: ChartSeries, fn: ChartFn, columns: ListColumn[]): ChartSeries {
   if (fn === "count") return { ...s, fn, field: null };
-  const field = s.field ?? numericFields(columns)[0]?.field ?? null;
+  if (fn === "distinct") {
+    const field = s.field ?? columns[0]?.field ?? null;
+    return field === null ? s : { ...s, fn, field };
+  }
+  const numeric = numericFields(columns);
+  const field = numeric.some((c) => c.field === s.field) ? s.field : numeric[0]?.field ?? null;
   return field === null ? s : { ...s, fn, field };
 }

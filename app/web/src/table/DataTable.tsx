@@ -11,7 +11,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown, ArrowUp, ChartColumn, ChevronDown, ChevronRight, Columns3, Download, Ellipsis, FoldVertical, Funnel,
   FunnelX,
-  ListCollapse, Rows3, UnfoldVertical,
+  ListCollapse, Rows3, UnfoldVertical, X,
 } from "lucide-react";
 import {
   type CSSProperties, type DragEvent, type HTMLAttributes, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject,
@@ -34,7 +34,8 @@ import { FilterMenu, valueLabel } from "./filters";
 import { GroupPanel } from "./GroupPanel";
 import { RuleDialog } from "./RuleDialog";
 import { RuledValue } from "./RuleIcon";
-import { clampHeight, defaultChart, DEFAULT_HEIGHT } from "../ui/chart/chartModel";
+import { type ChartPick, chartSelection, clampHeight, defaultChart, DEFAULT_HEIGHT, hasPick, NO_PICK } from "../ui/chart/chartModel";
+import { bucketLabel } from "../ui/chart/chartOption";
 import { type CellEditing, type EditorSpec, type PasteCell, parseClipboard } from "./cellEditing";
 import { ChartPane } from "./ChartPane";
 import {
@@ -446,7 +447,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   /** Alçak şerit (detay kartı, K-173). */
   compact?: boolean;
 }) {
-  const { fontSize, userId, trackExport } = useShell();
+  const { fontSize, userId, trackExport, scenario } = useShell();
   const [columns, setColumns] = useState<ListColumn[] | null>(null);
   const [chunkSize, setChunkSize] = useState(0);
   const [exportInfo, setExportInfo] = useState<ExportInfo | null>(null);
@@ -563,10 +564,17 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   }, [s.order, s.widths, pinnedCount, wrapKey, groupDepth, byField, selRem]);
   const baseKey = JSON.stringify(baseFilters ?? []);
   const fixed = useMemo(() => JSON.parse(baseKey) as ListFilter[], [baseKey]);
-  const requestKey = JSON.stringify([s.order, s.sort, s.filters, fixed, active.map(toRequestRule)]);
+  // Grafik seçimi ve iniş (K-179): geçici (görünüme girmez); tablo da seçilenlerin kayıtlarına süzülür
+  const [chartPick, setChartPick] = useState<ChartPick>(NO_PICK);
+  const selectionKey = JSON.stringify(chartSelection(s.chart, chartPick, scenario?.id) ?? null);
+  const chartSel = useMemo(() => JSON.parse(selectionKey) as ReturnType<typeof chartSelection> | null ?? undefined, [selectionKey]);
+  const pickResetKey = JSON.stringify([list, fixed, s.filters, s.chart?.x.field, s.chart?.x.bucket, s.chart?.split, Boolean(s.chart?.open), views.currentId]);
+  useEffect(() => setChartPick(NO_PICK), [pickResetKey]);  // filtre, yatay eksen, dönem, kırılım ya da görünüm değişince ve grafik kapanınca temizlenir
+  const requestKey = JSON.stringify([s.order, s.sort, s.filters, fixed, active.map(toRequestRule), selectionKey]);
   const request: ListRequest | null = useMemo(() => (ready ? {
     fields: s.order, sort: s.sort, filters: [...fixed, ...s.filters], ...(active.length ? { rules: active.map(toRequestRule) } : {}),
-  } : null), [ready, requestKey]); // requestKey alanları, sıralamayı, filtreleri ve kuralları taşır
+    ...(chartSel ? { chart_selection: chartSel } : {}),
+  } : null), [ready, requestKey]); // requestKey alanları, sıralamayı, filtreleri, kuralları ve grafik seçimini taşır
   // Grafik (K-178): tablonun filtresini çizer; açık ya da kapalı olması, düzeni ve yüksekliği görünümün parçasıdır
   const chartFilters = useMemo(() => [...fixed, ...s.filters], [fixed, JSON.stringify(s.filters)]);  // eslint-disable-line react-hooks/exhaustive-deps
   const chartOpen = Boolean(s.chart?.open);
@@ -597,6 +605,19 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     document.addEventListener("mousemove", move);
     document.addEventListener("mouseup", up);
   };
+  // Filtre şeridindeki çip (K-179): "Grafik seçimi: 3 dönem ✕"; yalnız iniş varsa "Grafik: Kas 2026 ✕" (✕ en üste döner)
+  const pickChip = useMemo(() => {
+    if (!s.chart?.open || !hasPick(chartPick)) return null;
+    if (chartPick.items.length) {
+      const C = tr.chart;
+      const dated = chartPick.drill.length > 0 || s.chart.x.bucket !== null;
+      const unit = s.chart.split ? C.selectionUnits.part : dated ? C.selectionUnits.period : C.selectionUnits.value;
+      const n = s.chart.split ? chartPick.items.length : new Set(chartPick.items.map((i) => i.x)).size;
+      return { label: C.selectionChip(n, unit), clearLabel: C.clearSelection, clear: () => setChartPick((p) => ({ ...p, items: [] })) };
+    }
+    const last = chartPick.drill[chartPick.drill.length - 1];
+    return { label: tr.chart.drillChip(last.keys.length === 1 ? bucketLabel(last.keys[0], last.bucket) : tr.chart.periods(last.keys.length)), clearLabel: tr.chart.clearDrill, clear: () => setChartPick(NO_PICK) };
+  }, [chartPick, s.chart?.open, s.chart?.split, s.chart?.x.bucket]);
   const grouped = s.groupBy.length > 0;
   const flat = useListQuery(list, grouped ? null : request, chunkSize);
   const aggKey = JSON.stringify(requestAggregates(columns ?? [], s));
@@ -689,7 +710,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   }
   const selectAll = async () => {
     try {
-      const r = await listApi(list).ids([...fixed, ...s.filters]);
+      const r = await listApi(list).ids([...fixed, ...s.filters], undefined, chartSel);  // Ctrl + A grafik seçimindeki kayıtları seçer
       setPicked(new Set(r.ids));
       if (r.truncated) emitNotice(T.selectionMax);
     } catch (e) {
@@ -918,6 +939,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
       fields: s.order, widths: s.widths, sort: s.sort, filters: [...fixed, ...s.filters], group_by: s.groupBy, aggregates,
       scope: fixed.length ? { ...scope, rows: "filtered" } : scope,  // "Tümü" sabit filtreyi aşmaz
       rules: active,
+      ...(chartSel ? { chart_selection: chartSel } : {}),  // "ekrandaki filtrelerle" kapsamında grafik seçimi de (K-179)
     });
     if (result.kind === "file") saveBlob(result.blob, result.fileName);
     else trackExport({ jobId: result.job_id, title: exportInfo?.title ?? list, fileName: result.file_name, rows: result.rows });
@@ -1145,10 +1167,16 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
         </div>
       </div>
 
-      {(s.filters.length > 0 || grouped) && (
+      {(s.filters.length > 0 || grouped || pickChip) && (
         <div className="sc-table-status">
           <FilterChips filters={s.filters} byField={byField} onRemove={(f) => setFilter(f, null)}
                        onEdit={(f, el) => openPop("filter", f, el)} />
+          {pickChip && (
+            <span className="sc-chip-filter sc-chip-chart" data-testid="chart-chip">
+              <span className="sc-chip-filter-text">{pickChip.label}</span>
+              <button type="button" className="sc-chip-filter-x" aria-label={pickChip.clearLabel} title={pickChip.clearLabel} onClick={pickChip.clear}><X aria-hidden="true" /></button>
+            </span>
+          )}
           {s.filters.length > 0 && (
             <Button size="sm" variant="ghost" icon={FunnelX} onClick={() => update((st) => ({ ...st, filters: [] }))}>{T.clearFilters}</Button>
           )}
@@ -1166,7 +1194,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
       {chartOpen && s.chart && (
         <>
           <ChartPane list={list} columns={columns} filters={chartFilters} chart={s.chart} reloadKey={reloadKey} style={chartFull ? { flex: "1 1 0" } : { flex: `${s.chart.height} 1 0` }}
-                     fresh={chartFresh} onSettled={() => setChartFresh(false)}
+                     fresh={chartFresh} onSettled={() => setChartFresh(false)} pick={chartPick} onPick={setChartPick}
                      onChange={(chart) => update((st) => ({ ...st, chart }))} onClose={toggleChart} />
           {!chartFull && (
             <div role="separator" aria-orientation="horizontal" aria-label={tr.chart.resize} tabIndex={0} className="sc-md-splitter sc-chart-splitter"

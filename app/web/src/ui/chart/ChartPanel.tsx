@@ -11,7 +11,7 @@ import { ColorPicker } from "../ColorPicker";
 import { NumberField, Segment, SelectField, TextField } from "../fields";
 import {
   type AxisSide, type BarMode, type BarWidth, BUCKETS, CATEGORY_LIMITS, type ChartBucket, type ChartConfig, type ChartFn, type ChartSeries, FNS, isDateField,
-  type LegendPosition, MAX_REF_LINES, MAX_SERIES, newSeries, nextId, numericFields, type RefKind, type RefLine, SERIES_TYPES, type SeriesType,
+  type LegendPosition, type LineStyle, MAX_DISTINCT, MAX_REF_LINES, MAX_SERIES, newSeries, nextId, numericFields, type RefKind, type RefLine, SERIES_TYPES, type SeriesType,
   splitFields, type TitleAlign, type TitleSize, type ValueAxis, withSeriesFn, withXField, xFields,
 } from "./chartModel";
 import { PALETTE, seriesLabel, THRESHOLD_COLOR } from "./chartOption";
@@ -44,18 +44,28 @@ function Toggle({ label, checked, onToggle }: { label: string; checked: boolean;
   );
 }
 
-function SeriesEditor({ s, auto, columns, onChange }: { s: ChartSeries; auto: string; columns: ListColumn[]; onChange(next: ChartSeries): void }) {
+function SeriesEditor({ s, auto, columns, distinctFull, onChange }: {
+  s: ChartSeries; auto: string; columns: ListColumn[];
+  /** Grafikte en çok üç "Benzersiz say" serisi olur: dolduysa başka seride seçilemez. */
+  distinctFull: boolean;
+  onChange(next: ChartSeries): void;
+}) {
   const numeric = numericFields(columns);
+  const fns = FNS.filter((fn) => fn === "count" || fn === "distinct" ? fn === "count" || s.fn === "distinct" || !distinctFull : numeric.length > 0);
   return (
     <div className="sc-chart-series-body">
       <SelectField label={T.aggregate} value={s.fn} onChange={(fn) => onChange(withSeriesFn(s, fn as ChartFn, columns))}
-                   options={FNS.filter((fn) => fn === "count" || numeric.length > 0).map((fn) => ({ value: fn, label: T.fn[fn] }))} />
+                   options={fns.map((fn) => ({ value: fn, label: T.fn[fn] }))} />
       {s.fn !== "count" && (
         <SelectField label={T.field} value={s.field ?? ""} onChange={(field) => onChange({ ...s, field })}
-                     options={numeric.map((c) => ({ value: c.field, label: c.label }))} />
+                     options={(s.fn === "distinct" ? columns : numeric).map((c) => ({ value: c.field, label: c.label }))} />
       )}
       <SelectField label={T.type} value={s.type} onChange={(type) => onChange({ ...s, type: type as SeriesType })}
                    options={SERIES_TYPES.map((t) => ({ value: t, label: T.types[t] }))} />
+      {s.type !== "bar" && (
+        <Segment<LineStyle> label={T.lineStyle} value={s.line} onChange={(line) => onChange({ ...s, line })}
+                            options={[{ value: "solid", label: T.lineStyles.solid }, { value: "dashed", label: T.lineStyles.dashed }]} />
+      )}
       <Segment<AxisSide> label={T.axis} value={s.axis} onChange={(axis) => onChange({ ...s, axis })}
                          options={[{ value: "primary", label: T.primary }, { value: "secondary", label: T.secondary }]} />
       <ColorPicker label={T.color} value={s.color ?? undefined} emptyLabel={T.colorAuto} emptyColor={auto} onChange={(color) => onChange({ ...s, color: color ?? null })} />
@@ -164,7 +174,7 @@ export function ChartPanel({ chart, columns, onChange }: { chart: ChartConfig; c
                   <button type="button" className="sc-tool-btn" aria-label={T.removeSeries(name)} title={T.removeSeries(name)} disabled={chart.series.length === 1}
                           onClick={() => setSeries(chart.series.filter((x) => x.id !== s.id))}><Trash2 aria-hidden="true" /></button>
                 </div>
-                {isOpen && <SeriesEditor s={s} auto={PALETTE[i % PALETTE.length]} columns={columns} onChange={(next) => setSeries(chart.series.map((x) => (x.id === s.id ? next : x)))} />}
+                {isOpen && <SeriesEditor s={s} auto={PALETTE[i % PALETTE.length]} columns={columns} distinctFull={chart.series.filter((x) => x.fn === "distinct").length >= MAX_DISTINCT} onChange={(next) => setSeries(chart.series.map((x) => (x.id === s.id ? next : x)))} />}
               </li>
             );
           })}
@@ -184,7 +194,12 @@ export function ChartPanel({ chart, columns, onChange }: { chart: ChartConfig; c
       </Section>
 
       <Section title={T.sections.axes} {...section("axes")}>
-        <TextField label={T.xTitle} value={chart.axes.x.title} maxLength={60} onChange={(title) => onChange({ ...chart, axes: { ...chart.axes, x: { title } } })} />
+        <TextField label={T.xTitle} value={chart.axes.x.title} maxLength={60} onChange={(title) => onChange({ ...chart, axes: { ...chart.axes, x: { ...chart.axes.x, title } } })} />
+        <div className="sc-field sc-field--inline sc-chart-toggle" title={isDateField(xCol) ? undefined : T.zoomOnlyTime}>
+          <span className="sc-field-label">{T.zoom}</span>
+          <SwitchCell label={T.zoom} checked={chart.axes.x.zoom && isDateField(xCol)} editable={isDateField(xCol)} size="md"
+                      onToggle={(zoom) => onChange({ ...chart, axes: { ...chart.axes, x: { ...chart.axes.x, zoom } } })} />
+        </div>
         <AxisEditor title={T.primaryAxis} axis={chart.axes.primary} onChange={(primary) => onChange({ ...chart, axes: { ...chart.axes, primary } })} />
         {hasSecondary && (
           <AxisEditor title={T.secondaryAxis} axis={chart.axes.secondary} onChange={(secondary) => onChange({ ...chart, axes: { ...chart.axes, secondary } })} />

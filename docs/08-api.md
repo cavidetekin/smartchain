@@ -286,7 +286,8 @@ Tablonun grafiği için toplama. Listeyi okuma yetkisiyle çalışır (`query` i
 - `x.field`: tarih ya da tarih-saat alanı (`bucket` zorunlu: `day | week | month | quarter | year`) ya da metin, liste, Evet/Hayır, tam sayı alanı (kategori; `bucket` yok). Saat kırılımı yoktur. Tarih-saat alanı (UTC) API sunucusunun yerel gününe indirgenir: gün sınırı tarih filtresindekiyle aynıdır (bir günün çubuğu, o günün filtresindeki satırlardır); gece yarısına yakın kayıt, sunucuyla aynı saat dilimindeki arayüzde göründüğü güne düşer.
 - `week`: hafta, senaryonun `WeekStart` parametresindeki günle başlar (`scenario_id` verilmezse kullanıcının seçili senaryosu, K-177). Cevapta `week_start`.
 - `split`: isteğe bağlı kırılım alanı (kategori). `order`: kategori ekseninde `value` (ilk serinin değeri, azalan) ya da `name`; tarih ekseni her zaman eskiden yeniye.
-- `series`: 1–8 seri; `fn`: `sum | avg | min | max` (sayısal `field` ister) ya da `count` (satır sayısı; `field` yok).
+- `series`: 1–8 seri; `fn`: `sum | avg | min | max` (sayısal `field` ister), `count` (satır sayısı; `field` yok; arayüzde "Say") ya da `distinct` ("Benzersiz say", K-179: `field`'daki farklı değer sayısı; listenin bütün alanları; boş değer sayılmaz; metinde Türkçe ve büyük/küçük harf duyarsız; en çok 3 seri). `distinct` ayrı sorguyla sayılır: "Diğer" kalan satırlardaki farklı değer sayısıdır; birim karışıklığı kuralına girmez.
+- `within` (isteğe bağlı, K-179 iniş): `[{"bucket": "month", "keys": ["2026-11-01", "2027-01-01"]}]`; her adım bir düzey ve o düzeyde inilen dönem(ler)dir (en çok 200). Grafik yalnız bu dönemlerin (iç içe adımlarda hepsini sağlayan) satırlarını toplar; boşluk doldurma yalnız inilen dönemlerin içinde yapılır (bitişik olmayan dönemlerin arası çizilmez). Dönem, toplamadaki ifadeyle bulunur (hafta başlangıcı ve gün sınırı aynı).
 
 ```json
 {"x": {"kind": "date", "bucket": "week", "values": [{"key": "2026-11-16", "label": null}], "other": false},
@@ -300,6 +301,21 @@ Tablonun grafiği için toplama. Listeyi okuma yetkisiyle çalışır (`query` i
 - `mixed_units`: birimden ondalıklı alanda katkı veren satırlarda birden çok birim varsa seri `mixed_units: true` ve verisi `null` döner; `count` bu kurala girmez (gruplamayla aynı kural, K-88, K-90).
 - Hatalar: alan yoksa ya da tipe uymuyorsa 422 `validation`; veri versiyonu yoksa 404 `no_data_version`.
 - **Performans hedefi:** 50.000 satırda ortanca 300 ms altında (kategori + kırılım; haftalık dönem + iki seri; filtreli ve çok kategorili). Ölçümler `tests/test_lists_perf.py`'de; koşusu Aşama 7 sonundaki performans işinde.
+
+### Grafik seçimi · `chart_selection` (K-179)
+
+Grafikte seçilen çubukların (ve inilen dönemin) kayıtları. `POST /api/<liste>/query`, `/groups`, `/ids` ve `/export` isteklerine isteğe bağlı eklenir; `/values`'a (filtre menüsünün değer listesi) eklenmez.
+
+```json
+{"chart_selection": {"x": {"field": "RequestedDate", "bucket": "week"}, "split": "CustomerCode",
+                     "items": [{"x": "2026-11-16", "p": "MUS-A"}, {"x": null, "p": null}],
+                     "within": [{"bucket": "month", "keys": ["2026-11-01"]}], "scenario_id": 1}}
+```
+
+- `x`, `split`: grafiğin yatay ekseni ve kırılımı (`chart` isteğindeki gibi). `items`: seçilen öğeler; `x` dönemin ilk günü ya da kategori değeri, `p` kırılım değeri (kırılım yoksa verilmez); `null` boş değerdir. Öğeler "ya da" ile birleşir; kırılımda her öğe dönem **ve** parçadır. En çok 200 öğe.
+- `within`: inilen dönem(ler); `items` boşsa yalnız bu dönem süzülür. `items` ve `within` birlikte boş olamaz (422).
+- Koşul, `chart` ucunun toplama sorgusuyla aynı ifadelerle kurulur (dönem hesabı, hafta başlangıcı, gün sınırı, boş değer): bir çubuğun değeri ile bu seçimle dönen satır sayısı birebir tutar. "Diğer" seçilemez (anahtarı kabul edilmez, 422).
+- `query` ve `groups` cevabındaki `filtered` seçimi de sayar; `export`'ta yalnız "ekrandaki filtrelerle" kapsamında uygulanır ve Bilgi sayfasına "Grafik seçimi" satırı yazılır.
 
 ### Görünümler (K-89)
 
@@ -329,15 +345,16 @@ Kullanıcı oturumdan gelir (K-97).
 - Göreli tarih filtresi göreli saklanır; görünüm açıldığı günün haftasına göre çalışır.
 - `chart` (isteğe bağlı, K-178): tablonun grafiği. Anahtar yoksa grafik kapalıdır (eski görünümler değişmeden çalışır; geçiş yok).
   `{"v": 1, "open": true, "layout": "split" | "full", "height": 0.45, "x": {"field", "bucket"}, "split": null, "order": "value" | "name",
-  "limit": 30, "series": [{"id", "field", "fn", "type": "bar" | "line" | "smooth" | "step" | "area", "axis": "primary" | "secondary",
+  "limit": 30, "series": [{"id", "field", "fn", "type": "bar" | "line" | "smooth" | "step" | "area", "line": "solid" | "dashed", "axis": "primary" | "secondary",
   "color": "#4F5BD5" | null, "labels": {"show", "decimals", "zero"}, "threshold": {"value", "color", "line"} | null}],
   "bars": {"mode": "group" | "stack" | "percent", "horizontal", "totals", "width": "thin" | "medium" | "thick"},
-  "axes": {"x": {"title"}, "primary": {"title", "min", "max", "unit", "grid"}, "secondary": {…}},
+  "axes": {"x": {"title", "zoom"}, "primary": {"title", "min", "max", "unit", "grid"}, "secondary": {…}},
   "ref_lines": [{"id", "kind": "value" | "avg" | "min" | "max", "value", "series", "name", "color", "show_name", "show_value"}],
   "legend": {"show", "position": "top" | "bottom" | "right"}, "title", "title_align": "left" | "center" | "right",
   "title_size": "small" | "medium" | "large"}`. Varsayılanlar: `labels.zero` Hayır (0 değerinin etiketi çıkmaz), `threshold.line` Hayır (eşik çizgisi
   çizilmez), `bars.totals` Hayır, `bars.width` medium (çubuk genişliği: İnce · Orta · Kalın; bütün çubuk serileri için ortak), `show_name` ve `show_value` Evet, `title_align` left, `title_size` medium, `limit` 30. Ayar panelinin açık ya da
-  kapalı olması saklanmaz.
+  kapalı olması saklanmaz. K-179: `series[].fn` `distinct` olabilir; `series[].line` (varsayılan solid) ve `axes.x.zoom` (yakınlaştırma kaydırıcısı; varsayılan Hayır)
+  eklendi. Grafik seçimi, iniş ve kaydırıcının konumu saklanmaz.
   Kaydederken alanlar, toplama ve tip adları, renk kodları (`#RRGGBB`) ve sınırlar doğrulanır (422). Açılırken artık olmayan alana bağlı seri atılır
   (`warnings`); yatay eksenin alanı ya da bütün seriler gitmişse grafik atılır.
 - `rules`: koşullu biçim kuralları, sıralı (aşağıda "Koşullu biçim kuralları"). Açılırken artık olmayan alana ya da karşılaştırılan alana bakan kural atılır, `warnings`'te yazar.

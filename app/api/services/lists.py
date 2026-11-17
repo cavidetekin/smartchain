@@ -10,7 +10,7 @@ from ..lists.definition import ListDefinition, columns as column_list
 from ..lists.query import DEFAULT_UNIT_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists import chart as chart_query
 from ..lists.groups import build_tree
-from ..lists.request import ChartRequest, GroupsRequest, IdsRequest, QueryRequest, ValuesRequest
+from ..lists.request import ChartRequest, ChartSelection, GroupsRequest, IdsRequest, QueryRequest, ValuesRequest
 from app.params import scenarios as scenario_service, service as params
 from app.params.horizon import week_start_index
 from app.manual import manual_fields
@@ -74,6 +74,7 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role
           user_id: int | None = None) -> dict:
     def work():
         b = _builder(session, defn, role, user_id)
+        apply_selection(session, b, req.chart_selection, user_id)
         rows_q = b.rows_query(req, repo.read_chunk_size(session))
         rules_valid = b.rule_columns(req.rules)  # doğrulama (422) satırlar okunmadan
         rows = [{k: _json(v) for k, v in r.items()} for r in repo.fetch_rows(session, rows_q)]
@@ -98,7 +99,7 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role
                 d = units.get(r.pop(UNIT))
                 r[UNIT_DECIMALS] = DEFAULT_UNIT_DECIMALS if d is None else int(d)
         total = repo.fetch_count(session, b.total_query())
-        narrowed = req.filters or req.group_key
+        narrowed = req.filters or req.group_key or req.chart_selection
         filtered = repo.fetch_count(session, b.filtered_query(req.filters, req.group_key)) if narrowed else total
         return {"rows": rows, "offset": req.offset, "filtered": filtered, "total": total}
     return _run(session, work)
@@ -108,6 +109,7 @@ def ids(session: Session | None, defn: ListDefinition, req: IdsRequest, role: st
     """Filtredeki satırların kimlikleri (çoklu seçim, K-171), en çok SELECTION_MAX."""
     def work():
         b = _builder(session, defn, role, user_id)
+        apply_selection(session, b, req.chart_selection, user_id)
         found = [r["Id"] for r in repo.fetch_rows(session, b.ids_query(req.filters, SELECTION_MAX))]
         return {"ids": [str(i) for i in found[:SELECTION_MAX]], "truncated": len(found) > SELECTION_MAX}
     return _run(session, work)
@@ -127,6 +129,7 @@ def groups(session: Session | None, defn: ListDefinition, req: GroupsRequest, ro
     """Grup ağacı, satır sayıları ve ara toplamlar (K-90)."""
     def work():
         b = _builder(session, defn, role, user_id)
+        apply_selection(session, b, req.chart_selection, user_id)
         max_groups = repo.read_max_groups(session)
         specs = b.aggregate_specs(req.fields, req.aggregates)
         # birim gizli düzey olabilir: satır sayısı yaprak grup sayısından fazla olabilir; üst sınır geniş tutulur
@@ -153,14 +156,27 @@ def week_start(session: Session, user_id: int | None, scenario_id: int | None) -
     return params.read_settings(session, scenario["Id"]).get("WeekStart") or "Pazartesi"
 
 
+def apply_selection(session: Session, b: Builder, sel: ChartSelection | None, user_id: int | None) -> None:
+    """Grafik seçimini (K-179) sorgu kurucusuna koşul olarak koyar: satır, grup, kimlik ve dışa aktarım sorguları bu koşulla çalışır."""
+    if sel is None:
+        return
+    weekly = sel.x.bucket == "week" or any(w.bucket == "week" for w in sel.within)
+    start = week_start(session, user_id, sel.scenario_id) if weekly else "Pazartesi"
+    b.selection = chart_query.selection_clause(b, sel, week_start_index(start))
+
+
 def chart(session: Session | None, defn: ListDefinition, req: ChartRequest, role: str | None = None, user_id: int | None = None) -> dict:
     """Tablonun grafiği için toplama (K-178): listeyle aynı filtre, versiyon ve satır kapsamı."""
     def work():
         b = _builder(session, defn, role, user_id)
-        start = week_start(session, user_id, req.scenario_id) if req.x.bucket == "week" else "Pazartesi"
-        leaves = repo.fetch_rows(session, chart_query.query(b, req, week_start_index(start)))
+        weekly = req.x.bucket == "week" or any(w.bucket == "week" for w in req.within)
+        start = week_start(session, user_id, req.scenario_id) if weekly else "Pazartesi"
+        ws = week_start_index(start)
+        leaves = repo.fetch_rows(session, chart_query.query(b, req, ws))
+        # Benzersiz say (K-179): seri başına ek sorgu
+        distinct = {s.id: repo.fetch_rows(session, chart_query.distinct_query(b, req, s, ws)) for s in req.series if s.fn == "distinct"}
         try:
-            out = chart_query.assemble(b, req, leaves, start)
+            out = chart_query.assemble(b, req, leaves, start, distinct)
         except chart_query.TooManyPeriods as exc:
             raise AppError("too_many_periods", chart_query.TOO_MANY_PERIODS, 422) from exc
         return {**out, "x": {**out["x"], "values": [{**v, "key": _json(v["key"])} for v in out["x"]["values"]]}}

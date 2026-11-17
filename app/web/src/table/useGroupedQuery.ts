@@ -77,7 +77,8 @@ export function useGroupedQuery(list: string, request: ListRequest | null, group
     const gen = generation.current;
     const ctrl = new AbortController();
     setState((s) => ({ ...s, status: "loading", error: null }));
-    api.groups({ group_by: groupBy, fields: request.fields, aggregates, filters: request.filters, sort: request.sort },
+    api.groups({ group_by: groupBy, fields: request.fields, aggregates, filters: request.filters, sort: request.sort,
+                 ...(request.chart_selection ? { chart_selection: request.chart_selection } : {}) },
                ctrl.signal)
       .then((tree) => gen === generation.current && setState({ status: "ready", error: null, tree }))
       .catch((e: unknown) => {

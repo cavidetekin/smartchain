@@ -126,13 +126,52 @@ def test_mixed_units_blank_the_series_but_not_count():
     ({"x": {"field": "StockCoverageDays"}}, "x.field"),                                     # ondalıklı sayı eksen olamaz
     ({"split": "MaterialGroup"}, "split"),                                                  # eksenle aynı alan
     ({"split": "UpdatedAt"}, "split"),
-    ({"series": [{"id": "a", "field": "Name", "fn": "sum"}]}, "series.0.field"),            # metinde yalnız adet
+    ({"series": [{"id": "a", "field": "Name", "fn": "sum"}]}, "series.0.field"),            # metinde yalnız Say ve Benzersiz say
+    ({"series": [{"id": "a", "field": "Yok", "fn": "distinct"}]}, "series.0.field"),
+    ({"series": [{"id": str(i), "field": "Name", "fn": "distinct"} for i in range(4)]}, "series"),   # en çok 3 Benzersiz say
     ({"series": [{"id": "a", "fn": "sum"}]}, "series.0.field"),
     ({"series": [{"id": "a", "fn": "count"}, {"id": "a", "fn": "count"}]}, "series"),
 ])
 def test_validation(body, where):
     req = request(**body)
     assert where in [p["field"] for p in chart_query.problems(builder(), req.x, req.split, req.series)]
+
+
+def test_distinct_counts_values_and_other_is_the_rest_not_a_sum():
+    """Benzersiz say (K-179): hücre başına farklı değer; "Diğer" kalan satırlardaki farklı değer sayısı (toplam değil); sıra onun değerine göre."""
+    req = request(limit=2, series=[{"id": "d", "field": "Name", "fn": "distinct"}, {"id": "n", "fn": "count"}])
+    leaves = [leaf("A", 5), leaf("B", 3), leaf("C", 4), leaf("D", 6)]
+    triples = {"d": [{"x": "A", "v": "k1"}, {"x": "A", "v": "k2"}, {"x": "A", "v": "k3"}, {"x": "B", "v": "k1"}, {"x": "B", "v": "k2"},
+                     {"x": "C", "v": "k1"}, {"x": "D", "v": "k1"}, {"x": "D", "v": "k9"}]}
+    out = chart_query.assemble(builder(), req, leaves, "Pazartesi", triples)
+    assert [v["key"] for v in out["x"]["values"]] == ["A", "B", chart_query.OTHER]             # sıra: farklı değer sayısı (3, 2, …), satır sayısı değil
+    assert out["series"][0] == {"id": "d", "data": [[3, 2, 2]], "mixed_units": False}           # Diğer (C, D): {k1, k9} = 2; toplam (1 + 2) değil
+    assert out["series"][1]["data"] == [[5, 3, 10]]
+    split = request(split="Brand", series=[{"id": "d", "field": "Name", "fn": "distinct"}])
+    leaves = [leaf("A", 2, p="P1"), leaf("A", 1, p="P2"), leaf("B", 1, p="P1")]
+    triples = {"d": [{"x": "A", "p": "P1", "v": "k1"}, {"x": "A", "p": "P1", "v": "k2"}, {"x": "A", "p": "P2", "v": "k1"}, {"x": "B", "p": "P1", "v": "k1"}]}
+    out = chart_query.assemble(builder(), split, leaves, "Pazartesi", triples)
+    assert [v["key"] for v in out["split"]["values"]] == ["P1", "P2"] and out["series"][0]["data"] == [[2, 1], [1, 0]]
+    dated = request(x={"field": "UpdatedAt", "bucket": "month"}, series=[{"id": "d", "field": "Name", "fn": "distinct"}])
+    out = chart_query.assemble(builder(), dated, [leaf(date(2026, 11, 1), 2), leaf(date(2027, 1, 1), 1)], "Pazartesi",
+                               {"d": [{"x": date(2026, 11, 1), "v": "a"}, {"x": date(2026, 11, 1), "v": "b"}, {"x": date(2027, 1, 1), "v": "a"}]})
+    assert out["series"][0]["data"] == [[2, 0, 1]]                                              # boş dönemde 0
+
+
+def test_selection_is_validated():
+    from app.api.lists.query import ListQueryError
+    from app.api.lists.request import ChartSelection
+    def fields(sel):
+        with pytest.raises(ListQueryError) as e:
+            chart_query.selection_clause(builder(), ChartSelection.model_validate(sel), 0)
+        return [d["field"] for d in e.value.details]
+    assert fields({"x": {"field": "MaterialGroup"}}) == ["chart_selection.items"]                                        # boş seçim
+    assert fields({"x": {"field": "Yok"}, "items": [{"x": "a"}]}) == ["chart_selection.x.field"]
+    assert fields({"x": {"field": "MaterialGroup"}, "items": [{"x": chart_query.OTHER}]}) == ["chart_selection.items.0.x"]   # Diğer seçilemez
+    assert fields({"x": {"field": "UpdatedAt", "bucket": "week"}, "items": [{"x": "dun"}]}) == ["chart_selection.items.0.x"]
+    assert fields({"x": {"field": "MaterialGroup"}, "within": [{"bucket": "month", "keys": ["2026-11-01"]}]}) == ["chart_selection.within"]  # iniş yalnız tarihte
+    with pytest.raises(Exception):
+        ChartSelection.model_validate({"x": {"field": "MaterialGroup"}, "items": [{"x": str(i)} for i in range(201)]})   # en çok 200 öğe
 
 
 # ------------------------------------------------------------------ veritabanıyla
@@ -307,17 +346,22 @@ def test_chart_is_saved_with_the_view_and_shared(api, views):
     v = save(api, "pytest grafik A", {**VIEW, "chart": CHART}, shared=True)
     got = v["definition"]["chart"]
     assert (got["v"], got["open"], got["layout"], got["height"], got["order"], got["split"], got["limit"]) == (1, True, "full", 0.6, "value", None, 30)
-    assert got["series"][0] == {"id": "s1", "field": "StockCoverageDays", "fn": "avg", "type": "line", "axis": "secondary", "color": "#2E7D7A",
+    assert got["series"][0] == {"id": "s1", "field": "StockCoverageDays", "fn": "avg", "type": "line", "line": "solid", "axis": "secondary", "color": "#2E7D7A",
                                 "labels": {"show": True, "decimals": 1, "zero": False}, "threshold": {"value": 30.0, "color": "#F7DCD5", "line": False}}
-    assert got["series"][1] == {"id": "s2", "field": None, "fn": "count", "type": "bar", "axis": "primary", "color": None,
+    assert got["axes"]["x"] == {"title": "", "zoom": False}                                                               # yeni alanların varsayılanları (K-179)
+    assert got["series"][1] == {"id": "s2", "field": None, "fn": "count", "type": "bar", "line": "solid", "axis": "primary", "color": None,
                                 "labels": {"show": False, "decimals": 0, "zero": False}, "threshold": None}             # varsayılanlar dolu döner
     assert got["bars"] == {"mode": "stack", "horizontal": True, "totals": False, "width": "medium"} and got["legend"] == {"show": True, "position": "top"}
     assert (got["title_align"], got["title_size"], got["ref_lines"][0]["show_name"], got["ref_lines"][0]["show_value"]) == ("left", "medium", True, True)
     assert "panel" not in got                                                                                            # panelin açık ya da kapalı olması saklanmaz
     rich = {**CHART, "limit": 10, "title_align": "center", "title_size": "large", "bars": {"mode": "stack", "totals": True, "width": "thick"},
-            "series": [{"id": "s1", "fn": "count", "type": "smooth", "labels": {"show": True, "zero": True}, "threshold": {"value": 5, "color": "#F7EBC4", "line": True}}],
+            "series": [{"id": "s1", "fn": "count", "type": "smooth", "labels": {"show": True, "zero": True}, "threshold": {"value": 5, "color": "#F7EBC4", "line": True}},
+                       {"id": "s2", "field": "Name", "fn": "distinct", "type": "line", "line": "dashed"}],
+            "axes": {"x": {"zoom": True}},
             "ref_lines": [{"id": "r1", "kind": "value", "value": 3, "show_name": False, "show_value": True}]}
     r = save(api, "pytest grafik A2", {**VIEW, "chart": rich})["definition"]["chart"]
+    assert (r["series"][1]["fn"], r["series"][1]["field"], r["series"][1]["line"], r["axes"]["x"]["zoom"]) == ("distinct", "Name", "dashed", True)  # K-179
+    assert "selection" not in r and "within" not in r and "drill" not in r                                              # seçim ve iniş saklanmaz
     assert r["bars"]["width"] == "thick"                                                                                 # çubuk genişliği görünümle saklanır
     assert (r["limit"], r["title_align"], r["title_size"], r["bars"]["totals"], r["series"][0]["type"], r["series"][0]["labels"]["zero"],
             r["series"][0]["threshold"]["line"], r["ref_lines"][0]["show_name"]) == (10, "center", "large", True, "smooth", True, True, False)
@@ -347,6 +391,7 @@ def test_invalid_chart_is_rejected(api, views, change, where):
     {"series": [{"id": "s1", "fn": "count", "color": "kirmizi"}]}, {"series": [{"id": "s1", "fn": "count", "type": "pie"}]},
     {"height": 0.99}, {"bars": {"mode": "ust uste"}}, {"series": []}, {"x": {"field": "UpdatedAt", "bucket": "hour"}},   # saat kırılımı yok
     {"limit": 31}, {"limit": 0}, {"title_size": "dev"}, {"title_align": "ust"}, {"bars": {"width": "cok kalin"}},
+    {"series": [{"id": "s1", "fn": "count", "line": "noktali"}]}, {"series": [{"id": "s1", "fn": "median"}]},
 ])
 def test_chart_shape_is_validated(api, views, change):
     assert save(api, "pytest grafik Y", {**VIEW, "chart": {**CHART, **change}}, status=422)["error"]["code"] == "validation"
@@ -366,3 +411,147 @@ def test_stored_chart_is_adapted_when_fields_disappear(api, views, db_engine):
     assert len(got["warnings"]) == 2 and all("artık listede yok" in w for w in got["warnings"])
     gone = stored(lambda raw: raw.replace('"field": "MaterialLevel"', '"field": "EskiEksen"'))
     assert "chart" not in gone["definition"] and any("grafik görünümden çıkarıldı" in w for w in gone["warnings"])
+
+
+
+# ------------------------------------------------------------------ Benzersiz say, grafik seçimi, iniş (K-179)
+
+@pytest.mark.db
+def test_distinct_matches_the_rows_also_on_text_fields_and_mixed_units(api):
+    rows = all_rows(api, fields=["MaterialLevel", "MaterialGroup", "BaseUom", "Name"])
+    out = chart(api, x={"field": "MaterialLevel"}, order="name",
+                series=[{"id": "g", "field": "MaterialGroup", "fn": "distinct"}, {"id": "u", "field": "BaseUom", "fn": "distinct"}, {"id": "n", "fn": "count"}])
+    keys = [v["key"] for v in out["x"]["values"]]
+    want_g, want_u = defaultdict(set), defaultdict(set)
+    for r in rows:
+        if r["MaterialGroup"]:
+            want_g[r["MaterialLevel"]].add(r["MaterialGroup"].upper())
+        if r["BaseUom"]:
+            want_u[r["MaterialLevel"]].add(r["BaseUom"])
+    data = {s["id"]: dict(zip(keys, s["data"][0])) for s in out["series"]}
+    assert all(not s["mixed_units"] for s in out["series"])                                                             # birimden bağımsız
+    assert {k: data["g"][k] for k in keys} == {k: len(want_g[k]) for k in keys}
+    assert {k: data["u"][k] for k in keys} == {k: len(want_u[k]) for k in keys}
+    top = chart(api, x={"field": "MaterialGroup"}, limit=2, series=[{"id": "d", "field": "MaterialLevel", "fn": "distinct"}])
+    kept = [v["key"] for v in top["x"]["values"] if v["key"] != chart_query.OTHER]
+    rest = {r["MaterialLevel"] for r in rows if r["MaterialGroup"] not in kept and r["MaterialLevel"]}
+    assert top["x"]["other"] and top["series"][0]["data"][0][-1] == len(rest)                                           # Diğer: kalan satırlardaki farklı değer
+    stock = chart(api, STOCK, x={"field": "Status"}, series=[{"id": "d", "field": "MaterialCode", "fn": "distinct"}, {"id": "q", "field": "Quantity", "fn": "sum"}])
+    assert stock["series"][0]["mixed_units"] is False and stock["series"][0]["data"] is not None and stock["series"][1]["mixed_units"] is True
+
+
+def _filtered(api, base, sel, filters=()):
+    r = api.post(f"{base}/query", json={"filters": list(filters), "chart_selection": sel})
+    assert r.status_code == 200, r.text
+    return r.json()["filtered"]
+
+
+@pytest.mark.db
+@pytest.mark.parametrize("bucket", ["day", "week", "month", "quarter", "year"])
+@pytest.mark.parametrize("name", ["Pazartesi", "Perşembe"])
+def test_every_bar_equals_the_rows_selected_by_it(api, monkeypatch, bucket, name):
+    """Grafik seçimi (K-179): bir çubuğun değeri, o çubuk seçilince tabloda kalan satır sayısıdır; her dönem tipinde ve hafta başlangıcında."""
+    monkeypatch.setattr(list_service, "week_start", lambda session, user_id, scenario_id: name)
+    axis = {"field": "RequestedDate", "bucket": bucket}
+    out = chart(api, ORDERS, x=axis, series=[{"id": "n", "fn": "count"}])
+    bars = [(v["key"], n) for v, n in zip(out["x"]["values"], out["series"][0]["data"][0]) if n]
+    assert bars and sum(n for _, n in bars) == out["rows"]
+    for key, n in bars[:6]:
+        assert _filtered(api, ORDERS, {"x": axis, "items": [{"x": key}]}) == n, key
+    two = bars[:1] + bars[-1:]
+    assert _filtered(api, ORDERS, {"x": axis, "items": [{"x": k} for k, _ in two]}) == sum(n for _, n in two)             # birden fazla: "ya da"
+
+
+@pytest.mark.db
+def test_selection_with_split_category_empty_and_other_filters(api):
+    axis = {"field": "RequestedDate", "bucket": "month"}
+    out = chart(api, ORDERS, x=axis, split="CustomerCode", series=[{"id": "n", "fn": "count"}])
+    xs, ps = [v["key"] for v in out["x"]["values"]], [v["key"] for v in out["split"]["values"]]
+    cells = [(x, p, out["series"][0]["data"][i][j]) for i, p in enumerate(ps) for j, x in enumerate(xs) if out["series"][0]["data"][i][j]]
+    for x, p, n in cells[:5]:
+        assert _filtered(api, ORDERS, {"x": axis, "split": "CustomerCode", "items": [{"x": x, "p": p}]}) == n            # dönem ve parça
+    (x1, p1, n1), (x2, p2, n2) = cells[0], cells[-1]
+    assert _filtered(api, ORDERS, {"x": axis, "split": "CustomerCode", "items": [{"x": x1, "p": p1}, {"x": x2, "p": p2}]}) == n1 + n2
+    # kategori ekseni ve boş değer: "(Boş)" seçilir
+    cat = chart(api, MAT, x={"field": "MaterialGroup"}, series=[{"id": "n", "fn": "count"}])
+    for v, n in list(zip(cat["x"]["values"], cat["series"][0]["data"][0]))[:4]:
+        if v["key"] != chart_query.OTHER:
+            assert _filtered(api, MAT, {"x": {"field": "MaterialGroup"}, "items": [{"x": v["key"]}]}) == n
+    brand = chart(api, MAT, x={"field": "Brand"}, series=[{"id": "n", "fn": "count"}])
+    empty = dict(zip([v["key"] for v in brand["x"]["values"]], brand["series"][0]["data"][0])).get(None)
+    if empty:
+        assert _filtered(api, MAT, {"x": {"field": "Brand"}, "items": [{"x": None}]}) == empty
+    # tablonun filtresiyle birlikte: ikisi de uygulanır
+    flt = [{"field": "IsSellable", "op": "in", "values": [True]}]
+    part = chart(api, MAT, filters=flt, x={"field": "MaterialLevel"}, series=[{"id": "n", "fn": "count"}])
+    key, n = part["x"]["values"][0]["key"], part["series"][0]["data"][0][0]
+    assert _filtered(api, MAT, {"x": {"field": "MaterialLevel"}, "items": [{"x": key}]}, flt) == n
+
+
+@pytest.mark.db
+def test_selection_reaches_groups_ids_and_export_but_not_filter_values(api):
+    import io
+    from openpyxl import load_workbook
+    sel = {"x": {"field": "MaterialLevel"}, "items": [{"x": "Hammadde"}]}
+    n = _filtered(api, MAT, sel)
+    assert 0 < n < query(api)["total"]
+    groups = api.post(f"{MAT}/groups", json={"group_by": ["MaterialGroup"], "fields": ["Code"], "aggregates": {}, "filters": [], "sort": [], "chart_selection": sel}).json()
+    assert groups["filtered"] == n and sum(g["count"] for g in groups["groups"]) == n
+    ids = api.post(f"{MAT}/ids", json={"filters": [], "chart_selection": sel}).json()                                   # Ctrl + A
+    assert len(ids["ids"]) == n
+    vals = api.post(f"{MAT}/values", json={"field": "MaterialLevel", "search": "", "filters": [], "chart_selection": sel}).json()
+    assert len({v["value"] for v in vals}) > 1                                                                           # filtre menüsünün değer listesi daralmaz
+    body = {"fields": ["Code", "MaterialLevel"], "sort": [], "filters": [], "group_by": [], "chart_selection": sel}
+    wb = load_workbook(io.BytesIO(api.post(f"{MAT}/export", json=body).content))
+    data = list(wb["Veri"].iter_rows(values_only=True))
+    assert len(data) - 1 == n and {r[1] for r in data[1:]} == {"Hammadde"}                                               # "ekrandaki filtrelerle"
+    info = {r[0]: r[1] for r in wb["Bilgi"].iter_rows(values_only=True) if r[0]}
+    assert "Grafik seçimi" in info and "1 öğe" in info["Grafik seçimi"]
+    everything = load_workbook(io.BytesIO(api.post(f"{MAT}/export", json={**body, "scope": {"rows": "all", "columns": "visible"}}).content))
+    assert everything["Veri"].max_row - 1 == query(api)["total"]                                                         # "tümü" kapsamında seçim uygulanmaz
+    bad = api.post(f"{MAT}/query", json={"chart_selection": {"x": {"field": "MaterialLevel"}, "items": [{"x": chart_query.OTHER}]}})
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "validation"
+
+
+@pytest.mark.db
+def test_drill_down_within_a_period_adds_up(api):
+    """İniş (K-179): üst dönemin değeri, o dönemin içindeki alt dönemlerin toplamıdır; tabloya da aynı dönem yansır."""
+    months = chart(api, ORDERS, x={"field": "RequestedDate", "bucket": "month"}, series=[{"id": "n", "fn": "count"}])
+    key, n = next((v["key"], c) for v, c in zip(months["x"]["values"], months["series"][0]["data"][0]) if c and v["key"])
+    within = [{"bucket": "month", "keys": [key]}]
+    for bucket in ("week", "day"):                                                                                       # ara düzey atlanabilir
+        inner = chart(api, ORDERS, x={"field": "RequestedDate", "bucket": bucket}, within=within, series=[{"id": "n", "fn": "count"}])
+        assert inner["rows"] == n and sum(inner["series"][0]["data"][0]) == n
+        assert all(k is None or k[:7] == key[:7] or bucket == "week" for k in [v["key"] for v in inner["x"]["values"]])
+    assert _filtered(api, ORDERS, {"x": {"field": "RequestedDate", "bucket": "week"}, "within": within}) == n            # yalnız iniş: tablo o aya süzülür
+    week = chart(api, ORDERS, x={"field": "RequestedDate", "bucket": "week"}, within=within, series=[{"id": "n", "fn": "count"}])
+    wk, wn = next((v["key"], c) for v, c in zip(week["x"]["values"], week["series"][0]["data"][0]) if c)
+    assert _filtered(api, ORDERS, {"x": {"field": "RequestedDate", "bucket": "week"}, "within": within, "items": [{"x": wk}]}) == wn   # inilen düzeyde seçim
+    d = chart(api, ORDERS, x={"field": "RequestedDate", "bucket": "day"}, within=within, series=[{"id": "d", "field": "CustomerCode", "fn": "distinct"}])
+    assert max(d["series"][0]["data"][0]) >= 1                                                                           # Benzersiz say inişte de çalışır
+
+
+@pytest.mark.db
+def test_drill_down_into_several_periods_skips_the_gap(api):
+    """Çoklu dönemde iniş (K-179): bitişik olmayan iki aya inilince yalnız onların alt dönemleri gelir; aradaki ay çizilmez; tablo da aynı."""
+    from datetime import date
+    months = chart(api, ORDERS, x={"field": "RequestedDate", "bucket": "month"}, series=[{"id": "n", "fn": "count"}])
+    full = [(v["key"], c) for v, c in zip(months["x"]["values"], months["series"][0]["data"][0]) if v["key"]]
+    (a, na), (mid, _), (c, nc) = next(t for t in zip(full, full[1:], full[2:]) if t[0][1] and t[2][1])
+    within = [{"bucket": "month", "keys": [a, c]}]
+    for bucket in ("week", "day"):
+        inner = chart(api, ORDERS, x={"field": "RequestedDate", "bucket": bucket}, within=within, series=[{"id": "n", "fn": "count"}])
+        assert inner["rows"] == na + nc and sum(inner["series"][0]["data"][0]) == na + nc
+        keys = [date.fromisoformat(v["key"][:10]) for v in inner["x"]["values"]]
+        assert keys == sorted(keys)
+        for k in keys:                                                                                                   # her alt dönem seçilen aylardan biriyle kesişir
+            end = chart_query.next_period(k, bucket)
+            assert any(k < chart_query.next_period(date.fromisoformat(m), "month") and end > date.fromisoformat(m) for m in (a, c)), (bucket, k)
+        if bucket == "day":
+            assert not any(k.isoformat()[:7] == mid[:7] for k in keys)                                                   # aradaki ay yok
+            n_a = len([k for k in keys if k.isoformat()[:7] == a[:7]])
+            assert n_a >= 1
+    assert _filtered(api, ORDERS, {"x": {"field": "RequestedDate", "bucket": "day"}, "within": within}) == na + nc
+    assert _filtered(api, ORDERS, {"x": {"field": "RequestedDate", "bucket": "month"}, "items": [{"x": a}, {"x": c}]}) == na + nc   # seçimle aynı kayıtlar
+    assert api.post(f"{ORDERS}/chart", json={"x": {"field": "RequestedDate", "bucket": "day"}, "series": [{"id": "n", "fn": "count"}],
+                                             "within": [{"bucket": "month", "keys": []}]}).status_code == 422

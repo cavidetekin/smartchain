@@ -103,6 +103,8 @@ class Builder:
         self.version = version
         self.today = today
         self.scope = defn.row_scope(role, user_id) if defn.row_scope else None
+        # Grafik seçimi (K-179): servis kurar; satır, grup, kimlik ve dışa aktarım sorgularına eklenir. Filtre menüsünün değer listesine eklenmez.
+        self.selection: sa.ColumnElement | None = None
 
     # --- doğrulama -----------------------------------------------------------------------------------------
     def _col(self, name: str, where: str, problems: list[dict]) -> sa.Column | None:
@@ -159,6 +161,8 @@ class Builder:
                 out.append(clause)
         if problems:
             raise ListQueryError(problems)
+        if self.selection is not None and skip_field is None:
+            out.append(self.selection)
         return out
 
     def _filter(self, col: sa.Column, f: FilterItem, where: str, problems: list[dict]):

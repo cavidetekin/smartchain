@@ -1,6 +1,6 @@
 // Liste sorgu sözleşmesi (K-87, docs/08 "Liste sorgusu"): sunucuyla birebir.
 import { ensureOk, fileNameFrom, getJson, postJson, sendJson } from "../api/client";
-import type { ChartConfig, ChartData, ChartRequest } from "../ui/chart/chartModel";
+import type { ChartConfig, ChartData, ChartRequest, ChartSelection } from "../ui/chart/chartModel";
 
 export type ColumnType = "text" | "integer" | "number" | "bool" | "date" | "datetime";
 export type FilterType = "text" | "list" | "number" | "date";
@@ -68,6 +68,8 @@ export interface ExportRequest {
   /** Aktif ve görünen kolonların kuralları; Excel hücresine uygulanır (K-95). */
   rules: FormatRule[];
   scope: ExportScope;
+  /** Grafik seçimi (K-179): "ekrandaki filtrelerle" kapsamında uygulanır. */
+  chart_selection?: ChartSelection;
 }
 
 /** Anlık: dosya gövdede (200). Arka plan: iş (202), bitince bildirim. */
@@ -150,6 +152,8 @@ export interface QueryRequest {
   offset: number;
   limit: number;
   group_key?: GroupKey[];
+  /** Grafik seçimi (K-179). */
+  chart_selection?: ChartSelection;
   /** Koşullu biçim (K-95): satırlar _rules ile döner (tutan kuralların bu listedeki sırası). */
   rules?: RuleSpec[];
 }
@@ -236,11 +240,12 @@ export function listApi(list: string) {
     columns: (signal?: AbortSignal) => getJson<ColumnsResponse>(`${base}/columns`, signal),
     query: (body: QueryRequest, signal?: AbortSignal) => postJson<QueryResponse>(`${base}/query`, body, signal),
     /** Filtredeki satırların kimlikleri (çoklu seçim, K-171): en çok 10.000; truncated: fazlası var. */
-    ids: (filters: ListFilter[], signal?: AbortSignal) => postJson<{ ids: string[]; truncated: boolean }>(`${base}/ids`, { filters }, signal),
+    ids: (filters: ListFilter[], signal?: AbortSignal, selection?: ChartSelection) =>
+      postJson<{ ids: string[]; truncated: boolean }>(`${base}/ids`, { filters, ...(selection ? { chart_selection: selection } : {}) }, signal),
     values: (body: { field: string; search: string; filters: ListFilter[] }, signal?: AbortSignal) =>
       postJson<ValueCount[]>(`${base}/values`, body, signal),
     groups: (body: { group_by: string[]; fields: string[]; aggregates: Record<string, AggSpec>; filters: ListFilter[];
-                     sort: SortItem[] }, signal?: AbortSignal) =>
+                     sort: SortItem[]; chart_selection?: ChartSelection }, signal?: AbortSignal) =>
       postJson<GroupsResponse>(`${base}/groups`, body, signal),
     /** Tablonun grafiği için toplama (K-178): listeyle aynı filtre ve yetki. */
     chart: (body: ChartRequest, signal?: AbortSignal) => postJson<ChartData>(`${base}/chart`, body, signal),

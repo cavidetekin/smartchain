@@ -2,6 +2,7 @@
 // Alan, sıralama ya da filtre değişince önbellek sıfırlanır ve eski istekler iptal edilir. Yalnız koşullu biçim
 // kuralları değişince (K-95) önbellek korunur: eski satırlar ekranda kalır, yüklü parçalar yeni kurallarla yeniden
 // istenir ve geldikçe yerine konur (yer tutucu görünmez).
+import type { ChartSelection } from "../ui/chart/chartModel";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
@@ -16,6 +17,8 @@ export interface ListRequest {
   filters: ListFilter[];
   /** Ekrana uygulanan kurallar (aktif, alanı görünen); satırlar _rules (sıra) ile döner, _ruleIds'e çevrilir. */
   rules?: RequestRule[];
+  /** Grafik seçimi ve iniş (K-179): tablo yalnız seçilenlerin kayıtlarını gösterir. */
+  chart_selection?: ChartSelection;
 }
 
 /** Sorgu gövdesi: kurallar yalnız alan ve koşulla. */
@@ -49,7 +52,7 @@ export interface ListState {
 
 /** Veri anahtarı: kurallar hariç (kural değişince satırlar sıfırlanmaz). */
 export const dataKeyOf = (r: ListRequest | null) =>
-  r ? JSON.stringify({ fields: r.fields, sort: r.sort, filters: r.filters }) : "";
+  r ? JSON.stringify({ fields: r.fields, sort: r.sort, filters: r.filters, chart_selection: r.chart_selection ?? null }) : "";
 
 export function useListQuery(list: string, request: ListRequest | null, chunkSize: number): ListState {
   const api = useMemo(() => listApi(list), [list]);

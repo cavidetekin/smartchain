@@ -96,6 +96,7 @@ class QueryRequest(BaseModel):
     limit: int | None = Field(default=None, ge=1, le=MAX_LIMIT)  # boşsa ListChunkSize
     group_key: list[GroupKeyItem] = []
     rules: list[RuleSpec] = Field(default=[], max_length=MAX_RULES)  # satır başına _rules (K-95)
+    chart_selection: "ChartSelection | None" = None  # grafik seçimi (K-179)
 
 
 # Ara toplam türleri (K-90, docs/08): toplam, ortalama (boşlar / sıfırlar hariç), ağırlıklı ortalama, en küçük,
@@ -115,10 +116,12 @@ class GroupsRequest(BaseModel):
     aggregates: dict[str, AggSpec] | None = None  # verilirse tam bu türler (görünen kolonlar için istemci gönderir)
     filters: list[FilterItem] = []
     sort: list[SortItem] = []
+    chart_selection: "ChartSelection | None" = None  # grafik seçimi (K-179)
 
 
 class IdsRequest(BaseModel):
     filters: list[FilterItem] = []
+    chart_selection: "ChartSelection | None" = None  # Ctrl + A grafik seçimindeki kayıtları seçer (K-179)
 
 
 class ValuesRequest(BaseModel):
@@ -130,7 +133,9 @@ class ValuesRequest(BaseModel):
 # --- Grafik (K-178, docs/08 "Grafik") ------------------------------------------------------------------------------
 
 ChartBucket = Literal["day", "week", "month", "quarter", "year"]  # saat kırılımı yok
-ChartFn = Literal["sum", "avg", "min", "max", "count"]
+ChartFn = Literal["sum", "avg", "min", "max", "count", "distinct"]  # count: "Say" (satır sayısı); distinct: "Benzersiz say" (K-179)
+CHART_MAX_DISTINCT = 3      # her "Benzersiz say" serisi ek sorgudur
+CHART_MAX_SELECTION = 200   # grafik seçiminde en çok öğe
 CHART_MAX_SERIES = 8
 CHART_MAX_REF_LINES = 6
 CHART_MAX_CATEGORIES = 30  # kategori ekseninde gösterilecek değer sayısının üst sınırı ve varsayılanı
@@ -148,6 +153,26 @@ class ChartSeriesSpec(BaseModel):
     fn: ChartFn
 
 
+class ChartWithin(BaseModel):
+    """İnilen dönem (K-179): grafik ve tablo yalnız bu dönemin satırlarını görür."""
+    bucket: ChartBucket
+    keys: list[date] = Field(min_length=1, max_length=CHART_MAX_SELECTION)  # dönem(ler)in ilk günü; birden fazla dönem seçiliyken de inilir
+
+
+class ChartSelectionItem(BaseModel):
+    x: Any = None  # dönemin ilk günü (ISO) ya da kategori değeri; null boş değer
+    p: Any = None  # kırılım değeri (kırılım yoksa verilmez)
+
+
+class ChartSelection(BaseModel):
+    """Grafikte seçilen çubukların ve inilen dönemin kayıtları (K-179); tablo sorgularına eklenir. Koşul toplama sorgusuyla aynı ifadelerle kurulur."""
+    x: ChartAxis
+    split: str | None = None
+    items: list[ChartSelectionItem] = Field(default=[], max_length=CHART_MAX_SELECTION)
+    within: list[ChartWithin] = Field(default=[], max_length=4)
+    scenario_id: int | None = None
+
+
 class ChartRequest(BaseModel):
     filters: list[FilterItem] = []
     x: ChartAxis
@@ -155,6 +180,7 @@ class ChartRequest(BaseModel):
     order: Literal["value", "name"] = "value"  # kategori ekseninde; tarih ekseni eskiden yeniye
     series: list[ChartSeriesSpec] = Field(min_length=1, max_length=CHART_MAX_SERIES)
     limit: int = Field(default=CHART_MAX_CATEGORIES, ge=1, le=CHART_MAX_CATEGORIES)  # kategori ekseninde en büyük kaç değer; kalanı "Diğer"
+    within: list[ChartWithin] = Field(default=[], max_length=4)  # iniş (K-179): yalnız bu dönemin satırları
     scenario_id: int | None = None  # hafta başlangıcı bu senaryonun parametresinden (verilmezse kullanıcının seçili senaryosu)
 
 
@@ -173,6 +199,7 @@ class ChartThreshold(BaseModel):
 class ChartSeries(ChartSeriesSpec):
     """Görünümdeki seri: toplama ve görünüş ayarları."""
     type: Literal["bar", "line", "smooth", "step", "area"] = "bar"  # smooth: eğimli (monoton) çizgi
+    line: Literal["solid", "dashed"] = "solid"  # çizgi biçimi (K-179): çizgi ve alan tiplerinde
     axis: Literal["primary", "secondary"] = "primary"
     color: str | None = Field(default=None, pattern=COLOR)  # boşsa paletten sırayla
     labels: ChartLabels = ChartLabels()
@@ -196,6 +223,7 @@ class ChartValueAxis(BaseModel):
 
 class ChartCategoryAxis(BaseModel):
     title: str = Field(default="", max_length=60)
+    zoom: bool = False  # yakınlaştırma kaydırıcısı (K-179): yalnız zaman ekseninde; konumu saklanmaz
 
 
 class ChartAxes(BaseModel):
@@ -302,3 +330,8 @@ class ExportRequest(BaseModel):
     aggregates: dict[str, AggSpec] | None = None
     rules: list[FormatRule] = Field(default=[], max_length=MAX_RULES)  # aktif ve görünen kolonların kuralları
     scope: ExportScope = ExportScope()
+    chart_selection: ChartSelection | None = None      # "ekrandaki filtrelerle" kapsamında grafik seçimi de uygulanır (K-179)
+
+
+for _model in (QueryRequest, GroupsRequest, IdsRequest):  # ChartSelection dosyada sonra tanımlı
+    _model.model_rebuild()

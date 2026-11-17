@@ -549,6 +549,16 @@
 .sc-chart-pane { position: relative; display: flex; min-height: 13.8462rem; border: 1px solid var(--table-border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .sc-chart-main { position: relative; display: flex; flex: 1; flex-direction: column; min-width: 0; padding: var(--space-2) var(--space-3) var(--space-2); }
 .sc-chart-head { position: absolute; top: var(--space-2); right: var(--space-2); z-index: 2; display: flex; gap: 0.1538rem; }
+.sc-chip-chart { display: inline-flex; align-items: center; }
+.sc-chart-trail { position: absolute; top: var(--space-2); left: var(--space-3); z-index: 2; display: flex; align-items: center; gap: var(--space-2); max-width: calc(100% - 9rem); }
+.sc-chart-trail ol { display: flex; align-items: center; gap: 0.1538rem; margin: 0; padding: 0; list-style: none; overflow: hidden; white-space: nowrap; }
+.sc-chart-trail li + li::before { content: "›"; padding: 0 0.3077rem; color: var(--text-muted); }
+.sc-chart-trail li button { padding: 0.1538rem 0.3077rem; border: 0; border-radius: var(--radius); background: transparent; color: var(--indigo-700); font: inherit; cursor: pointer; }
+.sc-chart-trail li button:hover { background: var(--indigo-50); }
+.sc-chart-trail li [aria-current="true"] { padding: 0.1538rem 0.3077rem; color: var(--text); font-weight: 600; }
+.sc-chart-pane.is-narrow .sc-chart-trail { left: 7.6923rem; max-width: calc(100% - 9rem); }
+.sc-chart-menu-anchor { position: fixed; width: 1px; height: 1px; pointer-events: none; }
+.sc-chart-canvas { cursor: default; }
 .sc-chart-body { position: relative; display: flex; flex: 1; min-height: 0; padding-top: 1.8462rem; }
 .sc-chart-body.is-stale { opacity: 0.45; }
 .sc-chart-body > .sc-alert { align-self: flex-start; width: 100%; }

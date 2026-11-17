@@ -2,7 +2,10 @@
 import { describe, expect, it } from "vitest";
 
 import { col, COLUMNS } from "../../table/testBackend";
-import { type ChartConfig, type ChartData, chartRequest, defaultChart, fitChart, newSeries, normalizeChart, OTHER_KEY, withSeriesFn, withXField } from "./chartModel";
+import {
+  type ChartConfig, type ChartData, chartRequest, chartSelection, defaultChart, effectiveBucket, finerBuckets, fitChart, newSeries, normalizeChart, OTHER_KEY,
+  withSeriesFn, withXField,
+} from "./chartModel";
 import { bucketLabel, buildOption, isEmptyData, keyLabel, PALETTE, seriesLabel, THRESHOLD_COLOR } from "./chartOption";
 
 type Opt = Record<string, any>;  // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -27,7 +30,7 @@ describe("ayar modeli", () => {
 
   it("kayıtlı içerik tam biçime gelir; alanı kalkan seri, kırılım ve ona bağlı çizgi atılır; eksen gitmişse grafik de", () => {
     const n = normalizeChart({ x: { field: "MaterialLevel", bucket: null }, series: [{ id: "a", field: null, fn: "count" } as never] });
-    expect(n.series[0]).toEqual({ id: "a", field: null, fn: "count", type: "bar", axis: "primary", color: null, labels: { show: false, decimals: 0, zero: false }, threshold: null });
+    expect(n.series[0]).toEqual({ id: "a", field: null, fn: "count", type: "bar", line: "solid", axis: "primary", color: null, labels: { show: false, decimals: 0, zero: false }, threshold: null });
     expect([n.height, n.bars, n.legend, n.axes.secondary.grid]).toEqual([0.45, { mode: "group", horizontal: false, totals: false, width: "medium" }, { show: true, position: "top" }, false]);
     expect([n.limit, n.title_align, n.title_size]).toEqual([30, "left", "medium"]);                                    // yeni ayarların varsayılanları; panel durumu modelde yok
     expect(Object.keys(n)).not.toContain("panel");
@@ -54,6 +57,98 @@ describe("ayar modeli", () => {
   });
 });
 
+describe("seçim ve iniş (K-179)", () => {
+  const monthly = (): ChartConfig => ({ ...base(), x: { field: "UpdatedAt", bucket: "month" } });
+
+  it("ince dönemler: ara düzey atlanabilir; günden aşağısı yok; kategori ekseninde iniş yok", () => {
+    expect([finerBuckets("year"), finerBuckets("month"), finerBuckets("week"), finerBuckets("day"), finerBuckets(null)])
+      .toEqual([["quarter", "month", "week", "day"], ["week", "day"], ["day"], [], []]);
+  });
+
+  it("iniş geçerli dönemi değiştirir, görünümün dönemini değil; grafik isteği inilen dönemi taşır; senaryo haftada gider", () => {
+    const c = monthly();
+    const drill = [{ bucket: "month" as const, keys: ["2026-11-01"], to: "week" as const }];
+    expect(effectiveBucket(c, { items: [], drill })).toBe("week");
+    expect(c.x.bucket).toBe("month");
+    const req = chartRequest(c, [], 7, drill);
+    expect([req.x, req.within, req.scenario_id]).toEqual([{ field: "UpdatedAt", bucket: "week" }, [{ bucket: "month", keys: ["2026-11-01"] }], 7]);
+    expect(chartRequest(c, [], 7).within).toBeUndefined();
+    const deep = chartRequest(c, [], 7, [...drill, { bucket: "week" as const, keys: ["2026-11-16"], to: "day" as const }]);
+    expect([deep.x.bucket, deep.within, deep.scenario_id]).toEqual(["day", [{ bucket: "month", keys: ["2026-11-01"] }, { bucket: "week", keys: ["2026-11-16"] }], 7]);
+  });
+
+  it("tablo sorgusuna giden seçim: öğeler ve inilen dönem; kırılımda parça; seçim yoksa ya da grafik kapalıysa yok", () => {
+    const c = monthly();
+    expect(chartSelection(c, { items: [], drill: [] }, 7)).toBeUndefined();
+    expect(chartSelection({ ...c, open: false }, { items: [{ x: "2026-11-01" }], drill: [] }, 7)).toBeUndefined();
+    expect(chartSelection(null, { items: [{ x: "2026-11-01" }], drill: [] }, 7)).toBeUndefined();
+    expect(chartSelection(c, { items: [{ x: "2026-11-01" }, { x: null }], drill: [] }, 7))
+      .toEqual({ x: { field: "UpdatedAt", bucket: "month" }, split: null, items: [{ x: "2026-11-01" }, { x: null }], within: [] });
+    expect(chartSelection({ ...c, split: "MaterialGroup" }, { items: [{ x: "2026-11-01", p: "Çubuk" }], drill: [] }, 7)?.items).toEqual([{ x: "2026-11-01", p: "Çubuk" }]);
+    const drilled = chartSelection(c, { items: [], drill: [{ bucket: "month", keys: ["2026-11-01"], to: "week" }] }, 7)!;
+    expect(drilled).toEqual({ x: { field: "UpdatedAt", bucket: "week" }, split: null, items: [], within: [{ bucket: "month", keys: ["2026-11-01"] }], scenario_id: 7 });
+  });
+
+  it("seçilenler canlı, ötekiler soluk; seçim yokken hiçbiri soluk değil; tıklanan parça öğesine çevrilir, Diğer seçilemez", () => {
+    const d = data({ x: { kind: "category", bucket: null, values: [{ key: "A", label: "A" }, { key: null, label: null }, { key: OTHER_KEY, label: null }], other: true } });
+    const plain = buildOption(base(), d, COLUMNS);
+    expect((plain.option as Opt).series[0].data.map((p: Opt) => p.itemStyle.opacity)).toEqual([undefined, undefined, undefined]);
+    expect([plain.hit(0, 0), plain.hit(0, 1), plain.hit(0, 2), plain.hit(5, 0)]).toEqual([{ x: "A" }, { x: null }, "other", null]);   // (Boş) seçilir, Diğer seçilmez
+    const picked = buildOption(base(), d, COLUMNS, { selected: [{ x: null }] });
+    expect((picked.option as Opt).series[0].data.map((p: Opt) => p.itemStyle.opacity)).toEqual([0.35, undefined, 0.35]);
+    const line = buildOption(base({ series: [newSeries("s1", "StockCoverageDays", "sum", "line")] }), d, COLUMNS, { selected: [{ x: "A" }] });
+    expect((line.option as Opt).series[0].data.map((p: Opt) => p.itemStyle?.opacity)).toEqual([undefined, 0.35, 0.35]);   // çizgide nokta da seçilir
+    const split = data({ split: { field: "MaterialGroup", values: [{ key: "Çubuk", label: "Çubuk" }, { key: OTHER_KEY, label: null }], other: true },
+                         series: [{ id: "s1", data: [[1, 2, 3], [4, 5, 6]], mixed_units: false }] });
+    const parts = buildOption(base({ split: "MaterialGroup" }), split, COLUMNS, { selected: [{ x: "B", p: "Çubuk" }] });
+    expect([parts.hit(0, 1), parts.hit(1, 1)]).toEqual([{ x: "B", p: "Çubuk" }, "other"]);
+    expect((parts.option as Opt).series[0].data.map((p: Opt) => p.itemStyle.opacity)).toEqual([0.35, undefined, 0.35]);
+  });
+});
+
+describe("Say, Benzersiz say, çizgi biçimi, yakınlaştırma (K-179)", () => {
+  it("Say eski Adet'tir (kayıttaki değer count); Benzersiz say her alanda, ondalıksız; hesaplama değişince alan uyar", () => {
+    const byField = new Map(COLUMNS.map((c) => [c.field, c]));
+    expect([seriesLabel({ field: null, fn: "count" }, byField), seriesLabel({ field: "Name", fn: "distinct" }, byField)]).toEqual(["Say", "Malzeme adı · Benzersiz say"]);
+    expect(normalizeChart({ x: { field: "MaterialLevel", bucket: null }, series: [{ id: "a", field: null, fn: "count" } as never] }).series[0].fn).toBe("count");  // eski kayıt
+    expect(withSeriesFn(newSeries("s1", null, "count"), "distinct", COLUMNS)).toMatchObject({ fn: "distinct", field: "Code" });
+    expect(withSeriesFn(newSeries("s1", "Name", "distinct"), "sum", COLUMNS)).toMatchObject({ fn: "sum", field: "SafetyStock" });   // metin alanı toplanamaz
+    const d = data({ series: [{ id: "s1", data: [[3, 2, 2]], mixed_units: false }] });
+    const o = build(base({ series: [{ ...newSeries("s1", "Name", "distinct"), labels: { show: true, decimals: 0, zero: false } }] }), d);
+    expect([o.series[0].name, o.yAxis[0].minInterval, o.series[0].label.formatter({ dataIndex: 0 })]).toEqual(["Malzeme adı · Benzersiz say", 1, "3"]);
+  });
+
+  it("Toplamı göster Benzersiz say serilerini toplamaz", () => {
+    const c = base({ bars: { mode: "stack", horizontal: false, totals: true, width: "medium" },
+                     series: [newSeries("s1", "StockCoverageDays", "sum"), newSeries("s2", "Name", "distinct")] });
+    const o = build(c, twoData);
+    expect([0, 1, 2].map((i) => o.series[2].label.formatter({ dataIndex: i }))).toEqual(["10", "20", "30"]);        // yalnız birinci seri
+    const only = build(base({ bars: { mode: "stack", horizontal: false, totals: true, width: "medium" }, series: [newSeries("s1", "Name", "distinct")] }));
+    expect(only.series).toHaveLength(1);                                                                            // toplanacak seri yok: toplam etiketi de yok
+  });
+
+  it("çizgi biçimi: düz ya da kesikli; çubukta etkisiz", () => {
+    const o = build(base({ series: [{ ...newSeries("s1", "StockCoverageDays", "sum", "line"), line: "dashed" }, { ...newSeries("s2", "StockCoverageDays", "avg", "area") },
+                                    { ...newSeries("s3", null, "count"), line: "dashed" }] }),
+                    data({ series: ["s1", "s2", "s3"].map((id) => ({ id, data: [[1, 2, 3]], mixed_units: false })) }));
+    expect([o.series[0].lineStyle.type, o.series[1].lineStyle.type, o.series[2].lineStyle]).toEqual(["dashed", "solid", undefined]);
+  });
+
+  it("yakınlaştırma kaydırıcısı: yalnız zaman ekseninde; yatay çubukta dikey; kapalıyken yok", () => {
+    const dated = data({ x: { kind: "date", bucket: "day", values: ["2026-11-16", "2026-11-17", "2026-11-18"].map((key) => ({ key, label: null })), other: false } });
+    const zoomed = (patch: Partial<ChartConfig> = {}) => ({ ...base(patch), x: { field: "UpdatedAt", bucket: "day" as const }, axes: { ...base().axes, x: { title: "", zoom: true } } });
+    const o = build(zoomed(), dated);
+    expect(o.dataZoom).toHaveLength(1);
+    expect([o.dataZoom[0].type, o.dataZoom[0].xAxisIndex, o.dataZoom[0].showDetail]).toEqual(["slider", 0, false]);
+    expect(o.dataZoom[0].filterMode).toBe("empty");                                    // kaydırırken dikey eksen sınırları değişmez
+    expect(o.dataZoom[0].dataBackground.areaStyle.opacity).toBe(1);                    // veri silueti belirgin
+    expect(o.dataZoom[0].height).toBeGreaterThanOrEqual(24);
+    expect(build(zoomed({ bars: { mode: "group", horizontal: true, totals: false, width: "medium" } }), dated).dataZoom[0].yAxisIndex).toBe(0);
+    expect(build({ ...base(), axes: { ...base().axes, x: { title: "", zoom: true } } }).dataZoom).toBeUndefined();   // kategori ekseni
+    expect(build({ ...zoomed(), axes: base().axes }, dated).dataZoom).toBeUndefined();
+  });
+});
+
 describe("etiketler", () => {
   it("dönem etiketleri: gün, hafta, ay, çeyrek, yıl; saat yok", () => {
     expect([bucketLabel("2026-11-16", "day"), bucketLabel("2026-11-16", "week"), bucketLabel("2026-11-01", "month"), bucketLabel("2026-10-01", "quarter"), bucketLabel("2026-01-01", "year")])
@@ -65,7 +160,7 @@ describe("etiketler", () => {
     expect([keyLabel({ key: OTHER_KEY, label: null }), keyLabel({ key: null, label: null }), keyLabel({ key: true, label: "Evet" }), keyLabel({ key: 5, label: "5" })])
       .toEqual(["Diğer", "(Boş)", "Evet", "5"]);
     const byField = new Map(COLUMNS.map((c) => [c.field, c]));
-    expect([seriesLabel({ field: "SafetyStock", fn: "sum" }, byField), seriesLabel({ field: null, fn: "count" }, byField)]).toEqual(["Güvenlik stoğu · Toplam", "Adet"]);
+    expect([seriesLabel({ field: "SafetyStock", fn: "sum" }, byField), seriesLabel({ field: null, fn: "count" }, byField)]).toEqual(["Güvenlik stoğu · Toplam", "Say"]);                     // eski adı "Adet" (K-179)
   });
 });
 
@@ -228,7 +323,7 @@ describe("çizim seçenekleri", () => {
     expect(build(base({ legend: { show: true, position: "right" } })).legend).toMatchObject({ orient: "vertical" });
     expect(build(base({ legend: { show: true, position: "right" } }), data(), { narrow: true }).legend).toMatchObject({ bottom: 0 });
     expect(build(base({ legend: { show: false, position: "top" } })).legend.show).toBe(false);
-    const c = base({ title: "Açık miktar", axes: { x: { title: "Hafta" }, primary: { title: "Miktar", unit: "adet", min: 0, max: 100, grid: false }, secondary: { title: "", unit: "", min: null, max: null, grid: false } } });
+    const c = base({ title: "Açık miktar", axes: { x: { title: "Hafta", zoom: false }, primary: { title: "Miktar", unit: "adet", min: 0, max: 100, grid: false }, secondary: { title: "", unit: "", min: null, max: null, grid: false } } });
     const o = build(c);
     expect([o.title.text, o.title.show, o.xAxis.name, o.yAxis[0].name, o.yAxis[0].min, o.yAxis[0].max, o.yAxis[0].splitLine.show]).toEqual(["Açık miktar", true, "Hafta", "Miktar (adet)", 0, 100, false]);
     expect([o.title.left, o.title.textStyle.fontSize]).toEqual(["left", 14]);                                       // varsayılan: sol, orta
