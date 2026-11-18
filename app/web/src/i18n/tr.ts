@@ -779,6 +779,7 @@ export const tr = {
     weight: "Ağırlık alanı",
     decimals: "Ondalık",
     fn: { sum: "Toplam", avg: "Ortalama", min: "En düşük", max: "En yüksek", count: "Say", distinct: "Benzersiz say", wavg: "Ağırlıklı ortalama" },
+    fnDate: { min: "En erken", max: "En geç" },  // tarih alanında
     total: "Toplam",
     grandTotal: "Genel toplam",
     totalOf: (name: string) => `${name} toplamı`,

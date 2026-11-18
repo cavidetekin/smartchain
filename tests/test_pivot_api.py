@@ -172,6 +172,23 @@ def test_average_and_weighted_average_differ_on_the_same_data(api, ratio_rows):
     assert info["avg"]["percent"] and info["wavg"]["percent"] and info["wavg"]["weight"] == "SafetyStock" and info["w"]["from_unit"]
 
 
+def test_earliest_and_latest_on_date_fields(api):
+    """Tarih alanında En erken · En geç (K-183 demo kararı): hücrede, ara toplamda ve genel toplamda kayıtlardan; sıralama da tarihle."""
+    values = [{"id": "ilk", "field": "RequestedDate", "fn": "min"}, {"id": "son", "field": "RequestedDate", "fn": "max"}, {"id": "n", "fn": "count"}]
+    out, rows = whole(api, ORDERS, rows=[{"field": "CustomerCode"}, {"field": "MaterialCode"}], values=values, totals=ALL, sort={"by": "ilk", "dir": "asc"})
+    recs = records(api, ORDERS, ["CustomerCode", "MaterialCode", "RequestedDate"])
+    for row in rows:
+        days = [r["RequestedDate"] for r in recs if [r["CustomerCode"], r["MaterialCode"]][: row["level"]] == row["key"]]
+        assert [row["cells"][0][0], row["cells"][1][0], row["cells"][2][0]] == [min(days), max(days), len(days)], row["key"]
+    assert [v["type"] for v in out["values"]] == ["date", "date", "number"]
+    firsts = [r["cells"][0][0] for r in rows if r["total"] and r["level"] == 1]
+    assert firsts == sorted(firsts)                                                        # müşteriler ilk sipariş tarihine göre
+    bad = api.post(ORDERS + "/pivot", json={"rows": [{"field": "CustomerCode"}], "values": [{"id": "x", "field": "RequestedDate", "fn": "sum"}]})
+    assert bad.status_code == 422 and "Tarih alanında yalnız En erken, En geç, Say ve Benzersiz say" in bad.text
+    text = api.post(ORDERS + "/pivot", json={"rows": [{"field": "CustomerCode"}], "values": [{"id": "x", "field": "OrderNo", "fn": "min"}]})
+    assert text.status_code == 422                                                         # metin alanında yalnız Say ve Benzersiz say
+
+
 def test_mixed_units_only_on_own_quantity_fields(api):
     """Listenin kendi miktar alanında birim tek değilse hücre işaretli boş; "Say" etkilenmez; ilişkili miktar alanında denetlenmez (K-183)."""
     out = pivot(api, "/api/master-bom", rows=[{"field": "LocationCode"}], values=[{"id": "q", "field": "Quantity", "fn": "sum"}, {"id": "n", "fn": "count"}])

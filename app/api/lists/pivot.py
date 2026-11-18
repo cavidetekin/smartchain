@@ -66,8 +66,11 @@ def problems(b: Builder, rows: list[PivotAxis], columns: list[PivotAxis], values
         if col is None:
             bad(f"values.{i}.field", f"Bilinmeyen alan: {v.field}" if v.field else "Alan seçilmeli")
             continue
+        if v.fn in ("min", "max") and col["type"] in DATE_KINDS:
+            continue  # tarih alanında en erken ve en geç (K-183 demo kararı); toplam ve ortalama yok
         if v.fn != "distinct" and col["type"] not in NUMERIC_KINDS:
-            bad(f"values.{i}.fn", f"Bu hesaplama yalnız sayı alanında: {col['label']}")
+            bad(f"values.{i}.fn", f"Tarih alanında yalnız En erken, En geç, Say ve Benzersiz say: {col['label']}" if col["type"] in DATE_KINDS
+                else f"Bu hesaplama yalnız sayı alanında: {col['label']}")
         if v.fn == "wavg":
             weight = b.columns.get(v.weight or "")
             if weight is None or weight["type"] not in NUMERIC_KINDS or v.weight == v.field:
@@ -268,8 +271,9 @@ class Pivot:
                 base = col.get("decimals")
                 decimals = (0 if col.get("type") == "integer" else DEFAULT_DECIMALS) if base is None else base
                 percent = bool(col.get("percent"))
-            out.append({"id": v.id, "fn": v.fn, "field": v.field, "weight": v.weight, "decimals": decimals, "percent": percent,
-                        "from_unit": k in self.unit_of})
+            dated = v.fn in ("min", "max") and col.get("type") in DATE_KINDS
+            out.append({"id": v.id, "fn": v.fn, "field": v.field, "weight": v.weight, "decimals": decimals, "percent": percent and not dated,
+                        "from_unit": k in self.unit_of, "type": col.get("type") if dated else "number"})
         return out
 
     def assemble(self, columns: list[dict], rows: list[dict], cells: list[dict], unit_decimals: dict, to_json) -> list[dict]:

@@ -231,7 +231,7 @@
 .sc-table-pop-option { min-width: 0; }
 /* Seçici kipi (pivot paneli, K-183): alan tıklanarak seçilir */
 .sc-table-picker { padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.sc-table-pick { display: block; width: 100%; min-width: 0; padding: 0.1538rem var(--space-1); border: 0; border-radius: var(--radius); background: none; color: inherit;
+.sc-table-pick { display: block; flex: none; width: 100%; min-width: 0; min-height: 1.6923rem; padding: 0.1538rem var(--space-1); border: 0; border-radius: var(--radius); background: none; color: inherit;
   font: inherit; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .sc-table-pick:hover:not(:disabled) { background: var(--indigo-50); }
 .sc-table-pick:disabled { color: var(--lead-300); cursor: not-allowed; }
@@ -245,6 +245,10 @@
 .sc-pivot-panel-head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line);
   font-weight: var(--fw-medium); }
 .sc-pivot-chip { cursor: default; }
+/* Değer çipi iki satır: üstte alan, altta hesaplama (uzun alan adında da hesaplama görünür) */
+.sc-pivot-value-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-width: 0; text-align: left; }
+.sc-pivot-value-chip > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-pivot-value-chip > .sc-pivot-calc { color: var(--text-muted); font-size: var(--fs-sm); }
 .sc-pivot-bucket { flex: none; width: auto; min-width: 5.3846rem; }
 .sc-pivot-grid { table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 .sc-pivot-grid th, .sc-pivot-grid td { height: 2.1538rem; padding: 0 var(--space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

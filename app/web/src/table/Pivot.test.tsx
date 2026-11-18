@@ -1,14 +1,14 @@
 // Pivot (K-183, docs/12 "Pivot standardı"): ⚙ › Pivot görünümü, ayar paneli (satır, sütun, değer, değerlerin yeri, toplamlar, sıralama),
 // katlı başlık ve satır başlıkları, boş ve karışık birim hücresi, başlıktan süzme, ilişkili alanın panelden seçilmesi, görünümle saklama,
 // sınır ve hata durumları, parça parça yükleme.
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { meAs, mockApi, renderApp, type Reply } from "../test/helpers";
 import { headerCells } from "./PivotGrid";
 import {
-  emptyPivot, fitPivot, formatPivotCell, normalizePivot, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRequest,
+  defaultFn, emptyPivot, fitPivot, fnLabel, fnsFor, formatPivotCell, normalizePivot, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRequest,
   type PivotValueInfo, valueLabel,
 } from "./pivotModel";
 import { col, useTableTestSetup } from "./testBackend";
@@ -133,6 +133,18 @@ describe("pivot modeli", () => {
     expect(formatPivotCell(1234.5, info("a", "sum", "x"), 1)).toBe("1.234,5");
   });
 
+  it("tarih alanında En erken · En geç; metinde yalnız Say ve Benzersiz say; hücre tarih biçiminde", () => {
+    const date = byField.get("RequestedDate")!;
+    expect(fnsFor(date).map((fn) => fnLabel(fn, date))).toEqual(["En erken", "En geç", "Say", "Benzersiz say"]);
+    expect(fnsFor(byField.get("OrderNo")).map((fn) => fnLabel(fn, byField.get("OrderNo")))).toEqual(["Say", "Benzersiz say"]);
+    expect(fnsFor(byField.get("Price")).map((fn) => fnLabel(fn, byField.get("Price"))))
+      .toEqual(["Toplam", "Ortalama", "En düşük", "En yüksek", "Say", "Benzersiz say", "Ağırlıklı ortalama"]);
+    expect([defaultFn(date), defaultFn(byField.get("OrderNo")!), defaultFn(byField.get("Price")!)]).toEqual(["min", "distinct", "sum"]);
+    expect(valueLabel({ field: "RequestedDate", fn: "min" }, byField)).toBe("İstek tarihi · En erken");
+    expect(valueLabel({ field: "RequestedDate", fn: "max" }, byField)).toBe("İstek tarihi · En geç");
+    expect(formatPivotCell("2026-11-17", info("a", "min", "RequestedDate", { type: "date" }), null)).toBe("17.11.2026");
+  });
+
   it("katlı başlık: aynı üst değer birleşir; ara toplam kendi katında başlar, alta uzanır", () => {
     const cols: PivotColumn[] = [
       { key: ["2026-10-01", "A"], level: 2, total: false }, { key: ["2026-10-01", "B"], level: 2, total: false }, { key: ["2026-10-01"], level: 1, total: true },
@@ -174,6 +186,49 @@ describe("pivot görünümü (K-183)", () => {
     await menuItem(user, "Pivot görünümü");
     expect(screen.queryByRole("table", { name: "Pivot" })).toBeNull();
     expect(screen.getByRole("button", { name: /^Grupla/ })).toBeEnabled();
+  });
+
+  it("seçicide tablonun kendi alanları listelenir; değer çipinde alan ve hesaplama iki satırdır; tarihte En erken", async () => {
+    const { user, last } = await open();
+    await menuItem(user, "Pivot görünümü");
+    const rows = within(panel()).getByRole("button", { name: /^Satırlar/ }).closest("section")!;
+    await user.click(within(rows).getByRole("button", { name: "Alan ekle" }));
+    const picker = within(rows).getByRole("group", { name: "Alan ekle" });
+    expect(within(picker).getAllByRole("button").map((b) => b.textContent).slice(0, 4)).toEqual(["Sipariş no", "Müşteri", "Malzeme", "İstek tarihi"]);
+    expect(within(picker).getAllByRole("button").slice(0, 4).every((b) => b.classList.contains("sc-table-pick"))).toBe(true);
+    await user.click(within(picker).getByRole("button", { name: "Müşteri" }));
+    const values = within(panel()).getByRole("button", { name: /^Değerler\s*\d*$/ }).closest("section")!;
+    await user.click(within(values).getByRole("button", { name: "Değer ekle" }));
+    expect(within(within(values).getByRole("group", { name: "Değer ekle" })).getAllByRole("button").map((b) => b.textContent))
+      .toEqual(expect.arrayContaining(["Sipariş no", "İstek tarihi", "Açık miktar", "Fiyat"]));
+    await user.click(within(values).getByRole("button", { name: "İstek tarihi" }));
+    await waitFor(() => expect(last().values).toEqual([{ id: "d1", fn: "min", field: "RequestedDate" }]));
+    const chip = within(values).getByRole("button", { name: "İstek tarihi · En erken" });
+    expect([...chip.querySelectorAll("span")].map((x) => x.textContent)).toEqual(["İstek tarihi", "En erken"]);   // hesaplama kendi satırında
+    await user.click(chip);
+    expect(within(within(values).getByRole("combobox", { name: "Hesaplama" })).getAllByRole("option").map((o) => o.textContent))
+      .toEqual(["En erken", "En geç", "Say", "Benzersiz say"]);
+  });
+
+  it("alanlar ve değerler sürüklenerek sıralanır", async () => {
+    const { user, last } = await open(viewWith(PIVOT));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
+    await menuItem(user, "Pivot ayarları");
+    const rows = within(panel()).getByRole("button", { name: /^Satırlar/ }).closest("section")!;
+    const [first, second] = within(rows).getAllByRole("listitem");
+    fireEvent.dragStart(second);
+    fireEvent.dragOver(first);
+    fireEvent.drop(first);
+    await waitFor(() => expect(last().rows.map((a) => a.field)).toEqual(["MaterialCode", "CustomerCode"]));
+    const values = within(panel()).getByRole("button", { name: /^Değerler\s*\d*$/ }).closest("section")!;
+    const items = within(values).getAllByRole("listitem");
+    fireEvent.dragStart(items[1]);
+    fireEvent.dragOver(items[0]);
+    fireEvent.drop(items[0]);
+    await waitFor(() => expect(last().values.map((v) => v.id)).toEqual(["d2", "d1"]));
+    fireEvent.dragStart(within(rows).getAllByRole("listitem")[0]);     // başka bölüme bırakılamaz
+    fireEvent.drop(within(values).getAllByRole("listitem")[0]);
+    expect(last().rows.map((a) => a.field)).toEqual(["MaterialCode", "CustomerCode"]);
   });
 
   it("katlı başlık, satır başlıkları, toplam adları, boş ve karışık birim hücresi, birimin ondalığı", async () => {

@@ -123,15 +123,18 @@ def relations_of(table: str, labels: Labels = NO_LABELS, level: int = 1) -> list
 
 
 def _fields(relation: Relation, labels: Labels, level: int) -> dict[str, dict]:
-    """İlişkinin sunduğu alanlar: hedef listenin alanlarından hedef tablonun kendi kolonu olanlar ("Manuel değer" ve ilişki kodları hariç);
+    """İlişkinin sunduğu alanlar: hedef listenin alanlarından hedef tablonun kendi kolonu olanlar ("Manuel değer", ilişki kodları ve sistem alanları hariç);
     birinci seviyede tabloda zaten kolon olan kod da hariç."""
     defn = _definition(relation.target)
     table = core(relation.target)
     shown = REFS[relation.column][3] if level == 1 else None
     out = {}
     for c in columns(defn, labels(relation.target)):
-        if c["field"] in table.c and c["field"] != shown:
-            out[c["field"]] = c
+        if c["field"] not in table.c or c["field"] == shown:
+            continue
+        if (table.c[c["field"]].info or {}).get("source") == "Sistem":  # sistem alanı (son değişiklik zamanı) ilişkili alan olmaz (K-182)
+            continue
+        out[c["field"]] = c
     return out
 
 

@@ -42,6 +42,7 @@ def test_relations_are_single_valued_and_from_one_place():
     names = [f["field"] for f in group["fields"]]
     assert (group["label"], CRITICAL in names) == ("Kaynak grubu", True)
     assert "ResourceGroupId/Code" not in names and "ResourceGroupId/ManualState" not in names  # kod zaten tabloda; manuel değer kolonu alınmaz
+    assert "ResourceGroupId/UpdatedAt" not in names and "UpdatedAt" in member.fields            # sistem alanı ilişkili alan olmaz; tablonun kendi alanıdır
     assert not any(f["manual"] or f["default_visible"] for f in group["fields"]) and all(f["related"] for f in group["fields"])
     assert [r["path"] for r in group["relations"]] == ["ResourceGroupId/SubcontractorId"]         # ikinci seviyede Lokasyon yok
     second = relations.catalog(member, "ResourceGroupId/SubcontractorId")
