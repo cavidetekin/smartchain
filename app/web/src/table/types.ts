@@ -1,6 +1,7 @@
 // Liste sorgu sözleşmesi (K-87, docs/08 "Liste sorgusu"): sunucuyla birebir.
 import { ensureOk, fileNameFrom, getJson, postJson, sendJson } from "../api/client";
 import type { ChartConfig, ChartData, ChartKind, ChartRequest, ChartSelection, PointsData, PointsRequest } from "../ui/chart/chartModel";
+import type { PivotConfig, PivotData, PivotRequest } from "./pivotModel";
 
 export type ColumnType = "text" | "integer" | "number" | "bool" | "date" | "datetime";
 export type FilterType = "text" | "list" | "number" | "date";
@@ -210,6 +211,8 @@ export interface ViewDefinition {
   rules?: FormatRule[];
   /** Tablonun grafiği (K-178); yoksa grafik kapalı. */
   chart?: ChartConfig | null;
+  /** Pivot görünümü (K-183); yoksa pivot kurulmamış. */
+  pivot?: PivotConfig | null;
 }
 
 export interface SavedView {
@@ -273,6 +276,8 @@ export function listApi(list: string) {
       postJson<GroupsResponse>(`${base}/groups`, body, signal),
     /** Tablonun grafiği için toplama (K-178): listeyle aynı filtre ve yetki. */
     chart: (body: ChartRequest, signal?: AbortSignal) => postJson<ChartData>(`${base}/chart`, body, signal),
+    /** Pivot (K-183): satır × sütun × değer; satırlar parça parça (offset, limit). */
+    pivot: (body: PivotRequest, signal?: AbortSignal) => postJson<PivotData>(`${base}/pivot`, body, signal),
     /** Dağılım grafiğinin noktaları (K-179): en çok 2.000; aşımda eşit aralıklı örnekleme. */
     points: (body: PointsRequest, signal?: AbortSignal) => postJson<PointsData>(`${base}/chart/points`, body, signal),
     /** Grafiğin verisi Excel'e (K-179): Veri, Bilgi ve Grafik sayfaları. */

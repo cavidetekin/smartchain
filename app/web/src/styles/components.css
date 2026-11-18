@@ -229,6 +229,40 @@
 /* Araç çubuğu düğmeleri ve alan paneli (1.3 demo düzeltmeleri, docs/12) */
 .sc-table-fields { width: 23.0769rem; min-width: 18rem; max-width: calc(100vw - 2rem); }
 .sc-table-pop-option { min-width: 0; }
+/* Seçici kipi (pivot paneli, K-183): alan tıklanarak seçilir */
+.sc-table-picker { padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.sc-table-pick { display: block; width: 100%; min-width: 0; padding: 0.1538rem var(--space-1); border: 0; border-radius: var(--radius); background: none; color: inherit;
+  font: inherit; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.sc-table-pick:hover:not(:disabled) { background: var(--indigo-50); }
+.sc-table-pick:disabled { color: var(--lead-300); cursor: not-allowed; }
+.sc-table-pick:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+/* Pivot (K-183): ızgara tablonun yerinde; panel sağda (grafik panelinin sınıflarıyla) */
+.sc-pivot-wrap { position: relative; display: flex; flex: 1 1 0; min-height: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.sc-pivot { flex: 1 1 0; min-width: 0; overflow: auto; }
+.sc-pivot.is-stale { opacity: 0.55; }
+.sc-pivot--empty { display: flex; align-items: center; justify-content: center; padding: var(--space-5); }
+.sc-pivot-wrap.is-narrow .sc-pivot-panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 5; width: min(23.0769rem, 92%); box-shadow: var(--shadow-popover); }
+.sc-pivot-panel-head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line);
+  font-weight: var(--fw-medium); }
+.sc-pivot-chip { cursor: default; }
+.sc-pivot-bucket { flex: none; width: auto; min-width: 5.3846rem; }
+.sc-pivot-grid { table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.sc-pivot-grid th, .sc-pivot-grid td { height: 2.1538rem; padding: 0 var(--space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-bottom: 1px solid var(--line); }
+.sc-pivot-grid thead th { position: sticky; z-index: 2; background: var(--table-head-bg); color: var(--table-head-text); font-weight: var(--fw-medium);
+  text-align: center; border-right: 1px solid var(--table-head-border); border-bottom-color: var(--table-head-border); }
+.sc-pivot-grid thead th.sc-pivot-value { text-align: right; font-weight: var(--fw-regular, 400); }
+.sc-pivot-grid thead th.is-pinned { z-index: 4; text-align: left; }
+.sc-pivot-grid tbody th { position: sticky; z-index: 1; background: var(--surface); font-weight: var(--fw-regular, 400); text-align: left; }
+.sc-pivot-grid tbody td { text-align: right; }
+.sc-pivot-grid .is-total { font-weight: var(--fw-semibold); }
+.sc-pivot-grid tbody tr.is-total th, .sc-pivot-grid tbody tr.is-total td, .sc-pivot-grid tbody td.is-total { background: var(--lead-50); }
+.sc-pivot-grid td.is-mixed { color: var(--text-muted); }
+.sc-pivot-grid .is-pinned-last { box-shadow: inset -1px 0 0 var(--table-head-border); }
+.sc-pivot-corner { vertical-align: top; padding: 0 !important; }
+.sc-pivot-corner-field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); min-width: 0; padding: 0 var(--space-2); }
+.sc-pivot-corner-field > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sc-pivot-wait { background: var(--lead-50); }
 /* İlişkili alanlar (K-182): başlıklar açılır kapanır; alanlar başlığın altında girintili */
 .sc-table-rels { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-2); padding-top: var(--space-2);
   border-top: 1px solid var(--line); }

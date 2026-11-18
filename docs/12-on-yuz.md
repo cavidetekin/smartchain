@@ -245,6 +245,36 @@ Grafik ortak tablonun parçasıdır: `DataTable` kullanan her tabloda (ana tablo
 | Dışa aktarma (K-179) | Grafik başlığında (☰'nin solunda) indirme düğmesi ve menüsü: Görsel (PNG) · Veri (Excel). Düğme Excel'e aktarma yetkisiyle görünür (fonksiyon 86; End user dahil); çizilecek grafik yokken pasiftir. **Görsel:** ekrandaki ayarla aynı (başlık, gösterge, etiketler, Türkçe biçim), beyaz zemin, 2× çözünürlük; seçim soluklaştırması ve üstüne gelme bandı görsele girmez. Tarayıcıda, ekran dışı bir tuvalde üretilir; en az 720 × 360 px, küçük grafiklerde bütün küçük grafikler görsele girer (kaydırılan kısım dahil). Dosya adı `smartchain_<liste>_grafik_veri-v35_2026-11-17_1706.png`. **Veri (Excel):** "Veri" sayfası (toplanmış veri: satırlar yatay eksen, kolonlar seriler ve parçalar; küçük grafik varsa başta onun kolonu; dağılımda gösterilen noktalar; sayılar sayı, dönemler tarih), "Bilgi" sayfası (kaynak, grafik, filtreler, kim, ne zaman) ve "Grafik" sayfası (görsel). **Tablonun Excel'ine grafik:** Excel'e aktar penceresinde grafik açık ve çizilmişken "Grafiği ekle" kutusu; işaretlenirse dosyaya "Grafik" sayfası (görsel) eklenir. Excel'in düzenlenebilir grafiği yoktur. Her dışa aktarım denetim izine "Dışa aktarım" olarak düşer; iz yazılamazsa dosya inmez |
 | Hareket | Canlandırma yoktur; veri değişince grafik anında çizilir |
 
+## Pivot standardı (7.7, K-183)
+
+Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açılır, ekrana özel pivot bileşeni yazılmaz. Mockup `plans/7.7-mockups/pivot.html`.
+
+| Parça | Kural |
+|---|---|
+| Giriş | ⚙ › "Pivot görünümü" (işaretli öğe). Pivot açıkken altında "Pivot ayarları" (paneli açar). Şeride simge eklenmez |
+| Yer | Tablonun yerinde pivot ızgarası; şerit, görünüm seçimi, filtre çipleri ve grafik bölmesi yerinde kalır. Grafik açıksa üstte grafik, altta pivot; grafik tablonun verisinden çizilir |
+| Şerit | Pivot açıkken Grupla ve Alanlar kapalıdır (ipucu: "Pivot görünümünde kullanılmaz"). |
+| Veri | Sunucuda hesaplanır (`POST /api/<liste>/pivot`); tablonun filtresi ve grafik seçimiyle. Ayar değişince 250 ms sonra yeniden istenir |
+| Satırlar | 1–3 alan, sırayla. Sayı (ondalıklı) alanı satır ya da sütun olamaz |
+| Sütunlar | 0–3 alan; başlık alan sayısı kadar katlıdır. Tarih alanında dönem tipi seçilir (Gün · Hafta · Ay · Çeyrek · Yıl); etiketler grafikteki gibi ("H47 2026", "Kas 2026", "Ç4 2026") |
+| Değerler | 1–8. Hesaplama: Toplam · Ortalama · En düşük · En yüksek · Say · Benzersiz say · Ağırlıklı ortalama (ağırlık alanı seçilir). Sayı alanında varsayılan Toplam, öteki alanda Benzersiz say. "Ölçü" sözcüğü kullanılmaz |
+| Etiket | "Alan · Hesaplama"; ağırlıklı ortalamada "Alan · Ağırlıklı ortalama (ağırlık alanı)"; hesaplanan değerde (7.7b) "Ad · Toplamlardan" |
+| Değerlerin yeri | Sütunlarda (her sütunun altında değerler) · Satırlarda (her satırda değerler alt alta; sütun alanı yan yana) |
+| Toplamlar | Satır toplamı (en altta "Genel toplam"), Sütun toplamı (en sağda "Toplam" grubu), Ara toplamlar (grubun sonunda "<ad> toplamı"; sütunda üst başlığın sonunda "Toplam"). Üçü de varsayılan kapalı. Toplamlar kayıtlardan hesaplanır |
+| Sıralama | Ada göre ya da bir değere göre, artan ya da azalan; her düzeyde kendi içinde |
+| Başlıkta süzme | Satır ve sütun alanının başlığındaki huni tablonun filtre penceresini açar; filtre tablonunkiyle ortaktır (çip, tablo görünümü) |
+| Izgara | Başlık satırları ve soldaki satır başlıkları sabit; sütunlar yatay kayar. Satırlar sanal kaydırılır, parça parça yüklenir (satır sınırı yok). Dış satır alanının değeri grubunun ilk satırında ve ekrandaki ilk satırda yazılır |
+| Hücre | Sayılar sağa yaslı, eşit genişlikte rakam; ondalık alanın (miktarda birimin) ondalığı, ortalamalarda bir fazla, Say ve Benzersiz say ondalıksız. Kaydı olmayan hücre boş; sonuç 0 ise "0" |
+| Karışık birim | Listenin kendi miktar alanında hücrenin kayıtları tek birimde değilse hücre "—", ipucu "Birimler farklı; toplam yok". İlişkili miktar alanında denetlenmez |
+| Boş | Filtrede kayıt yoksa ızgaranın yerinde "Bu filtrede kayıt yok" |
+| Sınır | Yaprak sütun 200, çizilen değer sütunu 400, dönem 400; aşılırsa ızgaranın yerinde nedeni ("Sütun sayısı çok fazla (… / 200). Daha büyük bir dönem seçin, alan çıkarın ya da süzün.") |
+| Yükleniyor · Hata | Yükleniyor: eski pivot soluklaşır. Hata: mesaj ve "Yeniden dene" |
+| Ayar paneli | Sağda 300 px; pivot açılınca açık gelir, ✕ ile kapanır, ⚙ › "Pivot ayarları" ile açılır; açık ya da kapalı olması saklanmaz. Bölümler: Satırlar · Sütunlar · Değerler · Değerlerin yeri · Toplamlar · Sıralama. Alan çipleri tutamakla sürüklenir, ✕ ile çıkar. Dar pencerede (880 px altı) panel ızgaranın üstüne açılır |
+| Alan seçici | "+ Alan ekle" ve "+ Değer ekle": aramalı liste; tablonun alanları ve "İlişkili alanlar" ağacı (Alanlar panelindekiyle aynı bileşen). İlişkili alan tabloya kolon eklenmeden pivota girer; sınır 20 alan, 8 ilişki |
+| Görünümle kaydetme | Pivot ayarları görünüm tanımında (`pivot`); "Kaydet" ve "Farklı kaydet" ile. Şirket Standart'ı pivot olabilir |
+| Yetki | Listenin okuma yetkisi olan herkes (End user dahil) |
+| 7.7b | Hesaplanan değer, değere koşullu biçim, Excel'e pivot şekliyle aktarım, alanın varsayılan hesaplaması |
+
 ## Görünüm (1.4, K-89, K-90)
 
 | Parça | Davranış |
@@ -255,7 +285,7 @@ Grafik ortak tablonun parçasıdır: `DataTable` kullanan her tabloda (ana tablo
 | Sıra (U-10) | Başlık sürüklenip bırakılır, bırakılacak yer indigo çizgiyle görünür; başlıktayken Alt+← / Alt+→ |
 | Sabitleme (U-10) | İlk N kolon yatay kaydırmada yerinde kalır; sabit bölgenin sağında ince çizgi |
 | Gruplama (U-11) | "Grupla ▾" ile bir ya da birden çok alan (sıralı). Tablonun üstünde "Malzeme seviyesi › Malzeme grubu ile gruplu". Gruplar açık başlar (mockup m24f-0720). Gruplama açıkken "Grupla" düğmesinin yanında ikonlu küçük düğme grubu: "Tümünü daralt", "Tümünü aç" ve iki ya da daha çok düzeyde "1. düzeye kadar aç" (adları ipucunda). Grup satırına tıklayınca ya da Enter / boşlukla o grup, Alt+tıklama ya da Alt+Enter ile o düzeydeki bütün gruplar birlikte açılır ya da kapanır. Grup başlığı düzeye göre girintili, 1. düzey adı kalın (600), alt düzeyler yarı kalın (500); veri satırlarının ilk görünen hücresi en alt grubun adıyla aynı hizada başlar; ad, satır sayısı, ara toplamlar kendi kolonlarında (türü ipucunda); birimleri farklı miktarda "—", ipucunda "birimler farklı" |
-| Ara toplam (K-90) | Sayı kolonunun "⋯" menüsünde "Ara toplam" alt menüsü: Toplam · Ortalama (boşlar hariç) · Ortalama (sıfırlar hariç) · Ağırlıklı ortalama (ağırlık alanı seçilir) · En küçük · En büyük · Sayı (dolu satır) · Yok. Varsayılan liste tanımından; seçim görünümle kaydedilir. Ortalamalar kolonun ondalığından bir fazla, sayı ondalıksız yazılır. Grup satırında değerin önünde tür soluk ve küçük yazar: Σ (toplam), ort. (ortalama), ağ. ort. (ağırlıklı ortalama), en az, en çok, n (sayı) |
+| Ara toplam (K-90) | Sayı kolonunun "⋯" menüsünde "Ara toplam" alt menüsü: Toplam · Ortalama (boşlar hariç) · Ortalama (sıfırlar hariç) · Ağırlıklı ortalama (ağırlık alanı seçilir) · En düşük · En yüksek · Sayı (dolu satır) · Yok. Varsayılan liste tanımından; seçim görünümle kaydedilir. Ortalamalar kolonun ondalığından bir fazla, sayı ondalıksız yazılır. Grup satırında değerin önünde tür soluk ve küçük yazar: Σ (toplam), ort. (ortalama), ağ. ort. (ağırlıklı ortalama), en az, en çok, n (sayı) |
 | Tablo renkleri (K-85) | Bütün tablolar için ortak, değerler tokens.css'te (`--table-*`). Başlık #DCE0F7 zemin, #1E2257 yarı kalın yazı, alt çizgi #C5CBF2; tablonun dış çerçevesi #C5CBF2. Grup satırları başlıktan belirgin açık: 1. düzey #ECEEF7 (alt çizgi #E1E4EE, kalın yazı), 2. ve alt düzeyler #F7F8FC (orta kalın). Veri satırı beyaz; satıra tıklayınca seçilir (#EEF0FB), üzerine gelince #F4F5FB; grup satırı üzerine gelince değişmez. Yazı her zeminde en az 4,5:1 (testte) |
 | Aktif filtreler (U-12) | Sayacın yanında her filtre bir etiket ("Malzeme adı: içerir 'mil'", "Güvenlik stoğu: 10–100", "Son değişiklik: bu hafta", "Malzeme grubu: Çubuk, Levha +2", "…: boş"). Etikete tıklayınca filtre menüsü açılır; × tek tıkla kaldırır |
 | Boş (U-13) | Metin, sayı ve tarih menüsünde "Boş olanlar"; liste menüsünde değerlerin başında "(Boş)" ve sayısı |
@@ -587,4 +617,5 @@ Veri menüsünde Veri yüklemeden sonra, adres `/veri/veri-kurallari`; Validasyo
 | Grafik altyapısı (7.4c): tür (pasta, halka, dağılım), küçük çoğullar, dışa aktarma (Görsel, Veri, "Grafiği ekle") (K-179) | uygulandı (7.4c, K-179) |
 | Kaynak modeli revizyonu (7.5): Kaynak sekmesi (Kaynak · Kaynak grubu · Kaynak grup eşleşmesi), rota ve iş emri operasyonunda kaynak grubu; toplu validasyonda tek özet bildirim (K-180, K-181) | uygulandı (7.5, K-180, K-181) |
 | İlişkili alanlar (7.6): Alanlar paneli › "İlişkili alanlar", iki seviyeye kadar; salt okunur kolon; iki seviyede kısa başlık, tam yol ipucunda (K-182) | uygulandı (7.6, K-182) |
+| Pivot altyapısı (7.7a): ⚙ › Pivot görünümü, satır · sütun · değer, toplamlar, başlıktan süzme, ilişkili alanlar, sayfalı satırlar (K-183) | demo bekliyor |
 | Tablo standardı: sekmeler ve araç çubuğu tek şerit (simge düğmeler, ⚙ Tablo ayarları), kayıt sayısı tablonun altında, Diğer ▾; Ana veri, İşlem verisi, Sistem sağlığı, detay kartları, Validasyon çekmecesi | uygulandı (6.3, K-173) |

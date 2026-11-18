@@ -10,8 +10,9 @@ from ..lists.definition import ListDefinition, columns as column_list
 from ..lists import relations
 from ..lists.query import DEFAULT_UNIT_DECIMALS, FIELD_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists import chart as chart_query
+from ..lists import pivot as pivot_query
 from ..lists.groups import build_tree
-from ..lists.request import ChartRequest, ChartSelection, GroupsRequest, IdsRequest, PointsRequest, QueryRequest, ValuesRequest
+from ..lists.request import ChartRequest, ChartSelection, GroupsRequest, IdsRequest, PivotRequest, PointsRequest, QueryRequest, ValuesRequest
 from app.params import scenarios as scenario_service, service as params
 from app.params.horizon import week_start_index
 from app.manual import manual_fields
@@ -220,6 +221,37 @@ def chart(session: Session | None, defn: ListDefinition, req: ChartRequest, role
         except chart_query.TooManyPeriods as exc:
             raise AppError("too_many_periods", chart_query.TOO_MANY_PERIODS, 422) from exc
         return {**out, "x": {**out["x"], "values": [{**v, "key": _json(v["key"])} for v in out["x"]["values"]]}}
+    return _run(session, work)
+
+
+def pivot(session: Session | None, defn: ListDefinition, req: PivotRequest, role: str | None = None, user_id: int | None = None) -> dict:
+    """Pivot (K-183): listeyle aynı filtre, versiyon ve satır kapsamı. Satırlar parça parça; toplamlar kayıtlardan, veritabanında."""
+    def work():
+        b = _builder(session, defn, role, user_id, req)
+        problems = pivot_query.problems(b, req.rows, req.columns, req.values, req.sort.by)
+        if problems:
+            raise ListQueryError(problems)
+        apply_selection(session, b, req.chart_selection, user_id)
+        weekly = any(a.bucket == "week" for a in (*req.rows, *req.columns))
+        start = week_start(session, user_id, req.scenario_id) if weekly else "Pazartesi"
+        chunk = repo.read_chunk_size(session)
+        if (req.limit or chunk) > chunk:
+            raise ListQueryError([{"field": "body.limit", "problem": f"En çok {chunk} satır istenebilir (ListChunkSize)"}])
+        p = pivot_query.Pivot(b, req.model_copy(update={"limit": req.limit or chunk}), week_start_index(start))
+        try:
+            leaf_columns = repo.fetch_rows(session, p.columns_query()) if req.columns else []
+            columns = p.columns([tuple(r[f"c{i}"] for i in range(len(req.columns))) for r in leaf_columns])
+        except pivot_query.PivotTooLarge as exc:
+            raise AppError("pivot_too_large", str(exc), 422) from exc
+        except chart_query.TooManyPeriods as exc:
+            raise AppError("too_many_periods", chart_query.TOO_MANY_PERIODS, 422) from exc
+        rows = repo.fetch_rows(session, p.rows_query())
+        cells = repo.fetch_rows(session, p.cells_query()) if rows else []
+        row_count = int(rows[0]["cnt"]) if rows else repo.fetch_count(session, p.count_query())
+        units = repo.read_unit_decimals(session) if p.unit_of else {}
+        return {"row_fields": pivot_query.axis_info(b, req.rows), "column_fields": pivot_query.axis_info(b, req.columns),
+                "columns": [{**c, "key": [_json(k) for k in c["key"]]} for c in columns], "values": p.value_info(),
+                "rows": p.assemble(columns, rows, cells, units, _json), "offset": req.offset, "row_count": row_count, "week_start": start}
     return _run(session, work)
 
 

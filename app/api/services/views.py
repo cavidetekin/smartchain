@@ -15,10 +15,10 @@ from sqlalchemy.orm import Session
 
 from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, field_title
-from ..lists import chart as chart_query, relations
+from ..lists import chart as chart_query, pivot as pivot_query, relations
 from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
-    AggSpec, ChartDefinition, DefaultViewRequest, FilterItem, FormatRule, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
+    AggSpec, ChartDefinition, DefaultViewRequest, FilterItem, FormatRule, PivotDefinition, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
 )
 from ..repositories import audit, lists as list_repo, views as repo
 from ..permissions import ADMIN, SYSTEM_OWNER, Access
@@ -100,7 +100,42 @@ def _problems(b: Builder, d: ViewDefinition) -> list[dict]:
                 problems.append({"field": f"definition.chart.ref_lines.{i}.value", "problem": "Değer girilmeli"})
             elif line.kind != "value" and line.series not in ids:
                 problems.append({"field": f"definition.chart.ref_lines.{i}.series", "problem": "Seri seçilmeli"})
+    if d.pivot is not None:  # pivot (K-183): pivot ucuyla aynı doğrulama
+        problems += pivot_query.problems(b, d.pivot.rows, d.pivot.columns, d.pivot.values, d.pivot.sort.by, "definition.pivot.")
     return problems
+
+
+def _clean_pivot(b: Builder, raw, gone, warnings: list[str]) -> dict | None:
+    """Kayıtlı pivot bugünkü listeye uydurulur (K-183): alanı kalkan satır, sütun ve değer atılır; satır alanı ya da değer kalmazsa pivot atılır."""
+    try:
+        pivot = PivotDefinition.model_validate(raw)
+    except ValidationError:
+        warnings.append("Pivot artık geçerli değil; görünümden çıkarıldı.")
+        return None
+    data = pivot.model_dump(mode="json", exclude_none=True)
+    dropped = False
+
+    def keep(field: str | None) -> bool:
+        nonlocal dropped
+        if field is None or field in b.columns:
+            return True
+        gone(field)
+        dropped = True
+        return False
+
+    data["rows"] = [a for a in data["rows"] if keep(a["field"])]
+    data["columns"] = [a for a in data["columns"] if keep(a["field"])]
+    data["values"] = [v for v in data["values"] if keep(v.get("field")) and keep(v.get("weight"))]
+    if data["sort"]["by"] != "name" and data["sort"]["by"] not in {v["id"] for v in data["values"]}:
+        data["sort"] = {"by": "name", "dir": "asc"}
+    if dropped and (not data["rows"] or not data["values"]):
+        warnings.append("Pivot görünümünün alanları artık listede yok; pivot görünümden çıkarıldı.")
+        return None
+    cleaned = PivotDefinition.model_validate(data)
+    if pivot_query.problems(b, cleaned.rows, cleaned.columns, cleaned.values, cleaned.sort.by):
+        warnings.append("Pivot artık geçerli değil; görünümden çıkarıldı.")
+        return None
+    return data
 
 
 def _clean_chart(b: Builder, raw, gone, warnings: list[str]) -> dict | None:
@@ -218,6 +253,10 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
         chart = _clean_chart(b, data["chart"], gone, warnings)
         if chart is not None:
             definition["chart"] = chart
+    if data.get("pivot"):  # anahtar yoksa pivot kurulmamış (eski görünümler değişmeden okunur)
+        pivot = _clean_pivot(b, data["pivot"], gone, warnings)
+        if pivot is not None:
+            definition["pivot"] = pivot
     return definition, warnings
 
 

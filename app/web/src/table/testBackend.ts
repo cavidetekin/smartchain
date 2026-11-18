@@ -250,15 +250,17 @@ export function backend({ filtered = 1234, total = 50000, status = 200, chunk = 
 }
 
 /** jsdom ölçü vermez: sanal kaydırıcı kap boyunu offsetHeight'tan okur. */
+const SCROLLERS = ["table-scroll", "pivot-scroll"];  // sanal kaydırıcılar: tablo ve pivot ızgarası
+
 export function useTableTestSetup() {
   const sizes = Object.getOwnPropertyDescriptors(HTMLElement.prototype);
   beforeEach(() => {
     mockSocket();
     Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
-      configurable: true, get() { return (this as HTMLElement).dataset.testid === "table-scroll" ? VIEW_PX : 0; },
+      configurable: true, get() { return SCROLLERS.includes((this as HTMLElement).dataset.testid ?? "") ? VIEW_PX : 0; },
     });
     Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
-      configurable: true, get() { return (this as HTMLElement).dataset.testid === "table-scroll" ? 1000 : 0; },
+      configurable: true, get() { return SCROLLERS.includes((this as HTMLElement).dataset.testid ?? "") ? 1000 : 0; },
     });
   });
   afterEach(() => {

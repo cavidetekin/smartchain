@@ -479,10 +479,10 @@ describe("ara toplam türü (K-90)", () => {
     await waitFor(() => expect(lastGroups().aggregates).toEqual({ SafetyStock: { fn: "sum" }, StockCoverageDays: { fn: "avg" } }));
     let menu = await openMenu(user, "Güvenlik stoğu");
     expect(within(menu).getAllByRole("menuitemradio").map((b) => b.textContent)).toEqual([
-      "Toplam", "Ortalama (boşlar hariç)", "Ortalama (sıfırlar hariç)", "Ağırlıklı ortalama…", "En küçük", "En büyük",
+      "Toplam", "Ortalama (boşlar hariç)", "Ortalama (sıfırlar hariç)", "Ağırlıklı ortalama…", "En düşük", "En yüksek",
       "Sayı (dolu satır)", "Yok"]);
     expect(within(menu).getByRole("menuitemradio", { name: "Toplam" })).toHaveAttribute("aria-checked", "true");
-    for (const [name, fn] of [["En büyük", "max"], ["En küçük", "min"], ["Ortalama (sıfırlar hariç)", "avg_nonzero"],
+    for (const [name, fn] of [["En yüksek", "max"], ["En düşük", "min"], ["Ortalama (sıfırlar hariç)", "avg_nonzero"],
                               ["Sayı (dolu satır)", "count"]] as const) {
       menu = await openMenu(user, "Güvenlik stoğu");
       await user.click(within(menu).getByRole("menuitemradio", { name }));
@@ -647,8 +647,8 @@ describe("tablo ayrıntıları (docs/12)", () => {
     await openTable({ groups: tree, views: { views: [view], default_view_id: 4 } });
     const fnOf = async () => (await screen.findAllByRole("row", { expanded: true }))[0].querySelector(".sc-agg-fn")?.textContent;
     expect(await fnOf()).toBe("Σ");
-    for (const [name, short] of [["Ortalama (boşlar hariç)", "ort."], ["Ortalama (sıfırlar hariç)", "ort."], ["En küçük", "en az"],
-                                 ["En büyük", "en çok"], ["Sayı (dolu satır)", "n"]] as const) {
+    for (const [name, short] of [["Ortalama (boşlar hariç)", "ort."], ["Ortalama (sıfırlar hariç)", "ort."], ["En düşük", "en az"],
+                                 ["En yüksek", "en çok"], ["Sayı (dolu satır)", "n"]] as const) {
       await user.click(screen.getByRole("button", { name: "Güvenlik stoğu kolon işlemleri" }));
       await user.click(screen.getByRole("menuitem", { name: /Ara toplam/ }));
       await user.click(within(screen.getByRole("group", { name: "Ara toplam" })).getByRole("menuitemradio", { name }));

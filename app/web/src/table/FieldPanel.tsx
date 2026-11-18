@@ -14,7 +14,7 @@ const LABEL_SEP = " · ";
 
 type Loaded = Record<string, RelatedCatalog | "loading" | "error">;
 
-export function FieldPanel({ ref, columns, visibility, onToggle, onReset, relations = [], order = [], loadRelated, onToggleRelated }: {
+export function FieldPanel({ ref, columns, visibility, onToggle, onReset, relations = [], order = [], loadRelated, onToggleRelated, pick, allowed, label }: {
   ref?: Ref<HTMLDivElement>;
   /** Tablonun kendi alanları. */
   columns: ListColumn[];
@@ -27,6 +27,12 @@ export function FieldPanel({ ref, columns, visibility, onToggle, onReset, relati
   order?: string[];
   loadRelated?(path: string): Promise<RelatedCatalog>;
   onToggleRelated?(column: ListColumn, on: boolean): void;
+  /** Seçici kipi (pivot paneli, K-183): onay kutusu yerine tıklanan alan seçilir; panel yerinde (açılır pencere değil) çizilir. */
+  pick?(column: ListColumn): void;
+  /** Seçici kipinde seçilebilen alanlar (ör. satır ve sütunda ondalıklı sayı olmaz). */
+  allowed?(column: ListColumn): boolean;
+  /** Seçici kipinde grubun adı. */
+  label?: string;
 }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -83,6 +89,13 @@ export function FieldPanel({ ref, columns, visibility, onToggle, onReset, relati
               const last = on && visibleCount === 1;
               const reason = last ? T.lastField : limit === "fields" ? T.relatedLimitFields : limit === "joins" ? T.relatedLimitJoins : null;
               const short = f.label.startsWith(c.label + LABEL_SEP) ? f.label.slice(c.label.length + LABEL_SEP.length) : f.label;
+              if (pick) {
+                if (allowed && !allowed(f)) return null;
+                return (
+                  <button key={f.field} type="button" className="sc-table-pick" disabled={Boolean(limit)} onClick={() => pick(f)}
+                          title={limit ? `${f.label} · ${limit === "fields" ? T.relatedLimitFields : T.relatedLimitJoins}` : f.label}>{short}</button>
+                );
+              }
               return (
                 <div key={f.field} className="sc-table-pop-option" title={reason ? `${f.label} · ${reason}` : f.label}>
                   <Checkbox label={short} checked={on} disabled={Boolean(reason)} onChange={(v) => onToggleRelated?.(f, v)} />
@@ -96,6 +109,24 @@ export function FieldPanel({ ref, columns, visibility, onToggle, onReset, relati
     );
   };
 
+  if (pick) {
+    return (
+      <div ref={ref} className="sc-table-fields sc-table-picker" role="group" aria-label={label}>
+        <SearchField label={T.fieldSearch} value={search} onChange={setSearch} />
+        <div className="sc-table-pop-list">
+          {columns.filter((c) => (!allowed || allowed(c)) && (!q || fold(c.label).includes(q))).map((c) => (
+            <button key={c.field} type="button" className="sc-table-pick" title={c.label} onClick={() => pick(c)}>{c.label}</button>
+          ))}
+          {relations.length > 0 && (
+            <div className="sc-table-rels" role="group" aria-label={T.relatedFields}>
+              <p className="sc-table-rels-title">{T.relatedFields}</p>
+              {relations.map((r) => group(r, null))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
   return (
     <div ref={ref} className="sc-table-pop sc-table-fields sc-floating" role="dialog" aria-label={T.fields(visibleCount, columns.length)}>
       <SearchField label={T.fieldSearch} value={search} onChange={setSearch} />

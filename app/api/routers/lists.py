@@ -10,7 +10,7 @@ from ..deps import require
 from ..permissions import Access
 from ..lists import LISTS, ListDefinition
 from ..lists.request import (
-    ChartExportLogRequest, ChartExportRequest, ChartRequest, DefaultViewRequest, ExportRequest, PointsRequest, GroupsRequest, IdsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
+    ChartExportLogRequest, ChartExportRequest, ChartRequest, DefaultViewRequest, PivotRequest, ExportRequest, PointsRequest, GroupsRequest, IdsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
 )
 from ..services import export, lists as service, views
 from ..services.auth import CurrentUser
@@ -41,6 +41,10 @@ def list_router(defn: ListDefinition) -> APIRouter:
     @router.post("/chart", summary=f"{defn.table}: tablonun grafiği için toplama (K-178)")
     def chart(body: ChartRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
         return service.chart(session, defn, body, user.role, user.id)
+
+    @router.post("/pivot", summary=f"{defn.table}: pivot (satır × sütun × değer; satırlar parça parça; K-183)")
+    def pivot(body: PivotRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
+        return service.pivot(session, defn, body, user.role, user.id)
 
     @router.post("/chart/points", summary=f"{defn.table}: dağılım grafiğinin noktaları (K-179)")
     def chart_points(body: PointsRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:

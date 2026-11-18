@@ -144,10 +144,12 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
 
 /** Şeridin sağ yarısı (K-173): görünüm seçici, Sıralamayı temizle, aradaki tablo düğmeleri (children: Grupla, Alanlar, Excel'e aktar) ve en sonda
  *  ⚙ Tablo ayarları (görünüm işleri; 9.3'te Grafik). Kaydedilmemiş değişiklikte ⚙'nin köşesinde nokta. */
-export function ViewBar({ views, state, onClearSort, children, multi }: {
+export function ViewBar({ views, state, onClearSort, children, multi, pivot }: {
   views: Views; state: TableState; onClearSort(): void; children?: ReactNode;
   /** ⚙ menüsünde "Çoklu seçim" (K-171): seçim kutusu kolonunu açar ya da kapatır. */
   multi?: { on: boolean; toggle(): void };
+  /** ⚙ menüsünde "Pivot görünümü" (K-183); pivot açıkken "Pivot ayarları" paneli açar. */
+  pivot?: { on: boolean; toggle(): void; openPanel(): void };
 }) {
   const [confirm, setConfirm] = useState<{ kind: "switch"; id: number | null } | { kind: "delete" } | { kind: "reset" } | null>(null);
   const [saveAs, setSaveAs] = useState(false);
@@ -226,6 +228,20 @@ export function ViewBar({ views, state, onClearSort, children, multi }: {
                         onClick={() => { setMenuOpen(false); multi.toggle(); }}>
                   <span>{T.multiSelect}</span><span className="sc-popmenu-mark" aria-hidden="true">{multi.on ? "✓" : ""}</span>
                 </button>
+              </>
+            )}
+            {pivot && (
+              <>
+                <div role="separator" className="sc-popmenu-sep" />
+                <button type="button" role="menuitemcheckbox" aria-checked={pivot.on} className="sc-popmenu-item sc-popmenu-check"
+                        onClick={() => { setMenuOpen(false); pivot.toggle(); }}>
+                  <span>{tr.pivot.view}</span><span className="sc-popmenu-mark" aria-hidden="true">{pivot.on ? "✓" : ""}</span>
+                </button>
+                {pivot.on && (
+                  <button type="button" role="menuitem" className="sc-popmenu-item" onClick={() => { setMenuOpen(false); pivot.openPanel(); }}>
+                    {tr.pivot.settings}
+                  </button>
+                )}
               </>
             )}
           </div>

@@ -1,5 +1,6 @@
 // Tablo durumu ve kayıtlı görünüm içeriği (K-89, docs/08 "Görünümler"). Saf işlevler: dönüşüm, karşılaştırma, taşıma.
 import { type ChartConfig, fitChart, normalizeChart } from "../ui/chart/chartModel";
+import { fitPivot, normalizePivot, type PivotConfig } from "./pivotModel";
 import type { AggSpec, ColumnType, FormatRule, ListColumn, ListFilter, SortItem, ViewDefinition } from "./types";
 
 export interface TableState {
@@ -19,6 +20,8 @@ export interface TableState {
   rules: FormatRule[];
   /** Tablonun grafiği (K-178): ayarları, açık ya da kapalı olması, düzeni ve yüksekliği görünümün parçasıdır; yoksa null. */
   chart: ChartConfig | null;
+  /** Pivot görünümü (K-183): ayarları ve açık olması görünümün parçasıdır; yoksa null. */
+  pivot: PivotConfig | null;
 }
 
 /** Tipin varsayılan genişliği (rem; 13 px'te 180 / 120 / 140 / 100 px). */
@@ -34,7 +37,7 @@ export const clampWidth = (rem: number) => Math.min(MAX_WIDTH_REM, Math.max(MIN_
 /** "Standart" görünüm: liste tanımındaki varsayılan alanlar ve sunucunun varsayılan sıralaması (K-89). */
 export function standardState(columns: ListColumn[]): TableState {
   return { order: columns.filter((c) => c.default_visible).map((c) => c.field), widths: {}, pinned: 0, sort: [],
-           filters: [], groupBy: [], aggregates: {}, rules: [], chart: null };
+           filters: [], groupBy: [], aggregates: {}, rules: [], chart: null, pivot: null };
 }
 
 export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): TableState {
@@ -51,6 +54,7 @@ export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): Tabl
     aggregates: Object.fromEntries(Object.entries(def.aggregates ?? {}).filter(([f]) => known.has(f))),
     rules: (def.rules ?? []).filter((r) => known.has(r.field) && (!r.condition.field_ref || known.has(r.condition.field_ref))),
     chart: def.chart ? fitChart(normalizeChart(def.chart), columns) : null,
+    pivot: fitPivot(normalizePivot(def.pivot), columns),
   };
 }
 
@@ -65,6 +69,7 @@ export function toDefinition(s: TableState): ViewDefinition {
     aggregates: s.aggregates,
     rules: s.rules,
     ...(s.chart ? { chart: s.chart } : {}),
+    ...(s.pivot ? { pivot: s.pivot } : {}),
   };
 }
 
@@ -82,6 +87,7 @@ function normalize(def: ViewDefinition): string {
       .map(([f, a]) => [f, a.fn, a.weight ?? null]),
     rules: (def.rules ?? []).map((r) => [r.id, r.field, r.enabled, clean(r.condition as ListFilter), clean(r.format as ListFilter)]),
     chart: def.chart ? normalizeChart(def.chart) : null,
+    pivot: normalizePivot(def.pivot),
   });
 }
 

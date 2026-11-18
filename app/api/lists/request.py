@@ -318,6 +318,67 @@ class ChartDefinition(BaseModel):
 MIN_WIDTH_REM, MAX_WIDTH_REM = 4.0, 60.0
 
 
+# --- pivot (K-183) -------------------------------------------------------------------------------------------
+PIVOT_MAX_AXIS = 3
+PIVOT_MAX_VALUES = 8
+PivotFn = Literal["sum", "avg", "min", "max", "count", "distinct", "wavg"]
+
+
+class PivotAxis(BaseModel):
+    """Satır ya da sütun alanı; tarih alanında dönem tipi."""
+    field: str
+    bucket: ChartBucket | None = None
+
+
+class PivotValueSpec(BaseModel):
+    """Bir değer: alan ve hesaplama ("Say" alansız; ağırlıklı ortalamada ağırlık alanı)."""
+    id: str = Field(min_length=1, max_length=20)
+    field: str | None = None
+    fn: PivotFn = "sum"
+    weight: str | None = None
+
+
+class PivotTotals(BaseModel):
+    rows: bool = False        # genel toplam satırı
+    columns: bool = False     # "Toplam" sütun grubu
+    subtotals: bool = False   # satır ve sütun ara toplamları
+
+
+class PivotSort(BaseModel):
+    by: str = "name"          # "name" ya da bir değerin kimliği
+    dir: Literal["asc", "desc"] = "asc"
+
+
+class PivotRequest(BaseModel):
+    filters: list[FilterItem] = []
+    chart_selection: ChartSelection | None = None
+    rows: list[PivotAxis] = Field(min_length=1, max_length=PIVOT_MAX_AXIS)
+    columns: list[PivotAxis] = Field(default=[], max_length=PIVOT_MAX_AXIS)
+    values: list[PivotValueSpec] = Field(min_length=1, max_length=PIVOT_MAX_VALUES)
+    totals: PivotTotals = PivotTotals()
+    sort: PivotSort = PivotSort()
+    scenario_id: int | None = None
+    offset: int = Field(default=0, ge=0)
+    limit: int | None = Field(default=None, ge=1, le=MAX_LIMIT)
+
+
+class PivotValue(PivotValueSpec):
+    """Görünümde saklanan değer: gösterim ayarıyla."""
+    decimals: int | None = Field(default=None, ge=0, le=6)
+
+
+class PivotDefinition(BaseModel):
+    """Görünümle saklanan pivot ayarları (K-183)."""
+    v: Literal[1] = 1
+    open: bool = True
+    rows: list[PivotAxis] = Field(default=[], max_length=PIVOT_MAX_AXIS)
+    columns: list[PivotAxis] = Field(default=[], max_length=PIVOT_MAX_AXIS)
+    values: list[PivotValue] = Field(default=[], max_length=PIVOT_MAX_VALUES)
+    values_on: Literal["columns", "rows"] = "columns"
+    totals: PivotTotals = PivotTotals()
+    sort: PivotSort = PivotSort()
+
+
 class ViewColumn(BaseModel):
     field: str
     width: float | None = Field(default=None, ge=MIN_WIDTH_REM, le=MAX_WIDTH_REM)  # rem; boşsa tipin varsayılanı
@@ -334,6 +395,7 @@ class ViewDefinition(BaseModel):
     aggregates: dict[str, AggSpec] = {}  # varsayılandan farklı seçilen ara toplam türleri (K-90)
     rules: list[FormatRule] = Field(default=[], max_length=MAX_RULES)  # koşullu biçim, sıralı (K-95)
     chart: ChartDefinition | None = None  # tablonun grafiği (K-178); yoksa grafik kapalı
+    pivot: PivotDefinition | None = None  # pivot görünümü (K-183); yoksa pivot kurulmamış
 
 
 class ViewCreate(BaseModel):

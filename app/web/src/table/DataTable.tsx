@@ -46,7 +46,10 @@ import {
   type AggSpec, type ExportInfo, type ExportScope, type FormatRule, listApi, type GroupNode, type ListColumn, type ListFilter,
   MAX_RULES, type RelatedCatalog, type RelationHeading, type Row,
 } from "./types";
-import { mergeColumns, withDisplayLabels } from "./related";
+import { PivotGrid } from "./PivotGrid";
+import { emptyPivot, type PivotConfig } from "./pivotModel";
+import { PivotPanel } from "./PivotPanel";
+import { isRelatedField, mergeColumns, withDisplayLabels } from "./related";
 import { type DisplayItem, flatten, useGroupedQuery } from "./useGroupedQuery";
 import { type ListRequest, useListQuery } from "./useListQuery";
 import { useViews, ViewBar } from "./ViewBar";
@@ -59,6 +62,7 @@ const T = tr.table;
 
 /** Satır yüksekliği rem cinsinden; tokens.css --row-height ile aynı (testte karşılaştırılır). */
 export const ROW_REM = 2.1538;
+const PIVOT_NARROW_PX = 880;
 /** Görünen satırların üstünde ve altında çizilen tampon satır sayısı (docs/12 performans hedefi). */
 export const OVERSCAN = 10;
 /** Grup düzeyi başına girinti ve grup okunun (ikon + boşluk) genişliği (rem); veri satırı hizası bunlardan. */
@@ -602,6 +606,35 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   // Grafik (K-178): tablonun filtresini çizer; açık ya da kapalı olması, düzeni ve yüksekliği görünümün parçasıdır
   const chartFilters = useMemo(() => [...fixed, ...s.filters], [fixed, JSON.stringify(s.filters)]);  // eslint-disable-line react-hooks/exhaustive-deps
   const chartOpen = Boolean(s.chart?.open);
+  // Pivot (K-183): açıkken tablonun yerinde pivot ızgarası; ayarlar görünümle saklanır, panelin açık olması saklanmaz
+  const pivotOn = Boolean(s.pivot?.open);
+  const [pivotPanel, setPivotPanel] = useState(false);
+  // Dar alanda panel ızgaranın üstüne açılır (grafik bölmesindeki kural)
+  const pivotWrapRef = useRef<HTMLDivElement>(null);
+  const [pivotNarrow, setPivotNarrow] = useState(false);
+  useEffect(() => {
+    const el = pivotWrapRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setPivotNarrow(el.clientWidth < PIVOT_NARROW_PX);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pivotOn]);
+  const setPivot = useCallback((pivot: PivotConfig | null) => update((st) => ({ ...st, pivot })), [update]);
+  const togglePivot = () => {
+    setPanel(null);
+    if (pivotOn) {
+      const kept = views.baseline?.pivot || (s.pivot && (s.pivot.rows.length || s.pivot.values.length));
+      setPivot(kept && s.pivot ? { ...s.pivot, open: false } : null);
+      setPivotPanel(false);
+    } else {
+      setPivot(s.pivot ? { ...s.pivot, open: true } : emptyPivot());
+      setPivotPanel(true);
+    }
+  };
+  const pivotFields = s.pivot ? [...s.pivot.rows.map((a) => a.field), ...s.pivot.columns.map((a) => a.field),
+    ...s.pivot.values.flatMap((v) => [v.field, v.weight].filter((f): f is string => Boolean(f)))] : [];
   const chartFull = s.chart?.layout === "full";
   const chartPossible = useMemo(() => Boolean(columns && defaultChart(columns, s.order)), [columns, s.order]);
   const baselineChart = views.baseline?.chart ?? null;
@@ -1153,10 +1186,11 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
         <div className="sc-table-tools" ref={panelRef}>
           {toolbarActions}
           <ViewBar views={views} state={s} onClearSort={() => update((st) => ({ ...st, sort: [] }))}
+                   pivot={{ on: pivotOn, toggle: togglePivot, openPanel: () => setPivotPanel(true) }}
                    multi={fit ? undefined : { on: multiOn, toggle: () => { const next = !multiOn; setMultiOn(next); userPrefs(userId).setMultiSelect(list, next); } }}>
             <button type="button" className={`sc-tool-btn${s.groupBy.length ? " has-mark" : ""}`} ref={groupBtnRef} aria-expanded={panel === "group"}
-                    aria-label={T.group(s.groupBy.length)} title={T.group(s.groupBy.length)}
-                    onClick={() => setPanel((p) => (p === "group" ? null : "group"))}><Rows3 aria-hidden="true" /></button>
+                    aria-label={T.group(s.groupBy.length)} title={pivotOn ? `${T.group(s.groupBy.length)} · ${tr.pivot.notInPivot}` : T.group(s.groupBy.length)}
+                    disabled={pivotOn} onClick={() => setPanel((p) => (p === "group" ? null : "group"))}><Rows3 aria-hidden="true" /></button>
             {grouped && (
               <div className="sc-btn-group" role="group" aria-label={T.groupToggles}>
                 <button type="button" className="sc-tool-btn" aria-label={T.collapseAll} title={T.collapseAll}
@@ -1170,8 +1204,9 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
               </div>
             )}
             <button type="button" className="sc-tool-btn" ref={fieldsBtnRef} aria-expanded={panel === "fields"}
-                    aria-label={T.fields(visible.length, baseColumns!.length)} title={T.fields(visible.length, baseColumns!.length)}
-                    onClick={() => setPanel((p) => (p === "fields" ? null : "fields"))}><Columns3 aria-hidden="true" /></button>
+                    aria-label={T.fields(visible.length, baseColumns!.length)}
+                    title={pivotOn ? `${T.fields(visible.length, baseColumns!.length)} · ${tr.pivot.notInPivot}` : T.fields(visible.length, baseColumns!.length)}
+                    disabled={pivotOn} onClick={() => setPanel((p) => (p === "fields" ? null : "fields"))}><Columns3 aria-hidden="true" /></button>
             {exportInfo && (
               <button type="button" className="sc-tool-btn" aria-label={T.exportButton} title={T.exportButton}
                       onClick={() => setExporting(true)}><Download aria-hidden="true" /></button>
@@ -1245,8 +1280,20 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
           )}
         </>
       )}
+      {pivotOn && s.pivot && (
+        <div className={`sc-pivot-wrap${pivotNarrow ? " is-narrow" : ""}`} ref={pivotWrapRef}
+             style={chartOpen && s.chart ? (chartFull ? { display: "none" } : { flex: `${1 - s.chart.height} 1 0` }) : undefined}>
+          <PivotGrid list={list} columns={columns} pivot={s.pivot} filters={chartFilters} selection={chartSel} chunkSize={chunkSize ?? 100}
+                     reloadKey={reloadKey} onFilter={(field, anchor) => openPop("filter", field, anchor)} isFiltered={(field) => Boolean(filterOf(field))} />
+          {pivotPanel && (
+            <PivotPanel pivot={s.pivot} columns={columns} baseColumns={baseColumns!} relations={relations} loadRelated={loadRelated} onRelated={addRelated}
+                        usedFields={[...new Set([...pivotFields, ...s.filters.map((f) => f.field)])].filter(isRelatedField)}
+                        onChange={setPivot} onClose={() => setPivotPanel(false)} />
+          )}
+        </div>
+      )}
       <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll" tabIndex={-1}
-           style={chartOpen && s.chart ? (chartFull ? { display: "none" } : { flex: `${1 - s.chart.height} 1 0` }) : undefined}
+           style={pivotOn ? { display: "none" } : chartOpen && s.chart ? (chartFull ? { display: "none" } : { flex: `${1 - s.chart.height} 1 0` }) : undefined}
            onKeyDown={(e) => { if (!onSelectKey(e) && !onCopyKey(e) && gridOn) onGridKey(e); }} onPaste={gridOn ? onGridPaste : undefined}>
         <table className={`sc-table-grid${fit ? " sc-table-grid--fit" : ""}`} aria-rowcount={count + 1} aria-colcount={visible.length + extraCols}
                style={fit ? undefined : { width: `${visible.reduce((sum, c) => sum + width(c.field), (rowMenu ? ROW_MENU_REM : 0) + selRem)}rem` }}>
