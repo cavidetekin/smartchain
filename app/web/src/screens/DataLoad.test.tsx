@@ -12,7 +12,7 @@ useTableTestSetup();
 const COLUMNS = [
   col("Name", "Tablo", "text", "text"), col("EntityClass", "Kategori", "text", "list"), col("Description", "Açıklama", "text", "text"),
 ];
-const ROWS = [{ Id: 9, Entity: "Resource", Name: "Kaynak", EntityClass: "Ana veri", Description: "Makine, işçi ve fason kaynakları ve kapasiteleri", Version: 1 }];
+const ROWS = [{ Id: 9, Entity: "Resource", Name: "Kaynak", EntityClass: "Ana veri", Description: "Makine, işçi ve fason kaynakları", Version: 1 }];
 const INFO: TemplateInfo = {
   entity: "Resource", name: "Kaynak", version: 1, file_name: "smartchain_kaynak_v1.xlsx", field_count: 15,
   required: ["Lokasyon kodu", "Kaynak kodu"],
@@ -48,7 +48,7 @@ describe("ekran 02", () => {
     renderApp("/veri/veri-yukleme", meAs(role));
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Veri yükleme");
     expect(await screen.findByText("Kaynak", {}, { timeout: 5000 })).toBeInTheDocument();
-    expect(screen.getByText("Makine, işçi ve fason kaynakları ve kapasiteleri")).toBeInTheDocument();
+    expect(screen.getByText("Makine, işçi ve fason kaynakları")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/K-\d+/);
   });
 

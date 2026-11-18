@@ -8,6 +8,7 @@ Miktarların ondalığı satırın biriminden (K-88): malzeme miktarları malzem
 temel birimi), kapasite ve tüketim kaynağın kapasite birimi. İlişkiden gelen birim listede kolon değildir (`UnitOfRow`), yalnız ondalık içindir.
 Malzeme mevcut `materials` listesidir (görünümler korunur).
 """
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import sqlalchemy as sa
@@ -21,7 +22,7 @@ from .materials import MATERIALS
 SYSTEM = ("VersionFrom", "VersionTo", "ImportBatchId", "BusinessKey")
 HIDDEN = ("IsActive", "UpdatedAt")  # Standart görünümde gizli (K-169)
 UNIT_OF_ROW = "UnitOfRow"
-NAMES = {row[0]: row[1] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "Birim", "ResourceGroupAssignment": "Grup ataması"}
+NAMES = {row[0]: row[1] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "Birim"}
 SLUGS = {row[0]: row[4] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "birim"}
 
 
@@ -58,12 +59,23 @@ class Spec:
     # tablonun kolonu boşken ilişkideki (ör. bileşen birimi yoksa bileşenin temel birimi)
     unit: str | None = None
     unit_ref: tuple[str, str] | None = None
+    # Satırın birimi bir alt sorgudan (ör. kaynağın gruplarının ortak kapasite birimi, K-180)
+    unit_query: Callable[[sa.Table], sa.ColumnElement] | None = None
     function: int = 10
 
 
 ADD = {f"AdditionalNumber{i}": 2 for i in range(1, 4)}
 MATERIAL_UNIT = ("MaterialId", "BaseUom")
-CAPACITY_UNIT = ("ResourceId", "CapacityUnit")
+CAPACITY_UNIT = ("ResourceGroupId", "CapacityUnit")  # tüketim kaynak grubunun kapasite biriminde (K-180)
+
+
+def _resource_unit(table: sa.Table) -> sa.ColumnElement:
+    """Kaynağın üye olduğu grupların ortak kapasite birimi (K-180): günlük kapasitenin birimi. Grubu yoksa ya da birimler farklıysa boş
+    (ondalık varsayılana düşer). Geçici: günlük kapasite 7.8'de kaynaktan kalkar."""
+    m = metadata.tables["core.ResourceGroupMember"].alias("u_member")
+    g = metadata.tables["core.ResourceGroup"].alias("u_group")
+    return (sa.select(sa.case((sa.func.count(sa.distinct(g.c.CapacityUnit)) == 1, sa.func.min(g.c.CapacityUnit))))
+            .where(m.c.ResourceId == table.c.Id, _current(m), g.c.Id == m.c.ResourceGroupId, _current(g)).correlate(table).scalar_subquery())
 
 MASTER_SPECS: tuple[Spec, ...] = (
     Spec("MaterialReference", "master-material-reference", {"TimeFactor": 2}),
@@ -74,9 +86,9 @@ MASTER_SPECS: tuple[Spec, ...] = (
          unit_decimals=frozenset({"Consumption"}), unit_ref=CAPACITY_UNIT),
     Spec("Resource", "master-resource",
          {"SubconFixedLeadTimeDays": 2, "SubconVariableDaysPerUnit": 4, "RemainingOverTimeYear": 2, "RemainingOverTimeMonth": 2, **ADD},
-         unit_decimals=frozenset({"DailyCapacity"}), unit="CapacityUnit"),
+         unit_decimals=frozenset({"DailyCapacity"}), unit_query=_resource_unit),
     Spec("ResourceGroup", "master-resource-group", ADD),
-    Spec("ResourceGroupAssignment", "master-resource-group-assignment"),
+    Spec("ResourceGroupMember", "master-resource-group-member", {f"AdditionalNumber{i}": 2 for i in range(1, 3)}),
     Spec("Supplier", "master-supplier", ADD),
     Spec("MaterialSupplier", "master-material-supplier", {"QuotaRatio": 2, "FixedLeadTimeDays": 0, "VariableLeadTimeDays": 4, **ADD},
          percent=frozenset({"QuotaRatio"}), unit_decimals=frozenset({"MinimumOrderQuantity", "OrderLotSize", "MaximumOrderQuantity"}),
@@ -153,6 +165,9 @@ def _build(spec: Spec) -> ListDefinition:
         related = aliases[ref].c[unit_col]
         cols.append((sa.func.coalesce(table.c[spec.unit], related) if spec.unit else related).label(UNIT_OF_ROW))
         unit = UNIT_OF_ROW
+    if spec.unit_query:
+        cols.append(spec.unit_query(table).label(UNIT_OF_ROW))
+        unit = UNIT_OF_ROW
     source = sa.select(*cols).select_from(joined).subquery(f"md_{spec.table}")
     numeric = {f for f in fields if isinstance(source.c[f].type, sa.Numeric) and not isinstance(source.c[f].type, sa.Integer)}
     decimals = {f: spec.decimals[f] for f in numeric if f in spec.decimals}
@@ -192,7 +207,7 @@ BY_NAME = {d.name: d for d in (MATERIALS, *MASTER_LISTS, *TRANSACTION_LISTS)}
 MASTER_TABS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("malzeme", ("materials", "master-material-reference")),
     ("urun-agaci-ve-rota", ("master-production-version", "master-bom", "master-routing")),
-    ("kaynak", ("master-resource", "master-resource-group", "master-resource-group-assignment")),
+    ("kaynak", ("master-resource", "master-resource-group", "master-resource-group-member")),
     ("tedarikci-ve-musteri", ("master-supplier", "master-material-supplier", "master-customer")),
     ("lokasyon-ve-birim", ("master-location", "master-unit-of-measure", "master-uom-conversion")),
 )

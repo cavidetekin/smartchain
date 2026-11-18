@@ -296,26 +296,42 @@ def _resource(t, code_field: str, *conditions) -> sa.ColumnElement:
     return sa.exists().where(current(r), r.c.LocationCode == t.c.LocationCode, r.c.Code == t.c[code_field], *[c(r) for c in conditions])
 
 
-def _not_member(t):
-    a = alias("ResourceGroupAssignment", "_m")
-    return sa.and_(t.c.ResourceCode.is_not(None), t.c.ResourceGroupCode.is_not(None), ~sa.exists().where(
-        current(a), a.c.LocationCode == t.c.LocationCode, a.c.ResourceGroupCode == t.c.ResourceGroupCode, a.c.ResourceCode == t.c.ResourceCode))
+def _group(t, code_field: str, *conditions) -> sa.ColumnElement:
+    g = alias("ResourceGroup", "_rg")
+    return sa.exists().where(current(g), g.c.LocationCode == t.c.LocationCode, g.c.Code == t.c[code_field], *[c(g) for c in conditions])
 
 
-def _group_unit(t):
-    a, r = alias("ResourceGroupAssignment", "_g"), alias("Resource", "_g")
-    mixed = (sa.select(a.c.LocationCode, a.c.ResourceGroupCode)
-             .select_from(a.join(r, sa.and_(r.c.LocationCode == a.c.LocationCode, r.c.Code == a.c.ResourceCode)))
-             .where(current(a), current(r), r.c.CapacityUnit.is_not(None))
-             .group_by(a.c.LocationCode, a.c.ResourceGroupCode).having(sa.func.count(sa.distinct(r.c.CapacityUnit)) > 1).subquery("mixed"))
-    return sa.and_(t.c.ResourceGroupCode.is_not(None),
-                   sa.exists().where(mixed.c.LocationCode == t.c.LocationCode, mixed.c.ResourceGroupCode == t.c.ResourceGroupCode))
+def _number_over_group(t):
+    """Kaynak adedi gruptaki kaynak sayısından büyük (K-180): adet eşleşmeden bilinir. Üyesi olmayan grup RG.NO_RESOURCE'un işidir."""
+    m = alias("ResourceGroupMember", "_n")
+    members = (sa.select(sa.func.count()).where(current(m), m.c.LocationCode == t.c.LocationCode, m.c.ResourceGroupCode == t.c.ResourceGroupCode)
+               .correlate(t).scalar_subquery())
+    return sa.and_(t.c.ResourceGroupCode.is_not(None), t.c.ResourceNumber.is_not(None), members > 0, t.c.ResourceNumber > members)
 
 
-def _competence_not_employee(t):
-    g = alias("ResourceGroup", "_c")
-    return sa.and_(sa.exists().where(current(g), g.c.LocationCode == t.c.LocationCode, g.c.Code == t.c.ResourceGroupCode, one(g.c.IsCompetenceGroup)),
-                   _resource(t, "ResourceCode", lambda r: nz(r.c.IsEmployee) == 0))
+def _other_groups(t, differs) -> sa.ColumnElement:
+    """Aynı kaynağın başka bir grup eşleşmesi var ve iki grup `differs` bakımından ayrışıyor."""
+    m, own, other = alias("ResourceGroupMember", "_om"), alias("ResourceGroup", "_og"), alias("ResourceGroup", "_ox")
+    return sa.exists().where(current(m), current(own), current(other),
+                             m.c.LocationCode == t.c.LocationCode, m.c.ResourceCode == t.c.ResourceCode, m.c.ResourceGroupCode != t.c.ResourceGroupCode,
+                             own.c.LocationCode == t.c.LocationCode, own.c.Code == t.c.ResourceGroupCode,
+                             other.c.LocationCode == m.c.LocationCode, other.c.Code == m.c.ResourceGroupCode, differs(own, other))
+
+
+def _unit_mismatch(t):
+    return _other_groups(t, lambda own, other: own.c.CapacityUnit != other.c.CapacityUnit)  # birimi boş grup karşılaştırmaya girmez
+
+
+def _mixed_types(t):
+    return _other_groups(t, lambda own, other: sa.or_(*[nz(own.c[f]) != nz(other.c[f]) for f in RES_TYPES]))
+
+
+def _not_employee(t):
+    """Kaynak bulunuyor ama hiçbir işçi grubuna (`IsEmployee`) üye değil."""
+    m, g = alias("ResourceGroupMember", "_em"), alias("ResourceGroup", "_eg")
+    return sa.and_(_resource(t, "ResourceCode"), ~sa.exists().where(
+        current(m), current(g), m.c.LocationCode == t.c.LocationCode, m.c.ResourceCode == t.c.ResourceCode,
+        g.c.LocationCode == m.c.LocationCode, g.c.Code == m.c.ResourceGroupCode, one(g.c.IsEmployee)))
 
 
 def _non_stockable(t):
@@ -381,38 +397,36 @@ TABLE_RULES: tuple[RuleDef, ...] = (
       [Q("AlternativePriority", FILLED), Q("AlternativeGroup", EMPTY)]),
     X("BOM.SINGLE_ALTERNATIVE", "BOM", "Alternatif grupta tek satır", "Alternatif grupta tek satır", U, "Alternatif grupta tek satır var.",
       C(_alone_in_group("BOM", ("LocationCode", "MaterialCode", "Code"), "AlternativeGroup"), "AlternativeGroup"), group=True),
-    G("RTG.NO_RESOURCE", "Routing", "Kaynak ve kaynak grubu boş", H, "Kaynak ya da kaynak grubu dolu olmalı.",
-      [Q("ResourceCode", EMPTY), Q("ResourceGroupCode", EMPTY)]),
     G("RTG.RESOURCE_NUMBER", "Routing", "Kaynak adedi 1'den az", H, "Kaynak adedi en az 1 olmalı.", [Q("ResourceNumber", LT, 1)]),
     G("RTG.ZERO_CONSUMPTION", "Routing", "Tüketim sıfır", U, "Tüketim sıfır.", [Q("Consumption", EQ, 0)]),
     G("RTG.PRIORITY_NO_GROUP", "Routing", "Alternatif önceliği var, grubu yok", U, "Alternatif önceliği var, alternatif grubu yok.",
       [Q("AlternativePriority", FILLED), Q("AlternativeGroup", EMPTY)]),
-    X("RTG.NOT_MEMBER", "Routing", "Kaynak, kaynak grubunun üyesi değil", "Kaynak, yazılan kaynak grubunun üyesi değil (K-116)", U,
-      "Kaynak, yazılan kaynak grubunun üyesi değil.", C(_not_member, "ResourceCode"), check_type=CROSS, reads=("ResourceGroupAssignment",)),
-    X("RTG.GROUP_UNIT", "Routing", "Kaynak grubunda kapasite birimleri farklı", "Yazılan kaynak grubundaki kaynakların kapasite birimi farklı (K-116)", U,
-      "Kaynak grubundaki kaynakların kapasite birimi farklı.", C(_group_unit, "ResourceGroupCode"), check_type=CROSS, reads=("ResourceGroupAssignment", "Resource")),
-    X("RTG.SUBCON_RESOURCE", "Routing", "Fason operasyonun kaynağı fason değil", "Fason operasyon = Evet ama kaynak fason değil", U, "Fason operasyonun kaynağı fason değil.",
-      C(lambda t: sa.and_(one(t.c.IsSubcontracted), t.c.ResourceCode.is_not(None), _resource(t, "ResourceCode", lambda r: nz(r.c.IsSubcontractor) == 0)), "ResourceCode"),
-      check_type=CROSS, reads=("Resource",)),
+    X("RTG.SUBCON_RESOURCE", "Routing", "Fason operasyonun kaynak grubu fason değil", "Fason operasyon = Evet ama kaynak grubu fason değil", U,
+      "Fason operasyonun kaynak grubu fason değil.",
+      C(lambda t: sa.and_(one(t.c.IsSubcontracted), _group(t, "ResourceGroupCode", lambda g: nz(g.c.IsSubcontractor) == 0)), "ResourceGroupCode"),
+      check_type=CROSS, reads=("ResourceGroup",)),
+    X("RTG.NUMBER_OVER_GROUP", "Routing", "Kaynak adedi gruptaki kaynak sayısından büyük", "Kaynak adedi > gruptaki kaynak sayısı (K-180)", U,
+      "Kaynak adedi gruptaki kaynak sayısından büyük.", C(_number_over_group, "ResourceNumber"), check_type=CROSS, reads=("ResourceGroupMember",)),
     G("REF.SELF", "MaterialReference", "Malzeme kendisine benzetilmiş", H, "Malzeme kendisine benzetilmiş.", [Q("ReferenceMaterialCode", EQ, other="MaterialCode")]),
     X("REF.CYCLE", "MaterialReference", "Referans zincirinde döngü", "Referans zincirinde döngü", H, "Referans zincirinde döngü.",
       python=_cycle_rule("MaterialReference", "MaterialCode", "ReferenceMaterialCode", "ReferenceMaterialCode"), group=True),
     G("REF.TIMEFACTOR", "MaterialReference", "Süre çarpanı sıfır ya da negatif", H, "Süre çarpanı sıfırdan büyük olmalı.", [Q("TimeFactor", LE, 0)]),
-    G("RG.NO_TYPE", "ResourceGroup", "Grup tipi yok", U, "Grup ne kaynak grubu ne yetkinlik grubu.", [Q("IsResourceGroup", NE, 1), Q("IsCompetenceGroup", NE, 1)]),
-    X("RES.TYPE_FLAGS", "Resource", "Kaynak tipi tek değil", "İşçi, Makine, Fırın, Kalıp, Diğer, Fason bayraklarından hiçbiri ya da birden fazlası Evet", U,
-      "Kaynağın tek bir tipi olmalı.", C(lambda t: _flags_not_one(t, RES_TYPES), "IsEmployee")),
-    G("RES.SUBCON_CONFLICT", "Resource", "Fason bayrağı fasoncuyla çelişiyor", U, "Fason bayrağı ile fasoncu çelişiyor.",
+    X("RG.TYPE_FLAGS", "ResourceGroup", "Grup tipi tek değil", "İşçi, Makine, Fırın, Kalıp, Diğer, Fason bayraklarından hiçbiri ya da birden fazlası Evet", U,
+      "Kaynak grubunun tek bir tipi olmalı.", C(lambda t: _flags_not_one(t, RES_TYPES), "IsEmployee")),
+    G("RG.SUBCON_CONFLICT", "ResourceGroup", "Fason bayrağı fasoncuyla çelişiyor", U, "Fason bayrağı ile fasoncu çelişiyor.",
       [Q("SubcontractorCode", EMPTY), Q("IsSubcontractor", EQ, 1)], [Q("SubcontractorCode", FILLED), Q("IsSubcontractor", NE, 1)]),
     G("RES.MONTH_YEAR", "Resource", "Aylık kalan fazla mesai yıllıktan büyük", U, "Aylık kalan fazla mesai yıllıktan büyük.",
       [Q("RemainingOverTimeMonth", GT, other="RemainingOverTimeYear")]),
-    G("RES.PHASE1_UNUSED", "Resource", "Fırın ya da kalıp Faz 1'de kullanılmaz", B, "Fırın ve kalıp Faz 1 planlamasında kullanılmaz.",
+    G("RG.PHASE1_UNUSED", "ResourceGroup", "Fırın ya da kalıp Faz 1'de kullanılmaz", B, "Fırın ve kalıp Faz 1 planlamasında kullanılmaz.",
       [Q("IsFurnace", EQ, 1)], [Q("IsMold", EQ, 1)]),
-    X("RGA.COMPETENCE_NOT_EMPLOYEE", "ResourceGroupAssignment", "Yetkinlik grubunda işçi olmayan kaynak", "Yetkinlik grubuna işçi olmayan kaynak atanmış", U,
-      "Yetkinlik grubuna işçi olmayan kaynak atanmış.", C(_competence_not_employee, "ResourceCode"), check_type=CROSS, reads=("ResourceGroup", "Resource")),
+    X("RGM.UNIT_MISMATCH", "ResourceGroupMember", "Kaynağın gruplarının kapasite birimi farklı", "Kaynağın üye olduğu grupların kapasite birimi farklı (K-180)", U,
+      "Kaynağın üye olduğu grupların kapasite birimi farklı.", C(_unit_mismatch, "ResourceCode"), check_type=CROSS, reads=("ResourceGroup",)),
+    X("RGM.MIXED_TYPES", "ResourceGroupMember", "Kaynak farklı tipte gruplara üye", "Kaynağın üye olduğu grupların tip bayrakları farklı (K-180)", U,
+      "Kaynak farklı tipte gruplara üye.", C(_mixed_types, "ResourceCode"), check_type=CROSS, reads=("ResourceGroup",)),
     G("ABS.HOURS", "EmployeeAbsence", "Günlük izin saati 0–24 dışında", H, "Günlük saat 0'dan büyük, en çok 24 olmalı.",
       [Q("HoursPerDay", LE, 0)], [Q("HoursPerDay", GT, 24)]),
-    X("ABS.NOT_EMPLOYEE", "EmployeeAbsence", "İzin kaydının kaynağı işçi değil", "Kaynak işçi değil", U, "İzin kaydının kaynağı işçi değil.",
-      C(lambda t: _resource(t, "ResourceCode", lambda r: nz(r.c.IsEmployee) == 0), "ResourceCode"), check_type=CROSS, reads=("Resource",)),
+    X("ABS.NOT_EMPLOYEE", "EmployeeAbsence", "İzin kaydının kaynağı işçi değil", "Kaynak hiçbir işçi grubuna üye değil", U, "İzin kaydının kaynağı işçi değil.",
+      C(_not_employee, "ResourceCode"), check_type=CROSS, reads=("ResourceGroupMember", "ResourceGroup")),
     X("ABS.OVERLAP", "EmployeeAbsence", "İzinler çakışıyor", "Aynı kişinin izinleri çakışıyor", U, "Aynı kişinin izinleri çakışıyor.", C(_overlap, "StartDate"), group=True),
     G("MS.MIN_MAX", "MaterialSupplier", "Minimum sipariş maksimumdan büyük", H, "Minimum sipariş maksimumdan büyük.",
       [Q("MinimumOrderQuantity", GT, other="MaximumOrderQuantity")]),
@@ -465,8 +479,6 @@ TABLE_RULES: tuple[RuleDef, ...] = (
       [Q("ParentWorkOrderNo", EMPTY), Q("IsRework", EQ, 1)]),
     G("WO.CUSTOM_NO_OWNER", "WorkOrder", "Özel takipli iş emrinin sahibi yok", U, "Özel takipli kaydın sahibi yok.", [Q("IsCustomTracked", EQ, 1), *OWNER]),
     G("WOC.ISSUED", "WorkOrderComponent", "Çekilen gereken miktardan fazla", U, "Çekilen gereken miktardan fazla.", [Q("IssuedQuantity", GT, other="RequiredQuantity")]),
-    G("WOO.NO_RESOURCE", "WorkOrderOperation", "Kaynak ve kaynak grubu boş", H, "Kaynak ya da kaynak grubu dolu olmalı.",
-      [Q("ResourceCode", EMPTY), Q("ResourceGroupCode", EMPTY)]),
     G("WOO.RESOURCE_NUMBER", "WorkOrderOperation", "Kaynak adedi 1'den az", H, "Kaynak adedi en az 1 olmalı.", [Q("ResourceNumber", LT, 1)]),
     G("WOO.CONFIRMED", "WorkOrderOperation", "Teyit edilen tüketim planlanandan fazla", U, "Teyit edilen tüketim planlanandan fazla.",
       [Q("ConfirmedConsumption", GT, other="PlannedConsumption")]),
@@ -656,18 +668,17 @@ INTEGRITY_RULES: tuple[RuleDef, ...] = (
                              ~_has("ProductionVersion", "_v", _same_location(t), lambda v: v.c.MaterialCode == t.c.ReferenceMaterialCode,
                                    lambda v: one(v.c.IsActive))),
            "ReferenceMaterialCode", ("Material", "ProductionVersion")),
-    _cross("RG.NO_RESOURCE", "ResourceGroup", "Kaynak grubunda kaynak yok", "Gruba atanmış kaynak yok", WARNING,
-           lambda t: ~_has("ResourceGroupAssignment", "_a", _same_location(t), lambda a: a.c.ResourceGroupCode == t.c.Code),
-           "Code", ("ResourceGroupAssignment",)),
-    _cross("RES.UNUSED", "Resource", "Kaynak hiçbir rotada ve grupta yok", "Kaynak hiçbir rota satırında ve kaynak grubu atamasında geçmiyor", INFO,
-           lambda t: sa.and_(~_has("Routing", "_r", _same_location(t), lambda r: r.c.ResourceCode == t.c.Code),
-                             ~_has("ResourceGroupAssignment", "_a", _same_location(t), lambda a: a.c.ResourceCode == t.c.Code)),
-           "Code", ("Routing", "ResourceGroupAssignment"), ("ResourceGroupAssignment",)),
+    _cross("RG.NO_RESOURCE", "ResourceGroup", "Kaynak grubunda kaynak yok", "Gruba üye kaynak yok", WARNING,
+           lambda t: ~_has("ResourceGroupMember", "_a", _same_location(t), lambda a: a.c.ResourceGroupCode == t.c.Code),
+           "Code", ("ResourceGroupMember",)),
+    _cross("RES.UNUSED", "Resource", "Kaynak hiçbir grupta yok", "Kaynak hiçbir grup eşleşmesinde geçmiyor (K-180)", WARNING,
+           lambda t: ~_has("ResourceGroupMember", "_a", _same_location(t), lambda a: a.c.ResourceCode == t.c.Code),
+           "Code", ("ResourceGroupMember",), ("ResourceGroupMember",)),
     _cross("SUP.NO_MATERIAL", "Supplier", "Tedarikçi hiçbir malzemeye bağlı değil",
-           "Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynağın fasoncusu değil", INFO,
+           "Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynak grubunun fasoncusu değil", INFO,
            lambda t: sa.and_(~_has("MaterialSupplier", "_s", lambda s: s.c.SupplierCode == t.c.Code),
-                             ~_has("Resource", "_r", lambda r: r.c.SubcontractorCode == t.c.Code)),
-           "Code", ("MaterialSupplier", "Resource"), ("Resource",)),
+                             ~_has("ResourceGroup", "_r", lambda r: r.c.SubcontractorCode == t.c.Code)),
+           "Code", ("MaterialSupplier", "ResourceGroup"), ("ResourceGroup",)),
     _cross("SO.NOT_SELLABLE", "SalesOrderLine", "Malzeme satılabilir değil", "Malzemenin Satılabilir alanı Evet değil", WARNING,
            lambda t: _has("Material", "_m", _same_location(t), lambda m: m.c.Code == t.c.MaterialCode, lambda m: nz(m.c.IsSellable) == 0),
            "MaterialCode", ("Material",)),

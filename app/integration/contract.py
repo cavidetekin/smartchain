@@ -26,7 +26,7 @@ UNIT_CODE = "Birim kodu; yeni kod yüklemede oluşur"  # birim şablonu yok, kod
 BLANK_ROW_REJECTED = "Satır yüklenmez"
 AFTER_RULES = "hata (kurallardan sonra)"          # BOŞSA (K-138): kuralla dolabilir, dolmazsa validasyonda Hata
 LEAD_TIME_AFTER_RULES = "tedarik süresi doluysa hata (kurallardan sonra)"
-EITHER = "alternatif "   # iki alandan biri dolu olmalı (K-116); kontrolü validasyonda (RTG.NO_RESOURCE, WOO.NO_RESOURCE)
+EITHER = "alternatif "   # iki alandan biri dolu olmalı; bugün kullanan alan yok (rota ve iş emri operasyonunda kaynak grubu zorunlu oldu, K-180)
 BLANK_MEANINGS = {      # docs/03 BOŞSA → şablonun "Boş bırakılırsa" satırı
     "yok": "Yok sayılır",
     "sınırsız": "Sınır yok",

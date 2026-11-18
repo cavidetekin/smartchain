@@ -60,7 +60,7 @@ def test_values_fit_schema(ds):
 def test_references_resolve(ds):
     """Her ...Id alanı var olan bir kayda gider (K-58: ana tablolar Id ile)."""
     targets = {**{k: (v if isinstance(v, str) else v[0]) for k, v in gen.REF_TARGET.items()},
-               "LocationId": "Location", "CalendarId": "Calendar", "ShiftId": "Shift",
+               "LocationId": "Location", "CalendarId": "Calendar",
                "ResourceGroupId": "ResourceGroup",
                "ProjectGroupId": "ProjectGroup", "CustomerId": "Customer",
                "SalesOrderLineId": "SalesOrderLine"}
@@ -73,35 +73,50 @@ def test_references_resolve(ds):
                         missing.append(f"{name}.{k}={v}")
     assert not missing
     labor = [r for r in ds.rows("Routing") if r["ResourceRole"] == "Secondary"]  # K-116: işçilik ayrı satır
-    assert labor and all(r["ResourceId"] is None and ds.code("ResourceGroup", r["ResourceGroupId"]) == d.LABOR_GROUP and r["ResourceNumber"] == 2
-                         for r in labor)
+    assert labor and all(ds.code("ResourceGroup", r["ResourceGroupId"]) == d.LABOR_GROUP and r["ResourceNumber"] == 2 for r in labor)
     primary = {(r["RouteCode"], r["OperationNo"]): r for r in ds.rows("Routing") if r["ResourceRole"] == "Primary"}
     assert all(r["Consumption"] == primary[(r["RouteCode"], r["OperationNo"])]["Consumption"] and r["SequenceNo"] == 2 for r in labor)
-    assert all(r["ResourceId"] or r["ResourceGroupId"] for r in ds.rows("Routing"))
+    assert all(r["ResourceGroupId"] and "ResourceId" not in r for r in ds.rows("Routing"))  # K-180: rotada kaynak yok, grup zorunlu
     keys = [(r["RouteCode"], r["OperationNo"], r["SequenceNo"]) for r in ds.rows("Routing")]
     assert len(keys) == len(set(keys))
-    worker_ops = {o["WorkOrderId"] for o in ds.rows("WorkOrderOperation") if o["ResourceId"] is None}
-    assert not worker_ops  # iş emri operasyonu yalnız Primary satırdan
+    groups = {g["Id"]: g for g in ds.rows("ResourceGroup")}
+    assert all(o["ResourceGroupId"] and "ResourceId" not in o for o in ds.rows("WorkOrderOperation"))
+    assert not [o for o in ds.rows("WorkOrderOperation") if groups[o["ResourceGroupId"]]["IsEmployee"]]  # iş emri operasyonu yalnız Primary satırdan
 
 
 def test_resource_side(ds):
-    """K-117: tip bayrakla; işçi kaynak, yetkinlik grup; atama ve izin kaynağa bağlı."""
+    """K-180: planlama birimi kaynak grubu. Tip bayrağı, kritiklik, birim ve fasoncu grupta; kaynakta yalnız kimlik ve ham tip; eşleşme tarihsiz."""
     flags = ("IsEmployee", "IsMachine", "IsFurnace", "IsMold", "IsOther", "IsSubcontractor")
-    assert all(sum(bool(r[f]) for f in flags) == 1 for r in ds.rows("Resource"))
-    assert not [r for r in ds.rows("Resource") if r["IsFurnace"] or r["IsMold"]]  # Faz 1 dışı
     groups = {g["Id"]: g for g in ds.rows("ResourceGroup")}
-    assert {g["Code"] for g in groups.values() if g["IsCompetenceGroup"]} == {"CG-CNC", "CG-MON", "CG-KAL"}
-    assignments = ds.rows("ResourceGroupAssignment")
-    keys = [(a["ResourceGroupId"], a["ResourceId"]) for a in assignments]
+    assert all(sum(bool(g[f]) for f in flags) == 1 for g in groups.values())                       # her grubun tek tipi
+    assert not [g for g in groups.values() if g["IsFurnace"] or g["IsMold"]]                       # Faz 1 dışı
+    assert all(g["CapacityUnit"] == "SAAT" and g["IsCritical"] is not None for g in groups.values())
+    assert not any(k in g for g in groups.values() for k in ("IsResourceGroup", "IsCompetenceGroup"))
+    assert {g["Code"] for g in groups.values() if g["IsEmployee"]} == {"CG-CNC", "CG-MON", "CG-KAL"}   # yetkinlik grubu = işçi grubu
+    fason = {g["Code"]: g for g in groups.values() if g["IsSubcontractor"]}
+    assert set(fason) == {"F-ISIL", "F-KAPLA"} and all(g["SubcontractorId"] and not g["IsCritical"] for g in fason.values())
+    moved = (*flags, "IsCritical", "CapacityUnit", "SubcontractorId", "CapacitySource", "Quantity")
+    assert not [k for r in ds.rows("Resource") for k in moved if k in r]                           # kaynakta kalmadı
+    assert {r["ResourceType"] for r in ds.rows("Resource")} == {"Makine", "İşçi", "Fason"}         # ham tip bilgi olarak durur
+    members = ds.rows("ResourceGroupMember")
+    assert not any(k in m for m in members for k in ("ValidFrom", "ValidTo"))                      # eşleşme tarihsiz
+    keys = [(m["ResourceGroupId"], m["ResourceId"]) for m in members]
     assert len(keys) == len(set(keys))
-    employees = {r["Id"] for r in ds.rows("Resource") if r["IsEmployee"]}
-    machines = {r["Id"] for r in ds.rows("Resource") if r["IsMachine"]}
-    assert employees == {a["ResourceId"] for a in assignments if groups[a["ResourceGroupId"]]["IsCompetenceGroup"]}
-    assert machines <= {a["ResourceId"] for a in assignments}
-    assert not {a["ResourceId"] for a in assignments if groups[a["ResourceGroupId"]]["IsCompetenceGroup"]} & machines
+    employees = s.employees(ds)
+    by_resource = {}
+    for m in members:
+        by_resource.setdefault(m["ResourceId"], set()).add(m["ResourceGroupId"])
+    assert set(by_resource) == {r["Id"] for r in ds.rows("Resource")}                              # her kaynak en az bir grupta
+    assert len(employees) == 25 and all(all(groups[g]["IsEmployee"] for g in by_resource[r]) for r in employees)   # işçi yalnız işçi gruplarında
+    assert any(len(by_resource[r]) > 1 for r in employees)                                         # birden fazla yetkinliği olan işçi
+    units = {r: {groups[g]["CapacityUnit"] for g in gs} for r, gs in by_resource.items()}
+    assert all(len(u) == 1 for u in units.values())                                                # üye olunan grupların birimi aynı
     assert all(a["ResourceId"] in employees and a["EndDate"] >= a["StartDate"] for a in ds.rows("EmployeeAbsence"))
-    assert {s["ResourceGroupId"] for s in ds.rows("ShiftPlan")} <= {g for g in groups if groups[g]["IsCompetenceGroup"]}
-    assert not [r for r in ds.rows("Routing") if r["ResourceRole"] == "Secondary" and not groups[r["ResourceGroupId"]]["IsCompetenceGroup"]]
+    assert "Shift" not in ds.tables and "ShiftPlan" not in ds.tables                               # vardiya kalktı
+    assert not [r for r in ds.rows("Routing") if r["ResourceRole"] == "Secondary" and not groups[r["ResourceGroupId"]]["IsEmployee"]]
+    count = {g: sum(1 for m in members if m["ResourceGroupId"] == g) for g in groups}
+    assert all(r["ResourceNumber"] <= count[r["ResourceGroupId"]] for r in ds.rows("Routing"))     # kaynak adedi gruptaki kaynak sayısını aşmaz
+    assert count[ds.get("ResourceGroup", Code=d.BOTTLENECK_GROUP)["Id"]] == 1                      # darboğaz grubu tek üyeli
 
 
 def test_bom_is_acyclic_with_three_or_four_levels(ds):
@@ -130,7 +145,7 @@ def test_deterministic_and_seed_sensitive(ds):
     again = generate(DAY)
     assert again.tables == ds.tables and again.params == ds.params
     other = generate(DAY, seed=7)
-    assert [r["Name"] for r in other.rows("Resource") if r["IsEmployee"]] != [r["Name"] for r in ds.rows("Resource") if r["IsEmployee"]]
+    assert [r["Name"] for r in other.rows("Resource") if r["ResourceType"] == "İşçi"] != [r["Name"] for r in ds.rows("Resource") if r["ResourceType"] == "İşçi"]
 
 
 # Takvim ayına bağlı alanlar (aylık tedarikçi limiti, durum 3) hafta kaymasıyla değil, aya göre belirlenir.
@@ -162,7 +177,7 @@ def test_intentional_situations(day):
 def test_bottleneck_orders(ds):
     """Durum 1: hafta 3–5'teki aşırı yük SO-1011…1016'dan gelir."""
     load_by_order = {}
-    m5 = ds.get("Resource", Code=d.BOTTLENECK_RESOURCE)["Id"]
+    m5 = ds.get("ResourceGroup", Code=d.BOTTLENECK_GROUP)["Id"]  # yük grup düzeyinde (K-180)
     for so in s.open_firm_orders(ds):
         if 3 <= ds.week_of(so["RequestedDate"]) <= 5:
             load_by_order[so["OrderNo"]] = s.resource_hours(ds, so["MaterialId"], so["OpenQuantity"], m5)

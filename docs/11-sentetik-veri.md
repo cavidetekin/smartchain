@@ -22,7 +22,8 @@ Hayali bir üreticinin ana verisi ve işlem verisi. Geliştirmede test zemini, s
 | Açık müşteri siparişi | 40 |
 | Müşteri | 3 |
 | Tedarikçi | 8 |
-| Çalışan | 25 (kaynak olarak; yetkinlikleri `ResourceGroupAssignment`'ta) |
+| Çalışan | 25 (kaynak olarak; yetkinlikleri `ResourceGroupMember`'da, K-180) |
+| Kaynak grubu | 11 (6 tezgâh grubu, 3 işçi grubu, 2 fason grubu; K-180) |
 | Planlama ufku | 13 hafta |
 
 Her ana veri ve işlem tablosu en az birkaç satırla dolu gelir; hiçbir ekran boş açılmaz. Büyük veriyle performans denemesi bu setin işi değildir (Aşama 10, A-31).
@@ -81,8 +82,8 @@ python -m app.data.synthetic check                                     # sayıla
 - **Satın alma (K-125):** Ham tip `Satın alma`, `Fason` ya da `Satın alma talebi`; bayraklar tiple uyumlu, satırlar aktif, özel takip yok. Sipariş miktarı açık miktara eşit, teslim alınan 0, birim boş; müşteri ve bağlı sipariş boş. Fason siparişler fason operasyonu olan iş emrine bağlıdır (PO.SUBCON_NO_WO, 3.4).
 - **Üretim gerçekleşmesi (K-125):** Başlamış her iş emrinde bir teyit: no `T-<iş emri>`, malzeme iş emrinden, miktar emir − açık, başlangıç ve bitiş üretim başlangıcından 3 gün önce.
 - **Müşteri ve proje (K-119):** Müşteriler yurt içi, `MUS-A` özel takipli. Proje grubu ve projeler aktif. Bir açık ödünç var: `MAM-006`, `PRJ-01` → `PRJ-02`, 2 adet, geri ödeme hafta 3.
-- **Rota (K-116):** Montaj operasyonlarında işçilik ayrı satırdır: sıra no 2, yetkinlik grubu `CG-MON`, Secondary, 2 kişi, süre ana satırla aynı. İş emri operasyonları yalnız Primary satırlardan üretilir.
-- **Kaynak (K-117):** Kapasite birimi `SAAT`. İşçiler `IsEmployee` bayraklı kaynaktır (`W-…`; 7,5 saat/gün, kısıtlı); yetkinlikler (`CG-…`) `IsCompetenceGroup` bayraklı gruptur. Tezgâhlar ve işçiler gruplarına `ResourceGroupAssignment` ile atanır; işçi hem bağlı olduğu kaynak grubunda hem yetkinlik grubundadır. Vardiya planı yetkinlik grubunu gösterir. `W-021` izni günde 4 saatlik kısmi devamsızlıktır.
+- **Rota (K-116, K-180):** Rota satırı kaynağı değil kaynak grubunu gösterir (tezgâhın grubu: `TORNA`, `ISL3`, `ISL5`, `TASLAMA`, `MONTAJ`, `KALITE`; fason operasyonda `F-ISIL`, `F-KAPLA`). Montaj operasyonlarında işçilik ayrı satırdır: sıra no 2, işçi grubu `CG-MON`, Secondary, 2 kişi, süre ana satırla aynı. İş emri operasyonları yalnız Primary satırlardan üretilir ve aynı grubu taşır.
+- **Kaynak ve kaynak grubu (K-117, K-180):** Planlama birimi kaynak grubudur. Tip bayrağı, kritiklik, kapasite birimi (`SAAT`) ve fasoncu gruptadır: tezgâh grupları `IsMachine` ve kritik; işçi grupları (yetkinlikler, `CG-…`) `IsEmployee` ve kritik; fason grupları (`F-ISIL`, `F-KAPLA`) `IsSubcontractor`, kritik değil, fasoncuya bağlı ve kaynağıyla aynı kodda tek üyeli (kaynağını grup olarak veren müşteri örneği). Kaynakta kimlik ve ham tip (Makine, İşçi, Fason) ile geçici kapasite alanları durur (işçi 7,5 saat/gün). Kaynaklar gruplarına `ResourceGroupMember` ile bağlanır (tarihsiz); işçiler **yalnız** işçi gruplarına üyedir (gruptaki kaynak sayısı kapasiteyi belirlediği için tezgâh grubunda değiller), bazıları iki yetkinliklidir. Darboğaz grubu `ISL5` tek üyelidir (`M5-01`). Vardiya ve vardiya planı yoktur. `W-021` izni günde 4 saatlik kısmi devamsızlıktır.
 - **Birimler:** ADET (0 ondalık), KG (3), M (2), SAAT (2); UnitOfMeasure.Decimals (K-88).
 
 **Bilerek konmuş durumların kurulumu.** `check` ve testler bunları veriden hesaplayarak doğrular; ölçüler kabadır, plan değildir.
@@ -97,11 +98,11 @@ python -m app.data.synthetic check                                     # sayıla
 | 6 | Zincirin derininde Yüksek uyarı (6.5) | `HAM-022`'nin tedarikçi satırında sabit ve değişken tedarik süresi boş (MS.NO_LEADTIME); `HAM-022` açık siparişli `MAM-002`'nin üç seviye altında, iki yolda (MAM-002 → ALT-004 → PRC-011 → HAM-022 ve MAM-002 → ALT-005 → PRC-012 → HAM-022) | Uyarı Yüksek; talep zincirinde o siparişin yolu |
 | 7 | Talebi olmayan malzemede Normal uyarı (6.5) | `ALT-099` hiçbir talebin ağacında değil; ağacında bir bileşen miktarı 0 (BOM.ZERO_QTY) | Uyarı Normal |
 | 8 | Yok sayılıp kaydı değişince yeniden açılan (6.5) | Durum 6'nın kaydı; yok sayma ve değişiklik (manuel değer ya da yeni versiyon) test ve demo akışındadır | Yok sayıldı → Açık |
-| 9 | Tarih geçince çıkan uyarı (6.5) | `SO-1043` istek tarihi üretim günü − 1, açık; `SO-1044` istek tarihi üretim günü, açık · `T-05` kritik tezgâh, günlük kapasitesi boş (K-117); `T-04`'ün grubunda, rotada yok | SO-1043 bugün, SO-1044 ertesi gün SO.PAST_DUE; T-05 SC.RES_NO_CAPACITY (rotada olmadığı için Normal) |
+| 9 | Tarih geçince çıkan uyarı (6.5) | `SO-1043` istek tarihi üretim günü − 1, açık; `SO-1044` istek tarihi üretim günü, açık · `T-05` kritik gruba (`TORNA`) üye tezgâh, günlük kapasitesi boş (K-117, K-180); `T-04`'ün grubunda | SO-1043 bugün, SO-1044 ertesi gün SO.PAST_DUE; T-05 SC.RES_NO_CAPACITY (grubu rotada olduğu için talep zincirinde: Yüksek; K-180) |
 
 **Kirli hâl.** `data/synthetic/v0/kirli/` altında varlık başına bir Excel (25 dosya; benzetilen ürün ve tahmin yalnız hazır kural örnekleriyle) ve `beklenen-hatalar.json`; her gün yeniden üretilebildiği için git'e girmez.
 - **Sayfa düzeni (K-110):** şablon üreticisiyle yazılır (`app/integration/template.py`): 1. satır `stg` alan adı, veri 2. satırdan; Açıklama sayfası; gizli `_Surum` sayfasında tablo, sürüm, set, tohum ve üretim günü. Etiketsiz ek alan kolonu yoktur. Etiket veri setinden gelir, veritabanı gerekmez.
-- **Kapsam:** Takvim, vardiya ve duruş entegrasyonla gelmediği için yoktur (K-65). Sipariş, stok ve iş emri üretimde API veya SQL ile gelir; ETL testleri için aynı `stg` biçiminde Excel'e konur.
+- **Kapsam:** Takvim ve duruş entegrasyonla gelmediği için yoktur (K-65). Sipariş, stok ve iş emri üretimde API veya SQL ile gelir; ETL testleri için aynı `stg` biçiminde Excel'e konur.
 - **Hataların yeri:** Başka satırı zincirleme etkilemez. ETL sonrası ana veri = temiz hâl − aşağıdaki fark. Satır numaraları `beklenen-hatalar.json`'dadır.
 - **Mesaj metni:** H1 ve H2'nin mesajı 4.4'te kesinleşti (K-146): kataloğun mesajı ve değer ("Rota bulunamadı: R-PRC-033", "Malzeme bulunamadı: MAM-099"); H3 ve H4'ün mesajı 3.4'te kesinleşti: kataloğun mesajı (H3 "Negatif olamaz.", alan ve değer bulgunun kolonlarında) ve ön kontrolün tekrar eden anahtar mesajı.
 
@@ -137,7 +138,7 @@ python -m app.data.synthetic check                                     # sayıla
 
 ### Referans ve bütünlük örnekleri (geliştirme 4.4, K-146)
 
-- **Kapsam:** Kirli hâlde her referans, pasif ebeveyn ve bütünlük kuralı için en az bir satır bulunur (docs/06 fonksiyon 04; ilişki haritası docs/03). Zorunlu ilişkide tanımsız kod (Hata), isteğe bağlı bağlantıda tanımsız kod (Uyarı), pasif ebeveyne bakan satır (`L-` ile başlayan pasif malzeme, müşteri, tedarikçi ve kaynak; Uyarı ya da Bilgi), bağı eksik ebeveyn (aktif versiyonu olmayan üretilen malzeme, tedarikçisi olmayan satın alınan malzeme, kaynaksız grup…).
+- **Kapsam:** Kirli hâlde her referans, pasif ebeveyn ve bütünlük kuralı için en az bir satır bulunur (docs/06 fonksiyon 04; ilişki haritası docs/03). Zorunlu ilişkide tanımsız kod (Hata), isteğe bağlı bağlantıda tanımsız kod (Uyarı), pasif ebeveyne bakan satır (`L-` ile başlayan pasif malzeme, müşteri, tedarikçi, kaynak ve kaynak grubu; Uyarı ya da Bilgi), bağı eksik ebeveyn (aktif versiyonu olmayan üretilen malzeme, tedarikçisi olmayan satın alınan malzeme, kaynaksız grup…).
 - **Yer:** Örnekler kendi satırlarındadır (`V-` ve `L-` ile başlayan kodlar, ayrı sipariş ve iş emri numaraları); bilerek konmuş durumlara ve H1–H4'e dokunmaz. Temiz hâlde yeni kurallar bulgu vermez; önceki örneklerin yeni kurallara takılan satırları düzeltilir ya da beklenene eklenir.
 - **H2:** `SO.REF_MATERIAL` ("Malzeme bulunamadı: MAM-099") ve `BOM.REF_COMPONENT` ("Bileşen bulunamadı: SAT-999"); ikisi de Hata, satır yüklenmez.
 - **Beklenen:** `beklenen-hatalar.json`'da kural kodu, tablo, satır anahtarı, sınıf ve mesaj; test (`tests/test_validation_dirty.py`) her yeni kuralın en az bir bulgu verdiğini, beklenmeyen satırda bulgu çıkmadığını ve Excel ile SQL yolunun aynı sonucu verdiğini denetler.

@@ -41,6 +41,14 @@ PARTS_PER_ASSEMBLY = [3, 3, 2]  # 10 mamul × (3 + 3 + 2) = 80 işlenmiş parça
 
 # Bilerek konmuş durumlar (docs/11; situations.py denetler)
 BOTTLENECK_RESOURCE = "M5-01"
+BOTTLENECK_GROUP = "ISL5"  # darboğaz kaynağın grubu: tek üyeli, plan ve yük grup düzeyinde (K-180)
+# Rotalar kaynağı değil grubunu gösterir: kaynak kodunun ön eki → grup
+RESOURCE_GROUPS = {"T-": "TORNA", "M3-": "ISL3", "M5-": BOTTLENECK_GROUP, "G-": "TASLAMA", "A-": "MONTAJ", "Q-": "KALITE"}
+
+
+def resource_group(resource_code: str) -> str:
+    """Kaynağın tezgâh grubu; fason kaynak kendi kodundaki gruptadır."""
+    return next((g for prefix, g in RESOURCE_GROUPS.items() if resource_code.startswith(prefix)), resource_code)
 BOTTLENECK_PRODUCTS = ("MAM-001", "MAM-002", "MAM-003")
 BOTTLENECK_HOURS = 3.0          # bu mamullerin gövde parçasının 5 eksende birim süresi
 LIGHT_M5_HOURS = 0.3
@@ -181,40 +189,41 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
         b.add("CalendarDay", with_id=False, CalendarId=cal["Id"], Date=d, IsWorkingDay=d.weekday() < 5,
               WorkingFraction=1.0 if d.weekday() < 5 else 0.0)
         d += timedelta(days=1)
-    b.add("Shift", LocationId=1, Code="S1", StartTime=time(7, 0), EndTime=time(15, 0), BreakMinutes=30)
-    b.add("Shift", LocationId=1, Code="S2", StartTime=time(15, 0), EndTime=time(23, 0), BreakMinutes=30)
 
-    groups = [("TORNA", "CNC torna"), ("ISL3", "3 eksen işleme"), ("ISL5", "5 eksen işleme"),
-              ("TASLAMA", "Taşlama"), ("MONTAJ", "Montaj"), ("KALITE", "Kalite kontrol")]
-    for code, name in groups:
-        b.add("ResourceGroup", LocationId=1, Code=code, Name=name, Type="Makine grubu", IsResourceGroup=True,
-              IsCompetenceGroup=False, IsActive=True)
-    # Yetkinlikler kaynak grubudur (K-117).
-    for code, name in [("CG-CNC", "CNC operatörü"), (LABOR_GROUP, "Montajcı"), ("CG-KAL", "Kalite teknisyeni")]:
-        b.add("ResourceGroup", LocationId=1, Code=code, Name=name, Type="Yetkinlik", IsResourceGroup=False,
-              IsCompetenceGroup=True, IsActive=True)
-
-    def resource(code, name, kind, flag, critical, daily, quantity=1, **extra):
-        """Tip bayrakla ifade edilir (K-117); kapasite alanları Smartchain'de tanımlanır, core'da durur."""
+    def group(code, name, kind, flag, critical):
+        """Kaynak grubu planlama birimidir (K-180): tip bayrağı, kritiklik, kapasite birimi ve fasoncu gruptadır."""
         flags = dict(IsEmployee=False, IsMachine=False, IsFurnace=False, IsMold=False, IsOther=False, IsSubcontractor=False)
-        return b.add("Resource", LocationId=1, Code=code, Name=name, ResourceType=kind, **{**flags, flag: True}, IsActive=True,
-                     IsCritical=critical, CapacityUnit="SAAT", DailyCapacity=daily, Quantity=quantity, CalendarId=cal["Id"], **extra)
+        b.add("ResourceGroup", LocationId=1, Code=code, Name=name, Type=kind, **{**flags, flag: True}, IsActive=True, IsCritical=critical,
+              CapacityUnit="SAAT", SubcontractorId=None)
 
-    def assign(resource_row, group):
-        b.add("ResourceGroupAssignment", LocationId=1, ResourceGroupId=b.id("ResourceGroup", group), ResourceId=resource_row["Id"])
+    for code, name in [("TORNA", "CNC torna"), ("ISL3", "3 eksen işleme"), (BOTTLENECK_GROUP, "5 eksen işleme"),
+                       ("TASLAMA", "Taşlama"), ("MONTAJ", "Montaj"), ("KALITE", "Kalite kontrol")]:
+        group(code, name, "Makine grubu", "IsMachine", True)
+    # İşçi grubu (yetkinlik grubu) IsEmployee bayraklı gruptur (K-180).
+    for code, name in [("CG-CNC", "CNC operatörü"), (LABOR_GROUP, "Montajcı"), ("CG-KAL", "Kalite teknisyeni")]:
+        group(code, name, "Yetkinlik", "IsEmployee", True)
+    # Fason grupları: kaynağıyla aynı kodda tek üyeli grup (kaynağını grup olarak veren müşteri örneği); kritik değil
+    for code, name in [("F-ISIL", "Fason ısıl işlem"), ("F-KAPLA", "Fason kaplama")]:
+        group(code, name, "Fason", "IsSubcontractor", False)
+
+    def resource(code, name, kind, daily, **extra):
+        """Kaynak: kimlik ve ham tip (yalnız bilgi); günlük kapasite ve takvim geçici alanlar (7.8'de kalkar, K-180)."""
+        return b.add("Resource", LocationId=1, Code=code, Name=name, ResourceType=kind, IsActive=True, DailyCapacity=daily, CalendarId=cal["Id"], **extra)
+
+    def assign(resource_row, group_code):
+        b.add("ResourceGroupMember", LocationId=1, ResourceGroupId=b.id("ResourceGroup", group_code), ResourceId=resource_row["Id"])
 
     machines = ([(f"T-0{i}", f"CNC torna {i}", "TORNA", 15.0) for i in range(1, 5)]
                 + [(f"M3-0{i}", f"3 eksen işleme merkezi {i}", "ISL3", 15.0) for i in range(1, 4)]
-                + [("M5-01", "5 eksen işleme merkezi", "ISL5", 15.0)]
+                + [(BOTTLENECK_RESOURCE, "5 eksen işleme merkezi", BOTTLENECK_GROUP, 15.0)]
                 + [(f"G-0{i}", f"Silindirik taşlama {i}", "TASLAMA", 15.0) for i in range(1, 3)]
                 + [(f"A-0{i}", f"Montaj hattı {i}", "MONTAJ", 15.0) for i in range(1, 3)]
                 + [("Q-01", "Kalite kontrol istasyonu", "KALITE", 7.5)])
-    for code, name, group, daily in machines:
-        assign(resource(code, name, "Makine", "IsMachine", True, daily, ProductionLocation="Hol 1"), group)
-    # Fason kaynaklar tedarikçiye bağlanır (_suppliers'ta SupplierId yazılır).
+    for code, name, group_code, daily in machines:
+        assign(resource(code, name, "Makine", daily, ProductionLocation="Hol 1"), group_code)
+    # Fason kaynak kendi grubundadır; grup tedarikçiye bağlanır (_suppliers'ta SubcontractorId yazılır).
     for code, name, lead in [("F-ISIL", "Fason ısıl işlem", 5), ("F-KAPLA", "Fason kaplama", 4)]:
-        resource(code, name, "Fason", "IsSubcontractor", False, 24.0, SubconPlanningType="Tedarik süresi",
-                 SubconFixedLeadTimeDays=lead, SubconVariableDaysPerUnit=0.0)
+        assign(resource(code, name, "Fason", 24.0, SubconPlanningType="Tedarik süresi", SubconFixedLeadTimeDays=lead, SubconVariableDaysPerUnit=0.0), code)
 
     b.add("ResourceCapacityProfile", ResourceId=b.id("Resource", "G-02"), ValidFrom=ds.day(9), ValidTo=ds.day(10, 6),
           DailyCapacity=7.5)
@@ -228,11 +237,6 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
           StartAt=datetime.combine(ds.day(8, 4), time(0, 0)), EndAt=datetime.combine(ds.day(8, 5), time(0, 0)),
           AffectedQuantity=1, DurationDays=1.0, Note="Yıllık bakım")
 
-    s1, s2 = b.id("Shift", "S1"), b.id("Shift", "S2")
-    valid = dict(ValidFrom=ds.start - timedelta(days=HISTORY_DAYS), ValidTo=ds.horizon_end)
-    b.add("ShiftPlan", ResourceGroupId=b.id("ResourceGroup", "CG-MON"), ShiftId=s1, Headcount=6, **valid)
-    b.add("ShiftPlan", ResourceGroupId=b.id("ResourceGroup", "CG-MON"), ShiftId=s2, Headcount=4, **valid)
-    b.add("ShiftPlan", ResourceGroupId=b.id("ResourceGroup", "CG-KAL"), ShiftId=s1, Headcount=2, **valid)
 
     names = set()
     for i in range(1, 26):
@@ -241,16 +245,17 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
             if name not in names:
                 names.add(name)
                 break
+        # İşçi yalnız işçi (yetkinlik) gruplarına üyedir: gruptaki kaynak sayısı kapasiteyi belirler, tezgâh grubunu şişirmemeli (K-180)
         if i <= 10:
-            group, comps = rng.choice(["TORNA", "ISL3", "ISL5"]), ["CG-CNC"] + (["CG-MON"] if i in (3, 8) else [])
+            rng.choice(["TORNA", "ISL3", "ISL5"])  # eski "bağlı olduğu tezgâh grubu" seçimi: rastgele dizi değişmesin diye tüketilir
+            comps = ["CG-CNC"] + (["CG-MON"] if i in (3, 8) else [])
         elif i <= 20:
-            group, comps = "MONTAJ", ["CG-MON"]
+            comps = ["CG-MON"]
         elif i <= 23:
-            group, comps = "KALITE", ["CG-KAL"]
+            comps = ["CG-KAL"]
         else:
-            group, comps = "MONTAJ", ["CG-MON", "CG-KAL"]
-        w = resource(f"W-{i:03d}", name, "İşçi", "IsEmployee", True, 7.5)  # işçiler kaynaktır (K-117)
-        assign(w, group)
+            comps = ["CG-MON", "CG-KAL"]
+        w = resource(f"W-{i:03d}", name, "İşçi", 7.5)  # işçiler kaynaktır (K-117)
         for c in comps:
             assign(w, c)
     # Durum 5: izin (hafta 3, bütün hafta) ve rapor (hafta 1, Salı–Çarşamba); ayrıca ileride bir izin.
@@ -350,7 +355,7 @@ def _materials(b: _Builder, rng: random.Random) -> None:
 # --- Ürün ağacı ve rota ---
 
 def _structure(b: _Builder, rng: random.Random) -> None:
-    res = lambda code: b.id("Resource", code)  # noqa: E731
+    grp = lambda resource: b.id("ResourceGroup", resource_group(resource))  # noqa: E731  # rota kaynağın grubunu gösterir (K-180)
     sat_pool = [f"SAT-{i:03d}" for i in range(1, 40) if i != 3]
     ham_pool = [f"HAM-{i:03d}" for i in range(1, 41) if f"HAM-{i:03d}" != LATE_MATERIAL]
     light_m5 = {"PRC-026", "PRC-042", "PRC-050", "PRC-063", "PRC-071"}  # 5 eksende kısa işlenen parçalar
@@ -367,14 +372,14 @@ def _structure(b: _Builder, rng: random.Random) -> None:
     def op(code, no, name, resource, cons, **extra):
         if resource.startswith("F-"):  # fason operasyonu olan malzeme fasona verilebilir
             next(m for m in b.t["Material"] if m["Code"] == code)["IsSubcontractable"] = True
-        return b.add("Routing", LocationId=1, RouteCode=f"R-{code}", OperationNo=no, SequenceNo=1, OperationName=name, ResourceId=res(resource),
+        return b.add("Routing", LocationId=1, RouteCode=f"R-{code}", OperationNo=no, SequenceNo=1, OperationName=name, ResourceGroupId=grp(resource),
                      ResourceRole="Primary", Consumption=round(cons, 3), ResourceNumber=1,
                      IsSubcontracted=resource.startswith("F-"), IsActive=True, IsLotBasedUsage=False, **extra)
 
     def crew(row, people=2):
-        """İşçilik ayrı kaynak satırı (K-116): işçi grubu, Secondary, kişi sayısı, süre ana satırla aynı."""
+        """İşçilik ayrı satır (K-116, K-180): işçi grubu, Secondary, kişi sayısı, süre ana satırla aynı."""
         b.add("Routing", LocationId=1, RouteCode=row["RouteCode"], OperationNo=row["OperationNo"], SequenceNo=2, OperationName=row["OperationName"],
-              ResourceId=None, ResourceGroupId=b.id("ResourceGroup", LABOR_GROUP), ResourceRole="Secondary", Consumption=row["Consumption"],
+              ResourceGroupId=b.id("ResourceGroup", LABOR_GROUP), ResourceRole="Secondary", Consumption=row["Consumption"],
               ResourceNumber=people, IsSubcontracted=False, IsActive=True, IsLotBasedUsage=False)
 
     n_alt = n_prc = 0
@@ -432,8 +437,8 @@ def _suppliers(b: _Builder, rng: random.Random) -> None:
                             (LIMIT_SUPPLIER, "Rulman Dağıtım A.Ş.", False), ("TED-06", "Sızdırmazlık Elemanları", False),
                             ("TED-07", "Isıl İşlem Hizmetleri", True), ("TED-08", "Yüzey Kaplama Atölyesi", True)]:
         b.add("Supplier", Code=code, Name=name, IsSubcontractor=sub, IsActive=True, Country="Türkiye", City="Kocaeli" if sub else "İstanbul")
-    b.find("Resource", "F-ISIL")["SubcontractorId"] = b.id("Supplier", "TED-07")
-    b.find("Resource", "F-KAPLA")["SubcontractorId"] = b.id("Supplier", "TED-08")
+    b.find("ResourceGroup", "F-ISIL")["SubcontractorId"] = b.id("Supplier", "TED-07")  # fasoncu kaynak grubundadır (K-180)
+    b.find("ResourceGroup", "F-KAPLA")["SubcontractorId"] = b.id("Supplier", "TED-08")
 
     by_group = {"Çubuk": "TED-01", "Levha": "TED-02", "Bağlantı": "TED-03", "Rulman": LIMIT_SUPPLIER,
                 "Conta": "TED-06", "Aksesuar": "TED-03", "Dövme": LATE_SUPPLIER}
@@ -576,7 +581,7 @@ def _work_orders(b: _Builder, rng: random.Random) -> None:
             planned = round(r["Consumption"] * qty, 4)
             done = round(planned / 2, 4) if started and i == 0 else 0.0
             b.add("WorkOrderOperation", LocationId=1, WorkOrderId=wo["Id"], OperationNo=r["OperationNo"], SequenceNo=r["SequenceNo"],
-                  OperationName=r["OperationName"], ResourceId=r["ResourceId"], ResourceGroupId=r.get("ResourceGroupId"),
+                  OperationName=r["OperationName"], ResourceGroupId=r["ResourceGroupId"],
                   ResourceRole=r["ResourceRole"], ResourceNumber=r["ResourceNumber"], PlannedConsumption=planned, ConfirmedConsumption=done,
                   RemainingConsumption=round(planned - done, 4), Status="Açık", IsCompleted=False, IsLotBasedUsage=r["IsLotBasedUsage"],
                   IsSubcontracted=r["IsSubcontracted"], IsActive=r["IsActive"], ProductionLocation=r.get("ProductionLocation"),
@@ -624,9 +629,9 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
     po(sat, LIMIT_QTY - 250, second, second, sup, no="PO-2042")
     n = 2049
     po(b.id("Material", "SAT-021"), 200, ds.day(4, 2), None, b.id("Supplier", "TED-06"), kind="Satın alma talebi")
-    fason_part = next(r for r in b.t["Routing"] if r["ResourceId"] == b.id("Resource", "F-ISIL"))["RouteCode"][2:]
+    fason_part = next(r for r in b.t["Routing"] if r["ResourceGroupId"] == b.id("ResourceGroup", "F-ISIL"))["RouteCode"][2:]
     po(b.id("Material", fason_part), 40, ds.day(2, 3), ds.day(2, 3), b.id("Supplier", "TED-07"), kind="Fason", wo=_subcon_work_order(b, "F-ISIL"))
-    kaplama = next(r for r in b.t["Routing"] if r["ResourceId"] == b.id("Resource", "F-KAPLA"))["RouteCode"][2:]
+    kaplama = next(r for r in b.t["Routing"] if r["ResourceGroupId"] == b.id("ResourceGroup", "F-KAPLA"))["RouteCode"][2:]
     po(b.id("Material", kaplama), 25, ds.day(3, 1), None, b.id("Supplier", "TED-08"), kind="Fason", wo=_subcon_work_order(b, "F-KAPLA"))
     n = 2059
     po(b.id("Material", "SAT-020"), 300, ds.day(2, 1), ds.day(2, 1), supplier_of[b.id("Material", "SAT-020")])  # PO-2060 (H3)
@@ -666,11 +671,11 @@ def _quality(b: _Builder) -> None:
     for no, when in ((PAST_DUE_ORDER, on - timedelta(days=1)), (DUE_TODAY_ORDER, on)):
         _copy(b, "SalesOrderLine", so_src, OrderNo=no, LineNo=1, LineItemNo=0, MaterialId=b.id("Material", "MAM-004"), ProjectId=None,
               IsCustomTracked=False, OpenQuantity=5.0, OrderedQuantity=5.0, DeliveredQuantity=0.0, RequestedDate=when, ConfirmedDate=None)
-    # 9: kritik, günlük kapasitesi boş tezgâh (K-117); rotada kullanılmaz
+    # 9: kritik gruba üye, günlük kapasitesi boş tezgâh (K-117, K-180)
     t04 = b.find("Resource", "T-04")
     t05 = _copy(b, "Resource", t04, Code=NO_CAPACITY_RESOURCE, Name="Torna T-05 (kapasitesi tanımsız)", DailyCapacity=None)
-    for row in [r for r in b.t["ResourceGroupAssignment"] if r["ResourceId"] == t04["Id"]]:  # T-04'ün grubunda (talep zincirinde)
-        _copy(b, "ResourceGroupAssignment", row, ResourceId=t05["Id"])
+    for row in [r for r in b.t["ResourceGroupMember"] if r["ResourceId"] == t04["Id"]]:  # T-04'ün grubunda (talep zincirinde)
+        _copy(b, "ResourceGroupMember", row, ResourceId=t05["Id"])
     # Tahmin: gelecek iki ay (ay başı), planlama ufku içinde
     for months, qty in ((1, 40.0), (2, 30.0)):
         b.add("Forecast", LocationId=1, MaterialId=b.id("Material", FORECAST_PRODUCT), CustomerId=None, ProjectId=None,
@@ -685,10 +690,11 @@ def _quality(b: _Builder) -> None:
 
 
 def _subcon_work_order(b, resource_code: str) -> int | None:
-    """Fason siparişin bağlı iş emri (PO.SUBCON_NO_WO, K-137): o fason kaynağı kullanan operasyonu olan iş emri, yoksa fason operasyonu olan ilk iş emri."""
-    fason = {b.id("Resource", c) for c in ("F-ISIL", "F-KAPLA")}
+    """Fason siparişin bağlı iş emri (PO.SUBCON_NO_WO, K-137): o fason grubunu kullanan operasyonu olan iş emri, yoksa fason operasyonu olan ilk iş emri."""
+    fason = {b.id("ResourceGroup", c) for c in ("F-ISIL", "F-KAPLA")}
     ops = b.t["WorkOrderOperation"]
-    found = next((o for o in ops if o.get("ResourceId") == b.id("Resource", resource_code)), None) or next((o for o in ops if o.get("ResourceId") in fason), None)
+    own = b.id("ResourceGroup", resource_group(resource_code))
+    found = next((o for o in ops if o.get("ResourceGroupId") == own), None) or next((o for o in ops if o.get("ResourceGroupId") in fason), None)
     return found["WorkOrderId"] if found else None
 
 
@@ -737,10 +743,8 @@ def _business_keys(ds: Dataset) -> None:
                                    f"{c('Project', r['BorrowingProjectId'])}|{_iso(r['BorrowDate'])}",  # K-119
         "Resource": lambda r: f"{LOCATION_CODE}|{r['Code']}",  # K-117
         "ResourceGroup": lambda r: f"{LOCATION_CODE}|{r['Code']}",
-        "ResourceGroupAssignment": lambda r: f"{LOCATION_CODE}|{c('ResourceGroup', r['ResourceGroupId'])}|{c('Resource', r['ResourceId'])}",
+        "ResourceGroupMember": lambda r: f"{LOCATION_CODE}|{c('ResourceGroup', r['ResourceGroupId'])}|{c('Resource', r['ResourceId'])}",
         "EmployeeAbsence": lambda r: f"{LOCATION_CODE}|{c('Resource', r['ResourceId'])}|{r['AbsenceType']}|{_iso(r['StartDate'])}",
-        "ShiftPlan": lambda r: f"{c('ResourceGroup', r['ResourceGroupId'])}|{c('Shift', r['ShiftId'])}|"
-                               f"{_iso(r['ValidFrom'])}",
         "SalesOrderLine": lambda r: f"{LOCATION_CODE}|{r['OrderNo']}|{r['LineNo']}|{_iso(r['LineItemNo'])}",  # K-120
         "Stock": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Warehouse']}|{_iso(r['LotNo'])}|{r['Status']}|"
                            f"{c('Project', r['ProjectId']) or ''}|{c('Customer', r.get('CustomerId')) or ''}|{so_line(r.get('SalesOrderLineId'))}",  # K-123

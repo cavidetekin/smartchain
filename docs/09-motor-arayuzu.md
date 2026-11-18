@@ -61,6 +61,15 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 
   Kurulumdan sonra `verify.ps1` (duman testi) bunu da yürütür.
 
+## Kaynak modeli notları (7.5, K-180)
+
+- Planlama birimi kaynak grubudur: rota ve iş emri operasyonu kaynak grubunu ve gruptan aynı anda kullanılan kaynak adedini verir; kaynak alanı yoktur. Plan ve yük grup düzeyindedir (`CapacityLoad.ResourceGroupId`).
+- Kapasite kaynakta hesaplanır, grupta toplanır (hesap 7.8'de); gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir.
+- Kritik olmayan grup (`ResourceGroup.IsCritical` = Hayır) sonsuz kapasiteli sayılır ve yalnız raporlanır.
+- Birden fazla gruba üye kaynağın (ortak üye, ör. iki yetkinliği olan işçi) kapasitesini yalnız kritik grupların yükü kullanır.
+- Kaynağı olmayan kritik grubun kapasitesi sıfırdır; doğrulama ve veri kalitesi uyarır (`RG.NO_RESOURCE`).
+- Tip bilgisi grubun bayraklarından okunur (`IsEmployee`, `IsMachine`, `IsSubcontractor`…); kaynaktaki ham tip yalnız bilgidir. Vardiya kavramı yoktur.
+
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.

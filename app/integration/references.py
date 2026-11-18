@@ -1,9 +1,8 @@
 """İlişki haritası (K-146): her ilişki alanının baktığı tablo ve anahtar; zorunlu mu, isteğe bağlı mı; ebeveyn pasifse sınıf.
 
 Tek kaynak docs/03 "İlişki haritası" tablosudur (test ikisini karşılaştırır). Zorunlu: sözleşmede alan zorunludur (ZOR. E). İsteğe bağlı: alan
-boş bırakılabilir. İstisna "Zorunlu (doluysa)": rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu
-olmalı, K-116) ama doluysa ve yoksa Hata: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur. Kaydın anahtarının
-parçası olan isteğe bağlı bağlantı da "Zorunlu (doluysa)"dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları):
+boş bırakılabilir. Rota ve iş emri operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). İstisna
+"Zorunlu (doluysa)": kaydın anahtarının parçası olan isteğe bağlı bağlantı (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları):
 boş yazılsaydı anahtar değişir, kayıt başka bir kayda dönüşür ya da onunla çakışırdı (K-153). İki yerde kullanılır:
 - Validasyon (4.4): referans kuralları (zorunlu → Hata, isteğe bağlı → Uyarı) ve pasif ebeveyn kuralları buradan üretilir.
 - Load (5.2): kod `core` Id'sine bu haritayla çevrilir; zorunlu ilişkisi çevrilemeyen satır yüklenmez, isteğe bağlı bağlantı boş yazılır,
@@ -56,15 +55,14 @@ REFERENCES: tuple[Reference, ...] = (
     R("PV", "ROUTE", "Rota", "ProductionVersion", ("RouteCode",), "Routing", ("RouteCode",)),
     R("BOM", "MATERIAL", "Üretilen malzeme", "BOM", ("MaterialCode",), "Material", ("Code",)),
     R("BOM", "COMPONENT", "Bileşen", "BOM", ("ComponentMaterialCode",), "Material", ("Code",), inactive=WARNING),
-    R("RTG", "RESOURCE", "Kaynak", "Routing", ("ResourceCode",), "Resource", ("Code",), REQUIRED_IF_FILLED, inactive=WARNING),
-    R("RTG", "RESOURCE_GROUP", "Kaynak grubu", "Routing", ("ResourceGroupCode",), "ResourceGroup", ("Code",), REQUIRED_IF_FILLED),
+    R("RTG", "RESOURCE_GROUP", "Kaynak grubu", "Routing", ("ResourceGroupCode",), "ResourceGroup", ("Code",), inactive=WARNING),
     R("REF", "MATERIAL", "Benzetilen ürün", "MaterialReference", ("MaterialCode",), "Material", ("Code",)),
     R("REF", "REFERENCE_MATERIAL", "Referans ürün", "MaterialReference", ("ReferenceMaterialCode",), "Material", ("Code",)),
     R("REF", "REFERENCE_VERSION", "Referans versiyon", "MaterialReference", ("ReferenceProductionVersionCode", "ReferenceMaterialCode"), "ProductionVersion",
       ("Code", "MaterialCode"), OPTIONAL),  # boşsa motor seçer
-    R("RES", "SUBCONTRACTOR", "Fasoncu", "Resource", ("SubcontractorCode",), "Supplier", ("Code",), OPTIONAL, by_location=False),
-    R("RGA", "RESOURCE_GROUP", "Kaynak grubu", "ResourceGroupAssignment", ("ResourceGroupCode",), "ResourceGroup", ("Code",)),
-    R("RGA", "RESOURCE", "Kaynak", "ResourceGroupAssignment", ("ResourceCode",), "Resource", ("Code",)),
+    R("RG", "SUBCONTRACTOR", "Fasoncu", "ResourceGroup", ("SubcontractorCode",), "Supplier", ("Code",), OPTIONAL, by_location=False),
+    R("RGM", "RESOURCE_GROUP", "Kaynak grubu", "ResourceGroupMember", ("ResourceGroupCode",), "ResourceGroup", ("Code",)),
+    R("RGM", "RESOURCE", "Kaynak", "ResourceGroupMember", ("ResourceCode",), "Resource", ("Code",)),
     R("ABS", "RESOURCE", "Kaynak", "EmployeeAbsence", ("ResourceCode",), "Resource", ("Code",)),
     R("MS", "MATERIAL", "Malzeme", "MaterialSupplier", ("MaterialCode",), "Material", ("Code",)),
     R("MS", "SUPPLIER", "Tedarikçi", "MaterialSupplier", ("SupplierCode",), "Supplier", ("Code",), inactive=WARNING, by_location=False),
@@ -91,8 +89,7 @@ REFERENCES: tuple[Reference, ...] = (
     R("WOC", "WORK_ORDER", "İş emri", "WorkOrderComponent", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
     R("WOC", "MATERIAL", "Malzeme", "WorkOrderComponent", ("MaterialCode",), "Material", ("Code",)),
     R("WOO", "WORK_ORDER", "İş emri", "WorkOrderOperation", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
-    R("WOO", "RESOURCE", "Kaynak", "WorkOrderOperation", ("ResourceCode",), "Resource", ("Code",), REQUIRED_IF_FILLED),
-    R("WOO", "RESOURCE_GROUP", "Kaynak grubu", "WorkOrderOperation", ("ResourceGroupCode",), "ResourceGroup", ("Code",), REQUIRED_IF_FILLED),
+    R("WOO", "RESOURCE_GROUP", "Kaynak grubu", "WorkOrderOperation", ("ResourceGroupCode",), "ResourceGroup", ("Code",)),
     R("PO", "MATERIAL", "Malzeme", "PurchaseOrderLine", ("MaterialCode",), "Material", ("Code",), inactive=WARNING),
     R("PO", "SUPPLIER", "Tedarikçi", "PurchaseOrderLine", ("SupplierCode",), "Supplier", ("Code",), OPTIONAL, inactive=WARNING, by_location=False),
     R("PO", "PROJECT", "Proje", "PurchaseOrderLine", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),

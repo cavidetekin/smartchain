@@ -48,15 +48,18 @@ DATA = {
             {"LocationCode": LOC, "MaterialCode": "M-PRD2", "Code": "A-1", "ComponentMaterialCode": "M-PAS", "OperationNo": 30, "SequenceNo": 2, "Quantity": 1},
             {"LocationCode": LOC, "MaterialCode": "M-PRD2", "Code": "A-2", "ComponentMaterialCode": "SAT-999", "OperationNo": 10, "SequenceNo": 1, "Quantity": 1,
              "ComponentUom": "KOLI"}],
-    "Routing": [{"LocationCode": LOC, "RouteCode": "R-1", "OperationNo": 10, "SequenceNo": 1, "ResourceCode": "K-1", "IsActive": 1},
-                {"LocationCode": LOC, "RouteCode": "R-BOS", "OperationNo": 10, "SequenceNo": 1, "ResourceCode": "K-PAS", "IsActive": 1},
-                {"LocationCode": LOC, "RouteCode": "R-1", "OperationNo": 10, "SequenceNo": 2, "ResourceCode": "K-YOK", "IsActive": 1},
+    # K-180: planlama birimi kaynak grubu; rota ve iş emri operasyonu yalnız gruba bağlanır, kaynak gruba eşleşmeyle girer
+    "Routing": [{"LocationCode": LOC, "RouteCode": "R-1", "OperationNo": 10, "SequenceNo": 1, "ResourceGroupCode": "G-1", "IsActive": 1},
+                {"LocationCode": LOC, "RouteCode": "R-BOS", "OperationNo": 10, "SequenceNo": 1, "ResourceGroupCode": "G-PAS", "IsActive": 1},
+                {"LocationCode": LOC, "RouteCode": "R-1", "OperationNo": 10, "SequenceNo": 2, "ResourceGroupCode": "G-YOK", "IsActive": 1},
                 {"LocationCode": LOC, "RouteCode": "R-1", "OperationNo": 10, "SequenceNo": 3, "ResourceGroupCode": "G-1", "IsActive": 1}],
-    "Resource": [{"LocationCode": LOC, "Code": "K-1", "IsMachine": 1, "CapacityUnit": "SAAT", "IsActive": 1},
-                 {"LocationCode": LOC, "Code": "K-PAS", "IsMachine": 1, "CapacityUnit": "SAAT", "IsActive": 0},
-                 {"LocationCode": LOC, "Code": "K-BOS", "IsMachine": 1, "CapacityUnit": "SAAT", "IsActive": 1, "SubcontractorCode": "S-YOK"}],
-    "ResourceGroup": [{"LocationCode": LOC, "Code": "G-BOS", "IsActive": 1}, {"LocationCode": LOC, "Code": "G-1", "IsActive": 1}],
-    "ResourceGroupAssignment": [{"LocationCode": LOC, "ResourceGroupCode": "G-1", "ResourceCode": "K-1"}],
+    "Resource": [{"LocationCode": LOC, "Code": "K-1", "IsActive": 1}, {"LocationCode": LOC, "Code": "K-BOS", "IsActive": 1}],
+    "ResourceGroup": [{"LocationCode": LOC, "Code": "G-1", "IsMachine": 1, "CapacityUnit": "SAAT", "IsActive": 1},
+                      {"LocationCode": LOC, "Code": "G-PAS", "IsMachine": 1, "CapacityUnit": "SAAT", "IsActive": 0},
+                      {"LocationCode": LOC, "Code": "G-BOS", "IsMachine": 1, "CapacityUnit": "SAAT", "IsActive": 1, "SubcontractorCode": "S-YOK"}],
+    "ResourceGroupMember": [{"LocationCode": LOC, "ResourceGroupCode": "G-1", "ResourceCode": "K-1"},
+                            {"LocationCode": LOC, "ResourceGroupCode": "G-YOK", "ResourceCode": "K-1"},
+                            {"LocationCode": LOC, "ResourceGroupCode": "G-1", "ResourceCode": "K-YOK"}],
     "MaterialReference": [{"LocationCode": LOC, "MaterialCode": "M-REF", "ReferenceMaterialCode": "M-PRD"}],
     "SalesOrderLine": [so("SO-1", "M-OK"), so("SO-1099", "MAM-099"), so("SO-PAS", "M-PAS"), so("SO-CPAS", "M-OK", CustomerCode="C-PAS"),
                        so("SO-PRJ", "M-OK", ProjectCode="P-YOK"), so("SO-OFF", "MAM-098", IsActive=0), so("SO-SELL", "M-NOSELL"),
@@ -65,7 +68,8 @@ DATA = {
     "WorkOrder": [{"LocationCode": LOC, "WorkOrderNo": "WO-1", "MaterialCode": "M-PRD2", "ProductionVersionCode": "V1", "OpenQuantity": 5},
                   {"LocationCode": LOC, "WorkOrderNo": "WO-BOS", "MaterialCode": "M-PRD2", "OpenQuantity": 5, "ParentWorkOrderNo": "WO-YOK"},
                   {"LocationCode": LOC, "WorkOrderNo": "WO-OP", "MaterialCode": "M-PRD2", "OpenQuantity": 5, "ParentWorkOrderNo": "WO-1"}],
-    "WorkOrderOperation": [{"LocationCode": LOC, "WorkOrderNo": "WO-OP", "OperationNo": 10, "SequenceNo": 1, "ResourceCode": "K-1", "IsActive": 1}],
+    "WorkOrderOperation": [{"LocationCode": LOC, "WorkOrderNo": "WO-OP", "OperationNo": 10, "SequenceNo": 1, "ResourceGroupCode": "G-1", "IsActive": 1},
+                           {"LocationCode": LOC, "WorkOrderNo": "WO-OP", "OperationNo": 30, "SequenceNo": 1, "ResourceGroupCode": "G-YOK", "IsActive": 1}],
     "WorkOrderComponent": [{"LocationCode": LOC, "WorkOrderNo": "WO-OP", "MaterialCode": "M-COMP", "OperationNo": 20, "SequenceNo": 1},
                            {"LocationCode": LOC, "WorkOrderNo": "WO-OP", "MaterialCode": "M-COMP", "OperationNo": 10, "SequenceNo": 2}],
     "PurchaseOrderLine": [{"LocationCode": LOC, "PurchaseOrderNo": "PO-1", "LineNo": 1, "MaterialCode": "M-OK", "SupplierCode": "S-1", "SalesOrderNo": "SO-1",
@@ -131,14 +135,17 @@ def test_required_reference_is_error_with_the_value(hits):
 def test_optional_link_is_warning_only_when_filled(hits):
     assert of(hits, "SO.REF_PROJECT") == [(f"{LOC} · SO-PRJ · 10 · 0", "Uyarı", "Proje bulunamadı: P-YOK")]
     assert [(s, m) for _, s, m in of(hits, "WO.REF_PARENT_WORK_ORDER")] == [("Uyarı", "Orijinal iş emri bulunamadı: WO-YOK")]
-    assert [(s, m) for _, s, m in of(hits, "RES.REF_SUBCONTRACTOR")] == [("Uyarı", "Fasoncu bulunamadı: S-YOK")]
+    assert [(s, m) for _, s, m in of(hits, "RG.REF_SUBCONTRACTOR")] == [("Uyarı", "Fasoncu bulunamadı: S-YOK")]  # fasoncu grupta (K-180)
     assert [(s, m) for _, s, m in of(hits, "UOM.REF_MATERIAL")] == [("Hata", "Malzeme bulunamadı: M-YOK")]  # anahtarın parçası: Zorunlu (doluysa), K-153
 
 
-def test_resource_is_required_if_filled(hits):
-    """Rotada kaynak sözleşmede isteğe bağlı (biri dolu olmalı), ama doluysa ve yoksa Hata; boş kaynak referans bulgusu vermez."""
-    assert of(hits, "RTG.REF_RESOURCE") == [(f"{LOC} · R-1 · 10 · 2", "Hata", "Kaynak bulunamadı: K-YOK")]
-    assert not of(hits, "RTG.REF_RESOURCE_GROUP")
+def test_resource_group_is_a_required_reference(hits):
+    """K-180: rota ve iş emri operasyonu kaynak grubuna bağlanır (zorunlu); grup yoksa Hata. Kaynak alanı kalktı, kaynak referansı yalnız grup eşleşmesinde."""
+    assert of(hits, "RTG.REF_RESOURCE_GROUP") == [(f"{LOC} · R-1 · 10 · 2", "Hata", "Kaynak grubu bulunamadı: G-YOK")]
+    assert of(hits, "WOO.REF_RESOURCE_GROUP") == [(f"{LOC} · WO-OP · 30 · 1", "Hata", "Kaynak grubu bulunamadı: G-YOK")]
+    assert of(hits, "RGM.REF_RESOURCE_GROUP") == [(f"{LOC} · G-YOK · K-1", "Hata", "Kaynak grubu bulunamadı: G-YOK")]
+    assert of(hits, "RGM.REF_RESOURCE") == [(f"{LOC} · G-1 · K-YOK", "Hata", "Kaynak bulunamadı: K-YOK")]
+    assert not {h[0] for h in hits} & {"RTG.REF_RESOURCE", "RTG.INACTIVE_RESOURCE", "WOO.REF_RESOURCE", "RES.REF_SUBCONTRACTOR", "RTG.NO_RESOURCE", "WOO.NO_RESOURCE"}  # kalkan kurallar
 
 
 def test_multi_field_link_narrows_only_by_filled_fields(hits):
@@ -151,10 +158,10 @@ def test_inactive_parent_has_its_class_and_no_reference_error(hits):
     assert [k for k, _, _ in of(hits, "SO.INACTIVE_CUSTOMER")] == [f"{LOC} · SO-CPAS · 10 · 0"]
     assert [(s, m) for _, s, m in of(hits, "STK.INACTIVE_MATERIAL")] == [("Bilgi", "Malzeme pasif: M-PAS")]
     assert [(s, m) for _, s, m in of(hits, "BOM.INACTIVE_COMPONENT")] == [("Uyarı", "Bileşen pasif: M-PAS")]
-    assert [(s, m) for _, s, m in of(hits, "RTG.INACTIVE_RESOURCE")] == [("Uyarı", "Kaynak pasif: K-PAS")]
+    assert of(hits, "RTG.INACTIVE_RESOURCE_GROUP") == [(f"{LOC} · R-BOS · 10 · 1", "Uyarı", "Kaynak grubu pasif: G-PAS")]
     assert [(s, m) for _, s, m in of(hits, "MS.INACTIVE_SUPPLIER")] == [("Uyarı", "Tedarikçi pasif: S-PAS")]
     assert [(s, m) for _, s, m in of(hits, "PO.INACTIVE_SUPPLIER")] == [("Uyarı", "Tedarikçi pasif: S-PAS")]
-    assert not of(hits, "STK.REF_MATERIAL") and not of(hits, "BOM.REF_MATERIAL") and not [m for _, _, m in of(hits, "RTG.REF_RESOURCE") if "K-PAS" in m]
+    assert not of(hits, "STK.REF_MATERIAL") and not of(hits, "BOM.REF_MATERIAL") and not [m for _, _, m in of(hits, "RTG.REF_RESOURCE_GROUP") if "G-PAS" in m]
 
 
 def test_inactive_child_enters_no_rule(hits):
@@ -182,7 +189,8 @@ def test_integrity_findings_are_on_the_parent(hits):
     assert keys("WO.NO_STRUCTURE") == [f"{LOC} · WO-BOS"]
     assert keys("WOC.OPERATION_NOT_IN_WO") == [f"{LOC} · WO-OP · M-COMP · 20 · 1"]
     assert keys("PO.SUPPLIER_NOT_LISTED") == [f"{LOC} · PO-2 · 1", f"{LOC} · PO-3 · 1"]
-    assert {s for c, *_, s, _ in [(h[0], h[3], h[4]) for h in hits] if c.startswith(("RES.UNUSED", "SUP.", "PO.SUPPLIER"))} == {"Bilgi"}
+    assert {s for c, *_, s, _ in [(h[0], h[3], h[4]) for h in hits] if c.startswith(("SUP.", "PO.SUPPLIER"))} == {"Bilgi"}
+    assert [(s, m) for _, s, m in of(hits, "RES.UNUSED")] == [("Uyarı", "Kaynak hiçbir grupta yok.")]  # K-180: grupsuz kaynak planlanamaz, Bilgi değil Uyarı
 
 
 def test_missing_parent_table_is_no_data(hits):

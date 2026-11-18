@@ -26,9 +26,9 @@ def test_every_table_is_checked_from_the_contract():
         required += sum(f.required for f in checker.fields)
         assert key_fields(e.table), e.table
         row, found = checker.check(1, {})  # boş satır: zorunlusu olanda hata
-        assert (row is None) == any(f.required for f in checker.fields) or checker._either, e.table
+        assert (row is None) == any(f.required for f in checker.fields), e.table
         assert all(x.row == 1 for x in found)
-    assert required == 88
+    assert required == 90  # K-180: Routing ve WorkOrderOperation'da kaynak grubu zorunlu
 
 
 @pytest.mark.parametrize("kind, value, expected", [
@@ -68,27 +68,37 @@ def test_scrap_ratio_out_of_range_rejects_the_row_only():
 
 
 def test_required_blank_is_an_error_with_key():
-    row, found = findings("Resource", {"LocationCode": "ORM-01", "Name": "Ad"})
-    assert row is None and [(x.severity, x.check, x.field, x.row) for x in found] == [(ERROR, "required", label("Resource", "Code"), 7)]
+    row, found = findings("ResourceGroup", {"LocationCode": "ORM-01", "Name": "Ad"})
+    assert row is None and [(x.severity, x.check, x.field, x.row) for x in found] == [(ERROR, "required", label("ResourceGroup", "Code"), 7)]
 
 
 def test_rule_filled_field_is_not_rejected_before_rules():
     """K-117, 3.4 notu: CapacityUnit boşsa ön kontrol reddetmez, kontrolü veri kurallarından sonradır."""
-    row, found = findings("Resource", resource())
+    row, found = findings("ResourceGroup", resource())
     assert row is not None and row["CapacityUnit"] is None and not found
 
 
-def test_either_pair_is_checked_in_validation():
-    """Kaynak ve kaynak grubu ikisi boş: ön kontrol satırı alır, validasyonda Hata (RTG.NO_RESOURCE, K-137)."""
+def test_resource_group_is_required_on_routing_and_work_order_operation():
+    """K-180: planlama birimi kaynak grubu; kaynak grubu boşsa ön kontrol satırı reddeder (Zorunlu alan boş). Kaynak alanı ve "kaynak ya da grup" kuralı kalktı."""
     base = {"LocationCode": "L", "RouteCode": "R", "OperationNo": 10, "SequenceNo": 1, "Consumption": 1}
     row, found = findings("Routing", base)
-    assert row is not None and not [x for x in found if x.severity == ERROR]
-    assert findings("Routing", {**base, "ResourceGroupCode": "G"})[0] is not None
-    assert findings("Routing", {**base, "ResourceCode": "A"})[0] is not None
+    assert row is None and [(x.severity, x.check, x.field, x.message) for x in found] == [(ERROR, "required", label("Routing", "ResourceGroupCode"), "Zorunlu alan boş.")]
+    row, found = findings("Routing", {**base, "ResourceGroupCode": "G"})
+    assert row is not None and row["ResourceGroupCode"] == "G" and not found
+    row, found = findings("Routing", {**base, "ResourceCode": "A"})  # kaynak kodu grubun yerini tutmaz
+    assert row is None and [(x.check, x.field) for x in found] == [("required", label("Routing", "ResourceGroupCode"))]
+    operation = {"LocationCode": "L", "WorkOrderNo": "W", "OperationNo": 10, "SequenceNo": 1}
+    row, found = findings("WorkOrderOperation", operation)
+    assert row is None and [(x.severity, x.check, x.field) for x in found] == [(ERROR, "required", label("WorkOrderOperation", "ResourceGroupCode"))]
+    assert findings("WorkOrderOperation", {**operation, "ResourceGroupCode": "G"})[0] is not None
+    for table in ("Routing", "WorkOrderOperation"):
+        names = [f.name for f in contract.fields(table)]
+        assert "ResourceCode" not in names and "ResourceGroupCode" in names
+        assert [(x.severity, x.check) for x in check_columns(table, [*names, "ResourceCode"])] == [(INFO, "unknown_column")]  # eski şablonun kolonu yok sayılır
 
 
 def test_value_outside_the_list_is_only_information():
-    row, found = findings("Routing", {"LocationCode": "L", "RouteCode": "R", "OperationNo": 10, "SequenceNo": 1, "Consumption": 1, "ResourceCode": "A", "ResourceRole": "Ana"})
+    row, found = findings("Routing", {"LocationCode": "L", "RouteCode": "R", "OperationNo": 10, "SequenceNo": 1, "Consumption": 1, "ResourceGroupCode": "G", "ResourceRole": "Ana"})
     assert row["ResourceRole"] == "Ana" and [(x.severity, x.check, x.value) for x in found] == [(INFO, "value_list", "Ana")]
 
 
@@ -99,19 +109,19 @@ def test_raw_fields_have_no_list():
 
 
 def test_several_problems_in_one_row():
-    row, found = findings("Resource", resource(Code=None, IsMachine="belki", RemainingOverTimeYear="x"))
-    assert row is None and {x.field for x in found} == {label("Resource", n) for n in ("Code", "IsMachine", "RemainingOverTimeYear")} and all(x.severity == ERROR for x in found)
+    row, found = findings("ResourceGroup", resource(Code=None, IsMachine="belki", IsCritical="x"))
+    assert row is None and {x.field for x in found} == {label("ResourceGroup", n) for n in ("Code", "IsMachine", "IsCritical")} and all(x.severity == ERROR for x in found)
 
 
 def test_columns():
-    fields = [f.name for f in contract.fields("Resource")]
-    assert check_columns("Resource", fields) == []
-    missing = check_columns("Resource", [n for n in fields if n != "Code"])
+    fields = [f.name for f in contract.fields("ResourceGroup")]
+    assert check_columns("ResourceGroup", fields) == []
+    missing = check_columns("ResourceGroup", [n for n in fields if n != "Code"])
     assert [(x.severity, x.check, x.field) for x in missing] == [(ERROR, "missing_column", "Code")] and "Şablonu yeniden indirin" in missing[0].message
-    assert [x.check for x in check_columns("Resource", [*fields, "Hata", None, ""])] == ["unknown_column"]
-    assert [(x.severity, x.check) for x in check_columns("Resource", [*fields, "AdditionalText1"])] == [(INFO, "unlabelled_column")]
-    assert check_columns("Resource", [*fields, "AdditionalText1"], {"AdditionalText1": "Etiket"}) == []
-    assert [x.check for x in check_columns("Resource", [*fields, "Code"])] == ["repeated_column"]
+    assert [x.check for x in check_columns("ResourceGroup", [*fields, "Hata", None, ""])] == ["unknown_column"]
+    assert [(x.severity, x.check) for x in check_columns("ResourceGroup", [*fields, "AdditionalText1"])] == [(INFO, "unlabelled_column")]
+    assert check_columns("ResourceGroup", [*fields, "AdditionalText1"], {"AdditionalText1": "Etiket"}) == []
+    assert [x.check for x in check_columns("ResourceGroup", [*fields, "Code"])] == ["repeated_column"]
 
 
 def test_non_stockable_is_optional_and_not_defaulted():

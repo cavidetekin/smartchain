@@ -12,7 +12,7 @@ from app.integration.contract import ENTITIES, FIRST_DATA_ROW, fields
 from app.integration.template import NOTE_HEADERS, NOTES_INTRO, write_template
 
 
-def build(table="Resource", labels=None, **kw):
+def build(table="ResourceGroup", labels=None, **kw):
     buffer = io.BytesIO()
     write_template(buffer, contract.entity(table), labels, **kw)
     buffer.seek(0)
@@ -48,12 +48,12 @@ def test_every_table_builds(entity):
 
 
 def test_required_headers_are_dark():
-    ws = build()["Kaynak"]
+    ws = build()["Kaynak grubu"]
     required, other = ws[f"{column_of(ws, 'Code')}1"], ws[f"{column_of(ws, 'Name')}1"]
     assert required.fill.fgColor.rgb == rgb(formats.color("indigo-900")) and required.font.color.rgb == rgb(formats.color("surface"))
     assert other.fill.fgColor.rgb == rgb(formats.color("indigo-100")) and other.font.color.rgb == rgb(formats.color("indigo-900"))
     darks = [c.value for c in ws[1] if c.fill.fgColor.rgb == rgb(formats.color("indigo-900"))]
-    assert darks == [f.name for f in fields("Resource") if f.required] == ["LocationCode", "Code"]
+    assert darks == [f.name for f in fields("ResourceGroup") if f.required] == ["LocationCode", "Code"]
 
 
 def test_notes_sheet_layout():
@@ -62,12 +62,12 @@ def test_notes_sheet_layout():
     assert ws["A1"].value == NOTES_INTRO == "Koyu başlıklı alanlar zorunludur."
     assert tuple(c.value for c in ws[2]) == NOTE_HEADERS == ("Alan", "Etiket", "Açıklama", "Tip", "Boş bırakılırsa", "Smartchain değerleri", "Örnek")
     assert ws.freeze_panes == "A3"
-    assert list(notes(wb)) == [f.name for f in fields("Resource")]
+    assert list(notes(wb)) == [f.name for f in fields("ResourceGroup")]
 
 
 def test_description_empty_when_it_repeats():
     found = notes(build())
-    assert found["Code"]["Etiket"] == "Kaynak kodu" and found["Code"]["Açıklama"] is None
+    assert found["Code"]["Etiket"] == "Grup kodu" and found["Code"]["Açıklama"] is None
     assert notes(build("Material"))["MaterialLevel"]["Açıklama"] is None  # yalnız değer listesiydi
     assert found["IsCritical"]["Açıklama"] == "1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır)"
 
@@ -120,10 +120,19 @@ def test_material_reference_and_resource_templates():
     assert dict(build("MaterialReference")["_Surum"].iter_rows(values_only=True))["Sürüm"] == 1
     found = notes(build("MaterialReference"))
     assert found["TimeFactor"]["Etiket"] == "Süre çarpanı" and found["TimeFactor"]["Boş bırakılırsa"] == "Yok sayılır" and found["ReferenceMaterialCode"]["Boş bırakılırsa"] == "Satır yüklenmez"
-    wb = build("Resource")
+    wb = build("ResourceGroup")
     assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 3
     found = notes(wb)
     assert found["CapacityUnit"]["Etiket"] == "Kapasite birimi" and found["CapacityUnit"]["Boş bırakılırsa"] == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez" and found["CapacityUnit"]["Örnek"] == "SAAT"
+    # K-180: tip, kritiklik, kapasite birimi ve fasoncu grupta; kaynakta yalnız kimlik, ham tip ve kalan fazla mesai
+    assert (found["IsCritical"]["Etiket"], found["SubcontractorCode"]["Etiket"], found["Type"]["Etiket"], found["Name"]["Etiket"]) == ("Kritik", "Fasoncu", "Grup tipi", "Grup adı")
+    assert not {"IsResourceGroup", "IsCompetenceGroup"} & set(found)
+    wb = build("Resource")
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 4
+    assert list(notes(wb)) == ["LocationCode", "Code", "Name", "ResourceType", "IsActive", "ProductionLocation", "RemainingOverTimeYear", "RemainingOverTimeMonth"]
+    wb = build("ResourceGroupMember")
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 2 and wb.sheetnames[0] == "Grup eşleşmesi"
+    assert list(notes(wb)) == ["LocationCode", "ResourceGroupCode", "ResourceCode"]  # geçerlilik tarihleri kalktı
 
 
 def test_purchase_and_confirmation_templates_v2():
@@ -140,8 +149,9 @@ def test_purchase_and_confirmation_templates_v2():
     assert [c.value for c in ws[1]] == ["LocationCode", "ConfirmationNo", "WorkOrderNo", "MaterialCode", "ConfirmedQuantity", "StartDate", "EndDate"]
 
 
-def test_work_order_templates_v2():
-    for table, version in (("WorkOrder", 3), ("WorkOrderComponent", 2), ("WorkOrderOperation", 2)):
+def test_work_order_templates_operation_v3_group_required():
+    """K-180: iş emri operasyonu v3; kaynak alanı yok, kaynak grubu zorunlu."""
+    for table, version in (("WorkOrder", 3), ("WorkOrderComponent", 2), ("WorkOrderOperation", 3)):
         assert dict(build(table)["_Surum"].iter_rows(values_only=True))["Sürüm"] == version, table
     found = notes(build("WorkOrder"))
     assert not {"OrderNo", "OrderType", "OrderQty", "OpenQty"} & set(found)
@@ -150,7 +160,9 @@ def test_work_order_templates_v2():
     found = notes(build("WorkOrderComponent"))
     assert found["UnitUsage"]["Etiket"] == "Birim kullanım" and found["Uom"]["Boş bırakılırsa"] == "Temel birimde kabul edilir"
     found = notes(build("WorkOrderOperation"))
-    assert not {"OpNo", "SeqNo"} & set(found) and found["ResourceCode"]["Boş bırakılırsa"] == "Kaynak grubu da boşsa satır yüklenmez"
+    assert not {"OpNo", "SeqNo", "ResourceCode"} & set(found) and found["ResourceGroupCode"]["Boş bırakılırsa"] == "Satır yüklenmez"
+    assert found["ResourceGroupCode"]["Etiket"] == "Kaynak grubu" and found["ResourceGroupCode"]["Smartchain değerleri"] == "Kaynak grubu tablosundaki kod"
+    assert [f.name for f in fields("WorkOrderOperation") if f.required] == ["LocationCode", "WorkOrderNo", "OperationNo", "SequenceNo", "ResourceGroupCode"]
     assert found["ResourceRole"]["Smartchain değerleri"] == "Primary, Secondary. ERP'deki farklı değerler veri kuralıyla bu değerlere çevrilir." and found["Status"]["Smartchain değerleri"] is None
 
 
@@ -210,8 +222,8 @@ def test_employee_absence_says_end_day_is_included():
 def test_types_and_examples():
     found = notes(build())
     assert found["IsCritical"]["Tip"] == "1 = Evet, 0 = Hayır" and found["Code"]["Tip"] == "Metin, en çok 50"
-    assert found["Code"]["Örnek"] == "TORNA-01"
-    assert isinstance(found["RemainingOverTimeYear"]["Örnek"], (int, float)) and isinstance(notes(build("Routing"))["ResourceNumber"]["Örnek"], int)
+    assert found["Code"]["Örnek"] == "TORNA" and notes(build("Resource"))["Code"]["Örnek"] == "TORNA-01"
+    assert isinstance(notes(build("Resource"))["RemainingOverTimeYear"]["Örnek"], (int, float)) and isinstance(notes(build("Routing"))["ResourceNumber"]["Örnek"], int)
     assert not [r for r in found.values() if "ÖRN" in str(r["Örnek"])]
     day = notes(build("ProductionVersion"))["ValidTo"]["Örnek"]
     assert day == datetime(2026, 12, 31)
@@ -225,14 +237,15 @@ def test_additional_field_appears_with_its_label_version_stays():
     assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 4  # ek alan etiketi sürümü artırmaz; Malzeme v4 sözleşmeden (K-113)
 
 
-def test_routing_template_v2():
+def test_routing_template_v3_group_required():
+    """K-180: rota v3; kaynak alanı yok, kaynak grubu zorunlu."""
     wb = build("Routing")
-    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 2
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 3
     ws = wb["Rota"]
-    assert not {"OpNo", "SeqNo", "LaborType", "CrewSize"} & {c.value for c in ws[1]}
-    assert [c.value for c in ws[1] if c.fill.fgColor.rgb == rgb(formats.color("indigo-900"))] == ["LocationCode", "RouteCode", "OperationNo", "SequenceNo", "Consumption"]
+    assert not {"OpNo", "SeqNo", "LaborType", "CrewSize", "ResourceCode"} & {c.value for c in ws[1]}
+    assert [c.value for c in ws[1] if c.fill.fgColor.rgb == rgb(formats.color("indigo-900"))] == ["LocationCode", "RouteCode", "OperationNo", "SequenceNo", "ResourceGroupCode", "Consumption"]
     found = notes(wb)
-    assert found["ResourceCode"]["Boş bırakılırsa"] == "Kaynak grubu da boşsa satır yüklenmez"
+    assert found["ResourceGroupCode"]["Boş bırakılırsa"] == "Satır yüklenmez"
     assert found["ResourceGroupCode"]["Etiket"] == "Kaynak grubu" and found["ResourceGroupCode"]["Örnek"] == "MONTAJ"
     assert found["WaitingTimeHours"]["Etiket"] == "Bekleme süresi (saat)" and found["WaitingTimeHours"]["Tip"] == "Sayı"
     assert found["IsLotBasedUsage"]["Tip"] == "1 = Evet, 0 = Hayır" and "hazırlık süresi" in found["IsLotBasedUsage"]["Açıklama"]
@@ -277,12 +290,12 @@ def test_material_template_v3():
 
 
 def test_rows_are_typed_and_text_stays_text():
-    rows = [{"Code": "=1+1", "Name": "001", "IsCritical": True, "RemainingOverTimeYear": -5.5, "RemainingOverTimeMonth": 3}]
-    ws = build(rows=rows)["Kaynak"]
+    rows = [{"Code": "=1+1", "Name": "001", "IsActive": True, "RemainingOverTimeYear": -5.5, "RemainingOverTimeMonth": 3}]
+    ws = build("Resource", rows=rows)["Kaynak"]  # sayı alanı kaynakta (K-180)
     value = lambda name: ws[f"{column_of(ws, name)}{FIRST_DATA_ROW}"]  # noqa: E731
     assert value("Code").value == "=1+1" and value("Code").data_type == "s"
     assert value("Name").value == "001" and value("Name").number_format == "@"
-    assert value("IsCritical").value == 1 and value("RemainingOverTimeYear").value == -5.5 and value("RemainingOverTimeMonth").value == 3
+    assert value("IsActive").value == 1 and value("RemainingOverTimeYear").value == -5.5 and value("RemainingOverTimeMonth").value == 3
 
 
 def test_dates_keep_their_format():

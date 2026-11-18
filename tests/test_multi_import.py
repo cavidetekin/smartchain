@@ -64,24 +64,24 @@ def test_quick_identity_matches_full_read(tmp_path):
 def test_table_from_file_and_rejections_without_batches(db_engine, client, people):  # noqa: F811
     user = people[KEY_USER]
     try:
-        r = send(client, user, xlsx(GOOD), name="kaynak.xlsx")
+        r = send(client, user, xlsx(GOOD), name="kaynak grubu.xlsx")
         assert r.status_code == 200, r.text
         body = r.json()
-        assert (body["entity"], body["name"], body["read"], body["mode"]) == ("Resource", "Kaynak", 3, "Değişen")
+        assert (body["entity"], body["name"], body["read"], body["mode"]) == ("ResourceGroup", "Kaynak grubu", 3, "Değişen")
         before = batches(db_engine)
-        r = send(client, user, xlsx(GOOD), skip="Resource")
-        assert r.status_code == 409 and r.json()["error"]["code"] == "import_duplicate" and r.json()["error"]["details"][0]["name"] == "Kaynak"
+        r = send(client, user, xlsx(GOOD), skip="ResourceGroup")
+        assert r.status_code == 409 and r.json()["error"]["code"] == "import_duplicate" and r.json()["error"]["details"][0]["name"] == "Kaynak grubu"
         plain = OpenWorkbook()
         buffer = io.BytesIO()
         plain.save(buffer)
         r = send(client, user, buffer.getvalue())
         assert r.status_code == 422 and r.json()["error"]["code"] == "import_unknown_template"
-        old = contract.entity("Resource").version - 1
+        old = contract.entity("ResourceGroup").version - 1
         r = send(client, user, resaved(xlsx(GOOD), version=old))
         assert r.status_code == 422 and r.json()["error"]["code"] == "import_old_template" and f"v{old}" in r.json()["error"]["message"]
         assert send(client, user, b"bozuk").status_code == 422
         assert batches(db_engine) == before                                                    # reddedilen dosyada parti yok
-        r = send(client, user, xlsx(MATERIAL, entity="Material"), skip="Resource", name="malzeme.xlsx")
+        r = send(client, user, xlsx(MATERIAL, entity="Material"), skip="ResourceGroup", name="malzeme.xlsx")
         assert r.status_code == 200 and r.json()["entity"] == "Material"
     finally:
         clean_validation(db_engine)
@@ -107,6 +107,6 @@ def test_large_file_is_identified_without_opening(db_engine, client, people, mon
     r = send(client, people[KEY_USER], xlsx(GOOD), name="buyuk.xlsx")
     assert r.status_code == 202, r.text
     body = r.json()
-    assert (body["entity"], body["name"]) == ("Resource", "Kaynak") and body["job_id"] and not opened
+    assert (body["entity"], body["name"]) == ("ResourceGroup", "Kaynak grubu") and body["job_id"] and not opened
     assert batch_row(db_engine, body["batch_id"])["Status"] == "Ön kontrol"
     assert Path(batch_row(db_engine, body["batch_id"])["FilePath"]).exists()

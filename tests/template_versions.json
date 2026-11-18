@@ -1,7 +1,7 @@
 {
   "Location": {
-    "version": 2,
-    "contract": "031ff24ba2ef594e"
+    "version": 3,
+    "contract": "d7e50bbffec61ab2"
   },
   "UomConversion": {
     "version": 2,
@@ -20,16 +20,28 @@
     "contract": "e0a52724580a446e"
   },
   "Routing": {
-    "version": 2,
-    "contract": "6a825848f39fa300"
+    "version": 3,
+    "contract": "d1523c2206da61dd"
+  },
+  "MaterialReference": {
+    "version": 1,
+    "contract": "c70a3bbd7c01fe4d"
   },
   "ResourceGroup": {
-    "version": 2,
-    "contract": "a3eec2a21369f383"
+    "version": 3,
+    "contract": "ee538c0d485e6bba"
   },
   "Resource": {
-    "version": 3,
-    "contract": "887b3dbfdafc65df"
+    "version": 4,
+    "contract": "ec850ea22b90b562"
+  },
+  "ResourceGroupMember": {
+    "version": 2,
+    "contract": "1d379cf55a2d7577"
+  },
+  "EmployeeAbsence": {
+    "version": 1,
+    "contract": "be4fbc5df14a7c5d"
   },
   "Supplier": {
     "version": 2,
@@ -63,6 +75,10 @@
     "version": 3,
     "contract": "f79300d2d300b4e3"
   },
+  "BorrowPayback": {
+    "version": 1,
+    "contract": "79eeb1699157bcaf"
+  },
   "WorkOrder": {
     "version": 3,
     "contract": "339d49067cdeff10"
@@ -72,8 +88,8 @@
     "contract": "225611bf56bf97b7"
   },
   "WorkOrderOperation": {
-    "version": 2,
-    "contract": "0b077631667600e7"
+    "version": 3,
+    "contract": "970a349c7ed72123"
   },
   "PurchaseOrderLine": {
     "version": 3,
@@ -82,21 +98,5 @@
   "ProductionConfirmation": {
     "version": 2,
     "contract": "60c9b114504cc806"
-  },
-  "ResourceGroupAssignment": {
-    "version": 1,
-    "contract": "441823a2a8f01007"
-  },
-  "EmployeeAbsence": {
-    "version": 1,
-    "contract": "be4fbc5df14a7c5d"
-  },
-  "BorrowPayback": {
-    "version": 1,
-    "contract": "79eeb1699157bcaf"
-  },
-  "MaterialReference": {
-    "version": 1,
-    "contract": "c70a3bbd7c01fe4d"
   }
 }

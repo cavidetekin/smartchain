@@ -18,8 +18,8 @@
     {"DemandType": "Sipariş", "DemandId": 7002, "DueDate": "2026-11-17", "PlannedDate": "2026-11-20", "ShortQty": 0, "DelayDays": 3}
   ],
   "capacity_loads": [
-    {"ResourceId": 11, "BucketStart": "2026-11-09", "GrossCapacity": 80, "DowntimeLoss": 0, "NetCapacity": 72, "Load": 81, "Overtime": 9},
-    {"ResourceId": 11, "BucketStart": "2026-11-16", "GrossCapacity": 80, "DowntimeLoss": 8, "NetCapacity": 64.8, "Load": 50, "Overtime": 0}
+    {"ResourceGroupId": 11, "BucketStart": "2026-11-09", "GrossCapacity": 80, "DowntimeLoss": 0, "NetCapacity": 72, "Load": 81, "Overtime": 9},
+    {"ResourceGroupId": 11, "BucketStart": "2026-11-16", "GrossCapacity": 80, "DowntimeLoss": 8, "NetCapacity": 64.8, "Load": 50, "Overtime": 0}
   ],
   "pegging": [
     {"supply_ref": "P1", "DemandType": "Sipariş", "DemandId": 7001, "RootDemandId": 7001, "Quantity": 120},

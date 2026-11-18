@@ -2,7 +2,7 @@
 
 Küme (`adm.DemandChain`): her kontrolde baştan, veritabanında küme tabanlı SQL ile, seviye seviye (talep başına yol çıkarılmaz). Zinciri yalnız
 açık satış siparişi (aktif, açık miktarı > 0; teklif ve beklemede dahil) ve planlama ufkundaki tahmin başlatır. Her seviyede: aktif üretim
-versiyonları, ağaç satırları ve bileşenleri (alternatifler dahil), rota satırları, rotadaki kaynak ve kaynak grubu ve grubun kaynakları,
+versiyonları, ağaç satırları ve bileşenleri (alternatifler dahil), rota satırları, rotadaki kaynak grubu ve grubun kaynakları (grup eşleşmesiyle; K-180),
 malzeme tedarikçileri ve tedarikçi; kendi aktif versiyonu olmayan malzemede benzetilen ürünün versiyonu, ağacı ve rotası; açık iş emirleri,
 bileşenleri ve operasyonları.
 
@@ -73,7 +73,7 @@ def _add(session: Session, entity: str, ids: sa.Select) -> int:
 def rebuild(session: Session, day: date) -> dict[str, int]:
     """Kümeyi baştan kurar; yeni malzeme çıkmayana kadar seviye seviye genişler. Tablo başına kayıt sayısı."""
     so, fc, pv, bom, rtg = core("SalesOrderLine"), core("Forecast"), core("ProductionVersion"), core("BOM"), core("Routing")
-    rga, ms, mr, wo, woc, woo = (core("ResourceGroupAssignment"), core("MaterialSupplier"), core("MaterialReference"), core("WorkOrder"),
+    rgm, ms, mr, wo, woc, woo = (core("ResourceGroupMember"), core("MaterialSupplier"), core("MaterialReference"), core("WorkOrder"),
                                  core("WorkOrderComponent"), core("WorkOrderOperation"))
     session.execute(sa.delete(DC))
     start, end = horizon(session, day)
@@ -98,17 +98,16 @@ def rebuild(session: Session, day: date) -> dict[str, int]:
              .where(current(bom), pv_ok))
         _add(session, "Routing", sa.select(rtg.c.Id).select_from(rtg.join(chain_pv, sa.and_(chain_pv.c.RouteCode == rtg.c.RouteCode, chain_pv.c.LocationId == rtg.c.LocationId)))
              .where(current(rtg), pv_ok))
-        _add(session, "Resource", sa.select(rtg.c.ResourceId).where(current(rtg), rtg.c.Id.in_(_in_chain("Routing"))))
         _add(session, "ResourceGroup", sa.select(rtg.c.ResourceGroupId).where(current(rtg), rtg.c.Id.in_(_in_chain("Routing"))))
-        _add(session, "ResourceGroupAssignment", sa.select(rga.c.Id).where(current(rga), rga.c.ResourceGroupId.in_(_in_chain("ResourceGroup"))))
-        _add(session, "Resource", sa.select(rga.c.ResourceId).where(current(rga), rga.c.Id.in_(_in_chain("ResourceGroupAssignment"))))
         _add(session, "MaterialSupplier", sa.select(ms.c.Id).where(current(ms), active(ms), ms.c.MaterialId.in_(mats)))
         _add(session, "Supplier", sa.select(ms.c.SupplierId).where(current(ms), ms.c.Id.in_(_in_chain("MaterialSupplier"))))
         _add(session, "WorkOrder", sa.select(wo.c.Id).where(current(wo), wo.c.OpenQuantity > 0, wo.c.MaterialId.in_(mats)))
         _add(session, "WorkOrderComponent", sa.select(woc.c.Id).where(current(woc), woc.c.WorkOrderId.in_(_in_chain("WorkOrder"))))
         _add(session, "WorkOrderOperation", sa.select(woo.c.Id).where(current(woo), woo.c.WorkOrderId.in_(_in_chain("WorkOrder"))))
-        _add(session, "Resource", sa.select(woo.c.ResourceId).where(current(woo), woo.c.Id.in_(_in_chain("WorkOrderOperation"))))
         _add(session, "ResourceGroup", sa.select(woo.c.ResourceGroupId).where(current(woo), woo.c.Id.in_(_in_chain("WorkOrderOperation"))))
+        # gruptan eşleşmeyle kaynağa (rota ve iş emri operasyonu kaynağı değil grubu gösterir, K-180)
+        _add(session, "ResourceGroupMember", sa.select(rgm.c.Id).where(current(rgm), rgm.c.ResourceGroupId.in_(_in_chain("ResourceGroup"))))
+        _add(session, "Resource", sa.select(rgm.c.ResourceId).where(current(rgm), rgm.c.Id.in_(_in_chain("ResourceGroupMember"))))
         added = _add(session, "Material", sa.select(bom.c.ComponentMaterialId).where(current(bom), bom.c.Id.in_(_in_chain("BOM"))))
         added += _add(session, "Material", sa.select(woc.c.MaterialId).where(current(woc), woc.c.Id.in_(_in_chain("WorkOrderComponent"))))
         if not added:
@@ -183,7 +182,7 @@ def start_materials(session: Session, entity: str, record_id: int) -> tuple[set[
             return set(), []
         found = [d for d in _demands(session, {row.MaterialId}, date.today()).get(row.MaterialId, []) if d.entity == entity and d.id == record_id]
         return set(), found
-    pv, rtg, rga, ms, wo = core("ProductionVersion"), core("Routing"), core("ResourceGroupAssignment"), core("MaterialSupplier"), core("WorkOrder")
+    pv, rtg, rgm, ms, wo = core("ProductionVersion"), core("Routing"), core("ResourceGroupMember"), core("MaterialSupplier"), core("WorkOrder")
 
     def route_materials(where) -> set[int]:
         return set(session.execute(sa.select(pv.c.MaterialId).select_from(rtg.join(pv, sa.and_(pv.c.RouteCode == rtg.c.RouteCode, pv.c.LocationId == rtg.c.LocationId)))
@@ -192,18 +191,19 @@ def start_materials(session: Session, entity: str, record_id: int) -> tuple[set[
         return {record_id}, []
     if entity == "Routing":
         return route_materials(rtg.c.Id == record_id), []
-    if entity == "Resource":
-        groups = sa.select(rga.c.ResourceGroupId).where(current(rga), rga.c.ResourceId == record_id)
-        mats = route_materials(sa.or_(rtg.c.ResourceId == record_id, rtg.c.ResourceGroupId.in_(groups)))
+    def group_materials(groups) -> set[int]:
+        """Grubu (grupları) gösteren rotaların ve açık iş emri operasyonlarının malzemeleri."""
         woo = core("WorkOrderOperation")
-        mats |= set(session.execute(sa.select(wo.c.MaterialId).select_from(woo.join(wo, wo.c.Id == woo.c.WorkOrderId))
-                                    .where(current(woo), current(wo), wo.c.OpenQuantity > 0, woo.c.ResourceId == record_id)).scalars())
-        return mats, []
+        mats = route_materials(rtg.c.ResourceGroupId.in_(groups))
+        return mats | set(session.execute(sa.select(wo.c.MaterialId).select_from(woo.join(wo, wo.c.Id == woo.c.WorkOrderId))
+                                          .where(current(woo), current(wo), wo.c.OpenQuantity > 0, woo.c.ResourceGroupId.in_(groups))).scalars())
+    if entity == "Resource":  # kaynak, üye olduğu gruplar üzerinden (K-180)
+        return group_materials(sa.select(rgm.c.ResourceGroupId).where(current(rgm), rgm.c.ResourceId == record_id)), []
     if entity == "ResourceGroup":
-        return route_materials(rtg.c.ResourceGroupId == record_id), []
-    if entity == "ResourceGroupAssignment":
-        group = session.execute(sa.select(rga.c.ResourceGroupId).where(rga.c.Id == record_id, current(rga))).scalar()
-        return (route_materials(rtg.c.ResourceGroupId == group) if group is not None else set()), []
+        return group_materials([record_id]), []
+    if entity == "ResourceGroupMember":
+        group = session.execute(sa.select(rgm.c.ResourceGroupId).where(rgm.c.Id == record_id, current(rgm))).scalar()
+        return (group_materials([group]) if group is not None else set()), []
     if entity == "Supplier":
         return set(session.execute(sa.select(ms.c.MaterialId).where(current(ms), ms.c.SupplierId == record_id)).scalars()), []
     if entity in ("WorkOrderComponent", "WorkOrderOperation"):

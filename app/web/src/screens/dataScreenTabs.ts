@@ -22,7 +22,7 @@ export const MASTER_TABS: TabDef[] = [
   { key: "kaynak", label: M.tabs.resource, tables: [
     { list: "master-resource", slug: "kaynak", label: M.tables.resource },
     { list: "master-resource-group", slug: "kaynak-grubu", label: M.tables.resourceGroup },
-    { list: "master-resource-group-assignment", slug: "grup-atamasi", label: M.tables.groupAssignment }] },
+    { list: "master-resource-group-member", slug: "grup-eslesmesi", label: M.tables.groupMember }] },
   { key: "tedarikci-ve-musteri", label: M.tabs.supplierCustomer, tables: [
     { list: "master-supplier", slug: "tedarikci", label: M.tables.supplier },
     { list: "master-material-supplier", slug: "malzeme-tedarikcisi", label: M.tables.materialSupplier },

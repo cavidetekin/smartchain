@@ -60,7 +60,7 @@ def test_descriptions_come_from_docs_for_the_screen():
     assert all(rows.values())
     assert max(len(v) for v in rows.values()) <= metadata.tables["adm.FieldDefinition"].c.Description.type.length
     assert not [k for k, v in rows.items() if re.search(r"K-\d", v) or "FieldDefinition" in v]
-    assert rows[("Resource", "CapacityUnit")] == "Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir"
+    assert rows[("ResourceGroup", "CapacityUnit")] == "Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir" and ("Resource", "CapacityUnit") not in rows  # K-180
     assert rows[("UnitOfMeasure", "Decimals")] == "Miktar ondalığı; ERP'den gelmez, Smartchain'de tutulur"
     assert rows[("Material", "AdditionalText1")] == "Ek metin alanları"
     assert rows[("Material", "ShelfLifeDays")] == "Raf ömrü; şimdilik yalnız uyarı için kullanılır"
@@ -72,8 +72,8 @@ def test_descriptions_come_from_docs_for_the_screen():
 
 def test_label_and_description_are_separate():
     """K-88: ETİKET doluysa etiket odur; açıklama veritabanı yorumunda, değer listesi yerinde kalır."""
-    critical = metadata.tables["core.Resource"].c.IsCritical
-    assert critical.info["label"] == "Kritik kaynak" and "sonsuz kapasite" in critical.comment
+    critical = metadata.tables["core.ResourceGroup"].c.IsCritical  # kritiklik kaynak grubunda (K-180)
+    assert critical.info["label"] == "Kritik" and "sonsuz kapasite" in critical.comment
     status = metadata.tables["core.SalesOrderLine"].c.Status
     assert status.info["label"] == "Sipariş durumu" and "values" not in status.info  # K-127: ham değer
     policy = metadata.tables["core.Material"].c.LotSizePolicy
@@ -135,13 +135,14 @@ def test_closing_changes_in_the_dictionary(db_engine):
 
 @pytest.mark.db
 def test_material_reference_and_capacity_unit_in_the_dictionary(db_engine):
-    """K-126: yeni tablo etiketleriyle; K-117: kapasite biriminin varsayılanı kalktı, zorunlu kaldı."""
+    """K-126: yeni tablo etiketleriyle; K-117, K-180: kapasite birimi kaynak grubunda, varsayılansız ve zorunlu."""
     with db_engine.connect() as c:
-        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'MaterialReference', N'Resource')"))}
+        rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName IN (N'MaterialReference', N'Resource', N'ResourceGroup')"))}
     assert rows[("MaterialReference", "MaterialId")].StandardLabel == "Benzetilen ürün" and rows[("MaterialReference", "ReferenceMaterialId")].IsRequired
     assert rows[("MaterialReference", "TimeFactor")].StandardLabel == "Süre çarpanı" and rows[("MaterialReference", "TimeFactor")].IfEmpty == "yok"
     assert rows[("MaterialReference", "ReferenceProductionVersionId")].StandardLabel == "Referans ürünün versiyonu" and not rows[("MaterialReference", "ReferenceProductionVersionId")].IsRequired
-    assert rows[("Resource", "CapacityUnit")].IsRequired and rows[("Resource", "CapacityUnit")].IfEmpty == "hata (kurallardan sonra)"
+    assert rows[("ResourceGroup", "CapacityUnit")].IsRequired and rows[("ResourceGroup", "CapacityUnit")].IfEmpty == "hata (kurallardan sonra)"
+    assert ("Resource", "CapacityUnit") not in rows
 
 
 @pytest.mark.db
@@ -160,7 +161,7 @@ def test_purchase_and_confirmation_in_the_dictionary(db_engine):
 
 @pytest.mark.db
 def test_work_orders_in_the_dictionary(db_engine):
-    """K-124: eski adlar yok; tipin varsayılanı ve zorunluluğu kalktı; operasyonda kaynak zorunlu değil."""
+    """K-124: eski adlar yok; tipin varsayılanı ve zorunluluğu kalktı; operasyonda kaynak alanı yok, kaynak grubu zorunlu (K-180)."""
     with db_engine.connect() as c:
         rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition WHERE TableName LIKE N'WorkOrder%'"))}
     assert not {("WorkOrder", n) for n in ("OrderNo", "OrderType", "OrderQty", "OpenQty")} & set(rows)
@@ -169,7 +170,7 @@ def test_work_orders_in_the_dictionary(db_engine):
     assert kind.StandardLabel == "İş emri tipi" and kind.IfEmpty == "bilinmiyor" and not kind.IsRequired and not rows[("WorkOrder", "Status")].IsRequired
     assert rows[("WorkOrder", "ProductionVersionId")].StandardLabel == "Üretim versiyonu" and rows[("WorkOrder", "IsFixed")].StandardLabel == "Sabit" and rows[("WorkOrder", "IsFixed")].IfEmpty == "yok"
     assert rows[("WorkOrderComponent", "UnitUsage")].StandardLabel == "Birim kullanım" and rows[("WorkOrderComponent", "IssuedQuantity")].IfEmpty == "yok" and rows[("WorkOrderComponent", "ScrapRatio")].IfEmpty == "yok"
-    assert not rows[("WorkOrderOperation", "ResourceId")].IsRequired and rows[("WorkOrderOperation", "ResourceRole")].IfEmpty == "hata (kurallardan sonra)" and rows[("WorkOrderOperation", "IsCompleted")].StandardLabel == "Tamamlandı"
+    assert ("WorkOrderOperation", "ResourceId") not in rows and rows[("WorkOrderOperation", "ResourceGroupId")].IsRequired and rows[("WorkOrderOperation", "ResourceRole")].IfEmpty == "hata (kurallardan sonra)" and rows[("WorkOrderOperation", "IsCompleted")].StandardLabel == "Tamamlandı"
     assert rows[("WorkOrderOperation", "SequenceNo")].StandardLabel == "Sıra no"
 
 
@@ -230,16 +231,20 @@ def test_supplier_fields_in_the_dictionary(db_engine):
 
 @pytest.mark.db
 def test_resource_side_in_the_dictionary(db_engine):
-    """K-117: kalkan tablolar sözlükte yok; yeni tablolar ve alanlar var; kapasite alanı zorunlu değil."""
+    """K-117, K-180: kalkan tablolar ve alanlar sözlükte yok; tip, kritik ve fasoncu kaynak grubunda; grup eşleşmesi; geçici kapasite alanı zorunlu değil."""
     with db_engine.connect() as c:
         rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition"))}
-    assert not {t for t, _ in rows} & {"Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence"}
-    assert not {("Resource", "ResourceRole"), ("Resource", "ResourceGroupId"), ("Resource", "IsConstrained"), ("Resource", "SupplierId"), ("ShiftPlan", "CompetenceGroupId")} & set(rows)
-    assert rows[("Resource", "IsCritical")].StandardLabel == "Kritik kaynak" and rows[("Resource", "IsCritical")].IfEmpty == "hata (kurallardan sonra)"
-    assert rows[("Resource", "SubcontractorId")].StandardLabel == "Fasoncu" and rows[("Resource", "IsEmployee")].StandardLabel == "İşçi"
+    assert not {t for t, _ in rows} & {"Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence", "ResourceGroupAssignment", "Shift", "ShiftPlan", "OvertimeLimit"}
+    gone = ("ResourceRole", "ResourceGroupId", "IsConstrained", "SupplierId", "IsCritical", "CapacityUnit", "SubcontractorId", "IsEmployee", "IsMachine", "CapacitySource", "Quantity")
+    assert not {("Resource", f) for f in gone} & set(rows)
+    assert not {("ResourceGroup", "IsCompetenceGroup"), ("ResourceGroup", "IsResourceGroup"), ("Routing", "ResourceId"), ("AllocationRule", "ResourceId"), ("CapacityLoad", "ResourceId")} & set(rows)
+    assert rows[("ResourceGroup", "IsCritical")].StandardLabel == "Kritik" and rows[("ResourceGroup", "IsCritical")].IfEmpty == "hata (kurallardan sonra)"
+    assert rows[("ResourceGroup", "SubcontractorId")].StandardLabel == "Fasoncu" and rows[("ResourceGroup", "IsEmployee")].StandardLabel == "İşçi"
+    assert rows[("ResourceGroup", "Type")].StandardLabel == "Grup tipi" and rows[("Resource", "ResourceType")].StandardLabel == "Kaynak tipi"
     assert not rows[("Resource", "DailyCapacity")].IsRequired and not rows[("Resource", "CalendarId")].IsRequired and not rows[("Resource", "ResourceType")].IsRequired
-    assert rows[("ResourceGroupAssignment", "ResourceGroupId")].IsRequired and rows[("EmployeeAbsence", "HoursPerDay")].StandardLabel == "Günlük saat"
-    assert rows[("ResourceGroup", "IsCompetenceGroup")].StandardLabel == "Yetkinlik grubu" and rows[("ShiftPlan", "ResourceGroupId")].StandardLabel == "Kaynak ya da yetkinlik grubu"
+    assert rows[("ResourceGroupMember", "ResourceGroupId")].IsRequired and rows[("ResourceGroupMember", "ResourceGroupId")].StandardLabel == "Grup"
+    assert ("ResourceGroupMember", "AdditionalText3") in rows and ("ResourceGroupMember", "ValidFrom") not in rows
+    assert rows[("EmployeeAbsence", "HoursPerDay")].StandardLabel == "Günlük saat"
 
 
 @pytest.mark.db
@@ -251,7 +256,7 @@ def test_routing_fields_in_the_dictionary(db_engine):
     assert {n: rows[n].StandardLabel for n in ("OperationNo", "SequenceNo", "TransferQuantity", "ResourceGroupId", "IsActive", "IsLotBasedUsage", "ProductionLocation", "WaitingTimeHours", "TransferTimeHours")} == {
         "OperationNo": "Operasyon no", "SequenceNo": "Sıra no", "TransferQuantity": "Transfer miktarı", "ResourceGroupId": "Kaynak grubu", "IsActive": "Aktif",
         "IsLotBasedUsage": "Lot bazlı kullanım", "ProductionLocation": "Üretim yeri", "WaitingTimeHours": "Bekleme süresi (saat)", "TransferTimeHours": "Taşıma süresi (saat)"}
-    assert not rows["ResourceId"].IsRequired and rows["LocationId"].IsRequired and rows["IsActive"].IfEmpty == "hata (kurallardan sonra)"
+    assert "ResourceId" not in rows and rows["ResourceGroupId"].IsRequired and rows["LocationId"].IsRequired and rows["IsActive"].IfEmpty == "hata (kurallardan sonra)"
     assert (rows["ResourceRole"].IfEmpty, rows["ResourceNumber"].IfEmpty) == ("hata (kurallardan sonra)", "hata (kurallardan sonra)")  # K-138
 
 

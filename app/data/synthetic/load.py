@@ -22,15 +22,15 @@ log = logging.getLogger("smartchain.synthetic")
 
 # Bağımlılık sırası (K-79). Location ve UnitOfMeasure versiyonsuz; ayrı yazılır.
 LOAD_ORDER = [
-    "Calendar", "CalendarDay", "Shift", "ResourceGroup", "Supplier", "Customer", "ProjectGroup",
-    "Project", "Material", "UomConversion", "Resource", "ResourceCapacityProfile", "ResourceDowntime", "ShiftPlan",
-    "ResourceGroupAssignment", "EmployeeAbsence", "ProductionVersion", "BOM", "Routing", "MaterialSupplier", "MaterialReference",
+    "Calendar", "CalendarDay", "ResourceGroup", "Supplier", "Customer", "ProjectGroup",
+    "Project", "Material", "UomConversion", "Resource", "ResourceCapacityProfile", "ResourceDowntime",
+    "ResourceGroupMember", "EmployeeAbsence", "ProductionVersion", "BOM", "Routing", "MaterialSupplier", "MaterialReference",
     "SalesOrderLine", "Forecast", "Stock", "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "PurchaseOrderLine",
     "ProductionConfirmation",
 ]
 PARAM_ORDER = ["PriorityRule", "SupplierLimit"]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
 PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "ResourceEfficiency",
-                  "ResourcePeriodLimit", "OvertimeLimit", "SupplierLimit"]
+                  "ResourcePeriodLimit", "SupplierLimit"]
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
 
 

@@ -38,7 +38,10 @@ def test_relations_show_codes_not_ids():
     for d in (*MASTER_LISTS, *TRANSACTION_LISTS):
         assert not {f for f in cols(d.name) if f.endswith("Id")}, d.name
     assert {"MaterialCode", "ComponentMaterialCode", "LocationCode"} <= set(cols("master-bom"))
-    assert {"CalendarCode", "SubcontractorCode"} <= set(cols("master-resource"))
+    assert "CalendarCode" in cols("master-resource") and "SubcontractorCode" not in cols("master-resource")
+    assert "SubcontractorCode" in cols("master-resource-group")  # fasoncu grupta (K-180)
+    assert {"ResourceGroupCode"} <= set(cols("master-routing")) and "ResourceCode" not in cols("master-routing")
+    assert {"ResourceGroupCode", "ResourceCode"} <= set(cols("master-resource-group-member"))
     assert {"CustomerCode", "ProjectCode", "MaterialCode"} <= set(cols("transaction-sales-order"))
     assert {"SalesOrderLineCode", "ParentWorkOrderCode", "ProductionVersionCode"} <= set(cols("transaction-work-order"))
     assert {"LendingProjectCode", "BorrowingProjectCode"} <= set(cols("transaction-borrow-payback"))
@@ -113,7 +116,7 @@ def test_counts_match_current_rows(api, db_engine, url, tabs):
         for name, x in tables.items():
             assert x["count"] == _current(conn, BY_NAME[name].table_name), name
     if "materials" in tables:
-        assert (tables["materials"]["label"], tables["master-resource-group-assignment"]["label"]) == ("Malzeme", "Grup ataması")
+        assert (tables["materials"]["label"], tables["master-resource-group-member"]["label"]) == ("Malzeme", "Grup eşleşmesi")
 
 
 @pytest.mark.db

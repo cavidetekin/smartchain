@@ -27,7 +27,7 @@ W = metadata.tables["adm.DataQualityWarning"]
 RULE = metadata.tables["adm.ValidationRule"]
 PATH = metadata.tables["adm.DemandChainPath"]
 # core'da kodu kaybolan bağ: çözülemeyen isteğe bağlı kod core'a boş yazılır; kural işlenmiş staging'de çalışır
-CORE_LOST = frozenset({"RES.REF_SUBCONTRACTOR"})
+CORE_LOST = frozenset({"RG.REF_SUBCONTRACTOR"})
 SEP, LABEL_SEP = " · ", ": "  # "Malzeme: HAM-022 · Tedarikçi: TED-02"
 LABEL_SKIP = frozenset({"LocationCode", "LineItemNo"})  # Faz 1 tek lokasyon; alt satır kimlikte kalır, etikette yok
 NAMES = {e.table: e.name for e in ENTITIES}

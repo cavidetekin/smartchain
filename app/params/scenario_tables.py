@@ -46,7 +46,6 @@ TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("SupplierLimit", DATA, _pending),
     ScenarioTable("ResourceEfficiency", DATA, _pending),
     ScenarioTable("ResourcePeriodLimit", DATA, _pending),
-    ScenarioTable("OvertimeLimit", DATA, _pending),
 )
 BY_NAME = {t.name: t for t in TABLES}
 

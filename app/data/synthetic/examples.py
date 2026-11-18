@@ -121,39 +121,43 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     x.add("BOM", bom, ["BOM.SINGLE_ALTERNATIVE", "BOM.NO_VERSION"], Code="V-B-6", AlternativeGroup="V-ALT")
     x.add("BOM", bom, ["BOM.INACTIVE_COMPONENT"], ComponentMaterialCode="L-MAT-PAS", SequenceNo=7)
 
-    # Kaynak, kaynak grubu, atama (tablolar arası örnekler için de)
+    # Kaynak, kaynak grubu, grup eşleşmesi (K-180: tip, birim, kritik ve fasoncu grupta; tablolar arası örnekler için de)
     res = x.base("Resource", Code="T-01")
     r = lambda n, rules, **v: x.add("Resource", res, rules, Code=f"V-RES-{n}", Name=f"Örnek kaynak {n}", **v)  # noqa: E731
-    r(1, None, CapacityUnit="ADET")
-    r(2, ["RES.TYPE_FLAGS", "RES.UNUSED"], IsEmployee=True)  # örnek kaynaklar rotada ve grupta yok (Bilgi)
-    r(3, ["RES.SUBCON_CONFLICT", "RES.UNUSED"], SubcontractorCode="TED-07")
+    r(1, None)  # iki farklı birimli gruba üye (RGM.UNIT_MISMATCH eşleşme satırlarında)
+    r(2, None)  # hem makine hem işçi grubuna üye (RGM.MIXED_TYPES eşleşme satırlarında)
+    r(3, ["RES.UNUSED"])  # hiçbir grupta yok
     r(4, ["RES.MONTH_YEAR", "RES.UNUSED"], RemainingOverTimeMonth=50.0, RemainingOverTimeYear=10.0)
-    r(5, ["RES.PHASE1_UNUSED", "RES.UNUSED"], IsMachine=False, IsFurnace=True)
-    r(6, ["RES.REF_SUBCONTRACTOR", "RES.UNUSED"], IsMachine=False, IsSubcontractor=True, SubcontractorCode="V-YOK-SUP")
     group = x.base("ResourceGroup", Code="TORNA")
-    x.add("ResourceGroup", group, None, Code="V-RG-1", Name="Örnek karışık birimli grup")
-    x.add("ResourceGroup", group, ["RG.NO_TYPE", "RG.NO_RESOURCE"], Code="V-RG-2", Name="Örnek tipsiz grup", IsResourceGroup=False, IsCompetenceGroup=False)
+    g = lambda n, rules, name, **v: x.add("ResourceGroup", group, rules, Code=f"V-RG-{n}", Name=name, **v)  # noqa: E731
+    g(1, None, "Örnek adet birimli grup", CapacityUnit="ADET")
+    g(2, ["RG.TYPE_FLAGS", "RG.NO_RESOURCE"], "Örnek tipsiz grup", IsMachine=False)
     x.add("ResourceGroup", group, ["ALL.REF_LOCATION", "RG.NO_RESOURCE"], LocationCode="V-YOK-LOC", Code="V-RG-3", Name="Lokasyonu tanımsız grup")
-    rga = x.base("ResourceGroupAssignment", ResourceGroupCode="TORNA", ResourceCode="T-01")
-    x.add("ResourceGroupAssignment", rga, None, ResourceGroupCode="V-RG-1", ResourceCode="V-RES-1")
-    x.add("ResourceGroupAssignment", rga, None, ResourceGroupCode="V-RG-1", ResourceCode="T-01")
-    x.add("ResourceGroupAssignment", rga, ["RGA.COMPETENCE_NOT_EMPLOYEE"], ResourceGroupCode="CG-CNC", ResourceCode="T-02")
-    x.add("ResourceGroupAssignment", rga, ["RGA.REF_RESOURCE_GROUP"], ResourceGroupCode="V-YOK-RG", ResourceCode="T-01")
-    x.add("ResourceGroupAssignment", rga, ["RGA.REF_RESOURCE"], ResourceGroupCode="TORNA", ResourceCode="V-YOK-RES")
+    g(4, None, "Örnek makine grubu")
+    g(5, None, "Örnek işçi grubu", IsMachine=False, IsEmployee=True)
+    g(6, ["RG.SUBCON_CONFLICT", "RG.NO_RESOURCE"], "Fasoncusu olan, fason olmayan grup", SubcontractorCode="TED-07")
+    g(7, ["RG.PHASE1_UNUSED", "RG.NO_RESOURCE"], "Örnek fırın grubu", IsMachine=False, IsFurnace=True)
+    g(8, ["RG.REF_SUBCONTRACTOR", "RG.NO_RESOURCE"], "Fasoncusu tanımsız grup", IsMachine=False, IsSubcontractor=True, SubcontractorCode="V-YOK-SUP")
+    x.add("ResourceGroup", group, None, Code="L-RG-PAS", Name="Pasif kaynak grubu", IsActive=False)  # pasif ebeveyn (K-146)
+    rgm = x.base("ResourceGroupMember", ResourceGroupCode="TORNA", ResourceCode="T-01")
+    m = lambda rules, group_code, resource_code: x.add("ResourceGroupMember", rgm, rules, ResourceGroupCode=group_code, ResourceCode=resource_code)  # noqa: E731
+    m(["RGM.UNIT_MISMATCH"], "V-RG-1", "V-RES-1")
+    m(["RGM.UNIT_MISMATCH"], "V-RG-4", "V-RES-1")
+    m(["RGM.MIXED_TYPES"], "V-RG-4", "V-RES-2")
+    m(["RGM.MIXED_TYPES"], "V-RG-5", "V-RES-2")
+    m(["RGM.REF_RESOURCE_GROUP"], "V-YOK-RG", "T-01")
+    m(["RGM.REF_RESOURCE"], "TORNA", "V-YOK-RES")
 
-    # Rota
-    rtg = {**x.base("Routing", RouteCode="R-MAM-001", OperationNo=10, SequenceNo=1), "ResourceGroupCode": None, "AlternativeGroup": None, "AlternativePriority": None}
+    # Rota (K-180: kaynak alanı yok, kaynak grubu zorunlu)
+    rtg = {**x.base("Routing", RouteCode="R-MAM-001", OperationNo=10, SequenceNo=1), "AlternativeGroup": None, "AlternativePriority": None}
     rt = lambda n, rules, **v: x.add("Routing", rtg, [*rules, "RTG.NO_VERSION"], RouteCode=f"V-R-{n}", **v)  # noqa: E731  örnek rotalar versiyonsuz
-    rt(1, ["RTG.NO_RESOURCE"], ResourceCode=None)
     rt(2, ["RTG.RESOURCE_NUMBER"], ResourceNumber=0)
     rt(3, ["RTG.ZERO_CONSUMPTION"], Consumption=0.0)
     rt(4, ["RTG.PRIORITY_NO_GROUP"], AlternativePriority=1)
-    rt(5, ["RTG.NOT_MEMBER"], ResourceCode="T-01", ResourceGroupCode="MONTAJ")
-    rt(6, ["RTG.GROUP_UNIT"], ResourceCode=None, ResourceGroupCode="V-RG-1")
-    rt(7, ["RTG.SUBCON_RESOURCE"], ResourceCode="T-01", IsSubcontracted=True)
-    x.add("Routing", rtg, ["RTG.REF_RESOURCE"], SequenceNo=9, ResourceCode="V-YOK-RES")
-    x.add("Routing", rtg, ["RTG.INACTIVE_RESOURCE"], SequenceNo=8, ResourceCode="L-RES-PAS")
-    x.add("Routing", rtg, ["RTG.REF_RESOURCE_GROUP"], SequenceNo=7, ResourceCode=None, ResourceGroupCode="V-YOK-RG")
+    rt(5, ["RTG.NUMBER_OVER_GROUP"], ResourceNumber=99)
+    rt(7, ["RTG.SUBCON_RESOURCE"], IsSubcontracted=True)
+    x.add("Routing", rtg, ["RTG.INACTIVE_RESOURCE_GROUP"], SequenceNo=8, ResourceGroupCode="L-RG-PAS")
+    x.add("Routing", rtg, ["RTG.REF_RESOURCE_GROUP"], SequenceNo=7, ResourceGroupCode="V-YOK-RG")
 
     # Benzetilen ürün (temiz veride yok; hepsi Hata, ana veriye girmez)
     ref = {**x.empty("MaterialReference"), "LocationCode": LOC, "TimeFactor": 1.0}
@@ -168,7 +172,7 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     x.add("MaterialReference", ref, ["REF.NO_VERSION"], MaterialCode="MAM-008", ReferenceMaterialCode="V-MAT-4")
 
     # Çalışan izni (uzak tarihlerde: plan ufkunu etkilemez)
-    workers = [row["Code"] for row in stg["Resource"] if row.get("IsEmployee") and row["Code"].startswith("W-")]
+    workers = [row["Code"] for row in stg["Resource"] if row["Code"].startswith("W-")]  # işçiler: işçi gruplarının üyeleri
     absence = {**x.base("EmployeeAbsence", ResourceCode="W-007"), "HoursPerDay": None}
     x.add("EmployeeAbsence", absence, ["ABS.HOURS"], ResourceCode=workers[0], AbsenceType="İzin", StartDate=FAR, EndDate=date(2027, 3, 2), HoursPerDay=30.0)
     x.add("EmployeeAbsence", absence, ["ABS.NOT_EMPLOYEE"], ResourceCode="T-03", AbsenceType="İzin", StartDate=date(2027, 3, 5), EndDate=date(2027, 3, 6))
@@ -262,11 +266,9 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     x.add("WorkOrderComponent", comp, ["WOC.REF_MATERIAL"], MaterialCode="V-YOK-MAT")
     x.add("WorkOrderComponent", comp, ["WOC.OPERATION_NOT_IN_WO"], OperationNo=990)
     op = x.base("WorkOrderOperation", WorkOrderNo="WO-5001")
-    x.add("WorkOrderOperation", op, ["WOO.NO_RESOURCE", "WOO.REF_WORK_ORDER"], WorkOrderNo="V-WO-O1", ResourceCode=None, ResourceGroupCode=None)
     x.add("WorkOrderOperation", op, ["WOO.RESOURCE_NUMBER", "WOO.REF_WORK_ORDER"], WorkOrderNo="V-WO-O2", ResourceNumber=0)
     x.add("WorkOrderOperation", op, ["WOO.CONFIRMED", "WOO.REF_WORK_ORDER"], WorkOrderNo="V-WO-O3", PlannedConsumption=1.0, ConfirmedConsumption=5.0)
-    x.add("WorkOrderOperation", op, ["WOO.REF_RESOURCE"], OperationNo=980, ResourceCode="V-YOK-RES", ResourceGroupCode=None)
-    x.add("WorkOrderOperation", op, ["WOO.REF_RESOURCE_GROUP"], OperationNo=981, ResourceCode=None, ResourceGroupCode="V-YOK-RG")
+    x.add("WorkOrderOperation", op, ["WOO.REF_RESOURCE_GROUP"], OperationNo=981, ResourceGroupCode="V-YOK-RG")
 
     # Satın alma
     po = x.base("PurchaseOrderLine", PurchaseOrderNo="PO-2001")

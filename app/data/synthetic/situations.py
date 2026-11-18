@@ -39,11 +39,12 @@ def explode(ds: Dataset, material_id: int, qty: float) -> dict[int, float]:
     return dict(need)
 
 
-def resource_hours(ds: Dataset, material_id: int, qty: float, resource_id: int) -> float:
+def resource_hours(ds: Dataset, material_id: int, qty: float, group_id: int) -> float:
+    """Malzemenin (alt kırılımlarıyla) bir kaynak grubundaki yükü: plan ve yük grup düzeyindedir (K-180)."""
     route_of = {pv["MaterialId"]: pv["RouteCode"] for pv in ds.rows("ProductionVersion")}
     ops = defaultdict(float)
     for r in ds.rows("Routing"):
-        if r["ResourceId"] == resource_id:
+        if r["ResourceGroupId"] == group_id:
             ops[r["RouteCode"]] += r["Consumption"]
     return sum(q * ops.get(route_of.get(mid), 0.0) for mid, q in explode(ds, material_id, qty).items())
 
@@ -52,17 +53,26 @@ def open_firm_orders(ds: Dataset) -> list[dict]:
     return [s for s in ds.rows("SalesOrderLine") if not s["IsQuote"] and s["IsActive"]]  # K-121
 
 
-def weekly_capacity(ds: Dataset, resource: dict, week: int) -> float:
-    working = {r["Date"] for r in ds.rows("CalendarDay") if r["IsWorkingDay"] and r["CalendarId"] == resource["CalendarId"]}
-    days = sum(1 for i in range(7) if ds.day(week, i) in working)
-    return days * resource["DailyCapacity"] * resource["Quantity"]
+def members(ds: Dataset, group: dict) -> list[dict]:
+    """Grubun kaynakları (grup eşleşmesinden)."""
+    ids = {m["ResourceId"] for m in ds.rows("ResourceGroupMember") if m["ResourceGroupId"] == group["Id"]}
+    return [r for r in ds.rows("Resource") if r["Id"] in ids]
 
 
-def weekly_load(ds: Dataset, resource_code: str) -> dict[int, float]:
-    res = ds.get("Resource", Code=resource_code)
+def weekly_capacity(ds: Dataset, group: dict, week: int) -> float:
+    """Grubun haftalık kapasitesi: kapasite kaynakta hesaplanır, grupta toplanır (K-180)."""
+    total = 0.0
+    for resource in members(ds, group):
+        working = {r["Date"] for r in ds.rows("CalendarDay") if r["IsWorkingDay"] and r["CalendarId"] == resource["CalendarId"]}
+        total += sum(1 for i in range(7) if ds.day(week, i) in working) * (resource["DailyCapacity"] or 0.0)
+    return total
+
+
+def weekly_load(ds: Dataset, group_code: str) -> dict[int, float]:
+    group = ds.get("ResourceGroup", Code=group_code)
     load = defaultdict(float)
     for so in open_firm_orders(ds):
-        load[ds.week_of(so["RequestedDate"])] += resource_hours(ds, so["MaterialId"], so["OpenQuantity"], res["Id"])
+        load[ds.week_of(so["RequestedDate"])] += resource_hours(ds, so["MaterialId"], so["OpenQuantity"], group["Id"])
     return dict(load)
 
 
@@ -98,8 +108,8 @@ def path_lead_days(ds: Dataset, top_id: int, target_id: int) -> int | None:
 # --- Durumlar ---
 
 def check_bottleneck(ds: Dataset) -> Check:
-    res = ds.get("Resource", Code=d.BOTTLENECK_RESOURCE)
-    load = weekly_load(ds, d.BOTTLENECK_RESOURCE)
+    res = ds.get("ResourceGroup", Code=d.BOTTLENECK_GROUP)  # tek üyesi darboğaz tezgâh
+    load = weekly_load(ds, d.BOTTLENECK_GROUP)
     pct = {w: 100 * load.get(w, 0.0) / weekly_capacity(ds, res, w) for w in range(1, d.HORIZON_WEEKS + 1)}
     need_1_5 = sum(load.get(w, 0.0) for w in range(1, 6))
     cap_1_5 = sum(weekly_capacity(ds, res, w) for w in range(1, 6))
@@ -202,9 +212,17 @@ def check_past_due(ds: Dataset) -> Check:
     late = ds.get("SalesOrderLine", OrderNo=d.PAST_DUE_ORDER)
     today = ds.get("SalesOrderLine", OrderNo=d.DUE_TODAY_ORDER)
     res = ds.get("Resource", Code=d.NO_CAPACITY_RESOURCE)
+    groups = {m["ResourceGroupId"] for m in ds.rows("ResourceGroupMember") if m["ResourceId"] == res["Id"]}
+    critical = any(g["IsCritical"] for g in ds.rows("ResourceGroup") if g["Id"] in groups)  # kritiklik kaynak grubundadır (K-180)
     ok = (late["RequestedDate"] < ds.generated_on and today["RequestedDate"] == ds.generated_on and late["OpenQuantity"] > 0
-          and res["IsCritical"] and res["DailyCapacity"] is None)
+          and critical and res["DailyCapacity"] is None)
     return Check(9, "Tarih geçince çıkan uyarı; kapasitesi tanımsız kaynak", ok, f"{d.PAST_DUE_ORDER} {late['RequestedDate']:%d.%m}, {d.DUE_TODAY_ORDER} bugün")
+
+
+def employees(ds: Dataset) -> set[int]:
+    """İşçi kaynaklar: en az bir işçi grubuna (`IsEmployee`) üye olanlar (K-180)."""
+    groups = {g["Id"] for g in ds.rows("ResourceGroup") if g["IsEmployee"]}
+    return {m["ResourceId"] for m in ds.rows("ResourceGroupMember") if m["ResourceGroupId"] in groups}
 
 
 def all_checks(ds: Dataset) -> list[Check]:
@@ -218,7 +236,7 @@ def summary(ds: Dataset) -> dict:
         "Malzeme": len(ds.rows("Material")), "Kaynak": len(ds.rows("Resource")),
         "Açık kesin sipariş": len(firm), "Teklif": len(ds.rows("SalesOrderLine")) - len(firm),
         "Müşteri": len(ds.rows("Customer")), "Tedarikçi": len(ds.rows("Supplier")),
-        "Çalışan": sum(1 for r in ds.rows("Resource") if r["IsEmployee"]), "Ufuk (hafta)": d.HORIZON_WEEKS,
+        "Çalışan": len(employees(ds)), "Ufuk (hafta)": d.HORIZON_WEEKS,
         "Hafta 1": f"{ds.start:%d.%m.%Y}", "Ufuk sonu": f"{ds.horizon_end:%d.%m.%Y}",
     }
 

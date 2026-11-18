@@ -27,7 +27,7 @@ const SUMMARY: ValidationSummary = {
   batch: { id: 41, received_at: "2026-11-06T09:30:00", method: "Excel", mode: "Tam", uploaded_by_name: "Cavide" },
   current_rows: 120, error_rows: 0, warning_rows: 3, info_rows: 1, error_rate: 0, threshold: null,
   rules: [
-    { id: 12, name: "Kaynak tipi tek değil", severity: "Uyarı", rows: 2, message: null },
+    { id: 12, name: "Aylık kalan fazla mesai yıllıktan büyük", severity: "Uyarı", rows: 2, message: null },
     { id: 15, name: "Fırın ya da kalıp Faz 1'de kullanılmaz", severity: "Bilgi", rows: 1, message: null },
   ],
 };
@@ -84,7 +84,7 @@ describe("Validasyon çipi (K-134, K-139)", () => {
     const table = within(drawer).getByRole("table", { name: "Bulgular" });
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Kural", "Sınıf", "Satır sayısı"]);
     expect(within(table).getByText("Uyarı").className).toContain("sc-tag--soft");
-    expect(within(table).getByRole("button", { name: "Kaynak tipi tek değil: kayıtları göster" })).toBeInTheDocument();
+    expect(within(table).getByRole("button", { name: "Aylık kalan fazla mesai yıllıktan büyük: kayıtları göster" })).toBeInTheDocument();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /Validasyon · Kaynak/ })).not.toBeInTheDocument());
   });
@@ -95,14 +95,14 @@ describe("Validasyon çipi (K-134, K-139)", () => {
     renderApp("/veri/veri-yukleme", meAs("Key user"));
     await user.click(await screen.findByRole("button", { name: /^Kaynak validasyonu/ }, { timeout: 5000 }));
     const drawer = await screen.findByRole("dialog", { name: /Validasyon · Kaynak/ });
-    await user.click(await within(drawer).findByRole("button", { name: "Kaynak tipi tek değil: kayıtları göster" }));
+    await user.click(await within(drawer).findByRole("button", { name: "Aylık kalan fazla mesai yıllıktan büyük: kayıtları göster" }));
     expect(within(drawer).getByRole("radio", { name: "Kayıtlar" })).toHaveAttribute("aria-checked", "true");
     expect(await within(drawer).findByText("V-RES-2", {}, { timeout: 5000 })).toBeInTheDocument();
-    expect(within(drawer).getByText("Kural: Kaynak tipi tek değil")).toBeInTheDocument();
+    expect(within(drawer).getByText("Kural: Aylık kalan fazla mesai yıllıktan büyük")).toBeInTheDocument();
     await waitFor(() => expect(queryBodies("validation-records-Resource").some((b) =>
       b.filters.some((f: { field: string; value: string }) => f.field === "RuleIds" && f.value === ",12,"))).toBe(true));
     await user.click(within(drawer).getByRole("button", { name: "Kural süzmesini kaldır" }));
-    expect(within(drawer).queryByText("Kural: Kaynak tipi tek değil")).not.toBeInTheDocument();
+    expect(within(drawer).queryByText("Kural: Aylık kalan fazla mesai yıllıktan büyük")).not.toBeInTheDocument();
   });
 
   it("eşik aşılırsa oran kartında eşik ve uyarı bandı", async () => {

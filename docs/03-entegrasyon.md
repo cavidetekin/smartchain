@@ -99,10 +99,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Ürün ağacı (ProductionVersion, BOM) | Ana veri | API · SQL · Excel | ERP | Gece tam | LocationCode + MaterialCode + Code · LocationCode + MaterialCode + Code + ComponentMaterialCode + OperationNo + SequenceNo | Zorunlu |
 | Rota (Routing) | Ana veri | API · SQL · Excel | ERP | Gece tam | LocationCode + RouteCode + OperationNo + SequenceNo | Zorunlu |
 | Benzetilen ürün (MaterialReference) | Ana veri | API · SQL · Excel | ERP | Gece tam | LocationCode + MaterialCode + ReferenceMaterialCode + ValidFrom | İsteğe bağlı |
-| Kaynak (Resource, ResourceGroup) | Ana veri | Excel · SQL · API | ERP, kapasite tanımları Smartchain ekranında | Gece tam / elle | LocationCode + Code | Zorunlu |
-| Grup ataması ve devamsızlık (ResourceGroupAssignment, EmployeeAbsence) | Ana veri · İşlem verisi | API · SQL · Excel | ERP | Gece tam | LocationCode + ResourceGroupCode + ResourceCode · LocationCode + ResourceCode + StartDate + AbsenceType | İşçi grubu varsa |
+| Kaynak grubu ve kaynak (ResourceGroup, Resource) | Ana veri | Excel · SQL · API | ERP, kapasite tanımları Smartchain ekranında | Gece tam / elle | LocationCode + Code | Zorunlu (kaynak grubu planlama birimidir, K-180) |
+| Grup eşleşmesi ve devamsızlık (ResourceGroupMember, EmployeeAbsence) | Ana veri · İşlem verisi | API · SQL · Excel | ERP | Gece tam | LocationCode + ResourceGroupCode + ResourceCode · LocationCode + ResourceCode + StartDate + AbsenceType | Grup eşleşmesi zorunlu · devamsızlık işçi grubu varsa |
 | Takvim ve gün (Calendar, CalendarDay) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | Zorunlu |
-| Vardiya ve plan (Shift, ShiftPlan) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | İşçi grubu varsa |
 | Duruş ve kapasite profili (ResourceDowntime, ResourceCapacityProfile) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | İsteğe bağlı |
 | Tedarikçi ve malzeme-tedarikçi (Supplier, MaterialSupplier) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code · LocationCode + MaterialCode + SupplierCode | Zorunlu |
 | Müşteri (Customer) | Ana veri | API · SQL | ERP | Gece tam | Code | Zorunlu |
@@ -140,11 +139,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Material | Malzeme | Ana veri | Hammadde, yarı mamul ve nihai ürünler ile planlama bilgileri | malzeme | 4 |
 | ProductionVersion | Üretim versiyonu | Ana veri | Bir malzemenin ürün ağacı ve rotasını belirleyen üretim versiyonları | uretim-versiyonu | 2 |
 | BOM | Ürün ağacı | Ana veri | Malzemelerin bileşenleri ve miktarları | urun-agaci | 2 |
-| Routing | Rota | Ana veri | Üretim operasyonları, kullandıkları kaynaklar ve süreleri | rota | 2 |
+| Routing | Rota | Ana veri | Üretim operasyonları, kullandıkları kaynak grupları ve süreleri | rota | 3 |
 | MaterialReference | Benzetilen ürün | Ana veri | Kendi ağacı ya da rotası olmayan ürünlerin referans ürünleri | benzetilen-urun | 1 |
-| ResourceGroup | Kaynak grubu | Ana veri | Kaynak ve yetkinlik grupları | kaynak-grubu | 2 |
-| Resource | Kaynak | Ana veri | Makine, işçi ve fason kaynakları | kaynak | 3 |
-| ResourceGroupAssignment | Kaynak grubu ataması | Ana veri | Kaynakların gruplara atanması ve yetkinlik matrisi | kaynak-grubu-atamasi | 1 |
+| ResourceGroup | Kaynak grubu | Ana veri | Kaynak grupları: tip, kritiklik, kapasite birimi | kaynak-grubu | 3 |
+| Resource | Kaynak | Ana veri | Makine, işçi ve fason kaynakları | kaynak | 4 |
+| ResourceGroupMember | Grup eşleşmesi | Ana veri | Kaynakların gruplara üyeliği ve yetkinlik matrisi | grup-eslesmesi | 2 |
 | EmployeeAbsence | Çalışan izni | İşlem verisi | Çalışanların izin ve rapor kayıtları | calisan-izni | 1 |
 | Supplier | Tedarikçi | Ana veri | Tedarikçiler ve fasoncular | tedarikci | 2 |
 | MaterialSupplier | Malzeme tedarikçisi | Ana veri | Malzemelerin tedarikçileri, temin süreleri ve sipariş koşulları | malzeme-tedarikcisi | 2 |
@@ -157,7 +156,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | BorrowPayback | Ödünç ve geri ödeme | İşlem verisi | Projeler arası ödünç kayıtları ve geri ödemeleri | odunc-ve-geri-odeme | 1 |
 | WorkOrder | İş emri | İşlem verisi | Açık üretim, fason ve yeniden işleme emirleri | is-emri | 3 |
 | WorkOrderComponent | İş emri bileşeni | İşlem verisi | İş emirlerinin bileşenleri ve çekilen miktarlar | is-emri-bileseni | 2 |
-| WorkOrderOperation | İş emri operasyonu | İşlem verisi | İş emirlerinin operasyonları ve kalan işi | is-emri-operasyonu | 2 |
+| WorkOrderOperation | İş emri operasyonu | İşlem verisi | İş emirlerinin operasyonları ve kalan işi | is-emri-operasyonu | 3 |
 | PurchaseOrderLine | Satın alma siparişi | İşlem verisi | Açık satın alma ve fason sipariş satırları, talepler dahil | satin-alma-siparisi | 3 |
 | ProductionConfirmation | Üretim gerçekleşmesi | İşlem verisi | İş emri bazında stoğa girişler | uretim-gerceklesmesi | 2 |
 
@@ -297,7 +296,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### stg.Routing
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 1/2</sub>
 
-- Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
@@ -306,17 +305,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | OperationNo | int | UK | E | Operasyon no (birinci sıralama) | ERP | hata (satır atlanır) |
 | SequenceNo | int | UK | E | Operasyon içindeki alt sıra (ikinci sıralama) | ERP | hata (satır atlanır) |
 | OperationName | nvarchar(150) |  | H | Operasyon adı | ERP | bilinmiyor |
-| ResourceCode | nvarchar(50) | REF | H | Kaynak kodu | ERP | alternatif Kaynak grubu |
-| ResourceGroupCode | nvarchar(50) | REF | H | Kaynak grubu | ERP | alternatif Kaynak |
+| ResourceGroupCode | nvarchar(50) | REF | E | Kaynak grubu | ERP | hata (satır atlanır) |
 | ResourceRole | nvarchar(10) |  | E | Primary \| Secondary | ERP, yoksa kural | hata (kurallardan sonra) |
-| Consumption | decimal(18,6) |  | E | Baz miktar için kaynak tüketimi (kaynağın kapasite biriminde) | ERP | hata (satır atlanır) |
-| ResourceNumber | int |  | E | Operasyonda aynı anda kullanılan kaynak adedi | ERP, yoksa kural | hata (kurallardan sonra) |
+| Consumption | decimal(18,6) |  | E | Baz miktar için kaynak tüketimi (kaynak grubunun kapasite biriminde) | ERP | hata (satır atlanır) |
+| ResourceNumber | int |  | E | Operasyonda gruptan aynı anda kullanılan kaynak adedi | ERP, yoksa kural | hata (kurallardan sonra) |
 | IsSubcontracted | bit |  | H | Fason operasyon | ERP | yok |
 
 ### stg.Routing
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 2/2</sub>
 
-- Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
@@ -347,71 +345,75 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | TimeFactor | decimal(9,4) |  | H | Süre çarpanı; 1,2 = %20 daha uzun | ERP | yok |
 
 ### stg.Resource
-<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak · 1/2</sub>
+<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Kaynak: tek bir makine, işçi ya da fason iş yeri. Planlama birimi kaynak değil kaynak grubudur (K-180): tip bayrakları, kritiklik, kapasite birimi ve fasoncu gruptadır; kaynak gruplarına `ResourceGroupMember` ile bağlanır.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | UK,REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
 | Code | nvarchar(50) | UK | E | Kaynak kodu | ERP | hata (satır atlanır) |
 | Name | nvarchar(150) |  | H | Kaynak adı | ERP | bilinmiyor |
-| ResourceType | nvarchar(50) |  | H | ERP'den gelen ham değer; tip bayraklarla ifade edilir | ERP | bilinmiyor |
-| IsEmployee | bit |  | H | Kaynak işçi mi | ERP, yoksa kural | yok |
-| IsMachine | bit |  | H | Kaynak makine mi | ERP, yoksa kural | yok |
-| IsFurnace | bit |  | H | Kaynak fırın mı; Faz 1 planlamada kullanılmaz | ERP, yoksa kural | yok |
-| IsMold | bit |  | H | Kaynak kalıp mı; Faz 1 planlamada kullanılmaz | ERP, yoksa kural | yok |
-| IsOther | bit |  | H | Diğer kaynak mı | ERP, yoksa kural | yok |
-| IsSubcontractor | bit |  | H | Kaynak fason mu | ERP, yoksa kural | yok |
-
-### stg.Resource
-<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak · 2/2</sub>
-
-- Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
-
-| ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
-|---|---|---|---|---|---|---|
-| CapacityUnit | nvarchar(10) | REF | E | Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir | ERP, yoksa kural | hata (kurallardan sonra) |
-| SubcontractorCode | nvarchar(50) | REF | H | Fasoncu | ERP | bilinmiyor |
-| ProductionLocation | nvarchar(50) |  | H | Lokasyonun alt tanımı (hol, hat) | ERP | bilinmiyor |
+| ResourceType | nvarchar(50) |  | H | ERP'den gelen ham değer; yalnız bilgi (raporlama ve filtre), planlama grubun bayraklarına bakar | ERP | bilinmiyor |
 | IsActive | bit |  | H | Aktif mi | ERP, yoksa kural | hata (kurallardan sonra) |
-| IsCritical | bit |  | H | 1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır) | ERP, yoksa kural | hata (kurallardan sonra) |
+| ProductionLocation | nvarchar(50) |  | H | Lokasyonun alt tanımı (hol, hat) | ERP | bilinmiyor |
 | RemainingOverTimeYear | decimal(9,2) |  | H | Yıllık kalan fazla mesai (saat) | ERP | sınırsız |
 | RemainingOverTimeMonth | decimal(9,2) |  | H | Aylık kalan fazla mesai (saat) | ERP | sınırsız |
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
-- **Entegre edilmeyenler (K-117):** Günlük kapasite, paralel adet, kapasite kaynağı, verim, hedef doluluk, fason parametreleri, takvim, vardiya, kaynak duruşları ve kapasite profili entegre edilmez; Smartchain ekranlarında tanımlanır (6.1 Kaynak sekmesi, 7.5 Kapasite parametreleri). `core`'da kalır.
+- **Entegre edilmeyenler (K-117, K-180):** Günlük kapasite, verim, hedef doluluk, fason parametreleri, takvim, kaynak duruşları ve kapasite profili entegre edilmez; Smartchain ekranlarında tanımlanır (6.1 Kaynak sekmesi, 7.8 Kapasite yönetimi). `core`'da kalır. Vardiya kavramı, "kapasite kaynağı" ve paralel adet kalktı (K-180).
+- **Gruba taşınanlar (K-180):** tip bayrakları, `IsCritical`, `CapacityUnit` ve `SubcontractorCode` `stg.ResourceGroup`'tadır. Kaynak şablonu v4.
 
 ### stg.ResourceGroup
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Kaynak ve yetkinlik grubu. Kapasite havuzu değil, uygun kaynaklar listesidir; kapasite yalnız kaynakta tutulur.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | UK,REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
 | Code | nvarchar(50) | UK | E | Grup kodu | ERP | hata (satır atlanır) |
 | Name | nvarchar(150) |  | H | Grup adı | ERP | bilinmiyor |
-| Type | nvarchar(50) |  | H | Grup tipi; ERP'den gelen ham değer | ERP | bilinmiyor |
-| IsResourceGroup | bit |  | H | Kaynak grubu | ERP, yoksa kural | yok |
-| IsCompetenceGroup | bit |  | H | Yetkinlik grubu | ERP, yoksa kural | yok |
-| IsActive | bit |  | H | Aktif | ERP, yoksa kural | hata (kurallardan sonra) |
+| Type | nvarchar(50) |  | H | ERP'den gelen ham değer; tip bayraklarla ifade edilir | ERP | bilinmiyor |
+| IsEmployee | bit |  | H | İşçi grubu mu (yetkinlik grubu) | ERP, yoksa kural | yok |
+| IsMachine | bit |  | H | Makine grubu mu | ERP, yoksa kural | yok |
+| IsFurnace | bit |  | H | Fırın grubu mu; Faz 1 planlamada kullanılmaz | ERP, yoksa kural | yok |
+| IsMold | bit |  | H | Kalıp grubu mu; Faz 1 planlamada kullanılmaz | ERP, yoksa kural | yok |
+| IsOther | bit |  | H | Diğer kaynak grubu mu | ERP, yoksa kural | yok |
+| IsSubcontractor | bit |  | H | Fason grubu mu | ERP, yoksa kural | yok |
+| IsActive | bit |  | H | Aktif mi | ERP, yoksa kural | hata (kurallardan sonra) |
+| IsCritical | bit |  | H | 1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır) | ERP, yoksa kural | hata (kurallardan sonra) |
+| CapacityUnit | nvarchar(10) | REF | E | Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir | ERP, yoksa kural | hata (kurallardan sonra) |
+| SubcontractorCode | nvarchar(50) | REF | H | Fasoncu | ERP | bilinmiyor |
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
-### stg.ResourceGroupAssignment
+- **Kaynak grubu zorunludur (K-180):** kaynakla çalışan müşteri view'unda kaynaklarını grup olarak verir; eksik alanlar (tip bayrakları, kritik, kapasite birimi) veri kuralıyla doldurulabilir. Grup veremeyen müşteri için ayrı bir dönüşüm yoktur. Kaynak grubu şablonu v3.
+- **Örnek view (kaynağını grup olarak veren müşteri):** her kaynak için aynı kodla bir grup ve bir eşleşme satırı üretilir; dönüşüm müşterinin view'undadır.
+
+```sql
+CREATE VIEW dbo.View_ResourceGroup AS
+SELECT LocationCode, Code, Name, MachineClass AS Type, UnitCode AS CapacityUnit, IsBottleneck AS IsCritical, IsActive
+FROM erp.WorkCenter;
+
+CREATE VIEW dbo.View_ResourceGroupMember AS
+SELECT LocationCode, Code AS ResourceGroupCode, Code AS ResourceCode
+FROM erp.WorkCenter;
+```
+
+### stg.ResourceGroupMember
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Kaynağın gruba ataması; bir kaynak birden fazla gruba atanabilir, yetkinlik matrisi bu tablodur. Geçerlilik tarihleri yalnız girdi.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | UK,REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
-| ResourceGroupCode | nvarchar(50) | UK,REF | E | Kaynak ya da yetkinlik grubu | ERP | hata (satır atlanır) |
+| ResourceGroupCode | nvarchar(50) | UK,REF | E | Kaynak grubu | ERP | hata (satır atlanır) |
 | ResourceCode | nvarchar(50) | UK,REF | E | Kaynak kodu | ERP | hata (satır atlanır) |
-| ValidFrom | date |  | H | Geçerlilik başlangıcı | ERP | sınırsız |
-| ValidTo | date |  | H | Geçerlilik bitişi | ERP | sınırsız |
+| AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
 ### stg.EmployeeAbsence
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
@@ -686,8 +688,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | OperationNo | int | UK | E | Operasyon no | ERP | hata (satır atlanır) |
 | SequenceNo | int | UK | E | Operasyon içindeki alt sıra | ERP | hata (satır atlanır) |
 | OperationName | nvarchar(150) |  | H | Operasyon adı | ERP | bilinmiyor |
-| ResourceCode | nvarchar(50) | REF | H | Kaynak kodu | ERP | alternatif Kaynak grubu |
-| ResourceGroupCode | nvarchar(50) | REF | H | Kaynak grubu | ERP | alternatif Kaynak |
+| ResourceGroupCode | nvarchar(50) | REF | E | Kaynak grubu | ERP | hata (satır atlanır) |
 | ResourceRole | nvarchar(10) |  | E | Primary \| Secondary | ERP, yoksa kural | hata (kurallardan sonra) |
 | ResourceNumber | int |  | E | Operasyonda aynı anda kullanılan kaynak adedi | ERP, yoksa kural | hata (kurallardan sonra) |
 | PlannedConsumption | decimal(18,6) |  | H | Planlanan tüketim | ERP | bilinmiyor |
@@ -804,7 +805,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### Yöntem 3 · Excel şablonları
 <sub>26. Entegrasyon tasarımı · Yöntem 3 · Excel şablonları</sub>
 
-- **Ne zaman:** ERP'de tutulmayan ya da entegrasyonu olmayan varlıklar: kaynaklar, tahmin; ilk kurulumda tüm ana veri (takvim, vardiya ve duruş Excel'den gelmez, ekrandan girilir: K-65); ERP'den gelen veriyi düzeltmek için toplu düzeltme (15).
+- **Ne zaman:** ERP'de tutulmayan ya da entegrasyonu olmayan varlıklar: kaynaklar, tahmin; ilk kurulumda tüm ana veri (takvim ve duruş Excel'den gelmez, ekrandan girilir: K-65); ERP'den gelen veriyi düzeltmek için toplu düzeltme (15).
 - **Şablon:** Sözleşmeden üretilir (02, K-110): 1. satır teknik alan adı, veri 2. satırdan; zorunlu alanın başlığı koyu. Etiket, açıklama, tip, boş bırakılırsa ne olacağı, Smartchain değerleri ve örnek 'Açıklama' sayfasında; gizli sürüm bilgisi. Eşleme yok: kolon adla bulunur. Açılır liste ve Excel doğrulaması yok: staging ERP'nin dilidir (K-58); değer listeli alanlarda farklı değerler veri kuralıyla bu değerlere çevrilir, ham alanlar bayrağa dönüştürülür (K-121); tutarsızlık doğrulamada görünür.
 - **Yükleme:** Ekrandan sürükle-bırak (03): varlık ve sürüm tanıma, mod (ekle / güncelle ya da tam), satır bazlı ön kontrol, hata raporu, geçerli satırlarla devam. Hatalı satır ham veriye alınmaz, bulgu listesinde ve hata raporunda durur (K-129).
 - **Anahtar:** Tablolardaki ANAHTAR kolonu veritabanı indeksi değildir: `stg` ham veridir, aynı anahtar aynı partide (hata) ve sonraki partide (normal) gelebilir. Tekrar kontrolü bu tanımı okur (K-129). `stg` tablolarının standart alanları: `StagingRowId`, `ImportBatchId`, `RowStatus`, `ErrorText`, `SourceRowNo` (kaynaktaki satır no).
@@ -820,7 +821,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|
 | Doğrudan | ITEM_CODE → Material.Code | Tip ve uzunluk kontrolü; kırpma yok, uzunsa hata. |
 | Kod listesi | Tedarik türü 'S' → DefaultSupplyType = Satın alma | Veri kuralı (K-110, K-121); view çevirmez. Birim kodu olduğu gibi gelir (K-112). |
-| Birim dönüşümü | Rota süresi dakika → kaynak kapasite birimi saat | Kaynağın CapacityUnit'ine çevrilir; dönüşüm yoksa uyarı, kaynak kısıtsız sayılır. |
+| Birim dönüşümü | Rota süresi dakika → kaynak grubunun kapasite birimi saat | Grubun CapacityUnit'ine çevrilir; dönüşüm yoksa uyarı, grup kısıtsız sayılır. |
 | Birim dönüşümü · ters yön | M → KG tanımlı, KG → M tanımlı değil | Açıkça yazılan dönüşüm her zaman olduğu gibi kullanılır. 1/Factor yalnız ters yön hiç tanımlanmamışsa, kullanıldığı anda tam hassasiyetle hesaplanır, saklanmaz. |
 | Birim dönüşümü · zincir | KOLİ → ADET ve ADET → KG tanımlı | Zincirleme dönüşüm türetilmez: KOLİ → KG hesaplanmaz; gerekiyorsa ayrıca tanımlanır. |
 | Birim dönüşümü · lokasyon | HAM-001 iki lokasyonda var, dönüşüm satırı bir tane | UomConversion lokasyondan bağımsızdır, LocationCode taşımaz. MaterialCode, o koda sahip bütün lokasyonlardaki malzemeye uygulanır; kod→Id çevirisinde dönüşüm satırı aynı koddaki her lokasyonun malzemesine bağlanır. |
@@ -833,7 +834,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>26. Entegrasyon tasarımı · Referans kontrolü ve kod→Id</sub>
 
 - Her ilişki alanının baktığı tablo ve anahtar. Validasyon (fonksiyon 04) referans ve pasif ebeveyn kurallarını buradan üretir; aktarım (fonksiyon 05, 5.2) kodu `core` Id'sine bu haritayla çevirir. Kodda `app/integration/references.py`; test ikisini karşılaştırır.
-- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. **Zorunlu (doluysa)** istisnadır: rota ve iş emri operasyonundaki kaynak ve kaynak grubu sözleşmede isteğe bağlıdır (biri dolu olmalı, K-116), ama doluysa ve yoksa Hata, satır aktarılmaz: kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez, rota sessizce bozulur. Kaydın anahtarının parçası olan isteğe bağlı bağlantı da Zorunlu (doluysa)dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları; K-153): boş yazılsaydı anahtar değişirdi.
+- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. Rota ve iş emri operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). **Zorunlu (doluysa)** istisnadır: kaydın anahtarının parçası olan isteğe bağlı bağlantı Zorunlu (doluysa)dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları; K-153): boş yazılsaydı anahtar değişirdi.
 - **PASİF EBEVEYN:** ebeveyn bulunur ama `IsActive` = Hayır ise satırdaki bulgunun sınıfı; satır aktarılmaz. "—": bulgu yazılmaz, aktarım ebeveyn yokmuş gibi davranır (zorunluysa satır aktarılmaz, isteğe bağlıysa bağlantı boş).
 - **Eşleşme:** ALAN ve EBEVEYN ANAHTARI aynı sırayla eşleşir. Birden çok alanlı ilişkide (bağlı sipariş satırı) ilk alan doluysa bakılır; öteki alanlar boşsa eşleşmeyi daraltmaz. Proje, müşteri, tedarikçi ve proje grubu lokasyondan bağımsızdır; birim dönüşümünün malzemesi herhangi bir lokasyonda bulunursa yeter (K-112).
 - **Ortak ve dışarıda:** `LocationCode` → Lokasyon (`Code`) her tabloda zorunludur (`ALL.REF_LOCATION`), tabloda ayrıca yazılmaz. Birim alanları (`BaseUom`, `FromUom`, `ToUom`, `ComponentUom`, `Uom`, `CapacityUnit`) referans kontrolüne girmez (K-112); dönüşümü `ALL.UOM_CONVERSION` denetler.
@@ -846,14 +847,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ProductionVersion | LocationCode + RouteCode | Routing | LocationCode + RouteCode | Zorunlu | — | PV.REF_ROUTE |
 | BOM | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | BOM.REF_MATERIAL |
 | BOM | LocationCode + ComponentMaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | BOM.REF_COMPONENT |
-| Routing | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu (doluysa) | Uyarı | RTG.REF_RESOURCE |
-| Routing | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu (doluysa) | — | RTG.REF_RESOURCE_GROUP |
+| Routing | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu | Uyarı | RTG.REF_RESOURCE_GROUP |
 | MaterialReference | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | REF.REF_MATERIAL |
 | MaterialReference | LocationCode + ReferenceMaterialCode | Material | LocationCode + Code | Zorunlu | — | REF.REF_REFERENCE_MATERIAL |
 | MaterialReference | LocationCode + ReferenceProductionVersionCode + ReferenceMaterialCode | ProductionVersion | LocationCode + Code + MaterialCode | İsteğe bağlı | — | REF.REF_REFERENCE_VERSION |
-| Resource | SubcontractorCode | Supplier | Code | İsteğe bağlı | — | RES.REF_SUBCONTRACTOR |
-| ResourceGroupAssignment | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu | — | RGA.REF_RESOURCE_GROUP |
-| ResourceGroupAssignment | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu | — | RGA.REF_RESOURCE |
+| ResourceGroup | SubcontractorCode | Supplier | Code | İsteğe bağlı | — | RG.REF_SUBCONTRACTOR |
+| ResourceGroupMember | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu | — | RGM.REF_RESOURCE_GROUP |
+| ResourceGroupMember | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu | — | RGM.REF_RESOURCE |
 | EmployeeAbsence | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu | — | ABS.REF_RESOURCE |
 | MaterialSupplier | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | MS.REF_MATERIAL |
 | MaterialSupplier | SupplierCode | Supplier | Code | Zorunlu | Uyarı | MS.REF_SUPPLIER |
@@ -880,8 +880,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | WorkOrderComponent | LocationCode + WorkOrderNo | WorkOrder | LocationCode + WorkOrderNo | Zorunlu | — | WOC.REF_WORK_ORDER |
 | WorkOrderComponent | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | WOC.REF_MATERIAL |
 | WorkOrderOperation | LocationCode + WorkOrderNo | WorkOrder | LocationCode + WorkOrderNo | Zorunlu | — | WOO.REF_WORK_ORDER |
-| WorkOrderOperation | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu (doluysa) | — | WOO.REF_RESOURCE |
-| WorkOrderOperation | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu (doluysa) | — | WOO.REF_RESOURCE_GROUP |
+| WorkOrderOperation | LocationCode + ResourceGroupCode | ResourceGroup | LocationCode + Code | Zorunlu | — | WOO.REF_RESOURCE_GROUP |
 | PurchaseOrderLine | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | PO.REF_MATERIAL |
 | PurchaseOrderLine | SupplierCode | Supplier | Code | İsteğe bağlı | Uyarı | PO.REF_SUPPLIER |
 | PurchaseOrderLine | ProjectCode | Project | Code | İsteğe bağlı | — | PO.REF_PROJECT |
@@ -900,8 +899,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|
 | Ana veri (malzeme, ağaç, rota, tedarikçi, müşteri, proje) | ERP | Salt okunur; manuel değer alan bazında | ERP ezer; manuel değer alan ayarına göre kalır (FieldDefinition.ManualOverrides) |
 | Kaynak temel bilgisi (kod, ad, grup) | ERP ya da Excel | Salt okunur | Kaynağa göre |
-| Kaynak planlama alanları (günlük kapasite, paralel adet, kapasite kaynağı, verim, hedef doluluk, fason parametreleri) | Smartchain | Ekranda tanımlanır, entegre edilmez (K-117) | Aktarımda ezilmez |
-| Takvim, vardiya, duruş | Smartchain (K-65) | Ekrandan girilir | Smartchain değeri kalır |
+| Kaynak planlama alanları (günlük kapasite, verim, hedef doluluk, fason parametreleri) | Smartchain | Ekranda tanımlanır, entegre edilmez (K-117) | Aktarımda ezilmez |
+| Takvim, duruş | Smartchain (K-65) | Ekrandan girilir | Smartchain değeri kalır |
 | Siparişler, stok, iş emirleri, gerçekleşmeler | ERP | Salt okunur | Her aktarımda ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
 | Tahmin | ERP ya da Excel | Excel ile yüklenir | Son yükleme geçerli; versiyonlu |
 | Parametreler, senaryo tanımları, kurallar, manuel değerler | Smartchain | Ekrandan | ERP'ye gitmez |
@@ -912,7 +911,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Gece tam çekim · 22:00:** Tüm ERP varlıkları tam çekim, doğrulama, tam aktarım (v+1), ardından senaryolar. Bitiş sınırı 06:00. Excel varlıkları son yüklenen haliyle kalır.
 - **Gün içi kısmi · elle ya da zamanlanmış:** İşlem verisi grupları (Talep, Stok, Üretim, Satın alma, İzin) Key user tarafından ya da System owner'ın kurulumda tanımladığı ikinci bir akışla (ör. öğlen Talep ve Stok) kısmi aktarılır; ana veri yalnız tam aktarımda gelir (K-150). Hedef 5 dk altı.
-- **Haftalık ve elle:** Tahmin ve kaynak: haftalık ya da değişince Excel ile; takvim ve vardiya ekrandan (K-65). Ham veri temizliği Pazar 03:00.
+- **Haftalık ve elle:** Tahmin ve kaynak: haftalık ya da değişince Excel ile; takvim ekrandan (K-65). Ham veri temizliği Pazar 03:00.
 - **Artımlı çekim:** SQL her zaman tam okur (K-130). API'de (Faz 2) LastModified varsa yalnız değişenler; silinenler için tam liste gerekir (A-23). Artımlı destek yoksa tam çekim (varsayılan).
 - **Zamanlama ayarı:** Saatler ve paralellik Entegrasyon ekranında (Admin); bitiş sınırı ve işçi sayısı System owner ayarı. Müşterinin ERP gece işleriyle çakışmaması için saat devreye almada belirlenir.
 - **Çakışma yönetimi:** Gece akışı sırasında elle çekim kapalı; gün içi kısmi aktarım sırasında ikinci aktarım kuyrukta bekler. Aktarım açık çalışmaları etkilemez.
@@ -944,7 +943,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Servis hesapları:** API ve SQL için ayrı hesaplar; yalnız okuma. SQL'de Windows kimliği, şifre saklanmaz (K-130). API anahtarları (Faz 2) sunucuda şifreli saklanır, ekranda gösterilmez, destek paketine girmez.
 - **Ağ:** Kapalı ağ; Smartchain sunucusu → ERP sunucusu tek yön. Güvenlik duvarı kuralı kurulum dokümanında; internet gerekmez.
-- **Veri:** Ham veri ve geçerli veri Smartchain SQL Server'ında; yedekleme kurulum tasarımında (27). Kişisel veri: işçi adı yalnız vardiya planı için, parametreyle anonim kod kullanılabilir (öneri).
+- **Veri:** Ham veri ve geçerli veri Smartchain SQL Server'ında; yedekleme kurulum tasarımında (27). Kişisel veri: işçi adı yalnız kaynak kaydında, parametreyle anonim kod kullanılabilir (öneri).
 - **Log ve iz:** Her çağrı ve parti loglanır (gövde değil); elle tetiklemeler denetim izinde. Loglar destek paketiyle dışa alınır.
 - **Değişiklik yönetimi:** Yöntem, bağlantı ve view adı değişikliği denetim izinde; view'ın önceki sürümleri okunabilir, geri dönüş kurulumcunundur (K-130).
 - **Yetki (K-130):** Yöntem, veritabanı ve view adı: System owner. Çekim anahtarı, test ve önizleme: Admin ve üstü. Çekim ve yükleme: Key user ve üstü. Key user ayarları salt okunur görür, End user hiçbirini görmez.

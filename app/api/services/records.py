@@ -94,17 +94,17 @@ RELATIONS: dict[str, tuple[Relation, ...]] = {
         Relation("bom", "Ürün ağacı", "master-bom", _version_part("BOM", "Code", "BOMCode")),
         Relation("routing", "Rota", "master-routing", _version_part("Routing", "RouteCode", "RouteCode")),
     ),
-    "Resource": (
-        Relation("group-assignment", "Grup ataması", "master-resource-group-assignment", _by("ResourceGroupAssignment", "ResourceId")),
-        Relation("routing", "Rota", "master-routing", _by("Routing", "ResourceId")),
+    "Resource": (  # rota kaynağı değil grubu gösterir (K-180)
+        Relation("group-member", "Grup eşleşmesi", "master-resource-group-member", _by("ResourceGroupMember", "ResourceId")),
     ),
     "ResourceGroup": (
-        Relation("group-assignment", "Grup ataması", "master-resource-group-assignment", _by("ResourceGroupAssignment", "ResourceGroupId")),
+        Relation("group-member", "Grup eşleşmesi", "master-resource-group-member", _by("ResourceGroupMember", "ResourceGroupId")),
         Relation("routing", "Rota", "master-routing", _by("Routing", "ResourceGroupId")),
+        Relation("work-order-operation", "İş emri operasyonu", "transaction-work-order-operation", _by("WorkOrderOperation", "ResourceGroupId")),
     ),
     "Supplier": (
         Relation("material-supplier", "Malzeme tedarikçisi", "master-material-supplier", _by("MaterialSupplier", "SupplierId")),
-        Relation("subcontract-resource", "Fason kaynak", "master-resource", _by("Resource", "SubcontractorId")),
+        Relation("subcontract-resource-group", "Fason kaynak grubu", "master-resource-group", _by("ResourceGroup", "SubcontractorId")),
     ),
     "Customer": (
         Relation("sales-order", "Satış siparişi", "transaction-sales-order", _by("SalesOrderLine", "CustomerId")),

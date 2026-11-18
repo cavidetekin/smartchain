@@ -44,7 +44,7 @@ CONFIG = metadata.tables["adm.IntegrationEntity"]
 UNIT = metadata.tables["core.UnitOfMeasure"]
 LOCATION = metadata.tables["core.Location"]
 BIN = "Latin1_General_100_BIN2"
-UNIT_FIELDS = (("Material", "BaseUom"), ("Resource", "CapacityUnit"), ("UomConversion", "FromUom"), ("UomConversion", "ToUom"),
+UNIT_FIELDS = (("Material", "BaseUom"), ("ResourceGroup", "CapacityUnit"), ("UomConversion", "FromUom"), ("UomConversion", "ToUom"),
                ("BOM", "ComponentUom"), ("SalesOrderLine", "Uom"), ("Forecast", "Uom"), ("Stock", "Uom"), ("WorkOrder", "Uom"),
                ("WorkOrderComponent", "Uom"), ("PurchaseOrderLine", "Uom"))
 

@@ -29,13 +29,13 @@ pytestmark = pytest.mark.db
 PREFIX = "pytest.yukleme."
 TRIGGER = "adm.TR_AuditLog_Yukleme"
 ROLES = (SYSTEM_OWNER, ADMIN, KEY_USER, END_USER)
-ENTITY = "Resource"
+ENTITY = "ResourceGroup"
 
 
 def clean(engine):
     with engine.begin() as c:
         c.execute(text(f"DROP TRIGGER IF EXISTS {TRIGGER}"))
-        c.execute(text("DELETE FROM stg.Resource"))
+        c.execute(text("DELETE FROM stg.ResourceGroup"))
         c.execute(text("DELETE FROM stg.Material"))
         c.execute(text("DELETE FROM adm.ImportFinding"))
         c.execute(text("DELETE FROM adm.ImportBatch"))
@@ -74,11 +74,11 @@ def label(name, table=ENTITY):
     return next(f.label for f in contract.fields(table) if f.name == name)
 
 
-def upload(client, user, body, entity=ENTITY, mode="Değişen", name="kaynak.xlsx"):
+def upload(client, user, body, entity=ENTITY, mode="Değişen", name="kaynak grubu.xlsx"):
     return client.post(f"/api/imports/{entity}?mode={quote(mode)}", content=body, headers={**auth(user), "X-File-Name": quote(name)})
 
 
-def stg_rows(engine, table="Resource"):
+def stg_rows(engine, table="ResourceGroup"):
     with engine.connect() as c:
         return c.execute(text(f"SELECT * FROM stg.[{table}] ORDER BY SourceRowNo")).mappings().all()
 
@@ -105,21 +105,21 @@ def audit_rows(engine):
 def test_roles(client, people, role, allowed):
     r = upload(client, people[role], xlsx(GOOD))
     assert r.status_code == (200 if allowed else 403)
-    assert client.get("/api/imports/pending/Resource", headers=auth(people[role])).status_code == (200 if allowed else 403)
+    assert client.get("/api/imports/pending/ResourceGroup", headers=auth(people[role])).status_code == (200 if allowed else 403)
     assert client.get("/api/import-findings/columns", headers=auth(people[role])).status_code == (200 if allowed else 403)
 
 
 def test_small_file_returns_the_summary(db_engine, client, people):
-    r = upload(client, people[KEY_USER], xlsx(MIXED), name="kaynak v3.xlsx")
+    r = upload(client, people[KEY_USER], xlsx(MIXED), name="kaynak grubu v3.xlsx")
     assert r.status_code == 200, r.text
     s = r.json()
-    assert (s["status"], s["checked"], s["read"], s["valid"], s["errors"], s["name"], s["file_name"], s["mode"]) == ("Ön kontrol", True, 5, 3, 2, "Kaynak", "kaynak v3.xlsx", "Değişen")
+    assert (s["status"], s["checked"], s["read"], s["valid"], s["errors"], s["name"], s["file_name"], s["mode"]) == ("Ön kontrol", True, 5, 3, 2, "Kaynak grubu", "kaynak grubu v3.xlsx", "Değişen")
     assert s["template_version"] == s["current_version"] == contract.entity(ENTITY).version and s["job"] is None
     rows = stg_rows(db_engine)
     assert [(r["SourceRowNo"], r["Code"], r["ImportBatchId"]) for r in rows] == [(i + 2, f"A-{i}", s["batch_id"]) for i in range(3)]
     assert all("RowStatus" not in r for r in rows)  # satır durumu işlenmiş katmanda (K-140)
     b = batch_row(db_engine, s["batch_id"])
-    assert (b["Method"], b["EntityName"], b["LoadType"], b["FileName"], b["UploadedBy"], b["TemplateVersion"], b["RowCount"], b["ErrorCount"]) == ("Excel", ENTITY, "Değişen", "kaynak v3.xlsx", people[KEY_USER], s["template_version"], 5, 2)
+    assert (b["Method"], b["EntityName"], b["LoadType"], b["FileName"], b["UploadedBy"], b["TemplateVersion"], b["RowCount"], b["ErrorCount"]) == ("Excel", ENTITY, "Değişen", "kaynak grubu v3.xlsx", people[KEY_USER], s["template_version"], 5, 2)
     assert Path(b["FilePath"]).name == f"{s['batch_id']}.xlsx" and Path(b["FilePath"]).exists()
     found = findings(client, people[KEY_USER], s["batch_id"])
     assert [(f["RowNo"], f["FieldName"], f["Severity"]) for f in found] == [(5, label("Code"), "Hata"), (6, label("IsMachine"), "Hata")]
@@ -143,12 +143,12 @@ def test_rejected_files_open_no_batch(db_engine, client, people, body, code, sta
     with db_engine.connect() as c:
         assert c.execute(text("SELECT COUNT(*) FROM adm.ImportBatch")).scalar() == 0
     if code == "import_wrong_entity":
-        assert r.json()["error"]["message"] == "Bu dosya Kaynak tablosu içermemektedir."
+        assert r.json()["error"]["message"] == "Bu dosya Kaynak grubu tablosu içermemektedir."
 
 
 def test_missing_required_column(client, people):
     wb = OpenWorkbook()
-    wb.active.title = "Kaynak"
+    wb.active.title = "Kaynak grubu"
     wb.active.append(["LocationCode", "Name"])
     wb.active.append(["L", "Ad"])
     buffer = io.BytesIO()
@@ -174,7 +174,7 @@ def test_no_template_info_and_unknown_column_are_notes(db_engine, client, people
     wb.save(buffer)
     s = upload(client, people[KEY_USER], buffer.getvalue()).json()
     assert s["valid"] == 1 and s["template_version"] is None and s["notes"] == 3
-    assert {f["severity"] for f in s["file_findings"]} == {"Uyarı", "Bilgi"} and any("Kaynak olarak okundu" in f["message"] for f in s["file_findings"])
+    assert {f["severity"] for f in s["file_findings"]} == {"Uyarı", "Bilgi"} and any("Kaynak grubu olarak okundu" in f["message"] for f in s["file_findings"])
     assert any("Fazladan" in f["message"] for f in s["file_findings"]) and any("AdditionalText1" in f["message"] for f in s["file_findings"])
     assert stg_rows(db_engine)[0]["AdditionalText1"] is None
 
@@ -209,7 +209,7 @@ def test_old_template_version_warns(client, people):
 
 
 def test_value_outside_list_is_noted_once_per_value(db_engine, client, people):
-    rows = [{"LocationCode": "L", "RouteCode": "R", "OperationNo": i, "SequenceNo": 1, "Consumption": 1, "ResourceCode": "A", "ResourceRole": "Ana" if i < 3 else "Yan"} for i in range(1, 6)]
+    rows = [{"LocationCode": "L", "RouteCode": "R", "OperationNo": i, "SequenceNo": 1, "Consumption": 1, "ResourceGroupCode": "G", "ResourceRole": "Ana" if i < 3 else "Yan"} for i in range(1, 6)]
     s = upload(client, people[KEY_USER], xlsx(rows, "Routing"), "Routing").json()
     assert (s["valid"], s["errors"], s["notes"]) == (5, 0, 2)
     assert [(f["RowNo"], f["Value"]) for f in findings(client, people[KEY_USER], s["batch_id"])] == [(2, "Ana"), (4, "Yan")]
@@ -245,7 +245,7 @@ def test_continue_writes_trace_and_changes_status(db_engine, client, people):
     r = client.post(f"/api/imports/{s['batch_id']}/continue", headers=auth(people[KEY_USER]))
     assert r.status_code == 200 and r.json()["status"] == "Alındı"
     (action, user, kind, key, new), = audit_rows(db_engine)
-    assert (action, user, kind, key) == ("Excel yükleme", people[KEY_USER], "ImportBatch", "kaynak.xlsx") and '"valid": 3' in new and '"errors": 2' in new and '"mode": "Ekle / güncelle"' in new
+    assert (action, user, kind, key) == ("Excel yükleme", people[KEY_USER], "ImportBatch", "kaynak grubu.xlsx") and '"valid": 3' in new and '"errors": 2' in new and '"mode": "Ekle / güncelle"' in new
     again = client.post(f"/api/imports/{s['batch_id']}/continue", headers=auth(people[KEY_USER]))
     assert again.status_code == 409 and again.json()["error"]["code"] == "import_not_pending"
 
@@ -272,7 +272,7 @@ def test_cancel_removes_rows_and_file(db_engine, client, people):
     path = Path(batch_row(db_engine, s["batch_id"])["FilePath"])
     r = client.post(f"/api/imports/{s['batch_id']}/cancel", headers=auth(people[KEY_USER]))
     assert r.status_code == 200 and r.json()["status"] == "Vazgeçildi" and not path.exists() and not stg_rows(db_engine)
-    assert client.get("/api/imports/pending/Resource", headers=auth(people[KEY_USER])).json() is None
+    assert client.get("/api/imports/pending/ResourceGroup", headers=auth(people[KEY_USER])).json() is None
 
 
 def test_all_rows_bad(db_engine, client, people):
@@ -297,7 +297,7 @@ def test_error_report_keeps_original_values_and_can_be_reuploaded(db_engine, cli
     s = upload(client, people[KEY_USER], xlsx(MIXED)).json()
     r = client.get(f"/api/imports/{s['batch_id']}/error-report", headers=auth(people[KEY_USER]))
     assert r.status_code == 200 and f"hata-raporu_{s['batch_id']}" in r.headers["content-disposition"]
-    ws = load_workbook(io.BytesIO(r.content))["Kaynak"]
+    ws = load_workbook(io.BytesIO(r.content))["Kaynak grubu"]
     header = [c.value for c in ws[1]]
     data = [dict(zip(header, [c.value for c in row])) for row in ws.iter_rows(min_row=2)]
     assert header[-1] == "Hata" and [d["Name"] for d in data] == ["Kodsuz", None]
@@ -318,7 +318,7 @@ def test_new_upload_replaces_own_open_batch(db_engine, client, people):
     first = upload(client, people[KEY_USER], xlsx(GOOD)).json()
     second = upload(client, people[KEY_USER], xlsx(GOOD[:1])).json()
     assert batch_row(db_engine, first["batch_id"])["Status"] == "Vazgeçildi" and len(stg_rows(db_engine)) == 1
-    assert client.get("/api/imports/pending/Resource", headers=auth(people[KEY_USER])).json()["batch_id"] == second["batch_id"]
+    assert client.get("/api/imports/pending/ResourceGroup", headers=auth(people[KEY_USER])).json()["batch_id"] == second["batch_id"]
     other = upload(client, people[ADMIN], xlsx(GOOD)).json()
     assert batch_row(db_engine, second["batch_id"])["Status"] == "Ön kontrol" and other["read"] == 3  # başkasınınki kapanmaz
 
@@ -354,10 +354,10 @@ def test_large_file_becomes_a_job_with_the_same_result(db_engine, client, people
     batch_id, job_id = r.json()["batch_id"], r.json()["job_id"]
     waiting = client.get(f"/api/imports/{batch_id}", headers=auth(people[KEY_USER])).json()
     assert (waiting["checked"], waiting["read"], waiting["valid"], waiting["job"]["id"]) == (False, None, None, job_id)
-    assert client.get("/api/imports/pending/Resource", headers=auth(people[KEY_USER])).json()["batch_id"] == batch_id
+    assert client.get("/api/imports/pending/ResourceGroup", headers=auth(people[KEY_USER])).json()["batch_id"] == batch_id
     assert client.post(f"/api/imports/{batch_id}/continue", headers=auth(people[KEY_USER])).status_code == 409
     job = claim(db_engine)
-    assert job["Id"] == job_id and job["Channel"] == "Excel" and "Kaynak" in job["Summary"]
+    assert job["Id"] == job_id and job["Channel"] == "Excel" and "Kaynak grubu" in job["Summary"]
     run_import_job(job_id, job["Attempt"])
     assert job_of(db_engine, job_id)["Status"] == STATUS_DONE
     s = client.get(f"/api/imports/{batch_id}", headers=auth(people[KEY_USER])).json()
@@ -385,7 +385,7 @@ def test_large_file_is_not_opened_in_the_request(db_engine, client, people, larg
         service.run_precheck(s, batch_id)
     summary = client.get(f"/api/imports/{batch_id}", headers=auth(people[KEY_USER])).json()
     assert (summary["status"], summary["read"], summary["valid"]) == ("Hatalı", 0, 0)
-    assert [f["message"] for f in summary["file_findings"]] == ["Bu dosya Kaynak tablosu içermemektedir."]
+    assert [f["message"] for f in summary["file_findings"]] == ["Bu dosya Kaynak grubu tablosu içermemektedir."]
 
 
 def test_job_retry_does_not_double_rows(db_engine, client, people, large):
@@ -463,7 +463,7 @@ def test_last_load_time_only_for_received_batches(client, people):
     h = auth(people[KEY_USER])
 
     def last():
-        body = {"fields": ["Name", "LastLoadAt"], "filters": [{"field": "Name", "op": "equals", "value": "Kaynak"}], "sort": [], "offset": 0, "limit": 5}
+        body = {"fields": ["Name", "LastLoadAt"], "filters": [{"field": "Name", "op": "equals", "value": "Kaynak grubu"}], "sort": [], "offset": 0, "limit": 5}
         return client.post("/api/data-entities/query", json=body, headers=h).json()["rows"][0]["LastLoadAt"]
 
     assert last() is None

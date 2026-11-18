@@ -97,17 +97,17 @@ def test_save_is_all_or_nothing(env):
 
 def test_user_rule_create_edit_delete(env):
     client, people, eng = env
-    new = {"entity": "Resource", "name": "Ad kontrolü", "message": "Ad A ile başlıyor.", "severity": "Bilgi", "groups": GROUPS}
+    new = {"entity": "ResourceGroup", "name": "Ad kontrolü", "message": "Ad A ile başlıyor.", "severity": "Bilgi", "groups": GROUPS}
     assert client.put("/api/validation-rules", json={"changes": [new], "thresholds": []}, headers=auth(people[ADMIN])).status_code == 200
-    rid = rule_id(eng, "Resource", "KUL-1")
+    rid = rule_id(eng, "ResourceGroup", "KUL-1")
     detail = client.get(f"/api/validation-rules/{rid}", headers=auth(people[KEY_USER])).json()
-    assert (detail["kind"], detail["condition"], detail["groups"]) == ("Kullanıcı", "Kaynak adı Ad A ile başlar", GROUPS)
+    assert (detail["kind"], detail["condition"], detail["groups"]) == ("Kullanıcı", "Grup adı Ad A ile başlar", GROUPS)
     dup = client.put("/api/validation-rules", json={"changes": [new], "thresholds": []}, headers=auth(people[ADMIN]))
     assert dup.status_code == 422 and dup.json()["error"]["code"] == "validation_rule_name_taken"
     bad = client.put("/api/validation-rules", json={"changes": [{**new, "name": "x", "groups": [[{"field": "Yok", "operator": "Boş değil"}]]}], "thresholds": []},
                      headers=auth(people[ADMIN]))
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "validation_rule_bad_condition"
-    load((client, people[KEY_USER], eng), "Resource", [resource("A")])
+    load((client, people[KEY_USER], eng), "ResourceGroup", [resource("A")])
     run_validations(eng)
     with eng.connect() as c:
         assert c.execute(sa.text("SELECT COUNT(*) FROM adm.ValidationFinding WHERE ValidationRuleId = :r"), {"r": rid}).scalar() == 1
@@ -123,14 +123,14 @@ def test_user_rule_create_edit_delete(env):
 
 def test_threshold_is_per_table_without_default(env):
     client, people, eng = env
-    r = client.put("/api/validation-rules", json={"changes": [], "thresholds": [{"entity": "Resource", "value": "2,5"}]}, headers=auth(people[ADMIN]))
+    r = client.put("/api/validation-rules", json={"changes": [], "thresholds": [{"entity": "ResourceGroup", "value": "2,5"}]}, headers=auth(people[ADMIN]))
     assert r.status_code == 200
-    assert client.get("/api/validation/Resource", headers=auth(people[KEY_USER])).json()["threshold"] == 2.5
+    assert client.get("/api/validation/ResourceGroup", headers=auth(people[KEY_USER])).json()["threshold"] == 2.5
     assert client.get("/api/validation/Material", headers=auth(people[KEY_USER])).json()["threshold"] is None  # varsayılan yok (K-135)
-    bad = client.put("/api/validation-rules", json={"changes": [], "thresholds": [{"entity": "Resource", "value": "150"}]}, headers=auth(people[ADMIN]))
+    bad = client.put("/api/validation-rules", json={"changes": [], "thresholds": [{"entity": "ResourceGroup", "value": "150"}]}, headers=auth(people[ADMIN]))
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "validation_threshold_range"
-    client.put("/api/validation-rules", json={"changes": [], "thresholds": [{"entity": "Resource", "value": None}]}, headers=auth(people[ADMIN]))
-    assert client.get("/api/validation/Resource", headers=auth(people[KEY_USER])).json()["threshold"] is None
+    client.put("/api/validation-rules", json={"changes": [], "thresholds": [{"entity": "ResourceGroup", "value": None}]}, headers=auth(people[ADMIN]))
+    assert client.get("/api/validation/ResourceGroup", headers=auth(people[KEY_USER])).json()["threshold"] is None
     with eng.connect() as c:
         assert c.execute(sa.text("SELECT COUNT(*) FROM adm.AuditLog WHERE Action = N'Hata eşiği'")).scalar() == 2
 
@@ -138,42 +138,42 @@ def test_threshold_is_per_table_without_default(env):
 def test_rule_counts_records_rule_filter_and_download(env):
     client, people, eng = env
     user = people[KEY_USER]
-    load((client, user, eng), "Resource", [resource("A"), resource("B", IsEmployee=1), resource("C", CapacityUnit=None)])
+    load((client, user, eng), "ResourceGroup", [resource("A"), resource("B", IsEmployee=1), resource("C", CapacityUnit=None)])
     run_validations(eng)
-    rules = client.get("/api/validation/Resource", headers=auth(user)).json()["rules"]
-    assert [(r["name"], r["severity"], r["rows"]) for r in rules][:2] == [("Zorunlu alan boş", "Hata", 1), ("Kaynak tipi tek değil", "Uyarı", 1)]
-    type_flags = next(r for r in rules if r["name"] == "Kaynak tipi tek değil")
+    rules = client.get("/api/validation/ResourceGroup", headers=auth(user)).json()["rules"]
+    assert [(r["name"], r["severity"], r["rows"]) for r in rules][:2] == [("Zorunlu alan boş", "Hata", 1), ("Grup tipi tek değil", "Uyarı", 1)]
+    type_flags = next(r for r in rules if r["name"] == "Grup tipi tek değil")
     only = {"filters": [{"field": "RuleIds", "op": "contains", "value": f",{type_flags['id']},"}], "offset": 0, "limit": 50}
-    assert [r["Code"] for r in client.post("/api/validation-records-Resource/query", json=only, headers=auth(user)).json()["rows"]] == ["B"]
-    assert client.post("/api/validation-findings-Resource/query", json={"filters": [], "offset": 0, "limit": 5}, headers=auth(user)).status_code == 404
-    every = client.post("/api/validation-records-Resource/query", json={"filters": [], "offset": 0, "limit": 50}, headers=auth(user)).json()["rows"]
+    assert [r["Code"] for r in client.post("/api/validation-records-ResourceGroup/query", json=only, headers=auth(user)).json()["rows"]] == ["B"]
+    assert client.post("/api/validation-findings-ResourceGroup/query", json={"filters": [], "offset": 0, "limit": 5}, headers=auth(user)).status_code == 404
+    every = client.post("/api/validation-records-ResourceGroup/query", json={"filters": [], "offset": 0, "limit": 50}, headers=auth(user)).json()["rows"]
     assert sorted((r["Code"], r["Severity"]) for r in every) == [("A", None), ("B", "Uyarı"), ("C", "Hata")]  # Tüm satırlar (K-143)
     flagged = {"filters": [{"field": "HasFindings", "op": "in", "values": [True]}], "offset": 0, "limit": 50}
-    recs = client.post("/api/validation-records-Resource/query", json=flagged, headers=auth(user)).json()["rows"]
+    recs = client.post("/api/validation-records-ResourceGroup/query", json=flagged, headers=auth(user)).json()["rows"]
     assert sorted((r["Code"], r["Severity"]) for r in recs) == [("B", "Uyarı"), ("C", "Hata")]  # Bulgulu satırlar
     changed = {"filters": [{"field": "HasEffects", "op": "in", "values": [True]}], "offset": 0, "limit": 50}
-    assert client.post("/api/validation-records-Resource/query", json=changed, headers=auth(user)).json()["rows"] == []  # kural yok
+    assert client.post("/api/validation-records-ResourceGroup/query", json=changed, headers=auth(user)).json()["rows"] == []  # kural yok
     assert next(r for r in recs if r["Code"] == "C")["Problems"] == "Kapasite birimi: Zorunlu alan boş."
-    columns = [c["field"] for c in client.get("/api/validation-records-Resource/columns", headers=auth(user)).json()["columns"]]
+    columns = [c["field"] for c in client.get("/api/validation-records-ResourceGroup/columns", headers=auth(user)).json()["columns"]]
     assert columns[:3] == ["Problems", "Severity", "RowNo"]  # ilk kolonlar Sorun ve Sınıf (K-139)
     body = {"fields": columns, "widths": {}, "sort": [], "filters": [], "group_by": [], "aggregates": {}, "rules": [], "scope": {"rows": "all", "columns": "all"}}
-    r = client.post("/api/validation-records-Resource/export", json=body, headers=auth(user))
+    r = client.post("/api/validation-records-ResourceGroup/export", json=body, headers=auth(user))
     assert r.status_code == 200, r.text
     ws = load_workbook(io.BytesIO(r.content), read_only=True).worksheets[0]
     header = [c for c in next(ws.iter_rows(values_only=True))]
-    assert header[:2] == ["Sorun", "Sınıf"] and "Kaynak kodu" in header
-    assert client.post("/api/validation-records-Resource/query", json={"filters": [], "offset": 0, "limit": 5}, headers=auth(people[END_USER])).status_code == 403
+    assert header[:2] == ["Sorun", "Sınıf"] and "Grup kodu" in header
+    assert client.post("/api/validation-records-ResourceGroup/query", json={"filters": [], "offset": 0, "limit": 5}, headers=auth(people[END_USER])).status_code == 403
 
 
 def test_revalidate_is_audited(env):
     client, people, eng = env
-    load((client, people[KEY_USER], eng), "Resource", [resource("A")])
+    load((client, people[KEY_USER], eng), "ResourceGroup", [resource("A")])
     run_validations(eng)
-    assert client.post("/api/validation/Resource/revalidate", headers=auth(people[END_USER])).status_code == 403
-    assert client.post("/api/validation/Resource/revalidate", headers=auth(people[KEY_USER])).status_code == 202
+    assert client.post("/api/validation/ResourceGroup/revalidate", headers=auth(people[END_USER])).status_code == 403
+    assert client.post("/api/validation/ResourceGroup/revalidate", headers=auth(people[KEY_USER])).status_code == 202
     jobs = client.get("/api/jobs", headers=auth(people[KEY_USER])).json()["jobs"]
     job = next(j for j in jobs if j["job_type"] == "Validasyon" and j["validation"]["trigger"] == "Yeniden valide et")
-    assert job["validation"]["entity"] == "Resource" and job["channel"] == "Veri işleme"
+    assert job["validation"]["entity"] == "ResourceGroup" and job["channel"] == "Veri işleme"
     with eng.connect() as c:
         assert c.execute(sa.text("SELECT COUNT(*) FROM adm.AuditLog WHERE Action = N'Yeniden validasyon'")).scalar() == 1
 
@@ -211,7 +211,7 @@ def test_severity_only_change_does_not_customize(env):
 
 def test_reset_only_for_builtin(env):
     client, people, eng = env
-    new = {"entity": "Resource", "name": "Ad kontrolü", "message": "Ad A ile başlıyor.", "severity": "Bilgi", "groups": GROUPS}
+    new = {"entity": "ResourceGroup", "name": "Ad kontrolü", "message": "Ad A ile başlıyor.", "severity": "Bilgi", "groups": GROUPS}
     client.put("/api/validation-rules", json={"changes": [new], "thresholds": []}, headers=auth(people[ADMIN]))
-    r = client.put("/api/validation-rules", json={"changes": [{"id": rule_id(eng, "Resource", "KUL-1"), "reset": True}], "thresholds": []}, headers=auth(people[ADMIN]))
+    r = client.put("/api/validation-rules", json={"changes": [{"id": rule_id(eng, "ResourceGroup", "KUL-1"), "reset": True}], "thresholds": []}, headers=auth(people[ADMIN]))
     assert r.status_code == 422

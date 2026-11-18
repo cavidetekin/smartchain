@@ -96,7 +96,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Genel görünüm</sub>
 
 - **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
-- **Kaynak  11 tablo:** Resource · ResourceGroupAssignment · ShiftPlan · ResourceDowntime
+- **Kaynak  8 tablo:** Resource · ResourceGroup · ResourceGroupMember · ResourceDowntime
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · AllocationRule
 - yükleme
@@ -130,17 +130,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### KAYNAK
 
-- **Resource:** Kaynak: makine, işçi, fason, diğer
-- **ResourceGroup:** Kaynak ve yetkinlik grubu; uygun kaynaklar listesi
-- **ResourceGroupAssignment:** Kaynağın gruba ataması; yetkinlik matrisi
+- **Resource:** Kaynak: tek bir makine, işçi ya da fason iş yeri
+- **ResourceGroup:** Kaynak grubu: planlama birimi; tip, kritiklik, kapasite birimi
+- **ResourceGroupMember:** Grup eşleşmesi: kaynağın gruba üyeliği; yetkinlik matrisi
 - **ResourceCapacityProfile:** Günlük kapasitenin dönemsel değişikliği (ör
 - **ResourceDowntime:** Bakım ve arıza takvimi
 - **ResourceEfficiency:** Kaynak ve dönem bazında verim (kapasite katsayısı)
 - **ResourcePeriodLimit:** Dönem bazlı üst limit
-- **Shift:** Vardiya tanımı
-- **ShiftPlan:** Dönem bazında grup–vardiya–kişi sayısı
 - **EmployeeAbsence:** Kişi bazında izin ve rapor
-- **OvertimeLimit:** Fazla mesai üst limiti (vardiya ve dönem bazında)
 
 ### Tablo listesi
 <sub>21. Veri modeli · Tablo listesi · 3/6</sub>
@@ -329,10 +326,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### Resource
-<sub>21. Veri modeli · Kaynak · 1/2</sub>
+<sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.
+- Kaynak: tek bir makine, işçi ya da fason iş yeri. Planlama birimi kaynak değil kaynak grubudur (K-180): tip bayrakları, kritiklik, kapasite birimi ve fasoncu gruptadır; kaynak gruplarına `ResourceGroupMember` ile bağlanır.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
@@ -340,70 +337,63 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
 | Code | nvarchar(50) | UK | Kaynak kodu |  | ERP | H | E | hata (satır atlanır) |
 | Name | nvarchar(150) |  | Kaynak adı |  | ERP | H | H | bilinmiyor |
-| ResourceType | nvarchar(50) |  | ERP'den gelen ham değer; tip bayraklarla ifade edilir | Kaynak tipi | ERP | H | H | bilinmiyor |
-| IsEmployee | bit |  | Kaynak işçi mi | İşçi | ERP, yoksa kural | H | H | yok |
-| IsMachine | bit |  | Kaynak makine mi | Makine | ERP, yoksa kural | H | H | yok |
-| IsFurnace | bit |  | Kaynak fırın mı; Faz 1 planlamada kullanılmaz | Fırın | ERP, yoksa kural | H | H | yok |
-| IsMold | bit |  | Kaynak kalıp mı; Faz 1 planlamada kullanılmaz | Kalıp | ERP, yoksa kural | H | H | yok |
-| IsOther | bit |  | Diğer kaynak mı | Diğer | ERP, yoksa kural | H | H | yok |
-| IsSubcontractor | bit |  | Kaynak fason mu | Fason | ERP, yoksa kural | H | H | yok |
+| ResourceType | nvarchar(50) |  | ERP'den gelen ham değer; yalnız bilgi (raporlama ve filtre), planlama grubun bayraklarına bakar | Kaynak tipi | ERP | H | H | bilinmiyor |
 | IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
-| IsCritical | bit |  | 1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır) | Kritik kaynak | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
-| CapacityUnit | nvarchar(10) | FK | Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir | Kapasite birimi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
-| DailyCapacity | decimal(18,4) |  | Bir adet kaynağın bir çalışma günündeki kapasitesi | Günlük kapasite | Kural ya da elle | H | H | bilinmiyor |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
-
-### Resource
-<sub>21. Veri modeli · Kaynak · 2/2</sub>
-
-- Ana veri · versiyonlu · Faz 1
-- Kaynak: makine, işçi, fason, diğer. Kapasite kaynağın kendi biriminde günlük kapasite olarak tutulur.
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|---|
-| Quantity | int |  | Paralel kaynak adedi; Smartchain ekranında girilir, aktarımda önceki versiyondan gelir |  | Kural ya da elle | H | H | bilinmiyor |
-| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır) | Çalışma takvimi | Kural ya da elle | H | H | bilinmiyor |
-| CapacitySource | nvarchar(10) |  | İşçi gruplarında: Vardiyadan \| Doğrudan | Kapasite kaynağı | Kural ya da elle | H | H | bilinmiyor |
-| SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Fason planlama tipi | Kural ya da elle | H | H | bilinmiyor |
-| SubcontractorId | bigint | FK | Fasonda fasoncu | Fasoncu | ERP | H | H | bilinmiyor |
-| SubconFixedLeadTimeDays | decimal(9,2) |  | Fasonda sabit süre (taşıma ve kuyruk) | Fason sabit süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
-| SubconVariableDaysPerUnit | decimal(18,6) |  | Fasonda birim başına gün (fasoncunun hızı) | Fason birim süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
 | ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat) | Üretim yeri | ERP | H | H | bilinmiyor |
 | RemainingOverTimeYear | decimal(9,2) |  | Yıllık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
 | RemainingOverTimeMonth | decimal(9,2) |  | Aylık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
+| DailyCapacity | decimal(18,4) |  | Kaynağın bir çalışma günündeki kapasitesi; geçici alan (7.8'de kalkar) | Günlük kapasite | Kural ya da elle | H | H | bilinmiyor |
+| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır); geçici alan (7.8'de kalkar) | Çalışma takvimi | Kural ya da elle | H | H | bilinmiyor |
+| SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Fason planlama tipi | Kural ya da elle | H | H | bilinmiyor |
+| SubconFixedLeadTimeDays | decimal(9,2) |  | Fasonda sabit süre (taşıma ve kuyruk); geçici alan (7.8'de kalkar) | Fason sabit süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
+| SubconVariableDaysPerUnit | decimal(18,6) |  | Fasonda birim başına gün (fasoncunun hızı); geçici alan (7.8'de kalkar) | Fason birim süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
 | AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Entegrasyon (K-117):** Kimlik ve ilişkiler entegrasyonla gelir. Kapasite birimi ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Öteki kapasite tanımları (günlük kapasite, paralel adet, kapasite kaynağı), fason parametreleri ve takvim entegre edilmez; Smartchain ekranlarında tanımlanır (6.1, 7.5). Tanımlanana kadar boş kalabilir; aktif ve kritik olup kapasitesi tanımsız kaynak veri kalitesinde uyarı verir (6.5). Bu Smartchain alanları Kapasite yönetimi ekranında (7.5) girilir, güncel satırda yerinde güncellenir (yeni veri versiyonu açılmaz, izli; aktarım yeni versiyona taşır; K-167); ana veri ekranında salt okunur (K-168).
-- **Tip:** `ResourceType` ERP'den ham değerdir; tip bayraklarla ifade edilir. `IsFurnace` ve `IsMold` yalnız sözleşmededir, Faz 1 planlamada kullanılmaz.
-- **İşçi:** İşçiler kaynaktır (`IsEmployee`), yetkinlikler kaynak grubudur (`IsCompetenceGroup`), işçi yetkinlikleri `ResourceGroupAssignment`'tadır.
+- **Kaynakta kalanlar (K-180):** lokasyon, kod, ad, ham tip (yalnız bilgi), aktif, üretim yeri, yıllık ve aylık kalan fazla mesai, ek alanlar. Tip bayrakları, `IsCritical`, `CapacityUnit` ve fasoncu kaynak grubundadır; kaynakta yoktur.
+- **Geçici alanlar (K-180):** `DailyCapacity`, `CalendarId` ve fason parametreleri (`SubconPlanningType`, `SubconFixedLeadTimeDays`, `SubconVariableDaysPerUnit`) Kapasite yönetimi adımına (7.8) kadar yerinde durur; o adımda kalkar ve kapasite girişleri `param` tarafında yeniden tasarlanır (K-176). Entegre edilmezler; aktarım yeni versiyona önceki versiyondan taşır (K-153); ana veri ekranında salt okunur (K-168), "Manuel" olamazlar (K-170). Günlük kapasitenin birimi kaynağın üye olduğu grupların ortak kapasite birimidir. Aktif olup en az bir aktif kritik gruba üye olan ve günlük kapasitesi boş kaynak veri kalitesinde uyarı verir (6.5).
+- **Kalkanlar (K-180):** `CapacitySource` ("Kapasite kaynağı"; vardiya kavramıyla birlikte) ve `Quantity` (paralel adet; kaynak adedi grup eşleşmesinden bilinir).
+- **İşçi:** İşçiler kaynaktır; işçi grubu (yetkinlik grubu) `IsEmployee` bayraklı kaynak grubudur; işçinin yetkinlikleri `ResourceGroupMember`'dadır (bir işçi birden fazla gruba üye olabilir).
 
 ### ResourceGroup
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Kaynak ve yetkinlik grubu. Kapasite havuzu değil, uygun kaynaklar listesidir; kapasite yalnız kaynakta tutulur.
+- Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| LocationId | int | FK,UK | Lokasyon | ERP | H | E | hata (satır atlanır) |
-| Code | nvarchar(50) | UK | Grup kodu | ERP | H | E | hata (satır atlanır) |
-| Name | nvarchar(150) |  | Grup adı | ERP | H | H | bilinmiyor |
-| Type | nvarchar(50) |  | Grup tipi; ERP'den gelen ham değer | ERP | H | H | bilinmiyor |
-| IsResourceGroup | bit |  | Kaynak grubu | ERP, yoksa kural | H | H | yok |
-| IsCompetenceGroup | bit |  | Yetkinlik grubu | ERP, yoksa kural | H | H | yok |
-| IsActive | bit |  | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
-| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da | ERP | H | H | yok |
-| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da | ERP | H | H | yok |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
+| Code | nvarchar(50) | UK | Grup kodu |  | ERP | H | E | hata (satır atlanır) |
+| Name | nvarchar(150) |  | Grup adı |  | ERP | H | H | bilinmiyor |
+| Type | nvarchar(50) |  | ERP'den gelen ham değer; tip bayraklarla ifade edilir | Grup tipi | ERP | H | H | bilinmiyor |
+| IsEmployee | bit |  | İşçi grubu mu (yetkinlik grubu) | İşçi | ERP, yoksa kural | H | H | yok |
+| IsMachine | bit |  | Makine grubu mu | Makine | ERP, yoksa kural | H | H | yok |
+| IsFurnace | bit |  | Fırın grubu mu; Faz 1 planlamada kullanılmaz | Fırın | ERP, yoksa kural | H | H | yok |
+| IsMold | bit |  | Kalıp grubu mu; Faz 1 planlamada kullanılmaz | Kalıp | ERP, yoksa kural | H | H | yok |
+| IsOther | bit |  | Diğer kaynak grubu mu | Diğer | ERP, yoksa kural | H | H | yok |
+| IsSubcontractor | bit |  | Fason grubu mu | Fason | ERP, yoksa kural | H | H | yok |
+| IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| IsCritical | bit |  | 1: planda kısıt, 0: sonsuz kapasite (sadece raporlanır) | Kritik | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
+| CapacityUnit | nvarchar(10) | FK | Kapasite birimi (Saat, Adet, Ton…); rotadaki tüketim aynı birimde kabul edilir | Kapasite birimi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| SubcontractorId | bigint | FK | Fason grubunda fasoncu | Fasoncu | ERP | H | H | bilinmiyor |
+| AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
+
+- **Planlama birimi (K-180):** Kaynak grubu zorunludur. Kaynakla çalışan müşteri entegrasyon view'unda kaynaklarını grup olarak verir (her kaynak için aynı kodla bir grup ve bir eşleşme satırı); eksik alanlar veri kuralıyla doldurulabilir.
+- **Tip:** `Type` ERP'den ham değerdir; tip bayraklarla ifade edilir (boşsa veri kuralıyla doldurulur, varsayılan yok). Yetkinlik grubu `IsEmployee` olan gruptur. `IsFurnace` ve `IsMold` yalnız sözleşmededir, Faz 1 planlamada kullanılmaz.
+- **Kritik:** Kritik olmayan grup sonsuz kapasiteli sayılır ve yalnız raporlanır. Birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Kaynağı olmayan kritik grubun kapasitesi sıfırdır (doğrulamada ve veri kalitesinde uyarı).
+- **Kapasite birimi:** ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Bir kaynağın üye olduğu grupların kapasite birimi aynı olmalıdır (doğrulamada uyarı).
+- **Kapasite (sonraki adım, 7.8):** kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük grup düzeyindedir.
 
 ### ResourceCapacityProfile
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Günlük kapasitenin dönemsel değişikliği (ör. ikinci vardiya açıldı). Birim kaynağın CapacityUnit'i; ekranda gösterilir, ayrı saklanmaz. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
+- Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: 7.8'de yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
@@ -432,7 +422,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Note | nvarchar(400) |  | Açıklama |  | Kullanıcı | H | H | bilinmiyor |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Smartchain'de girilen tablolar (K-167):** Calendar, CalendarDay, Shift, ShiftPlan, ResourceCapacityProfile ve ResourceDowntime (ve Aşama 7'de açılacak malzeme blokajı) Kapasite yönetimi ve Malzeme blokajı ekranlarında girilir. Kaydedilince yeni veri versiyonu açılmaz; mevcut veride yerinde güncellenir, değişiklik denetim izinde kalır. Şema bu kurala Aşama 7'nin ilk ekran adımında geçer (versiyonsuz; sentetik yükleme de orada uyarlanır).
+- **Smartchain'de girilen tablolar (K-167):** Calendar, CalendarDay, ResourceCapacityProfile ve ResourceDowntime (ve Aşama 7'de açılacak malzeme blokajı) Kapasite yönetimi ve Malzeme blokajı ekranlarında girilir. Kaydedilince yeni veri versiyonu açılmaz; mevcut veride yerinde güncellenir, değişiklik denetim izinde kalır. Şema bu kurala Aşama 7'nin ilk ekran adımında geçer (versiyonsuz; sentetik yükleme de orada uyarlanır).
 
 ### ResourceEfficiency
 <sub>21. Veri modeli · Kaynak</sub>
@@ -453,7 +443,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın kapasite birimi.
+- Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: 7.8'de yeniden tasarlanır (K-180).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -464,52 +454,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ValidTo | date |  | Bitiş | Smartchain (parametre) | H | E |  |
 | UpperLimit | decimal(18,4) |  | Dönem üst limiti | Smartchain (parametre) | E | E |  |
 
-### ResourceGroupAssignment
+### ResourceGroupMember
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Kaynağın gruba ataması; bir kaynak birden fazla gruba atanabilir, yetkinlik matrisi bu tablodur. Geçerlilik tarihleri yalnız girdi.
+- Grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
-| ResourceGroupId | bigint | FK,UK | Kaynak ya da yetkinlik grubu | Grup | ERP | H | E | hata (satır atlanır) |
+| ResourceGroupId | bigint | FK,UK | Kaynak grubu | Grup | ERP | H | E | hata (satır atlanır) |
 | ResourceId | bigint | FK,UK | Kaynak |  | ERP | H | E | hata (satır atlanır) |
-| ValidFrom | date |  | Geçerlilik başlangıcı |  | ERP | H | H | sınırsız |
-| ValidTo | date |  | Geçerlilik bitişi |  | ERP | H | H | sınırsız |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
-
-### Shift
-<sub>21. Veri modeli · Kaynak</sub>
-
-- Ana veri · versiyonlu · Faz 1
-- Vardiya tanımı. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| LocationId | int | FK | Lokasyon | Kural ya da elle | H | E | hata (satır atlanır) |
-| Code | nvarchar(20) | UK | Vardiya kodu | Kural ya da elle | H | E | hata (satır atlanır) |
-| StartTime | time |  | Başlangıç saati | Kural ya da elle | H | E | hata (satır atlanır) |
-| EndTime | time |  | Bitiş saati | Kural ya da elle | H | E | hata (satır atlanır) |
-| BreakMinutes | int |  | Mola süresi (dk) | Kural ya da elle | H | H | yok |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
-
-### ShiftPlan
-<sub>21. Veri modeli · Kaynak</sub>
-
-- Ana veri · versiyonlu · Faz 1
-- Dönem bazında grup–vardiya–kişi sayısı. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ResourceGroupId | bigint | FK | Kaynak ya da yetkinlik grubu |  | Kural ya da elle | H | H |  |
-| ShiftId | bigint | FK | Vardiya |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| ValidFrom | date |  | Başlangıç |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| ValidTo | date |  | Bitiş |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| Headcount | int |  | Kişi sayısı |  | Kural ya da elle | E | E | hata (satır atlanır) |
+| AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
+| AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 ### EmployeeAbsence
@@ -528,19 +486,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | EndDate | date |  | Bitiş günü dahil | Bitiş | ERP | H | E | hata (satır atlanır) |
 | HoursPerDay | decimal(9,2) |  | Günlük devamsız saat; kısmi devamsızlık için, boşsa tam gün | Günlük saat | ERP | H | H | tam gün |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
-
-### OvertimeLimit
-<sub>21. Veri modeli · Kaynak</sub>
-
-- Parametre · versiyonsuz · Faz 1
-- Fazla mesai üst limiti (vardiya ve dönem bazında).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| ScenarioDefinitionId | int | FK | Senaryo | Smartchain (parametre) | H | E |  |
-| ShiftPlanId | bigint | FK | Vardiya planı | Smartchain (parametre) | H | E |  |
-| MaxOvertimeHours | decimal(9,2) |  | Dönem başına en fazla fazla mesai (saat) | Smartchain (parametre) | E | E |  |
 
 ### Material
 <sub>21. Veri modeli · Malzeme · 1/2</sub>
@@ -721,7 +666,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Malzeme · 1/2</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.
+- Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
@@ -731,21 +676,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | OperationNo | int | UK | Operasyon no (birinci sıralama) | Operasyon no | ERP | H | E | hata (satır atlanır) |
 | SequenceNo | int | UK | Operasyon içindeki alt sıra (ikinci sıralama) | Sıra no | ERP | H | E | hata (satır atlanır) |
 | OperationName | nvarchar(150) |  | Operasyon adı |  | ERP | H | H | bilinmiyor |
-| ResourceId | bigint | FK | Kaynak |  | ERP | H | H | alternatif Kaynak grubu |
-| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | H | alternatif Kaynak |
+| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | E | hata (satır atlanır) |
 | ResourceRole | nvarchar(10) |  | Primary \| Secondary | Kaynak rolü | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
-| Consumption | decimal(18,6) |  | Baz miktar için kaynak tüketimi (kaynağın kapasite biriminde) | Kaynak tüketimi | ERP | H | E | hata (satır atlanır) |
-| ResourceNumber | int |  | Operasyonda aynı anda kullanılan kaynak adedi | Kaynak adedi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
+| Consumption | decimal(18,6) |  | Baz miktar için kaynak tüketimi (kaynak grubunun kapasite biriminde) | Kaynak tüketimi | ERP | H | E | hata (satır atlanır) |
+| ResourceNumber | int |  | Operasyonda gruptan aynı anda kullanılan kaynak adedi | Kaynak adedi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Kaynak ya da kaynak grubu (K-116):** Her satırda `ResourceId` ya da `ResourceGroupId`'den biri dolu olmalı. İkisi de doluysa kaynak geçerlidir; kaynak o grubun üyesi değilse doğrulamada uyarı. Yalnız grup doluysa operasyon grubun herhangi bir kaynağında yapılabilir; seçim motorun kararıdır. Gruptaki kaynakların kapasite birimi farklıysa doğrulamada uyarı.
-- **İşçilik (K-116):** Rotada ayrı bir kaynak satırıdır: kaynak ya da kaynak grubu işçi grubu, `ResourceRole` Secondary, `ResourceNumber` kişi sayısı, `Consumption` süre.
+- **Kaynak grubu (K-180):** Her satırda `ResourceGroupId` zorunludur; boşsa satır yüklenmez. Rotada kaynak alanı yoktur: operasyon grubun kaynaklarında yapılır, `ResourceNumber` gruptan aynı anda kullanılan kaynak sayısıdır. Kaynak adedi gruptaki kaynak sayısından büyükse ve grup pasifse doğrulamada uyarı. Tüketim grubun kapasite birimindedir.
+- **İşçilik (K-116, K-180):** Rotada ayrı bir satırdır: kaynak grubu işçi grubu (`IsEmployee`), `ResourceRole` Secondary, `ResourceNumber` kişi sayısı, `Consumption` süre.
 
 ### Routing
 <sub>21. Veri modeli · Malzeme · 2/2</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Rota: her satır bir operasyon–kaynak ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynakları ayrı satırda, ResourceRole ile.
+- Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
@@ -1029,8 +973,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | OperationNo | int | UK | Operasyon no |  | ERP | H | E | hata (satır atlanır) |
 | SequenceNo | int | UK | Operasyon içindeki alt sıra | Sıra no | ERP | H | E | hata (satır atlanır) |
 | OperationName | nvarchar(150) |  | Operasyon adı |  | ERP | H | H | bilinmiyor |
-| ResourceId | bigint | FK | Kaynak |  | ERP | H | H | alternatif Kaynak grubu |
-| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | H | alternatif Kaynak |
+| ResourceGroupId | bigint | FK | Kaynak grubu |  | ERP | H | E | hata (satır atlanır) |
 | ResourceRole | nvarchar(10) |  | Primary \| Secondary | Kaynak rolü | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
 | ResourceNumber | int |  | Operasyonda aynı anda kullanılan kaynak adedi | Kaynak adedi | ERP, yoksa kural | H | E | hata (kurallardan sonra) |
 | PlannedConsumption | decimal(18,6) |  | Planlanan tüketim |  | ERP | H | H | bilinmiyor |
@@ -1049,7 +992,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Kaynak ya da kaynak grubu (K-124):** Rotadaki gibi her satırda `ResourceId` ya da `ResourceGroupId`'den biri dolu olmalı; ikisi de boşsa satır yüklenmez.
+- **Kaynak grubu (K-124, K-180):** Rotadaki gibi her satırda `ResourceGroupId` zorunludur; boşsa satır yüklenmez. Kaynak alanı yoktur.
 
 ### PurchaseOrderLine
 <sub>21. Veri modeli · Arz ve stok</sub>
@@ -1187,14 +1130,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Parametre</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Kapasite alokasyonu: talep sınıfına kaynak (grubu) ve dönem bazında pay.
+- Kapasite alokasyonu: talep sınıfına kaynak grubu ve dönem bazında pay (K-180).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
 | DemandClass | nvarchar(100) |  | Talep sınıfı tanımı (müşteri, proje, ürün grubu) | Talep sınıfı | Smartchain (parametre) | H | E |  |
-| ResourceId | bigint | FK | Kaynak |  | Smartchain (parametre) | H | H |  |
 | ResourceGroupId | bigint | FK | Kaynak grubu |  | Smartchain (parametre) | H | H |  |
 | ValidFrom | date |  | Başlangıç |  | Smartchain (parametre) | H | H |  |
 | ValidTo | date |  | Bitiş |  | Smartchain (parametre) | H | H |  |
@@ -1841,13 +1783,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Plan</sub>
 
 - Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
-- Kaynak ve dönem bazında kapasite ve kapasite yükü.
+- Kaynak grubu ve dönem bazında kapasite ve kapasite yükü (plan ve yük grup düzeyindedir, K-180).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| ResourceId | bigint | FK | Kaynak | Motor | H | E |  |
+| ResourceGroupId | bigint | FK | Kaynak grubu | Motor | H | E |  |
 | BucketStart | date |  | Dönem | Motor | H | E |  |
 | GrossCapacity | decimal(18,4) |  | Brüt kapasite | Motor | H | H |  |
 | DowntimeLoss | decimal(18,4) |  | Duruş kaybı | Motor | H | H |  |

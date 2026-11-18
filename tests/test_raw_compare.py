@@ -232,6 +232,9 @@ def test_migration_backfill(s):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.op = SimpleNamespace(execute=lambda sql: s.execute(sa.text(sql)))
+    # Eski geçiş o günün tablo adlarını taşır; sonradan kalkan ya da adı değişen tablolar (ör. ResourceGroupAssignment, K-180) bugünün şemasında yok
+    module.KEYS = {table: keys for table, keys in module.KEYS.items() if f"stg.{table}" in metadata.tables}
+    assert "Customer" in module.KEYS
     def batch(at, mode, status="Alındı"):
         return s.execute(sa.insert(BATCH).values(Method="SQL", EntityName="Customer", LoadType=mode, ReceivedAt=at, Status=status).returning(BATCH.c.Id)).scalar_one()
     b1, b2, b3 = batch(DAY1, FULL), batch(DAY2, CHANGED_MODE), batch(DAY5, FULL)

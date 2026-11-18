@@ -28,6 +28,9 @@ DEMO_RULES: list[dict] = [
      "result": {"kind": "Formül", "source_field": "RequestedDate", "operator": "+", "operand_value": "3"}, "groups": []},
     {"entity": "Material", "name": "Paletteki kutu sayısı", "target": "AdditionalNumber1", "mode": "Her zaman",
      "result": {"kind": "Formül", "source_field": "QtyPerPallet", "operator": "÷", "operand_field": "QtyPerBox"}, "groups": []},
+    # K-180: kaynak grubunun eksik alanı veri kuralıyla dolar (tip bayrağı ham tipten)
+    {"entity": "ResourceGroup", "name": "İşçi grubu bayrağı", "target": "IsEmployee", "mode": "Yalnız boşsa",
+     "result": {"kind": "Değer", "value": "1"}, "groups": [[{"field": "Type", "operator": "=", "value": "Yetkinlik"}]]},
 ]
 
 
@@ -35,6 +38,8 @@ def add_rule_examples(x: Examples, loc: str) -> None:
     """Kuralla çözülen satırlar: kurallar yokken beklenen bulgular, demo kurallarıyla hiçbiri."""
     x.add("Location", x.base("Location", Code=loc), ["LOC.NO_FLAG"], with_rules=[], Code="R-LOC-1", Name="Kuralla tesis", Type="PLANT",
           IsFactory=None, IsDepot=None, IsSubcontractor=None)
+    group = x.base("ResourceGroup", Code="CG-CNC")  # ham tipi "Yetkinlik": bayrak ERP'den gelmemiş, kural doldurur (K-180)
+    x.add("ResourceGroup", group, ["RG.TYPE_FLAGS", "RG.NO_RESOURCE"], with_rules=["RG.NO_RESOURCE"], Code="R-RG-1", Name="Kuralla işçi grubu", IsEmployee=None)
     customer = x.base("Customer", **{"IsActive": True})
     x.add("Customer", customer, ["STR.REQUIRED"], with_rules=[], Code="R-CUS-1", Name="Kuralla aktif müşteri", IsActive=None)
     stock = x.base("Stock", Status="Serbest", Warehouse="ANA")

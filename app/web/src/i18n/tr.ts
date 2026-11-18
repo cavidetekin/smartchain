@@ -494,7 +494,7 @@ export const tr = {
     tabs: { material: "Malzeme", bomRouting: "Ürün ağacı ve rota", resource: "Kaynak", supplierCustomer: "Tedarikçi ve müşteri",
             locationUnit: "Lokasyon ve birim" },
     tables: { material: "Malzeme", materialReference: "Benzetilen ürün", productionVersion: "Üretim versiyonu", bom: "Ürün ağacı", routing: "Rota",
-              resource: "Kaynak", resourceGroup: "Kaynak grubu", groupAssignment: "Grup ataması", supplier: "Tedarikçi",
+              resource: "Kaynak", resourceGroup: "Kaynak grubu", groupMember: "Grup eşleşmesi", supplier: "Tedarikçi",
               materialSupplier: "Malzeme tedarikçisi", customer: "Müşteri", location: "Lokasyon", unit: "Birim", uomConversion: "Birim dönüşümü" },
   },
   transactionData: {

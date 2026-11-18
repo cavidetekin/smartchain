@@ -63,7 +63,9 @@ def run_online():
         engine = create_engine(URL, poolclass=pool.NullPool)
         with engine.connect() as conn:
             if downgrade:
-                guard.confirm(database, ACTION, f"geçiş {current_revision(conn)}")
+                status = current_revision(conn)
+                conn.rollback()  # okumanın açtığı işlem kapanır: yoksa geçiş "dış işlem" sayılır, commit edilmez ve bağlantı kapanınca geri sarılır
+                guard.confirm(database, ACTION, f"geçiş {status}")
             _migrate(conn)
     except guard.Refused as exc:
         print(exc, file=sys.stderr)

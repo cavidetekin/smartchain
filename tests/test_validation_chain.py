@@ -70,42 +70,42 @@ def findings(engine, entity: str | None = None) -> list[tuple]:
 
 def test_full_replaces_and_changed_merges(env):
     engine = env[2]
-    load(env, "Resource", [resource("A"), resource("B")])
-    load(env, "Resource", [resource("B", Name="Yeni B"), resource("C")], mode="Değişen")
-    assert current_codes(engine, "Resource") == {"A": "Ad A", "B": "Yeni B", "C": "Ad C"}
-    load(env, "Resource", [resource("C"), resource("D")])  # Tam: A ve B silinmiş sayılır
-    assert current_codes(engine, "Resource") == {"C": "Ad C", "D": "Ad D"}
+    load(env, "ResourceGroup", [resource("A"), resource("B")])
+    load(env, "ResourceGroup", [resource("B", Name="Yeni B"), resource("C")], mode="Değişen")
+    assert current_codes(engine, "ResourceGroup") == {"A": "Ad A", "B": "Yeni B", "C": "Ad C"}
+    load(env, "ResourceGroup", [resource("C"), resource("D")])  # Tam: A ve B silinmiş sayılır
+    assert current_codes(engine, "ResourceGroup") == {"C": "Ad C", "D": "Ad D"}
     with engine.connect() as c:
-        assert c.execute(sa.text("SELECT COUNT(*) FROM stg.Resource")).scalar() == 6  # eski satırlar tarihçede (K-133)
+        assert c.execute(sa.text("SELECT COUNT(*) FROM stg.ResourceGroup")).scalar() == 6  # eski satırlar tarihçede (K-133)
 
 
 def test_full_keeps_row_whose_new_line_was_rejected(env):
     engine = env[2]
-    load(env, "Resource", [resource("A"), resource("B")])
-    load(env, "Resource", [resource("A"), resource("B", IsMachine="belki")])  # B ön kontrolde düşer: silinmiş sayılmaz
-    assert set(current_codes(engine, "Resource")) == {"A", "B"}
+    load(env, "ResourceGroup", [resource("A"), resource("B")])
+    load(env, "ResourceGroup", [resource("A"), resource("B", IsMachine="belki")])  # B ön kontrolde düşer: silinmiş sayılmaz
+    assert set(current_codes(engine, "ResourceGroup")) == {"A", "B"}
 
 
 def test_chain_writes_findings_marks_rows_and_counts(env):
     client, user, engine = env
-    load(env, "Resource", [resource("A"), resource("B", IsEmployee=1), resource("C", CapacityUnit=None)])
+    load(env, "ResourceGroup", [resource("A"), resource("B", IsEmployee=1), resource("C", CapacityUnit=None)])
     with engine.connect() as c:
-        state = c.execute(sa.text("SELECT TOP 1 State FROM adm.ValidationRun WHERE EntityName = N'Resource' ORDER BY Id DESC")).scalar()
+        state = c.execute(sa.text("SELECT TOP 1 State FROM adm.ValidationRun WHERE EntityName = N'ResourceGroup' ORDER BY Id DESC")).scalar()
     assert state == engine_state_queued()
     assert run_validations(engine)
-    found = findings(engine, "Resource")
-    assert ("Resource", "RES.TYPE_FLAGS", "ORM-01 · B", "Uyarı", "Kaynağın tek bir tipi olmalı.") in found
-    assert ("Resource", "STR.REQUIRED", "ORM-01 · C", "Hata", "Zorunlu alan boş.") in found  # kapasite birimi kurallardan sonra boş (K-117)
+    found = findings(engine, "ResourceGroup")
+    assert ("ResourceGroup", "RG.TYPE_FLAGS", "ORM-01 · B", "Uyarı", "Kaynak grubunun tek bir tipi olmalı.") in found
+    assert ("ResourceGroup", "STR.REQUIRED", "ORM-01 · C", "Hata", "Zorunlu alan boş.") in found  # kapasite birimi kurallardan sonra boş (K-117)
     with engine.connect() as c:
-        status = dict(c.execute(sa.text("SELECT Code, RowStatus FROM prc.Resource")).all())  # işlenmiş katman (K-140)
+        status = dict(c.execute(sa.text("SELECT Code, RowStatus FROM prc.ResourceGroup")).all())  # işlenmiş katman (K-140)
     assert status == {"A": "Yeni", "B": "Yeni", "C": "Hatalı"}
-    s = client.get("/api/validation/Resource", headers=auth(user)).json()
+    s = client.get("/api/validation/ResourceGroup", headers=auth(user)).json()
     assert (s["state"], s["outcome"], s["current_rows"], s["error_rows"], s["warning_rows"]) == ("Bitti", "Hatalı", 3, 1, 1)
     assert round(s["error_rate"], 2) == 33.33 and s["threshold"] is None and s["batch"]["method"] == "Excel"
-    assert {(r["name"], r["severity"], r["rows"]) for r in s["rules"]} >= {("Zorunlu alan boş", "Hata", 1), ("Kaynak tipi tek değil", "Uyarı", 1)}
+    assert {(r["name"], r["severity"], r["rows"]) for r in s["rules"]} >= {("Zorunlu alan boş", "Hata", 1), ("Grup tipi tek değil", "Uyarı", 1)}
     assert "by_check_type" not in s
     rows = client.post("/api/data-entities/query", json={"fields": ["Name", "Validation"], "filters": [], "offset": 0, "limit": 50}, headers=auth(user)).json()["rows"]
-    chip = next(r for r in rows if r["Entity"] == "Resource")
+    chip = next(r for r in rows if r["Entity"] == "ResourceGroup")
     assert (chip["Validation"], chip["ValidationErrors"], chip["ValidationWarnings"]) == ("Hatalı", 1, 1)
 
 
@@ -132,30 +132,30 @@ def test_related_table_refreshes_cross_rule_on_the_other_table(env):
 
 def test_inactive_rule_writes_nothing_and_user_rule_runs(env):
     client, user, eng = env
-    load(env, "Resource", [resource("A", IsEmployee=1)])
+    load(env, "ResourceGroup", [resource("A", IsEmployee=1)])
     with Session(eng) as s:
         engine.sync_rules(s, force=True)
     with eng.begin() as c:
-        c.execute(sa.text("UPDATE adm.ValidationRule SET IsActive = 0 WHERE EntityName = N'Resource' AND Code = N'RES.TYPE_FLAGS'"))
+        c.execute(sa.text("UPDATE adm.ValidationRule SET IsActive = 0 WHERE EntityName = N'ResourceGroup' AND Code = N'RG.TYPE_FLAGS'"))
         rule = c.execute(sa.text("INSERT INTO adm.ValidationRule (EntityName, Code, Name, Kind, CheckType, Severity, Message, IsActive, IsCustomized) OUTPUT inserted.Id "
-                                 "VALUES (N'Resource', N'KUL-1', N'Ad kontrolü', N'Kullanıcı', N'Mantıksal', N'Bilgi', N'Ad A ile başlıyor.', 1, 0)")).scalar_one()
+                                 "VALUES (N'ResourceGroup', N'KUL-1', N'Ad kontrolü', N'Kullanıcı', N'Mantıksal', N'Bilgi', N'Ad A ile başlıyor.', 1, 0)")).scalar_one()
         c.execute(sa.text("INSERT INTO adm.ValidationRuleCondition (ValidationRuleId, GroupNo, FieldName, Operator, Value) VALUES (:r, 1, N'Name', N'İle başlar', N'Ad A')"), {"r": rule})
     run_validations(eng)
-    codes = {f[1] for f in findings(eng, "Resource")}
-    assert "RES.TYPE_FLAGS" not in codes and "KUL-1" in codes
+    codes = {f[1] for f in findings(eng, "ResourceGroup")}
+    assert "RG.TYPE_FLAGS" not in codes and "KUL-1" in codes
 
 
 def test_failed_job_marks_run_and_keeps_old_findings(env, monkeypatch):
     client, user, eng = env
-    load(env, "Resource", [resource("A", IsEmployee=1)])
+    load(env, "ResourceGroup", [resource("A", IsEmployee=1)])
     run_validations(eng)
-    before = findings(eng, "Resource")
-    assert client.post("/api/validation/Resource/revalidate", headers=auth(user)).status_code == 202
-    assert client.post("/api/validation/Resource/revalidate", headers=auth(user)).status_code == 409  # sürüyor
+    before = findings(eng, "ResourceGroup")
+    assert client.post("/api/validation/ResourceGroup/revalidate", headers=auth(user)).status_code == 202
+    assert client.post("/api/validation/ResourceGroup/revalidate", headers=auth(user)).status_code == 409  # sürüyor
     monkeypatch.setattr(engine, "run_table", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("düştü")))
     run_validations(eng)
-    s = client.get("/api/validation/Resource", headers=auth(user)).json()
-    assert s["state"] == engine.FAILED and findings(eng, "Resource") == before
+    s = client.get("/api/validation/ResourceGroup", headers=auth(user)).json()
+    assert s["state"] == engine.FAILED and findings(eng, "ResourceGroup") == before
 
 
 def test_revalidate_without_data_is_refused(env):
@@ -167,10 +167,10 @@ def test_revalidate_without_data_is_refused(env):
 def test_bulk_cross_job_starts_after_pull_and_all_tables(env):
     """Toplu çekim: tablo içi işler bitince ve çekim bitince tablolar arası iş bir kez sıraya girer (K-134)."""
     _, user, eng = env
-    load(env, "Resource", [resource("A")])
+    load(env, "ResourceGroup", [resource("A")])
     with Session(eng) as s:
         pull = queue.enqueue(s, TYPE_PULL, "Veri çekme", user, {"entities": []})
-        job = engine.enqueue(s, "Resource", engine.SCOPE_TABLE, engine.TRIGGER_BULK, None, user, pull)
+        job = engine.enqueue(s, "ResourceGroup", engine.SCOPE_TABLE, engine.TRIGGER_BULK, None, user, pull)
     with Session(eng) as s:
         assert engine.maybe_start_cross(s, pull) is None  # çekim sürüyor
         s.execute(sa.text("UPDATE adm.Job SET Status = N'Bitti' WHERE Id = :j"), {"j": pull})
@@ -187,8 +187,8 @@ def test_bulk_cross_job_starts_after_pull_and_all_tables(env):
 
 def test_new_batch_drops_findings_of_rows_that_left(env):
     _, _, eng = env
-    load(env, "Resource", [resource("A", IsEmployee=1)])
+    load(env, "ResourceGroup", [resource("A", IsEmployee=1)])
     run_validations(eng)
-    assert findings(eng, "Resource")
-    load(env, "Resource", [resource("B")])  # A güncel hâlden çıkar
-    assert not [f for f in findings(eng, "Resource") if f[2] == "ORM-01 · A"]
+    assert findings(eng, "ResourceGroup")
+    load(env, "ResourceGroup", [resource("B")])  # A güncel hâlden çıkar
+    assert not [f for f in findings(eng, "ResourceGroup") if f[2] == "ORM-01 · A"]

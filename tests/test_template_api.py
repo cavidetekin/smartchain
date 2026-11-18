@@ -24,7 +24,7 @@ def clean(engine):
         c.execute(text(f"DROP TRIGGER IF EXISTS {TRIGGER}"))
         ids = [r[0] for r in c.execute(text("SELECT Id FROM adm.AppUser WHERE UserName LIKE :p"), {"p": PREFIX + "%"})]
         c.execute(text("DELETE FROM adm.AuditLog WHERE ObjectType = N'Template' OR ObjectType = N'data-entities'"))
-        c.execute(text("UPDATE adm.FieldDefinition SET Label = NULL WHERE TableName = N'Resource' AND FieldName IN (N'AdditionalNumber1', N'Name')"))
+        c.execute(text("UPDATE adm.FieldDefinition SET Label = NULL WHERE TableName = N'ResourceGroup' AND FieldName IN (N'AdditionalNumber1', N'Name')"))
         c.execute(text("DELETE FROM adm.SystemEvent WHERE Component = N'Denetim izi'"))
         delete_users(c, ids)
 
@@ -43,12 +43,12 @@ def client():
     return TestClient(create_app(), raise_server_exceptions=False)
 
 
-def sheet(response, name="Kaynak"):
+def sheet(response, name="Kaynak grubu"):
     return load_workbook(io.BytesIO(response.content))[name]
 
 
 @pytest.mark.parametrize("role, allowed", [(SYSTEM_OWNER, True), (ADMIN, True), (KEY_USER, True), (END_USER, False)])
-@pytest.mark.parametrize("url", ["/api/templates/Resource", "/api/templates/Resource/info", "/api/data-entities/columns"])
+@pytest.mark.parametrize("url", ["/api/templates/ResourceGroup", "/api/templates/ResourceGroup/info", "/api/data-entities/columns"])
 def test_roles(client, people, role, allowed, url):
     assert client.get(url, headers=auth(people[role])).status_code == (200 if allowed else 403)
 
@@ -61,26 +61,26 @@ def test_unknown_entity(client, people, url):
 
 def test_download_writes_trace_and_info_does_not(db_engine, client, people):
     h = auth(people[KEY_USER])
-    assert client.get("/api/templates/Resource/info", headers=h).status_code == 200
+    assert client.get("/api/templates/ResourceGroup/info", headers=h).status_code == 200
     with db_engine.connect() as c:
         assert c.execute(text("SELECT COUNT(*) FROM adm.AuditLog WHERE ObjectType = N'Template'")).scalar_one() == 0
 
-    r = client.get("/api/templates/Resource", headers=h)
-    assert r.status_code == 200 and "smartchain_kaynak_v3.xlsx" in r.headers["content-disposition"]
-    assert [c.value for c in sheet(r)[1]] == [f.name for f in contract.fields("Resource")]
+    r = client.get("/api/templates/ResourceGroup", headers=h)
+    assert r.status_code == 200 and "smartchain_kaynak-grubu_v3.xlsx" in r.headers["content-disposition"]
+    assert [c.value for c in sheet(r)[1]] == [f.name for f in contract.fields("ResourceGroup")]
 
     with db_engine.connect() as c:
         row = c.execute(text("SELECT TOP 1 Id, Action, UserId, ObjectKey FROM adm.AuditLog WHERE ObjectType = N'Template' ORDER BY Id DESC")).one()
-    assert (row.Action, row.UserId, row.ObjectKey) == ("Şablon indirme", people[KEY_USER], "smartchain_kaynak_v3.xlsx")
+    assert (row.Action, row.UserId, row.ObjectKey) == ("Şablon indirme", people[KEY_USER], "smartchain_kaynak-grubu_v3.xlsx")
     seen = client.get(f"/api/audit-log/{row.Id}", headers=auth(people[ADMIN])).json()
     assert seen["object_type"] == "Şablon"
-    assert {c["field"]: c["new"] for c in seen["changes"]} == {"Tablo": "Kaynak", "Sürüm": "3", "Alan sayısı": "17"}
+    assert {c["field"]: c["new"] for c in seen["changes"]} == {"Tablo": "Kaynak grubu", "Sürüm": "3", "Alan sayısı": "14"}
 
 
 def test_no_file_without_trace(db_engine, client, people):
     with db_engine.begin() as c:
         c.execute(text(f"CREATE TRIGGER {TRIGGER} ON adm.AuditLog INSTEAD OF INSERT AS THROW 50001, 'iz yazılamıyor', 1;"))
-    r = client.get("/api/templates/Resource", headers=auth(people[KEY_USER]))
+    r = client.get("/api/templates/ResourceGroup", headers=auth(people[KEY_USER]))
     assert r.status_code == 503 and r.json()["error"]["code"] == "audit_failed" and not r.content.startswith(b"PK")
     with db_engine.connect() as c:
         assert c.execute(text("SELECT Message FROM adm.SystemEvent WHERE Component = N'Denetim izi'")).scalars().all() == ["Denetim kaydı yazılamadı · Şablon indirme"]
@@ -88,24 +88,24 @@ def test_no_file_without_trace(db_engine, client, people):
 
 def test_labels_from_dictionary_version_stays(db_engine, client, people):
     with db_engine.begin() as c:
-        c.execute(text("UPDATE adm.FieldDefinition SET Label = N'Birim ağırlık' WHERE TableName = N'Resource' AND FieldName = N'AdditionalNumber1'"))
-        c.execute(text("UPDATE adm.FieldDefinition SET Label = N'Tezgâh adı' WHERE TableName = N'Resource' AND FieldName = N'Name'"))
+        c.execute(text("UPDATE adm.FieldDefinition SET Label = N'Birim ağırlık' WHERE TableName = N'ResourceGroup' AND FieldName = N'AdditionalNumber1'"))
+        c.execute(text("UPDATE adm.FieldDefinition SET Label = N'Tezgâh adı' WHERE TableName = N'ResourceGroup' AND FieldName = N'Name'"))
     h = auth(people[KEY_USER])
-    r = client.get("/api/templates/Resource", headers=h)
-    assert "smartchain_kaynak_v3.xlsx" in r.headers["content-disposition"]
+    r = client.get("/api/templates/ResourceGroup", headers=h)
+    assert "smartchain_kaynak-grubu_v3.xlsx" in r.headers["content-disposition"]
     assert "AdditionalNumber1" in [c.value for c in sheet(r)[1]]
     labels = {row[0]: row[1] for row in sheet(r, "Açıklama").iter_rows(min_row=3, values_only=True)}
     assert labels["AdditionalNumber1"] == "Birim ağırlık" and labels["Name"] == "Tezgâh adı"
-    info = client.get("/api/templates/Resource/info", headers=h).json()
-    assert info["field_count"] == 18 and info["version"] == 3
+    info = client.get("/api/templates/ResourceGroup/info", headers=h).json()
+    assert info["field_count"] == 15 and info["version"] == 3
 
-    body = {"fields": ["Name", "FieldCount"], "filters": [{"field": "Name", "op": "equals", "value": "Kaynak"}]}
-    assert client.post("/api/data-entities/query", headers=h, json=body).json()["rows"][0]["FieldCount"] == 18
+    body = {"fields": ["Name", "FieldCount"], "filters": [{"field": "Name", "op": "equals", "value": "Kaynak grubu"}]}
+    assert client.post("/api/data-entities/query", headers=h, json=body).json()["rows"][0]["FieldCount"] == 15
 
 
 def test_info_lists_required_fields(client, people):
-    info = client.get("/api/templates/Resource/info", headers=auth(people[KEY_USER])).json()
-    assert info["required"] == ["Lokasyon kodu", "Kaynak kodu"]
+    info = client.get("/api/templates/ResourceGroup/info", headers=auth(people[KEY_USER])).json()
+    assert info["required"] == ["Lokasyon kodu", "Grup kodu"]
     assert set(info) == {"entity", "name", "version", "file_name", "field_count", "required"}
 
 
@@ -129,8 +129,11 @@ def test_entity_list_sorts_filters_and_exports(client, people):
     body = client.post("/api/data-entities/query", headers=h, json={"fields": fields, "limit": 100}).json()
     assert [r["Name"] for r in body["rows"]] == [e.name for e in contract.ENTITIES] and body["total"] == 25
     assert all(r["Entity"] for r in body["rows"])  # satır menüsü gizli kolonu da okur
-    resource = next(r for r in body["rows"] if r["Name"] == "Kaynak")
-    assert (resource["Version"], resource["FieldCount"], resource["RequiredCount"]) == (3, 17, 2)
+    group = next(r for r in body["rows"] if r["Name"] == "Kaynak grubu")
+    assert (group["Version"], group["FieldCount"], group["RequiredCount"]) == (3, 14, 2)
+    assert group["Description"] == "Kaynak grupları: tip, kritiklik, kapasite birimi"
+    resource = next(r for r in body["rows"] if r["Name"] == "Kaynak")  # K-180: kaynak v4, tip ve kapasite alanları grupta
+    assert (resource["Version"], resource["FieldCount"], resource["RequiredCount"]) == (4, 8, 2)
     assert resource["Description"] == "Makine, işçi ve fason kaynakları"
 
     sorted_rows = client.post("/api/data-entities/query", headers=h, json={"fields": fields, "limit": 100, "sort": [{"field": "FieldCount", "dir": "desc"}]}).json()["rows"]

@@ -21,15 +21,15 @@ KEY_LENGTH = 60
 
 # Ana veri ve işlem verisi ekranlarının tabloları (K-168, K-169); manuel değer yalnız bunlarda
 SCREEN_TABLES = frozenset({
-    "Material", "MaterialReference", "ProductionVersion", "BOM", "Routing", "Resource", "ResourceGroup", "ResourceGroupAssignment", "Supplier",
+    "Material", "MaterialReference", "ProductionVersion", "BOM", "Routing", "Resource", "ResourceGroup", "ResourceGroupMember", "Supplier",
     "MaterialSupplier", "Customer", "Location", "UnitOfMeasure", "UomConversion", "SalesOrderLine", "Forecast", "Project", "ProjectGroup", "Stock",
     "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "ProductionConfirmation", "PurchaseOrderLine", "EmployeeAbsence",
 })
 UNVERSIONED = frozenset({"Location", "UnitOfMeasure"})
 NOT_MANUAL_SOURCES = frozenset({"Sistem", "Ön hesap", "Yüklemede diğer tablolardan"})
 # Kaynağın Kapasite yönetimi'nde girilen alanları (7.3, K-167): ana veride salt okunur, manuel değer değil
-RESOURCE_CAPACITY = frozenset({"DailyCapacity", "Quantity", "CapacitySource", "CalendarId", "SubconPlanningType", "SubcontractorId",
-                               "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"})
+# Geçici alanlar: 7.8'de kaynaktan kalkar (K-180)
+RESOURCE_CAPACITY = frozenset({"DailyCapacity", "CalendarId", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"})
 
 KEY_REASON = "Anahtar alana manuel değer girilemez."
 RELATION_REASON = "İlişki alanına manuel değer girilemez."

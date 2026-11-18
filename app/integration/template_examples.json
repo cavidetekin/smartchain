@@ -92,7 +92,6 @@
   "OperationNo": 10,
   "SequenceNo": 1,
   "OperationName": "Son montaj",
-  "ResourceCode": "A-01",
   "ResourceGroupCode": "MONTAJ",
   "ResourceRole": "Primary",
   "Consumption": 1.181,
@@ -112,35 +111,31 @@
   "Code": "TORNA",
   "Name": "CNC torna",
   "Type": "Makine grubu",
-  "IsResourceGroup": 1,
-  "IsCompetenceGroup": 0,
-  "IsActive": 1
- },
- "Resource": {
-  "LocationCode": "ORM-01",
-  "Code": "TORNA-01",
-  "Name": "CNC torna 1",
-  "ResourceType": "Makine",
   "IsEmployee": 0,
   "IsMachine": 1,
   "IsFurnace": 0,
   "IsMold": 0,
   "IsOther": 0,
   "IsSubcontractor": 0,
-  "SubcontractorCode": "TED-07",
-  "ProductionLocation": "Hol 1",
   "IsActive": 1,
   "IsCritical": 1,
-  "RemainingOverTimeYear": 120,
-  "RemainingOverTimeMonth": 16,
-  "CapacityUnit": "SAAT"
+  "CapacityUnit": "SAAT",
+  "SubcontractorCode": "TED-07"
  },
- "ResourceGroupAssignment": {
+ "Resource": {
+  "LocationCode": "ORM-01",
+  "Code": "TORNA-01",
+  "Name": "CNC torna 1",
+  "ResourceType": "Makine",
+  "ProductionLocation": "Hol 1",
+  "IsActive": 1,
+  "RemainingOverTimeYear": 120,
+  "RemainingOverTimeMonth": 16
+ },
+ "ResourceGroupMember": {
   "LocationCode": "ORM-01",
   "ResourceGroupCode": "CG-CNC",
-  "ResourceCode": "W-001",
-  "ValidFrom": "2026-01-01",
-  "ValidTo": "2026-12-31"
+  "ResourceCode": "W-001"
  },
  "EmployeeAbsence": {
   "LocationCode": "ORM-01",
@@ -319,7 +314,6 @@
   "OperationNo": 10,
   "SequenceNo": 1,
   "OperationName": "Son montaj",
-  "ResourceCode": "A-02",
   "ResourceGroupCode": "MONTAJ",
   "ResourceRole": "Primary",
   "ResourceNumber": 1,

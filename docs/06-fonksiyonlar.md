@@ -331,24 +331,22 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | BOM.ZERO_QTY | BOM | Bileşen miktarı sıfır | Bileşen miktarı = 0 | Uyarı | Evet | Mantıksal | Evet |  |
 | BOM.PRIORITY_NO_GROUP | BOM | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Evet | Mantıksal | Evet |  |
 | BOM.SINGLE_ALTERNATIVE | BOM | Alternatif grupta tek satır | Alternatif grupta tek satır | Uyarı | Hayır | Küme | Sınıf, aktiflik |  |
-| RTG.NO_RESOURCE | Routing | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata |  | Mantıksal | Evet |  |
 | RTG.RESOURCE_NUMBER | Routing | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata |  | Mantıksal | Evet |  |
 | RTG.ZERO_CONSUMPTION | Routing | Tüketim sıfır | Kaynak tüketimi = 0 | Uyarı | Evet | Mantıksal | Evet |  |
 | RTG.PRIORITY_NO_GROUP | Routing | Alternatif önceliği var, grubu yok | Alternatif önceliği boş değil ve Alternatif grubu boş | Uyarı | Evet | Mantıksal | Evet |  |
-| RTG.NOT_MEMBER | Routing | Kaynak, kaynak grubunun üyesi değil | Kaynak, yazılan kaynak grubunun üyesi değil (K-116) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
-| RTG.GROUP_UNIT | Routing | Kaynak grubunda kapasite birimleri farklı | Yazılan kaynak grubundaki kaynakların kapasite birimi farklı (K-116) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment, Resource |
-| RTG.SUBCON_RESOURCE | Routing | Fason operasyonun kaynağı fason değil | Fason operasyon = Evet ama kaynak fason değil | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Resource |
+| RTG.SUBCON_RESOURCE | Routing | Fason operasyonun kaynak grubu fason değil | Fason operasyon = Evet ama kaynak grubu fason değil | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| RTG.NUMBER_OVER_GROUP | Routing | Kaynak adedi gruptaki kaynak sayısından büyük | Kaynak adedi > gruptaki kaynak sayısı (K-180) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupMember |
 | REF.SELF | MaterialReference | Malzeme kendisine benzetilmiş | Referans ürün = Benzetilen ürün | Hata |  | Mantıksal | Evet |  |
 | REF.CYCLE | MaterialReference | Referans zincirinde döngü | Referans zincirinde döngü | Hata |  | Küme | Sınıf, aktiflik |  |
 | REF.TIMEFACTOR | MaterialReference | Süre çarpanı sıfır ya da negatif | Süre çarpanı ≤ 0 | Hata |  | Mantıksal | Evet |  |
-| RG.NO_TYPE | ResourceGroup | Grup tipi yok | Kaynak grubu ≠ Evet ve Yetkinlik grubu ≠ Evet | Uyarı | Evet | Mantıksal | Evet |  |
-| RES.TYPE_FLAGS | Resource | Kaynak tipi tek değil | İşçi, Makine, Fırın, Kalıp, Diğer, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
-| RES.SUBCON_CONFLICT | Resource | Fason bayrağı fasoncuyla çelişiyor | Fasoncu boş ve Fason = Evet veya Fasoncu boş değil ve Fason ≠ Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| RG.TYPE_FLAGS | ResourceGroup | Grup tipi tek değil | İşçi, Makine, Fırın, Kalıp, Diğer, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| RG.SUBCON_CONFLICT | ResourceGroup | Fason bayrağı fasoncuyla çelişiyor | Fasoncu boş ve Fason = Evet veya Fasoncu boş değil ve Fason ≠ Evet | Uyarı | Evet | Mantıksal | Evet |  |
 | RES.MONTH_YEAR | Resource | Aylık kalan fazla mesai yıllıktan büyük | Aylık kalan fazla mesai (saat) > Yıllık kalan fazla mesai (saat) | Uyarı | Evet | Mantıksal | Evet |  |
-| RES.PHASE1_UNUSED | Resource | Fırın ya da kalıp Faz 1'de kullanılmaz | Fırın = Evet veya Kalıp = Evet | Bilgi |  | Mantıksal | Evet |  |
-| RGA.COMPETENCE_NOT_EMPLOYEE | ResourceGroupAssignment | Yetkinlik grubunda işçi olmayan kaynak | Yetkinlik grubuna işçi olmayan kaynak atanmış | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroup, Resource |
+| RG.PHASE1_UNUSED | ResourceGroup | Fırın ya da kalıp Faz 1'de kullanılmaz | Fırın = Evet veya Kalıp = Evet | Bilgi |  | Mantıksal | Evet |  |
+| RGM.UNIT_MISMATCH | ResourceGroupMember | Kaynağın gruplarının kapasite birimi farklı | Kaynağın üye olduğu grupların kapasite birimi farklı (K-180) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| RGM.MIXED_TYPES | ResourceGroupMember | Kaynak farklı tipte gruplara üye | Kaynağın üye olduğu grupların tip bayrakları farklı (K-180) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
 | ABS.HOURS | EmployeeAbsence | Günlük izin saati 0–24 dışında | Günlük saat ≤ 0 veya Günlük saat > 24 | Hata |  | Mantıksal | Evet |  |
-| ABS.NOT_EMPLOYEE | EmployeeAbsence | İzin kaydının kaynağı işçi değil | Kaynak işçi değil | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Resource |
+| ABS.NOT_EMPLOYEE | EmployeeAbsence | İzin kaydının kaynağı işçi değil | Kaynak hiçbir işçi grubuna üye değil | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupMember, ResourceGroup |
 | ABS.OVERLAP | EmployeeAbsence | İzinler çakışıyor | Aynı kişinin izinleri çakışıyor | Uyarı | Evet | Küme | Sınıf, aktiflik |  |
 | MS.MIN_MAX | MaterialSupplier | Minimum sipariş maksimumdan büyük | Minimum sipariş miktarı > Maksimum sipariş miktarı | Hata |  | Mantıksal | Evet |  |
 | MS.LOT | MaterialSupplier | Sipariş katı sıfır ya da negatif | Sipariş katı ≤ 0 | Hata |  | Mantıksal | Evet |  |
@@ -382,7 +380,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | WO.REWORK_NO_PARENT | WorkOrder | Yeniden işlemenin orijinal iş emri yok | Yeniden işlemede orijinal iş emri boş ve Yeniden işleme = Evet | Uyarı | Hayır | Mantıksal | Evet |  |
 | WO.CUSTOM_NO_OWNER | WorkOrder | Özel takipli iş emrinin sahibi yok | Özel takip = Evet ve Proje (ayraç) boş ve Müşteri boş ve Bağlı sipariş no (ayraç) boş | Uyarı | Evet | Mantıksal | Evet |  |
 | WOC.ISSUED | WorkOrderComponent | Çekilen gereken miktardan fazla | Çekilen miktar > Gereken miktar | Uyarı | Hayır | Mantıksal | Evet |  |
-| WOO.NO_RESOURCE | WorkOrderOperation | Kaynak ve kaynak grubu boş | Kaynak kodu boş ve Kaynak grubu boş | Hata |  | Mantıksal | Evet |  |
 | WOO.RESOURCE_NUMBER | WorkOrderOperation | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata |  | Mantıksal | Evet |  |
 | WOO.CONFIRMED | WorkOrderOperation | Teyit edilen tüketim planlanandan fazla | Teyit edilen tüketim > Planlanan tüketim | Uyarı | Hayır | Mantıksal | Evet |  |
 | PO.ZERO_OPEN | PurchaseOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Hayır | Mantıksal | Evet |  |
@@ -405,15 +402,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | BOM.REF_MATERIAL | BOM | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | BOM.REF_COMPONENT | BOM | Bileşen bulunamadı | Bileşen kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | BOM.INACTIVE_COMPONENT | BOM | Bileşen pasif | Bileşen bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material |
-| RTG.REF_RESOURCE | Routing | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
-| RTG.INACTIVE_RESOURCE | Routing | Kaynak pasif | Kaynak bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Resource |
-| RTG.REF_RESOURCE_GROUP | Routing | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| RTG.REF_RESOURCE_GROUP | Routing | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| RTG.INACTIVE_RESOURCE_GROUP | Routing | Kaynak grubu pasif | Kaynak grubu bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
 | REF.REF_MATERIAL | MaterialReference | Benzetilen ürün bulunamadı | Benzetilen ürün kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | REF.REF_REFERENCE_MATERIAL | MaterialReference | Referans ürün bulunamadı | Referans ürün kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | REF.REF_REFERENCE_VERSION | MaterialReference | Referans versiyon bulunamadı | Referans versiyon kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
-| RES.REF_SUBCONTRACTOR | Resource | Fasoncu bulunamadı | Fasoncu kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Supplier |
-| RGA.REF_RESOURCE_GROUP | ResourceGroupAssignment | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
-| RGA.REF_RESOURCE | ResourceGroupAssignment | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
+| RG.REF_SUBCONTRACTOR | ResourceGroup | Fasoncu bulunamadı | Fasoncu kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Supplier |
+| RGM.REF_RESOURCE_GROUP | ResourceGroupMember | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| RGM.REF_RESOURCE | ResourceGroupMember | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
 | ABS.REF_RESOURCE | EmployeeAbsence | Kaynak bulunamadı | Kaynak kodu Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
 | MS.REF_MATERIAL | MaterialSupplier | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | MS.REF_SUPPLIER | MaterialSupplier | Tedarikçi bulunamadı | Tedarikçi kodu Tedarikçi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Supplier |
@@ -446,8 +442,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | WOC.REF_WORK_ORDER | WorkOrderComponent | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | WOC.REF_MATERIAL | WorkOrderComponent | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | WOO.REF_WORK_ORDER | WorkOrderOperation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| WOO.REF_RESOURCE | WorkOrderOperation | Kaynak bulunamadı | Kaynak kodu dolu ve Kaynak tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Resource |
-| WOO.REF_RESOURCE_GROUP | WorkOrderOperation | Kaynak grubu bulunamadı | Kaynak grubu kodu dolu ve Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
+| WOO.REF_RESOURCE_GROUP | WorkOrderOperation | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
 | PO.REF_MATERIAL | PurchaseOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | PO.INACTIVE_MATERIAL | PurchaseOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
 | PO.REF_SUPPLIER | PurchaseOrderLine | Tedarikçi bulunamadı | Tedarikçi kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Supplier |
@@ -465,9 +460,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | BOM.OPERATION_NOT_IN_ROUTE | BOM | Bileşenin operasyonu rotada yok | Operasyon no dolu ve ağacı kullanan bir versiyonun rotasında bu operasyon yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion, Routing |
 | RTG.NO_VERSION | Routing | Rota hiçbir versiyonda kullanılmıyor | Rota kodu hiçbir üretim versiyonunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
 | REF.NO_VERSION | MaterialReference | Referans ürünün aktif versiyonu yok | Referans ürün bulunuyor ve aktif (Aktif = Evet) üretim versiyonu yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material, ProductionVersion |
-| RG.NO_RESOURCE | ResourceGroup | Kaynak grubunda kaynak yok | Gruba atanmış kaynak yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupAssignment |
-| RES.UNUSED | Resource | Kaynak hiçbir rotada ve grupta yok | Kaynak hiçbir rota satırında ve kaynak grubu atamasında geçmiyor | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Routing, ResourceGroupAssignment (boş olabilir) |
-| SUP.NO_MATERIAL | Supplier | Tedarikçi hiçbir malzemeye bağlı değil | Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynağın fasoncusu değil | Bilgi |  | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Resource (boş olabilir) |
+| RG.NO_RESOURCE | ResourceGroup | Kaynak grubunda kaynak yok | Gruba üye kaynak yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupMember |
+| RES.UNUSED | Resource | Kaynak hiçbir grupta yok | Kaynak hiçbir grup eşleşmesinde geçmiyor (K-180) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupMember (boş olabilir) |
+| SUP.NO_MATERIAL | Supplier | Tedarikçi hiçbir malzemeye bağlı değil | Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynak grubunun fasoncusu değil | Bilgi |  | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, ResourceGroup (boş olabilir) |
 | SO.NOT_SELLABLE | SalesOrderLine | Malzeme satılabilir değil | Malzemenin Satılabilir alanı Evet değil | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
 | WO.NO_STRUCTURE | WorkOrder | İş emrinin versiyonu ve kendi yapısı yok | Üretim versiyonu boş ya da bulunamadı; iş emrinin bileşeni ve operasyonu yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion (boş olabilir), WorkOrderComponent (boş olabilir), WorkOrderOperation (boş olabilir) |
 | WOC.OPERATION_NOT_IN_WO | WorkOrderComponent | Bileşenin operasyonu iş emrinde yok | Operasyon no dolu, iş emrinin operasyonları var ve bu operasyon aralarında yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | WorkOrderOperation |
@@ -879,7 +874,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
 
-- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim ve vardiya Kapasite yönetimi'nde (7.5, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim Kapasite yönetimi'nde (7.8, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
+- **Karar (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.8'de kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve İş emri operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Grup eşleşmesi; Kaynak grubu → Grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
 
 #### NASIL ÇALIŞIR
 
@@ -1561,6 +1557,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **06:** Detay kartı açılınca Talep zinciri o kayıttan yukarı (nerede kullanılıyor) çıkılarak bulunur; uyarı başına en çok 1.000 yol.
 
 - **Uygulama (6.5, K-174):** uygulandı. `app/quality/` (kontrol `run.py`, talep zinciri `chain.py`, Smartchain kontrolleri `checks.py`); kurallar `core`'un `prc` biçimli izdüşümünde (`sqlkit.core_layer`), RES.REF_SUBCONTRACTOR işlenmiş staging'de iş anahtarıyla; iş tipi "Veri kalitesi" (Veri işleme kanalı, öncelik −1, kuyrukta bekleyenle birleşir) aktarımdan, manuel değerden sonra ve gün dönümünde; tablolar `adm.DataQualityWarning`, `adm.DemandChain`, `adm.DemandChainPath` (geçiş 0056, 0057). Ölçüm (202 malzeme): planlar hazırken 2,1 sn, soğukken 8,8 sn (4,3 sn sorgu derlemesi); iyileştirme Bekleyen kontroller'de.
+- **Karar (7.5, K-180):** "kapasitesi tanımsız kaynak" kontrolü aktif, en az bir aktif kritik gruba üye ve günlük kapasitesi boş kaynağa bakar (kritiklik kaynak grubundadır; kontrol 7.8'de yeniden ele alınır). Talep zinciri rota ve iş emri operasyonundan kaynak grubuna, gruptan grup eşleşmesiyle kaynağa iner. Kaynak grubuna taşınan ve yeni kurallar veri kalitesinde takiplidir: grup tipi tek değil, fason bayrağı çelişkisi, fasoncu bulunamadı, kaynağın gruplarının kapasite birimi farklı, kaynak farklı tipte gruplara üye, kaynak adedi gruptaki kaynak sayısından büyük, rotadaki kaynak grubu pasif, kaynak grubunda kaynak yok, kaynak hiçbir grupta yok.
 
 ### 20 · Veri kalitesi kontrolü · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
@@ -1673,7 +1670,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Kayıt saklanır, iz bırakır; süresi biten blokaj kendiliğinden geçersiz olur, kayıt silinmez.
 - **GIRDI**
   - LocationCode, MaterialCode, HoldType, StartDate, EndDate, Reason
-- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.11'de açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
+- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.15'te açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
 - **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motorda uygulanışı Aşama 10.
 - **Uygulama (K-126):** Henüz uygulanmadı; yalnız tanım.
 
@@ -1743,7 +1740,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
 - **22 · Parametreler:** Senaryonun planlama parametrelerini ve hedeflerini yönetmek; her senaryo parametrelerinin tamamını taşır (K-175).
 - **23 · Zaman yapısı:** Senaryonun ufkunu ve dönem dizisini tanımlamak (dönem tipi, kapsam, kapsam birimi); tarihler plan başlangıcından hesaplanır. Parametreler ekranının Zaman başlığı (K-175).
-- **24 · Kapasite parametreleri:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.5, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
+- **24 · Kapasite parametreleri:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.8, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
 - **25 · Alokasyon ve öncelik kuralı:** Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
 - **26 · Uyarı eşikleri:** Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
 - **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo açmak, yeniden adlandırmak, pasif yapmak, silmek, Baz'dan ayırmak; senaryolar arasında geçmek (K-177).
@@ -1819,7 +1816,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Model:** üretim lot kuralları (minimum lot, lot katı, maksimum lot) yalnız MILP'te uygulanır; LP'de anahtarlar pasif ve gridir, değerleri korunur. Satın alma kararı modelde süreklidir; öneri sonradan sipariş lotuna yuvarlanır (K-27).
 - **Talep:** "Plana giren talep" alt başlığında talep tipleri ayrı ayrı açılır (Kesin sipariş, Teklif, Beklemedeki sipariş, Tahmin; K-60, K-127). "En fazla gecikebilecek gün" boşsa sınırsızdır.
 - **Malzeme:** güvenlik stoğu ve stok gün kapsamı ikisi de doluysa hangisinin geçerli olacağı (K-113); tedarikçi seçim kuralı (K-118); teyit tarihi boş açık arzda istenen tarih kullanılır; tarihi geçmiş açık arz bugüne çekilir ya da plana alınmaz.
-- **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.5).
+- **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.8).
 - **Plan kararlılığı:** sabit dönem değer ve birimdir (Gün, Hafta, Ay), ekranda tek satırda. Sınırı Planlama ufku'ndaki kapsam kuralıyla hesaplanır: plan başlangıcından başlar; Hafta ve Ay'da içinde bulunulan hafta ya da ay sayıya dahildir ve periyot takvim sınırında biter; 0 sabit dönem yok demektir. Kayıtlı değerin son günü alanın altında yazılır. Ayrıca açık iş emirleri (Sabit, Yalnız öteleme önerisi, Serbest), açık satın alma siparişleri ve "Sabitlenmiş kararlar korunsun" (planlamacının sabitlediği kararlar; docs'ta eski adı "kilit").
 - **Hedefler (leksikografik, ağırlık yok):** her hedef bir satırdır; sıra sürüklenir, motor aktif hedefleri sırayla çözer. Satır: Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%; üst hedeften verilebilecek en çok ödün, 0 = katı) · Aktif. Kapalı hedef çözülmez; sırası, süresi ve payı boştur, listenin sonunda durur. Altta toplam süre: senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır, ayrı bir senaryo süre parametresi yoktur. Süre 1 ya da daha büyük tam sayı, ödün payı 0–100; en az bir hedef aktiftir.
 - **Hedef listesi ve başlangıç değerleri** (sıra tablodaki sıradır):
@@ -1838,8 +1835,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PLAN_DEVIATION | Önceki plandan sapma |  |  | Hayır |
 | OVER_TARGET_LOAD | Hedef doluluğun üstü |  |  | Hayır |
 
-- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.6'te tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
-- **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.5). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
+- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.10'da tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
+- **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.8). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
 - **Hata durumları:** geçersiz değer (liste dışı seçenek, sayı olmayan değer, sınır dışı) kaydı durdurur; bilinmeyen anahtar reddedilir.
 - **YENİDEN HESAPLANACAK ALANLAR:** kayıt hesap başlatmaz; bir sonraki plan hesabı (gece ya da çalışma) yeni değerleri okur. Veri kalitesinin tahmin ufku bir sonraki kontrolde güncellenir.
 - **Uygulama (7.1, K-175):** uygulandı. `app/params/` (katalog, servis), `GET/PUT /api/parameters`, `GET/PUT /api/parameters/objectives`; geçiş 0058 (parametre seti kalktı, Baz açıldı). Motor `ScenarioParameters` ile okur (docs/09).
@@ -1887,9 +1884,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 24 · Kapasite parametreleri
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Çalışma prensibi 1/3</sub>
 
-- Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.5, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
+- Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.8, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
 
-- **Kapsam (K-167):** Kapasite yönetimi ekranına (7.5) döner: kaynak kapasitesi (günlük kapasite, paralel adet, kapasite kaynağı, takvim ataması, fason parametreleri; alt kartta duruşlar ve kapasite profili), takvim, vardiya tanımı ve planı, verim ve hedef doluluk, kişi sayısının kapasiteye dönüşümü. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
+- **Kapsam (K-167):** Kapasite yönetimi ekranına (7.8) döner. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
+- **Karar (7.5, K-180):** vardiya kavramı kalktı: vardiya tanımı, vardiya planı, "kapasite kaynağı", paralel adet ve vardiyaya bağlı fazla mesai limiti (`OvertimeLimit`) yoktur; aşağıdaki "vardiya × dönem" anlatımı geçersizdir, ek mesai limiti 7.8'de yeniden tasarlanır. Sonraki adımın kararları: kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük kaynak grubu düzeyindedir; kapasite girişleri senaryolu ayrı tablolardadır (K-176), grup ya da kaynak için girilir; adlandırılmış takvim yerine "çalışma düzeni" (haftanın günleri: tam, yarım, çalışılmıyor) ve fabrika takvimi gelir; fason parametreleri ayrı ele alınır; hedef doluluk 7.9'da. Kaynaktaki günlük kapasite, takvim ve fason parametreleri ile takvim, duruş, kapasite profili, verim ve dönem limiti tabloları o adıma kadar geçici olarak durur. Metindeki "Parametre setleri" atfı K-175 ile geçersizdir (tek kavram senaryo).
 
 #### NASIL ÇALIŞIR
 
@@ -2147,9 +2145,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Geliştirme 7.3 (K-177)</sub>
 
 - **Baz:** silinemez, pasif yapılamaz, yeniden adlandırılamaz; "Baz'ı izler" Baz'da boştur.
-- **Kopyalama (K-176 d, i):** ayar tabloları (parametreler, hedefler, planlama ufku, öncelik ve alokasyon kuralları) tam kopyalanır; "Baz'ı izler" seçimi taşınır. Veri tablolarında (Baz + fark: tedarikçi limitleri, verim, dönem limitleri, fazla mesai limitleri; 7.5'ten itibaren kapasite tabloları) kaynak Baz ise satır kopyalanmaz (Baz'ın satırları temel veridir, yeni senaryo onları Baz'dan okur), değilse kaynağın kendi satırları kopyalanır.
+- **Kopyalama (K-176 d, i):** ayar tabloları (parametreler, hedefler, planlama ufku, öncelik ve alokasyon kuralları) tam kopyalanır; "Baz'ı izler" seçimi taşınır. Veri tablolarında (Baz + fark: tedarikçi limitleri, verim, dönem limitleri, fazla mesai limitleri; 7.8'den itibaren kapasite tabloları) kaynak Baz ise satır kopyalanmaz (Baz'ın satırları temel veridir, yeni senaryo onları Baz'dan okur), değilse kaynağın kendi satırları kopyalanır.
 - **Kayıt defteri:** senaryo kimliği taşıyan her tablo türüyle (Ayar ya da Veri) `app/params/scenario_tables.py`'dedir; kopyalama, silme ve ayırma bu listeyi dolaşır. Yeni tablo açan adım tablosunu buraya ekler; test modeldeki bütün senaryo tablolarının listede olduğunu doğrular.
-- **Baz'ı izler ve Baz'dan ayır (K-176 e):** seçim senaryoda saklanır. Ayırma tek yönlüdür; yeniden bağlama yoktur. Ayırmada (ve "Baz'ı izler: Hayır" ile açılan senaryoda) her veri tablosunun "Baz'ın o anki değerlerini tam kopyala" işlevi çağrılır. Fark yapısı ve çözümleme katmanı 7.5'te geldiği için 7.3'te seçim kaydedilir ve gösterilir; işlevler 7.5'te ve sonraki adımlarda bağlanır.
+- **Baz'ı izler ve Baz'dan ayır (K-176 e):** seçim senaryoda saklanır. Ayırma tek yönlüdür; yeniden bağlama yoktur. Ayırmada (ve "Baz'ı izler: Hayır" ile açılan senaryoda) her veri tablosunun "Baz'ın o anki değerlerini tam kopyala" işlevi çağrılır. Fark yapısı ve çözümleme katmanı 7.8'de geldiği için 7.3'te seçim kaydedilir ve gösterilir; işlevler 7.8'de ve sonraki adımlarda bağlanır.
 - **Silme:** yayınlanmış planı (onaylı plan) olan senaryo silinemez, yalnız pasif yapılır. Silinen senaryoyu seçmiş kullanıcılar Baz'a düşer. Denetim izi senaryonun adını saklar; silinse de okunur.
 - **Seçili senaryo:** kullanıcı bazında hatırlanır; yeniden girişte son seçilen açılır, o senaryo pasifse ya da silindiyse Baz. Senaryoya bağlı uçlar senaryoyu istekle alır (`scenario_id`): iki sekmede iki senaryo açıkken yanlış senaryoya yazılmaz.
 - **Senaryoya bağlı ekranlar:** bugün Parametreler; sonraki adımlarda Kapasite yönetimi, Öncelik kuralları, Alokasyon, Pegging kuralları, Uyarı eşikleri, Tedarikçi limitleri, Malzeme blokajı ve plan ekranları. Geçişte bu ekranlar yeni senaryoyla baştan yüklenir; kaydedilmemiş değişiklik varsa geçiş onay ister.
@@ -2204,6 +2202,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ### 29 · Ön hesap
 <sub>24. Ekranlar ve fonksiyonlar · F29 · D Planlama motoru · Çalışma prensibi 1/3</sub>
+
+- **Karar (7.5, K-180):** plan ve yük kaynak grubu düzeyindedir (`CapacityLoad` kaynak grubu × dönem); kapasite kaynakta hesaplanır, grupta toplanır; kritik olmayan grup sonsuz kapasitelidir; birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Metindeki "kaynak" ve "vardiya" anlatımı Aşama 10'da bu modele göre yeniden yazılır.
 
 - Hesaptan önce veriyi modele hazırlamak: zaman yapısı, dönem kapasitesi, talep sırası ve LLC sırasıyla proje bazlı netleştirme.
 
@@ -2356,6 +2356,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ### 31 · Model kurma
 <sub>24. Ekranlar ve fonksiyonlar · F31 · D Planlama motoru · Çalışma prensibi 1/2</sub>
+
+- **Karar (7.5, K-180):** plan ve yük kaynak grubu düzeyindedir (`CapacityLoad` kaynak grubu × dönem); kapasite kaynakta hesaplanır, grupta toplanır; kritik olmayan grup sonsuz kapasitelidir; birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Metindeki "kaynak" ve "vardiya" anlatımı Aşama 10'da bu modele göre yeniden yazılır.
 
 - MRP iskeletinden kapasiteli optimizasyon modelini kurmak: değişkenler, kısıtlar, amaç; LP ya da MILP, çözücüden bağımsız.
 

@@ -218,20 +218,20 @@ def test_date_formula_only_empty_and_clear(env):
 @db
 def test_validation_sees_processed_value_and_records_carry_the_trace(env):
     client, people, eng = env
-    upload(env, "Resource", [resource("A"), resource("B", IsMachine=None)])
-    assert ("Resource", "RES.TYPE_FLAGS", "ORM-01 · B", "Uyarı", "Kaynağın tek bir tipi olmalı.") in findings(eng, "Resource")
-    save(env, [rule("Makine", "IsMachine", {"kind": "Değer", "value": "Evet"}, "Yalnız boşsa", entity="Resource")])
-    apply(env, "Resource")
-    assert not [f for f in findings(eng, "Resource") if f[1] == "RES.TYPE_FLAGS"]  # kural sonrası bulgu kalkar
+    upload(env, "ResourceGroup", [resource("A"), resource("B", IsMachine=None)])
+    assert ("ResourceGroup", "RG.TYPE_FLAGS", "ORM-01 · B", "Uyarı", "Kaynak grubunun tek bir tipi olmalı.") in findings(eng, "ResourceGroup")
+    save(env, [rule("Makine", "IsMachine", {"kind": "Değer", "value": "Evet"}, "Yalnız boşsa", entity="ResourceGroup")])
+    apply(env, "ResourceGroup")
+    assert not [f for f in findings(eng, "ResourceGroup") if f[1] == "RG.TYPE_FLAGS"]  # kural sonrası bulgu kalkar
 
 
 @db
 def test_records_list_returns_rule_effects(env):
     client, people, eng = env
-    upload(env, "Resource", [resource("A", CapacityUnit=None, IsMachine=None)])
-    save(env, [rule("Makine", "IsMachine", {"kind": "Değer", "value": "1"}, entity="Resource")])
-    apply(env, "Resource")
-    recs = client.post("/api/validation-records-Resource/query", json={"filters": [], "offset": 0, "limit": 5, "fields": ["Code"]},
+    upload(env, "ResourceGroup", [resource("A", CapacityUnit=None, IsMachine=None)])
+    save(env, [rule("Makine", "IsMachine", {"kind": "Değer", "value": "1"}, entity="ResourceGroup")])
+    apply(env, "ResourceGroup")
+    recs = client.post("/api/validation-records-ResourceGroup/query", json={"filters": [], "offset": 0, "limit": 5, "fields": ["Code"]},
                        headers=auth(people[KEY_USER])).json()["rows"]
     assert recs and recs[0]["RuleEffects"].split("\x1f") == ["IsMachine", "1", "Makine", ""]
 
@@ -275,8 +275,8 @@ def test_fields_mark_key_fields_as_not_target(env):
 def test_apply_all_tables_runs_cross_validation_last(env):
     client, people, eng = env
     upload(env, "Material", [material("A")])
-    upload(env, "Resource", [resource("R")])
-    save(env, [rule("M", "MinLot", {"kind": "Değer", "value": "1"}), rule("R", "IsCritical", {"kind": "Değer", "value": "1"}, entity="Resource")])
+    upload(env, "ResourceGroup", [resource("R")])
+    save(env, [rule("M", "MinLot", {"kind": "Değer", "value": "1"}), rule("R", "IsCritical", {"kind": "Değer", "value": "1"}, entity="ResourceGroup")])
     jobs = apply(env, None)
     assert len(jobs) == 2
     with eng.connect() as c:
@@ -355,10 +355,10 @@ def test_run_state_is_always_filled(env):
 def test_inactive_rows_skip_validation(env):
     """K-145: IsActive = Hayır olan satır hiçbir validasyon kuralına girmez; IsActive boşsa zorunlu alan bulgusu yazılır."""
     _, _, eng = env
-    upload(env, "Resource", [resource("A"), resource("P", IsActive=0, CapacityUnit=None, IsMachine=None), resource("N", IsActive=None)])
-    found = {(f[1], f[2]) for f in findings(eng, "Resource")}
+    upload(env, "ResourceGroup", [resource("A"), resource("P", IsActive=0, CapacityUnit=None, IsMachine=None), resource("N", IsActive=None)])
+    found = {(f[1], f[2]) for f in findings(eng, "ResourceGroup")}
     assert not any((key or "").endswith(" · P") for _, key in found)  # pasif satır: zorunlu alan ve tip bulgusu yok
     assert ("STR.REQUIRED", "ORM-01 · N") in found  # IsActive boş: zorunlu alan
-    save(env, [rule("Pasif yap", "IsActive", {"kind": "Değer", "value": "0"}, groups=[[{"field": "Code", "operator": "=", "value": "N"}]], entity="Resource")])
-    apply(env, "Resource")
-    assert not any((key or "").endswith(" · N") for _, key in {(f[1], f[2]) for f in findings(eng, "Resource")})  # kural kapsam dışı bıraktı
+    save(env, [rule("Pasif yap", "IsActive", {"kind": "Değer", "value": "0"}, groups=[[{"field": "Code", "operator": "=", "value": "N"}]], entity="ResourceGroup")])
+    apply(env, "ResourceGroup")
+    assert not any((key or "").endswith(" · N") for _, key in {(f[1], f[2]) for f in findings(eng, "ResourceGroup")})  # kural kapsam dışı bıraktı

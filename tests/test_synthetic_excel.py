@@ -97,7 +97,7 @@ def test_work_order_files(written):
     header, data = read(out, "WorkOrderComponent")
     assert not {"RequiredQty", "IssuedQty"} & set(header) and {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["UnitUsage"] and r["SequenceNo"] and r["Uom"] is None for r in data)
     header, data = read(out, "WorkOrderOperation")
-    assert not {"OpNo", "SeqNo"} & set(header) and {r["IsCompleted"] for r in data} == {0} and {r["ResourceRole"] for r in data} == {"Primary"} and all(r["ResourceCode"] or r["ResourceGroupCode"] for r in data)
+    assert not {"OpNo", "SeqNo"} & set(header) and {r["IsCompleted"] for r in data} == {0} and {r["ResourceRole"] for r in data} == {"Primary"} and all(r["ResourceGroupCode"] for r in data) and "ResourceCode" not in header  # K-180
 
 
 def test_stock_file(written):
@@ -146,30 +146,36 @@ def test_supplier_files(written):
 
 
 def test_resource_side_files(written):
-    """K-117: kalkan tablo dosyası yok; kapasite alanı dosyada yok; yeni dosyalar dolu."""
+    """K-117, K-180: kalkan tablo dosyası yok; kaynak dosyasında tip bayrağı, kritik, birim ve fasoncu yok (grup dosyasında); grup eşleşmesi tarihsiz."""
     _, out, _ = written
-    for gone in ("Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence"):
+    for gone in ("Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence", "ResourceGroupAssignment", "Shift", "ShiftPlan"):
         assert not (out / f"{gone}.xlsx").exists()
     header, data = read(out, "Resource")
-    assert {r["CapacityUnit"] for r in data} == {"SAAT"} and not {"ResourceGroupCode", "ResourceRole", "DailyCapacity", "Quantity", "CapacitySource", "SubconPlanningType", "SupplierCode", "IsConstrained"} & set(header)
-    assert sum(1 for r in data if r["IsEmployee"] == 1) == 25 and {r["SubcontractorCode"] for r in data if r["IsSubcontractor"] == 1} == {"TED-07", "TED-08"}
-    _, groups = read(out, "ResourceGroup")
-    assert {r["Code"] for r in groups if r["IsCompetenceGroup"] == 1} == {"CG-CNC", "CG-MON", "CG-KAL"}
-    _, assignments = read(out, "ResourceGroupAssignment")
-    assert {"LocationCode", "ResourceGroupCode", "ResourceCode"} <= set(assignments[0]) and any(r["ResourceGroupCode"] == "CG-MON" for r in assignments)
+    assert header[:8] == ["LocationCode", "Code", "Name", "ResourceType", "IsActive", "ProductionLocation", "RemainingOverTimeYear", "RemainingOverTimeMonth"]
+    assert not {"CapacityUnit", "IsEmployee", "IsCritical", "SubcontractorCode", "ResourceGroupCode", "ResourceRole", "DailyCapacity", "Quantity", "CapacitySource",
+                "SubconPlanningType", "SupplierCode", "IsConstrained"} & set(header)
+    assert sum(1 for r in data if r["ResourceType"] == "İşçi") == 25 and len(data) == 41
+    header, groups = read(out, "ResourceGroup")
+    assert {r["CapacityUnit"] for r in groups} == {"SAAT"} and not {"IsResourceGroup", "IsCompetenceGroup"} & set(header)
+    assert {r["Code"] for r in groups if r["IsEmployee"] == 1} == {"CG-CNC", "CG-MON", "CG-KAL"}
+    assert {r["Code"]: r["SubcontractorCode"] for r in groups if r["IsSubcontractor"] == 1} == {"F-ISIL": "TED-07", "F-KAPLA": "TED-08"}
+    assert {r["Code"] for r in groups if r["IsCritical"] == 0} == {"F-ISIL", "F-KAPLA"}
+    header, assignments = read(out, "ResourceGroupMember")
+    assert header[:3] == ["LocationCode", "ResourceGroupCode", "ResourceCode"] and not {"ValidFrom", "ValidTo"} & set(header)
+    assert any(r["ResourceGroupCode"] == "CG-MON" for r in assignments) and {r["ResourceCode"] for r in assignments} == {r["Code"] for r in data}
     _, absences = read(out, "EmployeeAbsence")
     assert {r["AbsenceType"] for r in absences} == {"İzin", "Rapor"} and [r["HoursPerDay"] for r in absences if r["ResourceCode"] == "W-021"] == [4]
 
 
 def test_routing_file(written):
-    """K-116: işçilik ayrı satır, kaynak grubu dolu; eski alanlar yok."""
+    """K-116, K-180: işçilik ayrı satır; kaynak alanı yok, kaynak grubu her satırda dolu; eski alanlar yok."""
     _, out, _ = written
     header, data = read(out, "Routing")
     assert not {"OpNo", "SeqNo", "TransferLotQty", "LaborType", "LaborRefCode", "LaborBasis", "CrewSize", "LaborTime"} & set(header)
     labor = [r for r in data if r["ResourceRole"] == "Secondary"]
-    assert labor and all(r["ResourceCode"] is None and r["ResourceGroupCode"] == d.LABOR_GROUP and r["ResourceNumber"] == 2 and r["SequenceNo"] == 2 for r in labor)
-    assert all(r["ResourceCode"] or r["ResourceGroupCode"] for r in data) and {r["LocationCode"] for r in data} == {d.LOCATION_CODE}
-    assert all(r["ResourceCode"] and not r["ResourceGroupCode"] for r in data if r["ResourceRole"] == "Primary")
+    assert labor and all(r["ResourceGroupCode"] == d.LABOR_GROUP and r["ResourceNumber"] == 2 and r["SequenceNo"] == 2 for r in labor)
+    assert "ResourceCode" not in header and all(r["ResourceGroupCode"] for r in data) and {r["LocationCode"] for r in data} == {d.LOCATION_CODE}
+    assert {r["ResourceGroupCode"] for r in data if r["ResourceRole"] == "Primary"} <= {"TORNA", "ISL3", "ISL5", "TASLAMA", "MONTAJ", "KALITE", "F-ISIL", "F-KAPLA"}
 
 
 def test_bom_file(written):
@@ -221,7 +227,7 @@ def test_same_layout_as_template(written):
     wb = load_workbook(out / "Resource.xlsx")
     assert wb.sheetnames == ["Kaynak", "Açıklama", "_Surum"] and wb["_Surum"].sheet_state == "hidden"
     info = dict(wb["_Surum"].iter_rows(values_only=True))
-    assert info["Tablo"] == "Resource" and info["Sürüm"] == 3 and info["Set"] == d.SET_NAME and info["Tohum"] == ds.seed
+    assert info["Tablo"] == "Resource" and info["Sürüm"] == 4 and info["Set"] == d.SET_NAME and info["Tohum"] == ds.seed
     assert FIRST_DATA_ROW == 2 and manifest["first_data_row"] == 2 and info["İlk veri satırı"] == 2
     ws = wb["Kaynak"]
     assert not ws.data_validations.dataValidation and ws.freeze_panes == "A2"

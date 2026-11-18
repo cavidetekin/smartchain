@@ -139,6 +139,9 @@ def people(db_engine):
 
 @pytest.fixture
 def api(db_engine, people):
+    with db_engine.begin() as c:  # sentetik yeniden yüklemelerden birikmiş artık: silinmiş veri versiyonunun "Kapandı" satırları sayfayı doldurmasın
+        c.execute(sa.text("DELETE FROM adm.FieldChange WHERE TableName = N'Customer' AND ChangeType = N'Kapandı' "
+                          "AND DataVersionId NOT IN (SELECT Id FROM adm.DataVersion)"))
     client = TestClient(create_app(), raise_server_exceptions=False)
     yield client
     with db_engine.begin() as c:  # artık kalmasın: testin manuel değeri ve geçmiş satırları

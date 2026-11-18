@@ -12,7 +12,7 @@ HEADER = "| TABLO | ALAN | EBEVEYN | EBEVEYN ANAHTARI | İLİŞKİ | PASİF EBEV
 UNIT_FIELDS = {"BaseUom", "FromUom", "ToUom", "ComponentUom", "Uom", "CapacityUnit"}  # referans kontrolüne girmez (K-112)
 IN_KEY = {("UomConversion", "MaterialCode"), ("Forecast", "CustomerCode"), ("Forecast", "ProjectCode"), ("Stock", "ProjectCode"),
           ("Stock", "CustomerCode"), ("Stock", "SalesOrderNo")}  # anahtarın parçası olan isteğe bağlı bağlantı (K-153)
-EITHER_ONE = {("Routing", "ResourceCode"), ("Routing", "ResourceGroupCode"), ("WorkOrderOperation", "ResourceCode"), ("WorkOrderOperation", "ResourceGroupCode")}
+EITHER_ONE: set = set()  # "kaynak ya da kaynak grubu" istisnası kalktı: rota ve iş emri operasyonunda kaynak grubu zorunlu (K-180)
 
 
 def docs_map() -> list[tuple]:
@@ -49,21 +49,29 @@ def test_fields_exist_and_parent_key_is_part_of_the_parent_key():
 
 
 def test_required_follows_the_contract():
-    """Zorunlu: sözleşmede alan zorunlu (ZOR. E). Zorunlu (doluysa): rota ve iş emri operasyonunda kaynak ve kaynak grubu (biri dolu olmalı) ve
-    kaydın anahtarının parçası olan bağlantı (boş yazılsaydı anahtar değişirdi, K-153); doluysa ve yoksa Hata. Öteki isteğe bağlı."""
+    """Zorunlu: sözleşmede alan zorunlu (ZOR. E); rota ve iş emri operasyonunun kaynak grubu da böyle (K-180). Zorunlu (doluysa): kaydın
+    anahtarının parçası olan bağlantı (boş yazılsaydı anahtar değişirdi, K-153); doluysa ve yoksa Hata. Öteki isteğe bağlı."""
     for r in refs.REFERENCES:
         required = {f.name: f.required for f in contract_fields(r.child)}[r.fields[0]]
         in_key = r.fields[0] in key_fields(r.child)
         expected = refs.REQUIRED if required else refs.REQUIRED_IF_FILLED if (r.child, r.fields[0]) in EITHER_ONE or in_key else refs.OPTIONAL
         assert r.kind == expected, (r.child, r.fields[0], r.kind)
     assert {(r.child, r.fields[0]) for r in refs.REFERENCES if r.kind == refs.REQUIRED_IF_FILLED} == EITHER_ONE | IN_KEY
+    by_field = {(r.child, r.fields[0]): r for r in refs.REFERENCES}
+    assert by_field[("Routing", "ResourceGroupCode")].kind == by_field[("WorkOrderOperation", "ResourceGroupCode")].kind == refs.REQUIRED
+    assert ("Routing", "ResourceCode") not in by_field and ("WorkOrderOperation", "ResourceCode") not in by_field      # kaynak alanı yok
+    assert by_field[("ResourceGroup", "SubcontractorCode")].kind == refs.OPTIONAL and ("Resource", "SubcontractorCode") not in by_field
+    assert {r.child for r in refs.REFERENCES if r.prefix == "RGM"} == {"ResourceGroupMember"}
 
 
 def test_required_if_filled_is_an_error_only_when_filled():
-    """Kaynağı boşaltılarak yüklenen operasyon kapasite tüketmez: doluysa ve yoksa Hata; boşsa referans kuralı çalışmaz (K-116 kuralı ayrı)."""
+    """Anahtarın parçası olan isteğe bağlı bağlantı: doluysa ve yoksa Hata; boşsa referans kuralı çalışmaz. Rota ve iş emri operasyonunun kaynak
+    grubu zorunlu alandır: kuralı koşulsuzdur (K-180)."""
     by_key = cat.by_key()
-    codes = [(child, f"{prefix}.REF_{key}") for child, prefix in (("Routing", "RTG"), ("WorkOrderOperation", "WOO")) for key in ("RESOURCE", "RESOURCE_GROUP")]
-    codes += [("UomConversion", "UOM.REF_MATERIAL"), ("Forecast", "FC.REF_CUSTOMER"), ("Forecast", "FC.REF_PROJECT"), ("Stock", "STK.REF_PROJECT"),
+    for key in (("Routing", "RTG.REF_RESOURCE_GROUP"), ("WorkOrderOperation", "WOO.REF_RESOURCE_GROUP")):
+        assert by_key[key].severity == cat.ERROR and " dolu ve " not in by_key[key].condition
+    assert ("Routing", "RTG.REF_RESOURCE") not in by_key and ("WorkOrderOperation", "WOO.REF_RESOURCE") not in by_key
+    codes = [("UomConversion", "UOM.REF_MATERIAL"), ("Forecast", "FC.REF_CUSTOMER"), ("Forecast", "FC.REF_PROJECT"), ("Stock", "STK.REF_PROJECT"),
               ("Stock", "STK.REF_CUSTOMER"), ("Stock", "STK.REF_SALES_ORDER")]  # anahtarın parçası: boş yazılsaydı anahtar değişirdi (K-153)
     for key in codes:
         rule = by_key[key]
@@ -99,7 +107,7 @@ def test_inactive_classes_as_decided():
     assert found == {
         ("SalesOrderLine", "MaterialCode"): "Uyarı", ("SalesOrderLine", "CustomerCode"): "Uyarı", ("Forecast", "MaterialCode"): "Uyarı",
         ("WorkOrder", "MaterialCode"): "Uyarı", ("PurchaseOrderLine", "MaterialCode"): "Uyarı", ("PurchaseOrderLine", "SupplierCode"): "Uyarı",
-        ("BOM", "ComponentMaterialCode"): "Uyarı", ("Routing", "ResourceCode"): "Uyarı", ("MaterialSupplier", "SupplierCode"): "Uyarı",
+        ("BOM", "ComponentMaterialCode"): "Uyarı", ("Routing", "ResourceGroupCode"): "Uyarı", ("MaterialSupplier", "SupplierCode"): "Uyarı",
         ("Stock", "MaterialCode"): "Bilgi", ("ProductionVersion", "MaterialCode"): "Bilgi",
     }
 

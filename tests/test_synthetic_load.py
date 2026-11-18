@@ -70,11 +70,11 @@ def test_load_writes_every_table(db_engine, ds, loaded):
         assert len(lent) == 1 and lent[0][0] == loaded["location_id"] and lent[0][1].startswith(f"{d.LOCATION_CODE}|MAM-006|PRJ-01|PRJ-02|")  # K-119
         ms = c.execute(text("SELECT MIN(LocationId), MIN(BusinessKey), MAX(QuotaRatio) FROM core.MaterialSupplier WHERE VersionFrom = :v"), {"v": v}).one()
         assert ms[0] == loaded["location_id"] and ms[1].startswith(f"{d.LOCATION_CODE}|") and float(ms[2]) == 0.7  # K-118; ikinci tedarikçi %30, birinci %70 (MS.QUOTA_SUM, K-137)
-        people = c.execute(text("SELECT COUNT(*), SUM(CAST(IsEmployee AS int)) FROM core.Resource WHERE VersionFrom = :v"), {"v": v}).one()
+        people = c.execute(text("SELECT COUNT(*), SUM(CASE WHEN ResourceType = N'İşçi' THEN 1 ELSE 0 END) FROM core.Resource WHERE VersionFrom = :v"), {"v": v}).one()
         assert tuple(people) == (41, 25)  # K-117: işçiler kaynak; 6.5: T-05 (K-174)
-        links = c.execute(text("SELECT COUNT(*) FROM core.ResourceGroupAssignment WHERE VersionFrom = :v"), {"v": v}).scalar()
+        links = c.execute(text("SELECT COUNT(*) FROM core.ResourceGroupMember WHERE VersionFrom = :v"), {"v": v}).scalar()
         assert links >= 25 + 13 and c.execute(text("SELECT COUNT(*) FROM core.EmployeeAbsence WHERE VersionFrom = :v"), {"v": v}).scalar() == 3
-        labor = c.execute(text("SELECT COUNT(*), MIN(ResourceNumber) FROM core.Routing WHERE VersionFrom = :v AND ResourceId IS NULL AND ResourceGroupId IS NOT NULL AND ResourceRole = N'Secondary'"), {"v": v}).one()
+        labor = c.execute(text("SELECT COUNT(*), MIN(ResourceNumber) FROM core.Routing WHERE VersionFrom = :v AND ResourceGroupId IS NOT NULL AND ResourceRole = N'Secondary'"), {"v": v}).one()
         assert labor[0] > 0 and labor[1] == 2  # K-116: işçilik ayrı satır
         bom = c.execute(text("SELECT MIN(LocationId), MIN(BusinessKey), COUNT(*) FROM core.BOM b WHERE VersionFrom = :v AND EXISTS "
                              "(SELECT 1 FROM core.ProductionVersion p WHERE p.VersionFrom = :v AND p.MaterialId = b.MaterialId AND p.BOMCode = b.Code)"), {"v": v}).one()

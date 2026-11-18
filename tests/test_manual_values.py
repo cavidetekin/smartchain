@@ -27,7 +27,7 @@ from validation_helpers import clean
 @pytest.mark.parametrize("table, field, reason", [
     ("Material", "Name", None), ("Material", "MaterialGroup", None), ("Material", "SafetyStock", None), ("UnitOfMeasure", "Decimals", None),
     ("Material", "Code", KEY_REASON), ("Routing", "RouteCode", KEY_REASON), ("SalesOrderLine", "OrderNo", KEY_REASON),
-    ("BOM", "ComponentMaterialId", KEY_REASON), ("SalesOrderLine", "CustomerId", RELATION_REASON), ("Routing", "ResourceId", RELATION_REASON), ("ProductionVersion", "BOMCode", RELATION_REASON),
+    ("BOM", "ComponentMaterialId", KEY_REASON), ("SalesOrderLine", "CustomerId", RELATION_REASON), ("Routing", "ResourceGroupId", RELATION_REASON), ("ProductionVersion", "BOMCode", RELATION_REASON),
     ("Material", "Id", SYSTEM_REASON), ("Material", "UpdatedAt", SYSTEM_REASON), ("WorkOrderComponent", "RemainingQuantity", SYSTEM_REASON),
     ("Material", "IsActive", ACTIVE_REASON), ("Resource", "DailyCapacity", CAPACITY_REASON), ("Calendar", "Name", TABLE_REASON),
 ])

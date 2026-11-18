@@ -116,7 +116,7 @@ Durum renkleri yalnız durum gösterir; her zaman bir yazı, değer ya da ikonla
 
 - Her hücrede değer yazar (U-3); renk yalnız vurgudur.
 - Eşik, ekranda yazan yuvarlanmış değere uygulanır: %100,4 "%100" yazar ve risk rengindedir.
-- **Eşikler parametredir:** `occupancyLevel(değer, eşikler)` ve doluluk bileşenleri eşikleri alır. Varsayılan `{ low: 40, normal: 70, risk: 90, over: 100 }`. Eşikler müşteriye göre değişir; 7.9'te uyarı eşikleri ekranından (WarningDefinition, fonksiyon 26) gelir.
+- **Eşikler parametredir:** `occupancyLevel(değer, eşikler)` ve doluluk bileşenleri eşikleri alır. Varsayılan `{ low: 40, normal: 70, risk: 90, over: 100 }`. Eşikler müşteriye göre değişir; 7.13'te uyarı eşikleri ekranından (WarningDefinition, fonksiyon 26) gelir.
 - Lejant metinleri eşiklerden üretilir.
 
 ### Grafik serileri (U-5)
