@@ -255,7 +255,12 @@
   border-bottom: 1px solid var(--line); }
 .sc-pivot-grid thead th { position: sticky; z-index: 2; background: var(--table-head-bg); color: var(--table-head-text); font-weight: var(--fw-medium);
   text-align: center; border-right: 1px solid var(--table-head-border); border-bottom-color: var(--table-head-border); }
-.sc-pivot-grid thead th.sc-pivot-value { text-align: right; font-weight: var(--fw-regular, 400); }
+.sc-pivot-grid thead th.sc-pivot-value { height: 3.2308rem; text-align: right; font-weight: var(--fw-regular, 400); line-height: 1.25; }
+.sc-pivot-grid thead th.sc-pivot-value > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-pivot-grid thead th.sc-pivot-value > .sc-pivot-value-top { font-weight: var(--fw-medium); }
+.sc-pivot-grid thead th.sc-pivot-value > .sc-pivot-calc { color: var(--text-muted); font-size: var(--fs-sm); }
+/* En dıştaki sütun grubunun solunda ince dikey ayraç (başlıkta ve hücrelerde); sağdaki "Toplam" grubu da ayrılır */
+.sc-pivot-grid .is-group-start { border-left: 2px solid var(--table-head-border); }
 .sc-pivot-grid thead th.is-pinned { z-index: 4; text-align: left; }
 .sc-pivot-grid tbody th { position: sticky; z-index: 1; background: var(--surface); font-weight: var(--fw-regular, 400); text-align: left; }
 .sc-pivot-grid tbody td { text-align: right; }

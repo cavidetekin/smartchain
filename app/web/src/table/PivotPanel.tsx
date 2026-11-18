@@ -5,16 +5,17 @@ import { type DragEvent, type ReactNode, useState } from "react";
 
 import { tr } from "../i18n/tr";
 import { BUCKETS, type ChartBucket } from "../ui/chart/chartModel";
-import { NumberField, Segment, SelectField } from "../ui";
+import { NumberField, Segment, SelectField, TextField } from "../ui";
 import { SwitchCell } from "./CellEditors";
 import { FieldPanel } from "./FieldPanel";
 import {
   defaultFn, fnLabel, fnsFor, isAxisField, isDate, isNumeric, nextValueId, type PivotAxis, type PivotConfig, type PivotFn, PIVOT_MAX_AXIS,
-  PIVOT_MAX_DISTINCT, PIVOT_MAX_VALUES, type PivotValue, valueLabel, valueParts,
+  PIVOT_MAX_DISTINCT, PIVOT_MAX_VALUES, type PivotValue, valueDisplay, valueLabel, valueName,
 } from "./pivotModel";
 import type { ListColumn, RelatedCatalog, RelationHeading } from "./types";
 
 const T = tr.pivot;
+const MANUAL_FIELD = "ManualState";  // "Manuel değer" kolonu satır ve sütun alanı olarak sunulmaz
 type SectionKey = "rows" | "columns" | "values" | "place" | "totals" | "sort";
 
 function Section({ id, title, count, open, onToggle, children }: { id: string; title: string; count?: number; open: boolean; onToggle(): void; children: ReactNode }) {
@@ -105,7 +106,7 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
   const picker = (list: "rows" | "columns" | "values") => adding === list && (
     <FieldPanel columns={baseColumns} visibility={{}} onToggle={() => undefined} onReset={() => undefined} relations={relations} order={usedFields}
                 loadRelated={loadRelated} label={list === "values" ? T.addValue : T.addField}
-                allowed={(c) => (list === "values" ? true : isAxisField(c) && !axisUsed.has(c.field))}
+                allowed={(c) => (list === "values" ? true : isAxisField(c) && !axisUsed.has(c.field) && c.field !== MANUAL_FIELD)}
                 pick={(c) => (list === "values" ? pickValue(c) : pickAxis(list, c))} />
   );
   const axes = (list: "rows" | "columns") => (
@@ -150,23 +151,25 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
         <ul className="sc-chart-series">
           {pivot.values.map((v) => {
             const col = byField.get(v.field ?? "");
-            const name = valueLabel(v, byField);
-            const parts = valueParts(v, byField);
+            const name = valueName(v, byField);
+            const shown = valueDisplay(v, byField);
             const isOpen = expanded === v.id;
             const fns = v.fn === "count" && !v.field ? (["count"] as PivotFn[]) : fnsFor(col);
             return (
               <li key={v.id} {...dragProps("values", v.id)}>
                 <div className="sc-chart-series-head">
                   <GripVertical className="sc-seq-grip" aria-hidden="true" />
-                  <button type="button" className="sc-chart-series-name sc-pivot-value-chip" aria-expanded={isOpen} aria-label={name} title={name}
+                  <button type="button" className="sc-chart-series-name sc-pivot-value-chip" aria-expanded={isOpen} aria-label={name} title={shown.full}
                           onClick={() => setExpanded(isOpen ? null : v.id)}>
-                    {parts.field !== null && <span>{parts.field}</span>}
-                    <span className={parts.field !== null ? "sc-pivot-calc" : undefined}>{parts.calc}</span>
+                    <span>{shown.top}</span>
+                    {shown.bottom !== null && <span className="sc-pivot-calc">{shown.bottom}</span>}
                   </button>
                   <button type="button" className="sc-tool-btn" aria-label={T.remove(name)} title={T.remove(name)} onClick={() => removeValue(v.id)}><X aria-hidden="true" /></button>
                 </div>
                 {isOpen && (
                   <div className="sc-chart-series-body">
+                    <TextField label={T.valueName} value={v.name ?? ""} maxLength={60} placeholder={valueLabel(v, byField)}
+                               onChange={(text) => setValue(v.id, { name: text ? text : null })} />
                     <SelectField label={T.calculation} value={v.fn}
                                  options={fns.map((fn) => ({ value: fn, label: fnLabel(fn, col), disabled: fn === "distinct" && v.fn !== "distinct" && distinctCount >= PIVOT_MAX_DISTINCT }))}
                                  onChange={(fn) => setValue(v.id, { fn: fn as PivotFn, weight: fn === "wavg" ? v.weight : null })} />
@@ -205,7 +208,7 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
       </Section>
       <Section title={T.sort} {...section("sort")}>
         <SelectField label={T.sortBy} value={pivot.sort.by}
-                     options={[{ value: "name", label: T.sortName }, ...pivot.values.map((v) => ({ value: v.id, label: valueLabel(v, byField) }))]}
+                     options={[{ value: "name", label: T.sortName }, ...pivot.values.map((v) => ({ value: v.id, label: valueName(v, byField) }))]}
                      onChange={(by) => onChange({ ...pivot, sort: { by, dir: by === "name" ? "asc" : "desc" } })} />
         <Segment label={T.sortDir} hideLabel value={pivot.sort.dir} onChange={(dir) => onChange({ ...pivot, sort: { ...pivot.sort, dir } })}
                  options={[{ value: "asc", label: T.asc }, { value: "desc", label: T.desc }]} />

@@ -365,6 +365,7 @@ class PivotRequest(BaseModel):
 class PivotValue(PivotValueSpec):
     """Görünümde saklanan değer: gösterim ayarıyla."""
     decimals: int | None = Field(default=None, ge=0, le=6)
+    name: str | None = Field(default=None, max_length=60)  # kullanıcının verdiği ad; boşsa "Alan · Hesaplama"
 
 
 class PivotDefinition(BaseModel):

@@ -189,6 +189,24 @@ def test_earliest_and_latest_on_date_fields(api):
     assert text.status_code == 422                                                         # metin alanında yalnız Say ve Benzersiz say
 
 
+def test_same_field_on_an_axis_and_as_a_value_with_totals_and_a_filter(api):
+    """Demo bulgusu: İstek tarihi hem sütunda (ay) hem değerde (En erken); üç toplam açık; tabloda "içermez" filtresi. Pivot çizilir."""
+    body = dict(rows=[{"field": "CustomerCode"}, {"field": "MaterialCode"}], columns=[{"field": "RequestedDate", "bucket": "month"}],
+                values=[QTY, {"id": "o", "field": "OrderNo", "fn": "distinct"}, {"id": "ilk", "field": "RequestedDate", "fn": "min"}], totals=ALL,
+                filters=[{"field": "Uom", "op": "not_contains", "value": "PALET"}])
+    out, rows = whole(api, ORDERS, **body)
+    recs = records(api, ORDERS, ["CustomerCode", "MaterialCode", "RequestedDate"], body["filters"])
+    cols = out["columns"]
+    for row in rows:
+        mine = [r["RequestedDate"] for r in recs if [r["CustomerCode"], r["MaterialCode"]][: row["level"]] == row["key"]]
+        for s, c in enumerate(cols):
+            days = mine if c["total"] else [x for x in mine if x[:7] + "-01" == c["key"][0]]
+            assert row["cells"][2][s] == (min(days) if days else None), (row["key"], c["key"])
+    assert rows[-1]["total"] and rows[-1]["cells"][2][-1] == min(r["RequestedDate"] for r in recs)
+    same_row = pivot(api, ORDERS, rows=[{"field": "CustomerCode"}], values=[{"id": "n", "field": "CustomerCode", "fn": "distinct"}], totals=ALL)
+    assert [r["cells"][0][0] for r in same_row["rows"]] == [1] * (len(same_row["rows"]) - 1) + [len(same_row["rows"]) - 1]   # satır alanı değer olarak da
+
+
 def test_mixed_units_only_on_own_quantity_fields(api):
     """Listenin kendi miktar alanında birim tek değilse hücre işaretli boş; "Say" etkilenmez; ilişkili miktar alanında denetlenmez (K-183)."""
     out = pivot(api, "/api/master-bom", rows=[{"field": "LocationCode"}], values=[{"id": "q", "field": "Quantity", "fn": "sum"}, {"id": "n", "fn": "count"}])
@@ -281,7 +299,7 @@ def test_pivot_is_saved_with_the_view_and_adapted(api, db_engine):
     plain = api.post(ORDERS + "/views", json={"name": "pytest pivot yok", "is_shared": False, "definition": base})
     definition = {"v": 1, "open": True, "rows": [{"field": "CustomerCode"}, {"field": "MaterialId/MaterialGroup"}],
                   "columns": [{"field": "RequestedDate", "bucket": "week"}],
-                  "values": [{"id": "d1", "field": "OpenQuantity", "fn": "wavg", "weight": "OrderedQuantity", "decimals": 1}, {"id": "d2", "fn": "count"}],
+                  "values": [{"id": "d1", "field": "OpenQuantity", "fn": "wavg", "weight": "OrderedQuantity", "decimals": 1}, {"id": "d2", "fn": "count", "name": "Sipariş sayısı"}],
                   "values_on": "rows", "totals": {"rows": True, "columns": False, "subtotals": True}, "sort": {"by": "d1", "dir": "desc"}}
     saved = api.post(ORDERS + "/views", json={"name": "pytest pivot", "is_shared": False, "definition": {**base, "pivot": definition}})
     assert plain.status_code == 201 and saved.status_code == 201, saved.text
@@ -291,6 +309,7 @@ def test_pivot_is_saved_with_the_view_and_adapted(api, db_engine):
     got = by_name["pytest pivot"]["definition"]["pivot"]
     assert got["rows"] == [{"field": "CustomerCode"}, {"field": "MaterialId/MaterialGroup"}] and got["values_on"] == "rows" and got["sort"] == {"by": "d1", "dir": "desc"}
     assert got["values"][0] == {"id": "d1", "field": "OpenQuantity", "fn": "wavg", "weight": "OrderedQuantity", "decimals": 1}
+    assert got["values"][1] == {"id": "d2", "fn": "count", "name": "Sipariş sayısı"}        # değerin özel adı görünümle saklanır
     assert "MaterialId/MaterialGroup" in {c["field"] for c in listed["related_columns"]}   # pivotun ilişkili alanı tanınır
     bad = api.post(ORDERS + "/views", json={"name": "pytest pivot bozuk", "is_shared": False,
                                             "definition": {**base, "pivot": {**definition, "rows": [{"field": "OpenQuantity"}]}}})

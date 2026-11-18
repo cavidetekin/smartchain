@@ -648,7 +648,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const onChartSplit = (e: ReactMouseEvent) => {
     e.preventDefault();
     const pane = rootRef.current?.querySelector<HTMLElement>(".sc-chart-pane");
-    const scroll = scrollRef.current;
+    const scroll = pivotOn ? pivotWrapRef.current : scrollRef.current;  // pivot açıkken alttaki bölme pivottur (tablo gizli)
     if (!pane || !scroll) return;
     const move = (ev: globalThis.MouseEvent) => {
       const top = pane.getBoundingClientRect().top;

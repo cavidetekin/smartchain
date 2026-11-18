@@ -21,6 +21,8 @@ export interface PivotValue {
   weight?: string | null;
   /** Gösterim ondalığı; boşsa alanın (miktarda birimin) ondalığı. */
   decimals?: number | null;
+  /** Kullanıcının verdiği ad (ör. "Sipariş sayısı"); boşsa otomatik ad. Başlıkta, panelde ve sıralama listesinde kullanılır. */
+  name?: string | null;
 }
 export interface PivotTotals { rows: boolean; columns: boolean; subtotals: boolean }
 export interface PivotSort { by: string; dir: "asc" | "desc" }
@@ -88,7 +90,8 @@ export function normalizePivot(raw: Partial<PivotConfig> | null | undefined): Pi
     v: 1, open: raw.open ?? true,
     rows: (raw.rows ?? []).map((a) => ({ field: a.field, bucket: a.bucket ?? null })),
     columns: (raw.columns ?? []).map((a) => ({ field: a.field, bucket: a.bucket ?? null })),
-    values: (raw.values ?? []).map((v) => ({ id: v.id, field: v.field ?? null, fn: v.fn ?? "sum", weight: v.weight ?? null, decimals: v.decimals ?? null })),
+    values: (raw.values ?? []).map((v) => ({ id: v.id, field: v.field ?? null, fn: v.fn ?? "sum", weight: v.weight ?? null, decimals: v.decimals ?? null,
+                                              name: v.name?.trim() ? v.name.trim() : null })),
     values_on: raw.values_on ?? "columns",
     totals: { ...base.totals, ...(raw.totals ?? {}) },
     sort: { ...base.sort, ...(raw.sort ?? {}) },
@@ -149,6 +152,18 @@ export function valueLabel(v: Pick<PivotValue, "field" | "fn" | "weight">, byFie
   const { field, calc } = valueParts(v, byField);
   return field === null ? calc : `${field} · ${calc}`;
 }
+
+/** Değerin gösterimi: iki satır. Özel ad varsa tek satır o addır (otomatik ad ipucunda); yoksa üstte alan, altta hesaplama. */
+export function valueDisplay(v: Pick<PivotValue, "field" | "fn" | "weight" | "name">, byField: Map<string, ListColumn>): { top: string; bottom: string | null; full: string } {
+  const full = valueLabel(v, byField);
+  if (v.name?.trim()) return { top: v.name.trim(), bottom: null, full };
+  const { field, calc } = valueParts(v, byField);
+  return field === null ? { top: calc, bottom: null, full } : { top: field, bottom: calc, full };
+}
+
+/** Değerin tek satırlık adı (sıralama listesi, "Değer" kolonu): özel ad ya da otomatik ad. */
+export const valueName = (v: Pick<PivotValue, "field" | "fn" | "weight" | "name">, byField: Map<string, ListColumn>): string =>
+  (v.name?.trim() ? v.name.trim() : valueLabel(v, byField));
 
 const RATIO: PivotFn[] = ["avg", "wavg"];
 

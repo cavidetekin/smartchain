@@ -369,7 +369,7 @@ Satırın bağlı olduğu **tek** kaydın alanları listeye kolon olarak ekleneb
 `POST /api/<liste>/pivot` (listenin okuma yetkisi): tablonun satırlarından çapraz özet. Filtre, satır kapsamı, veri versiyonu ve ilişkili alan birleştirmeleri liste sorgusuyla aynıdır; `chart_selection` verilirse o da uygulanır.
 
 - **İstek:** `{ filters, chart_selection?, rows: [{ field, bucket? }], columns: [{ field, bucket? }], values: [{ id, field?, fn, weight? }], totals: { rows, columns, subtotals }, sort: { by, dir }, scenario_id?, offset, limit }`.
-  - `rows` 1–3, `columns` 0–3 alan; tarih alanında `bucket` zorunludur (`day · week · month · quarter · year`; hafta başlangıcı grafikteki gibi senaryodan), başka alanda verilmez. Aynı alan iki eksende birden olamaz.
+  - `rows` 1–3, `columns` 0–3 alan; tarih alanında `bucket` zorunludur (`day · week · month · quarter · year`; hafta başlangıcı grafikteki gibi senaryodan), başka alanda verilmez. Aynı alan iki eksende birden olamaz; eksende kullanılan alan değer olarak da kullanılabilir.
   - `values` 1–8; `fn`: `sum · avg · min · max · count · distinct · wavg`. `count` alansızdır; `distinct` her alanda (en çok 3); ötekiler sayı alanında; `wavg`'de `weight` başka bir sayı alanıdır. Tarih alanında yalnız `min` ve `max` (En erken · En geç), `count` ve `distinct`: sonuç tarihtir (hücre ISO metin; `values[].type` `date` ya da `datetime`). Metin alanında yalnız `count` ve `distinct`.
   - `totals.rows`: genel toplam satırı; `totals.columns`: "Toplam" sütun grubu; `totals.subtotals`: satır ve sütun ara toplamları.
   - `sort.by`: `"name"` ya da bir değerin `id`'si; `dir`: `asc · desc`.
@@ -384,7 +384,7 @@ Satırın bağlı olduğu **tek** kaydın alanları listeye kolon olarak ekleneb
 - **Birim:** listenin kendi miktar alanında (`decimals_from_unit`) hücreye katkı veren kayıtların birimi tek değilse hücre `{ mixed: true }`; `count` ve `distinct` etkilenmez. İlişkili miktar alanında denetlenmez.
 - **Sınırlar:** yaprak sütun 200; çizilen değer sütunu (sütun × değer, toplam sütunları dahil) 400; dönem 400. Aşılırsa 422 `pivot_too_large` (mesaj nedeni ve sayıyı söyler) ya da `too_many_periods`. Satır sayısına sınır yoktur.
 - **Hatalar:** bilinmeyen alan, tipe uymayan hesaplama, eksik dönem tipi 422 `validation`.
-- **Görünüm:** görünüm tanımında `pivot`: `{ v: 1, open, rows, columns, values, values_on: "columns" | "rows", totals, sort }` (değerlerde ayrıca `decimals?`). Kaydederken bu uçla aynı doğrulama (422). Açılırken artık olmayan alan pivot tanımından atılır (`warnings`); satır alanı ya da değer kalmazsa pivot kaldırılır. `related_columns` pivotun kullandığı ilişkili alanları da kapsar.
+- **Görünüm:** görünüm tanımında `pivot`: `{ v: 1, open, rows, columns, values, values_on: "columns" | "rows", totals, sort }` (değerlerde ayrıca `decimals?` ve `name?`: kullanıcının verdiği ad, en çok 60 karakter). Kaydederken bu uçla aynı doğrulama (422). Açılırken artık olmayan alan pivot tanımından atılır (`warnings`); satır alanı ya da değer kalmazsa pivot kaldırılır. `related_columns` pivotun kullandığı ilişkili alanları da kapsar.
 - **Performans hedefi:** 50.000 satırda iki satır alanı × aylık sütun × iki değer, toplamlar açık, ilk parça ortanca 500 ms altında (`tests/test_lists_perf.py`; 7.7b'de yazılır).
 - 7.7b: hesaplanan değer (`kind: "calc"`), değerin kuralları ve `POST /api/<liste>/pivot/export`.
 

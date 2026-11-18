@@ -252,25 +252,26 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Parça | Kural |
 |---|---|
 | Giriş | ⚙ › "Pivot görünümü" (işaretli öğe). Pivot açıkken altında "Pivot ayarları" (paneli açar). Şeride simge eklenmez |
-| Yer | Tablonun yerinde pivot ızgarası; şerit, görünüm seçimi, filtre çipleri ve grafik bölmesi yerinde kalır. Grafik açıksa üstte grafik, altta pivot; grafik tablonun verisinden çizilir |
+| Yer | Tablonun yerinde pivot ızgarası; şerit, görünüm seçimi, filtre çipleri ve grafik bölmesi yerinde kalır. Grafik açıksa üstte grafik, altta pivot; aradaki tutamaç sürüklenerek yükseklik ayarlanır (tablodaki gibi); grafik tablonun verisinden çizilir |
 | Şerit | Pivot açıkken Grupla ve Alanlar kapalıdır (ipucu: "Pivot görünümünde kullanılmaz"). |
 | Veri | Sunucuda hesaplanır (`POST /api/<liste>/pivot`); tablonun filtresi ve grafik seçimiyle. Ayar değişince 250 ms sonra yeniden istenir |
 | Satırlar | 1–3 alan, sırayla. Sayı (ondalıklı) alanı satır ya da sütun olamaz |
 | Sütunlar | 0–3 alan; başlık alan sayısı kadar katlıdır. Tarih alanında dönem tipi seçilir (Gün · Hafta · Ay · Çeyrek · Yıl); etiketler grafikteki gibi ("H47 2026", "Kas 2026", "Ç4 2026") |
 | Değerler | 1–8. Hesaplama: Toplam · Ortalama · En düşük · En yüksek · Say · Benzersiz say · Ağırlıklı ortalama (ağırlık alanı seçilir). Sayı alanında varsayılan Toplam. Tarih alanında En erken · En geç · Say · Benzersiz say (varsayılan En erken; hücre tarih biçiminde). Metin alanında Say · Benzersiz say (varsayılan Benzersiz say). "Ölçü" sözcüğü kullanılmaz |
-| Etiket | "Alan · Hesaplama"; ağırlıklı ortalamada "Alan · Ağırlıklı ortalama (ağırlık alanı)"; hesaplanan değerde (7.7b) "Ad · Toplamlardan" |
+| Etiket | "Alan · Hesaplama"; ağırlıklı ortalamada "Alan · Ağırlıklı ortalama (ağırlık alanı)"; hesaplanan değerde (7.7b) "Ad · Toplamlardan". Sütun başlığında ve panel çipinde iki satır: üstte alan, altta soluk hesaplama; tam ad ipucunda. İki seviyeli ilişkili alanda kısa ad (son ilişki · alan). Değer ayarındaki "Ad" doluysa her yerde o ad yazılır (tek satır; otomatik ad ipucunda) |
 | Değerlerin yeri | Sütunlarda (her sütunun altında değerler) · Satırlarda (her satırda değerler alt alta; sütun alanı yan yana) |
 | Toplamlar | Satır toplamı (en altta "Genel toplam"), Sütun toplamı (en sağda "Toplam" grubu), Ara toplamlar (grubun sonunda "<ad> toplamı"; sütunda üst başlığın sonunda "Toplam"). Üçü de varsayılan kapalı. Toplamlar kayıtlardan hesaplanır |
 | Sıralama | Ada göre ya da bir değere göre, artan ya da azalan; her düzeyde kendi içinde |
 | Başlıkta süzme | Satır ve sütun alanının başlığındaki huni tablonun filtre penceresini açar; filtre tablonunkiyle ortaktır (çip, tablo görünümü) |
+| Sütun ayracı | En dıştaki sütun alanının her grubunun (ve sağdaki "Toplam" grubunun) solunda, başlıkta ve hücrelerde ince dikey çizgi |
 | Izgara | Başlık satırları ve soldaki satır başlıkları sabit; sütunlar yatay kayar. Satırlar sanal kaydırılır, parça parça yüklenir (satır sınırı yok). Dış satır alanının değeri grubunun ilk satırında ve ekrandaki ilk satırda yazılır |
 | Hücre | Sayılar sağa yaslı, eşit genişlikte rakam; ondalık alanın (miktarda birimin) ondalığı, ortalamalarda bir fazla, Say ve Benzersiz say ondalıksız. Kaydı olmayan hücre boş; sonuç 0 ise "0" |
 | Karışık birim | Listenin kendi miktar alanında hücrenin kayıtları tek birimde değilse hücre "—", ipucu "Birimler farklı; toplam yok". İlişkili miktar alanında denetlenmez |
 | Boş | Filtrede kayıt yoksa ızgaranın yerinde "Bu filtrede kayıt yok" |
 | Sınır | Yaprak sütun 200, çizilen değer sütunu 400, dönem 400; aşılırsa ızgaranın yerinde nedeni ("Sütun sayısı çok fazla (… / 200). Daha büyük bir dönem seçin, alan çıkarın ya da süzün.") |
-| Yükleniyor · Hata | Yükleniyor: eski pivot soluklaşır. Hata: mesaj ve "Yeniden dene" |
+| Yükleniyor · Hata | Yükleniyor: eski pivot soluklaşır. Hata: sunucunun söylediği neden (hangi alan ya da ayar geçersiz) ve "Yeniden dene" |
 | Ayar paneli | Sağda 300 px; pivot açılınca açık gelir, ✕ ile kapanır, ⚙ › "Pivot ayarları" ile açılır; açık ya da kapalı olması saklanmaz. Bölümler: Satırlar · Sütunlar · Değerler · Değerlerin yeri · Toplamlar · Sıralama. Alan çipleri tutamakla sürüklenir (kendi bölümü içinde), ✕ ile çıkar. Değer çipi iki satırdır: üstte alan, altta hesaplama; tam ad ipucunda. Dar pencerede (880 px altı) panel ızgaranın üstüne açılır |
-| Alan seçici | "+ Alan ekle" ve "+ Değer ekle": aramalı liste; tablonun alanları ve "İlişkili alanlar" ağacı (Alanlar panelindekiyle aynı bileşen). Listede önce tablonun kendi alanları, altında ilişkiler; satır ve sütun seçicisinde ondalıklı sayı alanları ve kullanılmış alanlar yoktur. İlişkili alan tabloya kolon eklenmeden pivota girer; sınır 20 alan, 8 ilişki |
+| Alan seçici | "+ Alan ekle" ve "+ Değer ekle": aramalı liste; tablonun alanları ve "İlişkili alanlar" ağacı (Alanlar panelindekiyle aynı bileşen). Listede önce tablonun kendi alanları, altında ilişkiler; satır ve sütun seçicisinde ondalıklı sayı alanları, "Manuel değer" ve o eksenlerde kullanılmış alanlar yoktur. İlişkili alan tabloya kolon eklenmeden pivota girer; sınır 20 alan, 8 ilişki |
 | Görünümle kaydetme | Pivot ayarları görünüm tanımında (`pivot`); "Kaydet" ve "Farklı kaydet" ile. Şirket Standart'ı pivot olabilir |
 | Yetki | Listenin okuma yetkisi olan herkes (End user dahil) |
 | 7.7b | Hesaplanan değer, değere koşullu biçim, Excel'e pivot şekliyle aktarım, alanın varsayılan hesaplaması |

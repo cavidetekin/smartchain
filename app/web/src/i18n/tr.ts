@@ -776,6 +776,7 @@ export const tr = {
     remove: (name: string) => `${name}: çıkar`,
     bucketOf: (name: string) => `${name}: dönem tipi`,
     calculation: "Hesaplama",
+    valueName: "Ad",
     weight: "Ağırlık alanı",
     decimals: "Ondalık",
     fn: { sum: "Toplam", avg: "Ortalama", min: "En düşük", max: "En yüksek", count: "Say", distinct: "Benzersiz say", wavg: "Ağırlıklı ortalama" },

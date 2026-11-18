@@ -13,7 +13,7 @@ import { bucketLabel } from "../ui/chart/chartOption";
 import { valueLabel as boolLabel } from "./filters";
 import {
   formatPivotCell, type PivotAxisInfo, type PivotCell, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRow,
-  valueLabel,
+  valueDisplay, valueName,
 } from "./pivotModel";
 import { listApi, type ListColumn, type ListFilter } from "./types";
 
@@ -29,15 +29,31 @@ const OVERSCAN = 10;
 
 type Key = string | number | boolean | null;
 
+/** Sunucunun reddettiği pivotun nedeni: genel mesajın yanında hangi alanın ya da ayarın geçersiz olduğu. */
+export function reasonOf(e: ApiError): string {
+  const problems = [...new Set(e.details.map((d) => (d as { problem?: string }).problem).filter((p): p is string => Boolean(p)))];
+  return problems.length ? problems.join(" · ") : e.message;
+}
+
 function keyLabel(v: Key, info: PivotAxisInfo | undefined): string {
   if (v === null || v === undefined || v === "") return T.empty;
   if (info?.bucket) return bucketLabel(String(v), info.bucket);
   return typeof v === "boolean" ? boolLabel(v) : String(v);
 }
 
+/** En dıştaki sütun alanının her grubunun (ve sağdaki "Toplam" grubunun) ilk sütunu: solunda ince dikey ayraç çizilir. */
+export function groupStarts(columns: PivotColumn[]): boolean[] {
+  return columns.map((c, i) => {
+    if (i === 0) return false;
+    const previous = columns[i - 1];
+    return c.level === 0 || previous.level === 0 || c.key[0] !== previous.key[0];
+  });
+}
+
 /** Bir başlık katının hücreleri: aynı üst değeri paylaşan sütunlar birleşir; ara toplam sütunu kendi katında başlar ve alta kadar uzanır. */
 export function headerCells(columns: PivotColumn[], level: number, depth: number, span: number, fields: PivotAxisInfo[]) {
-  const out: { label: string; colSpan: number; rowSpan: number; total: boolean; key: string }[] = [];
+  const out: { label: string; colSpan: number; rowSpan: number; total: boolean; key: string; start: boolean }[] = [];
+  const starts = groupStarts(columns);
   let i = 0;
   while (i < columns.length) {
     const c = columns[i];
@@ -45,10 +61,10 @@ export function headerCells(columns: PivotColumn[], level: number, depth: number
       let n = 1;
       while (i + n < columns.length && columns[i + n].level > level && columns[i + n].key.slice(0, level + 1).every((v, j) => v === c.key[j])) n += 1;
       const blank = c.empty && level > 0;  // verisiz dönemin alt başlığı boş
-      out.push({ label: blank ? "" : keyLabel(c.key[level], fields[level]), colSpan: n * span, rowSpan: 1, total: false, key: `${i}` });
+      out.push({ label: blank ? "" : keyLabel(c.key[level], fields[level]), colSpan: n * span, rowSpan: 1, total: false, key: `${i}`, start: starts[i] });
       i += n;
     } else {
-      if (c.level === level) out.push({ label: T.total, colSpan: span, rowSpan: depth - level, total: true, key: `${i}` });
+      if (c.level === level) out.push({ label: T.total, colSpan: span, rowSpan: depth - level, total: true, key: `${i}`, start: starts[i] });
       i += 1;
     }
   }
@@ -102,7 +118,7 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
         })
         .catch((e: unknown) => {
           if (ctrl.signal.aborted) return;
-          setError(e instanceof ApiError ? e.message : T.failed);
+          setError(e instanceof ApiError ? reasonOf(e) : T.failed);
           setShownKey(baseKey);
         });
     };
@@ -154,11 +170,15 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
   const C = data.column_fields.length;
   const leftCols = R + (valuesOnRows ? 1 : 0);
   const span = valuesOnRows ? 1 : V;
-  const labels = data.values.map((v) => valueLabel(v, byField));
+  const configured = data.values.map((v) => ({ ...v, name: pivot.values.find((x) => x.id === v.id)?.name ?? null }));
+  const labels = configured.map((v) => valueName(v, byField));
+  const shown = configured.map((v) => valueDisplay(v, byField));
+  const starts = groupStarts(data.columns);
   const overrides = data.values.map((v) => pivot.values.find((x) => x.id === v.id)?.decimals ?? null);
   const leftRem = (j: number) => j * HEAD_REM;
   // Değerler sütunlardayken hücre, değerin adı kesilmeden sığacak kadar geniştir (üst sınırla)
-  const cellRem = (k: number) => (valuesOnRows ? CELL_REM : Math.min(MAX_CELL_REM, Math.max(CELL_REM, labels[k].length * HEADER_CHAR_REM + 1.6)));
+  const cellRem = (k: number) => (valuesOnRows ? CELL_REM
+    : Math.min(MAX_CELL_REM, Math.max(CELL_REM, Math.max(shown[k].top.length, shown[k].bottom?.length ?? 0) * HEADER_CHAR_REM + 1.6)));
   const groupRem = valuesOnRows ? CELL_REM : labels.reduce((sum, _, k) => sum + cellRem(k), 0);
   const widthRem = R * HEAD_REM + (valuesOnRows ? VALUE_HEAD_REM : 0) + data.columns.length * groupRem;
   const rowAt = (d: number): PivotRow | undefined => chunks.get(Math.floor(d / chunkSize))?.[d % chunkSize];
@@ -178,7 +198,7 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
     const value: PivotCell = row.cells[k]?.[s] ?? null;
     const mixed = typeof value === "object" && value !== null && "mixed" in value;
     return (
-      <td key={`${s}-${k}`} className={`sc-num${row.total || c.total ? " is-total" : ""}${mixed ? " is-mixed" : ""}`}
+      <td key={`${s}-${k}`} className={`sc-num${row.total || c.total ? " is-total" : ""}${mixed ? " is-mixed" : ""}${starts[s] && (valuesOnRows || k === 0) ? " is-group-start" : ""}`}
           title={mixed ? tr.table.mixedUnits : undefined}>
         {formatPivotCell(value, data.values[k], overrides[k])}
       </td>
@@ -206,7 +226,7 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
                 </th>
               )}
               {headerCells(data.columns, level, C, span, data.column_fields).map((h) => (
-                <th key={h.key} scope="colgroup" colSpan={h.colSpan} rowSpan={h.rowSpan} className={`sc-pivot-col${h.total ? " is-total" : ""}`}
+                <th key={h.key} scope="colgroup" colSpan={h.colSpan} rowSpan={h.rowSpan} className={`sc-pivot-col${h.total ? " is-total" : ""}${h.start ? " is-group-start" : ""}`}
                     style={top(level)} title={h.label}>{h.label}</th>
               ))}
             </tr>
@@ -219,9 +239,13 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
             ))}
             {valuesOnRows && <th scope="col" className="sc-pivot-rowhead is-pinned is-pinned-last" style={{ left: `${leftRem(R)}rem`, ...top(C) }}>{T.value}</th>}
             {data.columns.flatMap((c, s) => (valuesOnRows
-              ? [<th key={s} className={`sc-pivot-col${c.total ? " is-total" : ""}`} style={top(C)} />]
-              : labels.map((name, k) => (
-                <th key={`${s}-${k}`} scope="col" className={`sc-pivot-col sc-pivot-value${c.total ? " is-total" : ""}`} style={top(C)} title={name}>{name}</th>
+              ? [<th key={s} className={`sc-pivot-col${c.total ? " is-total" : ""}${starts[s] ? " is-group-start" : ""}`} style={top(C)} />]
+              : shown.map((name, k) => (
+                <th key={`${s}-${k}`} scope="col" aria-label={labels[k]} title={name.full}
+                    className={`sc-pivot-col sc-pivot-value${c.total ? " is-total" : ""}${starts[s] && k === 0 ? " is-group-start" : ""}`} style={top(C)}>
+                  <span className="sc-pivot-value-top">{name.top}</span>
+                  {name.bottom !== null && <span className="sc-pivot-calc">{name.bottom}</span>}
+                </th>
               ))))}
           </tr>
         </thead>

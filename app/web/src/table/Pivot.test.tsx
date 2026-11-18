@@ -6,10 +6,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { meAs, mockApi, renderApp, type Reply } from "../test/helpers";
-import { headerCells } from "./PivotGrid";
+import { ApiError } from "../api/client";
+import { groupStarts, headerCells, reasonOf } from "./PivotGrid";
 import {
   defaultFn, emptyPivot, fitPivot, fnLabel, fnsFor, formatPivotCell, normalizePivot, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRequest,
-  type PivotValueInfo, valueLabel,
+  type PivotValueInfo, valueDisplay, valueLabel, valueName,
 } from "./pivotModel";
 import { col, useTableTestSetup } from "./testBackend";
 import type { ListColumn } from "./types";
@@ -21,6 +22,7 @@ const COLUMNS = [
   col("OrderNo", "Sipariş no", "text", "text"), col("CustomerCode", "Müşteri", "text", "list", { values_from_server: true }), col("MaterialCode", "Malzeme", "text", "list"),
   col("RequestedDate", "İstek tarihi", "date", "date"), col("OpenQuantity", "Açık miktar", "number", "number", { decimals_from_unit: true }),
   col("OrderedQuantity", "Sipariş miktarı", "number", "number", { decimals_from_unit: true }), col("Price", "Fiyat", "number", "number", { decimals: 2 }),
+  col("ManualState", "Manuel değer", "text", "list"),
 ];
 const GROUP: ListColumn = col("MaterialId/MaterialGroup", "Malzeme · Malzeme grubu", "text", "list", { default_visible: false, related: true });
 const byField = new Map([...COLUMNS, GROUP].map((c) => [c.field, c]));
@@ -153,6 +155,22 @@ describe("pivot modeli", () => {
     const fields = [{ field: "RequestedDate", type: "date" as const, bucket: "quarter" as const }, { field: "Type", type: "text" as const, bucket: null }];
     expect(headerCells(cols, 0, 2, 2, fields).map((h) => [h.label, h.colSpan, h.rowSpan])).toEqual([["Ç4 2026", 6, 1], ["Ç1 2027", 2, 1], ["Toplam", 2, 2]]);
     expect(headerCells(cols, 1, 2, 2, fields).map((h) => [h.label, h.colSpan, h.rowSpan])).toEqual([["A", 2, 1], ["B", 2, 1], ["Toplam", 2, 1], ["", 2, 1]]);
+    // dikey ayraç: en dıştaki grubun ilk sütununda ve sağdaki Toplam grubunda; grubun kendi ara toplamında yok
+    expect(groupStarts(cols)).toEqual([false, false, false, true, true]);
+    expect(headerCells(cols, 0, 2, 2, fields).map((h) => h.start)).toEqual([false, true, true]);
+  });
+
+  it("değerin gösterimi: iki satır; özel ad verilince o ad; sunucunun reddinde neden yazılır", () => {
+    expect(valueDisplay({ field: "OpenQuantity", fn: "sum" }, byField)).toEqual({ top: "Açık miktar", bottom: "Toplam", full: "Açık miktar · Toplam" });
+    expect(valueDisplay({ field: null, fn: "count" }, byField)).toEqual({ top: "Say", bottom: null, full: "Say" });
+    expect(valueDisplay({ field: "OrderNo", fn: "distinct", name: " Sipariş sayısı " }, byField))
+      .toEqual({ top: "Sipariş sayısı", bottom: null, full: "Sipariş no · Benzersiz say" });
+    expect([valueName({ field: "OrderNo", fn: "distinct", name: "Sipariş sayısı" }, byField), valueName({ field: "OrderNo", fn: "distinct" }, byField)])
+      .toEqual(["Sipariş sayısı", "Sipariş no · Benzersiz say"]);
+    expect(normalizePivot({ values: [{ id: "d1", fn: "count", name: "  " }] })!.values[0].name).toBeNull();
+    const rejected = new ApiError(422, "validation", "Girilen bilgiler geçersiz.", [{ field: "values.2.fn", problem: "Bu hesaplama yalnız sayı alanında: İstek tarihi" }]);
+    expect(reasonOf(rejected)).toBe("Bu hesaplama yalnız sayı alanında: İstek tarihi");
+    expect(reasonOf(new ApiError(422, "pivot_too_large", "Sütun sayısı çok fazla"))).toBe("Sütun sayısı çok fazla");
   });
 });
 
@@ -196,6 +214,7 @@ describe("pivot görünümü (K-183)", () => {
     const picker = within(rows).getByRole("group", { name: "Alan ekle" });
     expect(within(picker).getAllByRole("button").map((b) => b.textContent).slice(0, 4)).toEqual(["Sipariş no", "Müşteri", "Malzeme", "İstek tarihi"]);
     expect(within(picker).getAllByRole("button").slice(0, 4).every((b) => b.classList.contains("sc-table-pick"))).toBe(true);
+    expect(within(picker).queryByRole("button", { name: "Manuel değer" })).toBeNull();     // "Manuel değer" satır ve sütun alanı olmaz
     await user.click(within(picker).getByRole("button", { name: "Müşteri" }));
     const values = within(panel()).getByRole("button", { name: /^Değerler\s*\d*$/ }).closest("section")!;
     await user.click(within(values).getByRole("button", { name: "Değer ekle" }));
@@ -208,6 +227,17 @@ describe("pivot görünümü (K-183)", () => {
     await user.click(chip);
     expect(within(within(values).getByRole("combobox", { name: "Hesaplama" })).getAllByRole("option").map((o) => o.textContent))
       .toEqual(["En erken", "En geç", "Say", "Benzersiz say"]);
+    // aynı alan sütunda da kullanılır (değerde kullanılmış olması engel değil)
+    const columns = within(panel()).getByRole("button", { name: /^Sütunlar/ }).closest("section")!;
+    await user.click(within(columns).getByRole("button", { name: "Alan ekle" }));
+    await user.click(within(columns).getByRole("button", { name: "İstek tarihi" }));
+    await waitFor(() => expect(last()).toMatchObject({ columns: [{ field: "RequestedDate", bucket: "month" }], values: [{ id: "d1", fn: "min", field: "RequestedDate" }] }));
+    // değere özel ad: başlıkta, çipte ve sıralama listesinde
+    await user.type(within(values).getByRole("textbox", { name: "Ad" }), "İlk sipariş");
+    expect(await within(values).findByRole("button", { name: "İlk sipariş" })).toHaveAttribute("title", "İstek tarihi · En erken");
+    expect((await within(grid()).findAllByRole("columnheader", { name: "İlk sipariş" })).length).toBeGreaterThan(0);
+    await user.click(within(panel()).getByRole("button", { name: /^Sıralama/ }));
+    expect(within(within(panel()).getByRole("combobox", { name: "Sırala" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ada göre", "İlk sipariş"]);
   });
 
   it("alanlar ve değerler sürüklenerek sıralanır", async () => {
@@ -235,8 +265,14 @@ describe("pivot görünümü (K-183)", () => {
     await open(viewWith({ ...PIVOT, totals: { rows: true, columns: true, subtotals: true } }));
     await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A toplamı");
     expect(screen.queryByRole("complementary", { name: "Pivot ayarları" })).toBeNull();   // görünümden açılınca panel kapalı
-    const heads = within(grid()).getAllByRole("columnheader").map((h) => h.textContent);
+    const heads = within(grid()).getAllByRole("columnheader").map((h) => h.getAttribute("aria-label") ?? h.textContent);
     expect(heads).toEqual(expect.arrayContaining(["Kas 2026", "Ara 2026", "Toplam", "Açık miktar · Toplam", "Sipariş no · Benzersiz say"]));
+    // değer başlığı iki satır: üstte alan, altta hesaplama; aylar arasında dikey ayraç
+    const value = within(grid()).getAllByRole("columnheader", { name: "Açık miktar · Toplam" });
+    expect([...value[0].querySelectorAll("span")].map((x) => x.textContent)).toEqual(["Açık miktar", "Toplam"]);
+    expect(value.map((h) => h.classList.contains("is-group-start"))).toEqual([false, true, true]);
+    expect(within(grid()).getByRole("columnheader", { name: "Ara 2026" })).toHaveClass("is-group-start");
+    expect(within(grid()).getByRole("columnheader", { name: "Kas 2026" })).not.toHaveClass("is-group-start");
     expect(within(grid()).getByRole("columnheader", { name: "Kas 2026" })).toHaveAttribute("colspan", "2");
     const rows = bodyRows();
     expect(rows.map((r) => r.slice(0, 2))).toEqual([["MUS-A", "MAM-001"], ["", "MAM-002"], ["MUS-A toplamı", ""], ["MUS-B", "MAM-001"], ["MUS-B toplamı", ""], ["Genel toplam", ""]]);
