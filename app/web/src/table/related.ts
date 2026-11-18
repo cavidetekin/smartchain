@@ -29,6 +29,19 @@ export function relatedLimit(order: string[], field: string): "fields" | "joins"
   return joinPaths([...related, field]).size > MAX_RELATED_JOINS ? "joins" : null;
 }
 
+/** Tabloda gösterilen adlar (K-182): iki seviyeli ilişkili alanda kısa başlık (son ilişki ve alan), tam yol ipucunda (note). Açık kolonlardan
+ *  biriyle aynı kısa ada düşen kolonlarda tam yol kalır. Alanlar paneli ve Excel tam yolu kullanır (bu işlevden geçmez). */
+export function withDisplayLabels(columns: ListColumn[], order: string[]): ListColumn[] {
+  if (!columns.some((c) => c.short_label)) return columns;
+  const shortOf = (c: ListColumn) => c.short_label ?? c.label;
+  const open = columns.filter((c) => order.includes(c.field));
+  return columns.map((c) => {
+    if (!c.short_label) return c;
+    const clash = open.some((o) => o.field !== c.field && shortOf(o) === c.short_label);
+    return clash ? c : { ...c, label: c.short_label, note: c.note ?? c.label };
+  });
+}
+
 /** Bilinen kolonlar: tablonun kendi kolonları ve tanınan ilişkili kolonlar (tekrarsız, ilk gelen kalır). */
 export function mergeColumns(base: ListColumn[], ...more: ListColumn[][]): ListColumn[] {
   const seen = new Set(base.map((c) => c.field));

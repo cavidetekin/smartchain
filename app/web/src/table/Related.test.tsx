@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { meAs, mockApi, renderApp } from "../test/helpers";
-import { joinPaths, MAX_RELATED_FIELDS, mergeColumns, relatedLimit, relatedPath } from "./related";
+import { joinPaths, MAX_RELATED_FIELDS, mergeColumns, relatedLimit, relatedPath, withDisplayLabels } from "./related";
 import { col, useTableTestSetup } from "./testBackend";
 import type { ListColumn } from "./types";
 
@@ -17,7 +17,7 @@ const rel = (field: string, label: string, type: ListColumn["type"] = "text", ex
   col(field, label, type, type === "bool" ? "list" : type === "number" ? "number" : "text", { default_visible: false, related: true, ...extra });
 const CRITICAL = rel("ResourceGroupId/IsCritical", "Kaynak grubu · Kritik", "bool");
 const GROUP_FIELDS = [rel("ResourceGroupId/Name", "Kaynak grubu · Grup adı"), CRITICAL, rel("ResourceGroupId/CapacityUnit", "Kaynak grubu · Kapasite birimi")];
-const SUB = rel("ResourceGroupId/SubcontractorId/Name", "Kaynak grubu · Fasoncu · Tedarikçi adı");
+const SUB = rel("ResourceGroupId/SubcontractorId/Name", "Kaynak grubu · Fasoncu · Tedarikçi adı", "text", { short_label: "Fasoncu · Tedarikçi adı" });
 const STOCK = rel("ResourceId/Stock", "Kaynak · Miktar", "number", { decimals_from_unit: true });
 const CATALOG: Record<string, object> = {
   ResourceGroupId: { path: "ResourceGroupId", label: "Kaynak grubu", fields: GROUP_FIELDS,
@@ -68,6 +68,38 @@ describe("ilişkili alanların hesabı", () => {
     const eight = ["A/x", "B/x", "C/x", "D/x", "E/x", "F/x", "G/x", "H/x"];
     expect([relatedLimit(eight, "I/x"), relatedLimit(eight, "A/y"), relatedLimit(eight.slice(0, 7), "A/B/x")]).toEqual(["joins", null, null]);
     expect(mergeColumns(COLUMNS, [CRITICAL], [CRITICAL, COLUMNS[0]]).map((c) => c.field)).toEqual(["ResourceGroupCode", "ResourceCode", CRITICAL.field]);
+  });
+});
+
+describe("iki seviyeli ilişkili alanın kısa başlığı (K-182 demo kararı)", () => {
+  const other = rel("ResourceId/SubcontractorId/Name", "Kaynak · Fasoncu · Tedarikçi adı", "text", { short_label: "Fasoncu · Tedarikçi adı" });
+
+  it("kısa ad: son ilişki ve alan, tam yol ipucunda; tek seviye değişmez; çakışanlarda tam yol", () => {
+    const all = [...COLUMNS, CRITICAL, SUB, other];
+    const one = withDisplayLabels(all, ["ResourceCode", CRITICAL.field, SUB.field]);
+    expect(one.map((c) => c.label)).toEqual(["Kaynak grubu", "Kaynak", "Kaynak grubu · Kritik", "Fasoncu · Tedarikçi adı", "Kaynak · Fasoncu · Tedarikçi adı"]);
+    expect(one[3].note).toBe("Kaynak grubu · Fasoncu · Tedarikçi adı");
+    expect(one[2].note ?? null).toBeNull();
+    const both = withDisplayLabels(all, ["ResourceCode", SUB.field, other.field]);       // ikisi de açık: yalnız o kolonlarda tam yol
+    expect(both.slice(3).map((c) => c.label)).toEqual(["Kaynak grubu · Fasoncu · Tedarikçi adı", "Kaynak · Fasoncu · Tedarikçi adı"]);
+    expect(withDisplayLabels(COLUMNS, [])).toBe(COLUMNS);
+  });
+
+  it("tablo başlığı kısa, ipucu tam yol; panelde tam yol kalır", async () => {
+    const definition = { v: 1, columns: [{ field: "ResourceCode" }, { field: SUB.field }], pinned: 0, sort: [], filters: [], group_by: [] };
+    const views = { views: [{ id: 7, name: "Fasoncu", owner_user_id: 1, owner_name: "x", is_shared: false, is_owner: true,
+                              updated_at: "2026-11-19T10:00:00+00:00", definition, warnings: [] }], default_view_id: 7, related_columns: [SUB] };
+    const { user } = await open(views);
+    const header = screen.getByRole("columnheader", { name: /Fasoncu · Tedarikçi adı/ });
+    expect(header.textContent).toContain("Fasoncu · Tedarikçi adı");
+    expect(header.textContent).not.toContain("Kaynak grubu · Fasoncu");
+    expect(header.querySelector(".sc-table-sort")).toHaveAttribute("title", "Kaynak grubu · Fasoncu · Tedarikçi adı");
+    await user.click(screen.getByRole("button", { name: /Alanlar/ }));
+    const panel = screen.getByRole("dialog");
+    await user.click(within(panel).getByRole("button", { name: /^Kaynak grubu/ }));
+    await user.click(await within(panel).findByRole("button", { name: /Kaynak grubu › Fasoncu/ }));
+    const box = await within(panel).findByRole("checkbox", { name: "Tedarikçi adı" });
+    expect(box.closest("[title]")).toHaveAttribute("title", "Kaynak grubu · Fasoncu · Tedarikçi adı");
   });
 });
 

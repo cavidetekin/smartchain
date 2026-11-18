@@ -49,6 +49,9 @@ def test_relations_are_single_valued_and_from_one_place():
     assert relations.catalog(member, "ResourceGroupId/SubcontractorId/LocationId") is None        # üçüncü seviye yok
     assert relations.catalog(member, "Nope") is None and relations.resolve(member, "ResourceGroupId/Nope") is None
     assert relations.resolve(member, CRITICAL).column["label"] == "Kaynak grubu · Kritik"
+    assert "short_label" not in relations.resolve(member, CRITICAL).column                      # tek seviyede başlık değişmez
+    sub = relations.resolve(member, "ResourceGroupId/SubcontractorId/Name").column              # iki seviyede kısa başlık: son ilişki ve alan
+    assert (sub["label"], sub["short_label"]) == ("Kaynak grubu · Fasoncu · Tedarikçi adı", "Fasoncu · Tedarikçi adı")
     assert relations.headings(next(x for x in [BY_NAME["materials"]]))[0]["label"] == "Lokasyon"
 
 
@@ -225,7 +228,7 @@ def test_rules_chart_and_export_accept_related_fields(api):
         assert e.status_code == 200, e.text
         ws = load_workbook(io.BytesIO(e.content)).worksheets[0]
         header = [c.value for c in ws[1]]
-        if expected:
+        if expected:  # Excel'de tam yol
             assert header == expected and {ws.cell(row=i, column=2).value for i in range(2, ws.max_row + 1)} <= {"Evet", "Hayır"}
         else:  # bütün alanlar: tablonun kendi alanları ve açık ilişkili alan; başka ilişkili alan yok
             assert header.count("Kaynak grubu · Kritik") == 1 and sum(" · " in h for h in header) == 1 and "Kaynak" in header
@@ -264,6 +267,7 @@ def test_views_keep_related_fields_and_old_views_read_unchanged(api, db_engine, 
     related = {c["field"]: c for c in listed["related_columns"]}
     assert set(related) == {CRITICAL, "ResourceGroupId/SubcontractorId/Name", "ResourceGroupId/Name", "ResourceGroupId/Type"}
     assert related[CRITICAL]["label"] == "Kaynak grubu · Kritik" and related[CRITICAL]["type"] == "bool"
+    assert related["ResourceGroupId/SubcontractorId/Name"]["short_label"] == "Fasoncu · Tedarikçi adı"
     bad = api.post(MEMBER + "/views", json={"name": "pytest ilişkili bozuk", "is_shared": False,
                                             "definition": {**old, "columns": [{"field": "ResourceGroupId/Nope"}]}})
     assert bad.status_code == 422

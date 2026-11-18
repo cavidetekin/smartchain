@@ -46,7 +46,7 @@ import {
   type AggSpec, type ExportInfo, type ExportScope, type FormatRule, listApi, type GroupNode, type ListColumn, type ListFilter,
   MAX_RULES, type RelatedCatalog, type RelationHeading, type Row,
 } from "./types";
-import { mergeColumns } from "./related";
+import { mergeColumns, withDisplayLabels } from "./related";
 import { type DisplayItem, flatten, useGroupedQuery } from "./useGroupedQuery";
 import { type ListRequest, useListQuery } from "./useListQuery";
 import { useViews, ViewBar } from "./ViewBar";
@@ -456,7 +456,6 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const [relations, setRelations] = useState<RelationHeading[]>([]);
   const [relatedColumns, setRelatedColumns] = useState<ListColumn[]>([]);
   const addRelated = useCallback((cols: ListColumn[]) => setRelatedColumns((x) => mergeColumns(x, cols)), []);
-  const columns = useMemo(() => (baseColumns ? mergeColumns(baseColumns, relatedColumns) : null), [baseColumns, relatedColumns]);
   const catalogs = useRef(new Map<string, Promise<RelatedCatalog>>());
   const loadRelated = useCallback((path: string) => {
     const key = `${list} ${path}`;
@@ -474,6 +473,10 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const [columnsError, setColumnsError] = useState<ApiError | null>(null);
   const [columnsAttempt, setColumnsAttempt] = useState(0);
   const [state, setState] = useState<TableState | null>(null);
+  // İki seviyeli ilişkili alan tabloda kısa adıyla (başlık, çip, grafik, gruplama, kural listeleri); tam yol ipucunda
+  const orderKey = (state?.order ?? []).join(" ");
+  const columns = useMemo(() => (baseColumns ? withDisplayLabels(mergeColumns(baseColumns, relatedColumns), state?.order ?? []) : null),
+    [baseColumns, relatedColumns, orderKey]);
   const [panel, setPanel] = useState<"fields" | "group" | "rules" | null>(null);
   /** Kural penceresi; from: liste panelinden açıldıysa kapanınca panel geri açılır. */
   const [editing, setEditing] = useState<{ rule: FormatRule; isNew: boolean; from: "panel" | "menu" } | null>(null);

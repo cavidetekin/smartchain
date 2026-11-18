@@ -150,8 +150,12 @@ def _walk(defn: ListDefinition, path: tuple[str, ...], labels: Labels) -> list[R
 
 
 def _column(rels: list[Relation], name: str, base: dict) -> dict:
-    return {**base, "field": name, "label": LABEL_SEP.join([*(r.label for r in rels), base["label"]]), "default_visible": False,
-            "manual": False, "related": True}
+    """label: tam yol (panel, Excel, ipucu). short_label: iki seviyede yalnız son ilişki ve alan (tablo başlığı; K-182 demo kararı)."""
+    out = {**base, "field": name, "label": LABEL_SEP.join([*(r.label for r in rels), base["label"]]), "default_visible": False,
+           "manual": False, "related": True}
+    if len(rels) > 1:
+        out["short_label"] = LABEL_SEP.join([rels[-1].label, base["label"]])
+    return out
 
 
 def resolve(defn: ListDefinition, name: str, labels: Labels = NO_LABELS) -> Resolved | None:
