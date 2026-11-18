@@ -874,8 +874,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
 
-- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim Kapasite yönetimi'nde (7.8, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
-- **Uygulama (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Kaynak grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.8'de kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Kaynak grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve İş emri operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Kaynak grup eşleşmesi; Kaynak grubu → Kaynak grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
+- **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim Kapasite yönetimi'nde (7.9, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
+- **Uygulama (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Kaynak grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.9'da kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Kaynak grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve İş emri operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Kaynak grup eşleşmesi; Kaynak grubu → Kaynak grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
+- **İlişkili alanlar (7.6, K-182):** her tabloda, satırın bağlı olduğu kaydın alanları Alanlar panelinden kolon olarak eklenebilir (ör. Kaynak grup eşleşmesinde "Kaynak grubu · Kritik"); salt okunur, veri kopyalanmaz. Kayıt kartındaki "İlişkili kayıtlar" (K-173) ayrı özelliktir: orada çok karşılıklı ilişkiler tablo olarak açılır.
 
 #### NASIL ÇALIŞIR
 
@@ -1557,7 +1558,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **06:** Detay kartı açılınca Talep zinciri o kayıttan yukarı (nerede kullanılıyor) çıkılarak bulunur; uyarı başına en çok 1.000 yol.
 
 - **Uygulama (6.5, K-174):** uygulandı. `app/quality/` (kontrol `run.py`, talep zinciri `chain.py`, Smartchain kontrolleri `checks.py`); kurallar `core`'un `prc` biçimli izdüşümünde (`sqlkit.core_layer`), RES.REF_SUBCONTRACTOR işlenmiş staging'de iş anahtarıyla; iş tipi "Veri kalitesi" (Veri işleme kanalı, öncelik −1, kuyrukta bekleyenle birleşir) aktarımdan, manuel değerden sonra ve gün dönümünde; tablolar `adm.DataQualityWarning`, `adm.DemandChain`, `adm.DemandChainPath` (geçiş 0056, 0057). Ölçüm (202 malzeme): planlar hazırken 2,1 sn, soğukken 8,8 sn (4,3 sn sorgu derlemesi); iyileştirme Bekleyen kontroller'de.
-- **Uygulama (7.5, K-180):** "kapasitesi tanımsız kaynak" kontrolü aktif, en az bir aktif kritik gruba üye ve günlük kapasitesi boş kaynağa bakar (kritiklik kaynak grubundadır; kontrol 7.8'de yeniden ele alınır). Talep zinciri rota ve iş emri operasyonundan kaynak grubuna, gruptan grup eşleşmesiyle kaynağa iner. Kaynak grubuna taşınan ve yeni kurallar veri kalitesinde takiplidir: grup tipi tek değil, fason bayrağı çelişkisi, fasoncu bulunamadı, kaynağın gruplarının kapasite birimi farklı, kaynak farklı tipte gruplara üye, kaynak adedi gruptaki kaynak sayısından büyük, rotadaki kaynak grubu pasif, kaynak grubunda kaynak yok, kaynak hiçbir grupta yok.
+- **Uygulama (7.5, K-180):** "kapasitesi tanımsız kaynak" kontrolü aktif, en az bir aktif kritik gruba üye ve günlük kapasitesi boş kaynağa bakar (kritiklik kaynak grubundadır; kontrol 7.9'da yeniden ele alınır). Talep zinciri rota ve iş emri operasyonundan kaynak grubuna, gruptan grup eşleşmesiyle kaynağa iner. Kaynak grubuna taşınan ve yeni kurallar veri kalitesinde takiplidir: grup tipi tek değil, fason bayrağı çelişkisi, fasoncu bulunamadı, kaynağın gruplarının kapasite birimi farklı, kaynak farklı tipte gruplara üye, kaynak adedi gruptaki kaynak sayısından büyük, rotadaki kaynak grubu pasif, kaynak grubunda kaynak yok, kaynak hiçbir grupta yok.
 
 ### 20 · Veri kalitesi kontrolü · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
@@ -1665,12 +1666,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.11; K-167)
+  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.16; K-167)
 - **01:** Malzeme seçilir, blokaj türü (üretim, satın alma ya da satış), başlangıç ve bitiş tarihi ile neden girilir.
 - **02:** Kayıt saklanır, iz bırakır; süresi biten blokaj kendiliğinden geçersiz olur, kayıt silinmez.
 - **GIRDI**
   - LocationCode, MaterialCode, HoldType, StartDate, EndDate, Reason
-- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.15'te açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
+- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.16'da açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
 - **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motorda uygulanışı Aşama 10.
 - **Uygulama (K-126):** Henüz uygulanmadı; yalnız tanım.
 
@@ -1740,7 +1741,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
 - **22 · Parametreler:** Senaryonun planlama parametrelerini ve hedeflerini yönetmek; her senaryo parametrelerinin tamamını taşır (K-175).
 - **23 · Zaman yapısı:** Senaryonun ufkunu ve dönem dizisini tanımlamak (dönem tipi, kapsam, kapsam birimi); tarihler plan başlangıcından hesaplanır. Parametreler ekranının Zaman başlığı (K-175).
-- **24 · Kapasite parametreleri:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.8, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
+- **24 · Kapasite parametreleri:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.9, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
 - **25 · Alokasyon ve öncelik kuralı:** Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
 - **26 · Uyarı eşikleri:** Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
 - **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo açmak, yeniden adlandırmak, pasif yapmak, silmek, Baz'dan ayırmak; senaryolar arasında geçmek (K-177).
@@ -1756,7 +1757,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (okuma ve yazma); End user ekranı görmez
   - Nereden: Parametreler ekranı (06); ekran bağlam çubuğunda seçili senaryonun parametrelerini gösterir, ekranda ayrıca senaryo seçimi yoktur
-- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.9'te eklenir).
+- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.14'te eklenir).
 - **02:** Form başlığında solda alt başlıklar, sağda sıkı kart; değer değişince Kaydet ve Vazgeç etkinleşir (kartın altında, sağda). Tek alt başlıklı başlıkta sol menü yoktur.
 - **03:** "Kaydet" yalnız değişen parametreleri yazar; biri geçersizse hiçbiri yazılmaz, sorun alanın altında gösterilir.
 - **04:** Kaydedilmemiş değişiklikle başka alt başlığa, başlığa ya da ekrana geçilirse uyarı çıkar (K-132).
@@ -1816,7 +1817,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Model:** üretim lot kuralları (minimum lot, lot katı, maksimum lot) yalnız MILP'te uygulanır; LP'de anahtarlar pasif ve gridir, değerleri korunur. Satın alma kararı modelde süreklidir; öneri sonradan sipariş lotuna yuvarlanır (K-27).
 - **Talep:** "Plana giren talep" alt başlığında talep tipleri ayrı ayrı açılır (Kesin sipariş, Teklif, Beklemedeki sipariş, Tahmin; K-60, K-127). "En fazla gecikebilecek gün" boşsa sınırsızdır.
 - **Malzeme:** güvenlik stoğu ve stok gün kapsamı ikisi de doluysa hangisinin geçerli olacağı (K-113); tedarikçi seçim kuralı (K-118); teyit tarihi boş açık arzda istenen tarih kullanılır; tarihi geçmiş açık arz bugüne çekilir ya da plana alınmaz.
-- **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.8).
+- **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.9).
 - **Plan kararlılığı:** sabit dönem değer ve birimdir (Gün, Hafta, Ay), ekranda tek satırda. Sınırı Planlama ufku'ndaki kapsam kuralıyla hesaplanır: plan başlangıcından başlar; Hafta ve Ay'da içinde bulunulan hafta ya da ay sayıya dahildir ve periyot takvim sınırında biter; 0 sabit dönem yok demektir. Kayıtlı değerin son günü alanın altında yazılır. Ayrıca açık iş emirleri (Sabit, Yalnız öteleme önerisi, Serbest), açık satın alma siparişleri ve "Sabitlenmiş kararlar korunsun" (planlamacının sabitlediği kararlar; docs'ta eski adı "kilit").
 - **Hedefler (leksikografik, ağırlık yok):** her hedef bir satırdır; sıra sürüklenir, motor aktif hedefleri sırayla çözer. Satır: Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%; üst hedeften verilebilecek en çok ödün, 0 = katı) · Aktif. Kapalı hedef çözülmez; sırası, süresi ve payı boştur, listenin sonunda durur. Altta toplam süre: senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır, ayrı bir senaryo süre parametresi yoktur. Süre 1 ya da daha büyük tam sayı, ödün payı 0–100; en az bir hedef aktiftir.
 - **Hedef listesi ve başlangıç değerleri** (sıra tablodaki sıradır):
@@ -1835,8 +1836,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PLAN_DEVIATION | Önceki plandan sapma |  |  | Hayır |
 | OVER_TARGET_LOAD | Hedef doluluğun üstü |  |  | Hayır |
 
-- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.10'da tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
-- **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.8). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
+- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.11'de tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
+- **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.9). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
 - **Hata durumları:** geçersiz değer (liste dışı seçenek, sayı olmayan değer, sınır dışı) kaydı durdurur; bilinmeyen anahtar reddedilir.
 - **YENİDEN HESAPLANACAK ALANLAR:** kayıt hesap başlatmaz; bir sonraki plan hesabı (gece ya da çalışma) yeni değerleri okur. Veri kalitesinin tahmin ufku bir sonraki kontrolde güncellenir.
 - **Uygulama (7.1, K-175):** uygulandı. `app/params/` (katalog, servis), `GET/PUT /api/parameters`, `GET/PUT /api/parameters/objectives`; geçiş 0058 (parametre seti kalktı, Baz açıldı). Motor `ScenarioParameters` ile okur (docs/09).
@@ -1884,10 +1885,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 24 · Kapasite parametreleri
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Çalışma prensibi 1/3</sub>
 
-- Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.8, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
+- Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.9, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
 
-- **Kapsam (K-167):** Kapasite yönetimi ekranına (7.8) döner. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
-- **Uygulama (7.5, K-180):** vardiya kavramı kalktı: vardiya tanımı, vardiya planı, "kapasite kaynağı", paralel adet ve vardiyaya bağlı fazla mesai limiti (`OvertimeLimit`) yoktur; aşağıdaki "vardiya × dönem" anlatımı geçersizdir, ek mesai limiti 7.8'de yeniden tasarlanır. Sonraki adımın kararları: kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük kaynak grubu düzeyindedir; kapasite girişleri senaryolu ayrı tablolardadır (K-176), grup ya da kaynak için girilir; adlandırılmış takvim yerine "çalışma düzeni" (haftanın günleri: tam, yarım, çalışılmıyor) ve fabrika takvimi gelir; fason parametreleri ayrı ele alınır; hedef doluluk 7.9'da. Kaynaktaki günlük kapasite, takvim ve fason parametreleri ile takvim, duruş, kapasite profili, verim ve dönem limiti tabloları o adıma kadar geçici olarak durur. Metindeki "Parametre setleri" atfı K-175 ile geçersizdir (tek kavram senaryo).
+- **Kapsam (K-167):** Kapasite yönetimi ekranına (7.9) döner. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
+- **Uygulama (7.5, K-180):** vardiya kavramı kalktı: vardiya tanımı, vardiya planı, "kapasite kaynağı", paralel adet ve vardiyaya bağlı fazla mesai limiti (`OvertimeLimit`) yoktur; aşağıdaki "vardiya × dönem" anlatımı geçersizdir, ek mesai limiti 7.9'da yeniden tasarlanır. Sonraki adımın kararları: kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük kaynak grubu düzeyindedir; kapasite girişleri senaryolu ayrı tablolardadır (K-176), grup ya da kaynak için girilir; adlandırılmış takvim yerine "çalışma düzeni" (haftanın günleri: tam, yarım, çalışılmıyor) ve fabrika takvimi gelir; fason parametreleri ayrı ele alınır; hedef doluluk 7.10'da. Kaynaktaki günlük kapasite, takvim ve fason parametreleri ile takvim, duruş, kapasite profili, verim ve dönem limiti tabloları o adıma kadar geçici olarak durur. Metindeki "Parametre setleri" atfı K-175 ile geçersizdir (tek kavram senaryo).
 
 #### NASIL ÇALIŞIR
 
@@ -2145,9 +2146,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F27 · C Parametre · Geliştirme 7.3 (K-177)</sub>
 
 - **Baz:** silinemez, pasif yapılamaz, yeniden adlandırılamaz; "Baz'ı izler" Baz'da boştur.
-- **Kopyalama (K-176 d, i):** ayar tabloları (parametreler, hedefler, planlama ufku, öncelik ve alokasyon kuralları) tam kopyalanır; "Baz'ı izler" seçimi taşınır. Veri tablolarında (Baz + fark: tedarikçi limitleri, verim, dönem limitleri, fazla mesai limitleri; 7.8'den itibaren kapasite tabloları) kaynak Baz ise satır kopyalanmaz (Baz'ın satırları temel veridir, yeni senaryo onları Baz'dan okur), değilse kaynağın kendi satırları kopyalanır.
+- **Kopyalama (K-176 d, i):** ayar tabloları (parametreler, hedefler, planlama ufku, öncelik ve alokasyon kuralları) tam kopyalanır; "Baz'ı izler" seçimi taşınır. Veri tablolarında (Baz + fark: tedarikçi limitleri, verim, dönem limitleri, fazla mesai limitleri; 7.9'dan itibaren kapasite tabloları) kaynak Baz ise satır kopyalanmaz (Baz'ın satırları temel veridir, yeni senaryo onları Baz'dan okur), değilse kaynağın kendi satırları kopyalanır.
 - **Kayıt defteri:** senaryo kimliği taşıyan her tablo türüyle (Ayar ya da Veri) `app/params/scenario_tables.py`'dedir; kopyalama, silme ve ayırma bu listeyi dolaşır. Yeni tablo açan adım tablosunu buraya ekler; test modeldeki bütün senaryo tablolarının listede olduğunu doğrular.
-- **Baz'ı izler ve Baz'dan ayır (K-176 e):** seçim senaryoda saklanır. Ayırma tek yönlüdür; yeniden bağlama yoktur. Ayırmada (ve "Baz'ı izler: Hayır" ile açılan senaryoda) her veri tablosunun "Baz'ın o anki değerlerini tam kopyala" işlevi çağrılır. Fark yapısı ve çözümleme katmanı 7.8'de geldiği için 7.3'te seçim kaydedilir ve gösterilir; işlevler 7.8'de ve sonraki adımlarda bağlanır.
+- **Baz'ı izler ve Baz'dan ayır (K-176 e):** seçim senaryoda saklanır. Ayırma tek yönlüdür; yeniden bağlama yoktur. Ayırmada (ve "Baz'ı izler: Hayır" ile açılan senaryoda) her veri tablosunun "Baz'ın o anki değerlerini tam kopyala" işlevi çağrılır. Fark yapısı ve çözümleme katmanı 7.9'da geldiği için 7.3'te seçim kaydedilir ve gösterilir; işlevler 7.9'da ve sonraki adımlarda bağlanır.
 - **Silme:** yayınlanmış planı (onaylı plan) olan senaryo silinemez, yalnız pasif yapılır. Silinen senaryoyu seçmiş kullanıcılar Baz'a düşer. Denetim izi senaryonun adını saklar; silinse de okunur.
 - **Seçili senaryo:** kullanıcı bazında hatırlanır; yeniden girişte son seçilen açılır, o senaryo pasifse ya da silindiyse Baz. Senaryoya bağlı uçlar senaryoyu istekle alır (`scenario_id`): iki sekmede iki senaryo açıkken yanlış senaryoya yazılmaz.
 - **Senaryoya bağlı ekranlar:** bugün Parametreler; sonraki adımlarda Kapasite yönetimi, Öncelik kuralları, Alokasyon, Pegging kuralları, Uyarı eşikleri, Tedarikçi limitleri, Malzeme blokajı ve plan ekranları. Geçişte bu ekranlar yeni senaryoyla baştan yüklenir; kaydedilmemiş değişiklik varsa geçiş onay ister.

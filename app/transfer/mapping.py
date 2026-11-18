@@ -15,7 +15,7 @@ from app.integration.structural import key_fields
 from db.models import metadata
 
 SYSTEM = ("Id", "VersionFrom", "VersionTo", "ImportBatchId", "BusinessKey", "UpdatedAt")
-# Smartchain'de tanımlanan alanlar (K-117): yeni versiyona önceki versiyondan kopyalanır, aktarım ezmez. Geçici alanlar: 7.8'de kalkar (K-180).
+# Smartchain'de tanımlanan alanlar (K-117): yeni versiyona önceki versiyondan kopyalanır, aktarım ezmez. Geçici alanlar: 7.9'da kalkar (K-180).
 PRESERVED: dict[str, tuple[str, ...]] = {
     "Resource": ("DailyCapacity", "CalendarId", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"),
 }

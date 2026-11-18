@@ -28,7 +28,7 @@ SCREEN_TABLES = frozenset({
 UNVERSIONED = frozenset({"Location", "UnitOfMeasure"})
 NOT_MANUAL_SOURCES = frozenset({"Sistem", "Ön hesap", "Yüklemede diğer tablolardan"})
 # Kaynağın Kapasite yönetimi'nde girilen alanları (7.3, K-167): ana veride salt okunur, manuel değer değil
-# Geçici alanlar: 7.8'de kaynaktan kalkar (K-180)
+# Geçici alanlar: 7.9'da kaynaktan kalkar (K-180)
 RESOURCE_CAPACITY = frozenset({"DailyCapacity", "CalendarId", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"})
 
 KEY_REASON = "Anahtar alana manuel değer girilemez."

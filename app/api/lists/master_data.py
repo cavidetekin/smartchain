@@ -18,6 +18,7 @@ from db.models import ENTITY_CATALOG, metadata
 
 from .definition import ListDefinition
 from .materials import MATERIALS
+from .relations import REFS
 
 SYSTEM = ("VersionFrom", "VersionTo", "ImportBatchId", "BusinessKey")
 HIDDEN = ("IsActive", "UpdatedAt")  # Standart görünümde gizli (K-169)
@@ -26,26 +27,7 @@ NAMES = {row[0]: row[1] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "Birim"}
 SLUGS = {row[0]: row[4] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "birim"}
 
 
-def _code(a: sa.Alias) -> sa.ColumnElement:
-    return a.c.Code
-
-
-# İlişki kolonu → (hedef tablo, koda dönen kolonun adı, hedefte gösterilecek değer)
-REFS = {
-    "LocationId": ("Location", "LocationCode", _code), "MaterialId": ("Material", "MaterialCode", _code),
-    "ComponentMaterialId": ("Material", "ComponentMaterialCode", _code), "ReferenceMaterialId": ("Material", "ReferenceMaterialCode", _code),
-    "ReferenceProductionVersionId": ("ProductionVersion", "ReferenceProductionVersionCode", _code),
-    "ProductionVersionId": ("ProductionVersion", "ProductionVersionCode", _code),
-    "ResourceId": ("Resource", "ResourceCode", _code), "ResourceGroupId": ("ResourceGroup", "ResourceGroupCode", _code),
-    "SupplierId": ("Supplier", "SupplierCode", _code), "SubcontractorId": ("Supplier", "SubcontractorCode", _code),
-    "CalendarId": ("Calendar", "CalendarCode", _code), "ProjectGroupId": ("ProjectGroup", "ProjectGroupCode", _code),
-    "CustomerId": ("Customer", "CustomerCode", _code), "ProjectId": ("Project", "ProjectCode", _code),
-    "LendingProjectId": ("Project", "LendingProjectCode", _code), "BorrowingProjectId": ("Project", "BorrowingProjectCode", _code),
-    "WorkOrderId": ("WorkOrder", "WorkOrderCode", lambda a: a.c.WorkOrderNo),
-    "ParentWorkOrderId": ("WorkOrder", "ParentWorkOrderCode", lambda a: a.c.WorkOrderNo),
-    "SalesOrderLineId": ("SalesOrderLine", "SalesOrderLineCode",  # "sipariş no / satır no" (K-169)
-                         lambda a: sa.case((a.c.Id.is_(None), None), else_=sa.func.concat(a.c.OrderNo, " / ", sa.cast(a.c.LineNo, sa.Unicode(10))))),
-}
+# İlişkiler tek yerde: `relations.REFS` (ilişki alanı → hedef tablo; K-182). Kod kolonları ve ilişkili alanlar aynı tablodan.
 
 
 @dataclass(frozen=True)
@@ -71,7 +53,7 @@ CAPACITY_UNIT = ("ResourceGroupId", "CapacityUnit")  # tüketim kaynak grubunun 
 
 def _resource_unit(table: sa.Table) -> sa.ColumnElement:
     """Kaynağın üye olduğu grupların ortak kapasite birimi (K-180): günlük kapasitenin birimi. Grubu yoksa ya da birimler farklıysa boş
-    (ondalık varsayılana düşer). Geçici: günlük kapasite 7.8'de kaynaktan kalkar."""
+    (ondalık varsayılana düşer). Geçici: günlük kapasite 7.9'da kaynaktan kalkar."""
     m = metadata.tables["core.ResourceGroupMember"].alias("u_member")
     g = metadata.tables["core.ResourceGroup"].alias("u_group")
     return (sa.select(sa.case((sa.func.count(sa.distinct(g.c.CapacityUnit)) == 1, sa.func.min(g.c.CapacityUnit))))
@@ -141,11 +123,12 @@ def _build(spec: Spec) -> ListDefinition:
             cols.append(c)
             continue
         if c.name in REFS:
-            target, code, shown = REFS[c.name]
+            target, code, shown, _field = REFS[c.name]
             a = metadata.tables[f"core.{target}"].alias(f"r_{c.name}")
             aliases[c.name] = a
             joined = joined.outerjoin(a, sa.and_(a.c.Id == c, _current(a)))
             cols.append(shown(a).label(code))
+            cols.append(c)  # ham ilişki alanı: listede alan değildir; ilişkili alanların birleştirmesi buradan (K-182)
             labels[code] = info.get("label") or code
             fields.append(code)
             continue
@@ -196,12 +179,15 @@ def _build(spec: Spec) -> ListDefinition:
         server_values=frozenset(f for f in fields if f.endswith("Code") and f != "Code") | ({"Id"} if "Id" in table.c else set()),
         filter_only=("Id",) if "Id" in table.c else (),
         manual_table=spec.table,
+        related_table=spec.table,
     )
 
 
 MASTER_LISTS: tuple[ListDefinition, ...] = tuple(_build(s) for s in MASTER_SPECS)
 TRANSACTION_LISTS: tuple[ListDefinition, ...] = tuple(_build(s) for s in TRANSACTION_SPECS)
 BY_NAME = {d.name: d for d in (MATERIALS, *MASTER_LISTS, *TRANSACTION_LISTS)}
+BY_TABLE = {d.table_name: d for d in BY_NAME.values()}  # tablo → listesi (ilişkili alanların hedefi, K-182)
+SPEC_BY_TABLE = {s.table: s for s in (*MASTER_SPECS, *TRANSACTION_SPECS)}
 
 # Ekranların sekmeleri ve tabloları (K-168, K-169); ön yüz aynı sırayı kullanır, sayılar ucu bu tabloları sayar.
 MASTER_TABS: tuple[tuple[str, tuple[str, ...]], ...] = (

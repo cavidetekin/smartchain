@@ -362,7 +362,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
-- **Entegre edilmeyenler (K-117, K-180):** Günlük kapasite, verim, hedef doluluk, fason parametreleri, takvim, kaynak duruşları ve kapasite profili entegre edilmez; Smartchain ekranlarında tanımlanır (6.1 Kaynak sekmesi, 7.8 Kapasite yönetimi). `core`'da kalır. Vardiya kavramı, "kapasite kaynağı" ve paralel adet kalktı (K-180).
+- **Entegre edilmeyenler (K-117, K-180):** Günlük kapasite, verim, hedef doluluk, fason parametreleri, takvim, kaynak duruşları ve kapasite profili entegre edilmez; Smartchain ekranlarında tanımlanır (6.1 Kaynak sekmesi, 7.9 Kapasite yönetimi). `core`'da kalır. Vardiya kavramı, "kapasite kaynağı" ve paralel adet kalktı (K-180).
 - **Gruba taşınanlar (K-180):** tip bayrakları, `IsCritical`, `CapacityUnit` ve `SubcontractorCode` `stg.ResourceGroup`'tadır. Kaynak şablonu v4.
 
 ### stg.ResourceGroup

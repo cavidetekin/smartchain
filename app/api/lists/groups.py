@@ -32,7 +32,10 @@ class _Node:
                 continue
             self.k[f] = self.k.get(f, 0) + k
             if f in unit_fields:
-                self.units.setdefault(f, set()).add(row.get("u"))
+                if f"ua_{f}" in row:  # ilişkili miktar alanı: birim alanın kendi ölçüsünde (K-182)
+                    self.units.setdefault(f, set()).update((row[f"ua_{f}"], row[f"ub_{f}"]))
+                else:
+                    self.units.setdefault(f, set()).add(row.get("u"))
             if fn in ("sum", *RATIO):
                 self.s[f] = self.s.get(f, 0.0) + float(row[f"s_{f}"] or 0)
                 self.d[f] = self.d.get(f, 0.0) + float(row[f"d_{f}"] or 0)

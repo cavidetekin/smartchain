@@ -342,17 +342,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat) | Üretim yeri | ERP | H | H | bilinmiyor |
 | RemainingOverTimeYear | decimal(9,2) |  | Yıllık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
 | RemainingOverTimeMonth | decimal(9,2) |  | Aylık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
-| DailyCapacity | decimal(18,4) |  | Kaynağın bir çalışma günündeki kapasitesi; geçici alan (7.8'de kalkar) | Günlük kapasite | Kural ya da elle | H | H | bilinmiyor |
-| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır); geçici alan (7.8'de kalkar) | Çalışma takvimi | Kural ya da elle | H | H | bilinmiyor |
+| DailyCapacity | decimal(18,4) |  | Kaynağın bir çalışma günündeki kapasitesi; geçici alan (Kapasite yönetimi adımında kalkar) | Günlük kapasite | Kural ya da elle | H | H | bilinmiyor |
+| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır); geçici alan (Kapasite yönetimi adımında kalkar) | Çalışma takvimi | Kural ya da elle | H | H | bilinmiyor |
 | SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Fason planlama tipi | Kural ya da elle | H | H | bilinmiyor |
-| SubconFixedLeadTimeDays | decimal(9,2) |  | Fasonda sabit süre (taşıma ve kuyruk); geçici alan (7.8'de kalkar) | Fason sabit süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
-| SubconVariableDaysPerUnit | decimal(18,6) |  | Fasonda birim başına gün (fasoncunun hızı); geçici alan (7.8'de kalkar) | Fason birim süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
+| SubconFixedLeadTimeDays | decimal(9,2) |  | Fasonda sabit süre (taşıma ve kuyruk); geçici alan (Kapasite yönetimi adımında kalkar) | Fason sabit süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
+| SubconVariableDaysPerUnit | decimal(18,6) |  | Fasonda birim başına gün (fasoncunun hızı); geçici alan (Kapasite yönetimi adımında kalkar) | Fason birim süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
 | AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Kaynakta kalanlar (K-180):** lokasyon, kod, ad, ham tip (yalnız bilgi), aktif, üretim yeri, yıllık ve aylık kalan fazla mesai, ek alanlar. Tip bayrakları, `IsCritical`, `CapacityUnit` ve fasoncu kaynak grubundadır; kaynakta yoktur.
-- **Geçici alanlar (K-180):** `DailyCapacity`, `CalendarId` ve fason parametreleri (`SubconPlanningType`, `SubconFixedLeadTimeDays`, `SubconVariableDaysPerUnit`) Kapasite yönetimi adımına (7.8) kadar yerinde durur; o adımda kalkar ve kapasite girişleri `param` tarafında yeniden tasarlanır (K-176). Entegre edilmezler; aktarım yeni versiyona önceki versiyondan taşır (K-153); ana veri ekranında salt okunur (K-168), "Manuel" olamazlar (K-170). Günlük kapasitenin birimi kaynağın üye olduğu grupların ortak kapasite birimidir. Aktif olup en az bir aktif kritik gruba üye olan ve günlük kapasitesi boş kaynak veri kalitesinde uyarı verir (6.5).
+- **Geçici alanlar (K-180):** `DailyCapacity`, `CalendarId` ve fason parametreleri (`SubconPlanningType`, `SubconFixedLeadTimeDays`, `SubconVariableDaysPerUnit`) Kapasite yönetimi adımına (7.9) kadar yerinde durur; o adımda kalkar ve kapasite girişleri `param` tarafında yeniden tasarlanır (K-176). Entegre edilmezler; aktarım yeni versiyona önceki versiyondan taşır (K-153); ana veri ekranında salt okunur (K-168), "Manuel" olamazlar (K-170). Günlük kapasitenin birimi kaynağın üye olduğu grupların ortak kapasite birimidir. Aktif olup en az bir aktif kritik gruba üye olan ve günlük kapasitesi boş kaynak veri kalitesinde uyarı verir (6.5).
 - **Kalkanlar (K-180):** `CapacitySource` ("Kapasite kaynağı"; vardiya kavramıyla birlikte) ve `Quantity` (paralel adet; kaynak adedi grup eşleşmesinden bilinir).
 - **İşçi:** İşçiler kaynaktır; işçi grubu (yetkinlik grubu) `IsEmployee` bayraklı kaynak grubudur; işçinin yetkinlikleri `ResourceGroupMember`'dadır (bir işçi birden fazla gruba üye olabilir).
 
@@ -387,13 +387,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Tip:** `Type` ERP'den ham değerdir; tip bayraklarla ifade edilir (boşsa veri kuralıyla doldurulur, varsayılan yok). Yetkinlik grubu `IsEmployee` olan gruptur. `IsFurnace` ve `IsMold` yalnız sözleşmededir, Faz 1 planlamada kullanılmaz.
 - **Kritik:** Kritik olmayan grup sonsuz kapasiteli sayılır ve yalnız raporlanır. Birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Kaynağı olmayan kritik grubun kapasitesi sıfırdır (doğrulamada ve veri kalitesinde uyarı).
 - **Kapasite birimi:** ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Bir kaynağın üye olduğu grupların kapasite birimi aynı olmalıdır (doğrulamada uyarı).
-- **Kapasite (sonraki adım, 7.8):** kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük grup düzeyindedir.
+- **Kapasite (sonraki adım, 7.9):** kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük grup düzeyindedir.
 
 ### ResourceCapacityProfile
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: 7.8'de yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
+- Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
@@ -443,7 +443,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: 7.8'de yeniden tasarlanır (K-180).
+- Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
@@ -464,7 +464,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
-| ResourceGroupId | bigint | FK,UK | Kaynak grubu | Grup | ERP | H | E | hata (satır atlanır) |
+| ResourceGroupId | bigint | FK,UK | Kaynak grubu |  | ERP | H | E | hata (satır atlanır) |
 | ResourceId | bigint | FK,UK | Kaynak |  | ERP | H | E | hata (satır atlanır) |
 | AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |

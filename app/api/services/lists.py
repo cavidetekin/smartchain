@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, columns as column_list
-from ..lists.query import DEFAULT_UNIT_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
+from ..lists import relations
+from ..lists.query import DEFAULT_UNIT_DECIMALS, FIELD_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists import chart as chart_query
 from ..lists.groups import build_tree
 from ..lists.request import ChartRequest, ChartSelection, GroupsRequest, IdsRequest, PointsRequest, QueryRequest, ValuesRequest
@@ -48,14 +49,41 @@ def _run(session: Session | None, work):
         raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
 
 
-def _builder(session: Session, defn: ListDefinition, role: str | None = None, user_id: int | None = None) -> Builder:
-    """role, user_id: oturumdaki kullanıcı (row_scope); verilmezse en dar kapsam."""
+def labels_of(session: Session) -> relations.Labels:
+    """Tablo → alan etiketleri (FieldDefinition); ilişki ve hedef alan adları için, istek boyunca bir kez okunur."""
+    cache: dict[str, dict[str, str]] = {}
+
+    def read(table: str) -> dict[str, str]:
+        if table not in cache:
+            cache[table] = repo.read_labels(session, table)
+        return cache[table]
+    return read
+
+
+def _builder(session: Session, defn: ListDefinition, role: str | None = None, user_id: int | None = None, req=None) -> Builder:
+    """role, user_id: oturumdaki kullanıcı (row_scope); verilmezse en dar kapsam. req: isteğin gövdesi; içinde geçen ilişkili alanların
+    ilişkileri kaynağa birleştirilir (K-182)."""
+    related = relations.scan(req.model_dump(mode="json")) if req is not None and defn.related_table else ()
+    extra = {"related": related, "labels_of": labels_of(session)} if related else {}
     if not defn.versioned:
-        return Builder(defn, repo.read_labels(session, defn.table_name), None, today(), role, user_id)
+        return Builder(defn, repo.read_labels(session, defn.table_name), None, today(), role, user_id, **extra)
     current = data_versions.read_current(session)
     if current is None:
         raise AppError("no_data_version", "Henüz veri yüklenmedi.", 404)
-    return Builder(defn, repo.read_labels(session, defn.table_name), current["Id"], today(), role, user_id)
+    return Builder(defn, repo.read_labels(session, defn.table_name), current["Id"], today(), role, user_id, **extra)
+
+
+def _related_decimals(session: Session, b: Builder, rows: list[dict]) -> None:
+    """İlişkili miktar alanlarının ondalığı satırda (K-182): hedef kaydın biriminden; birim bilinmiyorsa 2."""
+    wanted = {f: u for f, u in b.related_units.items() if rows and u in rows[0]}
+    if not wanted:
+        return
+    units = repo.read_unit_decimals(session)
+    for r in rows:
+        r[FIELD_DECIMALS] = {f: DEFAULT_UNIT_DECIMALS if units.get(r[u]) is None else int(units[r[u]]) for f, u in wanted.items()}
+    for u in set(wanted.values()):
+        for r in rows:
+            r.pop(u, None)
 
 
 def columns(session: Session | None, defn: ListDefinition) -> dict:
@@ -64,16 +92,27 @@ def columns(session: Session | None, defn: ListDefinition) -> dict:
         return {"chunk_size": repo.read_chunk_size(session),
                 "columns": column_list(defn, repo.read_labels(session, defn.table_name),
                                        manual=frozenset(manual_fields(session, defn.manual_table)) if defn.manual_table else frozenset()),
+                "relations": relations.headings(defn, labels_of(session)),  # İlişkili alanların başlıkları (K-182)
                 "export": {"title": defn.title or defn.name, "file_slug": defn.file_slug or defn.name,
                            "sync_max_rows": limits["ExportSyncMaxRows"], "max_rows": limits["ExportMaxRows"],
                            "file_hours": limits["ExportFileHours"]}}
     return _run(session, work)
 
 
+def related(session: Session | None, defn: ListDefinition, path: str) -> dict:
+    """Bir ilişkinin alanları ve alt ilişkileri (Alanlar paneli, K-182)."""
+    def work():
+        found = relations.catalog(defn, path, labels_of(session))
+        if found is None:
+            raise AppError("not_found", "İlişki bulunamadı.", 404)
+        return found
+    return _run(session, work)
+
+
 def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role: str | None = None,
           user_id: int | None = None) -> dict:
     def work():
-        b = _builder(session, defn, role, user_id)
+        b = _builder(session, defn, role, user_id, req)
         apply_selection(session, b, req.chart_selection, user_id)
         rows_q = b.rows_query(req, repo.read_chunk_size(session))
         rules_valid = b.rule_columns(req.rules)  # doğrulama (422) satırlar okunmadan
@@ -98,6 +137,7 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role
             for r in rows:
                 d = units.get(r.pop(UNIT))
                 r[UNIT_DECIMALS] = DEFAULT_UNIT_DECIMALS if d is None else int(d)
+        _related_decimals(session, b, rows)
         total = repo.fetch_count(session, b.total_query())
         narrowed = req.filters or req.group_key or req.chart_selection
         filtered = repo.fetch_count(session, b.filtered_query(req.filters, req.group_key)) if narrowed else total
@@ -108,7 +148,7 @@ def query(session: Session | None, defn: ListDefinition, req: QueryRequest, role
 def ids(session: Session | None, defn: ListDefinition, req: IdsRequest, role: str | None = None, user_id: int | None = None) -> dict:
     """Filtredeki satırların kimlikleri (çoklu seçim, K-171), en çok SELECTION_MAX."""
     def work():
-        b = _builder(session, defn, role, user_id)
+        b = _builder(session, defn, role, user_id, req)
         apply_selection(session, b, req.chart_selection, user_id)
         found = [r["Id"] for r in repo.fetch_rows(session, b.ids_query(req.filters, SELECTION_MAX))]
         return {"ids": [str(i) for i in found[:SELECTION_MAX]], "truncated": len(found) > SELECTION_MAX}
@@ -118,7 +158,7 @@ def ids(session: Session | None, defn: ListDefinition, req: IdsRequest, role: st
 def values(session: Session | None, defn: ListDefinition, req: ValuesRequest, role: str | None = None,
            user_id: int | None = None) -> list[dict]:
     def work():
-        b = _builder(session, defn, role, user_id)
+        b = _builder(session, defn, role, user_id, req)
         rows = repo.fetch_rows(session, b.values_query(req.field, req.search, req.filters))
         return [{"value": _json(r["value"]), "count": int(r["count"])} for r in rows]
     return _run(session, work)
@@ -128,14 +168,14 @@ def groups(session: Session | None, defn: ListDefinition, req: GroupsRequest, ro
            user_id: int | None = None) -> dict:
     """Grup ağacı, satır sayıları ve ara toplamlar (K-90)."""
     def work():
-        b = _builder(session, defn, role, user_id)
+        b = _builder(session, defn, role, user_id, req)
         apply_selection(session, b, req.chart_selection, user_id)
         max_groups = repo.read_max_groups(session)
         specs = b.aggregate_specs(req.fields, req.aggregates)
         # birim gizli düzey olabilir: satır sayısı yaprak grup sayısından fazla olabilir; üst sınır geniş tutulur
         q, fields = b.groups_query(req.group_by, req.filters, req.sort, specs, (max_groups + 1) * 20)
         leaves = repo.fetch_rows(session, q)
-        units = repo.read_unit_decimals(session) if defn.unit_field else {}
+        units = repo.read_unit_decimals(session) if defn.unit_field or b.related_units else {}
         unit_relevant = {f for f, spec in specs.items() if b.unit_relevant(f, spec)}
         tree = build_tree(leaves, len(fields), {f: s.fn for f, s in specs.items()}, unit_relevant, _json, units)
         tree["aggregate_specs"] = {f: s.model_dump(exclude_none=True) for f, s in specs.items()}
@@ -168,7 +208,7 @@ def apply_selection(session: Session, b: Builder, sel: ChartSelection | None, us
 def chart(session: Session | None, defn: ListDefinition, req: ChartRequest, role: str | None = None, user_id: int | None = None) -> dict:
     """Tablonun grafiği için toplama (K-178): listeyle aynı filtre, versiyon ve satır kapsamı."""
     def work():
-        b = _builder(session, defn, role, user_id)
+        b = _builder(session, defn, role, user_id, req)
         weekly = req.x.bucket == "week" or any(w.bucket == "week" for w in req.within)
         start = week_start(session, user_id, req.scenario_id) if weekly else "Pazartesi"
         ws = week_start_index(start)
@@ -187,7 +227,7 @@ def points(session: Session | None, defn: ListDefinition, req: PointsRequest, ro
     """Dağılım grafiğinin noktaları (K-179): listeyle aynı filtre, versiyon ve satır kapsamı; en çok `limit` nokta, aşımda eşit aralıklı örnekleme.
     Bir eksendeki alanın birimi karışıksa nokta dönmez."""
     def work():
-        b = _builder(session, defn, role, user_id)
+        b = _builder(session, defn, role, user_id, req)
         info = chart_query.points_summary(b, req, repo.fetch_rows(session, chart_query.points_summary_query(b, req)))
         found = [] if any(info["mixed_units"].values()) or not info["rows"] else repo.fetch_rows(session, chart_query.points_query(b, req, info["rows"]))
         out = chart_query.assemble_points(req, info, found)

@@ -1088,7 +1088,7 @@ export const tr = {
       cells: "Hücre işaretleri",
       chart: "Grafik serileri",
     },
-    thresholdsNote: "Eşikler varsayılan; kurulumda değişir (7.9 uyarı eşikleri). Aşağıda farklı eşiklerle aynı değerler:",
+    thresholdsNote: "Eşikler varsayılan; kurulumda değişir (7.14 uyarı eşikleri). Aşağıda farklı eşiklerle aynı değerler:",
     usage: {
       lead: "Zemin, metin, çizgi (U-1)",
       indigo: "Aksiyon, seçim, aktif durum (U-4)",
@@ -1125,6 +1125,11 @@ export const tr = {
     fieldSearch: "Alan ara",
     resetFields: "Varsayılana dön",
     lastField: "En az bir alan açık kalmalı",
+    // İlişkili alanlar (K-182)
+    relatedFields: "İlişkili alanlar",
+    relatedError: "Alanlar yüklenemedi",
+    relatedLimitFields: "En çok 20 ilişkili alan seçilebilir",
+    relatedLimitJoins: "En çok 8 ilişki birleştirilebilir",
     sortPriority: (n: number) => `Sıralama önceliği ${n}`,
     filterOf: (label: string) => `${label} filtresi`,
     apply: "Uygula",

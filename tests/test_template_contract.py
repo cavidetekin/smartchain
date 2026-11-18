@@ -204,7 +204,7 @@ def test_work_order_operation_v3():
 
 def test_resource_keeps_identity_only():
     """K-180: kaynakta kimlik, ham tip (yalnız bilgi), aktif, üretim yeri, kalan fazla mesai; tip bayrakları, kritik, birim ve fasoncu grupta.
-    Geçici kapasite alanları sözleşmede yok, core'da durur (7.8'de kalkar)."""
+    Geçici kapasite alanları sözleşmede yok, core'da durur (7.9'da kalkar)."""
     found = {f.name: f for f in fields("Resource")}
     assert list(found) == ["LocationCode", "Code", "Name", "ResourceType", "IsActive", "ProductionLocation", "RemainingOverTimeYear", "RemainingOverTimeMonth"]
     assert [f.name for f in found.values() if f.required] == ["LocationCode", "Code"]

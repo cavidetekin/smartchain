@@ -189,12 +189,16 @@ class XlsxWriter:
             return v.date()
         return v
 
-    def data_row(self, row: Mapping, unit_decimals: int | None = None, indent: int = 0) -> None:
+    def data_row(self, row: Mapping, unit_decimals: int | None = None, indent: int = 0,
+                 field_decimals: Mapping[str, int | None] | None = None) -> None:
+        """field_decimals: alanın kendi biriminin ondalığı (ilişkili miktar alanı, K-182); verilmişse satırın biriminin yerine geçer."""
         r = self.rows
         for i, col in enumerate(self.columns):
             value = self.value(col, row.get(col["field"]))
             fmt = self.cell_format(col, row, value) if self.cell_format else None
-            nf = formats.column_number_format(col, unit_decimals) if self._unit_cols[i] else self._number_formats[i]
+            own = field_decimals is not None and col["field"] in field_decimals
+            decimals = field_decimals[col["field"]] if own else unit_decimals
+            nf = formats.column_number_format(col, decimals) if self._unit_cols[i] else self._number_formats[i]
             self._write(r, i, value, self.formats.get(fmt, nf, indent if i == 0 else 0))
         self.rows += 1
 

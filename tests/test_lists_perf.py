@@ -150,3 +150,64 @@ def test_chart_under_target(big_session, name):
     print(f"\ngrafik ({name}): ortanca {ms:.0f} ms")
     assert ms < TARGET_MS
 
+
+
+# --- ilişkili alanlar (K-182): iki seviyeli ilişkili alanla ilk parça, süzme ve sıralama ---
+
+RELATED_WORK_ORDERS = 5_000
+RELATED_NAME = "WorkOrderId/MaterialId/Name"
+
+
+def _copy_rows(conn, table: str, rows: int, overrides: dict[str, str]) -> None:
+    """Tablonun güncel ilk satırını şablon alıp `rows` satır üretir; `overrides`: kolon → n'e bağlı SQL ifadesi (Id dahil)."""
+    cols = [r[0] for r in conn.execute(text("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID(:t) AND is_computed = 0 AND is_identity = 0 "
+                                            "ORDER BY column_id"), {"t": f"core.{table}"})]
+    select = ", ".join(overrides.get(c, f"t.[{c}]") for c in cols)
+    conn.execute(text(f"INSERT INTO core.[{table}] ({', '.join(f'[{c}]' for c in cols)}) SELECT {select} "
+                      f"FROM (SELECT TOP 1 * FROM core.[{table}] WHERE VersionTo IS NULL ORDER BY Id) t "
+                      "CROSS JOIN (SELECT TOP (:rows) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n FROM sys.all_objects a CROSS JOIN sys.all_objects b) x"),
+                 {"rows": rows})
+
+
+def generate_related(conn, operations: int = ROWS, work_orders: int = RELATED_WORK_ORDERS) -> None:
+    """Malzemeler (bugünkü üretici), her biri bir malzemeye bağlı iş emirleri ve her biri bir iş emrine bağlı operasyonlar."""
+    v, loc = conn.execute(text("SELECT TOP 1 Id, LocationId FROM adm.DataVersion ORDER BY Id DESC")).one()
+    conn.execute(GENERATE, {"v": v, "loc": loc, "rows": work_orders})
+    _copy_rows(conn, "WorkOrder", work_orders, {
+        "Id": "2000000 + x.n", "VersionFrom": str(int(v)), "VersionTo": "NULL", "WorkOrderNo": "CONCAT('PERF-WO-', x.n)",
+        "MaterialId": "1000000 + x.n", "BusinessKey": "CONCAT('PERF-WO-', x.n)", "ParentWorkOrderId": "NULL"})
+    _copy_rows(conn, "WorkOrderOperation", operations, {
+        "Id": "3000000 + x.n", "VersionFrom": str(int(v)), "VersionTo": "NULL", "WorkOrderId": f"2000000 + (x.n % {int(work_orders)}) + 1",
+        "OperationNo": "x.n", "BusinessKey": "CONCAT('PERF-WOO-', x.n)"})
+
+
+@pytest.fixture
+def related_session(db_engine):
+    conn = db_engine.connect()
+    trans = conn.begin()
+    session = Session(bind=conn)
+    try:
+        generate_related(conn)
+        yield session
+    finally:
+        session.close()
+        trans.rollback()
+        conn.close()
+
+
+@pytest.mark.parametrize("name, req", [
+    ("ilk parça", QueryRequest(fields=["WorkOrderCode", "OperationName", RELATED_NAME], limit=100)),
+    ("ilişkili alanda süzme", QueryRequest(fields=["WorkOrderCode", "OperationName", RELATED_NAME], limit=100,
+                                           filters=[FilterItem(field=RELATED_NAME, op="contains", value="çelik")])),
+    ("ilişkili alanda sıralama", QueryRequest(fields=["WorkOrderCode", "OperationName", RELATED_NAME], limit=100,
+                                              sort=[SortItem(field=RELATED_NAME, dir="desc")])),
+])
+def test_related_fields_under_target(related_session, name, req):
+    """K-182: İş emri operasyonu → İş emri → Malzeme; 50.000 operasyon, 5.000 iş emri. Yazıldı, tam performans ölçümüyle birlikte koşulur."""
+    from app.api.lists.master_data import BY_NAME
+    defn = BY_NAME["transaction-work-order-operation"]
+    body = service.query(related_session, defn, req)
+    assert body["total"] >= ROWS and len(body["rows"]) == 100 and all(r[RELATED_NAME] for r in body["rows"])
+    ms = median_ms(lambda: service.query(related_session, defn, req))
+    print(f"\nilişkili alan, iki seviye ({name}): ortanca {ms:.0f} ms")
+    assert ms < TARGET_MS

@@ -346,6 +346,22 @@ Grafikte seçilen çubukların (ve inilen dönemin) kayıtları. `POST /api/<lis
 - Koşul, `chart` ucunun toplama sorgusuyla aynı ifadelerle kurulur (dönem hesabı, hafta başlangıcı, gün sınırı, boş değer): bir çubuğun değeri ile bu seçimle dönen satır sayısı birebir tutar. "Diğer" seçilemez (anahtarı kabul edilmez, 422).
 - `query` ve `groups` cevabındaki `filtered` seçimi de sayar; `export`'ta yalnız "ekrandaki filtrelerle" kapsamında uygulanır ve Bilgi sayfasına "Grafik seçimi" satırı yazılır.
 
+### İlişkili alanlar (K-182)
+
+Satırın bağlı olduğu **tek** kaydın alanları listeye kolon olarak eklenebilir; veri kopyalanmaz, sorguda `LEFT JOIN` ile okunur. İlişkiler tek yerde tanımlıdır (`app/api/lists/relations.py`: ilişki alanı → hedef tablo); kod kolonları (`MaterialCode`, `ResourceGroupCode`…) da aynı tablodan üretilir. İlişkisi tanımlı listeler: Ana veri ve İşlem verisi listeleri (aşağıda).
+
+- **Alan adı:** ilişki yolu + alan, `/` ile: `ResourceGroupId/IsCritical`; iki seviyede `WorkOrderId/MaterialId/Name`. Yol ilişki alanıyla yazılır (aynı tabloya iki ilişki olabilir: `MaterialId`, `ComponentMaterialId`). En çok iki seviye.
+- **Katalog:** `GET /api/<liste>/columns` cevabında `relations`: `[{ path, label }]` (birinci seviye başlıklar; ilişkisi olmayan listede boş). `GET /api/<liste>/related?path=<yol>` → `{ path, label, fields: [kolon], relations: [{ path, label }] }`: ilişkinin alanları (kolon biçimi `columns` ile aynı; `field` tam alan adı, `label` "Kaynak grubu · Kritik", `related: true`, `default_visible: false`) ve alt ilişkileri. Bilinmeyen yol 404 (`not_found`).
+- **Alanlar:** hedef tablonun kendi listesindeki alanlar (etiket, tip, ondalık, yüzde, değer listesi oradan). Dışarıda: "Manuel değer" kolonu, hedefin ilişki kodları (ikinci seviyenin konusu), birinci seviyede hedefin tabloda zaten kolon olan kodu. İlişkinin adı ilişki alanının etiketidir (`FieldDefinition.Label`, yoksa standart etiket).
+- **İstek:** ilişkili alan `fields`, `sort`, `filters`, `group_by`, `group_key`, `aggregates`, `rules`, grafik alanları ve `values` içinde tablonun kendi alanı gibi yazılır. Tanımsız yol ya da alan 422 "Bilinmeyen alan". Çok karşılıklı ilişki tanımlı olmadığı için yazılamaz.
+- **Birleştirme:** yalnız istekte geçen ilişkiler birleştirilir; koşul `hedef.Id = satır.<ilişki alanı>` ve hedef satır listenin okuduğu veri versiyonunda geçerli (`VersionFrom ≤ v` ve `VersionTo` boş ya da `≥ v`; versiyonsuz hedefte yalnız Id). Karşılık yoksa alan boş gelir; satır sayısı değişmez (tekillik güncel satırda, K-63). Toplam satır sayısı birleştirmesiz sayılır.
+- **Sınır:** bir istekte en çok 20 ilişkili alan ve 8 birleştirme; aşılırsa 422 ("En çok 20 ilişkili alan seçilebilir", "En çok 8 ilişki birleştirilebilir").
+- **Ondalık:** hedef listede "ondalık birimden" olan alan ilişkili alanda da öyledir: satırda `_field_decimals: { "<alan>": n }` döner (hedef kaydın biriminin ondalığı; birim bilinmiyorsa 2). Tablo, alanın ondalığını önce buradan, yoksa `_unit_decimals`'tan okur. Ara toplamda (gruplama) alanın birimi grupta tek değilse alan `mixed_units`'e girer. Grafikte ilişkili miktar alanında birim karışıklığı denetlenmez.
+- **Salt okunur:** ilişkili alan `manual` değildir; manuel değer uçları ilişkili alanı kabul etmez.
+- **Görünüm:** ilişkili alan görünüm tanımında alan adıyla saklanır; şema sürümü `v: 1` kalır. `GET /views` cevabında `related_columns`: dönen görünümlerin ve Standart'ın kullandığı ilişkili alanların kolon bilgisi (tablo açılırken ek istek gerekmez). İlişki ya da alan kalkarsa görünümden atılır, `warnings`'te yazar.
+- **Dışa aktarım:** "bütün alanlar" kapsamı tablonun kendi alanları ve istekte (`fields`) açık ilişkili alanlardır.
+- **Performans hedefi:** 50.000 satırlık tabloda iki seviyeli ilişkili alan açıkken ilk parça, o alanda süzme ve o alanda sıralama ortanca 300 ms altında (`tests/test_lists_perf.py`; -m perf).
+
 ### Görünümler (K-89)
 
 Kullanıcı oturumdan gelir (K-97).

@@ -26,6 +26,10 @@ def list_router(defn: ListDefinition) -> APIRouter:
     def columns(session: Session = Depends(get_session)) -> dict:
         return service.columns(session, defn)
 
+    @router.get("/related", summary=f"{defn.table}: bir ilişkinin alanları ve alt ilişkileri (İlişkili alanlar, K-182)")
+    def related(path: str, session: Session = Depends(get_session)) -> dict:
+        return service.related(session, defn, path)
+
     @router.post("/query", summary=f"{defn.table}: alanlar, sıralama, filtre, parça ve sayılar")
     def query(body: QueryRequest, user: CurrentUser = Depends(read), session: Session = Depends(get_session)) -> dict:
         return service.query(session, defn, body, user.role, user.id)

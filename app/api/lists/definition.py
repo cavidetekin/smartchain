@@ -54,6 +54,8 @@ class ListDefinition:
     # Hücrenin okunur biçimi (K-108): liste cevabı ve Excel aynı işlevden; süzme ve sıralama saklanan değerde.
     value_format: Mapping[str, Callable] = field(default_factory=dict)
     # Manuel değer alınan core tablosu (K-170; ana veri ve işlem verisi): kolon bilgisinde manual, satırlarda hücre kaynağı (_sources)
+    # İlişkili alanların çıktığı çekirdek tablo (K-182): doluysa satırın `…Id` ilişkileri Alanlar panelinde sunulur (lists/relations.py)
+    related_table: str | None = None
     manual_table: str | None = None
     # Satırın okunur biçimi başka alana bağlıysa (ör. geçmişte değerin biçimi alanın tipinden, K-173): satırlar üzerinde yerinde; liste cevabı
     # ve Excel aynı işlevden. Gereken alanlar key_fields'ta.

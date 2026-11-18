@@ -64,7 +64,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 ## Kaynak modeli notları (7.5, K-180)
 
 - Planlama birimi kaynak grubudur: rota ve iş emri operasyonu kaynak grubunu ve gruptan aynı anda kullanılan kaynak adedini verir; kaynak alanı yoktur. Plan ve yük grup düzeyindedir (`CapacityLoad.ResourceGroupId`).
-- Kapasite kaynakta hesaplanır, grupta toplanır (hesap 7.8'de); gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir.
+- Kapasite kaynakta hesaplanır, grupta toplanır (hesap 7.9'da); gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir.
 - Kritik olmayan grup (`ResourceGroup.IsCritical` = Hayır) sonsuz kapasiteli sayılır ve yalnız raporlanır.
 - Birden fazla gruba üye kaynağın (ortak üye, ör. iki yetkinliği olan işçi) kapasitesini yalnız kritik grupların yükü kullanır.
 - Kaynağı olmayan kritik grubun kapasitesi sıfırdır; doğrulama ve veri kalitesi uyarır (`RG.NO_RESOURCE`).
@@ -73,7 +73,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.
-- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) WarningDefinition'da yoksa geliştirme ve testte `ensure_fixture_warning_definitions` ekler; tanımlar 7.9'te ekrandan gelir.
+- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) WarningDefinition'da yoksa geliştirme ve testte `ensure_fixture_warning_definitions` ekler; tanımlar 7.14'te ekrandan gelir.
 - EngineUsed senaryonun `ModelType` parametresidir (yoksa LP), Solver `Sahte`.
 - Sahte motora özel PlanningSetting anahtarları (gerçek motor okumaz):
 

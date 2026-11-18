@@ -3,10 +3,12 @@
 Metin karşılaştırma ve sıralama Türkçe, büyük/küçük harf duyarsız (Turkish_100_CI_AS). Metin araması
 (LIKE) Türkçe büyük harfe çevrilmiş değerlerin ikili karşılaştırmasıdır: anlam aynı, 50.000 satırda ~3 kat hızlı.
 """
+from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta, timezone
 
 import sqlalchemy as sa
 
+from . import relations
 from .definition import ListDefinition, column_type, columns, filter_type
 from .request import AggSpec, FilterItem, GroupKeyItem, QueryRequest, RuleSpec, SortItem
 
@@ -28,6 +30,7 @@ RELATIVE = ("this_week", "next_4_weeks")
 # Gruplamada SQL Server maliyet tahmini seri plan seçiyor; paralel plan 50.000 satırda ~4 kat hızlı (K-90, docs/08).
 PARALLEL_HINT = "OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'))"
 UNIT_DECIMALS = "_unit_decimals"
+FIELD_DECIMALS = "_field_decimals"  # ilişkili miktar alanlarının ondalığı: alan → ondalık (hedef kaydın biriminden, K-182)
 UNIT = "_unit"
 DEFAULT_UNIT_DECIMALS = 2  # birim bilinmiyorsa (docs/02 UnitOfMeasure.Decimals)
 OPS = {  # her tipte "empty": değeri boş olanlar (U-13)
@@ -96,10 +99,21 @@ class Builder:
     """Bir liste tanımı ve görünür kolonlarıyla sorgu parçaları kurar."""
 
     def __init__(self, defn: ListDefinition, labels: dict[str, str], version: int | None, today: date,
-                 role: str | None = None, user_id: int | None = None):
+                 role: str | None = None, user_id: int | None = None, related: Iterable[str] = (),
+                 labels_of: relations.Labels = relations.NO_LABELS, related_limit: bool = True):
+        """related: istekte geçen ilişkili alan adları (K-182); kaynak yalnız bunların ilişkileriyle birleştirilir. labels_of: tablo → alan
+        etiketleri (ilişki ve hedef alan adları için). related_limit: sınır denetimi (görünüm listesinde kapalı)."""
         self.defn = defn
         self.table = defn.sa_table
+        self.base_table = self.table  # ilişkisiz kaynak: toplam satır sayısı birleştirmesiz sayılır
         self.columns = {c["field"]: c for c in columns(defn, labels, with_filter_only=True)}
+        self.related_units: dict[str, str] = {}  # ilişkili miktar alanı → birim kolonu
+        if defn.related_table and related:
+            try:
+                self.table, extra, self.related_units = relations.wrap(defn, self.table, version, related, labels_of, related_limit)
+            except relations.RelatedLimitError as exc:
+                raise ListQueryError([{"field": "fields", "problem": str(exc)}]) from exc
+            self.columns.update(extra)
         self.version = version
         self.today = today
         self.scope = defn.row_scope(role, user_id) if defn.row_scope else None
@@ -113,13 +127,17 @@ class Builder:
             return None
         return self.table.c[name]
 
-    def base_clause(self) -> sa.ColumnElement:
+    def base_clause(self, table: sa.FromClause | None = None) -> sa.ColumnElement:
         """Her sorgunun koşulu: sürüm (sürümlü listede) ve rolün görebildiği satırlar (row_scope)."""
         parts = [] if self.scope is None else [self.scope]
         if self.defn.versioned:
-            t, v = self.table, self.version
+            t, v = self.table if table is None else table, self.version
             parts.append(sa.and_(t.c.VersionFrom <= v, sa.or_(t.c.VersionTo.is_(None), t.c.VersionTo >= v)))
         return sa.and_(*parts) if parts else sa.true()
+
+    def related_unit_columns(self, fields: Iterable[str]) -> list[sa.Column]:
+        """İstenen ilişkili miktar alanlarının birim kolonları ("_unit/<yol>"; aynı ilişkinin alanları tek kolonu paylaşır)."""
+        return [self.table.c[u] for u in sorted({self.related_units[f] for f in fields if f in self.related_units})]
 
     def select_columns(self, fields: list[str] | None) -> list[sa.Column]:
         problems: list[dict] = []
@@ -357,6 +375,7 @@ class Builder:
         q = sa.select(*cols)
         if self.defn.unit_field:  # satırın birimi (K-88): ondalığı serviste UnitOfMeasure'dan eklenir
             q = q.add_columns(self.table.c[self.defn.unit_field].label(UNIT))
+        q = q.add_columns(*self.related_unit_columns(req.fields or ()))
         return q.where(self.base_clause(), *where).order_by(*order).offset(req.offset).limit(limit)
 
     def rules_by_id_query(self, ids: list[int], rules: list[RuleSpec]) -> sa.Select:
@@ -390,6 +409,7 @@ class Builder:
             order.append(expr.desc() if dirs.get(group_by[i]) == "desc" else expr.asc())
         if self.defn.unit_field:
             sel.append(self.table.c[self.defn.unit_field].label(UNIT))
+        sel += self.related_unit_columns(fields)
         sel += self.rule_columns(list(rules))
         order += self.order_by(sort)
         return (sa.select(*sel).where(self.base_clause(), *where).order_by(*order)
@@ -397,7 +417,9 @@ class Builder:
 
     def total_query(self) -> sa.Select:
         """Filtresiz sayı (güncel versiyondaki bütün kayıtlar)."""
-        return sa.select(sa.func.count()).select_from(self.table).where(self.base_clause())
+        if self.scope is not None:  # satır kapsamı listenin kendi kolonlarından; ilişkili kaynakla da aynı
+            return sa.select(sa.func.count()).select_from(self.table).where(self.base_clause())
+        return sa.select(sa.func.count()).select_from(self.base_table).where(self.base_clause(self.base_table))
 
     def ids_query(self, filters: list[FilterItem], limit: int) -> sa.Select:
         """Filtredeki satırların kimlikleri (çoklu seçim, K-171): varsayılan sırayla, en çok limit (+1: fazlası var mı)."""
@@ -443,7 +465,7 @@ class Builder:
         for f, spec in specs.items():
             measures += self._measures(f, spec)
         grouping = [self.group_expr(c) for c in cols]
-        if self.defn.unit_field and any(self.unit_relevant(f, spec) for f, spec in specs.items()):
+        if self.defn.unit_field and any(self.unit_relevant(f, spec) and f not in self.related_units for f, spec in specs.items()):
             unit = self.table.c[self.defn.unit_field]
             keys.append(unit.label("u"))
             grouping.append(unit)
@@ -459,6 +481,18 @@ class Builder:
         return q, [c.name for c in cols]
 
     def _measures(self, f: str, spec: AggSpec) -> list[sa.ColumnElement]:
+        return self._own_measures(f, spec) + self._unit_measures(f, spec)
+
+    def _unit_measures(self, f: str, spec: AggSpec) -> list[sa.ColumnElement]:
+        """İlişkili miktar alanında birim alanın kendisine aittir (K-182): gruptaki en küçük ve en büyük birim (ua_, ub_); farklıysa birim
+        karışıktır. Listenin kendi miktar alanlarında birim gizli son düzeydir ("u")."""
+        if f not in self.related_units or spec.fn == "count":
+            return []
+        c, unit = self.table.c[f], self.table.c[self.related_units[f]]
+        with_value = sa.case((c.is_not(None), unit))
+        return [sa.func.min(with_value).label(f"ua_{f}"), sa.func.max(with_value).label(f"ub_{f}")]
+
+    def _own_measures(self, f: str, spec: AggSpec) -> list[sa.ColumnElement]:
         c = self.table.c[f]
         if spec.fn == "wavg":
             w = self.table.c[spec.weight]
@@ -478,7 +512,7 @@ class Builder:
     def unit_relevant(self, f: str, spec: AggSpec) -> bool:
         """Birim karışıklığı bu ara toplamı geçersiz kılar mı (K-88, K-90): miktar alanı ya da miktar ağırlığı; sayı hariç."""
         units = self.defn.unit_decimals
-        return spec.fn != "count" and (f in units or (spec.fn == "wavg" and spec.weight in units))
+        return spec.fn != "count" and (f in units or f in self.related_units or (spec.fn == "wavg" and spec.weight in units))
 
     def aggregate_specs(self, fields: list[str] | None, specs: dict[str, AggSpec] | None,
                         where: str = "aggregates") -> dict[str, AggSpec]:

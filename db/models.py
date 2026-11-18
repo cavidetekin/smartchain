@@ -147,11 +147,11 @@ Resource = sa.Table(
     sa.Column("ProductionLocation", sa.Unicode(50), nullable=True, comment="Lokasyonun alt tanımı (hol, hat)", info={'label': "Üretim yeri", 'source': "ERP", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("RemainingOverTimeYear", sa.Numeric(9, 2), nullable=True, comment="Yıllık kalan fazla mesai (saat)", info={'label': "Yıllık kalan fazla mesai (saat)", 'source': "ERP", 'workspace': False, 'if_empty': "sınırsız"}),
     sa.Column("RemainingOverTimeMonth", sa.Numeric(9, 2), nullable=True, comment="Aylık kalan fazla mesai (saat)", info={'label': "Aylık kalan fazla mesai (saat)", 'source': "ERP", 'workspace': False, 'if_empty': "sınırsız"}),
-    sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=True, comment="Kaynağın bir çalışma günündeki kapasitesi; geçici alan (7.8'de kalkar)", info={'label': "Günlük kapasite", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("CalendarId", sa.Integer(), index=True, nullable=True, comment="Çalışma takvimi (Smartchain ekranında atanır); geçici alan (7.8'de kalkar)", info={'label': "Çalışma takvimi", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
+    sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=True, comment="Kaynağın bir çalışma günündeki kapasitesi; geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Günlük kapasite", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
+    sa.Column("CalendarId", sa.Integer(), index=True, nullable=True, comment="Çalışma takvimi (Smartchain ekranında atanır); geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Çalışma takvimi", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("SubconPlanningType", sa.Unicode(15), nullable=True, comment="Fasonda: İş yeri | Tedarik süresi", info={'label': "Fason planlama tipi", 'values': ["İş yeri", "Tedarik süresi"], 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("SubconFixedLeadTimeDays", sa.Numeric(9, 2), nullable=True, comment="Fasonda sabit süre (taşıma ve kuyruk); geçici alan (7.8'de kalkar)", info={'label': "Fason sabit süresi (gün)", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("SubconVariableDaysPerUnit", sa.Numeric(18, 6), nullable=True, comment="Fasonda birim başına gün (fasoncunun hızı); geçici alan (7.8'de kalkar)", info={'label': "Fason birim süresi (gün)", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
+    sa.Column("SubconFixedLeadTimeDays", sa.Numeric(9, 2), nullable=True, comment="Fasonda sabit süre (taşıma ve kuyruk); geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Fason sabit süresi (gün)", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
+    sa.Column("SubconVariableDaysPerUnit", sa.Numeric(18, 6), nullable=True, comment="Fasonda birim başına gün (fasoncunun hızı); geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Fason birim süresi (gün)", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("AdditionalText1", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AdditionalText2", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AdditionalText3", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
@@ -225,7 +225,7 @@ ResourceCapacityProfile = sa.Table(
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı", 'source': "Sistem", 'workspace': False}),
     schema="core",
     info={'field_class': "Ana veri"},
-    comment="Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: 7.8'de yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
+    comment="Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
 )
 
 ResourceDowntime = sa.Table(
@@ -271,14 +271,14 @@ ResourcePeriodLimit = sa.Table(
     sa.Column("UpperLimit", sa.Numeric(18, 4), nullable=False, comment="Dönem üst limiti", info={'label': "Dönem üst limiti", 'source': "Smartchain (parametre)", 'workspace': True}),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: 7.8'de yeniden tasarlanır (K-180).",
+    comment="Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180).",
 )
 
 ResourceGroupMember = sa.Table(
     "ResourceGroupMember", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
     sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), nullable=False, comment="Lokasyon", info={'label': "Lokasyon", 'source': "ERP", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak grubu", info={'label': "Grup", 'source': "ERP", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
+    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak grubu", info={'label': "Kaynak grubu", 'source': "ERP", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
     sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak", info={'label': "Kaynak", 'source': "ERP", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
     sa.Column("AdditionalText1", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AdditionalText2", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),

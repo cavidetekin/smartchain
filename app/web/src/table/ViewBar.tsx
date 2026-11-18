@@ -9,6 +9,7 @@ import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
 import { Checkbox, ConfirmDialog, Dialog, TextField } from "../ui";
 import { useFloating } from "../ui/popover";
+import { mergeColumns } from "./related";
 import { listApi, type ListColumn, type SavedView, type StandardView, type ViewDefinition } from "./types";
 import { fromDefinition, isDirty, standardState, type TableState, toDefinition } from "./viewState";
 
@@ -36,7 +37,7 @@ export interface Views {
 
 /** Görünümleri okur, açılışta varsayılanı uygular; seçim ve kayıt işlemleri tablo durumunu (apply) günceller. */
 export function useViews(list: string, userId: number, columns: ListColumn[] | null,
-                         apply: (s: TableState) => void): Views {
+                         apply: (s: TableState) => void, related: ListColumn[] = [], onRelated?: (columns: ListColumn[]) => void): Views {
   const api = useMemo(() => listApi(list), [list]);
   const [views, setViews] = useState<SavedView[]>([]);
   const [defaultId, setDefaultId] = useState<number | null>(null);
@@ -50,11 +51,18 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
   const applyRef = useRef(apply);
   applyRef.current = apply;
   const standardRef = useRef<StandardView | null>(null);
+  // Tanınan ilişkili kolonlar (K-182): görünümlerden ve bu oturumda panelden gelenler; görünüm uygulanırken tablonun kolonlarına eklenir.
+  // Bağımlılık değildir: ilişkili alan eklemek görünümleri yeniden okutmaz.
+  const relatedRef = useRef(related);
+  relatedRef.current = mergeColumns(relatedRef.current, related);
+  const onRelatedRef = useRef(onRelated);
+  onRelatedRef.current = onRelated;
 
   const use = useCallback((view: SavedView | null) => {
     if (!columns) return;
     const company = standardRef.current;
-    const state = view ? fromDefinition(view.definition, columns) : company ? fromDefinition(company.definition, columns) : standardState(columns);
+    const known = mergeColumns(columns, relatedRef.current);
+    const state = view ? fromDefinition(view.definition, known) : company ? fromDefinition(company.definition, known) : standardState(columns);
     applyRef.current(state);
     setCurrentId(view?.id ?? null);
     setBaseline(toDefinition(state));
@@ -75,6 +83,10 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
         standardRef.current = r.standard ?? null;
         setStandard(r.standard ?? null);
         setCanEditStandard(Boolean(r.can_edit_standard));
+        if (r.related_columns?.length) {
+          relatedRef.current = mergeColumns(relatedRef.current, r.related_columns);
+          onRelatedRef.current?.(r.related_columns);
+        }
         use(r.views.find((v) => v.id === r.default_view_id) ?? null);
         setReady(true);
       })

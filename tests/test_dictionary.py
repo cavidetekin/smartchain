@@ -242,7 +242,7 @@ def test_resource_side_in_the_dictionary(db_engine):
     assert rows[("ResourceGroup", "SubcontractorId")].StandardLabel == "Fasoncu" and rows[("ResourceGroup", "IsEmployee")].StandardLabel == "İşçi"
     assert rows[("ResourceGroup", "Type")].StandardLabel == "Grup tipi" and rows[("Resource", "ResourceType")].StandardLabel == "Kaynak tipi"
     assert not rows[("Resource", "DailyCapacity")].IsRequired and not rows[("Resource", "CalendarId")].IsRequired and not rows[("Resource", "ResourceType")].IsRequired
-    assert rows[("ResourceGroupMember", "ResourceGroupId")].IsRequired and rows[("ResourceGroupMember", "ResourceGroupId")].StandardLabel == "Grup"
+    assert rows[("ResourceGroupMember", "ResourceGroupId")].IsRequired and rows[("ResourceGroupMember", "ResourceGroupId")].StandardLabel == "Kaynak grubu"
     assert ("ResourceGroupMember", "AdditionalText3") in rows and ("ResourceGroupMember", "ValidFrom") not in rows
     assert rows[("EmployeeAbsence", "HoursPerDay")].StandardLabel == "Günlük saat"
 

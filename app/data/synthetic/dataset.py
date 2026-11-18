@@ -207,7 +207,7 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
         group(code, name, "Fason", "IsSubcontractor", False)
 
     def resource(code, name, kind, daily, **extra):
-        """Kaynak: kimlik ve ham tip (yalnız bilgi); günlük kapasite ve takvim geçici alanlar (7.8'de kalkar, K-180)."""
+        """Kaynak: kimlik ve ham tip (yalnız bilgi); günlük kapasite ve takvim geçici alanlar (7.9'da kalkar, K-180)."""
         return b.add("Resource", LocationId=1, Code=code, Name=name, ResourceType=kind, IsActive=True, DailyCapacity=daily, CalendarId=cal["Id"], **extra)
 
     def assign(resource_row, group_code):

@@ -31,6 +31,7 @@ MATERIALS = ListDefinition(
     labels=LABELS,
     values={MANUAL_COLUMN: STATES, **{c.name: c.info["values"] for c in MATERIAL.c if (c.info or {}).get("values")}},
     manual_table="Material",
+    related_table="Material",  # ilişkili alanlar (K-182): Lokasyon
     # Standart görünümde aktarılan bütün alanlar; Aktif hep Evet (aktarım pasifi kapatır, K-149), son değişiklik zamanı sistem kolonu (K-169)
     default_visible=tuple(f for f in FIELDS if f not in ("IsActive", "UpdatedAt")),
     default_sort=(("Code", "asc"),),

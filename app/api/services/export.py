@@ -109,14 +109,14 @@ def _describe_selection(sel, labels: dict) -> str:
 
 def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportRequest) -> Plan:
     # Rol kayıttan: arka plan işinde de işi başlatanın görebildiği satırlar (row_scope, K-101).
-    b = list_service._builder(session, defn, repo.user_role(session, user_id), user_id)
+    b = list_service._builder(session, defn, repo.user_role(session, user_id), user_id, req)
     version = data_versions.read_current(session) if defn.versioned else None
     unknown = [f for f in req.fields if f not in b.columns]
     if unknown:
         raise ListQueryError([{"field": "fields", "problem": f"Bilinmeyen alan: {', '.join(unknown)}"}])
     fields = list(dict.fromkeys(req.fields))
     if req.scope.columns == "all":
-        fields += [f for f in b.columns if f not in fields]
+        fields += [f for f, c in b.columns.items() if f not in fields and not c.get("related")]  # ilişkili alan yalnız açıksa (K-182)
     filters = req.filters if req.scope.rows == "filtered" else []
     group_by = req.group_by
     specs = b.aggregate_specs(fields, req.aggregates) if group_by else {}
@@ -188,7 +188,7 @@ def write(session: Session, plan: Plan, req: ExportRequest, target, progress: Ca
     b = plan.builder
     writer = XlsxWriter(target, plan.columns, req.widths, rule_formatter(plan.rules))
     writer.header()
-    units = list_repo.read_unit_decimals(session) if plan.defn.unit_field else {}
+    units = list_repo.read_unit_decimals(session) if plan.defn.unit_field or b.related_units else {}
 
     nodes: dict[tuple, dict] = {}
     if plan.group_by:
@@ -243,7 +243,9 @@ def _write_rows(result, plan: Plan, writer: XlsxWriter, nodes: dict, fns: dict, 
         if plan.defn.row_format:  # satıra bağlı okunur biçim (K-173)
             row = dict(row)
             plan.defn.row_format([row])
-        writer.data_row(row, unit, indent=len(plan.group_by))
+        related = plan.builder.related_units  # ilişkili miktar alanı hedef kaydın biriminin ondalığıyla (K-182)
+        field_decimals = {f: units.get(row[u]) for f, u in related.items() if u in row} if related else None
+        writer.data_row(row, unit, indent=len(plan.group_by), field_decimals=field_decimals)
         written += 1
         if progress and written % PROGRESS_EVERY == 0:
             progress(written)
@@ -349,11 +351,11 @@ def _points_table(b: Builder, req: ChartExportRequest, data: dict, labels: dict)
     return header, rows, [None, dec(p.x), dec(p.y)] + ([None] if p.color else [])
 
 
-def _chart_context(session: Session, defn: ListDefinition, user_id: int):
+def _chart_context(session: Session, defn: ListDefinition, user_id: int, req=None):
     if not view_repo.user_exists(session, user_id):
         raise AppError("user_not_found", "Kullanıcı bulunamadı.", 404)
     role = repo.user_role(session, user_id)
-    b = list_service._builder(session, defn, role, user_id)
+    b = list_service._builder(session, defn, role, user_id, req)
     version = data_versions.read_current(session) if defn.versioned else None
     return role, b, version
 
@@ -366,7 +368,7 @@ def start_chart(session: Session | None, defn: ListDefinition, user_id: int, req
     if (req.points if scatter else req.chart) is None:
         raise AppError("validation", "Girilen bilgiler geçersiz.", 422, [{"field": "points" if scatter else "chart", "problem": "Grafik isteği verilmeli"}])
     try:
-        role, b, version = _chart_context(session, defn, user_id)
+        role, b, version = _chart_context(session, defn, user_id, req)
         image = decode_image(req.image)
         labels = {f: c["label"] for f, c in b.columns.items()}
         t0 = time.perf_counter()

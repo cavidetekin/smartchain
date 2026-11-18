@@ -33,6 +33,20 @@ export interface ListColumn {
   default_visible: boolean;
   /** Manuel değer girilebilir (veri sözlüğünde Manuel, K-170); yetki ekranda fonksiyon 12'den. */
   manual?: boolean;
+  /** İlişkili alan (K-182): satırın bağlı olduğu kaydın alanı; salt okunur. Alan adı yol + alan ("ResourceGroupId/IsCritical"). */
+  related?: boolean;
+}
+
+/** İlişkili alanların başlığı (K-182): satırın bağlı olduğu kayıt (yol: ilişki alanları, "/" ile). */
+export interface RelationHeading {
+  path: string;
+  label: string;
+}
+
+/** Bir ilişkinin alanları ve alt ilişkileri (başlık açılınca yüklenir). */
+export interface RelatedCatalog extends RelationHeading {
+  fields: ListColumn[];
+  relations: RelationHeading[];
 }
 
 /** Dışa aktarım bilgisi (K-91): listenin adı, dosya adındaki kısa ad, anlık eşik ve üst sınır. */
@@ -50,6 +64,8 @@ export interface ColumnsResponse {
   chunk_size: number;
   columns: ListColumn[];
   export: ExportInfo;
+  /** İlişkili alanların birinci seviye başlıkları (K-182); ilişkisi olmayan listede boş. */
+  relations?: RelationHeading[];
 }
 
 /** Excel'e aktarım kapsamı (K-91, docs/08 "Dışa aktarım"). */
@@ -219,6 +235,8 @@ export interface ViewsResponse {
   default_view_id: number | null;
   standard?: StandardView | null;
   can_edit_standard?: boolean;
+  /** Görünümlerin kullandığı ilişkili alanların kolon bilgisi (K-182). */
+  related_columns?: ListColumn[];
 }
 
 export type Row = { Id: number } & Record<string, unknown>;
@@ -240,6 +258,8 @@ export function listApi(list: string) {
   const base = `/api/${list}`;
   return {
     columns: (signal?: AbortSignal) => getJson<ColumnsResponse>(`${base}/columns`, signal),
+    /** Bir ilişkinin alanları ve alt ilişkileri (İlişkili alanlar, K-182). */
+    related: (path: string, signal?: AbortSignal) => getJson<RelatedCatalog>(`${base}/related?path=${encodeURIComponent(path)}`, signal),
     query: (body: QueryRequest, signal?: AbortSignal) => postJson<QueryResponse>(`${base}/query`, body, signal),
     /** Filtredeki satırların kimlikleri (çoklu seçim, K-171): en çok 10.000; truncated: fazlası var. */
     ids: (filters: ListFilter[], signal?: AbortSignal, selection?: ChartSelection) =>

@@ -33,7 +33,7 @@ def _in_critical_group(t) -> sa.ColumnElement:
 
 
 CHECKS: tuple[SmartchainCheck, ...] = (
-    # Geçici: günlük kapasite 7.8'de kaynaktan kalkar; kontrol o adımda yeniden ele alınır (K-180)
+    # Geçici: günlük kapasite 7.9'da kaynaktan kalkar; kontrol o adımda yeniden ele alınır (K-180)
     SmartchainCheck("SC.RES_NO_CAPACITY", "Resource", "Kapasitesi tanımsız kaynak", "Kapasite tanımsız:",
                     lambda t: sa.and_(_active(t), _in_critical_group(t), t.c.DailyCapacity.is_(None))),
 )

@@ -229,6 +229,17 @@
 /* Araç çubuğu düğmeleri ve alan paneli (1.3 demo düzeltmeleri, docs/12) */
 .sc-table-fields { width: 23.0769rem; min-width: 18rem; max-width: calc(100vw - 2rem); }
 .sc-table-pop-option { min-width: 0; }
+/* İlişkili alanlar (K-182): başlıklar açılır kapanır; alanlar başlığın altında girintili */
+.sc-table-rels { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-2); padding-top: var(--space-2);
+  border-top: 1px solid var(--line); }
+.sc-table-rels-title { margin: 0; color: var(--text-muted); font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.sc-table-rel-head { display: flex; align-items: center; gap: var(--space-1); width: 100%; min-width: 0; padding: 0; border: 0; background: none;
+  color: inherit; font: inherit; font-weight: var(--fw-medium); text-align: left; cursor: pointer; }
+.sc-table-rel-head > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-table-rel-head svg { width: 1rem; height: 1rem; flex: none; color: var(--text-muted); }
+.sc-table-rel-head:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.sc-table-rel-body { display: flex; flex-direction: column; gap: var(--space-1); padding-left: var(--space-4); margin-bottom: var(--space-1); }
+.sc-table-rel-body > p { margin: 0; font-size: var(--fs-sm); }
 .sc-table-pop-option .sc-check { min-width: 0; }
 .sc-table-pop-option .sc-check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

@@ -15,14 +15,14 @@ from sqlalchemy.orm import Session
 
 from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, field_title
-from ..lists import chart as chart_query
+from ..lists import chart as chart_query, relations
 from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
     AggSpec, ChartDefinition, DefaultViewRequest, FilterItem, FormatRule, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
 )
 from ..repositories import audit, lists as list_repo, views as repo
 from ..permissions import ADMIN, SYSTEM_OWNER, Access
-from . import authz
+from . import authz, lists as list_service
 from .auth import CurrentUser
 
 # Paylaşılan görünüm başkasını etkiler, iz bırakır; kişisel görünüm ve varsayılan seçimi bırakmaz (K-108).
@@ -37,9 +37,23 @@ STANDARD_FORBIDDEN = "Standart görünümü yalnız System owner ve Admin deği�
 
 
 
-def _builder(session: Session, defn: ListDefinition) -> Builder:
-    """Yalnız alan ve filtre doğrulaması için (veri okunmaz; versiyon ve tarih önemsiz)."""
-    return Builder(defn, list_repo.read_labels(session, defn.table_name), version=0, today=date.today())
+def _related(*definitions) -> list[str]:
+    """Görünüm tanımlarında geçen ilişkili alan adları (K-182); tanım JSON metni, sözlük ya da model olabilir."""
+    names: dict[str, None] = {}
+    for d in definitions:
+        if d is None:
+            continue
+        data = json.loads(d) if isinstance(d, str) else d.model_dump(mode="json", by_alias=True, exclude_none=True) if hasattr(d, "model_dump") else d
+        names.update(dict.fromkeys(relations.scan(data)))
+    return list(names)
+
+
+def _builder(session: Session, defn: ListDefinition, *definitions) -> Builder:
+    """Yalnız alan ve filtre doğrulaması için (veri okunmaz; versiyon ve tarih önemsiz). definitions: ilişkili alanları tanınacak görünüm
+    tanımları; sınır burada denetlenmez (görünüm listesi birleşimdir), kaydederken `_problems` denetler."""
+    related = _related(*definitions) if defn.related_table else []
+    return Builder(defn, list_repo.read_labels(session, defn.table_name), version=0, today=date.today(), related=related,
+                   labels_of=list_service.labels_of(session), related_limit=False)
 
 
 def _problems(b: Builder, d: ViewDefinition) -> list[dict]:
@@ -256,6 +270,10 @@ def _run(session: Session | None, user_id: int, work):
 
 def _validated(b: Builder, d: ViewDefinition) -> ViewDefinition:
     problems = _problems(b, d)
+    if b.defn.related_table:  # ilişkili alan ve birleştirme sınırı (K-182)
+        limit = relations.limit_problem(b.defn, _related(d))
+        if limit:
+            problems.append({"field": "definition.columns", "problem": limit})
     if problems:
         raise AppError("validation", "Girilen bilgiler geçersiz.", 422, problems)
     return d
@@ -273,17 +291,21 @@ def _owned(session: Session, defn: ListDefinition, view_id: int, user: CurrentUs
 
 def list_views(session: Session | None, defn: ListDefinition, user_id: int, role: str | None = None) -> dict:
     def work():
-        b = _builder(session, defn)
-        views = [_out(b, r, user_id) for r in repo.list_views(session, defn.name, user_id)]
+        rows = repo.list_views(session, defn.name, user_id)
+        standard = repo.get_standard(session, defn.name)
+        b = _builder(session, defn, *(r["Definition"] for r in rows), standard["Definition"] if standard else None)
+        views = [_out(b, r, user_id) for r in rows]
         default = repo.read_default(session, user_id, defn.name)
         return {"views": views, "default_view_id": default if any(v["id"] == default for v in views) else None,
-                "standard": _standard_out(b, repo.get_standard(session, defn.name)), "can_edit_standard": role in STANDARD_EDITORS}
+                "standard": _standard_out(b, standard), "can_edit_standard": role in STANDARD_EDITORS,
+                # Görünümlerin kullandığı ilişkili alanların kolon bilgisi (K-182): tablo açılırken ek istek gerekmez
+                "related_columns": [c for c in b.columns.values() if c.get("related")]}
     return _run(session, user_id, work)
 
 
 def create(session: Session | None, defn: ListDefinition, user_id: int, body: ViewCreate) -> dict:
     def work():
-        b = _builder(session, defn)
+        b = _builder(session, defn, body.definition)
         d = _validated(b, body.definition)
         now = repo.now(session)
         view_id = repo.insert_view(session, {
@@ -301,8 +323,8 @@ def update(session: Session | None, defn: ListDefinition, user: CurrentUser, vie
     user_id = user.id
 
     def work():
-        b = _builder(session, defn)
         row = _owned(session, defn, view_id, user)
+        b = _builder(session, defn, row["Definition"], body.definition)
         values = {"UpdatedAt": repo.now(session)}
         if body.name is not None:
             values["Name"] = body.name.strip()
@@ -340,7 +362,7 @@ def save_standard(session: Session | None, defn: ListDefinition, user: CurrentUs
     """Şirket Standart'ını yazar (K-162); yalnız System owner ve Admin. İz aynı işlemde."""
     def work():
         _ensure_editor(user, defn)
-        b = _builder(session, defn)
+        b = _builder(session, defn, body.definition)
         d = _validated(b, body.definition)
         had = repo.get_standard(session, defn.name) is not None
         repo.save_standard(session, defn.name, _dump(d), json.dumps(list(b.columns), ensure_ascii=False), user.id, repo.now(session))

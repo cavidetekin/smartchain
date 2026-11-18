@@ -44,8 +44,9 @@ import {
 import { RulesPanel } from "./RulesPanel";
 import {
   type AggSpec, type ExportInfo, type ExportScope, type FormatRule, listApi, type GroupNode, type ListColumn, type ListFilter,
-  MAX_RULES, type Row,
+  MAX_RULES, type RelatedCatalog, type RelationHeading, type Row,
 } from "./types";
+import { mergeColumns } from "./related";
 import { type DisplayItem, flatten, useGroupedQuery } from "./useGroupedQuery";
 import { type ListRequest, useListQuery } from "./useListQuery";
 import { useViews, ViewBar } from "./ViewBar";
@@ -137,7 +138,9 @@ export function formatCell(col: ListColumn, v: unknown, row?: Row): string {
   switch (col.type) {
     case "number": {
       if (col.percent) return formatPercent(Number(v), col.decimals ?? 2);
-      const unit = row?._unit_decimals;
+      // İlişkili miktar alanı kendi kaydının biriminden (K-182); yoksa satırın birimi
+      const own = (row?._field_decimals as Record<string, number> | undefined)?.[col.field];
+      const unit = typeof own === "number" ? own : row?._unit_decimals;
       const decimals = col.decimals_from_unit ? (typeof unit === "number" ? unit : DEFAULT_UNIT_DECIMALS) : col.decimals ?? 0;
       return formatNumber(Number(v), decimals);
     }
@@ -448,7 +451,23 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   compact?: boolean;
 }) {
   const { fontSize, userId, trackExport, scenario } = useShell();
-  const [columns, setColumns] = useState<ListColumn[] | null>(null);
+  // Tablonun kendi kolonları; bilinen kolonlar (columns) = bunlar + tanınan ilişkili kolonlar (K-182)
+  const [baseColumns, setColumns] = useState<ListColumn[] | null>(null);
+  const [relations, setRelations] = useState<RelationHeading[]>([]);
+  const [relatedColumns, setRelatedColumns] = useState<ListColumn[]>([]);
+  const addRelated = useCallback((cols: ListColumn[]) => setRelatedColumns((x) => mergeColumns(x, cols)), []);
+  const columns = useMemo(() => (baseColumns ? mergeColumns(baseColumns, relatedColumns) : null), [baseColumns, relatedColumns]);
+  const catalogs = useRef(new Map<string, Promise<RelatedCatalog>>());
+  const loadRelated = useCallback((path: string) => {
+    const key = `${list} ${path}`;
+    let found = catalogs.current.get(key);
+    if (!found) {
+      found = listApi(list).related(path);
+      catalogs.current.set(key, found);
+      found.catch(() => catalogs.current.delete(key));  // hata saklanmaz: yeniden denenebilir
+    }
+    return found;
+  }, [list]);
   const [chunkSize, setChunkSize] = useState(0);
   const [exportInfo, setExportInfo] = useState<ExportInfo | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -485,8 +504,9 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   useEffect(() => {
     const ctrl = new AbortController();
     listApi(list).columns(ctrl.signal)
-      .then(({ columns: cols, chunk_size, export: info }) => {
+      .then(({ columns: cols, chunk_size, export: info, relations: rels }) => {
         setColumns(cols);
+        setRelations(rels ?? []);
         onColumns?.(cols);
         setChunkSize(chunk_size);
         setExportInfo(info);
@@ -498,7 +518,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     return () => ctrl.abort();
   }, [list, columnsAttempt]);
 
-  const views = useViews(list, userId, columns, setState);
+  const views = useViews(list, userId, baseColumns, setState, relatedColumns, addRelated);
   const update = useCallback((fn: (s: TableState) => TableState) => setState((s) => (s ? fn(s) : s)), []);
   const s = state ?? standardState(columns ?? []);
   const byField = useMemo(() => new Map((columns ?? []).map((c) => [c.field, c])), [columns]);
@@ -1147,7 +1167,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
               </div>
             )}
             <button type="button" className="sc-tool-btn" ref={fieldsBtnRef} aria-expanded={panel === "fields"}
-                    aria-label={T.fields(visible.length, columns.length)} title={T.fields(visible.length, columns.length)}
+                    aria-label={T.fields(visible.length, baseColumns!.length)} title={T.fields(visible.length, baseColumns!.length)}
                     onClick={() => setPanel((p) => (p === "fields" ? null : "fields"))}><Columns3 aria-hidden="true" /></button>
             {exportInfo && (
               <button type="button" className="sc-tool-btn" aria-label={T.exportButton} title={T.exportButton}
@@ -1168,10 +1188,14 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
                         onAdd={() => openRule(rulesFrom?.field ?? s.order[0], "panel")} />
           )}
           {panel === "fields" && (
-            <FieldPanel ref={panelPopRef} columns={columns}
+            <FieldPanel ref={panelPopRef} columns={baseColumns!} relations={relations} order={s.order} loadRelated={loadRelated}
+                        onToggleRelated={(col, on) => {
+                          if (on) addRelated([col]);
+                          update((st) => withOrder(st, on ? [...st.order, col.field] : st.order.filter((f) => f !== col.field)));
+                        }}
                         visibility={Object.fromEntries(columns.map((c) => [c.field, s.order.includes(c.field)]))}
                         onToggle={(field, on) => update((st) => withOrder(st, on ? [...st.order, field] : st.order.filter((f) => f !== field)))}
-                        onReset={() => update((st) => withOrder(st, standardState(columns).order))} />
+                        onReset={() => update((st) => withOrder(st, standardState(baseColumns!).order))} />
           )}
         </div>
       </div>
@@ -1327,7 +1351,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
 
       {exporting && exportInfo && (
         <ExportDialog info={exportInfo} filtered={filtered} total={fixed.length ? filtered : total} visibleColumns={visible.length}
-                      allColumns={columns.length} hasFilters={s.filters.length > 0} chart={Boolean(chartOpen && chartImage.current)}
+                      allColumns={baseColumns!.length + visible.filter((c) => c.related).length} hasFilters={s.filters.length > 0} chart={Boolean(chartOpen && chartImage.current)}
                       onClose={() => setExporting(false)} onExport={runExport} />
       )}
 
