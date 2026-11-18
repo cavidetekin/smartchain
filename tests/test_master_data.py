@@ -116,7 +116,7 @@ def test_counts_match_current_rows(api, db_engine, url, tabs):
         for name, x in tables.items():
             assert x["count"] == _current(conn, BY_NAME[name].table_name), name
     if "materials" in tables:
-        assert (tables["materials"]["label"], tables["master-resource-group-member"]["label"]) == ("Malzeme", "Grup eşleşmesi")
+        assert (tables["materials"]["label"], tables["master-resource-group-member"]["label"]) == ("Malzeme", "Kaynak grup eşleşmesi")
 
 
 @pytest.mark.db

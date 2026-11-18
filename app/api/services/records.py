@@ -95,10 +95,10 @@ RELATIONS: dict[str, tuple[Relation, ...]] = {
         Relation("routing", "Rota", "master-routing", _version_part("Routing", "RouteCode", "RouteCode")),
     ),
     "Resource": (  # rota kaynağı değil grubu gösterir (K-180)
-        Relation("group-member", "Grup eşleşmesi", "master-resource-group-member", _by("ResourceGroupMember", "ResourceId")),
+        Relation("group-member", "Kaynak grup eşleşmesi", "master-resource-group-member", _by("ResourceGroupMember", "ResourceId")),
     ),
     "ResourceGroup": (
-        Relation("group-member", "Grup eşleşmesi", "master-resource-group-member", _by("ResourceGroupMember", "ResourceGroupId")),
+        Relation("group-member", "Kaynak grup eşleşmesi", "master-resource-group-member", _by("ResourceGroupMember", "ResourceGroupId")),
         Relation("routing", "Rota", "master-routing", _by("Routing", "ResourceGroupId")),
         Relation("work-order-operation", "İş emri operasyonu", "transaction-work-order-operation", _by("WorkOrderOperation", "ResourceGroupId")),
     ),

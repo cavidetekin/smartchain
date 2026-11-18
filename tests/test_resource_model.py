@@ -88,11 +88,11 @@ def test_demand_chain_reaches_the_resource_through_its_group(eng):
 
 
 def test_record_card_relations(api, db_engine):
-    """K-173, K-180: Kaynak → Grup eşleşmesi (rota yok); Kaynak grubu → Grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Fason kaynak grubu."""
+    """K-173, K-180: Kaynak → Kaynak grup eşleşmesi (rota yok); Kaynak grubu → Kaynak grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Fason kaynak grubu."""
     group = core_id(db_engine, "ResourceGroup", Code=d.BOTTLENECK_GROUP)
     resource = _members(db_engine, ResourceGroupId=group)[0][1]
     card = api.get(f"/api/records/master-resource/{resource}").json()
-    assert [(x["key"], x["label"], x["list"]) for x in card["relations"]] == [("group-member", "Grup eşleşmesi", "master-resource-group-member")]
+    assert [(x["key"], x["label"], x["list"]) for x in card["relations"]] == [("group-member", "Kaynak grup eşleşmesi", "master-resource-group-member")]
     assert card["relations"][0]["count"] == len(_members(db_engine, ResourceId=resource))
     card = api.get(f"/api/records/master-resource-group/{group}").json()
     rel = {x["key"]: x for x in card["relations"]}

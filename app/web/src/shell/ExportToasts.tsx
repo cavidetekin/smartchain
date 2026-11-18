@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api, JOB_DONE, JOB_FAILED, JOB_PULL, JOB_VALIDATION, type Job } from "../api/client";
 import { tr } from "../i18n/tr";
 import type { TrackedExport } from "./ShellContext";
+import { summarize, type ValidationSummary } from "./validationNotice";
 
 export type ExportItem = TrackedExport & { job?: Job };
 
@@ -15,20 +16,49 @@ const SUPPORT_NUMBER = /\s*Destek için iş numarası:\s*\d+\.?/;
 /** "Hazır · 4,8 MB" → "4,8 MB" (iş ilerlemesi, services/export.run_job). */
 export const readySize = (progress: string | null | undefined) => progress?.split(" · ")[1] ?? "";
 
-export function ExportToasts({ items, onDismiss, checks = [], onOpenCheck, onDismissCheck }: {
+export function ExportToasts({ items, onDismiss, checks = [], onOpenCheck, onDismissCheck, onOpenValidationSummary }: {
   items: ExportItem[];
   onDismiss(jobId: number): void;
   /** Biten Excel ön kontrol işleri (K-129). */
   checks?: Job[];
   onOpenCheck?(job: Job): void;
   onDismissCheck?(jobId: number): void;
+  /** Özet validasyon bildiriminde "Sonucu aç" (K-181): içindeki işler kapanır, Veri yükleme ekranı açılır. */
+  onOpenValidationSummary?(jobIds: number[]): void;
 }) {
   const shown = items.filter((e) => e.job && (e.job.status === JOB_DONE || e.job.status === JOB_FAILED));
   if (!shown.length && !checks.length) return null;
+  // Validasyon işleri tek bildirimde toplanır (K-181); ön kontrol ve çekim kendi bildiriminde kalır
+  const others = checks.filter((j) => j.job_type !== JOB_VALIDATION);
+  const summary = summarize(checks);
+  const single = summary?.single ?? null;
   return (
     <div className="sc-toasts" role="region" aria-label={tr.jobs.notifications}>
       {shown.map((e) => <ExportToast key={e.jobId} item={e} onDismiss={() => onDismiss(e.jobId)} />)}
-      {checks.map((j) => <PrecheckToast key={j.id} job={j} onOpen={() => onOpenCheck?.(j)} onDismiss={() => onDismissCheck?.(j.id)} />)}
+      {others.map((j) => <PrecheckToast key={j.id} job={j} onOpen={() => onOpenCheck?.(j)} onDismiss={() => onDismissCheck?.(j.id)} />)}
+      {single && <PrecheckToast job={single} onOpen={() => onOpenCheck?.(single)} onDismiss={() => onDismissCheck?.(single.id)} />}
+      {summary && !single && (
+        <ValidationSummaryToast summary={summary} onOpen={() => onOpenValidationSummary?.(summary.jobIds)}
+                                onDismiss={() => summary.jobIds.forEach((id) => onDismissCheck?.(id))} />
+      )}
+    </div>
+  );
+}
+
+/** Birden fazla tablonun validasyonu: tek özet (K-181). Tamamlanamayan varsa kırmızı, yoksa nötr. */
+function ValidationSummaryToast({ summary, onOpen, onDismiss }: { summary: ValidationSummary; onOpen(): void; onDismiss(): void }) {
+  return (
+    <div className={`sc-toast${summary.failed ? " is-error" : ""}`} role="status">
+      <div className="sc-toast-body">
+        <p className="sc-toast-title">{tr.jobs.validationDone}</p>
+        <p className="sc-toast-sub">
+          {tr.jobs.validationSummary(summary.tables, summary.parts)}
+          {" · "}<button type="button" className="sc-toast-link" onClick={onOpen}>{tr.jobs.openResult}</button>
+        </p>
+      </div>
+      <button type="button" className="sc-toast-close" onClick={onDismiss} aria-label={tr.ui.close} title={tr.ui.close}>
+        <X aria-hidden="true" />
+      </button>
     </div>
   );
 }

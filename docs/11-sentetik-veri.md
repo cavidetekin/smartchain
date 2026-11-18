@@ -100,7 +100,7 @@ python -m app.data.synthetic check                                     # sayıla
 | 8 | Yok sayılıp kaydı değişince yeniden açılan (6.5) | Durum 6'nın kaydı; yok sayma ve değişiklik (manuel değer ya da yeni versiyon) test ve demo akışındadır | Yok sayıldı → Açık |
 | 9 | Tarih geçince çıkan uyarı (6.5) | `SO-1043` istek tarihi üretim günü − 1, açık; `SO-1044` istek tarihi üretim günü, açık · `T-05` kritik gruba (`TORNA`) üye tezgâh, günlük kapasitesi boş (K-117, K-180); `T-04`'ün grubunda | SO-1043 bugün, SO-1044 ertesi gün SO.PAST_DUE; T-05 SC.RES_NO_CAPACITY (grubu rotada olduğu için talep zincirinde: Yüksek; K-180) |
 
-**Kirli hâl.** `data/synthetic/v0/kirli/` altında varlık başına bir Excel (25 dosya; benzetilen ürün ve tahmin yalnız hazır kural örnekleriyle) ve `beklenen-hatalar.json`; her gün yeniden üretilebildiği için git'e girmez.
+**Kirli hâl.** `data/synthetic/v0/kirli/` altında varlık başına bir Excel (25 dosya; benzetilen ürün ve tahmin yalnız hazır kural örnekleriyle) ve `beklenen-hatalar.json`; her gün yeniden üretilebildiği için git'e girmez. Komut yazmadan önce klasördeki kendi ürettiği eski dosyaları siler (şablon sürüm sayfası taşıyan `.xlsx` dosyaları, `ekle-guncelle/` altındakiler ve `beklenen-hatalar.json`): artık üretilmeyen tablonun dosyası klasörde kalmaz; başka dosyaya dokunmaz (K-181).
 - **Sayfa düzeni (K-110):** şablon üreticisiyle yazılır (`app/integration/template.py`): 1. satır `stg` alan adı, veri 2. satırdan; Açıklama sayfası; gizli `_Surum` sayfasında tablo, sürüm, set, tohum ve üretim günü. Etiketsiz ek alan kolonu yoktur. Etiket veri setinden gelir, veritabanı gerekmez.
 - **Kapsam:** Takvim ve duruş entegrasyonla gelmediği için yoktur (K-65). Sipariş, stok ve iş emri üretimde API veya SQL ile gelir; ETL testleri için aynı `stg` biçiminde Excel'e konur.
 - **Hataların yeri:** Başka satırı zincirleme etkilemez. ETL sonrası ana veri = temiz hâl − aşağıdaki fark. Satır numaraları `beklenen-hatalar.json`'dadır.
@@ -187,4 +187,5 @@ Faz 1 dışı konular (set-up, kalıp, fırın, raf ömrü kuralları, çoklu lo
 | Birim ondalıkları (ADET 0, KG 3, M 2, SAAT 2) | uygulandı (1.3) |
 | Kullanıcılar ve geçici şifre komutu | uygulandı (2.1) |
 | Veri kuralı örnekleri ve demo kuralları komutu (`rules`) | uygulandı (4.1) |
+| Kaynak modeli revizyonu: tip, kritik, birim ve fasoncu grupta; işçiler yalnız yetkinlik gruplarında; fason grupları; vardiya yok (K-180, K-181) | uygulandı (7.5) |
 | Kilogramlı malzemelere miktar (güvenlik stoğu, lot) | açık: sonraya bırakıldı (1.3 demosu); KG'de 3 ondalık şimdilik yalnız testte görülür |

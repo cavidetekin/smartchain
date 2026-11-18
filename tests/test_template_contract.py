@@ -248,7 +248,7 @@ def test_resource_group_is_the_planning_unit():
     member = metadata.tables["core.ResourceGroupMember"].c
     assert not {"ValidFrom", "ValidTo"} & set(member.keys())
     assert [c for c in member.keys() if c.startswith("Additional")] == ["AdditionalText1", "AdditionalText2", "AdditionalText3", "AdditionalNumber1", "AdditionalNumber2"]  # K-59
-    assert contract.entity("ResourceGroupMember").file_name == "smartchain_grup-eslesmesi_v2.xlsx" and contract.entity("ResourceGroupMember").name == "Grup eşleşmesi"
+    assert contract.entity("ResourceGroupMember").file_name == "smartchain_kaynak-grup-eslesmesi_v2.xlsx" and contract.entity("ResourceGroupMember").name == "Kaynak grup eşleşmesi"
     absence = {f.name: f for f in fields("EmployeeAbsence")}
     assert list(absence) == ["LocationCode", "ResourceCode", "AbsenceType", "StartDate", "EndDate", "HoursPerDay"]
     load, rule = metadata.tables["planning.CapacityLoad"].c, metadata.tables["param.AllocationRule"].c

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { type Job } from "../api/client";
 import { buildCards, cardState, groupOutcomes } from "../shell/JobIndicator";
+import { summarize } from "../shell/validationNotice";
 import { col, useTableTestSetup } from "../table/testBackend";
 import { DATA_VERSION, FakeWebSocket, meAs, mockApi, renderApp, type Reply } from "../test/helpers";
 import type { ValidationSummary } from "./validationApi";
@@ -193,6 +194,48 @@ describe("Validasyon çipi (K-134, K-139)", () => {
     expect(screen.queryByText("Validasyon bitti")).not.toBeInTheDocument();
   });
 
+  it("birden fazla tablo birlikte bitince tek özet bildirim; tamamlanamayan varsa kırmızı; \"Sonucu aç\" tablo listesine götürür (K-181)", async () => {
+    const user = userEvent.setup();
+    const many = (id: number, entity: string, status: string, outcome: string | null = null) =>
+      ({ ...job(status), id, validation: { entity, trigger: "Yükleme", outcome } });
+    backend({ "/api/jobs": { body: { jobs: [many(8, "Resource", "Çalışıyor"), many(9, "Material", "Sırada"), many(10, "Stock", "Sırada")], counters: {} } as unknown as Reply["body"] } });
+    renderApp("/veri/veri-yukleme", { ...meAs("Key user"), id: 1 });
+    await screen.findByText("Kaynak", {}, { timeout: 5000 });
+    await waitFor(() => expect(FakeWebSocket.instances.some((x) => x.url.includes("/api/ws"))).toBe(true));
+    const socket = FakeWebSocket.instances.find((x) => x.url.includes("/api/ws"))!;
+    act(() => socket.send({ type: "job", job: many(8, "Resource", "Bitti", "Uyarılı") }));
+    act(() => socket.send({ type: "job", job: many(9, "Material", "Hata") }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText("Validasyon bitti")).not.toBeInTheDocument();  // öteki tablolar sürerken bildirim bekler
+    act(() => socket.send({ type: "job", job: many(10, "Stock", "Bitti", "Hatalı") }));
+    const region = await screen.findByRole("region", { name: "Bildirimler" });
+    expect(await within(region).findByText("Validasyon bitti")).toBeInTheDocument();
+    expect(within(region).getAllByRole("status")).toHaveLength(1);
+    expect(region).toHaveTextContent("3 tablo: 1 uyarılı, 1 hatalı, 1 tamamlanamadı");
+    expect(within(region).getByRole("status")).toHaveClass("is-error");
+    await user.click(within(region).getByRole("button", { name: "Sonucu aç" }));
+    await waitFor(() => expect(screen.queryByText("Validasyon bitti")).not.toBeInTheDocument());
+    expect(screen.queryByRole("dialog", { name: /Validasyon · / })).not.toBeInTheDocument();  // çekmece değil, tablo listesi
+    for (const id of [8, 9, 10]) expect(fetched()).toContain(`POST /api/jobs/${id}/dismiss`);
+  });
+
+  it("toplu çekimde özet tablolar arası iş bitince çıkar; tamamlanamayan yoksa nötr; zamanlanmış iş bildirim vermez (K-181)", async () => {
+    const cross = (status: string, requested_by: number | null) => ({ ...PULL_JOBS[4], status, requested_by });
+    backend({ "/api/jobs": { body: { jobs: [cross("Çalışıyor", 1)], counters: {} } as unknown as Reply["body"] } });
+    renderApp("/veri/veri-yukleme", { ...meAs("Key user"), id: 1 });
+    await screen.findByText("Kaynak", {}, { timeout: 5000 });
+    await waitFor(() => expect(FakeWebSocket.instances.some((x) => x.url.includes("/api/ws"))).toBe(true));
+    const socket = FakeWebSocket.instances.find((x) => x.url.includes("/api/ws"))!;
+    act(() => socket.send({ type: "job", job: { ...cross("Çalışıyor", null), id: 99 } }));
+    act(() => socket.send({ type: "job", job: { ...cross("Bitti", null), id: 99 } }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText("Validasyon bitti")).not.toBeInTheDocument();
+    act(() => socket.send({ type: "job", job: cross("Bitti", 1) }));
+    const region = await screen.findByRole("region", { name: "Bildirimler" });
+    expect(region).toHaveTextContent("3 tablo: 2 uyarılı, 1 hatalı");
+    expect(within(region).getByRole("status")).not.toHaveClass("is-error");
+  });
+
   it("\"Sonucu aç\" çekmeceyi açar", async () => {
     backend();
     renderApp("/veri/veri-yukleme?validasyon=Resource", meAs("Admin"));
@@ -263,5 +306,27 @@ describe("İş paneli kartları (K-139)", () => {
     expect(rows.lastElementChild).toHaveTextContent("Tablolar arası");
     await user.click(within(rows as HTMLElement).getByRole("button", { name: "Malzeme: aç" }));
     expect(await screen.findByRole("dialog", { name: /Validasyon · / }, { timeout: 5000 })).toBeInTheDocument();
+  });
+});
+
+describe("validasyon bildiriminin özeti (K-181)", () => {
+  const one = (id: number, entity: string, status: string, outcome: string | null, trigger = "Yükleme"): Job =>
+    ({ ...base, id, job_type: "Validasyon", status, validation: { entity, trigger, outcome } });
+
+  it("tek tabloda tablo bildirimi; aynı tablonun son işi sayılır; düşen iş tamamlanamadı", () => {
+    expect(summarize([])).toBeNull();
+    const single = summarize([one(1, "Material", "Bitti", "Geçti")])!;
+    expect(single.single?.id).toBe(1);
+    const s = summarize([one(1, "Material", "Bitti", "Hatalı"), one(3, "Material", "Bitti", "Geçti"), one(2, "Stock", "Hata", null), one(4, "BOM", "Çalışıyor", null)])!;
+    expect(s.single).toBeNull();
+    expect([s.tables, s.failed, s.jobIds]).toEqual([2, true, [1, 2, 3]]);
+    expect(s.parts).toEqual([{ outcome: "Geçti", count: 1 }, { outcome: "Tamamlanamadı", count: 1 }]);
+  });
+
+  it("toplu çekimde tabloların sonucu tablolar arası işten okunur", () => {
+    const s = summarize([PULL_JOBS[4]])!;
+    expect([s.single, s.tables, s.failed]).toEqual([null, 3, false]);
+    expect(s.parts).toEqual([{ outcome: "Uyarılı", count: 2 }, { outcome: "Hatalı", count: 1 }]);
+    expect(summarize([{ ...PULL_JOBS[4], status: "Hata" }])!.failed).toBe(true);
   });
 });

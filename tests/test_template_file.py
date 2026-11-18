@@ -131,7 +131,7 @@ def test_material_reference_and_resource_templates():
     assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 4
     assert list(notes(wb)) == ["LocationCode", "Code", "Name", "ResourceType", "IsActive", "ProductionLocation", "RemainingOverTimeYear", "RemainingOverTimeMonth"]
     wb = build("ResourceGroupMember")
-    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 2 and wb.sheetnames[0] == "Grup eşleşmesi"
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 2 and wb.sheetnames[0] == "Kaynak grup eşleşmesi"
     assert list(notes(wb)) == ["LocationCode", "ResourceGroupCode", "ResourceCode"]  # geçerlilik tarihleri kalktı
 
 

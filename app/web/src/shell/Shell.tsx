@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 
-import { api, ApiError, emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job, VALIDATION_NOTIFY,
+import { api, ApiError, emitNotice, importResultPath, JOB_DONE, JOB_FAILED, JOB_PRECHECK, JOB_PULL, JOB_VALIDATION, pullResultPath, type Job,
   validationResultPath } from "../api/client";
 import { authApi } from "../auth/authApi";
 import { useAuth } from "../auth/AuthContext";
@@ -18,9 +18,11 @@ import { ConfirmDialog } from "../ui";
 import { scenarioApi } from "./scenarioApi";
 import { ShellContext, type ShellScenario, type TrackedExport } from "./ShellContext";
 import { Sidebar } from "./Sidebar";
+import { VALIDATION_ACTIVE, validationNotifies } from "./validationNotice";
 
 /** Oturum kapısının (auth/AuthGate) içinde açılır; kullanıcı oturumdan gelir (K-97). */
 const RECENT_CHECK_MS = 10 * 60 * 1000;  // sayfa yenilenirse: yeni biten ön kontrol yine bildirilir
+const DATA_LOAD_PATH = "/veri/veri-yukleme";  // özet bildirimin "Sonucu aç" hedefi: tablo listesi (K-181)
 
 export function Shell() {
   const me = useAuth().me!;
@@ -53,15 +55,32 @@ export function Shell() {
   const [checks, setChecks] = useState<Job[]>([]);
   const seenChecks = useRef(new Map<number, string>());
   const navigate = useNavigate();
+  // Validasyon (K-181): kullanıcının validasyon işleri sürerken biten işler bekler; hepsi bitince birlikte bildirilir (tek özet bildirim).
+  const waitingValidation = useRef(new Map<number, Job>());
+  const activeValidation = useRef(new Set<number>());
   const onCheck = useCallback((job: Job) => {
-    const validation = job.job_type === JOB_VALIDATION && VALIDATION_NOTIFY.includes(job.validation?.trigger ?? "") && Boolean(job.validation?.entity);
-    if ((job.job_type !== JOB_PRECHECK && job.job_type !== JOB_PULL && !validation) || (job.requested_by ?? userId) !== userId || job.dismissed) return;
+    const validation = job.job_type === JOB_VALIDATION;
+    const wanted = validation ? validationNotifies(job, userId)
+      : (job.job_type === JOB_PRECHECK || job.job_type === JOB_PULL) && (job.requested_by ?? userId) === userId;
+    if (!wanted || job.dismissed) return;
     const before = seenChecks.current.get(job.id);
     seenChecks.current.set(job.id, job.status);
     const ended = job.status === JOB_DONE || job.status === JOB_FAILED;
     const wasEnded = before === JOB_DONE || before === JOB_FAILED;
     const recent = !!job.ended_at && Date.now() - Date.parse(job.ended_at) < RECENT_CHECK_MS;
-    if (ended && !wasEnded && (before !== undefined || recent)) setChecks((x) => [...x.filter((j) => j.id !== job.id), job]);
+    const fresh = ended && !wasEnded && (before !== undefined || recent);
+    if (!validation) {
+      if (fresh) setChecks((x) => [...x.filter((j) => j.id !== job.id), job]);
+      return;
+    }
+    if (VALIDATION_ACTIVE.includes(job.status)) activeValidation.current.add(job.id);
+    else activeValidation.current.delete(job.id);
+    if (fresh) waitingValidation.current.set(job.id, job);
+    if (waitingValidation.current.size && activeValidation.current.size === 0) {
+      const done = [...waitingValidation.current.values()];
+      waitingValidation.current.clear();
+      setChecks((x) => [...x.filter((j) => !done.some((d) => d.id === j.id)), ...done]);
+    }
   }, [userId]);
   const dismissCheck = useCallback((jobId: number) => {
     setChecks((x) => x.filter((j) => j.id !== jobId));
@@ -72,6 +91,10 @@ export function Shell() {
     if (job.job_type === JOB_PULL) navigate(pullResultPath(job.id));
     else if (job.job_type === JOB_VALIDATION && job.validation?.entity) navigate(validationResultPath(job.validation.entity));
     else if (job.import_batch_id) navigate(importResultPath(job.import_batch_id));
+  }, [dismissCheck, navigate]);
+  const openValidationSummary = useCallback((jobIds: number[]) => {
+    jobIds.forEach(dismissCheck);
+    navigate(DATA_LOAD_PATH);
   }, [dismissCheck, navigate]);
   const onJob = useCallback((job: Job) => {
     onCheck(job);
@@ -148,7 +171,8 @@ export function Shell() {
           <Outlet />
         </main>
       </div>
-      <ExportToasts items={exports} onDismiss={dismissExport} checks={checks} onOpenCheck={openCheck} onDismissCheck={dismissCheck} />
+      <ExportToasts items={exports} onDismiss={dismissExport} checks={checks} onOpenCheck={openCheck} onDismissCheck={dismissCheck}
+                    onOpenValidationSummary={openValidationSummary} />
       <ForbiddenNotice />
       <IdleWatch me={me} />
       {askScenario && (

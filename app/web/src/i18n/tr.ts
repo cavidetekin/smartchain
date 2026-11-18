@@ -59,6 +59,9 @@ export const tr = {
     pullFailed: "Çekim tamamlanamadı",
     validationDone: "Validasyon bitti",
     validationFailed: "Validasyon tamamlanamadı",
+    // Toplu validasyonun özeti (K-181): "25 tablo: 4 geçti, 3 uyarılı, 16 hatalı, 2 tamamlanamadı"
+    validationSummary: (tables: number, parts: { outcome: string; count: number }[]) =>
+      `${tables} tablo: ${parts.map((p) => `${p.count} ${p.outcome.toLocaleLowerCase("tr")}`).join(", ")}`,
     seeAll: "Tümünü gör",
     open: "Aç",
     openOf: (title: string) => `${title}: aç`,
@@ -494,7 +497,7 @@ export const tr = {
     tabs: { material: "Malzeme", bomRouting: "Ürün ağacı ve rota", resource: "Kaynak", supplierCustomer: "Tedarikçi ve müşteri",
             locationUnit: "Lokasyon ve birim" },
     tables: { material: "Malzeme", materialReference: "Benzetilen ürün", productionVersion: "Üretim versiyonu", bom: "Ürün ağacı", routing: "Rota",
-              resource: "Kaynak", resourceGroup: "Kaynak grubu", groupMember: "Grup eşleşmesi", supplier: "Tedarikçi",
+              resource: "Kaynak", resourceGroup: "Kaynak grubu", groupMember: "Kaynak grup eşleşmesi", supplier: "Tedarikçi",
               materialSupplier: "Malzeme tedarikçisi", customer: "Müşteri", location: "Lokasyon", unit: "Birim", uomConversion: "Birim dönüşümü" },
   },
   transactionData: {

@@ -23,7 +23,7 @@ ENTITY_CATALOG = (
     ('MaterialReference', 'Benzetilen ürün', 'Ana veri', 'Kendi ağacı ya da rotası olmayan ürünlerin referans ürünleri', 'benzetilen-urun', 1),
     ('ResourceGroup', 'Kaynak grubu', 'Ana veri', 'Kaynak grupları: tip, kritiklik, kapasite birimi', 'kaynak-grubu', 3),
     ('Resource', 'Kaynak', 'Ana veri', 'Makine, işçi ve fason kaynakları', 'kaynak', 4),
-    ('ResourceGroupMember', 'Grup eşleşmesi', 'Ana veri', 'Kaynakların gruplara üyeliği ve yetkinlik matrisi', 'grup-eslesmesi', 2),
+    ('ResourceGroupMember', 'Kaynak grup eşleşmesi', 'Ana veri', 'Kaynakların gruplara üyeliği ve yetkinlik matrisi', 'kaynak-grup-eslesmesi', 2),
     ('EmployeeAbsence', 'Çalışan izni', 'İşlem verisi', 'Çalışanların izin ve rapor kayıtları', 'calisan-izni', 1),
     ('Supplier', 'Tedarikçi', 'Ana veri', 'Tedarikçiler ve fasoncular', 'tedarikci', 2),
     ('MaterialSupplier', 'Malzeme tedarikçisi', 'Ana veri', 'Malzemelerin tedarikçileri, temin süreleri ve sipariş koşulları', 'malzeme-tedarikcisi', 2),
@@ -293,7 +293,7 @@ ResourceGroupMember = sa.Table(
     sa.Index("UX_ResourceGroupMember_LocationId_ResourceGroupId_ResourceId", "LocationId", "ResourceGroupId", "ResourceId", unique=True, mssql_where=sa.text("VersionTo IS NULL")),
     schema="core",
     info={'field_class': "Ana veri"},
-    comment="Grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).",
+    comment="Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).",
 )
 
 EmployeeAbsence = sa.Table(
@@ -2185,7 +2185,7 @@ stg_ResourceGroupMember = sa.Table(
     sa.Column("AdditionalNumber2", sa.Numeric(18, 4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da", info={'required': False, 'key': "", 'missing': "yok"}),
     sa.Index("UX_ResourceGroupMember_Current", "LocationCode", "ResourceGroupCode", "ResourceCode", unique=True, mssql_where=sa.text("IsCurrent = 1")),
     schema="stg",
-    comment="Grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).",
+    comment="Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).",
 )
 
 stg_EmployeeAbsence = sa.Table(
@@ -2949,7 +2949,7 @@ prc_ResourceGroupMember = sa.Table(
     sa.Column("AdditionalNumber2", sa.Numeric(18, 4), nullable=True, comment="Ek sayı alanları; etiketi FieldDefinition'da", info={'required': False, 'key': "", 'missing': "yok"}),
     sa.Index("UX_ResourceGroupMember_Key", "LocationCode", "ResourceGroupCode", "ResourceCode", unique=True),
     schema="prc",
-    comment="Grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).",
+    comment="Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).",
 )
 
 prc_EmployeeAbsence = sa.Table(

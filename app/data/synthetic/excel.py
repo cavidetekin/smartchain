@@ -10,6 +10,7 @@ from pathlib import Path
 
 from app.integration import contract
 from app.integration.contract import FIRST_DATA_ROW, stg_columns
+from app.integration.reader import quick_identity
 from app.integration.template import write_template
 from db import models
 from . import dataset as d
@@ -17,6 +18,7 @@ from .examples import add_examples
 from .rules import DEMO_RULES
 from .dataset import Dataset
 
+MANIFEST = "beklenen-hatalar.json"
 EMPTY_ENTITIES: set[str] = set()  # docs/11: 6.5'ten beri tahmin ve benzetilen ürün de temiz hâlde (K-174)
 
 
@@ -168,9 +170,31 @@ def labels_of(entity: str) -> dict[str, str]:
     return {f["FieldName"]: f["Label"] for f in d.FIELD_DEFINITIONS if f["TableName"] == entity}
 
 
+def clear_generated(out: Path) -> list[str]:
+    """Çıktı klasöründe bu komutun ürettiği eski dosyaları siler (K-181): artık üretilmeyen tablonun dosyası kalıp yüklemede reddedilmesin.
+    Yalnız şablon sürüm sayfası taşıyan .xlsx dosyaları (klasörde ve değişen partinin alt klasöründe) ve beklenen-hatalar.json; başka dosyaya
+    dokunmaz. Silinenlerin klasöre göre adları."""
+    removed = []
+    for folder in (out, out / CHANGED_DIR):
+        for path in sorted(folder.glob("*.xlsx")) if folder.is_dir() else []:
+            try:
+                ours = quick_identity(path).table is not None
+            except Exception:  # okunamayan dosya bizim değildir
+                ours = False
+            if ours:
+                path.unlink()
+                removed.append(path.relative_to(out).as_posix())
+    manifest = out / MANIFEST
+    if manifest.exists():
+        manifest.unlink()
+        removed.append(MANIFEST)
+    return removed
+
+
 def write_excel(ds: Dataset, out: Path) -> dict:
-    """Kirli hâli yazar: varlık başına Excel ve beklenen-hatalar.json. Özet döndürür."""
+    """Kirli hâli yazar: varlık başına Excel ve beklenen-hatalar.json. Özet döndürür. Önce klasördeki kendi ürettiği eski dosyaları siler (K-181)."""
     out.mkdir(parents=True, exist_ok=True)
+    clear_generated(out)
     stg, errors = make_dirty(ds)
     extra = [("Set", d.SET_NAME), ("Tohum", ds.seed), ("Üretim günü", ds.generated_on.isoformat()), ("Hafta 1", ds.start.isoformat())]
     for entity, rows in stg.items():
@@ -191,7 +215,7 @@ def write_excel(ds: Dataset, out: Path) -> dict:
         "files": {f"{e}.xlsx": len(r) for e, r in stg.items()}, "errors": errors,
         "demo_rules": [f"{r['entity']} · {r['name']}" for r in DEMO_RULES],  # python -m app.data.synthetic rules (K-141)
     }
-    (out / "beklenen-hatalar.json").write_text(
+    (out / MANIFEST).write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2, default=_json_default), encoding="utf-8")
     return manifest
 

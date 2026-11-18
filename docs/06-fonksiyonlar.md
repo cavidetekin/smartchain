@@ -267,7 +267,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Tablo başına çip: Geçti / Uyarılı · n / Hatalı · n
   - Kural bazında bulgular (Kural, Sınıf, Satır sayısı) ve hatalı kayıtlar (Excel)
   - Hata oranı ve eşik; bildirim
-- **06:** Bitince bildirim gelir ("Validasyon bitti · Malzeme · Uyarılı · 3", "Sonucu aç" çekmeceyi açar). İş panelinde iş kart olarak görünür (K-139). Gece akışında tam aktarım (05) devam eder (5.6).
+- **06:** Bitince bildirim gelir ("Validasyon bitti · Malzeme · Uyarılı · 3", "Sonucu aç" çekmeceyi açar). Birden fazla tablonun validasyonu birlikte bittiğinde tek özet bildirim çıkar ("Validasyon bitti · 25 tablo: 4 geçti, 3 uyarılı, 16 hatalı, 2 tamamlanamadı"; "Sonucu aç" Veri yükleme ekranındaki tablo listesine götürür; tamamlanamayan varsa kırmızı; K-181; uygulandı, 7.5). Birlikte koşan işlerde kilitlenen iş düşmez, yeniden koşar (K-181). İş panelinde iş kart olarak görünür (K-139). Gece akışında tam aktarım (05) devam eder (5.6).
 
 ### 04 · Validasyon · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Çalışma prensibi 2/2</sub>
@@ -875,7 +875,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
 
 - **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim Kapasite yönetimi'nde (7.8, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
-- **Karar (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.8'de kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve İş emri operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Grup eşleşmesi; Kaynak grubu → Grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
+- **Uygulama (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Kaynak grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.8'de kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Kaynak grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve İş emri operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Kaynak grup eşleşmesi; Kaynak grubu → Kaynak grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
 
 #### NASIL ÇALIŞIR
 
@@ -1557,7 +1557,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **06:** Detay kartı açılınca Talep zinciri o kayıttan yukarı (nerede kullanılıyor) çıkılarak bulunur; uyarı başına en çok 1.000 yol.
 
 - **Uygulama (6.5, K-174):** uygulandı. `app/quality/` (kontrol `run.py`, talep zinciri `chain.py`, Smartchain kontrolleri `checks.py`); kurallar `core`'un `prc` biçimli izdüşümünde (`sqlkit.core_layer`), RES.REF_SUBCONTRACTOR işlenmiş staging'de iş anahtarıyla; iş tipi "Veri kalitesi" (Veri işleme kanalı, öncelik −1, kuyrukta bekleyenle birleşir) aktarımdan, manuel değerden sonra ve gün dönümünde; tablolar `adm.DataQualityWarning`, `adm.DemandChain`, `adm.DemandChainPath` (geçiş 0056, 0057). Ölçüm (202 malzeme): planlar hazırken 2,1 sn, soğukken 8,8 sn (4,3 sn sorgu derlemesi); iyileştirme Bekleyen kontroller'de.
-- **Karar (7.5, K-180):** "kapasitesi tanımsız kaynak" kontrolü aktif, en az bir aktif kritik gruba üye ve günlük kapasitesi boş kaynağa bakar (kritiklik kaynak grubundadır; kontrol 7.8'de yeniden ele alınır). Talep zinciri rota ve iş emri operasyonundan kaynak grubuna, gruptan grup eşleşmesiyle kaynağa iner. Kaynak grubuna taşınan ve yeni kurallar veri kalitesinde takiplidir: grup tipi tek değil, fason bayrağı çelişkisi, fasoncu bulunamadı, kaynağın gruplarının kapasite birimi farklı, kaynak farklı tipte gruplara üye, kaynak adedi gruptaki kaynak sayısından büyük, rotadaki kaynak grubu pasif, kaynak grubunda kaynak yok, kaynak hiçbir grupta yok.
+- **Uygulama (7.5, K-180):** "kapasitesi tanımsız kaynak" kontrolü aktif, en az bir aktif kritik gruba üye ve günlük kapasitesi boş kaynağa bakar (kritiklik kaynak grubundadır; kontrol 7.8'de yeniden ele alınır). Talep zinciri rota ve iş emri operasyonundan kaynak grubuna, gruptan grup eşleşmesiyle kaynağa iner. Kaynak grubuna taşınan ve yeni kurallar veri kalitesinde takiplidir: grup tipi tek değil, fason bayrağı çelişkisi, fasoncu bulunamadı, kaynağın gruplarının kapasite birimi farklı, kaynak farklı tipte gruplara üye, kaynak adedi gruptaki kaynak sayısından büyük, rotadaki kaynak grubu pasif, kaynak grubunda kaynak yok, kaynak hiçbir grupta yok.
 
 ### 20 · Veri kalitesi kontrolü · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
@@ -1887,7 +1887,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.8, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
 
 - **Kapsam (K-167):** Kapasite yönetimi ekranına (7.8) döner. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
-- **Karar (7.5, K-180):** vardiya kavramı kalktı: vardiya tanımı, vardiya planı, "kapasite kaynağı", paralel adet ve vardiyaya bağlı fazla mesai limiti (`OvertimeLimit`) yoktur; aşağıdaki "vardiya × dönem" anlatımı geçersizdir, ek mesai limiti 7.8'de yeniden tasarlanır. Sonraki adımın kararları: kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük kaynak grubu düzeyindedir; kapasite girişleri senaryolu ayrı tablolardadır (K-176), grup ya da kaynak için girilir; adlandırılmış takvim yerine "çalışma düzeni" (haftanın günleri: tam, yarım, çalışılmıyor) ve fabrika takvimi gelir; fason parametreleri ayrı ele alınır; hedef doluluk 7.9'da. Kaynaktaki günlük kapasite, takvim ve fason parametreleri ile takvim, duruş, kapasite profili, verim ve dönem limiti tabloları o adıma kadar geçici olarak durur. Metindeki "Parametre setleri" atfı K-175 ile geçersizdir (tek kavram senaryo).
+- **Uygulama (7.5, K-180):** vardiya kavramı kalktı: vardiya tanımı, vardiya planı, "kapasite kaynağı", paralel adet ve vardiyaya bağlı fazla mesai limiti (`OvertimeLimit`) yoktur; aşağıdaki "vardiya × dönem" anlatımı geçersizdir, ek mesai limiti 7.8'de yeniden tasarlanır. Sonraki adımın kararları: kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük kaynak grubu düzeyindedir; kapasite girişleri senaryolu ayrı tablolardadır (K-176), grup ya da kaynak için girilir; adlandırılmış takvim yerine "çalışma düzeni" (haftanın günleri: tam, yarım, çalışılmıyor) ve fabrika takvimi gelir; fason parametreleri ayrı ele alınır; hedef doluluk 7.9'da. Kaynaktaki günlük kapasite, takvim ve fason parametreleri ile takvim, duruş, kapasite profili, verim ve dönem limiti tabloları o adıma kadar geçici olarak durur. Metindeki "Parametre setleri" atfı K-175 ile geçersizdir (tek kavram senaryo).
 
 #### NASIL ÇALIŞIR
 
@@ -2203,7 +2203,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 29 · Ön hesap
 <sub>24. Ekranlar ve fonksiyonlar · F29 · D Planlama motoru · Çalışma prensibi 1/3</sub>
 
-- **Karar (7.5, K-180):** plan ve yük kaynak grubu düzeyindedir (`CapacityLoad` kaynak grubu × dönem); kapasite kaynakta hesaplanır, grupta toplanır; kritik olmayan grup sonsuz kapasitelidir; birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Metindeki "kaynak" ve "vardiya" anlatımı Aşama 10'da bu modele göre yeniden yazılır.
+- **Uygulama (7.5, K-180):** plan ve yük kaynak grubu düzeyindedir (`CapacityLoad` kaynak grubu × dönem); kapasite kaynakta hesaplanır, grupta toplanır; kritik olmayan grup sonsuz kapasitelidir; birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Metindeki "kaynak" ve "vardiya" anlatımı Aşama 10'da bu modele göre yeniden yazılır.
 
 - Hesaptan önce veriyi modele hazırlamak: zaman yapısı, dönem kapasitesi, talep sırası ve LLC sırasıyla proje bazlı netleştirme.
 
@@ -2357,7 +2357,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 31 · Model kurma
 <sub>24. Ekranlar ve fonksiyonlar · F31 · D Planlama motoru · Çalışma prensibi 1/2</sub>
 
-- **Karar (7.5, K-180):** plan ve yük kaynak grubu düzeyindedir (`CapacityLoad` kaynak grubu × dönem); kapasite kaynakta hesaplanır, grupta toplanır; kritik olmayan grup sonsuz kapasitelidir; birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Metindeki "kaynak" ve "vardiya" anlatımı Aşama 10'da bu modele göre yeniden yazılır.
+- **Uygulama (7.5, K-180):** plan ve yük kaynak grubu düzeyindedir (`CapacityLoad` kaynak grubu × dönem); kapasite kaynakta hesaplanır, grupta toplanır; kritik olmayan grup sonsuz kapasitelidir; birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Metindeki "kaynak" ve "vardiya" anlatımı Aşama 10'da bu modele göre yeniden yazılır.
 
 - MRP iskeletinden kapasiteli optimizasyon modelini kurmak: değişkenler, kısıtlar, amaç; LP ya da MILP, çözücüden bağımsız.
 

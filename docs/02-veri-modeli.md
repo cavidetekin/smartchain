@@ -132,7 +132,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Resource:** Kaynak: tek bir makine, işçi ya da fason iş yeri
 - **ResourceGroup:** Kaynak grubu: planlama birimi; tip, kritiklik, kapasite birimi
-- **ResourceGroupMember:** Grup eşleşmesi: kaynağın gruba üyeliği; yetkinlik matrisi
+- **ResourceGroupMember:** Kaynak grup eşleşmesi: kaynağın gruba üyeliği; yetkinlik matrisi
 - **ResourceCapacityProfile:** Günlük kapasitenin dönemsel değişikliği (ör
 - **ResourceDowntime:** Bakım ve arıza takvimi
 - **ResourceEfficiency:** Kaynak ve dönem bazında verim (kapasite katsayısı)
@@ -458,7 +458,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).
+- Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|

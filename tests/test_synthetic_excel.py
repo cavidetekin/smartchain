@@ -316,3 +316,30 @@ def test_codes_resolve_outside_error_rows(written):
             for k in ("MaterialCode", "ComponentMaterialCode"):
                 if r.get(k) is not None and r[k] not in bad:
                     assert r[k] in material_codes, (entity, k, r[k])
+
+
+def test_old_generated_files_are_cleared_before_writing(tmp_path):
+    """K-181: artık üretilmeyen tablonun eski dosyası klasörde kalmaz; komutun üretmediği dosyaya dokunulmaz."""
+    from openpyxl import Workbook
+
+    from app.data.synthetic import excel
+    from app.integration.template import write_template
+
+    out = tmp_path / "kirli"
+    (out / excel.CHANGED_DIR).mkdir(parents=True)
+    entity = contract.entity("Customer")
+    stale = [out / "ResourceGroupAssignment.xlsx", out / excel.CHANGED_DIR / "Eski.xlsx"]  # eski adla kalmış şablon dosyaları
+    for path in stale:
+        write_template(str(path), entity, excel.labels_of("Customer"), [], [])
+    plain = out / "notlarim.xlsx"
+    wb = Workbook()
+    wb.active.append(["Kod", "Ad"])
+    wb.save(plain)
+    (out / "oku.txt").write_text("benim", encoding="utf-8")
+    (out / excel.MANIFEST).write_text("{}", encoding="utf-8")
+    removed = excel.clear_generated(out)
+    assert sorted(removed) == sorted(["ResourceGroupAssignment.xlsx", f"{excel.CHANGED_DIR}/Eski.xlsx", excel.MANIFEST])
+    assert not any(p.exists() for p in stale) and plain.exists() and (out / "oku.txt").exists()
+    write_template(str(stale[0]), entity, excel.labels_of("Customer"), [], [])
+    manifest = excel.write_excel(generate(), out)
+    assert not stale[0].exists() and plain.exists() and sorted(p.name for p in out.glob("*.xlsx")) == sorted([*manifest["files"], "notlarim.xlsx"])

@@ -100,7 +100,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Rota (Routing) | Ana veri | API · SQL · Excel | ERP | Gece tam | LocationCode + RouteCode + OperationNo + SequenceNo | Zorunlu |
 | Benzetilen ürün (MaterialReference) | Ana veri | API · SQL · Excel | ERP | Gece tam | LocationCode + MaterialCode + ReferenceMaterialCode + ValidFrom | İsteğe bağlı |
 | Kaynak grubu ve kaynak (ResourceGroup, Resource) | Ana veri | Excel · SQL · API | ERP, kapasite tanımları Smartchain ekranında | Gece tam / elle | LocationCode + Code | Zorunlu (kaynak grubu planlama birimidir, K-180) |
-| Grup eşleşmesi ve devamsızlık (ResourceGroupMember, EmployeeAbsence) | Ana veri · İşlem verisi | API · SQL · Excel | ERP | Gece tam | LocationCode + ResourceGroupCode + ResourceCode · LocationCode + ResourceCode + StartDate + AbsenceType | Grup eşleşmesi zorunlu · devamsızlık işçi grubu varsa |
+| Kaynak grup eşleşmesi ve devamsızlık (ResourceGroupMember, EmployeeAbsence) | Ana veri · İşlem verisi | API · SQL · Excel | ERP | Gece tam | LocationCode + ResourceGroupCode + ResourceCode · LocationCode + ResourceCode + StartDate + AbsenceType | Kaynak grup eşleşmesi zorunlu · devamsızlık işçi grubu varsa |
 | Takvim ve gün (Calendar, CalendarDay) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | Zorunlu |
 | Duruş ve kapasite profili (ResourceDowntime, ResourceCapacityProfile) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | İsteğe bağlı |
 | Tedarikçi ve malzeme-tedarikçi (Supplier, MaterialSupplier) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code · LocationCode + MaterialCode + SupplierCode | Zorunlu |
@@ -143,7 +143,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | MaterialReference | Benzetilen ürün | Ana veri | Kendi ağacı ya da rotası olmayan ürünlerin referans ürünleri | benzetilen-urun | 1 |
 | ResourceGroup | Kaynak grubu | Ana veri | Kaynak grupları: tip, kritiklik, kapasite birimi | kaynak-grubu | 3 |
 | Resource | Kaynak | Ana veri | Makine, işçi ve fason kaynakları | kaynak | 4 |
-| ResourceGroupMember | Grup eşleşmesi | Ana veri | Kaynakların gruplara üyeliği ve yetkinlik matrisi | grup-eslesmesi | 2 |
+| ResourceGroupMember | Kaynak grup eşleşmesi | Ana veri | Kaynakların gruplara üyeliği ve yetkinlik matrisi | kaynak-grup-eslesmesi | 2 |
 | EmployeeAbsence | Çalışan izni | İşlem verisi | Çalışanların izin ve rapor kayıtları | calisan-izni | 1 |
 | Supplier | Tedarikçi | Ana veri | Tedarikçiler ve fasoncular | tedarikci | 2 |
 | MaterialSupplier | Malzeme tedarikçisi | Ana veri | Malzemelerin tedarikçileri, temin süreleri ve sipariş koşulları | malzeme-tedarikcisi | 2 |
@@ -405,7 +405,7 @@ FROM erp.WorkCenter;
 ### stg.ResourceGroupMember
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|

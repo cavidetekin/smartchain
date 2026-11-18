@@ -6,11 +6,15 @@ girer (tablo kilidi). Kuyruğa yazan: Excel'de "Devam", çekimde tablonun okunma
 """
 import json
 import logging
+import random
+import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from typing import Any
 
 import sqlalchemy as sa
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.integration.contract import ENTITIES
@@ -375,15 +379,38 @@ def group_outcomes(session: Session, group: int | None) -> list[dict]:
     return out
 
 
+DEADLOCK_RETRIES = 5
+
+
+def is_deadlock(error: BaseException) -> bool:
+    """SQL Server kilitlenmesinde kurban seçilen işlem (1205, SQLSTATE 40001): işlem geri alınmıştır, yeniden denenebilir."""
+    text = str(getattr(error, "orig", None) or error)
+    return "40001" in text or "(1205)" in text
+
+
+def _with_deadlock_retry(session: Session, work: Callable[[], Any], pause: Callable[[float], None] = time.sleep) -> Any:
+    """Birlikte koşan validasyon işleri (toplu yükleme) başka tablolara dokunan tablolar arası kurallarda ve satır durumunda kilitlenebilir
+    (K-181): kurban seçilen iş düşmez, işlemi geri alınıp baştan koşar (her kural kendi bulgularını silip yeniden yazar; yeniden koşulabilir)."""
+    for attempt in range(1, DEADLOCK_RETRIES + 1):
+        try:
+            return work()
+        except DBAPIError as error:
+            if not is_deadlock(error) or attempt == DEADLOCK_RETRIES:
+                raise
+            session.rollback()
+            log.warning("Validasyon kilitlenmesi; yeniden deneniyor (%s/%s)", attempt, DEADLOCK_RETRIES - 1)
+            pause(random.uniform(0.2, 0.8) * attempt)
+
+
 def run_job(session: Session, job_id: int, attempt: int, payload: dict, progress: Callable[[str], None]) -> bool:
     """Motor servisinin validasyon işi. Sonuç iş kaydına (Job.Result) yazılır."""
     run_id, entity, scope = payload["run_id"], payload.get("entity"), payload.get("scope", SCOPE_TABLE)
     if scope == SCOPE_CROSS:
-        run_cross(session, run_id, progress)
+        _with_deadlock_retry(session, lambda: run_cross(session, run_id, progress))
         result = {"entity": None, "outcome": None, "tables": group_outcomes(session, payload.get("group"))}
     else:
         related = payload.get("trigger") != TRIGGER_BULK and not payload.get("group")  # grupta tablolar arası sonda (K-134, K-142)
-        c = run_table(session, run_id, entity, related=related, progress=progress)
+        c = _with_deadlock_retry(session, lambda: run_table(session, run_id, entity, related=related, progress=progress))
         result = {"entity": entity, "name": NAMES.get(entity, entity), "outcome": c["outcome"], "error_rows": c["error_rows"], "warning_rows": c["warning_rows"]}
     session.execute(sa.update(JOB).where(JOB.c.Id == job_id).values(Result=json.dumps(result, ensure_ascii=False)))
     text = f"{result.get('name') or 'Tablolar arası'} · {result['outcome'] or 'bitti'}"
