@@ -106,8 +106,20 @@ def core(table: str) -> sa.Table:
     return metadata.tables[f"core.{table}"]
 
 
+# Çekirdek tablosu olmayan listelerin ilişkileri (K-184; dönem tablosu): liste adı → ((ilişki alanı, etiket), …). Satır ana kaydın kimliğini taşır.
+LINKS: dict[str, tuple[tuple[str, str], ...]] = {}
+
+
+def register_links(name: str, links: tuple[tuple[str, str], ...]) -> str:
+    """Listenin `related_table` değeri olarak kullanılacak ad; ilişkiler `REFS`'teki hedeflere bağlanır."""
+    LINKS[name] = links
+    return name
+
+
 def relations_of(table: str, labels: Labels = NO_LABELS, level: int = 1) -> list[Relation]:
     """Tablonun tek karşılıklı ilişkileri (ilişki alanı sırasıyla). Hedefinin listesi olmayan (takvim) ve ikinci seviyede Lokasyon yoktur."""
+    if table in LINKS:
+        return [Relation(column, REFS[column][0], label) for column, label in LINKS[table] if _definition(REFS[column][0]) is not None]
     if f"core.{table}" not in metadata.tables:
         return []
     own = labels(table)

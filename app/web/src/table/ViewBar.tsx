@@ -37,7 +37,8 @@ export interface Views {
 
 /** Görünümleri okur, açılışta varsayılanı uygular; seçim ve kayıt işlemleri tablo durumunu (apply) günceller. */
 export function useViews(list: string, userId: number, columns: ListColumn[] | null,
-                         apply: (s: TableState) => void, related: ListColumn[] = [], onRelated?: (columns: ListColumn[]) => void): Views {
+                         apply: (s: TableState) => void, related: ListColumn[] = [], onRelated?: (columns: ListColumn[]) => void,
+                         standardPivot?: unknown): Views {
   const api = useMemo(() => listApi(list), [list]);
   const [views, setViews] = useState<SavedView[]>([]);
   const [defaultId, setDefaultId] = useState<number | null>(null);
@@ -62,12 +63,13 @@ export function useViews(list: string, userId: number, columns: ListColumn[] | n
     if (!columns) return;
     const company = standardRef.current;
     const known = mergeColumns(columns, relatedRef.current);
-    const state = view ? fromDefinition(view.definition, known) : company ? fromDefinition(company.definition, known) : standardState(columns);
+    // ürünün Standart'ı: dönem tablosunda liste tanımındaki pivotla (K-184)
+    const state = view ? fromDefinition(view.definition, known) : company ? fromDefinition(company.definition, known) : standardState(columns, standardPivot);
     applyRef.current(state);
     setCurrentId(view?.id ?? null);
     setBaseline(toDefinition(state));
     setWarnings(view ? view.warnings : company?.warnings ?? []);
-  }, [columns]);
+  }, [columns, standardPivot]);
   const setCompany = (s: StandardView | null) => {
     standardRef.current = s;
     setStandard(s);

@@ -280,6 +280,25 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Varsayılan hesaplama (7.7b) | Eklenen değer alanın liste tanımındaki varsayılan hesaplamasıyla gelir (yoksa sayıda Toplam, tarihte En erken, metinde Benzersiz say) |
 | Durum (7.7b) | uygulandı (7.7b, K-183) |
 
+## Dönem tablosu standardı (7.8, K-184)
+
+Dönem tablosu bir ana kaydın dönem bazındaki özetidir (kaynak grubu × dönem, malzeme × dönem…). Ortak tablonun bir listesidir; filtre, sıralama, gruplama, pivot, grafik, ilişkili alanlar, görünümler ve Excel öteki tablolardaki gibidir. Farkları:
+
+| Konu | Kural |
+|---|---|
+| Veri | Hesaplanır, girilmez: dönem tablosunda hücre düzenleme, kayıt kartı, elle değer, kayıt ekleme ve Excel'den yükleme yoktur. Girişler geçerlilik aralığıyla kendi tablolarındadır |
+| Senaryo | Dönemler bağlam çubuğunda seçili senaryonun planlama ufkundan (plan ekseni). Her istek senaryoyu taşır; senaryo değişince tablo yeniden yüklenir. Görünümler senaryodan bağımsızdır |
+| Alanlar | Önce ana kaydın alanları (kod, ad…), sonra her dönem tablosunda aynı ad ve sırayla: Dönem tipi · Dönem · Dönem başı · Dönem sonu · Hafta · Ay · Çeyrek · Yıl · Dönem takvim günü; ardından değerler. Ana kaydın öteki alanları "İlişkili alanlar"dan |
+| Etiketler | Gün "19.11.2026" · hafta "H47 2026" · ay "Kas 2026" · çeyrek "Ç4 2026" · yıl "2026"; pivot ve grafikteki dönem etiketleriyle aynı yazım (sunucuda tek işlev). Hafta kendi yılıyla; Yıl dönem başının takvim yılı |
+| Sıralama | Dönem, Hafta, Ay, Çeyrek, Yıl ve Dönem tipi her yerde Dönem başı'na göre sıralanır (alfabetik değil): tablo sıralaması, gruplama, filtre penceresinin değer listesi, pivot satır ve sütun başlıkları, grafik ekseni. Kolon bilgisinde `order_by`; istemci metin sıralaması yapmaz. Dönem tipinin değiştiği yerde (haftalardan aylara) ayrıca ayraç yoktur |
+| Varsayılan görünüm | Ürünün Standart'ı pivottur: satırda ana kayıt, sütunda Dönem, değerler satırlarda (liste tanımındaki `standard_pivot`). Pivot açık gelirken ayar paneli kapalıdır. Şirket Standart'ı ve kullanıcı görünümü bugünkü sırayla üstüne gelir; ⚙ › "Pivot görünümü" ile tabloya geçilir; grafik aynı veriden |
+| Değerler | Her değerin adı, birimi, ondalığı ve varsayılan hesaplaması liste tanımındadır; pivota eklenen değer o hesaplamayla gelir (oranlar ağırlıklı ortalama, ör. Verimlilik kapasiteyle). Değerler satırlardayken "Değer" sütunu en uzun değer adına göre genişler (14–26 rem; ad kesilmez); bu, bütün pivotlar için geçerlidir |
+| İlk · Son dönem değeri | Yalnız dönem tablolarının pivotunda iki hesaplama daha: "İlk dönem değeri" ve "Son dönem değeri". Hücreye giren dönemlerden ilkinin (ya da sonuncusunun) değeri alınır, ana kayıtlar arasında toplanır: kaynak sayısı dört haftada 3 ise ay altında 3'tür (12 değil); iki grubun toplamı 3 + 2 = 5. Etiket "Kaynak sayısı · Son dönem değeri". Tablodaki gruplamanın ara toplamında ve grafikte sunulmaz (o alanların ara toplamı boş kalır) |
+| Hazır hesaplanan değerler | Liste tanımındaki hazır oranlar (ör. "Ortalama verimlilik" = Kullanılabilir kapasite ÷ Toplam kapasite) pivot panelinde Değerler bölümünde "Hazır değerler" listesinde; seçilince işlenenleriyle birlikte eklenir ("… · Toplamlardan") |
+| Önbellek | Ekran açılırken hesap yapılmaz; günlük sonuç kullanıcıya görünmeyen önbellekten okunur, giriş değişince yalnız etkilenen kısım yenilenir (docs/08). Kullanıcı önbelleği görmez, yönetmez |
+| Deneme sayfası (7.8) | `/donem-tablosu`: menüde yok; "Kaynak grubu × dönem (deneme)" (kaynak sayısı, çalışma günü, toplam kapasite, verimlilik, kullanılabilir kapasite; bugünkü geçici kapasite verisinden). 7.9'da Kapasite yönetimi ekranı gelince kalkar |
+| Durum | demo bekliyor |
+
 ## Görünüm (1.4, K-89, K-90)
 
 | Parça | Davranış |

@@ -779,7 +779,11 @@ export const tr = {
     valueName: "Ad",
     weight: "Ağırlık alanı",
     decimals: "Ondalık",
-    fn: { sum: "Toplam", avg: "Ortalama", min: "En düşük", max: "En yüksek", count: "Say", distinct: "Benzersiz say", wavg: "Ağırlıklı ortalama" },
+    fn: { sum: "Toplam", avg: "Ortalama", min: "En düşük", max: "En yüksek", count: "Say", distinct: "Benzersiz say", wavg: "Ağırlıklı ortalama",
+          first: "İlk dönem değeri", last: "Son dönem değeri" },
+    // Hazır hesaplanan değerler (dönem tablosu, K-184)
+    readyValues: "Hazır değerler",
+    addReady: (name: string) => `Hazır değer ekle: ${name}`,
     fnDate: { min: "En erken", max: "En geç" },  // tarih alanında
     // Hesaplanan değer ve değerin kuralları (7.7b)
     addCalc: "Hesaplanan değer ekle",
@@ -1364,6 +1368,8 @@ export const tr = {
       "chart-2": "Petrol", "lead-100": "Açık kurşun", "lead-600": "Kurşun", "lead-900": "Koyu kurşun",
     } as Record<string, string>,
   },
+  // Dönem tablosu deneme sayfası (K-184; menüde yok, 7.9'da kalkar)
+  periodDemo: { title: "Kaynak grubu × dönem (deneme)" },
   demo: {
     title: "Tablo bileşeni",
     intro: "Ortak tablo bileşeni denemesi (K-87, docs/12): sentetik malzeme listesi. Ekran değildir; menüde yer almaz.",

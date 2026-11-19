@@ -10,7 +10,7 @@ metadata = sa.MetaData(naming_convention={
     "ck": "CK_%(table_name)s_%(constraint_name)s",
 })
 
-SCHEMAS = ['stg', 'prc', 'core', 'param', 'planning', 'adm']
+SCHEMAS = ['stg', 'prc', 'core', 'param', 'planning', 'adm', 'cache']
 
 # docs/03 Varlık kataloğu (K-110): tablo, ad, sınıf, açıklama, dosya adı, sürüm
 ENTITY_CATALOG = (
@@ -1869,6 +1869,31 @@ License = sa.Table(
     sa.Column("InstallationId", sa.Unicode(100), nullable=False, comment="Kurulum kimliği", info={'label': "Kurulum kimliği"}),
     schema="adm",
     comment="Çevrimdışı imzalı lisans.",
+)
+
+ResourceCapacityDay = sa.Table(
+    "ResourceCapacityDay", metadata,
+    sa.Column("ScenarioDefinitionId", sa.Integer(), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo"}),
+    sa.Column("ResourceId", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kaynak", info={'label': "Kaynak"}),
+    sa.Column("Date", mssql.DATE(), primary_key=True, autoincrement=False, comment="Gün", info={'label': "Gün"}),
+    sa.Column("WorkingDay", sa.Numeric(5, 2), nullable=False, comment="Çalışma günü (tam 1, yarım 0,5, çalışılmıyor 0)", info={'label': "Çalışma günü (tam 1, yarım 0,5, çalışılmıyor 0)"}),
+    sa.Column("Capacity", sa.Numeric(18, 4), nullable=False, comment="Günün toplam kapasitesi", info={'label': "Günün toplam kapasitesi"}),
+    sa.Column("AvailableCapacity", sa.Numeric(18, 4), nullable=False, comment="Kullanılabilir kapasite (toplam × verim)", info={'label': "Kullanılabilir kapasite (toplam × verim)"}),
+    schema="cache",
+    comment="Kaynak × gün kapasite ara sonucu (K-184): dönem tablosu \"Kaynak grubu × dönem\" bundan toplanır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız kendi girişi olan kaynak ve günler (gerisi Baz'ın satırlarından okunur). 7.8'de deneme hesabının alanlarını taşır; 7.9'da gerçek kapasite alanlarıyla yeniden düzenlenir. Kümelenmiş anahtar senaryo, kaynak, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan.",
+)
+
+PeriodCacheState = sa.Table(
+    "PeriodCacheState", metadata,
+    sa.Column("CacheName", sa.Unicode(60), primary_key=True, autoincrement=False, comment="Önbelleğin adı (ör. resource-capacity-day)", info={'label': "Önbelleğin adı (ör. resource-capacity-day)"}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo"}),
+    sa.Column("CodeVersion", sa.Integer(), nullable=False, comment="Hesap kodunun sürümü", info={'label': "Hesap kodunun sürümü"}),
+    sa.Column("DataVersionId", sa.Integer(), nullable=True, comment="Kurulduğu veri versiyonu", info={'label': "Kurulduğu veri versiyonu"}),
+    sa.Column("DateFrom", mssql.DATE(), nullable=False, comment="Tutulan ilk gün", info={'label': "Tutulan ilk gün"}),
+    sa.Column("DateTo", mssql.DATE(), nullable=False, comment="Tutulan son gün", info={'label': "Tutulan son gün"}),
+    sa.Column("BuiltAt", mssql.DATETIME2(), nullable=False, comment="Son tam kurulum zamanı (UTC)", info={'label': "Son tam kurulum zamanı (UTC)"}),
+    schema="cache",
+    comment="Önbelleğin durumu (K-184): önbellek ve senaryo başına tek satır. Satır yoksa önbellek kurulmamıştır; hesap kodunun sürümü ya da veri versiyonu farklıysa önbellek düşürülüp yeniden kurulur; gün aralığı ufkun gerisinde kaldıysa geçmiş günler temizlenir, ufuk ilerlediyse yalnız eksik günler hesaplanır.",
 )
 
 stg_Material = sa.Table(

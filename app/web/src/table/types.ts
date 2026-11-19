@@ -29,8 +29,11 @@ export interface ListColumn {
   decimals_from_unit: boolean;
   /** Yüzde gösterim (K-113): veride oran (0,05), ekranda %5,00; filtre ve kural değeri yüzde girilir, oran saklanır. */
   percent: boolean;
-  /** Gruplamada varsayılan ara toplam (K-90); pivota eklenen değerin de varsayılan hesaplaması (K-183). */
-  aggregate: AggFn | null;
+  /** Gruplamada varsayılan ara toplam (K-90); pivota eklenen değerin de varsayılan hesaplaması (K-183). Dönem tablosunda "first" · "last"
+   *  (İlk · Son dönem değeri, K-184) yalnız pivotta geçerlidir; gruplamada ara toplam yok sayılır. */
+  aggregate: AggFn | "first" | "last" | null;
+  /** Sıralamanın yapıldığı alan (K-184; dönem alanlarında Dönem başı): sıralamayı sunucu yapar, istemci metin sıralaması yapmaz. */
+  order_by?: string | null;
   /** Varsayılan hesaplama ağırlıklı ortalamaysa ağırlık alanı. */
   aggregate_weight?: string | null;
   default_visible: boolean;
@@ -73,6 +76,28 @@ export interface ColumnsResponse {
   export: ExportInfo;
   /** İlişkili alanların birinci seviye başlıkları (K-182); ilişkisi olmayan listede boş. */
   relations?: RelationHeading[];
+  /** Dönem tablosu (K-184): dönemler seçili senaryonun ufkundan; pivotta İlk · Son dönem değeri sunulur. */
+  period_table?: boolean;
+  /** Ürünün Standart görünümündeki pivot (görünüm içeriğindeki `pivot` biçiminde). */
+  standard_pivot?: unknown;
+  /** Hazır hesaplanan değerler: pivot panelinde seçilince işlenenleriyle birlikte eklenir. */
+  calculated_values?: CalculatedValue[];
+}
+
+export interface CalculatedValue {
+  name: string;
+  a: { field: string; fn: string };
+  op: "div" | "mul" | "add" | "sub";
+  b: { field: string; fn: string };
+  percent: boolean;
+  decimals: number;
+}
+
+// Dönem tablosunda (K-184) her istek seçili senaryoyu taşır: liste adı → senaryo. Tablo bileşeni kolonlar gelince yazar.
+const LIST_SCENARIO = new Map<string, number>();
+export function setListScenario(list: string, scenarioId: number | undefined): void {
+  if (scenarioId === undefined) LIST_SCENARIO.delete(list);
+  else LIST_SCENARIO.set(list, scenarioId);
 }
 
 /** Excel'e aktarım kapsamı (K-91, docs/08 "Dışa aktarım"). */
@@ -265,33 +290,39 @@ export interface ValueCount {
 
 export function listApi(list: string) {
   const base = `/api/${list}`;
+  /** Dönem tablosunda isteğe senaryo eklenir; gövdede zaten varsa (haftalık dönem) o kalır. */
+  const sc = <T extends object>(body: T): T => {
+    const id = LIST_SCENARIO.get(list);
+    return id === undefined ? body : { scenario_id: id, ...body };
+  };
   return {
     columns: (signal?: AbortSignal) => getJson<ColumnsResponse>(`${base}/columns`, signal),
     /** Bir ilişkinin alanları ve alt ilişkileri (İlişkili alanlar, K-182). */
     related: (path: string, signal?: AbortSignal) => getJson<RelatedCatalog>(`${base}/related?path=${encodeURIComponent(path)}`, signal),
-    query: (body: QueryRequest, signal?: AbortSignal) => postJson<QueryResponse>(`${base}/query`, body, signal),
+    query: (body: QueryRequest, signal?: AbortSignal) => postJson<QueryResponse>(`${base}/query`, sc(body), signal),
     /** Filtredeki satırların kimlikleri (çoklu seçim, K-171): en çok 10.000; truncated: fazlası var. */
     ids: (filters: ListFilter[], signal?: AbortSignal, selection?: ChartSelection) =>
-      postJson<{ ids: string[]; truncated: boolean }>(`${base}/ids`, { filters, ...(selection ? { chart_selection: selection } : {}) }, signal),
+      postJson<{ ids: string[]; truncated: boolean }>(`${base}/ids`, sc({ filters, ...(selection ? { chart_selection: selection } : {}) }), signal),
     values: (body: { field: string; search: string; filters: ListFilter[] }, signal?: AbortSignal) =>
-      postJson<ValueCount[]>(`${base}/values`, body, signal),
+      postJson<ValueCount[]>(`${base}/values`, sc(body), signal),
     groups: (body: { group_by: string[]; fields: string[]; aggregates: Record<string, AggSpec>; filters: ListFilter[];
                      sort: SortItem[]; chart_selection?: ChartSelection }, signal?: AbortSignal) =>
-      postJson<GroupsResponse>(`${base}/groups`, body, signal),
+      postJson<GroupsResponse>(`${base}/groups`, sc(body), signal),
     /** Tablonun grafiği için toplama (K-178): listeyle aynı filtre ve yetki. */
-    chart: (body: ChartRequest, signal?: AbortSignal) => postJson<ChartData>(`${base}/chart`, body, signal),
+    chart: (body: ChartRequest, signal?: AbortSignal) => postJson<ChartData>(`${base}/chart`, sc(body), signal),
     /** Pivot Excel'e, ekrandaki şekille (K-183). */
     pivotExport: async (body: unknown) => {
-      const r = await ensureOk(await fetch(`${base}/pivot/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+      const r = await ensureOk(await fetch(`${base}/pivot/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sc(body as object)) }));
       return { blob: await r.blob(), fileName: fileNameFrom(r.headers.get("Content-Disposition"), "smartchain_pivot.xlsx") };
     },
     /** Pivot (K-183): satır × sütun × değer; satırlar parça parça (offset, limit). */
-    pivot: (body: PivotRequest, signal?: AbortSignal) => postJson<PivotData>(`${base}/pivot`, body, signal),
+    pivot: (body: PivotRequest, signal?: AbortSignal) => postJson<PivotData>(`${base}/pivot`, sc(body), signal),
     /** Dağılım grafiğinin noktaları (K-179): en çok 2.000; aşımda eşit aralıklı örnekleme. */
-    points: (body: PointsRequest, signal?: AbortSignal) => postJson<PointsData>(`${base}/chart/points`, body, signal),
+    points: (body: PointsRequest, signal?: AbortSignal) => postJson<PointsData>(`${base}/chart/points`, sc(body), signal),
     /** Grafiğin verisi Excel'e (K-179): Veri, Bilgi ve Grafik sayfaları. */
     chartExport: async (body: { kind: ChartKind; chart?: ChartRequest; points?: PointsRequest; image?: string; title: string }) => {
-      const r = await ensureOk(await fetch(`${base}/chart/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+      const sent = { ...body, ...(body.chart ? { chart: sc(body.chart) } : {}), ...(body.points ? { points: sc(body.points) } : {}) };
+      const r = await ensureOk(await fetch(`${base}/chart/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sent) }));
       return { blob: await r.blob(), fileName: fileNameFrom(r.headers.get("Content-Disposition"), "smartchain_grafik.xlsx") };
     },
     /** Görsel (PNG) indirmesinin izi ve dosya adı (K-179): görsel tarayıcıda üretilir. */
@@ -307,7 +338,7 @@ export function listApi(list: string) {
     resetStandard: () => sendJson<void>("DELETE", `${base}/views/standard`),
     export: async (body: ExportRequest): Promise<ExportResult> => {
       const r = await ensureOk(await fetch(`${base}/export`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sc(body)),
       }));
       if (r.status === 202) return { kind: "job", ...(await r.json() as { job_id: number; file_name: string; rows: number }) };
       return { kind: "file", blob: await r.blob(), fileName: fileNameFrom(r.headers.get("Content-Disposition"), "smartchain.xlsx") };

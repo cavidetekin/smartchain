@@ -15,7 +15,7 @@ import {
 } from "./pivotModel";
 import { RuleDialog } from "./RuleDialog";
 import { describeCondition, formatStyle, newRuleId } from "./rules";
-import type { FormatRule, ListColumn, RelatedCatalog, RelationHeading } from "./types";
+import type { CalculatedValue, FormatRule, ListColumn, RelatedCatalog, RelationHeading } from "./types";
 
 const T = tr.pivot;
 type SectionKey = "rows" | "columns" | "values" | "place" | "totals" | "sort";
@@ -44,7 +44,11 @@ function Toggle({ label, checked, onToggle }: { label: string; checked: boolean;
   );
 }
 
-export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields, loadRelated, onRelated, onChange, onClose }: {
+export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields, loadRelated, onRelated, onChange, onClose, periodTable = false, calculated = [] }: {
+  /** Dönem tablosu (K-184): İlk · Son dönem değeri sunulur. */
+  periodTable?: boolean;
+  /** Hazır hesaplanan değerler (liste tanımından): seçilince işlenenleriyle birlikte eklenir. */
+  calculated?: CalculatedValue[];
   pivot: PivotConfig;
   /** Bilinen bütün kolonlar (tablonun kolonları ve tanınan ilişkili kolonlar): etiket ve tip için. */
   columns: ListColumn[];
@@ -90,6 +94,25 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
     setAdding(null);
   };
   const operands = pivot.values.filter((v) => isOperand(v, byField));
+  // Hazır değer: işlenenleri (alan + hesaplama) pivotta yoksa eklenir, sonra hesaplanan değer onlara bağlanır
+  const addReady = (c: CalculatedValue) => {
+    let values = [...pivot.values];
+    const operand = (side: { field: string; fn: string }) => {
+      const found = values.find((v) => !isCalc(v) && v.field === side.field && v.fn === side.fn);
+      if (found) return found.id;
+      const id = nextValueId(values);
+      values = [...values, { id, field: side.field, fn: side.fn as PivotFn, weight: null, decimals: null }];
+      return id;
+    };
+    const a = operand(c.a);
+    const b = operand(c.b);
+    const id = nextValueId(values);
+    values = [...values, { id, kind: "calc", field: null, fn: "sum", weight: null, decimals: c.decimals, name: c.name, a, op: c.op, b, percent: c.percent }];
+    if (values.length > PIVOT_MAX_VALUES) return;
+    onChange({ ...pivot, values });
+    setAdding(null);
+  };
+  const readyUsed = (c: CalculatedValue) => pivot.values.some((v) => isCalc(v) && v.name === c.name);
   const addCalc = () => {
     const id = nextValueId(pivot.values);
     const value: PivotValue = { id, kind: "calc", field: null, fn: "sum", weight: null, decimals: null, name: null,
@@ -217,7 +240,7 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
             const name = valueName(v, byField);
             const shown = valueDisplay(v, byField);
             const isOpen = expanded === v.id;
-            const fns = v.fn === "count" && !v.field ? (["count"] as PivotFn[]) : fnsFor(col);
+            const fns = v.fn === "count" && !v.field ? (["count"] as PivotFn[]) : fnsFor(col, periodTable);
             return (
               <li key={v.id} {...dragProps("values", v.id)}>
                 <div className="sc-chart-series-head">
@@ -279,6 +302,17 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
         <button type="button" className="sc-chart-add" disabled={pivot.values.length >= PIVOT_MAX_VALUES || operands.length === 0} onClick={addCalc}>
           <Plus aria-hidden="true" />{T.addCalc}
         </button>
+        {calculated.length > 0 && (
+          <div className="sc-field sc-pivot-ready" role="group" aria-label={T.readyValues}>
+            <span className="sc-field-label">{T.readyValues}</span>
+            {calculated.map((c) => (
+              <button key={c.name} type="button" className="sc-chart-add" aria-label={T.addReady(c.name)} title={T.addReady(c.name)}
+                      disabled={readyUsed(c) || pivot.values.length >= PIVOT_MAX_VALUES} onClick={() => addReady(c)}>
+                <Plus aria-hidden="true" />{c.name}
+              </button>
+            ))}
+          </div>
+        )}
       </Section>
       <Section title={T.valuesOn} {...section("place")}>
         <Segment label={T.valuesOn} hideLabel value={pivot.values_on} onChange={(values_on) => onChange({ ...pivot, values_on })}

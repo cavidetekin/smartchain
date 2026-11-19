@@ -1,4 +1,5 @@
 """Liste sorgusu (K-87, docs/08): kolonlar, parça parça satırlar ve sayılar, liste filtresi değerleri."""
+from dataclasses import replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
@@ -6,7 +7,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from ..errors import DB_UNAVAILABLE, AppError
-from ..lists.definition import ListDefinition, columns as column_list
+from ..lists.definition import ListDefinition, SourceContext, columns as column_list
 from ..lists import relations
 from ..lists.query import DEFAULT_UNIT_DECIMALS, FIELD_DECIMALS, SELECTION_MAX, UNIT, UNIT_DECIMALS, Builder, ListQueryError
 from ..lists import chart as chart_query
@@ -61,9 +62,19 @@ def labels_of(session: Session) -> relations.Labels:
     return read
 
 
+def scenario_of(session: Session, user_id: int | None, req=None) -> int:
+    """İsteğin senaryosu: gövdedeki `scenario_id`; verilmezse kullanıcının seçili senaryosu, o da yoksa Baz (K-184)."""
+    try:
+        return scenario_service.resolve(session, user_id, getattr(req, "scenario_id", None))["Id"]
+    except scenario_service.ScenarioError as exc:
+        raise AppError("not_found", "Senaryo bulunamadı.", 404) from exc
+
+
 def _builder(session: Session, defn: ListDefinition, role: str | None = None, user_id: int | None = None, req=None) -> Builder:
     """role, user_id: oturumdaki kullanıcı (row_scope); verilmezse en dar kapsam. req: isteğin gövdesi; içinde geçen ilişkili alanların
     ilişkileri kaynağa birleştirilir (K-182)."""
+    if defn.source_factory is not None:  # dönem tablosu (K-184): kaynak, isteğin senaryosuna göre kurulur
+        defn = replace(defn, source=defn.source_factory(SourceContext(session, scenario_of(session, user_id, req), today())))
     related = relations.scan(req.model_dump(mode="json")) if req is not None and defn.related_table else ()
     extra = {"related": related, "labels_of": labels_of(session)} if related else {}
     if not defn.versioned:
@@ -94,6 +105,10 @@ def columns(session: Session | None, defn: ListDefinition) -> dict:
                 "columns": column_list(defn, repo.read_labels(session, defn.table_name),
                                        manual=frozenset(manual_fields(session, defn.manual_table)) if defn.manual_table else frozenset()),
                 "relations": relations.headings(defn, labels_of(session)),  # İlişkili alanların başlıkları (K-182)
+                # Dönem tablosu (K-184): İlk · Son dönem değeri sunulur; ürünün Standart'ı pivot; hazır hesaplanan değerler
+                **({"period_table": True} if defn.period else {}),
+                **({"standard_pivot": dict(defn.standard_pivot)} if defn.standard_pivot else {}),
+                **({"calculated_values": [dict(c) for c in defn.calculated]} if defn.calculated else {}),
                 "export": {"title": defn.title or defn.name, "file_slug": defn.file_slug or defn.name,
                            "sync_max_rows": limits["ExportSyncMaxRows"], "max_rows": limits["ExportMaxRows"],
                            "file_hours": limits["ExportFileHours"]}}
@@ -242,7 +257,7 @@ def pivot(session: Session | None, defn: ListDefinition, req: PivotRequest, role
         p = pivot_query.Pivot(b, req.model_copy(update={"limit": req.limit or chunk}), week_start_index(start))
         try:
             leaf_columns = repo.fetch_rows(session, p.columns_query()) if req.columns else []
-            columns = p.columns([tuple(r[f"c{i}"] for i in range(len(req.columns))) for r in leaf_columns])
+            columns = p.columns(p.leaf_columns(leaf_columns))
         except pivot_query.PivotTooLarge as exc:
             raise AppError("pivot_too_large", str(exc), 422) from exc
         except chart_query.TooManyPeriods as exc:

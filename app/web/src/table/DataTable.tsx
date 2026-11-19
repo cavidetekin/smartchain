@@ -44,7 +44,7 @@ import {
 import { RulesPanel } from "./RulesPanel";
 import {
   type AggSpec, type ExportInfo, type ExportScope, type FormatRule, listApi, type GroupNode, type ListColumn, type ListFilter,
-  MAX_RULES, type RelatedCatalog, type RelationHeading, type Row,
+  type CalculatedValue, MAX_RULES, type RelatedCatalog, type RelationHeading, type Row, setListScenario,
 } from "./types";
 import { PivotGrid } from "./PivotGrid";
 import { emptyPivot, type PivotConfig, pivotExportRequest, pivotReady } from "./pivotModel";
@@ -473,6 +473,10 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   }, [list]);
   const [chunkSize, setChunkSize] = useState(0);
   const [exportInfo, setExportInfo] = useState<ExportInfo | null>(null);
+  const [period, setPeriod] = useState<{ table: boolean; standardPivot?: unknown; calculated: CalculatedValue[] }>({ table: false, calculated: [] });
+  const scenarioRef = useRef(scenario?.id);
+  scenarioRef.current = scenario?.id;
+  if (period.table) setListScenario(list, scenario?.id);  // senaryo değişince sonraki istekler yenisini taşır
   const [pivotExporting, setPivotExporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [columnsError, setColumnsError] = useState<ApiError | null>(null);
@@ -512,7 +516,10 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   useEffect(() => {
     const ctrl = new AbortController();
     listApi(list).columns(ctrl.signal)
-      .then(({ columns: cols, chunk_size, export: info, relations: rels }) => {
+      .then(({ columns: cols, chunk_size, export: info, relations: rels, period_table, standard_pivot, calculated_values }) => {
+        // Dönem tablosu (K-184): istekler seçili senaryoyu taşır; ürünün Standart'ı pivot; hazır hesaplanan değerler
+        setListScenario(list, period_table ? scenarioRef.current : undefined);
+        setPeriod({ table: Boolean(period_table), standardPivot: standard_pivot, calculated: calculated_values ?? [] });
         setColumns(cols);
         setRelations(rels ?? []);
         onColumns?.(cols);
@@ -526,9 +533,9 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     return () => ctrl.abort();
   }, [list, columnsAttempt]);
 
-  const views = useViews(list, userId, baseColumns, setState, relatedColumns, addRelated);
+  const views = useViews(list, userId, baseColumns, setState, relatedColumns, addRelated, period.standardPivot);
   const update = useCallback((fn: (s: TableState) => TableState) => setState((s) => (s ? fn(s) : s)), []);
-  const s = state ?? standardState(columns ?? []);
+  const s = state ?? standardState(columns ?? [], period.standardPivot);
   const byField = useMemo(() => new Map((columns ?? []).map((c) => [c.field, c])), [columns]);
   /** Kolonun varsayılan genişliği (rem): ipucu ya da tipin varsayılanı; fitHeaders'ta başlık (sıralama ve filtre düğmeleriyle) kesilmesin. */
   const baseWidth = (f: string): number => {
@@ -1304,6 +1311,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
                      reloadKey={reloadKey} onFilter={(field, anchor) => openPop("filter", field, anchor)} isFiltered={(field) => Boolean(filterOf(field))} />
           {pivotPanel && (
             <PivotPanel pivot={s.pivot} columns={columns} baseColumns={baseColumns!} relations={relations} loadRelated={loadRelated} onRelated={addRelated}
+                        periodTable={period.table} calculated={period.calculated}
                         usedFields={[...new Set([...pivotFields, ...s.filters.map((f) => f.field)])].filter(isRelatedField)}
                         onChange={setPivot} onClose={() => setPivotPanel(false)} />
           )}

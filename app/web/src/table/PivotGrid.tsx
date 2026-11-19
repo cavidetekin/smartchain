@@ -21,7 +21,8 @@ import { listApi, type ListColumn, type ListFilter } from "./types";
 const T = tr.pivot;
 export const PIVOT_ROW_REM = 2.1538;      // tablonun satır yüksekliği
 const HEAD_REM = 11;                       // satır başlık kolonu
-const VALUE_HEAD_REM = 14;                 // "Değer" kolonu (değerler satırlarda)
+const VALUE_HEAD_REM = 14;                 // "Değer" kolonu (değerler satırlarda): en az; uzun değer adında genişler
+const MAX_VALUE_HEAD_REM = 26;
 const CELL_REM = 8.4615;                   // değer hücresi
 const MAX_CELL_REM = 18;
 const HEADER_CHAR_REM = 0.56;
@@ -186,7 +187,9 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
   const cellRem = (k: number) => (valuesOnRows ? CELL_REM
     : Math.min(MAX_CELL_REM, Math.max(CELL_REM, Math.max(shown[k].top.length, shown[k].bottom?.length ?? 0) * HEADER_CHAR_REM + 1.6)));
   const groupRem = valuesOnRows ? CELL_REM : labels.reduce((sum, _, k) => sum + cellRem(k), 0);
-  const widthRem = R * HEAD_REM + (valuesOnRows ? VALUE_HEAD_REM : 0) + data.columns.length * groupRem;
+  // değer adı kesilmesin: en uzun ada göre (dönem tablosunda "Verimlilik · Ağırlıklı ortalama (Toplam kapasite)" gibi adlar)
+  const valueHeadRem = Math.min(MAX_VALUE_HEAD_REM, Math.max(VALUE_HEAD_REM, Math.max(0, ...labels.map((l) => l.length)) * HEADER_CHAR_REM + 1.6));
+  const widthRem = R * HEAD_REM + (valuesOnRows ? valueHeadRem : 0) + data.columns.length * groupRem;
   const rowAt = (d: number): PivotRow | undefined => chunks.get(Math.floor(d / chunkSize))?.[d % chunkSize];
   const fieldLabel = (field: string) => byField.get(field)?.label ?? field;
   const funnel = (field: string) => (
@@ -218,7 +221,7 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
       <table className="sc-pivot-grid" style={{ width: `${widthRem}rem` }} aria-rowcount={count} aria-label={T.pivot}>
         <colgroup>
           {data.row_fields.map((f) => <col key={f.field} style={{ width: `${HEAD_REM}rem` }} />)}
-          {valuesOnRows && <col style={{ width: `${VALUE_HEAD_REM}rem` }} />}
+          {valuesOnRows && <col style={{ width: `${valueHeadRem}rem` }} />}
           {data.columns.flatMap((_, s) => Array.from({ length: span }, (__, k) => <col key={`${s}-${k}`} style={{ width: `${cellRem(k)}rem` }} />))}
         </colgroup>
         <thead>

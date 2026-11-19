@@ -25,6 +25,7 @@ SCHEMA_OF_CLASS = {
     "Plan": "planning",
     "Veri yönetimi": "adm",
     "Sistem": "adm",
+    "Önbellek": "cache",
 }
 SCHEMA_TITLE = {
     "stg": "Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58); ham katman, hiç değişmez (K-140)",
@@ -33,6 +34,7 @@ SCHEMA_TITLE = {
     "param": "Planlama parametreleri ve senaryo tanımları",
     "planning": "Senaryo, çalışma ve plan çıktıları",
     "adm": "Veri yönetimi ve sistem (SQL Server'da `sys` ayrılmış olduğu için `adm`)",
+    "cache": "Önbellek: girişlerden hesaplanan ara sonuçlar; veri değildir, silinirse yeniden üretilir (K-184)",
 }
 
 # Versiyonlu tablolarda her kayıtta bulunan ortak alanlar (K-40)

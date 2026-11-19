@@ -183,3 +183,10 @@
 | `adm.FlowRunDismissal` | Kullanıcının kapattığı zamanlanmış iş bildirimi (K-163); kapatılan çip o kullanıcıda yeniden görünmez. | Sistem |  | 3 |
 | `adm.License` | Çevrimdışı imzalı lisans. | Sistem |  | 4 |
 
+## `cache` · Önbellek: girişlerden hesaplanan ara sonuçlar; veri değildir, silinirse yeniden üretilir (K-184) (2 tablo)
+
+| Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
+|---|---|---|---|---|
+| `cache.ResourceCapacityDay` | Kaynak × gün kapasite ara sonucu (K-184): dönem tablosu "Kaynak grubu × dönem" bundan toplanır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız kendi girişi olan kaynak ve günler (gerisi Baz'ın satırlarından okunur). 7.8'de deneme hesabının alanlarını taşır; 7.9'da gerçek kapasite alanlarıyla yeniden düzenlenir. Kümelenmiş anahtar senaryo, kaynak, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan. | Önbellek |  | 6 |
+| `cache.PeriodCacheState` | Önbelleğin durumu (K-184): önbellek ve senaryo başına tek satır. Satır yoksa önbellek kurulmamıştır; hesap kodunun sürümü ya da veri versiyonu farklıysa önbellek düşürülüp yeniden kurulur; gün aralığı ufkun gerisinde kaldıysa geçmiş günler temizlenir, ufuk ilerlediyse yalnız eksik günler hesaplanır. | Önbellek |  | 7 |
+

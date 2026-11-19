@@ -93,6 +93,14 @@ def _source(version: dict | None) -> str:
             f"{version['CreatedAt'].replace(tzinfo=timezone.utc).astimezone():%d.%m.%Y %H:%M}" if version else "Güncel kayıtlar")
 
 
+def _scenario_info(session: Session, defn: ListDefinition, user_id: int, req) -> list[tuple[str, str]]:
+    """Dönem tablosunda (K-184) dosyanın hangi senaryonun dönemleriyle hazırlandığı Bilgi sayfasında yazar."""
+    if defn.source_factory is None:
+        return []
+    from app.params import scenarios
+    return [("Senaryo", scenarios.get(session, list_service.scenario_of(session, user_id, req))["Name"])]
+
+
 def _file_name(defn: ListDefinition, version: dict | None, ext: str, part: str = "") -> str:
     version_part = f"veri-v{version['Id']}_" if version else ""
     return f"smartchain_{defn.file_slug or defn.name}_{part}{version_part}{_now_local():%Y-%m-%d_%H%M}.{ext}"
@@ -135,6 +143,7 @@ def _plan(session: Session, defn: ListDefinition, user_id: int, req: ExportReque
     info = [
         ("Liste", defn.title or defn.name),
         ("Kaynak", _source(version)),
+        *_scenario_info(session, defn, user_id, req),
         ("Satırlar", f"{'Filtrelenmiş' if req.scope.rows == 'filtered' else 'Tümü (filtresiz)'} · {describe.tr_number(rows, 0)}"),
         ("Kolonlar", f"{'Görünen' if req.scope.columns == 'visible' else 'Tümü'} · {len(columns)}: "
                      + ", ".join(c["label"] for c in columns)),
@@ -425,7 +434,7 @@ def start_chart(session: Session | None, defn: ListDefinition, user_id: int, req
 PIVOT_EXPORT_MAX_CELLS = 1_000_000   # görüntü satırı × değer sütunu; aşılırsa dosya hazırlanmaz
 PIVOT_EXPORT_PAGE = 500
 OPS = {"div": "÷", "mul": "×", "add": "+", "sub": "−"}
-PIVOT_FNS = {**FNS, "wavg": "Ağırlıklı ortalama"}
+PIVOT_FNS = {**FNS, "wavg": "Ağırlıklı ortalama", "first": "İlk dönem değeri", "last": "Son dönem değeri"}  # son ikisi yalnız dönem tablosunda (K-184)
 DATE_FNS = {"min": "En erken", "max": "En geç"}
 
 
@@ -539,6 +548,7 @@ def start_pivot(session: Session | None, defn: ListDefinition, user_id: int, req
         info = [
             ("Liste", defn.title or defn.name),
             ("Kaynak", _source(version)),
+            *_scenario_info(session, defn, user_id, req),
             ("Pivot", req.title or "Pivot görünümü"),
             ("Satırlar", " › ".join(labels.get(a.field, a.field) + bucket_of(a) for a in req.rows)),
             ("Sütunlar", " › ".join(labels.get(a.field, a.field) + bucket_of(a) for a in req.columns) or "yok"),

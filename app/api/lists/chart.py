@@ -194,9 +194,12 @@ def query(b: Builder, req: ChartRequest, week_start: int) -> sa.Select:
         cols.append(t.c[b.defn.unit_field].label("u"))
     fields = list(dict.fromkeys(s.field for s in req.series if s.fn not in NOT_MEASURED))
     cols += [t.c[f].label(f"c{i}") for i, f in enumerate(fields)]
+    ordered = not req.x.bucket and b.ordered(req.x.field)  # sıra alanı (K-184): kategori ekseni o alanın sırasıyla (dönemler tarih sırasıyla)
+    if ordered:
+        cols.append(b.order_col(t.c[req.x.field]).label("ox"))
     inner = sa.select(*cols).where(b.base_clause(), *where).subquery()
     keys = [inner.c.x] + ([inner.c.p] if req.split else []) + ([inner.c.f] if req.facet else []) + ([inner.c.u] if with_unit else [])
-    measures = [sa.func.count().label("n")]
+    measures = [sa.func.count().label("n")] + ([sa.func.min(inner.c.ox).label("ox")] if ordered else [])
     for i, _ in enumerate(fields):
         c = inner.c[f"c{i}"]
         measures += [sa.func.sum(c).label(f"s{i}"), sa.func.count(c).label(f"d{i}"), sa.func.min(c).label(f"lo{i}"), sa.func.max(c).label(f"hi{i}")]
@@ -290,6 +293,20 @@ def assemble(b: Builder, req: ChartRequest, leaves: list[dict], week_start_name:
         if any(leaf["x"] is None for leaf in leaves):
             xs.append(None)  # tarihi boş satırlar: "(Boş)" son sırada
         x_of = lambda leaf: None if leaf["x"] is None else _as_date(leaf["x"])  # noqa: E731
+    elif b.ordered(req.x.field):
+        # Sıra alanı (K-184): kategoriler değere göre değil sıra alanına göre dizilir; sınır aşılırsa sıradaki ilk değerler kalır, gerisi "Diğer"
+        first: dict = {}
+        for leaf in leaves:
+            if leaf["x"] is not None and leaf.get("ox") is not None:
+                first[leaf["x"]] = min(first.get(leaf["x"], leaf["ox"]), leaf["ox"])
+        named = sorted(first, key=lambda k: first[k])
+        rest = sorted({leaf["x"] for leaf in leaves if leaf["x"] is not None and leaf["x"] not in first}, key=lambda k: tr_key(str(k)))
+        keys = named + rest + ([None] if any(leaf["x"] is None for leaf in leaves) else [])
+        kept = keys[:req.limit]
+        x_other = len(keys) > req.limit
+        xs = kept + ([OTHER] if x_other else [])
+        keep = set(kept)
+        x_of = lambda leaf: leaf["x"] if leaf["x"] in keep else OTHER  # noqa: E731
     else:
         keys = ranked(lambda leaf: leaf["x"])
         kept = keys[:req.limit]  # gösterilecek değer sayısı (varsayılan ve üst sınır 30); kalanı "Diğer"

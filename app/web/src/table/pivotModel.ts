@@ -5,7 +5,9 @@ import { tr } from "../i18n/tr";
 import type { ChartBucket, ChartSelection } from "../ui/chart/chartModel";
 import type { ColumnType, ListColumn, ListFilter, RuleCondition, RuleFormat } from "./types";
 
-export type PivotFn = "sum" | "avg" | "min" | "max" | "count" | "distinct" | "wavg";
+export type PivotFn = "sum" | "avg" | "min" | "max" | "count" | "distinct" | "wavg" | "first" | "last";
+/** İlk · Son dönem değeri (K-184): yalnız dönem tablosunda; zaman içinde ilk (son) dönemin değeri, kayıtlar arasında toplanır. */
+export const PERIOD_FNS: PivotFn[] = ["first", "last"];
 export const PIVOT_FNS: PivotFn[] = ["sum", "avg", "min", "max", "count", "distinct", "wavg"];
 export const PIVOT_MAX_AXIS = 3;
 export const PIVOT_MAX_VALUES = 8;
@@ -167,13 +169,14 @@ export function defaultFn(c: ListColumn): PivotFn {
     if (a === "sum" || a === "avg" || a === "min" || a === "max") return a;
     if (a === "avg_nonzero") return "avg";
     if (a === "wavg" && c.aggregate_weight) return "wavg";
+    if (a === "first" || a === "last") return a;
     return "sum";
   }
   return isDate(c) ? "min" : "distinct";
 }
 /** Alana uyan hesaplamalar: sayıda hepsi; tarihte En erken · En geç · Say · Benzersiz say; metinde Say · Benzersiz say. */
-export const fnsFor = (c: ListColumn | undefined): PivotFn[] =>
-  (!c ? ["count"] : isNumeric(c) ? PIVOT_FNS : isDate(c) ? ["min", "max", "count", "distinct"] : ["count", "distinct"]);
+export const fnsFor = (c: ListColumn | undefined, periodTable = false): PivotFn[] =>
+  (!c ? ["count"] : isNumeric(c) ? (periodTable ? [...PIVOT_FNS, ...PERIOD_FNS] : PIVOT_FNS) : isDate(c) ? ["min", "max", "count", "distinct"] : ["count", "distinct"]);
 /** Hesaplamanın adı: tarih alanında "En düşük · En yüksek" yerine "En erken · En geç". */
 export const fnLabel = (fn: PivotFn, c: ListColumn | undefined): string =>
   (isDate(c) && (fn === "min" || fn === "max") ? tr.pivot.fnDate[fn] : tr.pivot.fn[fn]);

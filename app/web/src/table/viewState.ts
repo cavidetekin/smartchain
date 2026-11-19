@@ -34,10 +34,12 @@ export const MAX_GROUP_FIELDS = 4;
 
 export const clampWidth = (rem: number) => Math.min(MAX_WIDTH_REM, Math.max(MIN_WIDTH_REM, Math.round(rem * 100) / 100));
 
-/** "Standart" görünüm: liste tanımındaki varsayılan alanlar ve sunucunun varsayılan sıralaması (K-89). */
-export function standardState(columns: ListColumn[]): TableState {
+/** "Standart" görünüm: liste tanımındaki varsayılan alanlar ve sunucunun varsayılan sıralaması (K-89). Dönem tablosunda ürünün Standart'ı
+ *  pivottur (K-184): liste tanımındaki pivot açık gelir. */
+export function standardState(columns: ListColumn[], standardPivot?: unknown): TableState {
+  const pivot = standardPivot ? fitPivot(normalizePivot(standardPivot as Parameters<typeof normalizePivot>[0]), columns) : null;
   return { order: columns.filter((c) => c.default_visible).map((c) => c.field), widths: {}, pinned: 0, sort: [],
-           filters: [], groupBy: [], aggregates: {}, rules: [], chart: null, pivot: null };
+           filters: [], groupBy: [], aggregates: {}, rules: [], chart: null, pivot };
 }
 
 export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): TableState {
@@ -116,16 +118,19 @@ export function dropField(order: string[], field: string, target: string, side: 
 
 const isNumber = (c: ListColumn) => c.type === "number" || c.type === "integer";
 
+/** Gruplamanın varsayılan ara toplamı: İlk · Son dönem değeri yalnız pivottadır (K-184); gruplamada ara toplam yok sayılır. */
+const tableAggregate = (col: ListColumn): AggSpec["fn"] => (col.aggregate && col.aggregate !== "first" && col.aggregate !== "last" ? col.aggregate : "none");
+
 /** Kolonun geçerli ara toplamı: kullanıcının seçimi, yoksa liste tanımının varsayılanı (K-90). */
 export function aggregateOf(col: ListColumn, s: TableState): AggSpec {
   if (!isNumber(col)) return { fn: "none" };
-  return s.aggregates[col.field] ?? { fn: col.aggregate ?? "none" };
+  return s.aggregates[col.field] ?? { fn: tableAggregate(col) };
 }
 
 /** Seçimi yazar; varsayılanla aynıysa kaydı siler (görünüm temiz kalsın). */
 export function withAggregate(s: TableState, col: ListColumn, spec: AggSpec): TableState {
   const aggregates = { ...s.aggregates };
-  if (spec.fn === (col.aggregate ?? "none") && spec.fn !== "wavg") delete aggregates[col.field];
+  if (spec.fn === tableAggregate(col) && spec.fn !== "wavg") delete aggregates[col.field];
   else aggregates[col.field] = spec.fn === "wavg" ? { fn: "wavg", weight: spec.weight } : { fn: spec.fn };
   return { ...s, aggregates };
 }

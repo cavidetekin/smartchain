@@ -140,6 +140,12 @@ def _renumber(session: Session) -> None:
             session.execute(sa.update(S).where(S.c.Id == row["id"]).values(NightlyPriority=i))
 
 
+def _drop_period_cache(session: Session, scenario_id: int) -> None:
+    """Dönem tablosu önbelleği veri değildir (K-184): senaryo silinince, pasif yapılınca ve Baz'dan ayrılınca düşer."""
+    from app import periods  # döngüsel içe aktarma: dönemler parametreleri okur
+    periods.drop_scenario(session, scenario_id)
+
+
 def set_active(session: Session, scenario_id: int, active: bool) -> dict:
     """Pasif senaryo gece çalışmaz ve bağlam çubuğunda görünmez; parametreleri durur. Geri alınır."""
     row = _editable(session, scenario_id)
@@ -147,6 +153,7 @@ def set_active(session: Session, scenario_id: int, active: bool) -> dict:
     session.execute(sa.update(S).where(S.c.Id == scenario_id).values(**values))
     if not active:
         _renumber(session)
+        _drop_period_cache(session, scenario_id)  # pasif senaryonun dönem önbelleği tutulmaz (K-184)
     return row
 
 
@@ -157,6 +164,7 @@ def detach(session: Session, scenario_id: int) -> dict:
         raise ScenarioError("not_following", "Bu senaryo Baz'ı izlemiyor.")
     session.execute(sa.update(S).where(S.c.Id == scenario_id).values(FollowsBase=False))
     registry.materialize(session, scenario_id)
+    _drop_period_cache(session, scenario_id)  # artık kendi satırlarının tamamını tutar: ilk kullanımda baştan kurulur (K-184)
     return row
 
 
@@ -168,6 +176,7 @@ def delete(session: Session, scenario_id: int) -> dict:
         raise ScenarioError("scenario_published", "Yayınlanmış planı olan senaryo silinemez; pasif yapılabilir.")
     delete_scenario_plans(session.connection(), scenario_id)
     registry.delete_rows(session, scenario_id)
+    _drop_period_cache(session, scenario_id)
     session.execute(sa.update(USER).where(USER.c.ScenarioDefinitionId == scenario_id).values(ScenarioDefinitionId=None))
     session.execute(sa.delete(S).where(S.c.Id == scenario_id))
     _renumber(session)

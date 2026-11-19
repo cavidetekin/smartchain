@@ -70,6 +70,10 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 - Kaynağı olmayan kritik grubun kapasitesi sıfırdır; doğrulama ve veri kalitesi uyarır (`RG.NO_RESOURCE`).
 - Tip bilgisi grubun bayraklarından okunur (`IsEmployee`, `IsMachine`, `IsSubcontractor`…); kaynaktaki ham tip yalnız bilgidir. Vardiya kavramı yoktur.
 
+## Dönem değerleri (7.8, K-184)
+
+Kapasite gibi dönem bazındaki değerlerin tek bir hesabı vardır: `app/periods/` altındaki hesap işlevi. Ekran bu işlevle kurulan önbellekten okur; motor plan hesabında aynı işlevi doğrudan çağırır (`app.periods.values(session, ad, senaryo, gün aralığı)`; önbellekten okumaz). İkisinin birebir aynı sonucu verdiği testle sabittir. Motor yükleyicisinin bu işleve bağlanması 7.9'da (gerçek kapasite hesabıyla).
+
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.

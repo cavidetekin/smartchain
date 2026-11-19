@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 from . import relations
 from .definition import ListDefinition, column_type, columns, filter_type
-from .request import AggSpec, FilterItem, GroupKeyItem, QueryRequest, RuleSpec, SortItem
+from .request import PERIOD_FNS, AggSpec, FilterItem, GroupKeyItem, QueryRequest, RuleSpec, SortItem
 
 # Çok değerli liste filtresi (K-171, çoklu seçim): bu sayıdan fazla değer parametre yerine metin olarak gömülür (SQL Server'ın 2.100 parametre
 # sınırı). Değerler yine SQLAlchemy'nin kaçışıyla yazılır.
@@ -151,18 +151,30 @@ class Builder:
     def order_by(self, sort: list[SortItem]) -> list[sa.ColumnElement]:
         problems: list[dict] = []
         items = sort or [SortItem(field=f, dir=d) for f, d in self.defn.default_sort]
-        out = []
+        out, used = [], set()
         for i, s in enumerate(items):
             col = self._col(s.field, f"sort.{i}.field", problems)
             if col is None:
                 continue
+            col = self.order_col(col)  # sıra alanı (K-184): Dönem, Dönem başı'na göre sıralanır
+            if col.name in used:  # iki alan aynı sıra alanına bağlıysa (Ay ve Dönem) ilki geçerlidir; SQL Server aynı kolonu iki kez kabul etmez
+                continue
+            used.add(col.name)
             expr = turkish(col) if column_type(col) == "text" else col
             out.append(expr.desc() if s.dir == "desc" else expr.asc())
         if problems:
             raise ListQueryError(problems)
-        if not any(s.field == "Id" for s in items):
+        if "Id" not in used:
             out.append(self.table.c.Id.asc())  # kararlı parçalar
         return out
+
+    def order_col(self, col: sa.ColumnElement) -> sa.ColumnElement:
+        """Alanın sıralandığı kolon: liste tanımında sıra alanı varsa o (K-184), yoksa kendisi."""
+        other = self.defn.order_by.get(col.name)
+        return self.table.c[other] if other and other in self.table.c else col
+
+    def ordered(self, field_name: str) -> bool:
+        return bool(self.defn.order_by.get(field_name)) and self.defn.order_by[field_name] in self.table.c
 
     def where(self, filters: list[FilterItem], skip_field: str | None = None) -> list[sa.ColumnElement]:
         problems: list[dict] = []
@@ -441,11 +453,13 @@ class Builder:
         if search.strip():
             where.append(turkish_like(col, "%" + like_escape(search.strip()) + "%"))
         g = self.group_expr(col)
-        inner = (sa.select(g.label("value"), sa.func.count().label("count"))
+        by_other = self.ordered(field_name)  # sıra alanı (K-184): değerler o alanın en küçüğüne göre (dönemler tarih sırasıyla)
+        extra = [sa.func.min(self.order_col(col)).label("o")] if by_other else []
+        inner = (sa.select(g.label("value"), sa.func.count().label("count"), *extra)
                  .where(self.base_clause(), *where).group_by(g).subquery())
         v = inner.c.value
-        order = [sa.case((v.is_(None), 0), else_=1), turkish(v) if column_type(col) == "text" else v]
-        return sa.select(inner).order_by(*order).limit(limit + 1)  # boş (U-13) başta, sonra ilk 100 değer
+        order = [sa.case((v.is_(None), 0), else_=1), inner.c.o if by_other else turkish(v) if column_type(col) == "text" else v]
+        return sa.select(inner.c.value, inner.c.count).order_by(*order).limit(limit + 1)  # boş (U-13) başta, sonra ilk 100 değer
 
     def groups_query(self, group_by: list[str], filters: list[FilterItem], sort: list[SortItem],
                      specs: dict[str, AggSpec], limit: int) -> tuple[sa.Select, list[str]]:
@@ -462,6 +476,9 @@ class Builder:
         where = self.where(filters)
         keys = [self.group_expr(c).label(f"g{i}") for i, c in enumerate(cols)]
         measures = [sa.func.count().label("n")]
+        for i, c in enumerate(cols):  # sıra alanı (K-184): grubun sıra değeri, o alanın gruptaki en küçüğü
+            if self.ordered(c.name):
+                measures.append(sa.func.min(self.order_col(c)).label(f"o{i}"))
         for f, spec in specs.items():
             measures += self._measures(f, spec)
         grouping = [self.group_expr(c) for c in cols]
@@ -475,7 +492,10 @@ class Builder:
         for i, c in enumerate(cols):
             g = inner.c[f"g{i}"]
             order.append(sa.case((g.is_(None), 1), else_=0))
-            expr = turkish(g) if column_type(c) == "text" else g
+            if self.ordered(c.name):  # üst düzeyin sırası alt grupların hepsinde aynı olsun: düzeyin anahtarlarına göre pencere
+                expr = sa.func.min(inner.c[f"o{i}"]).over(partition_by=[inner.c[f"g{j}"] for j in range(i + 1)])
+            else:
+                expr = turkish(g) if column_type(c) == "text" else g
             order.append(expr.desc() if dirs.get(group_by[i]) == "desc" else expr.asc())
         q = sa.select(inner).order_by(*order).limit(limit).with_statement_hint(PARALLEL_HINT, "mssql")
         return q, [c.name for c in cols]
@@ -519,8 +539,9 @@ class Builder:
         """Ara toplam türleri: verilmezse görünen kolonlarda liste tanımının varsayılanı. "none" atılır.
         Yalnız sayı alanları; ağırlıklı ortalamada ağırlık başka bir sayı alanı olmalı (422)."""
         if specs is None:
+            # İlk · Son dönem değeri yalnız pivotta (K-184): gruplamanın varsayılan ara toplamı olmaz
             return {f: AggSpec(fn=fn, weight=self.defn.aggregate_weights.get(f) if fn == "wavg" else None) for f, fn in self.defn.aggregates.items()
-                    if f in self.columns and (fields is None or f in fields)}
+                    if f in self.columns and (fields is None or f in fields) and fn not in PERIOD_FNS}
         problems: list[dict] = []
         numeric = {f for f, c in self.columns.items() if c["type"] in ("number", "integer")}
         out = {}

@@ -5,6 +5,7 @@ Kolonun etiketi ve değer listesi docs'tan üretilen modelde (`info`), tipi veri
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from datetime import date
 
 import sqlalchemy as sa
 
@@ -12,6 +13,14 @@ from db.dictionary import description, standard_label
 from db.models import metadata
 
 ADDITIONAL = re.compile(r"Additional(Text|Number)\d+$")
+
+
+@dataclass(frozen=True)
+class SourceContext:
+    """Kaynağı istek başına kurulan listede (dönem tablosu, K-184) kaynağın bağlamı."""
+    session: object
+    scenario_id: int
+    today: date
 
 
 @dataclass(frozen=True)
@@ -62,6 +71,17 @@ class ListDefinition:
     # Satırın okunur biçimi başka alana bağlıysa (ör. geçmişte değerin biçimi alanın tipinden, K-173): satırlar üzerinde yerinde; liste cevabı
     # ve Excel aynı işlevden. Gereken alanlar key_fields'ta.
     row_format: Callable[[list[dict]], None] | None = None
+    # Kaynağı istek başına kuran işlev (K-184; dönem tablosu): SourceContext → FromClause. O zaman `source` yalnız kolon bilgisi için
+    # durağan iskelettir (aynı kolonlar, satırsız); sorgular istekte kurulan kaynağı okur.
+    source_factory: Callable[[SourceContext], sa.FromClause] | None = None
+    # Sıralamanın yapıldığı alan (K-184): alan → sıra alanı (ör. Dönem → Dönem başı). Tablo sıralaması, grupların sırası, filtre
+    # değerleri, pivot başlıkları ve grafik ekseni bu alana göre sıralar; istemci metin sıralaması yapmaz.
+    order_by: Mapping[str, str] = field(default_factory=dict)
+    # Dönem tablosu (K-184): (ana kayıt kolonu, dönem başı alanı). Doluysa pivotta "İlk dönem değeri" ve "Son dönem değeri" sunulur.
+    period: tuple[str, str] | None = None
+    # Ürünün Standart görünümündeki pivot (görünüm içeriğindeki `pivot` biçiminde) ve hazır hesaplanan değerler (K-184)
+    standard_pivot: Mapping | None = None
+    calculated: tuple[Mapping, ...] = ()
 
     @property
     def sa_table(self) -> sa.FromClause:
@@ -136,6 +156,7 @@ def columns(defn: ListDefinition, labels: dict[str, str], with_filter_only: bool
             "percent": name in defn.percent,
             "aggregate": defn.aggregates.get(name),
             "aggregate_weight": defn.aggregate_weights.get(name),
+            "order_by": defn.order_by.get(name),
             "default_visible": name in defn.default_visible,
             "note": _note(defn, name, col, label),
             "manual": name in manual,  # manuel değer girilebilir (K-170); yetki ön yüzde fonksiyon 12'den

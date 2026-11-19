@@ -23,6 +23,7 @@ import { StyleGuide } from "./screens/StyleGuide";
 import { SystemHealth } from "./screens/SystemHealth";
 import { SystemOwner } from "./screens/SystemOwner";
 import { TransactionData } from "./screens/TransactionData";
+import { PeriodTableDemo } from "./screens/PeriodTableDemo";
 import { TableDemo } from "./screens/TableDemo";
 import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
@@ -55,6 +56,7 @@ export function App({ initialMe }: { initialMe?: Me | null }) {
             <Route path="/stil" element={<StyleGuide />} />
             {/* Tablo bileşeni denemesi (K-87): ekran değildir, menüde yoktur */}
             <Route path="/tablo" element={<ScreenGate fn={10}><TableDemo /></ScreenGate>} />
+            <Route path="/donem-tablosu" element={<ScreenGate fn={10}><PeriodTableDemo /></ScreenGate>} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

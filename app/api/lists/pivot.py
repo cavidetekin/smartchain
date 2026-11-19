@@ -14,9 +14,11 @@ from datetime import date, timedelta
 
 import sqlalchemy as sa
 
+from app.periods import periods as period_list
+
 from .chart import DATE_KINDS, MAX_PERIODS, TooManyPeriods, _bucket_expr, next_period, tr_key
 from .query import PARALLEL_HINT, Builder, turkish
-from .request import PIVOT_RULE_OPS, PivotAxis, PivotRequest, PivotValueSpec
+from .request import PERIOD_FNS, PIVOT_RULE_OPS, PivotAxis, PivotRequest, PivotValueSpec
 
 MAX_LEAF_COLUMNS = 200      # yaprak sütun (sütun alanlarının değer birleşimi)
 MAX_VALUE_COLUMNS = 400     # çizilen değer sütunu: sütun (toplamlar dahil) × değer
@@ -83,6 +85,9 @@ def problems(b: Builder, rows: list[PivotAxis], columns: list[PivotAxis], values
         if col is None:
             bad(f"values.{i}.field", f"Bilinmeyen alan: {v.field}" if v.field else "Alan seçilmeli")
             continue
+        if v.fn in PERIOD_FNS and not b.defn.period:
+            bad(f"values.{i}.fn", "İlk dönem değeri ve Son dönem değeri yalnız dönem tablolarında kullanılır")
+            continue
         if v.fn in ("min", "max") and col["type"] in DATE_KINDS:
             continue  # tarih alanında en erken ve en geç (K-183 demo kararı); toplam ve ortalama yok
         if v.fn != "distinct" and col["type"] not in NUMERIC_KINDS:
@@ -105,8 +110,15 @@ class Pivot:
         t = b.table
         self.R, self.C = len(req.rows), len(req.columns)
         self.index = {v.id: k for k, v in enumerate(req.values)}
-        cols = [self._axis(a, week_start).label(f"r{i}") for i, a in enumerate(req.rows)]
-        cols += [self._axis(a, week_start).label(f"c{i}") for i, a in enumerate(req.columns)]
+        rx = [self._axis(a, week_start) for a in req.rows]
+        cx = [self._axis(a, week_start) for a in req.columns]
+        cols = [x.label(f"r{i}") for i, x in enumerate(rx)] + [x.label(f"c{i}") for i, x in enumerate(cx)]
+        # Sıra alanı (K-184): başlıklar o alanın gruptaki en küçüğüne göre sıralanır (Dönem, Dönem başı'na göre)
+        self.row_ordered = [not a.bucket and b.ordered(a.field) for a in req.rows]
+        self.col_ordered = [not a.bucket and b.ordered(a.field) for a in req.columns]
+        cols += [b.order_col(t.c[a.field]).label(f"or{i}") for i, a in enumerate(req.rows) if self.row_ordered[i]]
+        cols += [b.order_col(t.c[a.field]).label(f"oc{i}") for i, a in enumerate(req.columns) if self.col_ordered[i]]
+        self.col_order: dict[tuple[int, tuple], object] = {}
         self.unit_of: dict[int, str] = {}   # değer sırası → taban sorgudaki birim kolonu
         self.checked: set[int] = set()      # birim karışıklığı denetlenen değerler (listenin kendi miktar alanları)
         units: dict[str, str] = {}          # kaynak birim kolonu → taban sorgudaki ad
@@ -115,6 +127,15 @@ class Pivot:
                 continue
             src = t.c[v.field]
             cols.append((sa.func.nullif(src, sa.literal_column("N''")) if b.columns[v.field]["type"] == "text" else src).label(f"a{k}"))
+            if v.fn in PERIOD_FNS:
+                # İlk · Son dönem değeri (K-184): her toplama düzeyi (satır öneki i × sütun öneki j) için, o düzeyin hücresinde ana kaydın
+                # ilk (son) dönemindeki değer işaretlenir; hücrenin sonucu işaretli değerlerin toplamıdır (ana kayıtlar arasında toplanır).
+                master, start = t.c[b.defn.period[0]], t.c[b.defn.period[1]]
+                by = start.asc() if v.fn == "first" else start.desc()
+                for i in range(self.R + 1):
+                    for j in range(self.C + 1):
+                        first = sa.func.row_number().over(partition_by=[*rx[:i], *cx[:j], master], order_by=by) == 1
+                        cols.append(sa.case((first, src)).label(f"f{k}_{i}_{j}"))
             if v.fn == "wavg":
                 cols.append(t.c[v.weight].label(f"w{k}"))
             if v.fn in NOT_MEASURED or not b.columns[v.field]["decimals_from_unit"]:
@@ -139,11 +160,12 @@ class Pivot:
         return self.b.columns[a.field]["type"]
 
     # --- hesaplama --------------------------------------------------------------------------------------------
-    def measure(self, k: int, src: sa.FromClause) -> sa.ColumnElement:
-        """Değerin grubun kayıtlarından hesabı (her düzeyde aynı ifade: ara toplam ve genel toplam da kayıtlardan)."""
+    def measure(self, k: int, src: sa.FromClause, level=None) -> sa.ColumnElement:
+        """Değerin grubun kayıtlarından hesabı (her düzeyde aynı ifade: ara toplam ve genel toplam da kayıtlardan). level(i, j): sorgunun o
+        satırı (satır öneki i, sütun öneki j) düzeyinde mi (koşul; o düzey sorguda yoksa None); İlk · Son dönem değeri düzeye göre seçilir."""
         v = self.req.values[k]
         if v.kind == "calc":  # toplamlardan: o grubun a ve b sonuçlarından (kayıtların oranlarından değil); bölen 0 ya da biri boşsa boş
-            a, b = (sa.cast(self.measure(self.index[x], src), sa.Float) for x in (v.a, v.b))
+            a, b = (sa.cast(self.measure(self.index[x], src, level), sa.Float) for x in (v.a, v.b))
             return {"div": lambda: a / sa.func.nullif(b, 0), "mul": lambda: a * b, "add": lambda: a + b, "sub": lambda: a - b}[v.op]()
         if v.fn == "count":
             return sa.func.count()
@@ -152,6 +174,10 @@ class Pivot:
             return sa.func.count(sa.distinct(turkish(a) if self.b.columns[v.field]["type"] == "text" else a))
         if v.fn == "sum":
             return sa.func.sum(a)
+        if v.fn in PERIOD_FNS:
+            whens = [(cond, sa.func.sum(src.c[f"f{k}_{i}_{j}"])) for i in range(self.R + 1) for j in range(self.C + 1)
+                     if (cond := level(i, j)) is not None]
+            return sa.case(*whens)
         if v.fn in ("min", "max"):
             return getattr(sa.func, v.fn)(a)
         if v.fn == "avg":
@@ -168,7 +194,12 @@ class Pivot:
         by_value = req.sort.by != "name"
         k = next((i for i, v in enumerate(req.values) if v.id == req.sort.by), 0)
         g = [sa.func.grouping(x).label(f"g{i}") for i, x in enumerate(r)]
-        idx_cols = [*r, *g] + ([self.measure(k, base).label("sv")] if by_value else [])
+        grouped = sum((sa.func.grouping(x) for x in r[1:]), sa.func.grouping(r[0]))  # toplanmış satır alanı sayısı
+
+        def level(i: int, j: int):  # satır toplamı sütunların tamamındadır (sütun öneki 0)
+            return (grouped == self.R - i) if j == 0 else None
+        idx_cols = [*r, *g] + ([self.measure(k, base, level).label("sv")] if by_value else [])
+        idx_cols += [sa.func.min(base.c[f"or{i}"]).label(f"on{i}") for i in range(self.R) if self.row_ordered[i]]
         idx = sa.select(*idx_cols).select_from(base).group_by(sa.func.rollup(*r)).cte("idx")
         ir = [idx.c[f"r{i}"] for i in range(self.R)]
         ig = [idx.c[f"g{i}"] for i in range(self.R)]
@@ -182,7 +213,10 @@ class Pivot:
                 is_level = sa.and_(*[ig[j] == (0 if j <= i else 1) for j in range(self.R)])
                 value = sa.func.max(sa.case((is_level, idx.c.sv))).over(partition_by=[*ig[: i + 1], *ir[: i + 1]])
                 order += [(sa.case((value.is_(None), 1), else_=0), False), (value, desc)]
-            name = turkish(ir[i]) if self._kind(req.rows[i]) == "text" else ir[i]
+            if self.row_ordered[i]:  # sıra alanı: düzeyin anahtarlarında ortak değer (alt satırların hepsi aynı sırada dursun)
+                name = sa.func.min(idx.c[f"on{i}"]).over(partition_by=[*ir[: i + 1], *ig[: i + 1]])
+            else:
+                name = turkish(ir[i]) if self._kind(req.rows[i]) == "text" else ir[i]
             order += [(sa.case((ir[i].is_(None), 1), else_=0), False), (name, desc and not by_value)]
         # pencere değerleri süzmeden önce hesaplanır: sıra ifadeleri iç sorguda, süzme ve numaralama dışarıda
         keyed = sa.select(*ir, *ig, *[o.label(f"o{n}") for n, (o, _) in enumerate(order)]).cte("keyed")
@@ -211,8 +245,15 @@ class Pivot:
         match = [sa.or_(page.c[f"g{i}"] == 1, base.c[f"r{i}"] == page.c[f"r{i}"], sa.and_(base.c[f"r{i}"].is_(None), page.c[f"r{i}"].is_(None)))
                  for i in range(self.R)]
         cols: list[sa.ColumnElement] = [page.c.rn, *self.c, *[sa.func.grouping(x).label(f"gc{j}") for j, x in enumerate(self.c)]]
+        row_level = self.R - sum((sa.func.max(page.c[f"g{i}"]) for i in range(1, self.R)), sa.func.max(page.c.g0))
+        col_level = self.C - sum((sa.func.grouping(x) for x in self.c[1:]), sa.func.grouping(self.c[0])) if self.C else None
+
+        def level(i: int, j: int):
+            if col_level is None:
+                return (row_level == i) if j == 0 else None
+            return sa.and_(row_level == i, col_level == j)
         for k, v in enumerate(req.values):
-            cols.append(self.measure(k, base).label(f"v{k}"))
+            cols.append(self.measure(k, base, level).label(f"v{k}"))
             if k in self.unit_of:
                 unit = sa.case((base.c[f"a{k}"].is_not(None), base.c[self.unit_of[k]]))
                 cols += [sa.func.min(unit).label(f"ua{k}"), sa.func.max(unit).label(f"ub{k}")]
@@ -227,14 +268,30 @@ class Pivot:
         """Yaprak sütun anahtarları (sınırdan bir fazla: aşım anlaşılır)."""
         if not self.C:
             return None
-        return sa.select(*self.c).select_from(self.base).group_by(*self.c).limit(MAX_LEAF_COLUMNS + 1)
+        order = [sa.func.min(self.base.c[f"oc{j}"]).label(f"ocm{j}") for j in range(self.C) if self.col_ordered[j]]
+        return sa.select(*self.c, *order).select_from(self.base).group_by(*self.c).limit(MAX_LEAF_COLUMNS + 1)
+
+    def leaf_columns(self, rows: list[dict]) -> list[tuple]:
+        """Sorgu satırlarından yaprak anahtarları; sıra alanlı sütunlarda her önekin sıra değeri (o önekin yapraklarındaki en küçük)."""
+        for r in rows:
+            key = tuple(r[f"c{j}"] for j in range(self.C))
+            for j in range(self.C):
+                if self.col_ordered[j] and r[f"ocm{j}"] is not None:
+                    at = (j, key[: j + 1])
+                    self.col_order[at] = min(self.col_order.get(at, r[f"ocm{j}"]), r[f"ocm{j}"])
+        return [tuple(r[f"c{j}"] for j in range(self.C)) for r in rows]
 
     # --- cevap ------------------------------------------------------------------------------------------------
     def _sorted(self, keys: list[tuple]) -> list[tuple]:
-        def part(v, kind):
-            return (1, "") if v is None else (0, tr_key(v) if kind == "text" else v)
+        def part(key, i, kind):
+            v = key[i]
+            if v is None:
+                return (1, "")
+            if self.col_ordered[i] and (i, key[: i + 1]) in self.col_order:   # sıra alanı (K-184): Dönem, Dönem başı sırasıyla
+                return (0, self.col_order[(i, key[: i + 1])])
+            return (0, tr_key(v) if kind == "text" else v)
         kinds = [self._kind(a) for a in self.req.columns]
-        return sorted(keys, key=lambda key: tuple(part(v, kinds[i]) for i, v in enumerate(key)))
+        return sorted(keys, key=lambda key: tuple(part(key, i, kinds[i]) for i in range(len(key))))
 
     def columns(self, leaves: list[tuple]) -> list[dict]:
         """Sütun başlıkları soldan sağa: yapraklar, üst başlığın sonunda ara toplamı, en sağda genel toplam. Dıştaki tarih alanında veri
@@ -376,23 +433,16 @@ def rule_hit(cell, rules: list) -> int | None:
     return None
 
 
-MONTHS = ("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
+MONTHS = period_list.MONTHS
 
 
 def key_label(value, kind: str, bucket: str | None) -> str:
     """Satır ve sütun anahtarının yazısı (Excel; ekrandaki etiketlerle aynı): dönem, Evet / Hayır, boşta "(Boş)"."""
     if value is None or value == "":
         return "(Boş)"
-    if bucket:
+    if bucket:  # dönem etiketleri tek işlevden (K-184): dönem tablosunun Dönem alanıyla aynı yazım; anahtar dönemin ilk günüdür
         day = date.fromisoformat(str(value)[:10])
-        if bucket == "day":
-            return f"{day:%d.%m.%Y}"
-        if bucket == "week":
-            week = (day + timedelta(days=3)).isocalendar()
-            return f"H{week[1]} {week[0]}"
-        if bucket == "month":
-            return f"{MONTHS[day.month - 1]} {day.year}"
-        return f"Ç{(day.month - 1) // 3 + 1} {day.year}" if bucket == "quarter" else str(day.year)
+        return period_list.label(period_list.KIND_OF_BUCKET[bucket], day, day.weekday())
     if isinstance(value, bool):
         return "Evet" if value else "Hayır"
     return str(value)

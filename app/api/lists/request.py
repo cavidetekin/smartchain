@@ -89,6 +89,7 @@ class GroupKeyItem(BaseModel):
 
 
 class QueryRequest(BaseModel):
+    scenario_id: int | None = None  # dönem tablosunda dönemler bu senaryonun ufkundan (K-184); verilmezse kullanıcının seçili senaryosu
     fields: list[str] | None = None
     sort: list[SortItem] = []
     filters: list[FilterItem] = []
@@ -111,6 +112,7 @@ class AggSpec(BaseModel):
 
 
 class GroupsRequest(BaseModel):
+    scenario_id: int | None = None  # dönem tablosunda dönemler bu senaryonun ufkundan (K-184); verilmezse kullanıcının seçili senaryosu
     group_by: list[str] = Field(min_length=1, max_length=4)
     fields: list[str] | None = None  # görünen kolonlar: varsayılan ara toplamlar yalnız bunlar için
     aggregates: dict[str, AggSpec] | None = None  # verilirse tam bu türler (görünen kolonlar için istemci gönderir)
@@ -120,11 +122,13 @@ class GroupsRequest(BaseModel):
 
 
 class IdsRequest(BaseModel):
+    scenario_id: int | None = None  # dönem tablosunda dönemler bu senaryonun ufkundan (K-184); verilmezse kullanıcının seçili senaryosu
     filters: list[FilterItem] = []
     chart_selection: "ChartSelection | None" = None  # Ctrl + A grafik seçimindeki kayıtları seçer (K-179)
 
 
 class ValuesRequest(BaseModel):
+    scenario_id: int | None = None  # dönem tablosunda dönemler bu senaryonun ufkundan (K-184); verilmezse kullanıcının seçili senaryosu
     field: str
     search: str = ""
     filters: list[FilterItem] = []
@@ -267,6 +271,7 @@ class ChartScatter(BaseModel):
 
 
 class PointsRequest(BaseModel):
+    scenario_id: int | None = None  # dönem tablosunda dönemler bu senaryonun ufkundan (K-184); verilmezse kullanıcının seçili senaryosu
     filters: list[FilterItem] = []
     x: str
     y: str
@@ -321,7 +326,8 @@ MIN_WIDTH_REM, MAX_WIDTH_REM = 4.0, 60.0
 # --- pivot (K-183) -------------------------------------------------------------------------------------------
 PIVOT_MAX_AXIS = 3
 PIVOT_MAX_VALUES = 8
-PivotFn = Literal["sum", "avg", "min", "max", "count", "distinct", "wavg"]
+PivotFn = Literal["sum", "avg", "min", "max", "count", "distinct", "wavg", "first", "last"]  # first · last: İlk · Son dönem değeri, yalnız dönem tablosunda (K-184)
+PERIOD_FNS = ("first", "last")
 
 
 class PivotAxis(BaseModel):
@@ -465,6 +471,7 @@ class ExportScope(BaseModel):
 
 class ExportRequest(BaseModel):
     """Ekrandaki görünüm durumu ve kapsam."""
+    scenario_id: int | None = None  # dönem tablosunda dönemler bu senaryonun ufkundan (K-184); verilmezse kullanıcının seçili senaryosu
     fields: list[str] = Field(min_length=1)
     widths: dict[str, float] = {}                      # rem
     sort: list[SortItem] = []

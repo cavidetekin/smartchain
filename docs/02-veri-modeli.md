@@ -2180,3 +2180,38 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | LicenseFile | varbinary(max) |  | İmzalı lisans dosyası | Sistem | H | E |  |
 | ValidUntil | date |  | Bitiş | Sistem | H | E |  |
 | InstallationId | nvarchar(100) |  | Kurulum kimliği | Sistem | H | E |  |
+
+## Önbellek (7.8, K-184)
+
+Önbellek tabloları veri değildir: girişlerden hesaplanan ara sonuçtur, kullanıcıya tablo olarak sunulmaz, üzerinde giriş yapılmaz, silinirse yeniden üretilir (`python -m app.periods rebuild`). Ayrı şemada (`cache`) dururlar; yedekten dönüşte boş olmaları sorun değildir. Dış anahtar taşımazlar (yazma ucuz kalsın); bütünlüğü önbellek kodu sağlar (`app/periods/cache.py`).
+
+### ResourceCapacityDay
+<sub>21. Veri modeli · Önbellek</sub>
+
+- Önbellek · versiyonsuz · Faz 1
+- Kaynak × gün kapasite ara sonucu (K-184): dönem tablosu "Kaynak grubu × dönem" bundan toplanır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız kendi girişi olan kaynak ve günler (gerisi Baz'ın satırlarından okunur). 7.8'de deneme hesabının alanlarını taşır; 7.9'da gerçek kapasite alanlarıyla yeniden düzenlenir. Kümelenmiş anahtar senaryo, kaynak, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| ScenarioDefinitionId | int | PK | Senaryo | Sistem | H | E |  |
+| ResourceId | bigint | PK | Kaynak | Sistem | H | E |  |
+| Date | date | PK | Gün | Sistem | H | E |  |
+| WorkingDay | decimal(5,2) |  | Çalışma günü (tam 1, yarım 0,5, çalışılmıyor 0) | Sistem | H | E |  |
+| Capacity | decimal(18,4) |  | Günün toplam kapasitesi | Sistem | H | E |  |
+| AvailableCapacity | decimal(18,4) |  | Kullanılabilir kapasite (toplam × verim) | Sistem | H | E |  |
+
+### PeriodCacheState
+<sub>21. Veri modeli · Önbellek</sub>
+
+- Önbellek · versiyonsuz · Faz 1
+- Önbelleğin durumu (K-184): önbellek ve senaryo başına tek satır. Satır yoksa önbellek kurulmamıştır; hesap kodunun sürümü ya da veri versiyonu farklıysa önbellek düşürülüp yeniden kurulur; gün aralığı ufkun gerisinde kaldıysa geçmiş günler temizlenir, ufuk ilerlediyse yalnız eksik günler hesaplanır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|
+| CacheName | nvarchar(60) | PK | Önbelleğin adı (ör. resource-capacity-day) | Sistem | H | E |  |
+| ScenarioDefinitionId | int | PK | Senaryo | Sistem | H | E |  |
+| CodeVersion | int |  | Hesap kodunun sürümü | Sistem | H | E |  |
+| DataVersionId | int |  | Kurulduğu veri versiyonu | Sistem | H | H |  |
+| DateFrom | date |  | Tutulan ilk gün | Sistem | H | E |  |
+| DateTo | date |  | Tutulan son gün | Sistem | H | E |  |
+| BuiltAt | datetime2 |  | Son tam kurulum zamanı (UTC) | Sistem | H | E |  |
