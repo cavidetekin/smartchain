@@ -199,6 +199,7 @@ Bütün tablolar (ana veri, plan, rapor) aynı sözleşmeyle okunur. Filtre, sı
 - **Ondalık birimden** (`decimals_from_unit: true`, `decimals: null`): miktar kolonları; her satırda temel birimin ondalığı (UnitOfMeasure.Decimals, K-88) kullanılır. Sorgu cevabında her satır bunu `_unit_decimals` alanında taşır (birim bilinmiyorsa 2).
 - **Yüzde gösterim** (`percent: true`): değer veride oran (0,05), `decimals` yüzde değerinin ondalığı; ekran ve Excel `%5,00` gösterir (K-113). Sorgu cevabı, filtre ve koşullu biçim oranla çalışır, Excel hücresinde de oran durur.
 - Liste tanımında her `number` alanı ya sabit ondalıkla ya da "ondalık birimden" işaretlenir; ikisi birden ya da hiçbiri hatadır (testte).
+- **Pivot** (`pivot`): alan pivot seçicilerinde sunulur mu (K-183). "Manuel değer" kolonunda ve çekirdek tabloların sistem alanlarında (kaynağı "Sistem": son değişiklik zamanı) `false`; ötekilerde `true`.
 - **Filtre tipi** (`filter`) tipten gelir: metin → `text`; değer listeli metin (K-80) ve `bool` → `list` (değerler `values`'ta; bool için Evet / Hayır = `true` / `false`); liste tanımında işaretli kodlu alanlar → `list`, değerler `values` uç noktasından (`values_from_server: true`); sayı → `number`; tarih → `date`.
 
 ### Sorgu · `POST /api/<liste>/query`
@@ -365,6 +366,8 @@ Satırın bağlı olduğu **tek** kaydın alanları listeye kolon olarak ekleneb
 - **Performans hedefi:** 50.000 satırlık tabloda iki seviyeli ilişkili alan açıkken ilk parça, o alanda süzme ve o alanda sıralama ortanca 300 ms altında (`tests/test_lists_perf.py`; -m perf).
 
 ### Pivot (K-183)
+
+Uygulandı (7.7a, K-183); 7.7b: hesaplanan değer, kural ve Excel.
 
 `POST /api/<liste>/pivot` (listenin okuma yetkisi): tablonun satırlarından çapraz özet. Filtre, satır kapsamı, veri versiyonu ve ilişkili alan birleştirmeleri liste sorgusuyla aynıdır; `chart_selection` verilirse o da uygulanır.
 

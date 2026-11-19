@@ -136,5 +136,23 @@ def columns(defn: ListDefinition, labels: dict[str, str], with_filter_only: bool
             "default_visible": name in defn.default_visible,
             "note": _note(defn, name, col, label),
             "manual": name in manual,  # manuel değer girilebilir (K-170); yetki ön yüzde fonksiyon 12'den
+            "pivot": pivot_field(defn, name),  # pivot seçicilerinde sunulur mu (K-183)
         })
     return out
+
+
+MANUAL_STATE = "ManualState"  # "Manuel değer" kolonu (app.manual.MANUAL_COLUMN)
+
+
+def is_system_field(defn: ListDefinition, name: str) -> bool:
+    """Sistem alanı: çekirdek tablonun, kaynağı "Sistem" olan kolonu (son değişiklik zamanı). İlişkili alan olarak ve pivot seçicilerinde
+    sunulmaz (K-182, K-183); tablonun kendi Alanlar panelinde durur."""
+    if not defn.table.startswith("core."):
+        return False
+    col = metadata.tables[defn.table].c.get(name) if defn.table in metadata.tables else None
+    return col is not None and (col.info or {}).get("source") == "Sistem"
+
+
+def pivot_field(defn: ListDefinition, name: str) -> bool:
+    """Pivotun satır, sütun ve değer seçicilerinin tek kuralı: "Manuel değer" kolonu ve sistem alanları sunulmaz."""
+    return name != MANUAL_STATE and not is_system_field(defn, name)

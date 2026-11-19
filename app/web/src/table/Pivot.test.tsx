@@ -22,7 +22,7 @@ const COLUMNS = [
   col("OrderNo", "Sipariş no", "text", "text"), col("CustomerCode", "Müşteri", "text", "list", { values_from_server: true }), col("MaterialCode", "Malzeme", "text", "list"),
   col("RequestedDate", "İstek tarihi", "date", "date"), col("OpenQuantity", "Açık miktar", "number", "number", { decimals_from_unit: true }),
   col("OrderedQuantity", "Sipariş miktarı", "number", "number", { decimals_from_unit: true }), col("Price", "Fiyat", "number", "number", { decimals: 2 }),
-  col("ManualState", "Manuel değer", "text", "list"),
+  col("ManualState", "Manuel değer", "text", "list", { pivot: false }), col("UpdatedAt", "Son değişiklik zamanı", "datetime", "date", { pivot: false }),
 ];
 const GROUP: ListColumn = col("MaterialId/MaterialGroup", "Malzeme · Malzeme grubu", "text", "list", { default_visible: false, related: true });
 const byField = new Map([...COLUMNS, GROUP].map((c) => [c.field, c]));
@@ -214,12 +214,14 @@ describe("pivot görünümü (K-183)", () => {
     const picker = within(rows).getByRole("group", { name: "Alan ekle" });
     expect(within(picker).getAllByRole("button").map((b) => b.textContent).slice(0, 4)).toEqual(["Sipariş no", "Müşteri", "Malzeme", "İstek tarihi"]);
     expect(within(picker).getAllByRole("button").slice(0, 4).every((b) => b.classList.contains("sc-table-pick"))).toBe(true);
-    expect(within(picker).queryByRole("button", { name: "Manuel değer" })).toBeNull();     // "Manuel değer" satır ve sütun alanı olmaz
+    for (const name of ["Manuel değer", "Son değişiklik zamanı"]) expect(within(picker).queryByRole("button", { name })).toBeNull();   // hiçbir seçicide
     await user.click(within(picker).getByRole("button", { name: "Müşteri" }));
     const values = within(panel()).getByRole("button", { name: /^Değerler\s*\d*$/ }).closest("section")!;
     await user.click(within(values).getByRole("button", { name: "Değer ekle" }));
-    expect(within(within(values).getByRole("group", { name: "Değer ekle" })).getAllByRole("button").map((b) => b.textContent))
-      .toEqual(expect.arrayContaining(["Sipariş no", "İstek tarihi", "Açık miktar", "Fiyat"]));
+    const valueNames = within(within(values).getByRole("group", { name: "Değer ekle" })).getAllByRole("button").map((b) => b.textContent);
+    expect(valueNames).toEqual(expect.arrayContaining(["Sipariş no", "İstek tarihi", "Açık miktar", "Fiyat"]));
+    expect(valueNames).not.toEqual(expect.arrayContaining(["Manuel değer"]));
+    expect(valueNames).not.toEqual(expect.arrayContaining(["Son değişiklik zamanı"]));
     await user.click(within(values).getByRole("button", { name: "İstek tarihi" }));
     await waitFor(() => expect(last().values).toEqual([{ id: "d1", fn: "min", field: "RequestedDate" }]));
     const chip = within(values).getByRole("button", { name: "İstek tarihi · En erken" });

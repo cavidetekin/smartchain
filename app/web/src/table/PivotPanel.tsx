@@ -9,13 +9,12 @@ import { NumberField, Segment, SelectField, TextField } from "../ui";
 import { SwitchCell } from "./CellEditors";
 import { FieldPanel } from "./FieldPanel";
 import {
-  defaultFn, fnLabel, fnsFor, isAxisField, isDate, isNumeric, nextValueId, type PivotAxis, type PivotConfig, type PivotFn, PIVOT_MAX_AXIS,
+  defaultFn, fnLabel, fnsFor, isAxisField, isDate, isNumeric, isPivotField, nextValueId, type PivotAxis, type PivotConfig, type PivotFn, PIVOT_MAX_AXIS,
   PIVOT_MAX_DISTINCT, PIVOT_MAX_VALUES, type PivotValue, valueDisplay, valueLabel, valueName,
 } from "./pivotModel";
 import type { ListColumn, RelatedCatalog, RelationHeading } from "./types";
 
 const T = tr.pivot;
-const MANUAL_FIELD = "ManualState";  // "Manuel değer" kolonu satır ve sütun alanı olarak sunulmaz
 type SectionKey = "rows" | "columns" | "values" | "place" | "totals" | "sort";
 
 function Section({ id, title, count, open, onToggle, children }: { id: string; title: string; count?: number; open: boolean; onToggle(): void; children: ReactNode }) {
@@ -106,7 +105,7 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
   const picker = (list: "rows" | "columns" | "values") => adding === list && (
     <FieldPanel columns={baseColumns} visibility={{}} onToggle={() => undefined} onReset={() => undefined} relations={relations} order={usedFields}
                 loadRelated={loadRelated} label={list === "values" ? T.addValue : T.addField}
-                allowed={(c) => (list === "values" ? true : isAxisField(c) && !axisUsed.has(c.field) && c.field !== MANUAL_FIELD)}
+                allowed={(c) => (list === "values" ? isPivotField(c) : isAxisField(c) && !axisUsed.has(c.field))}
                 pick={(c) => (list === "values" ? pickValue(c) : pickAxis(list, c))} />
   );
   const axes = (list: "rows" | "columns") => (
@@ -175,7 +174,7 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
                                  onChange={(fn) => setValue(v.id, { fn: fn as PivotFn, weight: fn === "wavg" ? v.weight : null })} />
                     {v.fn === "wavg" && (
                       <SelectField label={T.weight} value={v.weight ?? ""}
-                                   options={[{ value: "", label: "" }, ...columns.filter((c) => isNumeric(c) && c.field !== v.field).map((c) => ({ value: c.field, label: c.label }))]}
+                                   options={[{ value: "", label: "" }, ...columns.filter((c) => isNumeric(c) && isPivotField(c) && c.field !== v.field).map((c) => ({ value: c.field, label: c.label }))]}
                                    onChange={(weight) => setValue(v.id, { weight: weight || null })} />
                     )}
                     {v.fn !== "count" && v.fn !== "distinct" && (

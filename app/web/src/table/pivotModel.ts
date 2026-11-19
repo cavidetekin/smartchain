@@ -74,8 +74,10 @@ const DATE: ColumnType[] = ["date", "datetime"];
 const NUMERIC: ColumnType[] = ["number", "integer"];
 export const isDate = (c: ListColumn | undefined) => Boolean(c && DATE.includes(c.type));
 export const isNumeric = (c: ListColumn | undefined) => Boolean(c && NUMERIC.includes(c.type));
+/** Pivotun bütün seçicilerinin (satır, sütun, değer) tek kuralı: "Manuel değer" kolonu ve sistem alanları sunulmaz (sunucunun `pivot` işareti). */
+export const isPivotField = (c: ListColumn) => c.pivot !== false;
 /** Satır ve sütun alanı: kategori ya da tarih; ondalıklı sayı olamaz. */
-export const isAxisField = (c: ListColumn) => c.type !== "number";
+export const isAxisField = (c: ListColumn) => isPivotField(c) && c.type !== "number";
 
 export const emptyPivot = (): PivotConfig => ({
   v: 1, open: true, rows: [], columns: [], values: [], values_on: "columns", totals: { rows: false, columns: false, subtotals: false },

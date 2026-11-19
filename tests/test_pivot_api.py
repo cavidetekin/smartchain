@@ -262,6 +262,18 @@ def test_column_axis_two_fields_periods_and_limits(api, monkeypatch):
     assert wide.status_code == 422 and "değer sütunu" in wide.json()["error"]["message"]
 
 
+def test_pivot_pickers_share_one_rule(api):
+    """K-183: "Manuel değer" kolonu ve sistem alanları (son değişiklik zamanı) pivot seçicilerinde sunulmaz; kural kolon bilgisinde tek işarettir."""
+    for url in (ORDERS, "/api/materials", "/api/master-resource-group-member", "/api/master-location"):
+        cols = {c["field"]: c for c in api.get(url + "/columns").json()["columns"]}
+        hidden = {f for f, c in cols.items() if not c["pivot"]}
+        assert hidden == {"ManualState", "UpdatedAt"} & set(cols) and "ManualState" in hidden, url
+    related = api.get(ORDERS + "/related", params={"path": "CustomerId"}).json()["fields"]
+    assert related and all(f["pivot"] for f in related) and not any(f["field"].endswith(("UpdatedAt", "ManualState")) for f in related)
+    other = api.get("/api/data-entities/columns").json()["columns"]
+    assert all(c["pivot"] for c in other)                                                   # çekirdek dışı listelerde kural uygulanmaz
+
+
 def test_filters_selection_and_permissions(api, people):
     full = pivot(api, ORDERS, rows=[{"field": "CustomerCode"}], values=[QTY], totals=ALL)
     one = pivot(api, ORDERS, rows=[{"field": "CustomerCode"}], values=[QTY], totals=ALL, filters=[{"field": "CustomerCode", "op": "in", "values": ["MUS-B"]}])

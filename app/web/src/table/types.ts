@@ -36,6 +36,8 @@ export interface ListColumn {
   manual?: boolean;
   /** İlişkili alan (K-182): satırın bağlı olduğu kaydın alanı; salt okunur. Alan adı yol + alan ("ResourceGroupId/IsCritical"). */
   related?: boolean;
+  /** Pivot seçicilerinde sunulur mu (K-183): "Manuel değer" kolonu ve sistem alanları (son değişiklik zamanı) için false. */
+  pivot?: boolean;
   /** İki seviyeli ilişkili alanın kısa başlığı: son ilişki ve alan ("Üretilen malzeme · Malzeme adı"); label tam yoldur. */
   short_label?: string;
 }
