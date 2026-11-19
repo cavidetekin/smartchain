@@ -113,6 +113,13 @@ const menuItem = async (user: ReturnType<typeof userEvent.setup>, name: string) 
   await user.click(screen.getByRole("button", { name: /^Tablo ayarları/ }));
   await user.click(within(screen.getByRole("menu")).getByText(name));
 };
+/** Kurulmuş pivotta panel bölümleri kapalı gelir; testin dokunacağı bölümler açılır (Sıralama'yı testler kendisi açar). */
+const openSections = async (user: ReturnType<typeof userEvent.setup>, names = ["Satırlar", "Sütunlar", "Değerler", "Değerlerin yeri", "Toplamlar"]) => {
+  for (const name of names) {
+    const head = within(panel()).getByRole("button", { name: new RegExp(`^${name}\\d*$`) });
+    if (head.getAttribute("aria-expanded") === "false") await user.click(head);
+  }
+};
 const bodyRows = () => within(grid()).getAllByRole("row").filter((r) => r.hasAttribute("aria-rowindex"))
   .map((r) => [...r.querySelectorAll("th, td")].map((c) => c.textContent ?? ""));
 
@@ -255,7 +262,7 @@ describe("pivot görünümü (K-183)", () => {
   it("alanlar ve değerler sürüklenerek sıralanır", async () => {
     const { user, last } = await open(viewWith(PIVOT));
     await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
-    await menuItem(user, "Pivot ayarları");
+    await menuItem(user, "Pivot ayarları"); await openSections(user);
     const rows = within(panel()).getByRole("button", { name: /^Satırlar/ }).closest("section")!;
     const [first, second] = within(rows).getAllByRole("listitem");
     fireEvent.dragStart(second);
@@ -297,7 +304,7 @@ describe("pivot görünümü (K-183)", () => {
   it("değerlerin yeri, toplamlar ve sıralama panelden; değer ayarında hesaplama ve ağırlık alanı", async () => {
     const { user, last } = await open(viewWith(PIVOT));
     await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
-    await menuItem(user, "Pivot ayarları");
+    await menuItem(user, "Pivot ayarları"); await openSections(user);
     await user.click(within(panel()).getByRole("radio", { name: "Satırlarda" }));
     await waitFor(() => expect(within(grid()).getByRole("columnheader", { name: "Değer" })).toBeInTheDocument());
     expect(bodyRows().slice(0, 2).map((r) => r.slice(0, 3))).toEqual([["MUS-A", "MAM-001", "Açık miktar · Toplam"], ["", "", "Sipariş no · Benzersiz say"]]);
@@ -331,7 +338,7 @@ describe("pivot görünümü (K-183)", () => {
   it("ilişkili alan panelden doğrudan seçilir; tabloya kolon eklenmez; görünümle saklanır", async () => {
     const { user, last, saved } = await open(viewWith(PIVOT));
     await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
-    await menuItem(user, "Pivot ayarları");
+    await menuItem(user, "Pivot ayarları"); await openSections(user);
     const rows = within(panel()).getByRole("button", { name: /^Satırlar/ }).closest("section")!;
     await user.click(within(rows).getByRole("button", { name: "Alan ekle" }));
     await user.click(within(rows).getByRole("button", { name: "Malzeme", expanded: false }));
@@ -421,7 +428,7 @@ describe("hesaplanan değer, değerin kuralı, Excel ve varsayılan hesaplama (7
   it("panelden: hesaplanan değer formu; kural penceresinde ikon ve alan karşılaştırması yok; yüzde eşik oran olarak; Toplamlara da uygula; işlenen çıkınca düşer", async () => {
     const { user, last } = await open(viewWith(SUMS));
     await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
-    await menuItem(user, "Pivot ayarları");
+    await menuItem(user, "Pivot ayarları"); await openSections(user);
     await user.click(within(panel()).getByRole("button", { name: "Hesaplanan değer ekle" }));
     await waitFor(() => expect(last().values[2]).toEqual({ id: "d3", kind: "calc", a: "d1", op: "div", b: "d2", percent: false }));
     expect(within(panel()).getByRole("button", { name: "Hesaplanan değer · Toplamlardan" })).toHaveAttribute("aria-expanded", "true");
@@ -472,9 +479,44 @@ describe("hesaplanan değer, değerin kuralı, Excel ve varsayılan hesaplama (7
   it("eklenen değer alanın liste tanımındaki varsayılan hesaplamasıyla gelir (ağırlıklı ortalamada ağırlık alanıyla)", async () => {
     const { user, last } = await open(viewWith({ ...PIVOT, values: [{ id: "d1", field: "OpenQuantity", fn: "sum" }] }));
     await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
-    await menuItem(user, "Pivot ayarları");
+    await menuItem(user, "Pivot ayarları"); await openSections(user);
     await user.click(within(panel()).getByRole("button", { name: "Değer ekle" }));
     await user.click(await within(panel()).findByRole("button", { name: "Fiyat" }));
     await waitFor(() => expect(last().values[1]).toEqual({ id: "d2", fn: "wavg", field: "Price", weight: "OpenQuantity" }));
+  });
+});
+
+describe("ayar panelinin bölümleri (K-183, 7.7b demo kararı)", () => {
+  const sections = () => Object.fromEntries(within(panel()).getAllByRole("heading", { level: 3 }).map((h) => {
+    const b = within(h).getByRole("button");
+    return [b.textContent, b.getAttribute("aria-expanded")];
+  }));
+
+  it("kurulmuş pivotta bölümler kapalı gelir, başlıkta öğe sayısı görünür; açılan bölüm panel kapanana kadar açık kalır", async () => {
+    const { user, last } = await open(viewWith(PIVOT));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
+    await menuItem(user, "Pivot ayarları");
+    expect(sections()).toEqual({ "Satırlar2": "false", "Sütunlar1": "false", "Değerler2": "false", "Değerlerin yeri": "false", "Toplamlar": "false", "Sıralama": "false" });
+    expect(within(panel()).queryByRole("button", { name: "Alan ekle" })).toBeNull();
+    await user.click(within(panel()).getByRole("button", { name: /^Değerler\d*$/ }));
+    await user.click(within(panel()).getByRole("button", { name: "Değer ekle" }));
+    await user.click(await within(panel()).findByRole("button", { name: "Fiyat" }));
+    await waitFor(() => expect(last().values).toHaveLength(3));
+    expect(sections()).toMatchObject({ "Değerler3": "true", "Satırlar2": "false" });        // öğe eklenince bölüm açık kalır; ötekiler kapalı
+    await user.click(within(panel()).getByRole("button", { name: "Paneli kapat" }));
+    await menuItem(user, "Pivot ayarları");
+    expect(sections()).toMatchObject({ "Değerler3": "false", "Satırlar2": "false" });       // yeniden açılınca kural: hepsi kapalı
+  });
+
+  it("pivot henüz kurulmamışsa Satırlar, Sütunlar ve Değerler açık gelir; ilk alandan sonra yeniden açılınca kapalı", async () => {
+    const { user } = await open();
+    await menuItem(user, "Pivot görünümü");
+    expect(sections()).toEqual({ "Satırlar": "true", "Sütunlar": "true", "Değerler": "true", "Değerlerin yeri": "false", "Toplamlar": "false", "Sıralama": "false" });
+    await user.click(within(panel()).getAllByRole("button", { name: "Alan ekle" })[0]);
+    await user.click(await within(panel()).findByRole("button", { name: "Müşteri" }));
+    expect(sections()).toMatchObject({ "Satırlar1": "true", "Sütunlar": "true", "Değerler": "true" });   // panel kapanana kadar açık
+    await user.click(within(panel()).getByRole("button", { name: "Paneli kapat" }));
+    await menuItem(user, "Pivot ayarları");
+    expect(sections()).toMatchObject({ "Satırlar1": "false", "Sütunlar": "false", "Değerler": "false" });
   });
 });

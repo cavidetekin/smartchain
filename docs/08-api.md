@@ -367,7 +367,7 @@ Satırın bağlı olduğu **tek** kaydın alanları listeye kolon olarak ekleneb
 
 ### Pivot (K-183)
 
-Uygulandı (7.7a, K-183); 7.7b (hesaplanan değer, değerin kuralları, Excel, varsayılan hesaplama): demo bekliyor.
+Uygulandı (7.7a ve 7.7b, K-183).
 
 `POST /api/<liste>/pivot` (listenin okuma yetkisi): tablonun satırlarından çapraz özet. Filtre, satır kapsamı, veri versiyonu ve ilişkili alan birleştirmeleri liste sorgusuyla aynıdır; `chart_selection` verilirse o da uygulanır.
 

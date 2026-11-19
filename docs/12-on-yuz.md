@@ -270,7 +270,7 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Boş | Filtrede kayıt yoksa ızgaranın yerinde "Bu filtrede kayıt yok" |
 | Sınır | Yaprak sütun 200, çizilen değer sütunu 400, dönem 400; aşılırsa ızgaranın yerinde nedeni ("Sütun sayısı çok fazla (… / 200). Daha büyük bir dönem seçin, alan çıkarın ya da süzün.") |
 | Yükleniyor · Hata | Yükleniyor: eski pivot soluklaşır. Hata: sunucunun söylediği neden (hangi alan ya da ayar geçersiz) ve "Yeniden dene" |
-| Ayar paneli | Sağda 300 px; pivot açılınca açık gelir, ✕ ile kapanır, ⚙ › "Pivot ayarları" ile açılır; açık ya da kapalı olması saklanmaz. Bölümler: Satırlar · Sütunlar · Değerler · Değerlerin yeri · Toplamlar · Sıralama. Alan çipleri tutamakla sürüklenir (kendi bölümü içinde), ✕ ile çıkar. Değer çipi iki satırdır: üstte alan, altta hesaplama; tam ad ipucunda. Dar pencerede (880 px altı) panel ızgaranın üstüne açılır |
+| Ayar paneli | Sağda 300 px; pivot açılınca açık gelir, ✕ ile kapanır, ⚙ › "Pivot ayarları" ile açılır; açık ya da kapalı olması saklanmaz. Bölümler: Satırlar · Sütunlar · Değerler · Değerlerin yeri · Toplamlar · Sıralama. Panel açıldığında bütün bölümler kapalı (daraltılmış) gelir, grafik ayar panelindeki gibi; kapalı bölümün başlığında içindeki öğe sayısı görünür (Satırlar 2, Değerler 3). İstisna: pivot henüz kurulmamışsa (hiç satır alanı ve değer yok) Satırlar, Sütunlar ve Değerler açık gelir; ilk alan eklendikten sonra panel yeniden açıldığında kural geçerlidir. Açılan bölüm panel kapanana kadar açık kalır (kullanıcı kendisi kapatmadıkça); bölümlerin açık ya da kapalı olması saklanmaz. Alan çipleri tutamakla sürüklenir (kendi bölümü içinde), ✕ ile çıkar. Değer çipi iki satırdır: üstte alan, altta hesaplama; tam ad ipucunda. Dar pencerede (880 px altı) panel ızgaranın üstüne açılır |
 | Alan seçici | "+ Alan ekle" ve "+ Değer ekle": aramalı liste; tablonun alanları ve "İlişkili alanlar" ağacı (Alanlar panelindekiyle aynı bileşen). Listede önce tablonun kendi alanları, altında ilişkiler; "Manuel değer" ve sistem alanları (son değişiklik zamanı) hiçbir seçicide yoktur; satır ve sütun seçicisinde ayrıca ondalıklı sayı alanları ve o eksenlerde kullanılmış alanlar yoktur. İlişkili alan tabloya kolon eklenmeden pivota girer; sınır 20 alan, 8 ilişki |
 | Görünümle kaydetme | Pivot ayarları görünüm tanımında (`pivot`); "Kaydet" ve "Farklı kaydet" ile. Şirket Standart'ı pivot olabilir |
 | Yetki | Listenin okuma yetkisi olan herkes (End user dahil) |
@@ -278,7 +278,7 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Koşullu biçim (7.7b) | Değerin ayarında "Koşullu biçim": kural satırları (renk örneği, koşul, ✕) ve "+ Kural ekle"; pencere ve renk seçici tablodaki koşullu biçimlendirmeninkidir (yalnız sayı koşulları; ikon yok). En çok 5 kural; üstteki kazanır. "Toplamlara da uygula" (varsayılan kapalı). Kural hesaplanmış hücre değerine bakar; tablonun kuralları pivota taşınmaz |
 | Excel (7.7b) | Şeritteki Excel düğmesi pivot açıkken pivotu aktarır (pencere açılmaz, dosya hemen iner): katlı başlıklar, toplamlar, sütun grubu çizgileri, kural renkleri, tarih ve yüzde biçimleri; ayrıca Bilgi sayfası |
 | Varsayılan hesaplama (7.7b) | Eklenen değer alanın liste tanımındaki varsayılan hesaplamasıyla gelir (yoksa sayıda Toplam, tarihte En erken, metinde Benzersiz say) |
-| Durum (7.7b) | demo bekliyor |
+| Durum (7.7b) | uygulandı (7.7b, K-183) |
 
 ## Görünüm (1.4, K-89, K-90)
 

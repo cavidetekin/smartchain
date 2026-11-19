@@ -59,7 +59,12 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
   onChange(next: PivotConfig): void;
   onClose(): void;
 }) {
-  const [open, setOpen] = useState<Record<SectionKey, boolean>>({ rows: true, columns: true, values: true, place: true, totals: true, sort: false });
+  // Panel açıldığında bölümler kapalı gelir (grafik panelindeki gibi; başlıkta öğe sayısı görünür). Pivot henüz kurulmamışsa Satırlar, Sütunlar
+  // ve Değerler açık gelir. Durum panelle yaşar: açılan bölüm panel kapanana kadar açık kalır, hiçbir yerde saklanmaz (K-183).
+  const [open, setOpen] = useState<Record<SectionKey, boolean>>(() => {
+    const fresh = pivot.rows.length === 0 && pivot.values.length === 0;
+    return { rows: fresh, columns: fresh, values: fresh, place: false, totals: false, sort: false };
+  });
   const [adding, setAdding] = useState<"rows" | "columns" | "values" | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ list: "rows" | "columns" | "values"; key: string } | null>(null);
