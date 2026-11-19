@@ -10,11 +10,13 @@ Toplama veritabanında yapılır, ekrana yalnız istenen satır parçası gelir 
 
 Filtre, satır kapsamı, veri versiyonu ve ilişkili alan birleştirmeleri liste sorgusunun kurucusundan (`Builder`) gelir.
 """
+from datetime import date, timedelta
+
 import sqlalchemy as sa
 
 from .chart import DATE_KINDS, MAX_PERIODS, TooManyPeriods, _bucket_expr, next_period, tr_key
 from .query import PARALLEL_HINT, Builder, turkish
-from .request import PivotAxis, PivotRequest, PivotValueSpec
+from .request import PIVOT_RULE_OPS, PivotAxis, PivotRequest, PivotValueSpec
 
 MAX_LEAF_COLUMNS = 200      # yaprak sütun (sütun alanlarının değer birleşimi)
 MAX_VALUE_COLUMNS = 400     # çizilen değer sütunu: sütun (toplamlar dahil) × değer
@@ -59,7 +61,22 @@ def problems(b: Builder, rows: list[PivotAxis], columns: list[PivotAxis], values
         bad("values", "Değer kimlikleri tekil olmalı")
     if sum(1 for v in values if v.fn == "distinct") > MAX_DISTINCT:
         bad("values", f"En çok {MAX_DISTINCT} \"Benzersiz say\" değeri eklenebilir")
+    fields = {v.id: v for v in values if v.kind == "field"}
     for i, v in enumerate(values):
+        for j, rule in enumerate(v.rules):
+            if rule.condition.op not in PIVOT_RULE_OPS or rule.condition.field_ref:
+                bad(f"values.{i}.rules.{j}.condition.op", "Pivot kuralında yalnız sayı koşulları kullanılır")
+        if v.kind == "calc":
+            # hesaplanan değer (toplamlardan): iki alan değerinin sonucu; tarih sonuçlu değer hesaba girmez
+            for side in ("a", "b"):
+                other = fields.get(getattr(v, side) or "")
+                if other is None:
+                    bad(f"values.{i}.{side}", "Hesaplanan değer için pivottaki bir değer seçilmeli")
+                elif other.fn in ("min", "max") and b.columns.get(other.field or "", {}).get("type") in DATE_KINDS:
+                    bad(f"values.{i}.{side}", "Tarih sonuçlu değer hesaplamada kullanılamaz")
+            if v.op is None:
+                bad(f"values.{i}.op", "İşlem seçilmeli")
+            continue
         if v.fn == "count":
             continue
         col = b.columns.get(v.field or "")
@@ -87,13 +104,14 @@ class Pivot:
         self.b, self.req = b, req
         t = b.table
         self.R, self.C = len(req.rows), len(req.columns)
+        self.index = {v.id: k for k, v in enumerate(req.values)}
         cols = [self._axis(a, week_start).label(f"r{i}") for i, a in enumerate(req.rows)]
         cols += [self._axis(a, week_start).label(f"c{i}") for i, a in enumerate(req.columns)]
         self.unit_of: dict[int, str] = {}   # değer sırası → taban sorgudaki birim kolonu
         self.checked: set[int] = set()      # birim karışıklığı denetlenen değerler (listenin kendi miktar alanları)
         units: dict[str, str] = {}          # kaynak birim kolonu → taban sorgudaki ad
         for k, v in enumerate(req.values):
-            if v.fn == "count":
+            if v.kind == "calc" or v.fn == "count":
                 continue
             src = t.c[v.field]
             cols.append((sa.func.nullif(src, sa.literal_column("N''")) if b.columns[v.field]["type"] == "text" else src).label(f"a{k}"))
@@ -124,6 +142,9 @@ class Pivot:
     def measure(self, k: int, src: sa.FromClause) -> sa.ColumnElement:
         """Değerin grubun kayıtlarından hesabı (her düzeyde aynı ifade: ara toplam ve genel toplam da kayıtlardan)."""
         v = self.req.values[k]
+        if v.kind == "calc":  # toplamlardan: o grubun a ve b sonuçlarından (kayıtların oranlarından değil); bölen 0 ya da biri boşsa boş
+            a, b = (sa.cast(self.measure(self.index[x], src), sa.Float) for x in (v.a, v.b))
+            return {"div": lambda: a / sa.func.nullif(b, 0), "mul": lambda: a * b, "add": lambda: a + b, "sub": lambda: a - b}[v.op]()
         if v.fn == "count":
             return sa.func.count()
         a = src.c[f"a{k}"]
@@ -264,6 +285,10 @@ class Pivot:
     def value_info(self) -> list[dict]:
         out = []
         for k, v in enumerate(self.req.values):
+            if v.kind == "calc":
+                out.append({"id": v.id, "fn": "calc", "field": None, "weight": None, "decimals": DEFAULT_DECIMALS, "percent": v.percent,
+                            "from_unit": False, "type": "number"})
+                continue
             col = self.b.columns.get(v.field or "", {})
             if v.fn in NOT_MEASURED:
                 decimals, percent = 0, False
@@ -285,8 +310,12 @@ class Pivot:
             at = position.get(tuple(cell[f"c{j}"] for j in range(level)))
             if at is None or cell["rn"] not in grid:
                 continue
-            for k in range(len(self.req.values)):
+            order = sorted(range(len(self.req.values)), key=lambda k: self.req.values[k].kind == "calc")  # hesaplananlar sonda: işlenenler hazır
+            for k in order:
                 value = to_json(cell[f"v{k}"])
+                v = self.req.values[k]
+                if v.kind == "calc" and any(_is_mixed(grid[cell["rn"]][self.index[x]][at]) for x in (v.a, v.b)):
+                    value = None                      # işlenenlerden biri karışık birimli: hesaplanan değer de boş
                 if value is not None and k in self.unit_of:
                     a, b = cell[f"ua{k}"], cell[f"ub{k}"]
                     if a != b and k in self.checked:
@@ -298,8 +327,75 @@ class Pivot:
         out = []
         for r in rows:
             level = next((i for i in range(self.R) if r[f"g{i}"]), self.R)
-            out.append({"key": [to_json(r[f"r{i}"]) for i in range(level)], "level": level, "total": level < self.R, "cells": grid[r["rn"]]})
+            item = {"key": [to_json(r[f"r{i}"]) for i in range(level)], "level": level, "total": level < self.R, "cells": grid[r["rn"]]}
+            formats = self._formats(item, columns)
+            if formats:
+                item["formats"] = formats
+            out.append(item)
         return out
+
+    def _formats(self, row: dict, columns: list[dict]) -> dict[str, list]:
+        """Değerlerin kuralları hesaplanmış hücrede (K-183): ilk tutan etkin kuralın sırası; toplam hücreleri yalnız "Toplamlara da uygula"da."""
+        out = {}
+        for k, v in enumerate(self.req.values):
+            rules = [r for r in v.rules if r.enabled]
+            if not rules:
+                continue
+            hits = [None if (row["total"] or c["total"]) and not v.rules_on_totals else rule_hit(row["cells"][k][s], rules) for s, c in enumerate(columns)]
+            if any(h is not None for h in hits):
+                out[str(k)] = hits
+        return out
+
+
+def _is_mixed(cell) -> bool:
+    return isinstance(cell, dict) and bool(cell.get("mixed"))
+
+
+def cell_number(cell):
+    """Hücrenin sayı değeri; boş, karışık birim ya da tarih ise None."""
+    if isinstance(cell, dict):
+        return cell.get("v")
+    return cell if isinstance(cell, (int, float)) and not isinstance(cell, bool) else None
+
+
+def rule_hit(cell, rules: list) -> int | None:
+    """İlk tutan kuralın sırası. Koşullar yalnız sayı: Büyük, Küçük, Arası, Eşit, Boş, Her zaman. Karışık birimli ve tarih hücresine kural yok."""
+    if _is_mixed(cell) or isinstance(cell, str):
+        return None
+    value = cell_number(cell)
+    for i, rule in enumerate(rules):
+        c = rule.condition
+        if c.op == "always" or (c.op == "empty" and value is None):
+            return i
+        if value is None or c.op == "empty":
+            continue
+        if ((c.op == "gt" and c.value is not None and value > float(c.value)) or (c.op == "lt" and c.value is not None and value < float(c.value))
+                or (c.op == "eq" and c.value is not None and value == float(c.value))
+                or (c.op == "between" and c.min is not None and c.max is not None and c.min <= value <= c.max)):
+            return i
+    return None
+
+
+MONTHS = ("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
+
+
+def key_label(value, kind: str, bucket: str | None) -> str:
+    """Satır ve sütun anahtarının yazısı (Excel; ekrandaki etiketlerle aynı): dönem, Evet / Hayır, boşta "(Boş)"."""
+    if value is None or value == "":
+        return "(Boş)"
+    if bucket:
+        day = date.fromisoformat(str(value)[:10])
+        if bucket == "day":
+            return f"{day:%d.%m.%Y}"
+        if bucket == "week":
+            week = (day + timedelta(days=3)).isocalendar()
+            return f"H{week[1]} {week[0]}"
+        if bucket == "month":
+            return f"{MONTHS[day.month - 1]} {day.year}"
+        return f"Ç{(day.month - 1) // 3 + 1} {day.year}" if bucket == "quarter" else str(day.year)
+    if isinstance(value, bool):
+        return "Evet" if value else "Hayır"
+    return str(value)
 
 
 def axis_info(b: Builder, axes: list[PivotAxis]) -> list[dict]:

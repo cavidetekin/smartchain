@@ -10,7 +10,7 @@ from ..deps import require
 from ..permissions import Access
 from ..lists import LISTS, ListDefinition
 from ..lists.request import (
-    ChartExportLogRequest, ChartExportRequest, ChartRequest, DefaultViewRequest, PivotRequest, ExportRequest, PointsRequest, GroupsRequest, IdsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
+    ChartExportLogRequest, ChartExportRequest, ChartRequest, DefaultViewRequest, PivotExportRequest, PivotRequest, ExportRequest, PointsRequest, GroupsRequest, IdsRequest, QueryRequest, StandardUpdate, ValuesRequest, ViewCreate, ViewUpdate,
 )
 from ..services import export, lists as service, views
 from ..services.auth import CurrentUser
@@ -54,6 +54,13 @@ def list_router(defn: ListDefinition) -> APIRouter:
     def chart_export(body: ChartExportRequest, user: CurrentUser = Depends(export_access),
                      session: Session = Depends(get_session, scope="function")) -> Response:
         out = export.start_chart(session, defn, user.id, body)
+        return Response(out["file"], media_type=export.XLSX, headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(out['file_name'])}"})
+
+    @router.post("/pivot/export", response_model=None, summary=f"{defn.name}: pivot Excel'e, ekrandaki şekille (Pivot ve Bilgi sayfaları; K-183)")
+    def pivot_export(body: PivotExportRequest, user: CurrentUser = Depends(export_access),
+                     session: Session = Depends(get_session, scope="function")) -> Response:
+        out = export.start_pivot(session, defn, user.id, body)
         return Response(out["file"], media_type=export.XLSX, headers={
             "Content-Disposition": f"attachment; filename*=UTF-8''{quote(out['file_name'])}"})
 

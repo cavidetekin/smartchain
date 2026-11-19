@@ -3,13 +3,13 @@
 // sınır ve hata durumları, parça parça yükleme.
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { meAs, mockApi, renderApp, type Reply } from "../test/helpers";
 import { ApiError } from "../api/client";
 import { groupStarts, headerCells, reasonOf } from "./PivotGrid";
 import {
-  defaultFn, emptyPivot, fitPivot, fnLabel, fnsFor, formatPivotCell, normalizePivot, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRequest,
+  defaultFn, dropOrphans, emptyPivot, fitPivot, pivotExportRequest, fnLabel, fnsFor, formatPivotCell, normalizePivot, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRequest,
   type PivotValueInfo, valueDisplay, valueLabel, valueName,
 } from "./pivotModel";
 import { col, useTableTestSetup } from "./testBackend";
@@ -21,7 +21,7 @@ const LIST = "/api/transaction-sales-order";
 const COLUMNS = [
   col("OrderNo", "Sipariş no", "text", "text"), col("CustomerCode", "Müşteri", "text", "list", { values_from_server: true }), col("MaterialCode", "Malzeme", "text", "list"),
   col("RequestedDate", "İstek tarihi", "date", "date"), col("OpenQuantity", "Açık miktar", "number", "number", { decimals_from_unit: true }),
-  col("OrderedQuantity", "Sipariş miktarı", "number", "number", { decimals_from_unit: true }), col("Price", "Fiyat", "number", "number", { decimals: 2 }),
+  col("OrderedQuantity", "Sipariş miktarı", "number", "number", { decimals_from_unit: true }), col("Price", "Fiyat", "number", "number", { decimals: 2, aggregate: "wavg", aggregate_weight: "OpenQuantity" }),
   col("ManualState", "Manuel değer", "text", "list", { pivot: false }), col("UpdatedAt", "Son değişiklik zamanı", "datetime", "date", { pivot: false }),
 ];
 const GROUP: ListColumn = col("MaterialId/MaterialGroup", "Malzeme · Malzeme grubu", "text", "list", { default_visible: false, related: true });
@@ -43,11 +43,16 @@ function data(req: PivotRequest): PivotData {
     { key: ["MUS-B", "MAM-001"], level: 2, total: false, cells: req.values.map(() => columns.map(() => ({ v: 1.5, d: 3 }))) },
     ...(req.totals.subtotals ? [{ key: ["MUS-B"], level: 1, total: true, cells: cells(40) }] : []),
     ...(req.totals.rows ? [{ key: [], level: 0, total: true, cells: cells(70) }] : []),
-  ].map((r) => (req.rows.length === 1 ? { ...r, key: r.key.slice(0, 1), level: Math.min(r.level, 1) } : r));
+  ].map((r) => (req.rows.length === 1 ? { ...r, key: r.key.slice(0, 1), level: Math.min(r.level, 1) } : r))
+    // kuralı olan değerde: ilk satırın ilk sütunu kuralı tutar; toplam satırları yalnız "Toplamlara da uygula" açıksa
+    .map((r, i) => {
+      const formats = Object.fromEntries(req.values.flatMap((v, k) => (v.rules?.length && (i === 0 || (r.total && v.rules_on_totals)) ? [[String(k), columns.map((_, s) => (s === 0 ? 0 : null))]] : [])));
+      return Object.keys(formats).length ? { ...r, formats } : r;
+    });
   return {
     row_fields: req.rows.map((a) => ({ field: a.field, type: "text", bucket: null })),
     column_fields: req.columns.map((a) => ({ field: a.field, type: "date", bucket: a.bucket ?? null })),
-    columns, values: req.values.map((v) => info(v.id, v.fn, v.field ?? null, { decimals: v.fn === "count" || v.fn === "distinct" ? 0 : 2, weight: v.weight ?? null })),
+    columns, values: req.values.map((v) => info(v.id, v.kind === "calc" ? "calc" : v.fn ?? "sum", v.field ?? null, { decimals: v.fn === "count" || v.fn === "distinct" ? 0 : 2, weight: v.weight ?? null })),
     rows: all.slice(req.offset, req.offset + req.limit), offset: req.offset, row_count: all.length, week_start: "Pazartesi",
   };
 }
@@ -65,6 +70,7 @@ const viewWith = (pivot: PivotConfig | null, extra: object = {}) => ({
 function backend(views: object = { views: [], default_view_id: null }, reply?: (req: PivotRequest) => Reply) {
   const pivots: PivotRequest[] = [];
   const saved: { definition: { pivot?: PivotConfig } }[] = [];
+  const exports: Record<string, unknown>[] = [];
   mockApi({
     "/api/transaction-data/counts": { body: { data_version: 35, tabs: [] } },
     [`${LIST}/columns`]: { body: { chunk_size: 100, columns: COLUMNS, relations: [{ path: "MaterialId", label: "Malzeme" }],
@@ -80,13 +86,17 @@ function backend(views: object = { views: [], default_view_id: null }, reply?: (
     },
     [`${LIST}/values`]: { body: [{ value: "MUS-A", count: 2 }, { value: "MUS-B", count: 1 }] },
     [`${LIST}/query`]: { body: { rows: [{ Id: 1, OrderNo: "SO-1", CustomerCode: "MUS-A" }], filtered: 1, total: 1 } },
+    [`${LIST}/pivot/export`]: (_url, init) => {
+      exports.push(JSON.parse(String(init?.body)));
+      return { body: "xlsx", headers: { "Content-Disposition": "attachment; filename*=UTF-8''satis-siparisi_pivot.xlsx" } };
+    },
     [`${LIST}/pivot`]: (_url, init) => {
       const req = JSON.parse(String(init?.body)) as PivotRequest;
       pivots.push(req);
       return reply ? reply(req) : { body: data(req) };
     },
   });
-  return { pivots, saved, last: () => pivots[pivots.length - 1] };
+  return { pivots, saved, exports, last: () => pivots[pivots.length - 1] };
 }
 
 async function open(views?: object, reply?: (req: PivotRequest) => Reply) {
@@ -141,7 +151,7 @@ describe("pivot modeli", () => {
     expect(fnsFor(byField.get("OrderNo")).map((fn) => fnLabel(fn, byField.get("OrderNo")))).toEqual(["Say", "Benzersiz say"]);
     expect(fnsFor(byField.get("Price")).map((fn) => fnLabel(fn, byField.get("Price"))))
       .toEqual(["Toplam", "Ortalama", "En düşük", "En yüksek", "Say", "Benzersiz say", "Ağırlıklı ortalama"]);
-    expect([defaultFn(date), defaultFn(byField.get("OrderNo")!), defaultFn(byField.get("Price")!)]).toEqual(["min", "distinct", "sum"]);
+    expect([defaultFn(date), defaultFn(byField.get("OrderNo")!), defaultFn(byField.get("Price")!)]).toEqual(["min", "distinct", "wavg"]);
     expect(valueLabel({ field: "RequestedDate", fn: "min" }, byField)).toBe("İstek tarihi · En erken");
     expect(valueLabel({ field: "RequestedDate", fn: "max" }, byField)).toBe("İstek tarihi · En geç");
     expect(formatPivotCell("2026-11-17", info("a", "min", "RequestedDate", { type: "date" }), null)).toBe("17.11.2026");
@@ -364,5 +374,107 @@ describe("pivot görünümü (K-183)", () => {
   it("filtrede kayıt yoksa ızgaranın yerinde yazar", async () => {
     await open(viewWith(PIVOT), (req) => ({ body: { ...data(req), rows: [], row_count: 0 } }));
     expect(await screen.findByText("Bu filtrede kayıt yok", {}, { timeout: 5000 })).toBeInTheDocument();
+  });
+});
+
+describe("hesaplanan değer, değerin kuralı, Excel ve varsayılan hesaplama (7.7b, K-183)", () => {
+  const RULE = { id: "k1", enabled: true, condition: { op: "lt" as const, value: 0.5 }, format: { fill: "#f7dcd5" } };
+  const SUMS: PivotConfig = { ...PIVOT, values: [{ id: "d1", field: "OpenQuantity", fn: "sum" }, { id: "d2", field: "OrderedQuantity", fn: "sum" }] };
+  const CALC: PivotConfig = { ...SUMS, values: [...SUMS.values, { id: "d3", kind: "calc", field: null, fn: "sum", name: "Açık oranı", a: "d1", op: "div", b: "d2", percent: true, rules: [RULE] }] };
+
+  it("model: etiket yolu söyler; istek, hazır olma, uyarlama, işleneni giden hesaplanan değer, varsayılan hesaplama, Excel isteği", () => {
+    const calc = CALC.values[2];
+    expect(valueLabel(calc, byField)).toBe("Açık oranı · Toplamlardan");
+    expect(valueDisplay(calc, byField)).toEqual({ top: "Açık oranı", bottom: "Toplamlardan", full: "Açık oranı · Toplamlardan" });   // özel adda da yol görünür
+    expect(valueName({ ...calc, name: null }, byField)).toBe("Hesaplanan değer · Toplamlardan");
+    expect(pivotReady(CALC)).toBe(true);
+    expect(pivotReady({ ...CALC, values: [...SUMS.values, { ...calc, b: null }] })).toBe(false);
+    const req = pivotRequest({ ...CALC, values: [{ ...SUMS.values[0], rules: [{ ...RULE, enabled: false }] }, SUMS.values[1], { ...calc, rules_on_totals: true }] }, [], null, 1, 0, 100);
+    expect(req.values).toEqual([{ id: "d1", fn: "sum", field: "OpenQuantity" }, { id: "d2", fn: "sum", field: "OrderedQuantity" },
+                                { id: "d3", kind: "calc", a: "d1", op: "div", b: "d2", percent: true, rules: [RULE], rules_on_totals: true }]);   // kapalı kural isteğe girmez
+    expect(fitPivot({ ...CALC, sort: { by: "d3", dir: "desc" } }, COLUMNS.filter((c) => c.field !== "OrderedQuantity"))).toMatchObject({ values: [{ id: "d1" }], sort: { by: "name" } });
+    expect(dropOrphans({ ...CALC, values: CALC.values.filter((v) => v.id !== "d1") }, byField).values.map((v) => v.id)).toEqual(["d2"]);
+    const dated: PivotConfig = { ...CALC, values: [{ id: "d1", field: "RequestedDate", fn: "min" }, CALC.values[1], CALC.values[2]] };
+    expect(dropOrphans(dated, byField).values.map((v) => v.id)).toEqual(["d1", "d2"]);   // tarih sonucu işlenen olamaz
+    expect(normalizePivot(JSON.parse(JSON.stringify(CALC)))!.values[2]).toMatchObject({ kind: "calc", a: "d1", op: "div", b: "d2", percent: true, rules: [RULE] });
+    const price: ListColumn = { ...byField.get("Price")!, aggregate: null, aggregate_weight: null };
+    expect([defaultFn(price), defaultFn({ ...price, aggregate: "avg" }), defaultFn({ ...price, aggregate: "wavg", aggregate_weight: "OpenQuantity" }),
+            defaultFn({ ...price, aggregate: "wavg" }), defaultFn({ ...price, aggregate: "avg_nonzero" })]).toEqual(["sum", "avg", "wavg", "sum", "avg"]);
+    const exp = pivotExportRequest({ ...CALC, values_on: "rows", values: [{ ...SUMS.values[0], decimals: 1, name: "Açık" }, SUMS.values[1], calc] }, [], null, 1, byField);
+    expect("offset" in exp || "limit" in exp).toBe(false);
+    expect(exp).toMatchObject({ values_on: "rows", names: { d1: "Açık", d2: "Sipariş miktarı · Toplam", d3: "Açık oranı · Toplamlardan" } });
+    expect(exp.values[0]).toEqual({ id: "d1", fn: "sum", field: "OpenQuantity", decimals: 1, name: "Açık" });
+  });
+
+  it("kayıtlı görünümden: başlıkta ad ve altında \"Toplamlardan\"; kuralı tutan hücre boyanır; istek hesaplanan değeri taşır", async () => {
+    const { last } = await open(viewWith(CALC));
+    const table = await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 });
+    await within(table).findByText("MUS-A");
+    expect(within(table).getAllByText("Açık oranı").length).toBeGreaterThan(0);
+    expect(within(table).getAllByText("Toplamlardan").length).toBeGreaterThan(0);
+    expect(last().values[2]).toEqual({ id: "d3", kind: "calc", a: "d1", op: "div", b: "d2", percent: true, rules: [RULE] });
+    const ruled = [...table.querySelectorAll("td.is-ruled")];
+    expect(ruled).toHaveLength(1);                                    // sahte sunucu ilk satırın ilk sütununu işaretler; toplamlar işaretsiz
+    expect(ruled[0]).toHaveStyle({ backgroundColor: "#f7dcd5" });
+  });
+
+  it("panelden: hesaplanan değer formu; kural penceresinde ikon ve alan karşılaştırması yok; yüzde eşik oran olarak; Toplamlara da uygula; işlenen çıkınca düşer", async () => {
+    const { user, last } = await open(viewWith(SUMS));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
+    await menuItem(user, "Pivot ayarları");
+    await user.click(within(panel()).getByRole("button", { name: "Hesaplanan değer ekle" }));
+    await waitFor(() => expect(last().values[2]).toEqual({ id: "d3", kind: "calc", a: "d1", op: "div", b: "d2", percent: false }));
+    expect(within(panel()).getByRole("button", { name: "Hesaplanan değer · Toplamlardan" })).toHaveAttribute("aria-expanded", "true");
+    await user.type(within(panel()).getByRole("textbox", { name: "Ad" }), "Oran");
+    expect(await within(panel()).findByRole("button", { name: "Oran · Toplamlardan" })).toBeInTheDocument();
+    expect(within(within(panel()).getByRole("combobox", { name: "A" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["Açık miktar · Toplam", "Sipariş miktarı · Toplam"]);
+    await user.click(within(panel()).getByRole("radio", { name: "×" }));
+    await user.click(within(panel()).getByRole("radio", { name: "Yüzde" }));
+    await waitFor(() => expect(last().values[2]).toMatchObject({ op: "mul", percent: true }));
+
+    await user.click(within(panel()).getByRole("button", { name: "Kural ekle" }));
+    const dialog = await screen.findByRole("dialog", { name: "Yeni biçim kuralı" });
+    expect(within(dialog).queryByText("İkon")).toBeNull();
+    expect(within(dialog).queryByText("Karşılaştır")).toBeNull();
+    expect(within(within(dialog).getByRole("combobox", { name: "Koşul" })).getAllByRole("option")).toHaveLength(6);   // yalnız sayı koşulları
+    await user.type(within(dialog).getByLabelText("Değer (%)"), "50");
+    await user.tab();
+    await user.click(within(dialog).getByRole("button", { name: /^Zemin:/ }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Zemin" })).getByRole("button", { name: "Açık kiremit #f7dcd5" }));
+    await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(last().values[2].rules).toEqual([{ id: "k1", enabled: true, condition: { op: "gt", value: 0.5 }, format: { fill: "#f7dcd5" } }]));
+    expect(last().values[2].rules_on_totals).toBeUndefined();
+    expect(within(panel()).getByRole("button", { name: /^Kuralı düzenle: / })).toBeInTheDocument();
+    await user.click(within(panel()).getByRole("switch", { name: "Toplamlara da uygula" }));
+    await waitFor(() => expect(last().values[2].rules_on_totals).toBe(true));
+    await user.click(within(panel()).getByRole("button", { name: /^Kuralı kaldır: / }));
+    await waitFor(() => expect(last().values[2].rules).toBeUndefined());
+
+    await user.click(within(panel()).getByRole("button", { name: "Açık miktar · Toplam: çıkar" }));
+    await waitFor(() => expect(last().values.map((v) => v.id)).toEqual(["d2"]));   // işleneni giden hesaplanan değer de gider
+  });
+
+  it("Excel düğmesi pivot açıkken pivotu aktarır: pencere açılmaz, dosya iner; istekte değerlerin yeri ve ekrandaki adlar", async () => {
+    const downloads: string[] = [];
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) { downloads.push(this.download); });
+    const { user, exports } = await open(viewWith({ ...CALC, values_on: "rows" }));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
+    await user.click(screen.getByRole("button", { name: "Excel'e aktar" }));
+    await waitFor(() => expect(downloads).toEqual(["satis-siparisi_pivot.xlsx"]));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(exports).toHaveLength(1);
+    expect(exports[0]).toMatchObject({ values_on: "rows", title: "Satış siparişi", rows: CALC.rows, totals: CALC.totals,
+                                       names: { d1: "Açık miktar · Toplam", d3: "Açık oranı · Toplamlardan" } });
+    expect("offset" in exports[0] || "limit" in exports[0]).toBe(false);
+  });
+
+  it("eklenen değer alanın liste tanımındaki varsayılan hesaplamasıyla gelir (ağırlıklı ortalamada ağırlık alanıyla)", async () => {
+    const { user, last } = await open(viewWith({ ...PIVOT, values: [{ id: "d1", field: "OpenQuantity", fn: "sum" }] }));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
+    await menuItem(user, "Pivot ayarları");
+    await user.click(within(panel()).getByRole("button", { name: "Değer ekle" }));
+    await user.click(await within(panel()).findByRole("button", { name: "Fiyat" }));
+    await waitFor(() => expect(last().values[1]).toEqual({ id: "d2", fn: "wavg", field: "Price", weight: "OpenQuantity" }));
   });
 });

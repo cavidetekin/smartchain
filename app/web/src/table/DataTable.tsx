@@ -47,7 +47,7 @@ import {
   MAX_RULES, type RelatedCatalog, type RelationHeading, type Row,
 } from "./types";
 import { PivotGrid } from "./PivotGrid";
-import { emptyPivot, type PivotConfig } from "./pivotModel";
+import { emptyPivot, type PivotConfig, pivotExportRequest, pivotReady } from "./pivotModel";
 import { PivotPanel } from "./PivotPanel";
 import { isRelatedField, mergeColumns, withDisplayLabels } from "./related";
 import { type DisplayItem, flatten, useGroupedQuery } from "./useGroupedQuery";
@@ -473,6 +473,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   }, [list]);
   const [chunkSize, setChunkSize] = useState(0);
   const [exportInfo, setExportInfo] = useState<ExportInfo | null>(null);
+  const [pivotExporting, setPivotExporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [columnsError, setColumnsError] = useState<ApiError | null>(null);
   const [columnsAttempt, setColumnsAttempt] = useState(0);
@@ -1011,6 +1012,21 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     setExporting(false);
   };
 
+  // Pivot açıkken Excel düğmesi pivotu ekrandaki şekille aktarır: pencere açılmaz, dosya hemen iner (K-183)
+  const exportPivot = async () => {
+    if (!s.pivot || pivotExporting) return;
+    setPivotExporting(true);
+    try {
+      const byField = new Map((columns ?? []).map((c) => [c.field, c]));
+      const file = await listApi(list).pivotExport({ ...pivotExportRequest(s.pivot, chartFilters, chartSel, scenario?.id, byField), title: exportInfo?.title });
+      saveBlob(file.blob, file.fileName);
+    } catch (e) {
+      emitNotice(e instanceof ApiError ? e.message : tr.pivot.exportFailed);
+    } finally {
+      setPivotExporting(false);
+    }
+  };
+
   // Kolonlar gelmeden (yükleniyor, hata) de şeridin solu ve sağ ucu çizilir: sekmeler ve kartın Büyüt / ✕'i kaybolmaz (K-173)
   const bareStrip = (toolbarLead || toolbarEnd) ? (
     <div className={`sc-table-toolbar${compact ? " sc-table-toolbar--compact" : ""}`}>
@@ -1209,7 +1225,8 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
                     disabled={pivotOn} onClick={() => setPanel((p) => (p === "fields" ? null : "fields"))}><Columns3 aria-hidden="true" /></button>
             {exportInfo && (
               <button type="button" className="sc-tool-btn" aria-label={T.exportButton} title={T.exportButton}
-                      onClick={() => setExporting(true)}><Download aria-hidden="true" /></button>
+                      disabled={pivotOn && (pivotExporting || !s.pivot || !pivotReady(s.pivot))}
+                      onClick={() => (pivotOn ? void exportPivot() : setExporting(true))}><Download aria-hidden="true" /></button>
             )}
             <button type="button" className={`sc-tool-btn${chartOpen ? " is-on" : ""}`} aria-label={tr.chart.chart} title={chartOpen ? tr.chart.close : tr.chart.chart}
                     aria-pressed={chartOpen} disabled={!chartOpen && !chartPossible} onClick={toggleChart}><ChartColumn aria-hidden="true" /></button>

@@ -274,7 +274,11 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Alan seçici | "+ Alan ekle" ve "+ Değer ekle": aramalı liste; tablonun alanları ve "İlişkili alanlar" ağacı (Alanlar panelindekiyle aynı bileşen). Listede önce tablonun kendi alanları, altında ilişkiler; "Manuel değer" ve sistem alanları (son değişiklik zamanı) hiçbir seçicide yoktur; satır ve sütun seçicisinde ayrıca ondalıklı sayı alanları ve o eksenlerde kullanılmış alanlar yoktur. İlişkili alan tabloya kolon eklenmeden pivota girer; sınır 20 alan, 8 ilişki |
 | Görünümle kaydetme | Pivot ayarları görünüm tanımında (`pivot`); "Kaydet" ve "Farklı kaydet" ile. Şirket Standart'ı pivot olabilir |
 | Yetki | Listenin okuma yetkisi olan herkes (End user dahil) |
-| 7.7b | Hesaplanan değer, değere koşullu biçim, Excel'e pivot şekliyle aktarım, alanın varsayılan hesaplaması |
+| Hesaplanan değer (7.7b) | Değerler bölümünde "+ Hesaplanan değer ekle": Ad; A, İşlem (÷ × + −), B (A ve B pivotun alan değerleridir; tarih sonuçlu değer seçilemez; işleneni çıkarılan hesaplanan değer de çıkar); Gösterim (Sayı · Yüzde); Ondalık. Her hücrede o hücrenin toplamlarından hesaplanır; ara toplam ve genel toplamda da. Başlıkta ve çipte iki satır: üstte ad, altta soluk "Toplamlardan". Aynı oran satırlardan (Ortalama, Ağırlıklı ortalama) ve toplamlardan yan yana eklenebilir |
+| Koşullu biçim (7.7b) | Değerin ayarında "Koşullu biçim": kural satırları (renk örneği, koşul, ✕) ve "+ Kural ekle"; pencere ve renk seçici tablodaki koşullu biçimlendirmeninkidir (yalnız sayı koşulları; ikon yok). En çok 5 kural; üstteki kazanır. "Toplamlara da uygula" (varsayılan kapalı). Kural hesaplanmış hücre değerine bakar; tablonun kuralları pivota taşınmaz |
+| Excel (7.7b) | Şeritteki Excel düğmesi pivot açıkken pivotu aktarır (pencere açılmaz, dosya hemen iner): katlı başlıklar, toplamlar, sütun grubu çizgileri, kural renkleri, tarih ve yüzde biçimleri; ayrıca Bilgi sayfası |
+| Varsayılan hesaplama (7.7b) | Eklenen değer alanın liste tanımındaki varsayılan hesaplamasıyla gelir (yoksa sayıda Toplam, tarihte En erken, metinde Benzersiz say) |
+| Durum (7.7b) | demo bekliyor |
 
 ## Görünüm (1.4, K-89, K-90)
 

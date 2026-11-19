@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.lists import MATERIALS
 from app.api.lists.request import (
-    ChartRequest, FilterItem, GroupsRequest, QueryRequest, RuleSpec, SortItem, ValuesRequest,
+    ChartRequest, FilterItem, GroupsRequest, PivotRequest, QueryRequest, RuleSpec, SortItem, ValuesRequest,
 )
 from app.api.services import lists as service
 
@@ -211,3 +211,32 @@ def test_related_fields_under_target(related_session, name, req):
     ms = median_ms(lambda: service.query(related_session, defn, req))
     print(f"\nilişkili alan, iki seviye ({name}): ortanca {ms:.0f} ms")
     assert ms < TARGET_MS
+
+
+# --- pivot (K-183): toplama veritabanında; hedef grafiğinkinden gevşek (çapraz ara toplamlar): ortanca 500 ms ---
+
+PIVOT_TARGET_MS = 500
+PIVOT_VALUES = [{"id": "a", "field": "SafetyStock", "fn": "sum"}, {"id": "b", "field": "SafetyStock", "fn": "avg"},
+                {"id": "c", "kind": "calc", "a": "a", "op": "div", "b": "b", "rules": [{"id": "k1", "enabled": True, "condition": {"op": "gt", "value": 100}, "format": {"fill": "#f7dcd5"}}]}]
+PIVOT_TOTALS = {"rows": True, "columns": True, "subtotals": True}
+PIVOTS = {
+    "iki satır alanı × sütun, bütün toplamlar": {"rows": [{"field": "MaterialGroup"}, {"field": "BaseUom"}], "columns": [{"field": "MaterialLevel"}],
+                                                 "values": PIVOT_VALUES, "totals": PIVOT_TOTALS},
+    "50.000 yaprak satır, ilk parça": {"rows": [{"field": "MaterialGroup"}, {"field": "Name"}], "columns": [{"field": "MaterialLevel"}],
+                                       "values": PIVOT_VALUES, "totals": PIVOT_TOTALS, "limit": 100},
+    "50.000 yaprak satır, değere göre sıralı son parça": {"rows": [{"field": "MaterialGroup"}, {"field": "Name"}], "columns": [{"field": "MaterialLevel"}],
+                                                          "values": PIVOT_VALUES, "totals": PIVOT_TOTALS, "sort": {"by": "a", "dir": "desc"},
+                                                          "offset": ROWS - 100, "limit": 100},
+    "filtreli": {"rows": [{"field": "MaterialGroup"}, {"field": "BaseUom"}], "columns": [{"field": "MaterialLevel"}], "values": PIVOT_VALUES,
+                 "totals": PIVOT_TOTALS, "filters": [{"field": "Name", "op": "contains", "value": "e"}, {"field": "SafetyStock", "op": "between", "min": 50, "max": 450}]},
+}
+
+
+@pytest.mark.parametrize("name", list(PIVOTS))
+def test_pivot_under_target(big_session, name):
+    req = PivotRequest.model_validate(PIVOTS[name])
+    out = service.pivot(big_session, MATERIALS, req)
+    assert out["rows"] and out["row_count"] >= len(out["rows"])
+    ms = median_ms(lambda: service.pivot(big_session, MATERIALS, req))
+    print(f"\npivot ({name}): ortanca {ms:.0f} ms")
+    assert ms < PIVOT_TARGET_MS

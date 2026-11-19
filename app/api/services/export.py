@@ -24,13 +24,14 @@ from app.jobs.settings import JobSettings
 from ..errors import DB_UNAVAILABLE, AppError
 from ..export import describe
 from ..export import formats
-from ..export.formats import CellFormat
-from ..export.writer import XlsxWriter, write_chart_workbook
+from ..export.formats import CellFormat, number_format as number_format_code, percent_format, rule_format
+from ..export.writer import XlsxWriter, write_chart_workbook, write_pivot_workbook
 from ..lists import LISTS, ListDefinition
 from ..lists.groups import build_tree
 from ..lists.query import UNIT, Builder, ListQueryError
 from ..lists import chart as chart_query
-from ..lists.request import ChartExportLogRequest, ChartExportRequest, ExportRequest
+from ..lists import pivot as pivot_query
+from ..lists.request import ChartExportLogRequest, ChartExportRequest, ExportRequest, PivotExportRequest, PivotRequest, PivotValueSpec
 from ..repositories import data_versions, export as repo, lists as list_repo, views as view_repo
 from ..settings import get_settings
 from . import lists as list_service
@@ -412,6 +413,157 @@ def start_chart(session: Session | None, defn: ListDefinition, user_id: int, req
             "list": defn.name, "title": defn.title, "data_version": version["Id"] if version else None, "chart": KINDS[req.kind], "format": "xlsx",
             "filters": dict(info)["Filtreler"], "rows": written, "size": len(content), "seconds": round(time.perf_counter() - t0, 2),
             "background": False, "job_id": None, "chart_image": image is not None})
+        session.commit()
+        return {"file": content, "file_name": file_name}
+    except ListQueryError as exc:
+        raise AppError("validation", "Girilen bilgiler geçersiz.", 422, exc.details) from exc
+    except DBAPIError as exc:
+        session.rollback()
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503) from exc
+
+
+PIVOT_EXPORT_MAX_CELLS = 1_000_000   # görüntü satırı × değer sütunu; aşılırsa dosya hazırlanmaz
+PIVOT_EXPORT_PAGE = 500
+OPS = {"div": "÷", "mul": "×", "add": "+", "sub": "−"}
+PIVOT_FNS = {**FNS, "wavg": "Ağırlıklı ortalama"}
+DATE_FNS = {"min": "En erken", "max": "En geç"}
+
+
+def _pivot_value_name(b, v, names: dict[str, str]) -> str:
+    """Değerin adı: ekrandan gelen ad (kısa ad ya da özel ad), yoksa "Alan · Hesaplama"; hesaplanan değerde "Ad · Toplamlardan"."""
+    if names.get(v.id):
+        return names[v.id]
+    if v.kind == "calc":
+        return f"{v.name or 'Hesaplanan değer'} · Toplamlardan"
+    if v.fn == "count":
+        return PIVOT_FNS["count"]
+    col = b.columns.get(v.field or "", {})
+    label = col.get("label", v.field)
+    if v.fn == "wavg":
+        return f"{label} · {PIVOT_FNS['wavg']} ({b.columns.get(v.weight or '', {}).get('label', v.weight)})"
+    return f"{label} · {(DATE_FNS if col.get('type') in ('date', 'datetime') else PIVOT_FNS).get(v.fn, PIVOT_FNS[v.fn])}"
+
+
+def start_pivot(session: Session | None, defn: ListDefinition, user_id: int, req: PivotExportRequest) -> dict:
+    """Pivot Excel'e, ekrandaki şekille (K-183): {"file": bytes, "file_name"}. Hep anlık; hücre sayısı sınırlıdır. İz yazılamazsa dosya verilmez."""
+    if session is None:
+        raise AppError("database_unavailable", DB_UNAVAILABLE, 503)
+    try:
+        role, b, version = _chart_context(session, defn, user_id, req)
+        t0 = time.perf_counter()
+        base = PivotRequest(**req.model_dump(exclude={"values_on", "names", "title", "values"}),
+                            values=[PivotValueSpec(**v.model_dump(exclude={"decimals", "name"})) for v in req.values], offset=0, limit=PIVOT_EXPORT_PAGE)
+        first = list_service.pivot(session, defn, base, role, user_id, unlimited=True)
+        columns, infos = first["columns"], first["values"]
+        V = len(infos)
+        if first["row_count"] * len(columns) * V > PIVOT_EXPORT_MAX_CELLS:
+            raise AppError("export_too_large", "Pivot dışa aktarmak için çok büyük (1.000.000 hücreden çok). Süzün ya da alan çıkarın.", 422)
+        rows = list(first["rows"])
+        while len(rows) < first["row_count"]:
+            page = list_service.pivot(session, defn, base.model_copy(update={"offset": len(rows)}), role, user_id, unlimited=True)
+            if not page["rows"]:
+                break
+            rows += page["rows"]
+        labels = {f: c["label"] for f, c in b.columns.items()}
+        row_fields, col_fields = first["row_fields"], first["column_fields"]
+        R, C = len(row_fields), len(col_fields)
+        on_rows = req.values_on == "rows"
+        span = 1 if on_rows else V
+
+        def label_of(value, info):
+            return pivot_query.key_label(value, info["type"], info["bucket"])
+
+        # en dıştaki sütun grubunun ilk sütunu: solunda dikey çizgi (ekrandaki ayraç)
+        starts = [i > 0 and (c["level"] == 0 or columns[i - 1]["level"] == 0 or c["key"][:1] != columns[i - 1]["key"][:1]) for i, c in enumerate(columns)]
+        header, occupied = [], [set() for _ in range(C)]
+        left_cols = R + (1 if on_rows else 0)
+        for level in range(C):
+            cells, i = [], 0
+            while i < len(columns):
+                c = columns[i]
+                if c["level"] > level:
+                    n = 1
+                    while i + n < len(columns) and columns[i + n]["level"] > level and columns[i + n]["key"][: level + 1] == c["key"][: level + 1]:
+                        n += 1
+                    cells.append(("" if c.get("empty") and level > 0 else label_of(c["key"][level], col_fields[level]), n * span, 1, starts[i]))
+                    i += n
+                else:
+                    if c["level"] == level:
+                        cells.append(("Toplam", span, C - level, starts[i]))
+                        for below in range(level + 1, C):
+                            occupied[below].update(range(left_cols + i * span, left_cols + (i + 1) * span))
+                    i += 1
+            header.append(cells)
+        overrides = {v.id: v.decimals for v in req.values}
+
+        def number_format(info, cell) -> str:
+            base_decimals = cell["d"] if isinstance(cell, dict) and "d" in cell else info["decimals"]
+            decimals = overrides.get(info["id"])
+            if decimals is None:
+                decimals = base_decimals + (1 if info["fn"] in ("avg", "wavg") else 0)
+            return percent_format(decimals) if info["percent"] else number_format_code(decimals)
+
+        def cell_value(info, cell):
+            if cell is None:
+                return None
+            if isinstance(cell, dict):
+                return "—" if cell.get("mixed") else cell.get("v")
+            if isinstance(cell, str):  # En erken · En geç
+                return datetime.fromisoformat(cell).replace(tzinfo=None) if info.get("type") == "datetime" else date.fromisoformat(cell[:10])
+            return cell
+
+        rules = {k: [rule_format(r.format) for r in v.rules if r.enabled] for k, v in enumerate(req.values)}
+        out_rows, previous = [], None
+        for row in rows:
+            texts = [""] * R
+            if row["total"]:
+                at = max(row["level"] - 1, 0)
+                texts[at] = "Genel toplam" if row["level"] == 0 else f"{label_of(row['key'][row['level'] - 1], row_fields[row['level'] - 1])} toplamı"
+            else:
+                for j in range(R):
+                    if previous is None or len(previous) <= j or previous[: j + 1] != row["key"][: j + 1]:
+                        texts[j] = label_of(row["key"][j], row_fields[j])
+            previous = row["key"]
+            formats_of = {int(k): [None if h is None else rules[int(k)][h] for h in hits] for k, hits in row.get("formats", {}).items()}
+            out_rows.append({"labels": texts, "total": row["total"], "formats": formats_of,
+                             "cells": [[cell_value(infos[k], c) for c in row["cells"][k]] for k in range(V)],
+                             "num_formats": [[number_format(infos[k], c) for c in row["cells"][k]] for k in range(V)]})
+        names = [_pivot_value_name(b, v, req.names) for v in req.values]
+        model = {"row_labels": [labels.get(f["field"], f["field"]) for f in row_fields], "column_labels": [labels.get(f["field"], f["field"]) for f in col_fields],
+                 "values": [{"name": names[k], "num_format": "dd.mm.yyyy hh:mm" if infos[k].get("type") == "datetime" else "dd.mm.yyyy"} for k in range(V)],
+                 "values_on": req.values_on, "header": header, "occupied": occupied, "columns": [{"total": c["total"], "start": starts[i]} for i, c in enumerate(columns)],
+                 "rows": out_rows}
+        bucket_of = lambda a: f" ({BUCKETS[a.bucket]})" if a.bucket else ""  # noqa: E731
+        totals = [name for name, on in (("Satır toplamı", req.totals.rows), ("Sütun toplamı", req.totals.columns), ("Ara toplamlar", req.totals.subtotals)) if on]
+        by_id = {v.id: names[k] for k, v in enumerate(req.values)}
+        info = [
+            ("Liste", defn.title or defn.name),
+            ("Kaynak", _source(version)),
+            ("Pivot", req.title or "Pivot görünümü"),
+            ("Satırlar", " › ".join(labels.get(a.field, a.field) + bucket_of(a) for a in req.rows)),
+            ("Sütunlar", " › ".join(labels.get(a.field, a.field) + bucket_of(a) for a in req.columns) or "yok"),
+            ("Değerler", "; ".join(f"{names[k]} = {by_id.get(v.a, v.a)} {OPS.get(v.op or '', '?')} {by_id.get(v.b, v.b)} (toplamlardan)" if v.kind == "calc" else names[k]
+                                   for k, v in enumerate(req.values))),
+            ("Değerlerin yeri", "Satırlarda" if on_rows else "Sütunlarda"),
+            ("Toplamlar", ", ".join(totals) or "yok"),
+            ("Sıralama", "Ada göre" if req.sort.by == "name" else f"{by_id.get(req.sort.by, req.sort.by)} · {'azalan' if req.sort.dir == 'desc' else 'artan'}"),
+            ("Filtreler", "; ".join(describe.describe_filter(f.model_dump(by_alias=True, exclude_none=True), labels.get(f.field, f.field),
+                                                             b.columns.get(f.field, {}).get("decimals"),
+                                                             b.columns.get(f.field, {}).get("percent", False))
+                                    for f in req.filters) or "yok"),
+            ("Dışa aktaran", repo.user_name(session, user_id) or f"#{user_id}"),
+            ("Zaman", f"{_now_local():%d.%m.%Y %H:%M}"),
+            ("Smartchain", __version__),
+            ("Not", "Dosya sisteme geri yüklenemez; yükleme şablonu ayrıdır."),
+        ]
+        file_name = _file_name(defn, version, "xlsx", "pivot_")
+        buf = io.BytesIO()
+        written = write_pivot_workbook(buf, model, info)
+        content = buf.getvalue()
+        repo.write_audit(session, user_id, defn.name, file_name, {
+            "list": defn.name, "title": defn.title, "data_version": version["Id"] if version else None, "pivot": True, "format": "xlsx",
+            "filters": dict(info)["Filtreler"], "rows": written, "size": len(content), "seconds": round(time.perf_counter() - t0, 2),
+            "background": False, "job_id": None})
         session.commit()
         return {"file": content, "file_name": file_name}
     except ListQueryError as exc:

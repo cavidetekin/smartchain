@@ -519,7 +519,7 @@ class Builder:
         """Ara toplam türleri: verilmezse görünen kolonlarda liste tanımının varsayılanı. "none" atılır.
         Yalnız sayı alanları; ağırlıklı ortalamada ağırlık başka bir sayı alanı olmalı (422)."""
         if specs is None:
-            return {f: AggSpec(fn=fn) for f, fn in self.defn.aggregates.items()
+            return {f: AggSpec(fn=fn, weight=self.defn.aggregate_weights.get(f) if fn == "wavg" else None) for f, fn in self.defn.aggregates.items()
                     if f in self.columns and (fields is None or f in fields)}
         problems: list[dict] = []
         numeric = {f for f, c in self.columns.items() if c["type"] in ("number", "integer")}

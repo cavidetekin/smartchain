@@ -126,6 +126,16 @@ def _clean_pivot(b: Builder, raw, gone, warnings: list[str]) -> dict | None:
     data["rows"] = [a for a in data["rows"] if keep(a["field"])]
     data["columns"] = [a for a in data["columns"] if keep(a["field"])]
     data["values"] = [v for v in data["values"] if keep(v.get("field")) and keep(v.get("weight"))]
+    ids = {v["id"] for v in data["values"] if v.get("kind", "field") == "field"}
+    data["values"] = [v for v in data["values"] if v.get("kind", "field") == "field" or (v.get("a") in ids and v.get("b") in ids)]  # işleneni giden hesaplanan değer
+    for v in data["values"]:  # varsayılan anahtarlar saklanmış içerikte taşınmaz
+        for key, default in (("kind", "field"), ("percent", False), ("rules", []), ("rules_on_totals", False)):
+            if v.get(key) == default:
+                v.pop(key, None)
+        if v.get("kind") == "calc":
+            v.pop("fn", None)  # hesaplanan değerin hesaplaması yoktur
+        for rule in v.get("rules", []):
+            rule["format"] = {k: x for k, x in rule["format"].items() if x not in (None, False)}
     if data["sort"]["by"] != "name" and data["sort"]["by"] not in {v["id"] for v in data["values"]}:
         data["sort"] = {"by": "name", "dir": "asc"}
     if dropped and (not data["rows"] or not data["values"]):

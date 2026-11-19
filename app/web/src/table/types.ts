@@ -29,8 +29,10 @@ export interface ListColumn {
   decimals_from_unit: boolean;
   /** Yüzde gösterim (K-113): veride oran (0,05), ekranda %5,00; filtre ve kural değeri yüzde girilir, oran saklanır. */
   percent: boolean;
-  /** Gruplamada varsayılan ara toplam (K-90). */
+  /** Gruplamada varsayılan ara toplam (K-90); pivota eklenen değerin de varsayılan hesaplaması (K-183). */
   aggregate: AggFn | null;
+  /** Varsayılan hesaplama ağırlıklı ortalamaysa ağırlık alanı. */
+  aggregate_weight?: string | null;
   default_visible: boolean;
   /** Manuel değer girilebilir (veri sözlüğünde Manuel, K-170); yetki ekranda fonksiyon 12'den. */
   manual?: boolean;
@@ -278,6 +280,11 @@ export function listApi(list: string) {
       postJson<GroupsResponse>(`${base}/groups`, body, signal),
     /** Tablonun grafiği için toplama (K-178): listeyle aynı filtre ve yetki. */
     chart: (body: ChartRequest, signal?: AbortSignal) => postJson<ChartData>(`${base}/chart`, body, signal),
+    /** Pivot Excel'e, ekrandaki şekille (K-183). */
+    pivotExport: async (body: unknown) => {
+      const r = await ensureOk(await fetch(`${base}/pivot/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+      return { blob: await r.blob(), fileName: fileNameFrom(r.headers.get("Content-Disposition"), "smartchain_pivot.xlsx") };
+    },
     /** Pivot (K-183): satır × sütun × değer; satırlar parça parça (offset, limit). */
     pivot: (body: PivotRequest, signal?: AbortSignal) => postJson<PivotData>(`${base}/pivot`, body, signal),
     /** Dağılım grafiğinin noktaları (K-179): en çok 2.000; aşımda eşit aralıklı örnekleme. */

@@ -330,12 +330,32 @@ class PivotAxis(BaseModel):
     bucket: ChartBucket | None = None
 
 
+PIVOT_MAX_RULES = 5
+PIVOT_RULE_OPS = ("gt", "lt", "between", "eq", "empty", "always")  # hesaplanmış değerde yalnız sayı koşulları
+
+
+class PivotRule(BaseModel):
+    """Değerin koşullu biçim kuralı (K-183): pivot hücresindeki hesaplanmış değere bakar; biçim tablodaki kuralınkiyle aynı."""
+    id: str = Field(min_length=1, max_length=40)
+    enabled: bool = True
+    condition: RuleCondition
+    format: RuleFormat
+
+
 class PivotValueSpec(BaseModel):
-    """Bir değer: alan ve hesaplama ("Say" alansız; ağırlıklı ortalamada ağırlık alanı)."""
+    """Bir değer. Alan değeri: alan ve hesaplama ("Say" alansız; ağırlıklı ortalamada ağırlık alanı). Hesaplanan değer (kind "calc"): başka iki
+    değerin o hücredeki sonuçlarından (toplamlardan) a op b."""
     id: str = Field(min_length=1, max_length=20)
+    kind: Literal["field", "calc"] = "field"
     field: str | None = None
     fn: PivotFn = "sum"
     weight: str | None = None
+    a: str | None = None
+    op: Literal["div", "mul", "add", "sub"] | None = None
+    b: str | None = None
+    percent: bool = False            # hesaplanan değerde yüzde gösterim
+    rules: list[PivotRule] = Field(default=[], max_length=PIVOT_MAX_RULES)
+    rules_on_totals: bool = False    # kurallar toplam satır ve sütunlarına da uygulanır
 
 
 class PivotTotals(BaseModel):
@@ -366,6 +386,21 @@ class PivotValue(PivotValueSpec):
     """Görünümde saklanan değer: gösterim ayarıyla."""
     decimals: int | None = Field(default=None, ge=0, le=6)
     name: str | None = Field(default=None, max_length=60)  # kullanıcının verdiği ad; boşsa "Alan · Hesaplama"
+
+
+class PivotExportRequest(BaseModel):
+    """Pivotun Excel'e aktarımı (K-183): pivot isteği (parçasız) ve ekrandaki gösterim (değerlerin yeri, değer adları, ondalıklar)."""
+    filters: list[FilterItem] = []
+    chart_selection: ChartSelection | None = None
+    rows: list[PivotAxis] = Field(min_length=1, max_length=PIVOT_MAX_AXIS)
+    columns: list[PivotAxis] = Field(default=[], max_length=PIVOT_MAX_AXIS)
+    values: list[PivotValue] = Field(min_length=1, max_length=PIVOT_MAX_VALUES)
+    totals: PivotTotals = PivotTotals()
+    sort: PivotSort = PivotSort()
+    scenario_id: int | None = None
+    values_on: Literal["columns", "rows"] = "columns"
+    names: dict[str, str] = {}       # değer id → ekrandaki ad (kısa ad ya da özel ad)
+    title: str | None = Field(default=None, max_length=80)
 
 
 class PivotDefinition(BaseModel):

@@ -31,11 +31,13 @@ export function conditionReady(col: ListColumn, c: RuleCondition): boolean {
   return c.value !== undefined && c.value !== "";
 }
 
-export function RuleDialog({ rule, isNew, columns, onClose, onSave }: {
+export function RuleDialog({ rule, isNew, columns, plain, onClose, onSave }: {
   /** Düzenlenen kural ya da yeni kural taslağı (alanı seçili). */
   rule: FormatRule;
   isNew: boolean;
   columns: ListColumn[];
+  /** Pivot değerinin kuralı (K-183): yalnız değerle karşılaştırma, ikon yok. */
+  plain?: boolean;
   onClose(): void;
   onSave(rule: FormatRule): void;
 }) {
@@ -47,7 +49,7 @@ export function RuleDialog({ rule, isNew, columns, onClose, onSave }: {
   const [format, setFormat] = useState<RuleFormat>(rule.format);
   const ops = RULE_OPS[kind];
   const op = ops.includes(cond.op) ? cond.op : ops[0];
-  const byRef = cond.field_ref !== undefined && canUseFieldRef(col, op);
+  const byRef = !plain && cond.field_ref !== undefined && canUseFieldRef(col, op);
   const refs = refCandidates(col, columns);
 
   const changeField = (f: string) => {
@@ -157,7 +159,7 @@ export function RuleDialog({ rule, isNew, columns, onClose, onSave }: {
         <SelectField label={T.ruleCondition} value={op} onChange={(v) => setOp(v as RuleOp)}
                      options={ops.map((o) => ({ value: o, label: opLabel(o) }))} />
       </div>
-      {canUseFieldRef(col, op) && (
+      {!plain && canUseFieldRef(col, op) && (
         <Segment<"value" | "field"> label={T.ruleCompare} value={byRef ? "field" : "value"}
                                     onChange={(m) => setCond(m === "field" ? { op, field_ref: "" } : { op })}
                                     options={[{ value: "value", label: T.ruleCompareValue }, { value: "field", label: T.ruleCompareField }]} />
@@ -171,11 +173,13 @@ export function RuleDialog({ rule, isNew, columns, onClose, onSave }: {
           <ColorPicker label={T.ruleColor} value={format.color} onChange={(color) => setFormat({ ...format, color })} />
         </div>
         <Checkbox label={T.ruleBold} checked={Boolean(format.bold)} onChange={(bold) => setFormat({ ...format, bold })} />
-        <Segment<RuleIcon | "none"> label={T.ruleIcon} value={format.icon ?? "none"}
-                                    onChange={(v) => setFormat({ ...format, icon: v === "none" ? undefined : v })}
-                                    options={[{ value: "none", label: T.ruleNoIcon },
-                                              ...RULE_ICONS.map((i) => ({ value: i, label: <><RuleIconView name={i} color={iconColor({ icon: i })} /><span className="sc-visually-hidden">{T.ruleIcons[i]}</span></> }))]} />
-        {format.icon && (
+        {!plain && (
+          <Segment<RuleIcon | "none"> label={T.ruleIcon} value={format.icon ?? "none"}
+                                      onChange={(v) => setFormat({ ...format, icon: v === "none" ? undefined : v })}
+                                      options={[{ value: "none", label: T.ruleNoIcon },
+                                                ...RULE_ICONS.map((i) => ({ value: i, label: <><RuleIconView name={i} color={iconColor({ icon: i })} /><span className="sc-visually-hidden">{T.ruleIcons[i]}</span></> }))]} />
+        )}
+        {!plain && format.icon && (
           <ColorPicker label={T.ruleIconColor} value={format.icon_color} emptyLabel={T.ruleIconDefault}
                        emptyColor={iconColor({ icon: format.icon })} onChange={(icon_color) => setFormat({ ...format, icon_color })} />
         )}

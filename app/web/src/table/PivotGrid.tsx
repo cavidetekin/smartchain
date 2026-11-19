@@ -6,6 +6,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react"
 
 import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
+import { formatStyle } from "./rules";
 import { useShell } from "../shell/ShellContext";
 import { Alert, Button } from "../ui";
 import { type ChartSelection } from "../ui/chart/chartModel";
@@ -170,11 +171,16 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
   const C = data.column_fields.length;
   const leftCols = R + (valuesOnRows ? 1 : 0);
   const span = valuesOnRows ? 1 : V;
-  const configured = data.values.map((v) => ({ ...v, name: pivot.values.find((x) => x.id === v.id)?.name ?? null }));
+  const configured = data.values.map((v) => {
+    const own = pivot.values.find((x) => x.id === v.id);
+    return { field: v.field, weight: v.weight, fn: v.fn === "calc" ? "sum" as const : v.fn, kind: v.fn === "calc" ? "calc" as const : undefined, name: own?.name ?? null };
+  });
   const labels = configured.map((v) => valueName(v, byField));
   const shown = configured.map((v) => valueDisplay(v, byField));
   const starts = groupStarts(data.columns);
   const overrides = data.values.map((v) => pivot.values.find((x) => x.id === v.id)?.decimals ?? null);
+  // satırdaki `formats` istekte gönderilen (etkin) kuralların sırasını taşır
+  const ruleFormats = data.values.map((v) => (pivot.values.find((x) => x.id === v.id)?.rules ?? []).filter((r) => r.enabled).map((r) => r.format));
   const leftRem = (j: number) => j * HEAD_REM;
   // Değerler sütunlardayken hücre, değerin adı kesilmeden sığacak kadar geniştir (üst sınırla)
   const cellRem = (k: number) => (valuesOnRows ? CELL_REM
@@ -197,9 +203,11 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
   const cell = (row: PivotRow, k: number, s: number, c: PivotColumn) => {
     const value: PivotCell = row.cells[k]?.[s] ?? null;
     const mixed = typeof value === "object" && value !== null && "mixed" in value;
+    const hit = row.formats?.[String(k)]?.[s];
+    const format = hit == null ? undefined : ruleFormats[k]?.[hit];
     return (
-      <td key={`${s}-${k}`} className={`sc-num${row.total || c.total ? " is-total" : ""}${mixed ? " is-mixed" : ""}${starts[s] && (valuesOnRows || k === 0) ? " is-group-start" : ""}`}
-          title={mixed ? tr.table.mixedUnits : undefined}>
+      <td key={`${s}-${k}`} className={`sc-num${row.total || c.total ? " is-total" : ""}${mixed ? " is-mixed" : ""}${starts[s] && (valuesOnRows || k === 0) ? " is-group-start" : ""}${format ? " is-ruled" : ""}`}
+          title={mixed ? tr.table.mixedUnits : undefined} style={format ? formatStyle(format) : undefined}>
         {formatPivotCell(value, data.values[k], overrides[k])}
       </td>
     );

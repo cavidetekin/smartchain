@@ -36,6 +36,8 @@ class ListDefinition:
     percent: frozenset[str] = field(default_factory=frozenset)
     # Gruplamada varsayılan ara toplam (K-90): request.AGG_FNS'ten biri; yazılmayan kolonun varsayılanı yok.
     aggregates: Mapping[str, str] = field(default_factory=dict)
+    # Varsayılan hesaplama ağırlıklı ortalamaysa (wavg) ağırlık alanı (K-183): gruplamanın ara toplamı ve pivota eklenen değer buradan
+    aggregate_weights: Mapping[str, str] = field(default_factory=dict)
     # Sürümsüz liste (2.3; ör. kullanıcılar): sürüm koşulu yok, veri versiyonu aranmaz, Excel adında versiyon yok.
     versioned: bool = True
     # Tablo yerine alt sorgu (hesaplı kolon için). Alt sorgu kolonlarında docs'tan gelen info olmadığı için etiket ve
@@ -133,6 +135,7 @@ def columns(defn: ListDefinition, labels: dict[str, str], with_filter_only: bool
             "decimals_from_unit": name in defn.unit_decimals,
             "percent": name in defn.percent,
             "aggregate": defn.aggregates.get(name),
+            "aggregate_weight": defn.aggregate_weights.get(name),
             "default_visible": name in defn.default_visible,
             "note": _note(defn, name, col, label),
             "manual": name in manual,  # manuel değer girilebilir (K-170); yetki ön yüzde fonksiyon 12'den

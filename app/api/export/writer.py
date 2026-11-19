@@ -87,6 +87,108 @@ def write_chart_workbook(target: "str | BinaryIO", header: list[str], rows: Iter
     return written
 
 
+def write_pivot_workbook(target: "str | BinaryIO", model: dict, info: list[tuple[str, str]]) -> int:
+    """Pivot ekrandaki şekliyle (K-183): "Pivot" ve "Bilgi" sayfaları. Katlı başlıklar birleştirilmiş hücrelerle; satır başlıkları ve başlık
+    satırları dondurulur; toplamlar kalın; en dıştaki sütun gruplarının solunda dikey çizgi; kural dolgusu; tarih ve yüzde biçimleri.
+
+    model: {row_labels, column_labels, values: [{name, num_format, date}], values_on, header: [[(metin, colspan, rowspan, grup başı)]],
+    columns: [{total, start}], rows: [{labels, total, cells[değer][sütun], formats{değer: [CellFormat|None]}}]}.
+    Birleştirme satır sırası dışı yazdığı için sabit bellek kipi kullanılmaz (hücre sayısı çağıranda sınırlıdır). Yazılan satır sayısı döner."""
+    wb = Workbook(target, {k: v for k, v in WORKBOOK_OPTIONS.items() if k != "constant_memory"})
+    ws = wb.add_worksheet("Pivot")
+    head = formats.header_format()
+    cache: dict[tuple, object] = {}
+
+    def fmt(bold=False, fill=None, color=None, num=None, left=False, header=False, align=None):
+        key = (bold, fill, color, num, left, header, align)
+        if key not in cache:
+            spec: dict = {}
+            if bold:
+                spec["bold"] = True
+            if fill:
+                spec.update(bg_color=fill, pattern=1)
+            if color:
+                spec["font_color"] = color
+            if num:
+                spec["num_format"] = num
+            if header:
+                spec.update(bg_color=head.fill, font_color=head.color, bold=True, border=1, border_color=head.fill, valign="vcenter")
+            if left:  # kenarlığın tamamından sonra yazılır (biçim anahtarları sırayla uygulanır); başlıkta çizgi yazı renginde ki zeminde görünsün
+                spec.update(left=2, left_color=head.color if header else head.fill)
+            if align:
+                spec["align"] = align
+            cache[key] = wb.add_format(spec)
+        return cache[key]
+
+    values, on_rows = model["values"], model["values_on"] == "rows"
+    R, V = len(model["row_labels"]), len(values)
+    left_cols = R + (1 if on_rows else 0)
+    span = 1 if on_rows else V
+    levels = model["header"]                     # sütun alanı katları (yoksa boş)
+    ws.set_column(0, max(left_cols - 1, 0), 22)
+    ws.set_column(left_cols, left_cols + len(model["columns"]) * span, 16)
+    r = 0
+    for level in levels:
+        c = left_cols
+        if r == 0 and left_cols:
+            text = " › ".join(model["column_labels"])
+            if len(levels) > 1 or left_cols > 1:
+                ws.merge_range(0, 0, len(levels) - 1, left_cols - 1, text, fmt(header=True, align="left"))
+            else:
+                ws.write_string(0, 0, text, fmt(header=True, align="left"))
+        occupied = model["occupied"][r]          # üst kattan uzanan (rowspan) hücrelerin kapladığı sütunlar
+        for text, colspan, rowspan, start in level:
+            while c in occupied:
+                c += 1
+            style = fmt(header=True, left=start, align="center")
+            if colspan > 1 or rowspan > 1:
+                ws.merge_range(r, c, r + rowspan - 1, c + colspan - 1, text, style)
+            else:
+                ws.write_string(r, c, text, style)
+            c += colspan
+        r += 1
+    for j, label in enumerate(model["row_labels"]):
+        ws.write_string(r, j, label, fmt(header=True, align="left"))
+    if on_rows:
+        ws.write_string(r, R, "Değer", fmt(header=True, align="left"))
+    for s, col in enumerate(model["columns"]):
+        for k in range(span):
+            text = "" if on_rows else values[k]["name"]
+            ws.write_string(r, left_cols + s * span + k, text, fmt(header=True, left=col["start"] and k == 0, align="right"))
+    header_rows = r + 1
+    ws.freeze_panes(header_rows, left_cols)
+    written = 0
+    for row in model["rows"]:
+        for sub in range(V if on_rows else 1):
+            y = header_rows + written
+            for j, label in enumerate(row["labels"]):
+                if label and sub == 0:
+                    ws.write_string(y, j, label, fmt(bold=row["total"]))
+            if on_rows:
+                ws.write_string(y, R, values[sub]["name"], fmt(bold=row["total"]))
+            for s, col in enumerate(model["columns"]):
+                for k in ([sub] if on_rows else range(V)):
+                    x = left_cols + s * span + (0 if on_rows else k)
+                    value = row["cells"][k][s]
+                    rule = (row.get("formats", {}).get(k) or [None] * len(model["columns"]))[s]
+                    bold = row["total"] or col["total"] or bool(rule and rule.bold)
+                    left = col["start"] and (on_rows or k == 0)
+                    fill, color = (rule.fill, rule.color) if rule else (None, None)
+                    if value is None:
+                        if left or fill:
+                            ws.write_blank(y, x, None, fmt(fill=fill, left=left))
+                    elif isinstance(value, str):     # karışık birim
+                        ws.write_string(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, align="right"))
+                    elif isinstance(value, (datetime, date)):
+                        ws.write_datetime(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, num=values[k]["num_format"]))
+                    else:
+                        ws.write_number(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, num=row["num_formats"][k][s]))
+            written += 1
+    write_info(wb, _Formats(wb), info)
+    wb.close()
+    return written
+
+
 def width_chars(rem: float | None) -> float:
     return DEFAULT_WIDTH_CHARS if rem is None else round(rem * REM_PX / EXCEL_CHAR_PX, 1)
 

@@ -224,8 +224,10 @@ def chart(session: Session | None, defn: ListDefinition, req: ChartRequest, role
     return _run(session, work)
 
 
-def pivot(session: Session | None, defn: ListDefinition, req: PivotRequest, role: str | None = None, user_id: int | None = None) -> dict:
-    """Pivot (K-183): listeyle aynı filtre, versiyon ve satır kapsamı. Satırlar parça parça; toplamlar kayıtlardan, veritabanında."""
+def pivot(session: Session | None, defn: ListDefinition, req: PivotRequest, role: str | None = None, user_id: int | None = None,
+          unlimited: bool = False) -> dict:
+    """Pivot (K-183): listeyle aynı filtre, versiyon ve satır kapsamı. Satırlar parça parça; toplamlar kayıtlardan, veritabanında.
+    unlimited: dışa aktarım büyük parçalarla okur (ListChunkSize sınırı ekranın isteği içindir)."""
     def work():
         b = _builder(session, defn, role, user_id, req)
         problems = pivot_query.problems(b, req.rows, req.columns, req.values, req.sort.by)
@@ -235,7 +237,7 @@ def pivot(session: Session | None, defn: ListDefinition, req: PivotRequest, role
         weekly = any(a.bucket == "week" for a in (*req.rows, *req.columns))
         start = week_start(session, user_id, req.scenario_id) if weekly else "Pazartesi"
         chunk = repo.read_chunk_size(session)
-        if (req.limit or chunk) > chunk:
+        if (req.limit or chunk) > chunk and not unlimited:
             raise ListQueryError([{"field": "body.limit", "problem": f"En çok {chunk} satır istenebilir (ListChunkSize)"}])
         p = pivot_query.Pivot(b, req.model_copy(update={"limit": req.limit or chunk}), week_start_index(start))
         try:
