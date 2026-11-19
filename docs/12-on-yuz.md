@@ -297,7 +297,8 @@ Dönem tablosu bir ana kaydın dönem bazındaki özetidir (kaynak grubu × dön
 | Hazır hesaplanan değerler | Liste tanımındaki hazır oranlar (ör. "Ortalama verimlilik" = Kullanılabilir kapasite ÷ Toplam kapasite) pivot panelinde Değerler bölümünde "Hazır değerler" listesinde; seçilince işlenenleriyle birlikte eklenir ("… · Toplamlardan") |
 | Önbellek | Ekran açılırken hesap yapılmaz; günlük sonuç kullanıcıya görünmeyen önbellekten okunur, giriş değişince yalnız etkilenen kısım yenilenir (docs/08). Kullanıcı önbelleği görmez, yönetmez |
 | Deneme sayfası (7.8) | `/donem-tablosu`: menüde yok; "Kaynak grubu × dönem (deneme)" (kaynak sayısı, çalışma günü, toplam kapasite, verimlilik, kullanılabilir kapasite; bugünkü geçici kapasite verisinden). 7.9'da Kapasite yönetimi ekranı gelince kalkar |
-| Durum | demo bekliyor |
+| Gruplama | Tablo görünümünde bütün dönem alanları ve ana kayıt alanlarıyla gruplanır; gruplar dönem başına göre sıralanır. Varsayılan ara toplamlar liste tanımından: ağırlıklı ortalama ağırlık alanıyla birlikte istenir (Verimlilik: Toplam kapasite); İlk · Son dönem değeri gruplamada ara toplam vermez |
+| Durum | uygulandı (7.8, K-184) |
 
 ## Görünüm (1.4, K-89, K-90)
 

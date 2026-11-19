@@ -121,16 +121,24 @@ const isNumber = (c: ListColumn) => c.type === "number" || c.type === "integer";
 /** Gruplamanın varsayılan ara toplamı: İlk · Son dönem değeri yalnız pivottadır (K-184); gruplamada ara toplam yok sayılır. */
 const tableAggregate = (col: ListColumn): AggSpec["fn"] => (col.aggregate && col.aggregate !== "first" && col.aggregate !== "last" ? col.aggregate : "none");
 
+/** Liste tanımının varsayılan ara toplamı: ağırlıklı ortalamada ağırlık alanıyla birlikte (K-183; ağırlık tanımlı değilse ara toplam yok). */
+function defaultAggregate(col: ListColumn): AggSpec {
+  const fn = tableAggregate(col);
+  if (fn !== "wavg") return { fn };
+  return col.aggregate_weight ? { fn, weight: col.aggregate_weight } : { fn: "none" };
+}
+
 /** Kolonun geçerli ara toplamı: kullanıcının seçimi, yoksa liste tanımının varsayılanı (K-90). */
 export function aggregateOf(col: ListColumn, s: TableState): AggSpec {
   if (!isNumber(col)) return { fn: "none" };
-  return s.aggregates[col.field] ?? { fn: tableAggregate(col) };
+  return s.aggregates[col.field] ?? defaultAggregate(col);
 }
 
 /** Seçimi yazar; varsayılanla aynıysa kaydı siler (görünüm temiz kalsın). */
 export function withAggregate(s: TableState, col: ListColumn, spec: AggSpec): TableState {
   const aggregates = { ...s.aggregates };
-  if (spec.fn === tableAggregate(col) && spec.fn !== "wavg") delete aggregates[col.field];
+  const usual = defaultAggregate(col);
+  if (spec.fn === usual.fn && (spec.fn !== "wavg" || spec.weight === usual.weight)) delete aggregates[col.field];
   else aggregates[col.field] = spec.fn === "wavg" ? { fn: "wavg", weight: spec.weight } : { fn: spec.fn };
   return { ...s, aggregates };
 }

@@ -87,6 +87,9 @@ describe("dönem tablosu modeli (K-184)", () => {
     expect(valueLabel({ field: "ResourceCount", fn: "last" }, byField)).toBe("Kaynak sayısı · Son dönem değeri");
     expect(valueLabel({ field: "ResourceCount", fn: "first" }, byField)).toBe("Kaynak sayısı · İlk dönem değeri");
     expect(aggregateOf(count, state)).toEqual({ fn: "none" });                     // tablodaki gruplamada ara toplam yok sayılır
+    // varsayılanı ağırlıklı ortalama olan alan ağırlık alanıyla birlikte gider (7.8 demo bulgusu: ağırlıksız istek 422 veriyordu)
+    expect(aggregateOf(byField.get("Efficiency")!, state)).toEqual({ fn: "wavg", weight: "TotalCapacity" });
+    expect(aggregateOf({ ...byField.get("Efficiency")!, aggregate_weight: null }, state)).toEqual({ fn: "none" });
     expect(aggregateOf(byField.get("TotalCapacity")!, state)).toEqual({ fn: "sum" });
   });
 });
@@ -135,5 +138,33 @@ describe("dönem tablosu deneme sayfası (K-184)", () => {
     await screen.findByText("KG-1");
     await waitFor(() => expect(bodies.query.length).toBeGreaterThan(0));
     expect(bodies.query[bodies.query.length - 1]).toMatchObject({ scenario_id: 7 });
+    // Grupla: Ay (7.8 demo bulgusu): varsayılan ara toplamlar ağırlık alanıyla gider; Son dönem değeri gönderilmez
+    await user.click(screen.getByRole("button", { name: /^Grupla/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Gruplanacak alan" }), "Ay");
+    await waitFor(() => expect(bodies.groups.length).toBeGreaterThan(0));
+    const sent = bodies.groups[bodies.groups.length - 1];
+    expect(sent).toMatchObject({ scenario_id: 7, group_by: ["Month"] });
+    expect(sent.aggregates).toEqual({ TotalCapacity: { fn: "sum" }, AvailableCapacity: { fn: "sum" }, Efficiency: { fn: "wavg", weight: "TotalCapacity" } });
+  });
+
+  it("sunucu liste isteğini reddederse nedeni ekranda yazar", async () => {
+    const user = userEvent.setup();
+    backend();
+    mockApi({
+      "/api/scenarios/current": { body: { id: 7, name: "Kısıtsız kapasite", is_base: false, is_active: true } },
+      [`${LIST}/columns`]: { body: { chunk_size: 100, columns: COLUMNS, relations: [], period_table: true,
+                                     export: { title: "x", file_slug: "x", sync_max_rows: 10000, max_rows: 500000, file_hours: 24 } } },
+      [`${LIST}/views`]: { body: { views: [], default_view_id: null } },
+      [`${LIST}/query`]: { body: { rows: [{ Id: 7001, ResourceGroupCode: "KG-1", Period: "H47 2026" }], filtered: 1, total: 1 } },
+      [`${LIST}/groups`]: { status: 422, body: { error: { code: "validation", message: "Girilen bilgiler geçersiz.", trace_id: "t",
+                                                          details: [{ field: "aggregates.Efficiency.weight", problem: "Ağırlıklı ortalama için başka bir sayı alanı seçilmeli" }] } } },
+    });
+    renderApp("/donem-tablosu", meAs("Key user"));
+    await screen.findByText("KG-1", {}, { timeout: 5000 });
+    await user.click(screen.getByRole("button", { name: /^Grupla/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Gruplanacak alan" }), "Ay");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Liste okunamadı");
+    expect(alert).toHaveTextContent("Ağırlıklı ortalama için başka bir sayı alanı seçilmeli");
   });
 });

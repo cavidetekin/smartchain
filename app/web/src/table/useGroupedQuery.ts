@@ -90,7 +90,8 @@ export function useGroupedQuery(list: string, request: ListRequest | null, group
   }, [api, key, attempt]);
 
   const fetchChunk = useCallback((id: string, keys: GroupKey[], c: number) => {
-    if (!request) return;
+    // Gruplama alanı kaldırılırken eski (daha derin) ağacın yaprağı bir an daha çizilebilir: anahtarı eksik istek gönderilmez
+    if (!request || keys.some((k) => !k.field)) return;
     const [gen, rowsGen] = [generation.current, rowsGeneration.current];
     wanted.current.set(id, { keys, chunk: c });
     inflight.current.add(id);

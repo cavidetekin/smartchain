@@ -411,6 +411,8 @@ Dönem tablosu bir listedir (`/api/<liste>/…` uçlarının tamamı); kaynağı
   - Baz'ı izleyen senaryo yalnız kendi girişi olan ana kayıt ve günleri tutar; okuma, senaryonun satırı varsa onu, yoksa Baz'ın satırını alır.
   - Senaryo silinince ya da pasif yapılınca önbelleği düşer.
   - Yönetim komutu: `python -m app.periods status` (önbellek, senaryo, gün aralığı, satır sayısı), `python -m app.periods rebuild [--scenario <id>]` (düşürüp yeniden kurar), `python -m app.periods drop` (boşaltır; ilk kullanımda yeniden kurulur).
+- **Gruplama:** `groups` isteğinde ağırlıklı ortalama ağırlıksız gelirse (`{ fn: "wavg" }`) liste tanımının ağırlık alanı kullanılır (`aggregate_weights`); tanımda da yoksa 422. Arayüz, varsayılanı ağırlıklı ortalama olan alanı ağırlık alanıyla birlikte gönderir.
+- **Hata nedeni ekranda:** sunucu bir liste isteğini reddettiğinde (422) tablo "Liste okunamadı" başlığının altında sunucunun nedenini yazar (`details[].problem`; yoksa `message`). Bütün listelerde geçerlidir.
 - **Tek hesap:** hesap işlevi `app/periods/` altındadır; önbellek onunla kurulur, motor aynı işlevi doğrudan çağırır (`app.periods.values(...)`, docs/09).
 - **Performans hedefi:** 2.000 kaynak × 400 gün × 10 senaryoda: önbellekten okuma pivotun ilk parçasında ortanca 500 ms, tablonun ilk parçasında 300 ms, tek gruba süzülmüş istekte 150 ms; tek kaynağın yenilenmesi 100 ms; ilk kurulum ve tablo boyutu ölçülür (hedefsiz). Ölçüm `tests/test_periods_perf.py` (-m perf).
 

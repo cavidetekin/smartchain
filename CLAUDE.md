@@ -30,7 +30,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 - **ETL sırası:** Staging'e çekme (SQL view, Excel; API Faz 2) → yapısal doğrulama → veri kuralları (işlenmiş katmanda, `prc`; ham `stg` değişmez, K-140) → referans kontrolü ve kod→Id → değer önceliği (ERP, kural, elle; varsayılan yok, K-138; ERP değeri her zaman saklanır) → versiyonlu yazma (VersionFrom / VersionTo).
 - **Ek alanlar (K-59):** ana veride AdditionalText1–7 ve AdditionalNumber1–3, yapı ve işlem verisinde AdditionalText1–3 ve AdditionalNumber1–2; etiketleri FieldDefinition'da.
 - Tablo ve alan adları `docs/02-veri-modeli.md` ve `docs/03-entegrasyon.md` ile birebir; sözleşme alan adlarını değiştirme.
-- **Şemalar (K-62, K-140):** `stg` entegrasyon (ham), `prc` işlenmiş staging, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem. Aynı ad katmanlarda: `stg.Material` → `prc.Material` → `core.Material`.
+- **Şemalar (K-62, K-140, K-184):** `stg` entegrasyon (ham), `prc` işlenmiş staging, `core` ana veri ve işlem verisi, `param` parametreler, `planning` plan çıktıları, `adm` veri yönetimi ve sistem, `cache` önbellek (girişlerden hesaplanan ara sonuçlar; veri değildir, silinirse yeniden üretilir). Aynı ad katmanlarda: `stg.Material` → `prc.Material` → `core.Material`.
 - **Versiyonlu tablolar (K-63):** birincil anahtar `Id + VersionFrom`; `Id` kaydın bütün versiyonlarında aynı. Versiyonlu tabloya fiziksel FK yok, bütünlüğü aktarım sağlar; tekillik yalnız güncel kayıtta (`VersionTo IS NULL`).
 - **Şema docs'tan üretilir (K-64):** `db/models.py` ve `docs/07-veritabani.md` elle değiştirilmez. Sıra: docs → `python db/generate.py` → `alembic -c db/alembic.ini revision --autogenerate -m "..."` → geçişi gözden geçir.
 
@@ -86,6 +86,9 @@ python -m app.data.synthetic excel                 # sentetik verinin kirli hâl
 python -m app.data.synthetic sql                   # kirli hâl: entegrasyon veritabanına ham tablolar ve view'lar (K-130)
 python -m app.data.synthetic rules                 # demo veri kuralları (docs/11, K-141; kurulumda varsayılan kural yok)
 python -m app.data.synthetic reset   # aktarımları geri alıp temiz sentetik hâle döner (onay ister)
+python -m app.periods status                       # dönem tablosu önbelleği (K-184): senaryo, gün aralığı, satır sayısı
+python -m app.periods rebuild [--scenario <id>]    # önbelleği düşürüp girişlerden yeniden kurar
+python -m app.periods drop [--scenario <id>]       # önbelleği boşaltır; ilk kullanımda yeniden kurulur
 python -m pytest                                   # testler (performans testleri hariç); Smartchain_test'te, başka veritabanı için SMARTCHAIN_TEST_DB_URL
 python -m pytest -m perf                           # performans testleri (ayrıca; ortanca ölçüm, docs/08)
 powershell -File installer\build.ps1               # internetsiz kurulum paketi (dist\), yalnız geliştirmede

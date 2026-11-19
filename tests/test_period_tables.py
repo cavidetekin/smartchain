@@ -500,3 +500,40 @@ def test_excel_carries_the_scenario(api, db_engine, world, clean):
     for row in wb["Pivot"].iter_rows(min_row=3):
         counts[row[1].value] += 1
     assert counts["Kaynak sayısı · Son dönem değeri"] > 1
+
+
+@pytest.mark.db
+def test_grouping_by_every_period_and_master_field(api, db_engine, world, clean):
+    """Tablodaki gruplama (7.8 demo bulgusu): her dönem alanı ve ana kayıt alanıyla; ara toplamlar ve sıralama. Arayüzün gönderdiği gövdeyle:
+    görünen bütün alanlar ve varsayılan ara toplamlar. Ağırlıklı ortalamada ağırlık verilmezse liste tanımının ağırlık alanı kullanılır."""
+    found = horizon_of(db_engine, world["base"])
+    efficiency(db_engine, world["base"], world["r1"], 77, found[0].start, found[1].end)
+    names = [c["field"] for c in api.get(U + "/columns").json()["columns"]]
+    sent = {"WorkingDays": {"fn": "sum"}, "TotalCapacity": {"fn": "sum"}, "AvailableCapacity": {"fn": "sum"}, "Efficiency": {"fn": "wavg"}}   # ağırlıksız: ilk demo gövdesi
+    order = {"Month": [p.month for p in found], "Period": [p.label for p in found], "Week": [p.week for p in found], "Quarter": [p.quarter for p in found],
+             "Year": [p.year for p in found], "PeriodType": [p.type for p in found]}
+    totals = all_rows(api, fields=["TotalCapacity", "AvailableCapacity"])
+    capacity = sum(r["TotalCapacity"] for r in totals)
+    for field in ("Month", "Period", "Week", "Quarter", "Year", "PeriodType", "PeriodStart", "PeriodEnd", "PeriodDays", "ResourceGroupCode", "ResourceGroupName", "CapacityUnit"):
+        out = post(api, "/groups", group_by=[field], fields=names, aggregates=sent, filters=[], sort=[])
+        groups = out["groups"]
+        assert groups and sum(g["count"] for g in groups) == len(totals), field
+        assert out["aggregate_specs"]["Efficiency"] == {"fn": "wavg", "weight": "TotalCapacity"}
+        if field in order:
+            assert [g["key"][0] for g in groups] == list(dict.fromkeys(order[field])), field                 # dönem başına göre
+        if field != "CapacityUnit" or len(groups) == 1:
+            got = sum((g["aggregates"]["TotalCapacity"] or 0) for g in groups)
+            assert got == pytest.approx(capacity), field                                                       # ara toplamlar kayıtlarla tutar
+        for g in groups:
+            a, t, e = g["aggregates"]["AvailableCapacity"], g["aggregates"]["TotalCapacity"], g["aggregates"]["Efficiency"]
+            assert e is None if not t else e == pytest.approx(a / t), field                                    # verimlilik kapasiteyle ağırlıklı
+    # iki düzey ve azalan sıralama; grubun satırları
+    out = post(api, "/groups", group_by=["Month", "ResourceGroupCode"], fields=names, aggregates=sent, filters=[], sort=[{"field": "Month", "dir": "desc"}])
+    months = list(dict.fromkeys(p.month for p in found))
+    assert [g["key"][0] for g in out["groups"]] == months[::-1] and all(len(g["children"]) > 1 for g in out["groups"])
+    first = out["groups"][0]
+    rows = post(api, "/query", limit=100, group_key=[{"field": "Month", "value": first["key"][0]}, {"field": "ResourceGroupCode", "value": first["children"][0]["key"][-1]}])
+    assert rows["filtered"] == first["children"][0]["count"] == len(rows["rows"])
+    # arayüz varsayılanlarını göndermezse: sunucunun varsayılanı (Son dönem değeri gruplamada yok)
+    plain = post(api, "/groups", group_by=["Month"], fields=names)
+    assert set(plain["aggregate_specs"]) == {"WorkingDays", "TotalCapacity", "AvailableCapacity", "Efficiency"}

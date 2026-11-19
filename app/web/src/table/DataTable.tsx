@@ -46,7 +46,7 @@ import {
   type AggSpec, type ExportInfo, type ExportScope, type FormatRule, listApi, type GroupNode, type ListColumn, type ListFilter,
   type CalculatedValue, MAX_RULES, type RelatedCatalog, type RelationHeading, type Row, setListScenario,
 } from "./types";
-import { PivotGrid } from "./PivotGrid";
+import { PivotGrid, reasonOf } from "./PivotGrid";
 import { emptyPivot, type PivotConfig, pivotExportRequest, pivotReady } from "./pivotModel";
 import { PivotPanel } from "./PivotPanel";
 import { isRelatedField, mergeColumns, withDisplayLabels } from "./related";
@@ -1199,7 +1199,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
       )}
       {status === "error" && (
         <Alert tone="error" title={T.loadError}>
-          {error?.message} <Button size="sm" onClick={grouped ? g.retry : flat.retry}>{T.retry}</Button>
+          {error ? reasonOf(error) : ""} <Button size="sm" onClick={grouped ? g.retry : flat.retry}>{T.retry}</Button>
         </Alert>
       )}
 

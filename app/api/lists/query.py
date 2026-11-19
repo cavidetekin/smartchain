@@ -546,6 +546,8 @@ class Builder:
         numeric = {f for f, c in self.columns.items() if c["type"] in ("number", "integer")}
         out = {}
         for f, spec in specs.items():
+            if spec.fn == "wavg" and spec.weight is None and self.defn.aggregate_weights.get(f):
+                spec = AggSpec(fn="wavg", weight=self.defn.aggregate_weights[f])  # ağırlık verilmediyse liste tanımının ağırlık alanı (K-183)
             if f not in numeric:
                 problems.append({"field": f"{where}.{f}", "problem": f"Ara toplam yalnız sayı alanında: {f}"})
             elif spec.fn == "wavg" and (spec.weight not in numeric or spec.weight == f):
