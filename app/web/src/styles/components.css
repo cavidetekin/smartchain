@@ -275,7 +275,18 @@
 .sc-pivot-grid tbody tr.is-total th, .sc-pivot-grid tbody tr.is-total td, .sc-pivot-grid tbody td.is-total { background: var(--lead-50); }
 .sc-pivot-grid td.is-mixed { color: var(--text-muted); }
 .sc-pivot-grid .is-pinned-last { box-shadow: inset -1px 0 0 var(--table-head-border); }
-.sc-pivot-corner { vertical-align: top; padding: 0 !important; }
+/* Satır alanı hücrelerinin birleşmesi (K-186): hücre grubu boyunca uzanır, değer üstte ve kaydırırken başlığın altında görünür kalır
+   (overflow: clip: yapışkan yazı ızgaranın kaydırmasına göre yapışır; hidden olsaydı hücrenin içinde kalırdı). */
+.sc-pivot-grid tbody th.sc-pivot-rowkey { height: auto; padding: 0; overflow: clip; vertical-align: top; }
+.sc-pivot-rowkey-text { position: sticky; display: block; height: 2.1538rem; padding: 0 var(--space-2); line-height: calc(2.1538rem - 1px); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+/* En dıştaki satır gruplarının arasında ince (1 px) yatay çizgi; sütunlardaki dikey ayraç 2 px kalır (K-186, ikinci demo) */
+.sc-pivot-grid tbody tr.is-row-group-start > th, .sc-pivot-grid tbody tr.is-row-group-start > td { border-top: 1px solid var(--table-head-border); }
+.sc-pivot-grid thead th.sc-pivot-rowhead { position: sticky; overflow: visible; }
+.sc-pivot-grid thead th.sc-pivot-rowhead > .sc-pivot-corner-field, .sc-pivot-grid thead th.sc-pivot-rowhead > .sc-pivot-rowhead-text { overflow: hidden; }
+.sc-pivot-rowhead-text { display: block; padding: 0 var(--space-2); text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.sc-pivot-grid thead th.sc-pivot-rowhead { padding: 0; }
+.sc-pivot-corner { padding: 0 !important; }
 .sc-pivot-corner-field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); min-width: 0; padding: 0 var(--space-2); }
 .sc-pivot-corner-field > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sc-pivot-wait { background: var(--lead-50); }
@@ -738,6 +749,10 @@ label.sc-group-row { cursor: pointer; }
 .sc-matrix { width: 100%; border-collapse: collapse; }
 .sc-matrix th, .sc-matrix td { padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--line); text-align: left; font-weight: var(--fw-regular); white-space: nowrap; }
 .sc-matrix thead th { color: var(--text-muted); font-size: var(--fs-sm); }
+/* Düzeyi grubundan farklı olan fonksiyon (istisna): grubunun altında, girintili ve soluk (K-186) */
+.sc-matrix tr.sc-matrix-function th { padding-left: var(--space-6); color: var(--text-muted); }
+.sc-matrix tr.sc-matrix-function td { color: var(--text-muted); }
+.sc-matrix tr.sc-matrix-function td.is-different { color: var(--text); font-weight: var(--fw-medium); }
 
 /* Excel yükleme penceresi (ekran 02, K-129) */
 .sc-steps { display: flex; gap: var(--space-2); margin: 0 0 var(--space-3); padding: 0; list-style: none; }

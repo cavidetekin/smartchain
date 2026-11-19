@@ -57,7 +57,8 @@ def test_role_rules():
     assert end_writes == {86, 89}  # End user fonksiyon çalıştıramaz; Excel ve oturum dışında (K-99)
     end_self = {no for no in perm.FUNCTIONS if perm.level(END_USER, no) == Level.SELF}
     assert end_self == {48, 87}
-    assert all(perm.level(END_USER, no) == Level.NONE for no in range(22, 29))  # Parametre End user'da yok (K-99)
+    assert all(perm.level(END_USER, no) == Level.NONE for no in range(22, 29) if no != 24)  # Parametre End user'da yok (K-99)
+    assert perm.level(END_USER, 24) == Level.READ  # Kapasite yönetimi'ni görür, giriş yapamaz (K-185)
     assert all(perm.level(KEY_USER, no) == Level.OWNER for no in range(50, 64))  # kendi çalışması
     assert perm.level("Sistem sahibi", 10) == Level.NONE  # tanınmayan rol hiçbir şey yapamaz
 

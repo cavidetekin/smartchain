@@ -18,7 +18,7 @@ from ..lists.definition import ListDefinition, field_title
 from ..lists import chart as chart_query, pivot as pivot_query, relations
 from ..lists.query import Builder, ListQueryError
 from ..lists.request import (
-    AggSpec, ChartDefinition, DefaultViewRequest, FilterItem, FormatRule, PivotDefinition, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
+    PIVOT_VALUE_WIDTH, AggSpec, ChartDefinition, DefaultViewRequest, FilterItem, FormatRule, PivotDefinition, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
 )
 from ..repositories import audit, lists as list_repo, views as repo
 from ..permissions import ADMIN, SYSTEM_OWNER, Access
@@ -136,6 +136,14 @@ def _clean_pivot(b: Builder, raw, gone, warnings: list[str]) -> dict | None:
             v.pop("fn", None)  # hesaplanan değerin hesaplaması yoktur
         for rule in v.get("rules", []):
             rule["format"] = {k: x for k, x in rule["format"].items() if x not in (None, False)}
+        if "format" in v:  # satır biçimi (K-186): boş biçim saklanmaz; ikon satır biçiminde yoktur
+            v["format"] = {k: x for k, x in v["format"].items() if x not in (None, False) and k in ("fill", "color", "bold")}
+            if not v["format"]:
+                v.pop("format")
+    known = {a["field"] for a in data["rows"]} | {PIVOT_VALUE_WIDTH}
+    data["widths"] = {k: w for k, w in data.get("widths", {}).items() if k in known}  # alanı kalkan kolonun genişliği atılır
+    if not data["widths"]:
+        data.pop("widths")
     if data["sort"]["by"] != "name" and data["sort"]["by"] not in {v["id"] for v in data["values"]}:
         data["sort"] = {"by": "name", "dir": "asc"}
     if dropped and (not data["rows"] or not data["values"]):

@@ -2,7 +2,7 @@
 // parça parça gelir (satır sınırı yok); toplam satırları da sunucunun satırlarıdır (kayıtlardan hesaplanmış). Sütun ekseni tek seferde gelir.
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Funnel } from "lucide-react";
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
@@ -13,14 +13,19 @@ import { type ChartSelection } from "../ui/chart/chartModel";
 import { bucketLabel } from "../ui/chart/chartOption";
 import { valueLabel as boolLabel } from "./filters";
 import {
-  formatPivotCell, type PivotAxisInfo, type PivotCell, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRow,
+  formatPivotCell, PIVOT_VALUE_WIDTH, type PivotAxisInfo, type PivotCell, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRow,
   valueDisplay, valueName,
 } from "./pivotModel";
 import { listApi, type ListColumn, type ListFilter } from "./types";
+import { clampWidth, MAX_WIDTH_REM, MIN_WIDTH_REM } from "./viewState";
 
 const T = tr.pivot;
 export const PIVOT_ROW_REM = 2.1538;      // tablonun satır yüksekliği
-const HEAD_REM = 11;                       // satır başlık kolonu
+const HEAD_REM = 11;                       // satır başlık kolonu: en az; alan adı kesilmeyecek kadar genişler (K-186)
+const VALUE_ROW_REM = 3.2308;              // değerler sütunlardayken son başlık satırı (iki satırlı değer adı)
+const WIDTH_STEP_REM = 0.5;
+const HEAD_EXTRA_REM = 3.6;                // başlıkta huni ve iç boşluk
+const FIT_PAD_REM = 1.4;
 const VALUE_HEAD_REM = 14;                 // "Değer" kolonu (değerler satırlarda): en az; uzun değer adında genişler
 const MAX_VALUE_HEAD_REM = 26;
 const CELL_REM = 8.4615;                   // değer hücresi
@@ -52,6 +57,24 @@ export function groupStarts(columns: PivotColumn[]): boolean[] {
   });
 }
 
+/** Sütun, bu kattaki başlığıyla üst kattaki başlığın tek alt sütunu mu ve yazıları aynı mı (K-186): öyleyse üstteki hücreyle birleşir
+ *  (ör. Ay › Dönem'de aylık dönem: "Ara 2026" altında yine "Ara 2026"). */
+function mergedUp(columns: PivotColumn[], i: number, level: number, fields: PivotAxisInfo[]): boolean {
+  const c = columns[i];
+  if (level === 0 || c.level <= level || c.empty) return false;
+  const sibling = (o: PivotColumn | undefined) => Boolean(o && o.level >= level && o.key.slice(0, level).every((v, j) => v === c.key[j]));
+  if (sibling(columns[i - 1]) || sibling(columns[i + 1])) return false;
+  return keyLabel(c.key[level], fields[level]) === keyLabel(c.key[level - 1], fields[level - 1]);
+}
+
+/** Satır alanı hücrelerinin birleşmesi (K-186): görüntü satırının `j`. satır alanındaki hücresinin grubu. Aynı gruptaki ardışık satırlar tek
+ *  hücredir: aynı öneki (ilk j + 1 anahtar) paylaşan satırlar; ara toplam satırı dış düzeylerin grubundadır, adını taşıdığı kolon ve sağındakiler
+ *  ile genel toplam satırın kendisine aittir (değerler satırlardayken satırın değer satırları boyunca yine birleşir). */
+export function rowGroup(row: PivotRow, d: number, j: number): string {
+  const inside = j < (row.total ? row.level - 1 : row.key.length);
+  return inside ? `k${JSON.stringify(row.key.slice(0, j + 1))}` : `#${d}`;
+}
+
 /** Bir başlık katının hücreleri: aynı üst değeri paylaşan sütunlar birleşir; ara toplam sütunu kendi katında başlar ve alta kadar uzanır. */
 export function headerCells(columns: PivotColumn[], level: number, depth: number, span: number, fields: PivotAxisInfo[]) {
   const out: { label: string; colSpan: number; rowSpan: number; total: boolean; key: string; start: boolean }[] = [];
@@ -63,7 +86,10 @@ export function headerCells(columns: PivotColumn[], level: number, depth: number
       let n = 1;
       while (i + n < columns.length && columns[i + n].level > level && columns[i + n].key.slice(0, level + 1).every((v, j) => v === c.key[j])) n += 1;
       const blank = c.empty && level > 0;  // verisiz dönemin alt başlığı boş
-      out.push({ label: blank ? "" : keyLabel(c.key[level], fields[level]), colSpan: n * span, rowSpan: 1, total: false, key: `${i}`, start: starts[i] });
+      if (n === 1 && mergedUp(columns, i, level, fields)) { i += n; continue; }   // üstteki aynı yazılı başlıkla birleşti
+      let down = 1;
+      while (n === 1 && level + down < depth && mergedUp(columns, i, level + down, fields)) down += 1;
+      out.push({ label: blank ? "" : keyLabel(c.key[level], fields[level]), colSpan: n * span, rowSpan: down, total: false, key: `${i}`, start: starts[i] });
       i += n;
     } else {
       if (c.level === level) out.push({ label: T.total, colSpan: span, rowSpan: depth - level, total: true, key: `${i}`, start: starts[i] });
@@ -73,7 +99,31 @@ export function headerCells(columns: PivotColumn[], level: number, depth: number
   return out;
 }
 
-export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize, reloadKey, onFilter, isFiltered, style }: {
+/** Satır başlığı kolonunun genişlik tutamağı (K-186): sürükleme, ok tuşları, çift tıklayınca içeriğe sığdırma. */
+function WidthHandle({ label, width, remPx, onWidth, onFit }: { label: string; width: number; remPx: number; onWidth(rem: number): void; onFit(): void }) {
+  const onMouseDown = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const [x0, w0] = [e.clientX, width];
+    const move = (ev: MouseEvent) => onWidth(clampWidth(w0 + (ev.clientX - x0) / remPx));
+    const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  };
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    onWidth(clampWidth(width + (e.key === "ArrowRight" ? WIDTH_STEP_REM : -WIDTH_STEP_REM)));
+  };
+  return (
+    <div role="separator" aria-orientation="vertical" aria-label={tr.table.widthOf(label)} tabIndex={0} title={T.fitWidth}
+         aria-valuenow={Math.round(width * 100) / 100} aria-valuemin={MIN_WIDTH_REM} aria-valuemax={MAX_WIDTH_REM}
+         className="sc-table-resize" onMouseDown={onMouseDown} onKeyDown={onKeyDown} onClick={(e) => e.stopPropagation()}
+         onDoubleClick={(e) => { e.stopPropagation(); onFit(); }} />
+  );
+}
+
+export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize, reloadKey, onFilter, isFiltered, onWidths, style }: {
   list: string;
   /** Bilinen kolonlar (etiket için). */
   columns: ListColumn[];
@@ -85,6 +135,8 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
   /** Başlıktaki huni: tablonun filtre penceresi. */
   onFilter(field: string, anchor: HTMLElement): void;
   isFiltered(field: string): boolean;
+  /** Satır başlığı kolonunun genişliği değişti (görünümle saklanır). Verilmezse genişlik ayarlanamaz. */
+  onWidths?(widths: Record<string, number>): void;
   style?: CSSProperties;
 }) {
   const { scenario, fontSize } = useShell();
@@ -182,16 +234,50 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
   const overrides = data.values.map((v) => pivot.values.find((x) => x.id === v.id)?.decimals ?? null);
   // satırdaki `formats` istekte gönderilen (etkin) kuralların sırasını taşır
   const ruleFormats = data.values.map((v) => (pivot.values.find((x) => x.id === v.id)?.rules ?? []).filter((r) => r.enabled).map((r) => r.format));
-  const leftRem = (j: number) => j * HEAD_REM;
   // Değerler sütunlardayken hücre, değerin adı kesilmeden sığacak kadar geniştir (üst sınırla)
   const cellRem = (k: number) => (valuesOnRows ? CELL_REM
     : Math.min(MAX_CELL_REM, Math.max(CELL_REM, Math.max(shown[k].top.length, shown[k].bottom?.length ?? 0) * HEADER_CHAR_REM + 1.6)));
   const groupRem = valuesOnRows ? CELL_REM : labels.reduce((sum, _, k) => sum + cellRem(k), 0);
   // değer adı kesilmesin: en uzun ada göre (dönem tablosunda "Verimlilik · Ağırlıklı ortalama (Toplam kapasite)" gibi adlar)
   const valueHeadRem = Math.min(MAX_VALUE_HEAD_REM, Math.max(VALUE_HEAD_REM, Math.max(0, ...labels.map((l) => l.length)) * HEADER_CHAR_REM + 1.6));
-  const widthRem = R * HEAD_REM + (valuesOnRows ? valueHeadRem : 0) + data.columns.length * groupRem;
-  const rowAt = (d: number): PivotRow | undefined => chunks.get(Math.floor(d / chunkSize))?.[d % chunkSize];
   const fieldLabel = (field: string) => byField.get(field)?.label ?? field;
+  // Satır başlığı kolonları (K-186): ayarlanmış genişlik; yoksa alan adı (ve huni) kesilmeyecek kadar
+  const headRem = data.row_fields.map((f) => pivot.widths?.[f.field] ?? clampWidth(Math.max(HEAD_REM, fieldLabel(f.field).length * HEADER_CHAR_REM + HEAD_EXTRA_REM)));
+  const valueRem = pivot.widths?.[PIVOT_VALUE_WIDTH] ?? valueHeadRem;
+  const leftRem = (j: number) => headRem.slice(0, j).reduce((sum, w) => sum + w, 0);
+  const widthRem = leftRem(R) + (valuesOnRows ? valueRem : 0) + data.columns.length * groupRem;
+  const setWidth = (key: string, rem: number) => onWidths?.({ ...(pivot.widths ?? {}), [key]: clampWidth(rem) });
+  /** İçeriğe sığdır: başlık ve yüklü satırlardaki en uzun yazı (ölçülemiyorsa karakter sayısından). */
+  const fit = (key: string, j: number | null) => {
+    const texts = j === null ? [T.value, ...labels] : [fieldLabel(data.row_fields[j].field)];
+    if (j !== null) {
+      for (const rows of chunks.values()) {
+        for (const r of rows) {
+          if (r.total) {
+            if (j === Math.max(r.level - 1, 0)) texts.push(r.level === 0 ? T.grandTotal : T.totalOf(keyLabel(r.key[r.level - 1], data.row_fields[r.level - 1])));
+          } else if (j < r.key.length) texts.push(keyLabel(r.key[j], data.row_fields[j]));
+        }
+      }
+    }
+    const el = scrollRef.current;
+    let ctx: CanvasRenderingContext2D | null = null;
+    try { ctx = document.createElement("canvas").getContext("2d"); } catch { ctx = null; }
+    if (ctx && el) ctx.font = getComputedStyle(el).font;
+    const measure = (t: string) => (ctx && el ? ctx.measureText(t).width / fontSize : t.length * HEADER_CHAR_REM);
+    const widest = Math.max(0, ...[...new Set(texts)].map(measure));
+    const head = j === null ? 0 : measure(fieldLabel(data.row_fields[j].field)) + HEAD_EXTRA_REM;
+    setWidth(key, Math.max(widest + FIT_PAD_REM, head));
+  };
+  const handle = (key: string, label: string, width: number, j: number | null) => onWidths && (
+    <WidthHandle label={label} width={width} remPx={fontSize} onWidth={(rem) => setWidth(key, rem)} onFit={() => fit(key, j)} />
+  );
+  // Değerin satır biçimi (K-186): değerler satırlardayken satırına, sütunlardayken sütunlarına; kural tutan hücrede kural kazanır
+  const rowFormats = data.values.map((v) => {
+    const f = pivot.values.find((x) => x.id === v.id)?.format;
+    return f && (f.fill || f.color || f.bold) ? formatStyle(f) : undefined;
+  });
+  const headerRem = C * PIVOT_ROW_REM + (valuesOnRows ? PIVOT_ROW_REM : VALUE_ROW_REM);   // yapışkan satır yazısının duracağı yer: başlığın altı
+  const rowAt = (d: number): PivotRow | undefined => chunks.get(Math.floor(d / chunkSize))?.[d % chunkSize];
   const funnel = (field: string) => (
     <button type="button" className={`sc-table-filter-btn${isFiltered(field) ? " is-active" : ""}`} aria-label={tr.table.filterOf(fieldLabel(field))}
             aria-pressed={isFiltered(field)} aria-haspopup="dialog" onClick={(e) => onFilter(field, e.currentTarget)}>
@@ -208,9 +294,10 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
     const mixed = typeof value === "object" && value !== null && "mixed" in value;
     const hit = row.formats?.[String(k)]?.[s];
     const format = hit == null ? undefined : ruleFormats[k]?.[hit];
+    const own = rowFormats[k];
     return (
-      <td key={`${s}-${k}`} className={`sc-num${row.total || c.total ? " is-total" : ""}${mixed ? " is-mixed" : ""}${starts[s] && (valuesOnRows || k === 0) ? " is-group-start" : ""}${format ? " is-ruled" : ""}`}
-          title={mixed ? tr.table.mixedUnits : undefined} style={format ? formatStyle(format) : undefined}>
+      <td key={`${s}-${k}`} className={`sc-num${row.total || c.total ? " is-total" : ""}${mixed ? " is-mixed" : ""}${starts[s] && (valuesOnRows || k === 0) ? " is-group-start" : ""}${format ? " is-ruled" : ""}${own ? " is-formatted" : ""}`}
+          title={mixed ? tr.table.mixedUnits : undefined} style={format || own ? { ...own, ...(format ? formatStyle(format) : {}) } : undefined}>
         {formatPivotCell(value, data.values[k], overrides[k])}
       </td>
     );
@@ -220,22 +307,16 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
     <div className={`sc-pivot${stale ? " is-stale" : ""}`} style={style} ref={scrollRef} data-testid="pivot-scroll" tabIndex={-1}>
       <table className="sc-pivot-grid" style={{ width: `${widthRem}rem` }} aria-rowcount={count} aria-label={T.pivot}>
         <colgroup>
-          {data.row_fields.map((f) => <col key={f.field} style={{ width: `${HEAD_REM}rem` }} />)}
-          {valuesOnRows && <col style={{ width: `${valueHeadRem}rem` }} />}
+          {data.row_fields.map((f, j) => <col key={f.field} style={{ width: `${headRem[j]}rem` }} />)}
+          {valuesOnRows && <col style={{ width: `${valueRem}rem` }} />}
           {data.columns.flatMap((_, s) => Array.from({ length: span }, (__, k) => <col key={`${s}-${k}`} style={{ width: `${cellRem(k)}rem` }} />))}
         </colgroup>
         <thead>
           {data.column_fields.map((f, level) => (
             <tr key={f.field}>
-              {level === 0 && (
-                <th className="sc-pivot-corner is-pinned" colSpan={leftCols} rowSpan={C} style={{ left: 0, ...top(0) }}>
-                  {data.column_fields.map((cf) => (
-                    <div key={cf.field} className="sc-pivot-corner-field" style={{ height: `${PIVOT_ROW_REM}rem` }}>
-                      <span title={fieldLabel(cf.field)}>{fieldLabel(cf.field)}</span>{funnel(cf.field)}
-                    </div>
-                  ))}
-                </th>
-              )}
+              <th className="sc-pivot-corner is-pinned" colSpan={leftCols} style={{ left: 0, ...top(level) }}>
+                <div className="sc-pivot-corner-field"><span title={fieldLabel(f.field)}>{fieldLabel(f.field)}</span>{funnel(f.field)}</div>
+              </th>
               {headerCells(data.columns, level, C, span, data.column_fields).map((h) => (
                 <th key={h.key} scope="colgroup" colSpan={h.colSpan} rowSpan={h.rowSpan} className={`sc-pivot-col${h.total ? " is-total" : ""}${h.start ? " is-group-start" : ""}`}
                     style={top(level)} title={h.label}>{h.label}</th>
@@ -246,9 +327,15 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
             {data.row_fields.map((f, j) => (
               <th key={f.field} scope="col" className="sc-pivot-rowhead is-pinned" style={{ left: `${leftRem(j)}rem`, ...top(C) }}>
                 <div className="sc-pivot-corner-field"><span title={fieldLabel(f.field)}>{fieldLabel(f.field)}</span>{funnel(f.field)}</div>
+                {handle(f.field, fieldLabel(f.field), headRem[j], j)}
               </th>
             ))}
-            {valuesOnRows && <th scope="col" className="sc-pivot-rowhead is-pinned is-pinned-last" style={{ left: `${leftRem(R)}rem`, ...top(C) }}>{T.value}</th>}
+            {valuesOnRows && (
+              <th scope="col" aria-label={T.value} className="sc-pivot-rowhead is-pinned is-pinned-last" style={{ left: `${leftRem(R)}rem`, ...top(C) }}>
+                <span className="sc-pivot-rowhead-text">{T.value}</span>
+                {handle(PIVOT_VALUE_WIDTH, T.value, valueRem, null)}
+              </th>
+            )}
             {data.columns.flatMap((c, s) => (valuesOnRows
               ? [<th key={s} className={`sc-pivot-col${c.total ? " is-total" : ""}${starts[s] ? " is-group-start" : ""}`} style={top(C)} />]
               : shown.map((name, k) => (
@@ -262,33 +349,54 @@ export function PivotGrid({ list, columns, pivot, filters, selection, chunkSize,
         </thead>
         <tbody>
           {before > 0 && <tr aria-hidden="true"><td colSpan={totalCols} style={{ height: before, padding: 0, border: 0 }} /></tr>}
-          {items.map((it) => {
+          {items.map((it, p) => {
             const d = Math.floor(it.index / per);
             const k = it.index % per;
             const row = rowAt(d);
             if (!row) {
               return <tr key={it.index} aria-rowindex={it.index + 1} style={{ height: rowPx }}><td colSpan={totalCols} className="sc-pivot-wait" /></tr>;
             }
+            // ekrandaki (sanal) satırlar içinde hücrenin grubu: üstteki satır aynı gruptaysa hücre çizilmez, ilk satırdaki hücre grubu boyunca uzanır
+            const groupAt = (q: number, j: number): string | null => {
+              const other = items[q];
+              if (!other) return null;
+              const od = Math.floor(other.index / per);
+              const orow = rowAt(od);
+              return orow ? rowGroup(orow, od, j) : null;
+            };
             const previous = d > 0 ? rowAt(d - 1) : undefined;
-            const isFirst = it.index === firstIndex;
+            // en dıştaki satır grubunun başı (K-186): gruplar arasında ince yatay çizgi; grup yoksa (tek alan, değerler sütunlarda) çizgi yok
+            const outer = (r: PivotRow) => (r.total && r.level === 0 ? "#" : JSON.stringify(r.key[0]));   // ara toplam grubunun içindedir; genel toplam ayrı
+            const outerStart = (R > 1 || valuesOnRows) && k === 0 && d > 0 && (!previous || outer(previous) !== outer(row));
             return (
-              <tr key={it.index} aria-rowindex={it.index + 1} className={row.total ? "is-total" : undefined} style={{ height: rowPx }}>
+              <tr key={it.index} aria-rowindex={it.index + 1} className={`${row.total ? "is-total" : ""}${outerStart ? " is-row-group-start" : ""}`.trim() || undefined}
+                  style={{ height: rowPx }}>
                 {data.row_fields.map((f, j) => {
+                  const group = rowGroup(row, d, j);
+                  if (p > 0 && groupAt(p - 1, j) === group) return null;   // üstteki hücrenin devamı
+                  let rows = 1;
+                  while (groupAt(p + rows, j) === group) rows += 1;
                   let text = "";
                   if (row.total) {
-                    if (j === Math.max(row.level - 1, 0) && (k === 0 || isFirst)) {
-                      text = row.level === 0 ? T.grandTotal : T.totalOf(keyLabel(row.key[row.level - 1], data.row_fields[row.level - 1]));
-                    }
+                    if (j === Math.max(row.level - 1, 0)) text = row.level === 0 ? T.grandTotal : T.totalOf(keyLabel(row.key[row.level - 1], data.row_fields[row.level - 1]));
+                    else if (j < row.level - 1) text = keyLabel(row.key[j], f);
                   } else {
-                    const changed = !previous || previous.key.length <= j || previous.key.slice(0, j + 1).some((v, i) => v !== row.key[i]);
-                    if ((changed && k === 0) || isFirst) text = keyLabel(row.key[j], f);
+                    text = keyLabel(row.key[j], f);
                   }
                   return (
-                    <th key={f.field} scope="row" className={`sc-pivot-rowkey is-pinned${!valuesOnRows && j === R - 1 ? " is-pinned-last" : ""}`}
-                        style={{ left: `${leftRem(j)}rem` }} title={text || undefined}>{text}</th>
+                    <th key={f.field} scope="row" rowSpan={rows > 1 ? rows : undefined}
+                        className={`sc-pivot-rowkey is-pinned${!valuesOnRows && j === R - 1 ? " is-pinned-last" : ""}`}
+                        style={{ left: `${leftRem(j)}rem` }} title={text || undefined}>
+                      <span className="sc-pivot-rowkey-text" style={{ top: `${headerRem}rem` }}>{text}</span>
+                    </th>
                   );
                 })}
-                {valuesOnRows && <th scope="row" className="sc-pivot-rowkey sc-pivot-value is-pinned is-pinned-last" style={{ left: `${leftRem(R)}rem` }} title={labels[k]}>{labels[k]}</th>}
+                {valuesOnRows && (
+                  <th scope="row" className={`sc-pivot-rowkey sc-pivot-value is-pinned is-pinned-last${rowFormats[k] ? " is-formatted" : ""}`}
+                      style={{ left: `${leftRem(R)}rem`, ...rowFormats[k] }} title={labels[k]}>
+                    <span className="sc-pivot-rowkey-text">{labels[k]}</span>
+                  </th>
+                )}
                 {data.columns.flatMap((c, s) => (valuesOnRows ? [cell(row, k, s, c)] : data.values.map((_, kk) => cell(row, kk, s, c))))}
               </tr>
             );

@@ -85,18 +85,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|
 | ERP | Entegrasyondan gelir (API, Excel, SQL view'ları). | Material.Code, SalesOrderLine.OpenQuantity |
 | ERP, yoksa kural | ERP'de varsa oradan; yoksa veri kuralıyla doldurulur. | Material.MaterialLevel, Resource.IsCritical |
-| Kural ya da elle | ERP'de genelde yok; veri kuralıyla ya da ana veri ekranında elle. | Resource.DailyCapacity, Material.IsCustomTracked |
+| Kural ya da elle | ERP'de genelde yok; veri kuralıyla ya da ana veri ekranında elle. | Material.IsCustomTracked |
 | Smartchain (parametre) | Smartchain'de tanımlanan planlama parametresi; parametre setine bağlı. | ResourceEfficiency.EfficiencyPct, AllocationRule.SharePct |
 | Kullanıcı | Kullanıcının ekrandan girdiği tanım. | DataRule, ScenarioDefinition |
 | Sistem | Sistemin ürettiği ya da System owner'ın yönettiği değer. | Id alanları, PlanRun, Job |
-| Ön hesap | Ön hesapta türetilen değer. | WorkOrderComponent.RemainingQuantity, ResourceDowntime.DurationDays |
+| Ön hesap | Ön hesapta türetilen değer. | WorkOrderComponent.RemainingQuantity |
 | Motor | Planlama motorunun çıktısı. | PlannedOrder, CapacityLoad, Pegging |
 
 ### Alan grupları ve veri akışı
 <sub>21. Veri modeli · Genel görünüm</sub>
 
 - **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
-- **Kaynak  8 tablo:** Resource · ResourceGroup · ResourceGroupMember · ResourceDowntime
+- **Kaynak  9 tablo:** Resource · ResourceGroup · ResourceGroupMember · EmployeeAbsence · WorkPattern · ResourceEfficiency · OvertimeLimit · ResourceDowntime · FactoryCalendar
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · AllocationRule
 - yükleme
@@ -105,7 +105,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Plan  13 tablo:** ScenarioDefinition · Scenario · Workspace · PlanRun · PlanVersion · PlannedOrder · CapacityLoad · Pegging · PlanWarning
 - versiyon
 - **Sistem  8 tablo:** AppUser · Job · SolverLog · SystemEvent · ServiceStatus · AuditLog · SystemSetting · License
-- **Ortak  5 tablo:** Location · UnitOfMeasure · Calendar
+- **Ortak  3 tablo:** Location · UnitOfMeasure · UomConversion
 - Akış: ERP verisi entegrasyon tablolarına (stg.*) iner, veri kurallarıyla tamamlanır ve yüklemeyle veri versiyonu olur. Senaryolar bir veri versiyonu ve bir parametre setiyle çalışır; çıktılar plan hesabına bağlanır, onaylı plan ERP'ye döner.
 
 ### Tablo listesi
@@ -116,8 +116,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Location:** Lokasyon (tesis, depo)
 - **UnitOfMeasure:** Ölçü birimi
 - **UomConversion:** Malzeme bazında birim dönüşümü
-- **Calendar:** Çalışma takvimi başlığı (kaynaklara bağlanır)
-- **CalendarDay:** Takvimin gün bazında çalışma durumu
 
 #### TALEP
 
@@ -133,10 +131,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Resource:** Kaynak: tek bir makine, işçi ya da fason iş yeri
 - **ResourceGroup:** Kaynak grubu: planlama birimi; tip, kritiklik, kapasite birimi
 - **ResourceGroupMember:** Kaynak grup eşleşmesi: kaynağın gruba üyeliği; yetkinlik matrisi
-- **ResourceCapacityProfile:** Günlük kapasitenin dönemsel değişikliği (ör
-- **ResourceDowntime:** Bakım ve arıza takvimi
-- **ResourceEfficiency:** Kaynak ve dönem bazında verim (kapasite katsayısı)
-- **ResourcePeriodLimit:** Dönem bazlı üst limit
+- **WorkPattern:** Çalışma düzeni: günlük kapasite ve haftanın günleri (K-185)
+- **ResourceEfficiency:** Verimlilik (kapasite katsayısı)
+- **OvertimeLimit:** Ek mesai limiti (günlük, kaynak başına)
+- **ResourceDowntime:** Bakım ve duruş
+- **FactoryCalendar:** Fabrika takvimi (toplu duruş)
 - **EmployeeAbsence:** Kişi bazında izin ve rapor
 
 ### Tablo listesi
@@ -298,33 +297,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Factor | decimal(18,6) |  | 1 kaynak birim = çarpan × hedef birim | Çarpan | ERP | H | E | hata (satır atlanır) |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-### Calendar
-<sub>21. Veri modeli · Ortak</sub>
-
-- Ana veri · versiyonlu · Faz 1
-- Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|
-| Id | int | PK | Takvim kimliği | Sistem | H | E |  |
-| Code | nvarchar(30) | UK | Takvim kodu | Kural ya da elle | H | E | hata (satır atlanır) |
-| Name | nvarchar(100) |  | Takvim adı | Kural ya da elle | H | H | bilinmiyor |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |
-
-### CalendarDay
-<sub>21. Veri modeli · Ortak</sub>
-
-- Ana veri · versiyonlu · Faz 1
-- Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|---|
-| CalendarId | int | PK,FK | Takvim |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| Date | date | PK | Gün |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| IsWorkingDay | bit |  | Çalışma günü mü |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| WorkingFraction | decimal(5,4) |  | Günün çalışılan oranı (yarım gün 0,5) | Çalışma oranı | Kural ya da elle | H | H | tam gün |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
-
 ### Resource
 <sub>21. Veri modeli · Kaynak</sub>
 
@@ -342,17 +314,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ProductionLocation | nvarchar(50) |  | Lokasyonun alt tanımı (hol, hat) | Üretim yeri | ERP | H | H | bilinmiyor |
 | RemainingOverTimeYear | decimal(9,2) |  | Yıllık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
 | RemainingOverTimeMonth | decimal(9,2) |  | Aylık kalan fazla mesai (saat) |  | ERP | H | H | sınırsız |
-| DailyCapacity | decimal(18,4) |  | Kaynağın bir çalışma günündeki kapasitesi; geçici alan (Kapasite yönetimi adımında kalkar) | Günlük kapasite | Kural ya da elle | H | H | bilinmiyor |
-| CalendarId | int | FK | Çalışma takvimi (Smartchain ekranında atanır); geçici alan (Kapasite yönetimi adımında kalkar) | Çalışma takvimi | Kural ya da elle | H | H | bilinmiyor |
-| SubconPlanningType | nvarchar(15) |  | Fasonda: İş yeri \| Tedarik süresi | Fason planlama tipi | Kural ya da elle | H | H | bilinmiyor |
-| SubconFixedLeadTimeDays | decimal(9,2) |  | Fasonda sabit süre (taşıma ve kuyruk); geçici alan (Kapasite yönetimi adımında kalkar) | Fason sabit süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
-| SubconVariableDaysPerUnit | decimal(18,6) |  | Fasonda birim başına gün (fasoncunun hızı); geçici alan (Kapasite yönetimi adımında kalkar) | Fason birim süresi (gün) | Kural ya da elle | H | H | bilinmiyor |
 | AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Kaynakta kalanlar (K-180):** lokasyon, kod, ad, ham tip (yalnız bilgi), aktif, üretim yeri, yıllık ve aylık kalan fazla mesai, ek alanlar. Tip bayrakları, `IsCritical`, `CapacityUnit` ve fasoncu kaynak grubundadır; kaynakta yoktur.
-- **Geçici alanlar (K-180):** `DailyCapacity`, `CalendarId` ve fason parametreleri (`SubconPlanningType`, `SubconFixedLeadTimeDays`, `SubconVariableDaysPerUnit`) Kapasite yönetimi adımına (7.9) kadar yerinde durur; o adımda kalkar ve kapasite girişleri `param` tarafında yeniden tasarlanır (K-176). Entegre edilmezler; aktarım yeni versiyona önceki versiyondan taşır (K-153); ana veri ekranında salt okunur (K-168), "Manuel" olamazlar (K-170). Günlük kapasitenin birimi kaynağın üye olduğu grupların ortak kapasite birimidir. Aktif olup en az bir aktif kritik gruba üye olan ve günlük kapasitesi boş kaynak veri kalitesinde uyarı verir (6.5).
+- **Kapasite (K-185):** günlük kapasite, çalışma günleri, verimlilik, duruş ve ek mesai limiti kaynakta alan olarak durmaz; Kapasite yönetimi'nin senaryolu giriş tablolarındadır (`param.WorkPattern` ve ötekiler). Kaynaktaki günlük kapasite, takvim ataması ve fason parametreleri 7.9'da kalktı.
 - **Kalkanlar (K-180):** `CapacitySource` ("Kapasite kaynağı"; vardiya kavramıyla birlikte) ve `Quantity` (paralel adet; kaynak adedi grup eşleşmesinden bilinir).
 - **İşçi:** İşçiler kaynaktır; işçi grubu (yetkinlik grubu) `IsEmployee` bayraklı kaynak grubudur; işçinin yetkinlikleri `ResourceGroupMember`'dadır (bir işçi birden fazla gruba üye olabilir).
 
@@ -388,71 +355,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kritik:** Kritik olmayan grup sonsuz kapasiteli sayılır ve yalnız raporlanır. Birden fazla gruba üye kaynağın kapasitesini yalnız kritik grupların yükü kullanır. Kaynağı olmayan kritik grubun kapasitesi sıfırdır (doğrulamada ve veri kalitesinde uyarı).
 - **Kapasite birimi:** ERP'den gelir, yoksa veri kuralıyla doldurulur; ikisinden de gelmezse doğrulamada hata. Bir kaynağın üye olduğu grupların kapasite birimi aynı olmalıdır (doğrulamada uyarı).
 - **Kapasite (sonraki adım, 7.9):** kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük grup düzeyindedir.
-
-### ResourceCapacityProfile
-<sub>21. Veri modeli · Kaynak</sub>
-
-- Ana veri · versiyonlu · Faz 1
-- Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ResourceId | bigint | FK | Kaynak |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| ValidFrom | date |  | Başlangıç |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| ValidTo | date |  | Bitiş |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| DailyCapacity | decimal(18,4) |  | Bu aralıktaki günlük kapasite | Günlük kapasite | Kural ya da elle | E | E | hata (satır atlanır) |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
-
-### ResourceDowntime
-<sub>21. Veri modeli · Kaynak</sub>
-
-- Ana veri · versiyonlu · Faz 1
-- Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
-|---|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ResourceId | bigint | FK | Kaynak |  | Kural ya da elle | H | E | hata (satır atlanır) |
-| DowntimeType | nvarchar(10) |  | Bakım \| Arıza | Duruş tipi | Kural ya da elle | H | E | hata (satır atlanır) |
-| StartAt | datetime2 |  | Başlangıç |  | Kural ya da elle | E | E | hata (satır atlanır) |
-| EndAt | datetime2 |  | Bitiş |  | Kural ya da elle | E | E | hata (satır atlanır) |
-| AffectedQuantity | int |  | Etkilenen kaynak adedi |  | Kural ya da elle | E | E | hata (satır atlanır) |
-| DurationDays | decimal(9,4) |  | Süre, gün olarak (yarım gün 0,5) | Süre (gün) | Ön hesap | H | H |  |
-| Note | nvarchar(400) |  | Açıklama |  | Kullanıcı | H | H | bilinmiyor |
-| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
-
-- **Smartchain'de girilen tablolar (K-167):** Calendar, CalendarDay, ResourceCapacityProfile ve ResourceDowntime (ve Aşama 7'de açılacak malzeme blokajı) Kapasite yönetimi ve Malzeme blokajı ekranlarında girilir. Kaydedilince yeni veri versiyonu açılmaz; mevcut veride yerinde güncellenir, değişiklik denetim izinde kalır. Şema bu kurala Aşama 7'nin ilk ekran adımında geçer (versiyonsuz; sentetik yükleme de orada uyarlanır).
-
-### ResourceEfficiency
-<sub>21. Veri modeli · Kaynak</sub>
-
-- Parametre · versiyonsuz · Faz 1
-- Kaynak ve dönem bazında verim (kapasite katsayısı); senaryoya özel.
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| ScenarioDefinitionId | int | FK | Senaryo | Smartchain (parametre) | H | E |  |
-| ResourceId | bigint | FK | Kaynak | Smartchain (parametre) | H | E |  |
-| ValidFrom | date |  | Başlangıç | Smartchain (parametre) | H | E |  |
-| ValidTo | date |  | Bitiş | Smartchain (parametre) | H | E |  |
-| EfficiencyPct | decimal(6,2) |  | Verim (%) | Smartchain (parametre) | E | E | 100 |
-
-### ResourcePeriodLimit
-<sub>21. Veri modeli · Kaynak</sub>
-
-- Parametre · versiyonsuz · Faz 1
-- Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| ScenarioDefinitionId | int | FK | Senaryo | Smartchain (parametre) | H | E |  |
-| ResourceId | bigint | FK | Kaynak | Smartchain (parametre) | H | E |  |
-| ValidFrom | date |  | Başlangıç | Smartchain (parametre) | H | E |  |
-| ValidTo | date |  | Bitiş | Smartchain (parametre) | H | E |  |
-| UpperLimit | decimal(18,4) |  | Dönem üst limiti | Smartchain (parametre) | E | E |  |
 
 ### ResourceGroupMember
 <sub>21. Veri modeli · Kaynak</sub>
@@ -2181,6 +2083,122 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ValidUntil | date |  | Bitiş | Sistem | H | E |  |
 | InstallationId | nvarchar(100) |  | Kurulum kimliği | Sistem | H | E |  |
 
+## Kapasite girişleri (7.9, K-185)
+
+Kapasitenin girişleri Kapasite yönetimi ekranında (ekran 30) girilir; `param` şemasında, senaryoludur ve "Baz + fark" tutulur (K-176). Her giriş kaynak grubu ya da kaynak içindir (tam biri dolu). Baz'ın satırları temel veridir; Baz'ı izleyen senaryo yalnız farkını tutar: fark satırı Baz satırını `BaseRowId` ile gösterir, değiştirdiği alanlar `OverriddenFields`'tadır; senaryonun kendi satırında `BaseRowId` boştur. Geçerli satırlar tek yerden çözülür (`app/params/resolve.py`). Kaynak ve kaynak grubu kimlikleri versiyonlu tabloya fiziksel bağ taşımaz (K-63).
+
+### WorkPattern
+<sub>21. Veri modeli · Kaynak</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Çalışma düzeni (K-185): günlük kapasite ve haftanın günleri. Çalışma günü yalnız buradan gelir. Geçerlilik: önce seviye (kaynakta o günü kapsayan kayıt varsa kaynağınkiler, yoksa grubunkiler), sonra başlangıcı en ileri olan.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",ValidTo,DailyCapacity,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz ("Geçersiz yap") | Geçerli | Smartchain (parametre) | H | E | 1 |
+| ResourceGroupId | bigint | FK | Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş | Kaynak grubu | Smartchain (parametre) | H | H |  |
+| ResourceId | bigint | FK | Kaynak (kaynağa girilen kayıt); grup doluysa boş | Kaynak | Smartchain (parametre) | H | H |  |
+| ValidFrom | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | E | E |  |
+| ValidTo | date |  | Bitiş (dahil); boşsa süresiz | Bitiş | Smartchain (parametre) | E | H |  |
+| DailyCapacity | decimal(18,4) |  | Tam çalışma günündeki kapasite, kaynak başına, grubun kapasite biriminde; yarım günde yarısı | Günlük kapasite | Smartchain (parametre) | E | E |  |
+| DayMon | decimal(2,1) |  | Pazartesi: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor | Pazartesi | Smartchain (parametre) | E | E | 1 |
+| DayTue | decimal(2,1) |  | Salı: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor | Salı | Smartchain (parametre) | E | E | 1 |
+| DayWed | decimal(2,1) |  | Çarşamba: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor | Çarşamba | Smartchain (parametre) | E | E | 1 |
+| DayThu | decimal(2,1) |  | Perşembe: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor | Perşembe | Smartchain (parametre) | E | E | 1 |
+| DayFri | decimal(2,1) |  | Cuma: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor | Cuma | Smartchain (parametre) | E | E | 1 |
+| DaySat | decimal(2,1) |  | Cumartesi: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor | Cumartesi | Smartchain (parametre) | E | E | 0 |
+| DaySun | decimal(2,1) |  | Pazar: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor | Pazar | Smartchain (parametre) | E | E | 0 |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş | Değiştiren | Sistem | H | H |  |
+
+### ResourceEfficiency
+<sub>21. Veri modeli · Kaynak</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Verimlilik (K-185): kapasite katsayısı, yüzde. Giriş yoksa %100. Geçerlilik kuralı çalışma düzenindeki gibi, kendi kayıtlarından.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",ValidTo,DailyCapacity,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz ("Geçersiz yap") | Geçerli | Smartchain (parametre) | H | E | 1 |
+| ResourceGroupId | bigint | FK | Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş | Kaynak grubu | Smartchain (parametre) | H | H |  |
+| ResourceId | bigint | FK | Kaynak (kaynağa girilen kayıt); grup doluysa boş | Kaynak | Smartchain (parametre) | H | H |  |
+| ValidFrom | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | E | E |  |
+| ValidTo | date |  | Bitiş (dahil); boşsa süresiz | Bitiş | Smartchain (parametre) | E | H |  |
+| EfficiencyPct | decimal(6,2) |  | Verimlilik (%) | Verimlilik (%) | Smartchain (parametre) | E | E | 100 |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş | Değiştiren | Sistem | H | H |  |
+
+### OvertimeLimit
+<sub>21. Veri modeli · Kaynak</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Ek mesai limiti (K-185): çalışılan günde kaynak başına yapılabilecek ek mesai, grubun kapasite biriminde. Giriş yoksa ek mesai yok. Her gruba girilebilir. ERP'den gelen kalan fazla mesai (kaynakta) ayrıdır, birleştirilmez.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",ValidTo,DailyCapacity,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz ("Geçersiz yap") | Geçerli | Smartchain (parametre) | H | E | 1 |
+| ResourceGroupId | bigint | FK | Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş | Kaynak grubu | Smartchain (parametre) | H | H |  |
+| ResourceId | bigint | FK | Kaynak (kaynağa girilen kayıt); grup doluysa boş | Kaynak | Smartchain (parametre) | H | H |  |
+| ValidFrom | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | E | E |  |
+| ValidTo | date |  | Bitiş (dahil); boşsa süresiz | Bitiş | Smartchain (parametre) | E | H |  |
+| DailyLimit | decimal(18,4) |  | Günlük ek mesai limiti, kaynak başına | Günlük limit | Smartchain (parametre) | E | E |  |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş | Değiştiren | Sistem | H | H |  |
+
+### ResourceDowntime
+<sub>21. Veri modeli · Kaynak</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Bakım ve duruş (K-185): kapasiteden düşülür. Gruba girilen duruş grubun bütün kaynaklarına uygulanır. Geçerlilik kuralının dışındadır: duruşlar birleşir, gün bir kez düşer. Çalışan izni ERP'den gelir (`core.EmployeeAbsence`), burada tutulmaz.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",ValidTo,DailyCapacity,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz ("Geçersiz yap") | Geçerli | Smartchain (parametre) | H | E | 1 |
+| ResourceGroupId | bigint | FK | Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş | Kaynak grubu | Smartchain (parametre) | H | H |  |
+| ResourceId | bigint | FK | Kaynak (kaynağa girilen kayıt); grup doluysa boş | Kaynak | Smartchain (parametre) | H | H |  |
+| StartDate | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | E | E |  |
+| EndDate | date |  | Bitiş (dahil) | Bitiş | Smartchain (parametre) | E | E |  |
+| DowntimeType | nvarchar(20) |  | Planlı bakım \| Arıza \| Diğer | Tip | Smartchain (parametre) | E | E |  |
+| Reason | nvarchar(255) |  | Sebep (serbest metin) | Sebep | Smartchain (parametre) | E | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş | Değiştiren | Sistem | H | H |  |
+
+### FactoryCalendar
+<sub>21. Veri modeli · Kaynak</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Fabrika takvimi (K-185): bütün kaynak gruplarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",ValidTo,DailyCapacity,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz ("Geçersiz yap") | Geçerli | Smartchain (parametre) | H | E | 1 |
+| StartDate | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | E | E |  |
+| EndDate | date |  | Bitiş (dahil) | Bitiş | Smartchain (parametre) | E | E |  |
+| Name | nvarchar(100) |  | Ad (ör. Yılbaşı) | Ad | Smartchain (parametre) | E | E |  |
+| DayValue | decimal(2,1) |  | O günlerde çalışılan oran: 0 Çalışılmıyor · 0,5 Yarım gün | Çalışma | Smartchain (parametre) | E | E | 0 |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş | Değiştiren | Sistem | H | H |  |
+
 ## Önbellek (7.8, K-184)
 
 Önbellek tabloları veri değildir: girişlerden hesaplanan ara sonuçtur, kullanıcıya tablo olarak sunulmaz, üzerinde giriş yapılmaz, silinirse yeniden üretilir (`python -m app.periods rebuild`). Ayrı şemada (`cache`) dururlar; yedekten dönüşte boş olmaları sorun değildir. Dış anahtar taşımazlar (yazma ucuz kalsın); bütünlüğü önbellek kodu sağlar (`app/periods/cache.py`).
@@ -2189,16 +2207,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Önbellek</sub>
 
 - Önbellek · versiyonsuz · Faz 1
-- Kaynak × gün kapasite ara sonucu (K-184): dönem tablosu "Kaynak grubu × dönem" bundan toplanır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız kendi girişi olan kaynak ve günler (gerisi Baz'ın satırlarından okunur). 7.8'de deneme hesabının alanlarını taşır; 7.9'da gerçek kapasite alanlarıyla yeniden düzenlenir. Kümelenmiş anahtar senaryo, kaynak, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan.
+- Kaynak grubu × kaynak × gün kapasite ara sonucu (K-184, K-185): dönem tablosu "Kaynak grubu × dönem" bundan toplanır. Grup kaydı o grubun içinde uygulandığı için birden fazla gruba üye kaynak her grubunda ayrı satırdır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız Baz'dan farklı çıkan satırlar (gerisi Baz'ın satırlarından okunur). Kümelenmiş anahtar senaryo, kaynak, grup, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | ScenarioDefinitionId | int | PK | Senaryo | Sistem | H | E |  |
 | ResourceId | bigint | PK | Kaynak | Sistem | H | E |  |
+| ResourceGroupId | bigint | PK | Kaynak grubu | Sistem | H | E |  |
 | Date | date | PK | Gün | Sistem | H | E |  |
-| WorkingDay | decimal(5,2) |  | Çalışma günü (tam 1, yarım 0,5, çalışılmıyor 0) | Sistem | H | E |  |
-| Capacity | decimal(18,4) |  | Günün toplam kapasitesi | Sistem | H | E |  |
-| AvailableCapacity | decimal(18,4) |  | Kullanılabilir kapasite (toplam × verim) | Sistem | H | E |  |
+| WorkingDay | decimal(2,1) |  | Çalışma günü (Tam 1, Yarım 0,5, Çalışılmıyor 0; çalışma düzeni yoksa 0) | Sistem | H | E |  |
+| Downtime | decimal(5,4) |  | Duruş (gün; çalışma gününü aşmaz) | Sistem | H | E |  |
+| DailyCapacity | decimal(18,4) |  | O gün geçerli günlük kapasite (çalışma düzeni yoksa 0) | Sistem | H | E |  |
+| Capacity | decimal(18,4) |  | Toplam kapasite: çalışma günü × günlük kapasite × verimlilik | Sistem | H | E |  |
+| AvailableCapacity | decimal(18,4) |  | Kullanılabilir kapasite: (çalışma günü − duruş) × günlük kapasite × verimlilik | Sistem | H | E |  |
+| OvertimeLimit | decimal(18,4) |  | Ek mesai limiti: (çalışma günü − duruş) × günlük limit | Sistem | H | E |  |
 
 ### PeriodCacheState
 <sub>21. Veri modeli · Önbellek</sub>

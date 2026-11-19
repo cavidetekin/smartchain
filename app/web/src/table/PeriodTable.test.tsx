@@ -1,5 +1,6 @@
 // Dönem tablosu (K-184, docs/12 "Dönem tablosu standardı"): ürünün Standart'ı pivot (panel kapalı), isteklerde senaryo, dönem sütunları sunucu
-// sırasıyla, İlk · Son dönem değeri yalnız dönem tablosunda, hazır hesaplanan değerler, gruplamada varsayılan ara toplam, deneme sayfası.
+// sırasıyla, İlk · Son dönem değeri yalnız dönem tablosunda, hazır hesaplanan değerler, gruplamada varsayılan ara toplam. Tablo, Kapasite yönetimi
+// ekranının (ekran 30, K-185) "Kapasite özeti" sekmesidir: menüdeki yeri, sekme şeridi, End user'ın salt okunur görmesi.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -7,11 +8,13 @@ import { describe, expect, it } from "vitest";
 import { meAs, mockApi, renderApp } from "../test/helpers";
 import { defaultFn, fnsFor, type PivotData, type PivotRequest, valueLabel } from "./pivotModel";
 import { col, useTableTestSetup } from "./testBackend";
+import { defaultChart } from "../ui/chart/chartModel";
 import { aggregateOf, standardState } from "./viewState";
 
 useTableTestSetup();
 
-const LIST = "/api/period-resource-group-demo";
+const LIST = "/api/period-resource-group";
+const PATH = "/parametre/kapasite-yonetimi";
 const ORDER = { order_by: "PeriodStart" };
 const COLUMNS = [
   col("ResourceGroupCode", "Kaynak grubu", "text", "list", { values_from_server: true }), col("CapacityUnit", "Kapasite birimi", "text", "list"),
@@ -28,7 +31,7 @@ const STANDARD = {
            { id: "d3", field: "Efficiency", fn: "wavg", weight: "TotalCapacity" }],
   totals: { rows: false, columns: false, subtotals: false }, sort: { by: "name", dir: "asc" },
 };
-const READY = [{ name: "Ortalama verimlilik", a: { field: "AvailableCapacity", fn: "sum" }, op: "div", b: { field: "TotalCapacity", fn: "sum" }, percent: true, decimals: 2 }];
+const READY = [{ name: "Kullanılabilirlik", a: { field: "AvailableCapacity", fn: "sum" }, op: "div", b: { field: "TotalCapacity", fn: "sum" }, percent: true, decimals: 2 }];
 // Sunucunun sırası: dönem başına göre (alfabetik olsaydı "Ara 2026" başa gelirdi)
 const PERIODS = ["H47 2026", "H48 2026", "Ara 2026", "Oca 2027"];
 
@@ -55,7 +58,7 @@ function backend(scenario = { id: 7, name: "Kısıtsız kapasite", is_base: fals
     "/api/scenarios/options": { body: { scenarios: [{ id: 1, name: "Baz", is_base: true }, { id: scenario.id, name: scenario.name, is_base: false }] } },
     [`${LIST}/columns`]: { body: { chunk_size: 100, columns: COLUMNS, relations: [{ path: "ResourceGroupId", label: "Kaynak grubu" }], period_table: true,
                                    standard_pivot: STANDARD, calculated_values: READY,
-                                   export: { title: "Kaynak grubu × dönem (deneme)", file_slug: "kaynak-grubu-donem-deneme", sync_max_rows: 10000, max_rows: 500000, file_hours: 24 } } },
+                                   export: { title: "Kaynak grubu × dönem", file_slug: "kaynak-grubu-donem", sync_max_rows: 10000, max_rows: 500000, file_hours: 24 } } },
     [`${LIST}/views`]: { body: { views: [], default_view_id: null } },
     [`${LIST}/values`]: post("values", () => PERIODS.map((value) => ({ value, count: 2 }))),
     [`${LIST}/query`]: post("query", () => ({ rows: [{ Id: 7001, ResourceGroupCode: "KG-1", Period: "H47 2026", ResourceCount: 3 }], filtered: 1, total: 1 })),
@@ -68,7 +71,7 @@ function backend(scenario = { id: 7, name: "Kısıtsız kapasite", is_base: fals
 async function open() {
   const user = userEvent.setup();
   const bodies = backend();
-  renderApp("/donem-tablosu", meAs("Key user"));
+  renderApp(PATH, meAs("Key user"));
   const table = await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 });
   await within(table).findByText("KG-1");
   return { user, bodies, table };
@@ -92,12 +95,27 @@ describe("dönem tablosu modeli (K-184)", () => {
     expect(aggregateOf({ ...byField.get("Efficiency")!, aggregate_weight: null }, state)).toEqual({ fn: "none" });
     expect(aggregateOf(byField.get("TotalCapacity")!, state)).toEqual({ fn: "sum" });
   });
+
+  it("grafik ilk açılışta liste tanımının verdiği değerle gelir (K-186); verilmezse görünür ilk sayı alanı", () => {
+    const order = COLUMNS.map((c) => c.field);
+    expect(defaultChart(COLUMNS, order, "AvailableCapacity")!.series.map((x) => [x.field, x.fn])).toEqual([["AvailableCapacity", "sum"]]);
+    expect(defaultChart(COLUMNS, order)!.series[0].field).toBe("TotalCapacity");
+    expect(defaultChart(COLUMNS, order, "Yok")!.series[0].field).toBe("TotalCapacity");   // bilinmeyen alan yok sayılır
+  });
 });
 
-describe("dönem tablosu deneme sayfası (K-184)", () => {
+describe("ekran 30 · Kapasite yönetimi · Kapasite özeti (K-184, K-185)", () => {
   it("pivot açık gelir, ayar paneli kapalı, görünüm değişmiş sayılmaz; sütunlar sunucunun sırasıyla; istekler seçili senaryoyu taşır", async () => {
     const { bodies, table } = await open();
-    expect(screen.getByRole("heading", { level: 1, name: "Kaynak grubu × dönem (deneme)" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Kapasite yönetimi" })).toBeInTheDocument();
+    // sekme şeridi: 7.9a'da yalnız Kapasite özeti (giriş sekmeleri 7.9b'de eklenir; boş sekme gösterilmez)
+    const tabs = within(screen.getByRole("radiogroup", { name: "Kapasite yönetimi bölümleri" })).getAllByRole("radio");
+    expect(tabs.map((t) => t.textContent)).toEqual(["Kapasite özeti"]);
+    expect(tabs[0]).toHaveAttribute("aria-checked", "true");
+    // menüde Parametre grubunda, Parametreler ile Senaryolar arasında
+    const links = screen.getAllByRole("link").map((l) => l.textContent);
+    const at = links.indexOf("Kapasite yönetimi");
+    expect(links.slice(at - 1, at + 2)).toEqual(["Parametreler", "Kapasite yönetimi", "Senaryolar"]);
     expect(screen.queryByRole("complementary", { name: "Pivot ayarları" })).toBeNull();
     expect(screen.getByRole("button", { name: "Tablo ayarları" })).toHaveAttribute("title", "Tablo ayarları");   // kaydedilmemiş değişiklik sayılmaz
     const heads = within(table).getAllByRole("columnheader").map((h) => h.textContent);
@@ -121,13 +139,13 @@ describe("dönem tablosu deneme sayfası (K-184)", () => {
     await waitFor(() => expect((bodies.pivot[bodies.pivot.length - 1].values as { fn: string }[])[0].fn).toBe("first"));
 
     expect(within(panel).getByRole("group", { name: "Hazır değerler" })).toBeInTheDocument();
-    const ready = within(panel).getByRole("button", { name: "Hazır değer ekle: Ortalama verimlilik" });
+    const ready = within(panel).getByRole("button", { name: "Hazır değer ekle: Kullanılabilirlik" });
     await user.click(ready);
     await waitFor(() => expect((bodies.pivot[bodies.pivot.length - 1].values as object[])).toHaveLength(5));
     const values = bodies.pivot[bodies.pivot.length - 1].values as Record<string, unknown>[];
     expect(values[3]).toEqual({ id: "d4", fn: "sum", field: "AvailableCapacity" });                      // eksik işlenen eklendi
     expect(values[4]).toEqual({ id: "d5", kind: "calc", a: "d4", op: "div", b: "d2", percent: true });     // var olan işlenen (Toplam kapasite · Toplam) kullanıldı
-    expect(await within(panel).findByRole("button", { name: "Ortalama verimlilik · Toplamlardan" })).toBeInTheDocument();
+    expect(await within(panel).findByRole("button", { name: "Kullanılabilirlik · Toplamlardan" })).toBeInTheDocument();
     expect(ready).toBeDisabled();
   });
 
@@ -159,12 +177,25 @@ describe("dönem tablosu deneme sayfası (K-184)", () => {
       [`${LIST}/groups`]: { status: 422, body: { error: { code: "validation", message: "Girilen bilgiler geçersiz.", trace_id: "t",
                                                           details: [{ field: "aggregates.Efficiency.weight", problem: "Ağırlıklı ortalama için başka bir sayı alanı seçilmeli" }] } } },
     });
-    renderApp("/donem-tablosu", meAs("Key user"));
+    renderApp(PATH, meAs("Key user"));
     await screen.findByText("KG-1", {}, { timeout: 5000 });
     await user.click(screen.getByRole("button", { name: /^Grupla/ }));
     await user.selectOptions(await screen.findByRole("combobox", { name: "Gruplanacak alan" }), "Ay");
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Liste okunamadı");
     expect(alert).toHaveTextContent("Ağırlıklı ortalama için başka bir sayı alanı seçilmeli");
+  });
+});
+
+describe("ekran 30 · yetki (K-185)", () => {
+  it("End user ekranı görür: özet salt okunur, kayıt ekleme ya da düzenleme denetimi yok", async () => {
+    backend();
+    renderApp(PATH, meAs("End user"));
+    const table = await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 });
+    await within(table).findByText("KG-1");
+    expect(screen.getByRole("heading", { level: 1, name: "Kapasite yönetimi" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Kapasite yönetimi" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Parametreler" })).toBeNull();          // Parametreler End user'da yok; Kapasite yönetimi istisna
+    expect(screen.queryByRole("button", { name: /Yeni kayıt|Kaydet|Düzenle/ })).toBeNull();
   });
 });

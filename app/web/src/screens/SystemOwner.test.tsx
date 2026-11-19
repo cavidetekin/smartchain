@@ -335,11 +335,24 @@ describe("yetki matrisi (ekran 22)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Yetki matrisi" });
     expect(dialog).toHaveClass("sc-dialog--xwide");
     const table = await within(dialog).findByRole("table", { name: "Yetki matrisi" });
-    expect(within(table).getAllByRole("row")).toHaveLength(20);
+    const groups = (matrix as unknown as { groups: unknown[] }).groups.length;
+    const rows = within(table).getAllByRole("row");
+    // düzeyi grubundan farklı olan fonksiyon grubunun altında kendi satırında (K-186): ad ve numara ekranda görünür
+    const exceptions = rows.filter((r) => r.classList.contains("sc-matrix-function"));
+    expect(rows).toHaveLength(1 + groups + exceptions.length);
+    const listed = exceptions.map((r) => within(r).getByRole("rowheader").textContent ?? "");
+    expect(listed).toEqual(expect.arrayContaining(["24 · Kapasite yönetimi", "86 · Excel'e aktarma"]));
+    // yalnız istisnalar: listelenen numaralar yetki matrisindeki istisna listesiyle birebir (grubuyla aynı düzeydeki fonksiyon listelenmez)
+    expect(listed.map((t) => t.split(" · ")[0]).sort()).toEqual(Object.keys((matrix as unknown as { exceptions: Record<string, string> }).exceptions).sort());
+    const capacity = within(table).getByRole("row", { name: /^24 · Kapasite yönetimi / });
+    expect(within(capacity).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Tam", "Tam", "Tam", "Salt okunur"]);
+    expect(within(capacity).getAllByRole("cell").map((c) => c.classList.contains("is-different"))).toEqual([false, false, false, true]);
+    expect(capacity.previousElementSibling).toHaveTextContent(/^Parametre/);                 // grubunun hemen altında
+    expect(capacity).toHaveAttribute("title", expect.stringContaining("End user görür"));
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Fonksiyon grubu", "System owner", "Admin", "Key user", "End user"]);
     const parameter = within(table).getByRole("row", { name: /^Parametre / });
     expect(within(parameter).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Tam", "Tam", "Tam", "Yok"]);
-    expect(within(table).getAllByRole("rowheader")[1]).toHaveTextContent(/^Ana veri$/);
+    expect(within(table).getAllByRole("rowheader").filter((h) => !h.closest(".sc-matrix-function"))[1]).toHaveTextContent(/^Ana veri$/);
     expect(dialog.textContent).not.toMatch(/\d+–\d+/);
     expect(within(dialog).getAllByRole("table")).toHaveLength(1);
     expect(dialog).not.toHaveTextContent("İstisnalar");

@@ -234,14 +234,14 @@ def test_resource_side_in_the_dictionary(db_engine):
     """K-117, K-180: kalkan tablolar ve alanlar sözlükte yok; tip, kritik ve fasoncu kaynak grubunda; grup eşleşmesi; geçici kapasite alanı zorunlu değil."""
     with db_engine.connect() as c:
         rows = {(r.TableName, r.FieldName): r for r in c.execute(text("SELECT TableName, FieldName, StandardLabel, IfEmpty, IsRequired FROM adm.FieldDefinition"))}
-    assert not {t for t, _ in rows} & {"Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence", "ResourceGroupAssignment", "Shift", "ShiftPlan", "OvertimeLimit"}
+    assert not {t for t, _ in rows} & {"Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence", "ResourceGroupAssignment", "Shift", "ShiftPlan"}
     gone = ("ResourceRole", "ResourceGroupId", "IsConstrained", "SupplierId", "IsCritical", "CapacityUnit", "SubcontractorId", "IsEmployee", "IsMachine", "CapacitySource", "Quantity")
     assert not {("Resource", f) for f in gone} & set(rows)
     assert not {("ResourceGroup", "IsCompetenceGroup"), ("ResourceGroup", "IsResourceGroup"), ("Routing", "ResourceId"), ("AllocationRule", "ResourceId"), ("CapacityLoad", "ResourceId")} & set(rows)
     assert rows[("ResourceGroup", "IsCritical")].StandardLabel == "Kritik" and rows[("ResourceGroup", "IsCritical")].IfEmpty == "hata (kurallardan sonra)"
     assert rows[("ResourceGroup", "SubcontractorId")].StandardLabel == "Fasoncu" and rows[("ResourceGroup", "IsEmployee")].StandardLabel == "İşçi"
     assert rows[("ResourceGroup", "Type")].StandardLabel == "Grup tipi" and rows[("Resource", "ResourceType")].StandardLabel == "Kaynak tipi"
-    assert not rows[("Resource", "DailyCapacity")].IsRequired and not rows[("Resource", "CalendarId")].IsRequired and not rows[("Resource", "ResourceType")].IsRequired
+    assert not {("Resource", "DailyCapacity"), ("Resource", "CalendarId")} & set(rows) and not rows[("Resource", "ResourceType")].IsRequired  # kapasite alanları kalktı (K-185)
     assert rows[("ResourceGroupMember", "ResourceGroupId")].IsRequired and rows[("ResourceGroupMember", "ResourceGroupId")].StandardLabel == "Kaynak grubu"
     assert ("ResourceGroupMember", "AdditionalText3") in rows and ("ResourceGroupMember", "ValidFrom") not in rows
     assert rows[("EmployeeAbsence", "HoursPerDay")].StandardLabel == "Günlük saat"

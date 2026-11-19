@@ -801,6 +801,8 @@ export const tr = {
     removeRule: (text: string) => `Kuralı kaldır: ${text}`,
     editRule: (text: string) => `Kuralı düzenle: ${text}`,
     rulesOnTotals: "Toplamlara da uygula",
+    rowFormat: "Satır biçimi",
+    fitWidth: "Genişlik: sürükleyin; içeriğe sığdırmak için çift tıklayın",
     exportFailed: "Pivot dışa aktarılamadı",
     total: "Toplam",
     grandTotal: "Genel toplam",
@@ -1368,8 +1370,8 @@ export const tr = {
       "chart-2": "Petrol", "lead-100": "Açık kurşun", "lead-600": "Kurşun", "lead-900": "Koyu kurşun",
     } as Record<string, string>,
   },
-  // Dönem tablosu deneme sayfası (K-184; menüde yok, 7.9'da kalkar)
-  periodDemo: { title: "Kaynak grubu × dönem (deneme)" },
+  // Kapasite yönetimi (ekran 30, K-185)
+  capacity: { title: "Kapasite yönetimi", sections: "Kapasite yönetimi bölümleri", tabs: { summary: "Kapasite özeti" } },
   demo: {
     title: "Tablo bileşeni",
     intro: "Ortak tablo bileşeni denemesi (K-87, docs/12): sentetik malzeme listesi. Ekran değildir; menüde yer almaz.",

@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { meAs, mockApi, renderApp, type Reply } from "../test/helpers";
 import { ApiError } from "../api/client";
-import { groupStarts, headerCells, reasonOf } from "./PivotGrid";
+import { groupStarts, headerCells, reasonOf, rowGroup } from "./PivotGrid";
 import {
   defaultFn, dropOrphans, emptyPivot, fitPivot, pivotExportRequest, fnLabel, fnsFor, formatPivotCell, normalizePivot, type PivotColumn, type PivotConfig, type PivotData, pivotReady, pivotRequest, type PivotRequest,
   type PivotValueInfo, valueDisplay, valueLabel, valueName,
@@ -120,8 +120,24 @@ const openSections = async (user: ReturnType<typeof userEvent.setup>, names = ["
     if (head.getAttribute("aria-expanded") === "false") await user.click(head);
   }
 };
-const bodyRows = () => within(grid()).getAllByRole("row").filter((r) => r.hasAttribute("aria-rowindex"))
-  .map((r) => [...r.querySelectorAll("th, td")].map((c) => c.textContent ?? ""));
+/** Gövde satırlarının hücre yazıları; üstteki birleşik hücrenin (rowspan, K-186) kapladığı yer boş yazıyla doldurulur. */
+const bodyRows = () => {
+  const carry: number[] = [];
+  return within(grid()).getAllByRole("row").filter((r) => r.hasAttribute("aria-rowindex")).map((r) => {
+    const cells = [...r.querySelectorAll("th, td")];
+    const out: string[] = [];
+    let at = 0;
+    while (cells.length || (carry[at] ?? 0) > 0) {
+      if ((carry[at] ?? 0) > 0) { carry[at] -= 1; out.push(""); } else {
+        const c = cells.shift()!;
+        carry[at] = Number(c.getAttribute("rowspan") ?? 1) - 1;
+        out.push(c.textContent ?? "");
+      }
+      at += 1;
+    }
+    return out;
+  });
+};
 
 describe("pivot modeli", () => {
   it("etiket, hazır olma, istek ve uyarlama", () => {
@@ -518,5 +534,120 @@ describe("ayar panelinin bölümleri (K-183, 7.7b demo kararı)", () => {
     await user.click(within(panel()).getByRole("button", { name: "Paneli kapat" }));
     await menuItem(user, "Pivot ayarları");
     expect(sections()).toMatchObject({ "Satırlar1": "false", "Sütunlar": "false", "Değerler": "false" });
+  });
+});
+
+describe("pivot · 7.9a demo bulguları (K-186)", () => {
+  it("başlık: üst ve alt başlığı aynı yazı olan tek alt sütun tek hücrede birleşir; iki alt sütunlu grup birleşmez", () => {
+    // Ay › Dönem: Kasım'ın iki haftası var; Aralık ve Ocak aylık dönem (alt başlık aynı yazı)
+    const cols: PivotColumn[] = [
+      { key: ["Kas 2026", "H47 2026"], level: 2, total: false }, { key: ["Kas 2026", "H48 2026"], level: 2, total: false },
+      { key: ["Ara 2026", "Ara 2026"], level: 2, total: false }, { key: ["Oca 2027", "Oca 2027"], level: 2, total: false },
+    ];
+    const fields = [{ field: "Month", type: "text" as const, bucket: null }, { field: "Period", type: "text" as const, bucket: null }];
+    expect(headerCells(cols, 0, 2, 1, fields).map((h) => [h.label, h.colSpan, h.rowSpan])).toEqual([["Kas 2026", 2, 1], ["Ara 2026", 1, 2], ["Oca 2027", 1, 2]]);
+    expect(headerCells(cols, 1, 2, 1, fields).map((h) => [h.label, h.colSpan, h.rowSpan])).toEqual([["H47 2026", 1, 1], ["H48 2026", 1, 1]]);
+    // ara toplam sütunu olan grupta tek alt sütun değildir: birleşmez
+    const withTotal: PivotColumn[] = [{ key: ["Ara 2026", "Ara 2026"], level: 2, total: false }, { key: ["Ara 2026"], level: 1, total: true }];
+    expect(headerCells(withTotal, 0, 2, 1, fields).map((h) => [h.label, h.colSpan, h.rowSpan])).toEqual([["Ara 2026", 2, 1]]);
+    expect(headerCells(withTotal, 1, 2, 1, fields).map((h) => [h.label, h.rowSpan])).toEqual([["Ara 2026", 1], ["Toplam", 1]]);
+  });
+
+  it("satır grubu: aynı öneki paylaşan satırlar tek hücre; ara toplam dış düzeyin grubunda, kendi adı ayrı; genel toplam ayrı", () => {
+    const row = (key: (string | null)[], level: number, total = false) => ({ key, level, total, cells: [] });
+    expect(rowGroup(row(["A", "x"], 2), 0, 0)).toBe(rowGroup(row(["A", "y"], 2), 1, 0));
+    expect(rowGroup(row(["A", "x"], 2), 0, 1)).not.toBe(rowGroup(row(["A", "y"], 2), 1, 1));
+    expect(rowGroup(row(["A", "x"], 2), 0, 0)).not.toBe(rowGroup(row(["B", "x"], 2), 3, 0));
+    expect(rowGroup(row(["A"], 1, true), 2, 0)).toBe("#2");                               // "A toplamı" kendi hücresi
+    expect(rowGroup(row(["A", "x"], 2, true), 2, 0)).toBe(rowGroup(row(["A", "x"], 2), 0, 0));   // iç ara toplam dış grubun içinde
+    expect(rowGroup(row([], 0, true), 5, 0)).toBe("#5");
+  });
+
+  it("ızgara: dış düzeyin hücresi grubu boyunca birleşir, yazısı yapışkan; dış gruplar arasında çizgi; değerler satırlardayken iç alan da birleşir", async () => {
+    const { user } = await open(viewWith({ ...PIVOT, totals: { rows: true, columns: false, subtotals: true } }));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A toplamı");
+    const head = (name: string) => within(grid()).getByRole("rowheader", { name });
+    expect(head("MUS-A")).toHaveAttribute("rowspan", "2");                          // iki malzeme; ara toplam satırı kendi hücresinde
+    expect((head("MUS-A").querySelector(".sc-pivot-rowkey-text") as HTMLElement).style.top).toMatch(/^5\.38\d*rem$/);   // başlığın altında yapışır (2,1538 + 3,2308)
+    expect(within(grid()).getAllByRole("rowheader", { name: "MUS-A" }).length).toBe(1);
+    expect(head("MUS-B")).not.toHaveAttribute("rowspan");
+    const lines = within(grid()).getAllByRole("row").filter((r) => r.hasAttribute("aria-rowindex")).map((r) => r.classList.contains("is-row-group-start"));
+    expect(lines).toEqual([false, false, false, true, false, true]);              // MUS-B ve Genel toplam yeni dış grup
+    await menuItem(user, "Pivot ayarları"); await openSections(user);
+    await user.click(within(panel()).getByRole("radio", { name: "Satırlarda" }));
+    await waitFor(() => expect(within(grid()).getByRole("columnheader", { name: "Değer" })).toBeInTheDocument());
+    expect(head("MUS-A")).toHaveAttribute("rowspan", "4");                          // 2 malzeme × 2 değer satırı
+    expect(within(grid()).getAllByRole("rowheader", { name: "MAM-001" })[0]).toHaveAttribute("rowspan", "2");
+    expect(head("MUS-A toplamı")).toHaveAttribute("rowspan", "2");
+  });
+
+  it("tek satır alanı ve değerler sütunlardayken birleşme ve grup çizgisi yok", async () => {
+    const unique = (req: PivotRequest): Reply => {   // sahte veri tek alanda aynı anahtarı yineler; gerçek sunucuda anahtar tekildir
+      const d = data(req);
+      return { body: { ...d, rows: d.rows.filter((r, i, all) => all.findIndex((x) => x.key[0] === r.key[0]) === i), row_count: 2 } };
+    };
+    await open(viewWith({ ...PIVOT, rows: [{ field: "CustomerCode" }] }), unique);
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findAllByText("MUS-A");
+    expect(grid().querySelectorAll("tr.is-row-group-start").length).toBe(0);
+    expect(grid().querySelectorAll("tbody th[rowspan]").length).toBe(0);
+  });
+
+  it("satır başlığı genişliği: başlık kesilmeyecek genişlikte gelir; ok tuşu ve çift tıkla ayarlanır; görünümle saklanır, Excel isteğine gider", async () => {
+    const { user, saved } = await open(viewWith({ ...PIVOT, values_on: "rows" }));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
+    const cols = () => [...grid().querySelectorAll("colgroup col")].slice(0, 3).map((c) => parseFloat((c as HTMLElement).style.width));
+    expect(cols()[0]).toBeGreaterThanOrEqual(11);
+    const handle = within(grid()).getByRole("separator", { name: "Müşteri genişliği" });
+    handle.focus();
+    await user.keyboard("{ArrowRight}{ArrowRight}");
+    await waitFor(() => expect(cols()[0]).toBe(12));
+    await user.dblClick(within(grid()).getByRole("separator", { name: "Değer genişliği" }));   // içeriğe sığdır
+    await waitFor(() => expect(cols()[2]).not.toBe(14));
+    await menuItem(user, "Kaydet");
+    await waitFor(() => expect(saved.length).toBeGreaterThan(0));
+    const stored = saved[saved.length - 1].definition.pivot!;
+    expect(stored.widths?.CustomerCode).toBe(12);
+    expect(Object.keys(stored.widths ?? {}).sort()).toEqual(["CustomerCode", "__value"]);
+  });
+
+  it("değerin satır biçimi: panelden kalın ve renk; satırlarda satıra, sütunlarda sütuna; kural tutan hücrede kural kazanır", async () => {
+    const formatted: PivotConfig = { ...PIVOT, values: [{ ...PIVOT.values[0], format: { fill: "#ffe8a3", bold: true },
+                                                         rules: [{ id: "r1", enabled: true, condition: { op: "always" }, format: { fill: "#c8e6c9" } }] }, PIVOT.values[1]] };
+    const { user, last } = await open(viewWith(formatted));
+    await within(await screen.findByRole("table", { name: "Pivot" }, { timeout: 5000 })).findByText("MUS-A");
+    const firstRow = () => within(grid()).getAllByRole("row").filter((r) => r.hasAttribute("aria-rowindex"))[0];
+    const cells = () => [...firstRow().querySelectorAll("td")];
+    expect(cells()[0]).toHaveStyle({ backgroundColor: "#c8e6c9" });                 // kural tuttu: kuralın zemini; kalın satır biçiminden kalır
+    expect(cells()[0].style.fontWeight).not.toBe("");
+    expect(cells()[2]).toHaveStyle({ backgroundColor: "#ffe8a3" });                 // aynı değerin öteki sütunu: satır biçimi
+    expect(cells()[1].style.backgroundColor).toBe("");                              // öteki değerin sütunu biçimsiz
+    expect(JSON.stringify(last())).not.toContain("ffe8a3");                         // biçim yalnız gösterim: pivot isteğine gitmez
+    await menuItem(user, "Pivot ayarları"); await openSections(user);
+    await user.click(within(panel()).getByRole("radio", { name: "Satırlarda" }));
+    await waitFor(() => expect(within(grid()).getByRole("columnheader", { name: "Değer" })).toBeInTheDocument());
+    const lines = within(grid()).getAllByRole("row").filter((r) => r.hasAttribute("aria-rowindex"));
+    expect(within(lines[0]).getByRole("rowheader", { name: "Açık miktar · Toplam" })).toHaveStyle({ backgroundColor: "#ffe8a3" });   // değer adı hücresi de
+    expect([...lines[0].querySelectorAll("td")][1]).toHaveStyle({ backgroundColor: "#ffe8a3" });
+    expect([...lines[1].querySelectorAll("td")][1].style.backgroundColor).toBe("");
+    // panelde "Satır biçimi": kalın işaretli; kaldırınca biçimden düşer
+    await user.click(within(panel()).getByRole("button", { name: "Açık miktar · Toplam" }));
+    const group = await within(panel()).findByRole("group", { name: "Satır biçimi: Açık miktar · Toplam" });
+    const bold = within(group).getByRole("checkbox", { name: "Kalın" });
+    expect(bold).toBeChecked();
+    await user.click(bold);
+    await waitFor(() => expect(within(lines[0]).getByRole("rowheader", { name: "Açık miktar · Toplam" }).style.fontWeight).toBe(""));
+  });
+
+  it("model: boş biçim ve genişlik saklanmaz; alanı kalkan kolonun genişliği düşer; Excel isteği biçimi ve genişliği taşır", () => {
+    const p = normalizePivot({ ...PIVOT, widths: { CustomerCode: 14, Gone: 9, __value: 20 },
+                               values: [{ ...PIVOT.values[0], format: { bold: false } }, { ...PIVOT.values[1], format: { color: "#112233" } }] })!;
+    expect(p.values[0].format).toBeUndefined();
+    expect(p.values[1].format).toEqual({ color: "#112233" });
+    expect(normalizePivot(PIVOT)!.widths).toBeUndefined();
+    expect(fitPivot(p, COLUMNS)!.widths).toEqual({ CustomerCode: 14, __value: 20 });
+    const exp = pivotExportRequest(fitPivot(p, COLUMNS)!, [], null, undefined, byField) as { widths?: Record<string, number>; values: { format?: unknown }[] };
+    expect(exp.widths).toEqual({ CustomerCode: 14, __value: 20 });
+    expect(exp.values.map((v) => v.format)).toEqual([undefined, { color: "#112233" }]);
+    expect(JSON.stringify(pivotRequest(p, [], null, undefined, 0, 100))).not.toMatch(/widths|format/);
   });
 });

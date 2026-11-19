@@ -64,15 +64,15 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 ## Kaynak modeli notları (7.5, K-180)
 
 - Planlama birimi kaynak grubudur: rota ve iş emri operasyonu kaynak grubunu ve gruptan aynı anda kullanılan kaynak adedini verir; kaynak alanı yoktur. Plan ve yük grup düzeyindedir (`CapacityLoad.ResourceGroupId`).
-- Kapasite kaynakta hesaplanır, grupta toplanır (hesap 7.9'da); gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir.
-- Kritik olmayan grup (`ResourceGroup.IsCritical` = Hayır) sonsuz kapasiteli sayılır ve yalnız raporlanır.
+- Kapasite kaynak grubu × kaynak × gün hesaplanır, grupta toplanır (K-185; `app/capacity/compute.py`); gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir. Birden fazla gruba üye kaynak her grupta o grubun değeriyle hesaplanır.
+- Motor yalnız kritik grupları kısıtlar (K-185); kritik olmayan grup (`ResourceGroup.IsCritical` = Hayır) sonsuz kapasiteli sayılır ve yalnız raporlanır (kapasitesi yine hesaplanır, Kapasite özeti'nde görünür).
 - Birden fazla gruba üye kaynağın (ortak üye, ör. iki yetkinliği olan işçi) kapasitesini yalnız kritik grupların yükü kullanır.
 - Kaynağı olmayan kritik grubun kapasitesi sıfırdır; doğrulama ve veri kalitesi uyarır (`RG.NO_RESOURCE`).
 - Tip bilgisi grubun bayraklarından okunur (`IsEmployee`, `IsMachine`, `IsSubcontractor`…); kaynaktaki ham tip yalnız bilgidir. Vardiya kavramı yoktur.
 
 ## Dönem değerleri (7.8, K-184)
 
-Kapasite gibi dönem bazındaki değerlerin tek bir hesabı vardır: `app/periods/` altındaki hesap işlevi. Ekran bu işlevle kurulan önbellekten okur; motor plan hesabında aynı işlevi doğrudan çağırır (`app.periods.values(session, ad, senaryo, gün aralığı)`; önbellekten okumaz). İkisinin birebir aynı sonucu verdiği testle sabittir. Motor yükleyicisinin bu işleve bağlanması 7.9'da (gerçek kapasite hesabıyla).
+Kapasite gibi dönem bazındaki değerlerin tek bir hesabı vardır. Kapasitede: `app.periods.values(session, "resource-capacity-day", senaryo, gün aralığı)` → kaynak grubu × kaynak × gün satırları (`WorkingDay`, `Downtime`, `DailyCapacity`, `Capacity`, `AvailableCapacity`, `OvertimeLimit`; senaryonun Baz'dan okuduğu girişler dahil). Ekran bu işlevle kurulan önbellekten okur; motor plan hesabında aynı işlevi doğrudan çağırır (önbellekten okumaz). İkisinin birebir aynı sonucu verdiği testle sabittir (`tests/test_capacity.py`). Motor yükleyicisinin bu işleve bağlanması 7.9c'de.
 
 ## Sahte motor (`app/engine/fake.py`)
 

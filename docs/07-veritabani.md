@@ -71,19 +71,15 @@
 | `prc.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 29 |
 | `prc.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
 
-## `core` · Ana veri ve işlem verisi (31 tablo)
+## `core` · Ana veri ve işlem verisi (27 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
 | `core.Location` | Lokasyon (tesis, depo). Faz 1'de her lokasyon kendi içinde planlanır. | Ana veri |  | 25 |
 | `core.UnitOfMeasure` | Ölçü birimi. | Ana veri |  | 3 |
 | `core.UomConversion` | Malzeme bazında birim dönüşümü. | Ana veri | evet | 7 |
-| `core.Calendar` | Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 3 |
-| `core.CalendarDay` | Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 4 |
-| `core.Resource` | Kaynak: tek bir makine, işçi ya da fason iş yeri. Planlama birimi kaynak değil kaynak grubudur (K-180): tip bayrakları, kritiklik, kapasite birimi ve fasoncu gruptadır; kaynak gruplarına `ResourceGroupMember` ile bağlanır. | Ana veri | evet | 24 |
+| `core.Resource` | Kaynak: tek bir makine, işçi ya da fason iş yeri. Planlama birimi kaynak değil kaynak grubudur (K-180): tip bayrakları, kritiklik, kapasite birimi ve fasoncu gruptadır; kaynak gruplarına `ResourceGroupMember` ile bağlanır. | Ana veri | evet | 19 |
 | `core.ResourceGroup` | Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez. | Ana veri | evet | 25 |
-| `core.ResourceCapacityProfile` | Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 5 |
-| `core.ResourceDowntime` | Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65). | Ana veri | evet | 8 |
 | `core.ResourceGroupMember` | Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180). | Ana veri | evet | 9 |
 | `core.EmployeeAbsence` | Kişi bazında izin ve rapor. | İşlem verisi | evet | 7 |
 | `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 44 |
@@ -107,12 +103,10 @@
 | `core.TransferOrder` | Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep). | İşlem verisi | evet | 13 |
 | `core.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | İşlem verisi | evet | 13 |
 
-## `param` · Planlama parametreleri ve senaryo tanımları (10 tablo)
+## `param` · Planlama parametreleri ve senaryo tanımları (13 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `param.ResourceEfficiency` | Kaynak ve dönem bazında verim (kapasite katsayısı); senaryoya özel. | Parametre |  | 6 |
-| `param.ResourcePeriodLimit` | Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180). | Parametre |  | 6 |
 | `param.SupplierLimit` | Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66). | Parametre |  | 7 |
 | `param.PlanningSetting` | Senaryonun planlama parametreleri (anahtar–değer; K-175). Anahtarlar, tipleri, seçenekleri ve başlangıç değerleri docs/06 fonksiyon 22'deki tabloda (`app/params/catalog.py`). | Parametre |  | 3 |
 | `param.TimeBucketDefinition` | Zaman yapısı: senaryonun ufuk ve dönem dizisi. Kullanıcı tarih girmez; her satır bir parçadır: dönem tipi (dönemlerin büyüklüğü) ve kapsam (parçanın ne kadar sürdüğü). Başlangıç ve bitiş plan başlangıcına göre hesaplanır (fonksiyon 23, K-175). Raporlama ekseni ayrı diziyse `Axis` = Rapor satırları. Dönem tipleri ve kapsam birimleri iki eksende aynıdır; kapsam birimi dönem tipinden küçük olamaz (çeyrek ve yıl dönem tipinde Ay da olabilir). | Parametre |  | 6 |
@@ -121,6 +115,11 @@
 | `param.AllocationRule` | Kapasite alokasyonu: talep sınıfına kaynak grubu ve dönem bazında pay (K-180). | Parametre |  | 8 |
 | `param.WarningDefinition` | Uyarı tanımı, eşik ve önem seviyesi. | Parametre |  | 5 |
 | `param.ScenarioDefinition` | Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz. | Parametre |  | 9 |
+| `param.WorkPattern` | Çalışma düzeni (K-185): günlük kapasite ve haftanın günleri. Çalışma günü yalnız buradan gelir. Geçerlilik: önce seviye (kaynakta o günü kapsayan kayıt varsa kaynağınkiler, yoksa grubunkiler), sonra başlangıcı en ileri olan. | Parametre |  | 19 |
+| `param.ResourceEfficiency` | Verimlilik (K-185): kapasite katsayısı, yüzde. Giriş yoksa %100. Geçerlilik kuralı çalışma düzenindeki gibi, kendi kayıtlarından. | Parametre |  | 12 |
+| `param.OvertimeLimit` | Ek mesai limiti (K-185): çalışılan günde kaynak başına yapılabilecek ek mesai, grubun kapasite biriminde. Giriş yoksa ek mesai yok. Her gruba girilebilir. ERP'den gelen kalan fazla mesai (kaynakta) ayrıdır, birleştirilmez. | Parametre |  | 12 |
+| `param.ResourceDowntime` | Bakım ve duruş (K-185): kapasiteden düşülür. Gruba girilen duruş grubun bütün kaynaklarına uygulanır. Geçerlilik kuralının dışındadır: duruşlar birleşir, gün bir kez düşer. Çalışan izni ERP'den gelir (`core.EmployeeAbsence`), burada tutulmaz. | Parametre |  | 13 |
+| `param.FactoryCalendar` | Fabrika takvimi (K-185): bütün kaynak gruplarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır. | Parametre |  | 11 |
 
 ## `planning` · Senaryo, çalışma ve plan çıktıları (12 tablo)
 
@@ -187,6 +186,6 @@
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
-| `cache.ResourceCapacityDay` | Kaynak × gün kapasite ara sonucu (K-184): dönem tablosu "Kaynak grubu × dönem" bundan toplanır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız kendi girişi olan kaynak ve günler (gerisi Baz'ın satırlarından okunur). 7.8'de deneme hesabının alanlarını taşır; 7.9'da gerçek kapasite alanlarıyla yeniden düzenlenir. Kümelenmiş anahtar senaryo, kaynak, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan. | Önbellek |  | 6 |
+| `cache.ResourceCapacityDay` | Kaynak grubu × kaynak × gün kapasite ara sonucu (K-184, K-185): dönem tablosu "Kaynak grubu × dönem" bundan toplanır. Grup kaydı o grubun içinde uygulandığı için birden fazla gruba üye kaynak her grubunda ayrı satırdır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız Baz'dan farklı çıkan satırlar (gerisi Baz'ın satırlarından okunur). Kümelenmiş anahtar senaryo, kaynak, grup, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan. | Önbellek |  | 10 |
 | `cache.PeriodCacheState` | Önbelleğin durumu (K-184): önbellek ve senaryo başına tek satır. Satır yoksa önbellek kurulmamıştır; hesap kodunun sürümü ya da veri versiyonu farklıysa önbellek düşürülüp yeniden kurulur; gün aralığı ufkun gerisinde kaldıysa geçmiş günler temizlenir, ufuk ilerlediyse yalnız eksik günler hesaplanır. | Önbellek |  | 7 |
 

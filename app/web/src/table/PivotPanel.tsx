@@ -5,11 +5,12 @@ import { type DragEvent, type ReactNode, useState } from "react";
 
 import { tr } from "../i18n/tr";
 import { BUCKETS, type ChartBucket } from "../ui/chart/chartModel";
-import { NumberField, Segment, SelectField, TextField } from "../ui";
+import { Checkbox, NumberField, Segment, SelectField, TextField } from "../ui";
+import { ColorPicker } from "../ui/ColorPicker";
 import { SwitchCell } from "./CellEditors";
 import { FieldPanel } from "./FieldPanel";
 import {
-  canRule, defaultFn, dropOrphans, fnLabel, fnsFor, isAxisField, isCalc, isDate, isNumeric, isOperand, isPivotField, nextValueId, type PivotAxis, type PivotConfig,
+  canRule, cleanRowFormat, defaultFn, dropOrphans, fnLabel, fnsFor, isAxisField, isCalc, isDate, isNumeric, isOperand, isPivotField, nextValueId, type PivotAxis, type PivotConfig,
   type PivotFn, PIVOT_MAX_AXIS, PIVOT_MAX_DISTINCT, PIVOT_MAX_RULES, PIVOT_MAX_VALUES, type PivotOp, PIVOT_OPS, type PivotRule, type PivotValue, valueDisplay,
   valueLabel, valueName,
 } from "./pivotModel";
@@ -189,6 +190,22 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
     );
   };
 
+  // Değerin satır biçimi (K-186): zemin, yazı rengi, kalın; renk seçici koşullu biçimdekiyle aynı
+  const rowFormatOf = (v: PivotValue) => {
+    const f = v.format ?? {};
+    const set = (next: typeof f) => setValue(v.id, { format: cleanRowFormat(next) });
+    return (
+      <fieldset className="sc-rule-format" aria-label={`${T.rowFormat}: ${valueName(v, byField)}`}>
+        <legend className="sc-field-label">{T.rowFormat}</legend>
+        <div className="sc-rule-grid">
+          <ColorPicker label={tr.table.ruleFill} value={f.fill} onChange={(fill) => set({ ...f, fill })} />
+          <ColorPicker label={tr.table.ruleColor} value={f.color} onChange={(color) => set({ ...f, color })} />
+        </div>
+        <Checkbox label={tr.table.ruleBold} checked={Boolean(f.bold)} onChange={(bold) => set({ ...f, bold })} />
+      </fieldset>
+    );
+  };
+
   const picker = (list: "rows" | "columns" | "values") => adding === list && (
     <FieldPanel columns={baseColumns} visibility={{}} onToggle={() => undefined} onReset={() => undefined} relations={relations} order={usedFields}
                 loadRelated={loadRelated} label={list === "values" ? T.addValue : T.addField}
@@ -265,6 +282,7 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
                     <Segment<"number" | "percent"> label={T.display} value={v.percent ? "percent" : "number"} onChange={(d) => setValue(v.id, { percent: d === "percent" })}
                                                     options={[{ value: "number", label: T.asNumber }, { value: "percent", label: T.asPercent }]} />
                     <NumberField label={T.decimals} value={v.decimals ?? null} onChange={(n) => setValue(v.id, { decimals: n === null ? null : Math.max(0, Math.min(6, Math.round(n))) })} />
+                    {rowFormatOf(v)}
                     {rulesOf(v)}
                   </div>
                 )}
@@ -283,6 +301,7 @@ export function PivotPanel({ pivot, columns, baseColumns, relations, usedFields,
                     {v.fn !== "count" && v.fn !== "distinct" && (
                       <NumberField label={T.decimals} value={v.decimals ?? null} onChange={(n) => setValue(v.id, { decimals: n === null ? null : Math.max(0, Math.min(6, Math.round(n))) })} />
                     )}
+                    {rowFormatOf(v)}
                     {canRule(v, byField) && rulesOf(v)}
                   </div>
                 )}

@@ -1,5 +1,6 @@
-// Yetki matrisi (fonksiyon 90, K-100; ekran 22'den açılır): 14 grup × 4 rol. İstisnalar Excel'de, fonksiyon düzeyinde görünür.
-import { useEffect, useState } from "react";
+// Yetki matrisi (fonksiyon 90, K-100; ekran 22'den açılır): grup × 4 rol. Düzeyi grubundan farklı olan fonksiyon grubunun altında kendi
+// satırında (numara · ad; K-186); matrisin tamamı fonksiyon düzeyinde Excel'de.
+import { Fragment, useEffect, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { tr } from "../i18n/tr";
@@ -48,10 +49,18 @@ export function PermissionMatrixDialog({ onClose }: { onClose(): void }) {
             </thead>
             <tbody>
               {matrix.groups.map((g) => (
-                <tr key={g.key}>
-                  <th scope="row">{g.name}</th>
-                  {matrix.roles.map((r) => <td key={r}>{T.levels[g.levels[r]]}</td>)}
-                </tr>
+                <Fragment key={g.key}>
+                  <tr>
+                    <th scope="row">{g.name}</th>
+                    {matrix.roles.map((r) => <td key={r}>{T.levels[g.levels[r]]}</td>)}
+                  </tr>
+                  {(matrix.functions ?? []).filter((f) => f.no >= g.first && f.no <= g.last && matrix.roles.some((r) => f.levels[r] !== g.levels[r])).map((f) => (
+                    <tr key={f.no} className="sc-matrix-function" title={matrix.exceptions?.[String(f.no)]}>
+                      <th scope="row">{`${f.no} · ${f.name}`}</th>
+                      {matrix.roles.map((r) => <td key={r} className={f.levels[r] !== g.levels[r] ? "is-different" : undefined}>{T.levels[f.levels[r]]}</td>)}
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>

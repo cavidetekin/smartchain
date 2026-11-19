@@ -256,7 +256,7 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Şerit | Pivot açıkken Grupla ve Alanlar kapalıdır (ipucu: "Pivot görünümünde kullanılmaz"). |
 | Veri | Sunucuda hesaplanır (`POST /api/<liste>/pivot`); tablonun filtresi ve grafik seçimiyle. Ayar değişince 250 ms sonra yeniden istenir |
 | Satırlar | 1–3 alan, sırayla. Sayı (ondalıklı) alanı satır ya da sütun olamaz |
-| Sütunlar | 0–3 alan; başlık alan sayısı kadar katlıdır. Tarih alanında dönem tipi seçilir (Gün · Hafta · Ay · Çeyrek · Yıl); etiketler grafikteki gibi ("H47 2026", "Kas 2026", "Ç4 2026") |
+| Sütunlar | 0–3 alan; başlık alan sayısı kadar katlıdır. Tarih alanında dönem tipi seçilir (Gün · Hafta · Ay · Çeyrek · Yıl); etiketler grafikteki gibi ("H47 2026", "Kas 2026", "Ç4 2026"). Üst ve alt başlık aynı yazıysa (tek alt sütunlu grupta; ör. Ay › Dönem'de aylık dönem) tek hücrede birleşir (K-186); köşedeki alan adları başlık satırlarıyla aynı hizadadır |
 | Değerler | 1–8. Hesaplama: Toplam · Ortalama · En düşük · En yüksek · Say · Benzersiz say · Ağırlıklı ortalama (ağırlık alanı seçilir). Sayı alanında varsayılan Toplam. Tarih alanında En erken · En geç · Say · Benzersiz say (varsayılan En erken; hücre tarih biçiminde). Metin alanında Say · Benzersiz say (varsayılan Benzersiz say). "Ölçü" sözcüğü kullanılmaz |
 | Etiket | "Alan · Hesaplama"; ağırlıklı ortalamada "Alan · Ağırlıklı ortalama (ağırlık alanı)"; hesaplanan değerde (7.7b) "Ad · Toplamlardan". Sütun başlığında ve panel çipinde iki satır: üstte alan, altta soluk hesaplama; tam ad ipucunda. İki seviyeli ilişkili alanda kısa ad (son ilişki · alan). Değer ayarındaki "Ad" doluysa her yerde o ad yazılır (tek satır; otomatik ad ipucunda) |
 | Değerlerin yeri | Sütunlarda (her sütunun altında değerler) · Satırlarda (her satırda değerler alt alta; sütun alanı yan yana) |
@@ -264,7 +264,10 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Sıralama | Ada göre ya da bir değere göre, artan ya da azalan; her düzeyde kendi içinde |
 | Başlıkta süzme | Satır ve sütun alanının başlığındaki huni tablonun filtre penceresini açar; filtre tablonunkiyle ortaktır (çip, tablo görünümü) |
 | Sütun ayracı | En dıştaki sütun alanının her grubunun (ve sağdaki "Toplam" grubunun) solunda, başlıkta ve hücrelerde ince dikey çizgi |
-| Izgara | Başlık satırları ve soldaki satır başlıkları sabit; sütunlar yatay kayar. Satırlar sanal kaydırılır, parça parça yüklenir (satır sınırı yok). Dış satır alanının değeri grubunun ilk satırında ve ekrandaki ilk satırda yazılır |
+| Izgara | Başlık satırları ve soldaki satır başlıkları sabit; sütunlar yatay kayar. Satırlar sanal kaydırılır, parça parça yüklenir (satır sınırı yok) |
+| Satır hücrelerinin birleşmesi (K-186) | Aynı değere ait satırlarda dış düzeyin hücresi tek hücredir; değerler satırlardayken en içteki satır alanı da değer satırları boyunca birleşir. Değer hücrenin üstünde yazar ve grup kaydırılırken başlığın altında görünür kalır. En dıştaki satır gruplarının arasında ince (1 px) yatay çizgi vardır; sütunlardaki dikey ayraç 2 px kalır (tek satır alanı ve değerler sütunlardayken grup olmadığı için çizgi yoktur). Excel'de karşılığı grubun ilk satırının üstünde ince kenarlıktır. Ara toplam ve genel toplam satırının adı kendi satırlarında yazar |
+| Satır başlığı genişliği (K-186) | Satır alanı kolonlarının ve "Değer" kolonunun genişliği ayarlanır: başlığın sağ kenarından sürükleyerek; odaktayken sol · sağ ok tuşlarıyla; çift tıklayınca içeriğe sığacak kadar (başlık ve yüklü satırlardaki en uzun yazı). Sınırlar tablodaki kolon genişliğiyle aynı. Genişlik görünümle saklanır (`pivot.widths`). Ayarlanmamış kolon başlığı (alan adı ve huni) kesilmeyecek genişlikte gelir; "Değer" kolonu en uzun değer adına göre |
+| Değerin satır biçimi (K-186) | Değerin ayarında "Satır biçimi": Zemin ve Yazı rengi (koşullu biçimin renk seçicisi) ve Kalın. Değerler satırlardayken o değerin satırına (değer adı hücresi ve bütün hücreler), sütunlardayken o değerin sütunlarına (değer başlığının altındaki hücreler) uygulanır. **Karar (K-186):** satır biçimi toplam satır ve sütunlarına da uygulanır (zemin verilirse toplamların zeminini örter); hücrede koşullu biçim kuralı tutuyorsa kuralın rengi (zemin, yazı rengi) kazanır, satır biçiminin "Kalın"ı kalır. Görünümle saklanır (`pivot.values[].format`), Excel'e taşınır |
 | Hücre | Sayılar sağa yaslı, eşit genişlikte rakam; ondalık alanın (miktarda birimin) ondalığı, ortalamalarda bir fazla, Say ve Benzersiz say ondalıksız. Kaydı olmayan hücre boş; sonuç 0 ise "0" |
 | Karışık birim | Listenin kendi miktar alanında hücrenin kayıtları tek birimde değilse hücre "—", ipucu "Birimler farklı; toplam yok". İlişkili miktar alanında denetlenmez |
 | Boş | Filtrede kayıt yoksa ızgaranın yerinde "Bu filtrede kayıt yok" |
@@ -276,9 +279,10 @@ Pivot, grafik gibi ortak altyapıdır: ortak tabloyu kullanan her tabloda açıl
 | Yetki | Listenin okuma yetkisi olan herkes (End user dahil) |
 | Hesaplanan değer (7.7b) | Değerler bölümünde "+ Hesaplanan değer ekle": Ad; A, İşlem (÷ × + −), B (A ve B pivotun alan değerleridir; tarih sonuçlu değer seçilemez; işleneni çıkarılan hesaplanan değer de çıkar); Gösterim (Sayı · Yüzde); Ondalık. Her hücrede o hücrenin toplamlarından hesaplanır; ara toplam ve genel toplamda da. Başlıkta ve çipte iki satır: üstte ad, altta soluk "Toplamlardan". Aynı oran satırlardan (Ortalama, Ağırlıklı ortalama) ve toplamlardan yan yana eklenebilir |
 | Koşullu biçim (7.7b) | Değerin ayarında "Koşullu biçim": kural satırları (renk örneği, koşul, ✕) ve "+ Kural ekle"; pencere ve renk seçici tablodaki koşullu biçimlendirmeninkidir (yalnız sayı koşulları; ikon yok). En çok 5 kural; üstteki kazanır. "Toplamlara da uygula" (varsayılan kapalı). Kural hesaplanmış hücre değerine bakar; tablonun kuralları pivota taşınmaz |
-| Excel (7.7b) | Şeritteki Excel düğmesi pivot açıkken pivotu aktarır (pencere açılmaz, dosya hemen iner): katlı başlıklar, toplamlar, sütun grubu çizgileri, kural renkleri, tarih ve yüzde biçimleri; ayrıca Bilgi sayfası |
+| Excel (7.7b) | Şeritteki Excel düğmesi pivot açıkken pivotu aktarır (pencere açılmaz, dosya hemen iner): katlı başlıklar, toplamlar, sütun grubu çizgileri, kural renkleri, tarih ve yüzde biçimleri; ayrıca Bilgi sayfası. K-186: satır alanı hücreleri birleştirilmiş ve üstte hizalı; aynı yazılı üst ve alt başlık birleşik; değerin satır biçimi; satır başlığı kolonlarının genişliği ekrandaki gibi |
 | Varsayılan hesaplama (7.7b) | Eklenen değer alanın liste tanımındaki varsayılan hesaplamasıyla gelir (yoksa sayıda Toplam, tarihte En erken, metinde Benzersiz say) |
 | Durum (7.7b) | uygulandı (7.7b, K-183) |
+| Durum (K-186) | uygulandı (7.9a, sürüm 0.47.0) |
 
 ## Dönem tablosu standardı (7.8, K-184)
 
@@ -294,9 +298,8 @@ Dönem tablosu bir ana kaydın dönem bazındaki özetidir (kaynak grubu × dön
 | Varsayılan görünüm | Ürünün Standart'ı pivottur: satırda ana kayıt, sütunda Dönem, değerler satırlarda (liste tanımındaki `standard_pivot`). Pivot açık gelirken ayar paneli kapalıdır. Şirket Standart'ı ve kullanıcı görünümü bugünkü sırayla üstüne gelir; ⚙ › "Pivot görünümü" ile tabloya geçilir; grafik aynı veriden |
 | Değerler | Her değerin adı, birimi, ondalığı ve varsayılan hesaplaması liste tanımındadır; pivota eklenen değer o hesaplamayla gelir (oranlar ağırlıklı ortalama, ör. Verimlilik kapasiteyle). Değerler satırlardayken "Değer" sütunu en uzun değer adına göre genişler (14–26 rem; ad kesilmez); bu, bütün pivotlar için geçerlidir |
 | İlk · Son dönem değeri | Yalnız dönem tablolarının pivotunda iki hesaplama daha: "İlk dönem değeri" ve "Son dönem değeri". Hücreye giren dönemlerden ilkinin (ya da sonuncusunun) değeri alınır, ana kayıtlar arasında toplanır: kaynak sayısı dört haftada 3 ise ay altında 3'tür (12 değil); iki grubun toplamı 3 + 2 = 5. Etiket "Kaynak sayısı · Son dönem değeri". Tablodaki gruplamanın ara toplamında ve grafikte sunulmaz (o alanların ara toplamı boş kalır) |
-| Hazır hesaplanan değerler | Liste tanımındaki hazır oranlar (ör. "Ortalama verimlilik" = Kullanılabilir kapasite ÷ Toplam kapasite) pivot panelinde Değerler bölümünde "Hazır değerler" listesinde; seçilince işlenenleriyle birlikte eklenir ("… · Toplamlardan") |
+| Hazır hesaplanan değerler | Liste tanımındaki hazır oranlar (ör. "Kullanılabilirlik" = Kullanılabilir kapasite ÷ Toplam kapasite) pivot panelinde Değerler bölümünde "Hazır değerler" listesinde; seçilince işlenenleriyle birlikte eklenir ("… · Toplamlardan") |
 | Önbellek | Ekran açılırken hesap yapılmaz; günlük sonuç kullanıcıya görünmeyen önbellekten okunur, giriş değişince yalnız etkilenen kısım yenilenir (docs/08). Kullanıcı önbelleği görmez, yönetmez |
-| Deneme sayfası (7.8) | `/donem-tablosu`: menüde yok; "Kaynak grubu × dönem (deneme)" (kaynak sayısı, çalışma günü, toplam kapasite, verimlilik, kullanılabilir kapasite; bugünkü geçici kapasite verisinden). 7.9'da Kapasite yönetimi ekranı gelince kalkar |
 | Gruplama | Tablo görünümünde bütün dönem alanları ve ana kayıt alanlarıyla gruplanır; gruplar dönem başına göre sıralanır. Varsayılan ara toplamlar liste tanımından: ağırlıklı ortalama ağırlık alanıyla birlikte istenir (Verimlilik: Toplam kapasite); İlk · Son dönem değeri gruplamada ara toplam vermez |
 | Durum | uygulandı (7.8, K-184) |
 
@@ -475,7 +478,7 @@ Menüde ve başlıkta "Sistem ayarları", adres `/yonetim/sistem-ayarlari` (eski
 - **Gruplu seçim:** gruplar satır satırdır: solda grup adı, tümünü seç kutusu ve "seçili / seçilebilir"; sağda öğeler seçilebilir çip (ad kırılmaz, sığmayan alt satıra geçer); seçilemeyen öğe kesik çerçeveli pasif çip ve küçük etiketiyle.
 
 
-**Yetki matrisi (K-100; ekran 22):** Kullanıcılar başlığının yanında "Yetki matrisi"; en geniş pencere, hücrelerde satır kayması olmaz: 14 grup satırı × 4 rol (Tam, Sahibi, Kendi, Salt okunur, Yok), grup yalnız adıyla; altında "Excel'e aktar", Kapat. İstisnalar pencerede yoktur; Excel fonksiyon düzeyindedir ve onları gösterir (98 satır; No, Fonksiyon, Grup, dört rol).
+**Yetki matrisi (K-100; ekran 22):** Kullanıcılar başlığının yanında "Yetki matrisi"; en geniş pencere, hücrelerde satır kayması olmaz: 14 grup satırı × 4 rol (Tam, Sahibi, Kendi, Salt okunur, Yok), grup yalnız adıyla; altında "Excel'e aktar", Kapat. Düzeyi grubundan farklı olan fonksiyon (istisna) grubunun altında kendi satırında, girintili ve "numara · ad" ile gösterilir (ör. Parametre'nin altında "24 · Kapasite yönetimi": End user Salt okunur); nedeni satırın ipucundadır (K-186). Excel fonksiyon düzeyindedir (102 satır; No, Fonksiyon, Grup, dört rol).
 
 ## Sistem sağlığı (2.5, K-106, K-107; ekran 24, fonksiyon 94, 93)
 
@@ -571,6 +574,21 @@ Parametre menüsünde, adres `/parametre/parametreler`; mockup `plans/7.1-mockup
 - **Değer ve birim** (sabit dönem): tek satırda dar sayı kutusu ve parçalı birim seçimi (`UnitRow`); altında bilgi satırı ("Sabit dönemin son günü: …", yalnız kayıtlı değer gösterilirken).
 - **Kaydedilmemiş değişiklik:** başka alt başlığa, başlığa ya da ekrana geçişte uyarı (K-132). Başarılı kayıtta bildirim yok; hata alanın altında ya da hücre ipucunda.
 - **Yetki:** Key user ve üstü; End user'da ekran menüde yok.
+
+### Kapasite yönetimi (7.9, K-185; ekran 30, fonksiyon 24)
+
+Menüde Parametre grubunda, Parametreler ile Senaryolar arasında (`/parametre/kapasite-yonetimi`); senaryoya bağlı ekran: bağlam çubuğunda senaryo değişince baştan yüklenir. Ekranda açıklama metni yoktur.
+
+| Konu | Kural |
+|---|---|
+| Düzen | Başlık "Kapasite yönetimi"; altında tablonun üst şeridinin başında sekme şeridi (taşan sekmeler "Diğer" menüsünde); sekmenin tablosu ekranı doldurur |
+| Sekmeler | Kapasite özeti (7.9a) · Kaynak grubu · Kaynak · Çalışma düzeni · Bakım ve duruşlar · Verimlilik · Fabrika takvimi · Ek mesai limitleri (7.9b). Henüz uygulanmayan sekme gösterilmez |
+| Kapasite özeti | Dönem tablosu "Kaynak grubu × dönem" (dönem tablosu standardı): Standart'ta pivot (satırda kaynak grubu, sütunda Dönem; Toplam kapasite · Kullanılabilir kapasite · Duruş), panel kapalı. Bütün kaynak grupları görünür (kritik olmayan ve fason dahil). Salt okunur: girişlerden hesaplanır |
+| Değerler | Kaynak sayısı · Çalışma günü · Duruş · Çalışılabilir gün · Ortalama günlük kapasite · Toplam günlük kapasite · Verimlilik · Toplam kapasite · Kullanılabilir kapasite · Ek mesai limiti · Kalan fazla mesai (ay) · Kalan fazla mesai (yıl). Birim grubun kapasite birimi. Günlük kapasiteler toplanmaz (Ortalama); Kaynak sayısı ve Kalan fazla mesai "Son dönem değeri"; Verimlilik Toplam kapasiteyle ağırlıklı |
+| Hazır değerler | "Duruş oranı" (Duruş ÷ Çalışma günü) · "Kullanılabilirlik" (Kullanılabilir kapasite ÷ Toplam kapasite) |
+| Grafik | İlk açılışta "Kullanılabilir kapasite" (toplam) ile gelir (liste tanımındaki ilk değer alanı, K-186) |
+| Yetki | Bütün roller görür; End user salt okunur (görünüm, pivot, koşullu biçim, Excel serbest); girişleri Key user ve üstü yapar (7.9b) |
+| Durum | uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş sekmeleri ve kartlar 7.9b, Geçerlilik görünümü 7.9c |
 
 ### Senaryolar (7.3, K-177; ekran 07, fonksiyon 27, 28)
 

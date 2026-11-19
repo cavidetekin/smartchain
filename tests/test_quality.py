@@ -90,8 +90,17 @@ def test_tracked_rules_run_on_core_and_identity_continues(eng):
     bom = warning(eng, "BOM.ZERO_QTY")
     assert bom and {w["Importance"] for w in bom if w["RecordLabel"].startswith(f"Üretilen malzeme: {d.NO_DEMAND_MATERIAL} · ")} == {"Normal"}
     cap = warning(eng, "SC.RES_NO_CAPACITY")
-    assert [w["RecordLabel"] for w in cap] == [f"Kaynak: {d.NO_CAPACITY_RESOURCE}"] and cap[0]["Source"] == "Smartchain" and cap[0]["FixField"] is None
-    assert cap[0]["Message"] == f"Kapasite tanımsız: {d.NO_CAPACITY_RESOURCE}"
+    # K-185: ne kendisinde ne grubunda çalışma düzeni olan kaynak; bütün gruplar için çıkar. Önem: grup kritik ve talep zincirinde ise Yüksek
+    by_label = {w["RecordLabel"]: w for w in cap}
+    assert sorted(by_label) == sorted([f"Kaynak: {d.NO_CAPACITY_RESOURCE}", f"Kaynak: {d.FASON_NO_CAPACITY}"])
+    critical, fason = by_label[f"Kaynak: {d.NO_CAPACITY_RESOURCE}"], by_label[f"Kaynak: {d.FASON_NO_CAPACITY}"]
+    assert (critical["Importance"], fason["Importance"]) == ("Yüksek", "Normal") and critical["Source"] == "Smartchain" and critical["FixField"] is None
+    assert critical["Message"] == f"Kapasite tanımsız (çalışma düzeni yok): {d.NO_CAPACITY_RESOURCE}"
+    conflict = warning(eng, "SC.RES_GROUP_CONFLICT")                 # CG-MON (7,5) ve CG-KAL (7,0) gruplarının ikisine üye işçiler
+    both = {r[0] for r in _sql(eng, "SELECT r.Code FROM core.Resource r WHERE r.VersionTo IS NULL AND (SELECT COUNT(*) FROM core.ResourceGroupMember m "
+                                    "JOIN core.ResourceGroup g ON g.Id = m.ResourceGroupId AND g.VersionTo IS NULL WHERE m.ResourceId = r.Id AND m.VersionTo IS NULL "
+                                    "AND g.Code IN (:a, N'CG-KAL')) = 2", a=d.LABOR_GROUP).all()}
+    assert both and {w["RecordLabel"] for w in conflict} >= {f"Kaynak: {code}" for code in both} and {w["Importance"] for w in conflict} <= {"Normal", "Yüksek"}
     first = ms[0]["FirstSeenAt"]
     check(eng)
     again = [w for w in warning(eng, "MS.NO_LEADTIME") if w["RecordKey"] == ms[0]["RecordKey"]][0]

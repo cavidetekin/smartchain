@@ -15,10 +15,9 @@ from app.integration.structural import key_fields
 from db.models import metadata
 
 SYSTEM = ("Id", "VersionFrom", "VersionTo", "ImportBatchId", "BusinessKey", "UpdatedAt")
-# Smartchain'de tanımlanan alanlar (K-117): yeni versiyona önceki versiyondan kopyalanır, aktarım ezmez. Geçici alanlar: 7.9'da kalkar (K-180).
-PRESERVED: dict[str, tuple[str, ...]] = {
-    "Resource": ("DailyCapacity", "CalendarId", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"),
-}
+# Smartchain'de tanımlanan alanlar (K-117): yeni versiyona önceki versiyondan kopyalanır, aktarım ezmez. Kaynağın kapasite alanları 7.9'da
+# kaynaktan kalktı (K-185: girişler `param` tablolarında, kaynağın `Id`'siyle; aktarım onlara dokunmaz); bugün korunan alan yok.
+PRESERVED: dict[str, tuple[str, ...]] = {}
 # Ön hesap (fonksiyon 29) kolonları: aktarımda boş
 PRECALC: dict[str, tuple[str, ...]] = {"WorkOrderComponent": ("RemainingQuantity",), "WorkOrderOperation": ("RemainingConsumption",)}
 UNVERSIONED = {"Location"}  # core.Location versiyonsuz (Id IDENTITY)

@@ -473,7 +473,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   }, [list]);
   const [chunkSize, setChunkSize] = useState(0);
   const [exportInfo, setExportInfo] = useState<ExportInfo | null>(null);
-  const [period, setPeriod] = useState<{ table: boolean; standardPivot?: unknown; calculated: CalculatedValue[] }>({ table: false, calculated: [] });
+  const [period, setPeriod] = useState<{ table: boolean; standardPivot?: unknown; calculated: CalculatedValue[]; chartValue?: string }>({ table: false, calculated: [] });
   const scenarioRef = useRef(scenario?.id);
   scenarioRef.current = scenario?.id;
   if (period.table) setListScenario(list, scenario?.id);  // senaryo değişince sonraki istekler yenisini taşır
@@ -516,10 +516,10 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   useEffect(() => {
     const ctrl = new AbortController();
     listApi(list).columns(ctrl.signal)
-      .then(({ columns: cols, chunk_size, export: info, relations: rels, period_table, standard_pivot, calculated_values }) => {
+      .then(({ columns: cols, chunk_size, export: info, relations: rels, period_table, standard_pivot, calculated_values, chart_value }) => {
         // Dönem tablosu (K-184): istekler seçili senaryoyu taşır; ürünün Standart'ı pivot; hazır hesaplanan değerler
         setListScenario(list, period_table ? scenarioRef.current : undefined);
-        setPeriod({ table: Boolean(period_table), standardPivot: standard_pivot, calculated: calculated_values ?? [] });
+        setPeriod({ table: Boolean(period_table), standardPivot: standard_pivot, calculated: calculated_values ?? [], chartValue: chart_value });
         setColumns(cols);
         setRelations(rels ?? []);
         onColumns?.(cols);
@@ -650,7 +650,7 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const toggleChart = () => update((st) => {
     if (!st.chart) setChartFresh(true);
     if (st.chart?.open) return { ...st, chart: baselineChart ? { ...st.chart, open: false } : null };  // görünümde grafik yoksa kapatınca iz kalmaz
-    return { ...st, chart: st.chart ? { ...st.chart, open: true } : defaultChart(columns ?? [], st.order) };
+    return { ...st, chart: st.chart ? { ...st.chart, open: true } : defaultChart(columns ?? [], st.order, period.chartValue) };
   });
   const setChartHeight = (ratio: number) => update((st) => (st.chart ? { ...st, chart: { ...st.chart, height: clampHeight(ratio) } } : st));
   const onChartSplit = (e: ReactMouseEvent) => {
@@ -1308,7 +1308,8 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
         <div className={`sc-pivot-wrap${pivotNarrow ? " is-narrow" : ""}`} ref={pivotWrapRef}
              style={chartOpen && s.chart ? (chartFull ? { display: "none" } : { flex: `${1 - s.chart.height} 1 0` }) : undefined}>
           <PivotGrid list={list} columns={columns} pivot={s.pivot} filters={chartFilters} selection={chartSel} chunkSize={chunkSize ?? 100}
-                     reloadKey={reloadKey} onFilter={(field, anchor) => openPop("filter", field, anchor)} isFiltered={(field) => Boolean(filterOf(field))} />
+                     reloadKey={reloadKey} onFilter={(field, anchor) => openPop("filter", field, anchor)} isFiltered={(field) => Boolean(filterOf(field))}
+                     onWidths={(widths) => setPivot({ ...s.pivot!, widths })} />
           {pivotPanel && (
             <PivotPanel pivot={s.pivot} columns={columns} baseColumns={baseColumns!} relations={relations} loadRelated={loadRelated} onRelated={addRelated}
                         periodTable={period.table} calculated={period.calculated}

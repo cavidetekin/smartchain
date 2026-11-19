@@ -1,10 +1,10 @@
-"""Dönem tablosu altyapısı (K-184, geliştirme 7.8): ortak dönem listesi, dönem tablosu listesi (deneme: kaynak grubu × dönem), sıralama,
-İlk · Son dönem değeri, senaryo, önbellek ve yenileme. Sentetik v0'da (Smartchain_test); kendi yazdığını geri alır.
+"""Dönem tablosu altyapısı (K-184, geliştirme 7.8) ve Kaynak grubu × dönem (K-185, 7.9a): ortak dönem listesi, dönem tablosu listesi, sıralama,
+İlk · Son dönem değeri, senaryo, gruplama, Excel. Sentetik v0'da (Smartchain_test); kendi yazdığını geri alır. Hesabın, çözümlemenin ve
+tetikleyicilerin testleri `tests/test_capacity.py`'dedir.
 
 Sabitlenenler: dönem alanları her yerde Dönem başı'na göre sıralanır; Son dönem değeri zaman içinde toplanmaz, kayıtlar arasında toplanır;
 her tetikleyicide yalnız etkilenen ana kayıt ve günler yenilenir ve önbellekteki sonuç sıfırdan hesaplananla birebir aynıdır (motorun yolu).
 """
-import dataclasses
 import io
 from collections import defaultdict
 from datetime import date, timedelta
@@ -19,14 +19,16 @@ from app import periods as P
 from app.api.lists import pivot as pivot_query
 from app.api.main import create_app
 from app.api.permissions import END_USER, KEY_USER
-from app.params import horizon, scenarios
-from app.periods import cache, capacity_demo, periods as period_list
-from app.periods.__main__ import main as periods_cli
+from app.params import horizon
+from app.capacity import compute
+from app.data.synthetic import capacity as reference
+from app.data.synthetic.dataset import generate
+from app.periods import cache, periods as period_list
 
 from auth_helpers import auth, ensure_user
 
-U = "/api/period-resource-group-demo"
-CACHE = capacity_demo.CACHE
+U = "/api/period-resource-group"
+CACHE = compute.CACHE
 PERIOD_FIELDS = ["PeriodType", "Period", "PeriodStart", "PeriodEnd", "Week", "Month", "Quarter", "Year", "PeriodDays"]
 MARK = (77, 33, 66, 44)   # testin yazdığı verim satırlarının yüzdeleri (temizlik bunlara bakar)
 
@@ -80,12 +82,11 @@ def world(db_engine):
         base = c.execute(sa.text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar()
         follower = c.execute(sa.text("SELECT TOP 1 Id FROM param.ScenarioDefinition WHERE FollowsBase = 1 AND IsActive = 1 AND ISNULL(IsBase, 0) = 0 ORDER BY Id")).scalar()
         free = c.execute(sa.text("SELECT TOP 1 Id FROM param.ScenarioDefinition WHERE FollowsBase = 0 AND IsActive = 1 AND ISNULL(IsBase, 0) = 0 ORDER BY Id")).scalar()
-        rows = c.execute(sa.text(
-            "SELECT m.ResourceId, g.Id, g.Code FROM core.ResourceGroupMember m JOIN core.ResourceGroup g ON g.Id = m.ResourceGroupId AND g.VersionTo IS NULL "
-            "JOIN core.Resource r ON r.Id = m.ResourceId AND r.VersionTo IS NULL WHERE m.VersionTo IS NULL AND r.DailyCapacity > 0 ORDER BY g.Code, m.ResourceId")).all()
-    assert base and follower and free and len(rows) > 3
-    r1 = rows[0]
-    r2 = next(r for r in rows if r[1] != r1[1] and r[0] != r1[0])
+        rows = {r[3]: r for r in c.execute(sa.text(
+            "SELECT m.ResourceId, g.Id, g.Code, r.Code FROM core.ResourceGroupMember m JOIN core.ResourceGroup g ON g.Id = m.ResourceGroupId AND g.VersionTo IS NULL "
+            "JOIN core.Resource r ON r.Id = m.ResourceId AND r.VersionTo IS NULL WHERE m.VersionTo IS NULL"))}
+    assert base and follower and free
+    r1, r2 = rows["M3-01"], rows["M3-03"]     # ISL3: grup düzeyinde çalışma düzeni, tek gruba üye; sentetik senaryo farklarından etkilenmez
     yield {"users": users, "base": base, "follower": follower, "free": free, "r1": r1[0], "g1": r1[2], "r2": r2[0], "g2": r2[2]}
     with db_engine.begin() as c:
         _clean(c)
@@ -131,24 +132,25 @@ def horizon_of(db_engine, scenario_id) -> list[period_list.Period]:
 
 def efficiency(db_engine, scenario_id, resource_id, pct, start, end) -> None:
     with db_engine.begin() as c:
-        c.execute(sa.text("INSERT INTO param.ResourceEfficiency (ScenarioDefinitionId, ResourceId, ValidFrom, ValidTo, EfficiencyPct) VALUES (:s, :r, :a, :b, :p)"),
+        c.execute(sa.text("INSERT INTO param.ResourceEfficiency (ScenarioDefinitionId, ResourceId, ValidFrom, ValidTo, EfficiencyPct, UpdatedAt) "
+                          "VALUES (:s, :r, :a, :b, :p, SYSUTCDATETIME())"),
                   {"s": scenario_id, "r": resource_id, "a": start, "b": end, "p": pct})
 
 
 def stored(db_engine, scenario_id) -> dict:
     """Önbellek tablosundaki satırlar (senaryonun kendi tuttukları)."""
     with db_engine.connect() as c:
-        rows = c.execute(sa.text("SELECT ResourceId, [Date], WorkingDay, Capacity, AvailableCapacity FROM cache.ResourceCapacityDay WHERE ScenarioDefinitionId = :s"),
-                         {"s": scenario_id}).all()
-    return {(r[0], r[1]): (float(r[2]), float(r[3]), float(r[4])) for r in rows}
+        rows = c.execute(sa.text("SELECT ResourceId, [Date], ResourceGroupId, WorkingDay, Capacity, AvailableCapacity FROM cache.ResourceCapacityDay "
+                                 "WHERE ScenarioDefinitionId = :s"), {"s": scenario_id}).all()
+    return {(r[0], r[1], r[2]): (float(r[3]), float(r[4]), float(r[5])) for r in rows}
 
 
 def same_as_scratch(db_engine, scenario_id) -> int:
     """Önbellekteki geçerli sonuç, girişlerden sıfırdan hesaplananla (motorun yolu) birebir aynı. Dönen: satır sayısı."""
     found = horizon_of(db_engine, scenario_id)
     with Session(db_engine) as s:
-        key = lambda r: (r["ResourceId"], r["Date"], float(r["WorkingDay"]), float(r["Capacity"]), float(r["AvailableCapacity"]))  # noqa: E731
-        cached = sorted(key(r) for r in capacity_demo.cached(s, scenario_id, found[0].start, found[-1].end))
+        key = lambda r: (r["ResourceId"], r["ResourceGroupId"], r["Date"], *[float(r[v]) for v in CACHE.values])  # noqa: E731
+        cached = sorted(key(r) for r in compute.cached(s, scenario_id, found[0].start, found[-1].end))
         scratch = sorted(key(r) for r in P.values(s, CACHE.name, scenario_id, found[0].start, found[-1].end))
     assert cached == scratch
     return len(cached)
@@ -162,49 +164,78 @@ def ensure(db_engine, scenario_id) -> dict:
 
 @pytest.mark.db
 def test_rows_fields_and_values(api, db_engine, world, clean):
-    """Satır = kaynak grubu × senaryonun dönemi; dokuz dönem alanı aynı ad ve sırayla; değerler girişlerden elle hesapla tutar."""
+    """Satır = kaynak grubu × senaryonun dönemi; dokuz dönem alanı aynı ad ve sırayla; değerler girişlerden bağımsız (Python) hesapla tutar."""
     cols = api.get(U + "/columns").json()
     names = [c["field"] for c in cols["columns"]]
     at = names.index("PeriodType")
     assert names[at:at + 9] == PERIOD_FIELDS and names[:3] == ["ResourceGroupCode", "ResourceGroupName", "CapacityUnit"]
     assert [c["label"] for c in cols["columns"][at:at + 9]] == ["Dönem tipi", "Dönem", "Dönem başı", "Dönem sonu", "Hafta", "Ay", "Çeyrek", "Yıl", "Dönem takvim günü"]
+    assert names[at + 9:] == ["ResourceCount", "WorkingDays", "Downtime", "WorkableDays", "AvgDailyCapacity", "TotalDailyCapacity", "Efficiency", "TotalCapacity",
+                              "AvailableCapacity", "OvertimeLimit", "RemainingOvertimeMonth", "RemainingOvertimeYear"]
     by = {c["field"]: c for c in cols["columns"]}
     assert all(by[f]["order_by"] == "PeriodStart" for f in ("PeriodType", "Period", "Week", "Month", "Quarter", "Year")) and by["PeriodStart"]["order_by"] is None
     assert cols["period_table"] is True and cols["standard_pivot"]["columns"] == [{"field": "Period"}] and cols["standard_pivot"]["values_on"] == "rows"
-    assert cols["calculated_values"][0]["name"] == "Ortalama verimlilik" and cols["relations"] == [{"path": "ResourceGroupId", "label": "Kaynak grubu"}]
-    assert (by["ResourceCount"]["aggregate"], by["Efficiency"]["aggregate"], by["Efficiency"]["aggregate_weight"]) == ("last", "wavg", "TotalCapacity")
+    assert [v["field"] for v in cols["standard_pivot"]["values"]] == ["TotalCapacity", "AvailableCapacity", "Downtime"]
+    assert [c["name"] for c in cols["calculated_values"]] == ["Duruş oranı", "Kullanılabilirlik"] and cols["relations"] == [{"path": "ResourceGroupId", "label": "Kaynak grubu"}]
+    # varsayılan hesaplamalar tek yerde (K-185 E): sayı ve ERP'nin kalan fazla mesaisi Son dönem değeri; günlük kapasiteler ortalama; verimlilik ağırlıklı
+    assert {f: by[f]["aggregate"] for f in ("ResourceCount", "AvgDailyCapacity", "TotalDailyCapacity", "Efficiency", "RemainingOvertimeMonth", "TotalCapacity")} == {
+        "ResourceCount": "last", "AvgDailyCapacity": "avg", "TotalDailyCapacity": "avg", "Efficiency": "wavg", "RemainingOvertimeMonth": "last", "TotalCapacity": "sum"}
+    assert by["Efficiency"]["aggregate_weight"] == "TotalCapacity"
 
     found = horizon_of(db_engine, world["base"])
     rows = all_rows(api)
-    with db_engine.connect() as c:
-        groups = c.execute(sa.text("SELECT Id, Code FROM core.ResourceGroup WHERE VersionTo IS NULL")).all()
-        members = c.execute(sa.text("SELECT m.ResourceGroupId, r.Id, r.DailyCapacity, r.CalendarId FROM core.ResourceGroupMember m JOIN core.Resource r "
-                                    "ON r.Id = m.ResourceId AND r.VersionTo IS NULL WHERE m.VersionTo IS NULL")).all()
-        calendar = {(r[0], r[1]): (float(r[3] if r[3] is not None else 1) if r[2] else 0.0)
-                    for r in c.execute(sa.text("SELECT CalendarId, [Date], IsWorkingDay, WorkingFraction FROM core.CalendarDay WHERE VersionTo IS NULL"))}
+    ds = generate(date.today())
+    daily = reference.daily(ds, found[0].start, found[-1].end)
+    groups = {g["Id"]: g["Code"] for g in ds.rows("ResourceGroup")}
     assert len(rows) == len(groups) * len(found) and len({r["Id"] for r in rows}) == len(rows)     # verisi olmayan dönem de satır; kimlik tekil
+    period_of = {}
+    for p in found:
+        day = p.start
+        while day <= p.end:
+            period_of[day] = p.label
+            day += timedelta(days=1)
+    want: dict = defaultdict(lambda: defaultdict(float))
+    worked: dict = defaultdict(set)
+    for (g, _r, day), v in daily.items():
+        key = (groups[g], period_of[day])
+        for f in ("WorkingDay", "Downtime", "Capacity", "AvailableCapacity", "OvertimeLimit"):
+            want[key][f] += v[f]
+        want[key]["Gross"] += v["WorkingDay"] * v["DailyCapacity"]
+        if v["WorkingDay"] > 0:
+            worked[key].add(day)
+    members = defaultdict(set)
+    for m in ds.rows("ResourceGroupMember"):
+        members[groups[m["ResourceGroupId"]]].add(m["ResourceId"])
+    checked = 0
+    for r in rows:
+        key = (r["ResourceGroupCode"], r["Period"])
+        w = want.get(key, {})
+        assert r["ResourceCount"] == len(members[r["ResourceGroupCode"]])
+        assert r["WorkingDays"] == pytest.approx(w.get("WorkingDay", 0)) and r["Downtime"] == pytest.approx(w.get("Downtime", 0), abs=1e-3), key
+        assert r["WorkableDays"] == pytest.approx(w.get("WorkingDay", 0) - w.get("Downtime", 0), abs=1e-3)
+        assert r["TotalCapacity"] == pytest.approx(w.get("Capacity", 0), abs=0.01) and r["AvailableCapacity"] == pytest.approx(w.get("AvailableCapacity", 0), abs=0.01), key
+        assert r["OvertimeLimit"] == pytest.approx(w.get("OvertimeLimit", 0), abs=0.01)
+        if w.get("WorkingDay"):
+            assert r["AvgDailyCapacity"] == pytest.approx(w["Gross"] / w["WorkingDay"], abs=1e-3)                 # kaynak başına, çalışma günüyle ağırlıklı
+            assert r["TotalDailyCapacity"] == pytest.approx(w["Gross"] / len(worked[key]), abs=1e-3)             # grubun toplamı, çalışılan günlerin ortalaması
+            assert r["Efficiency"] == pytest.approx(w["Capacity"] / w["Gross"], abs=1e-4) if w["Gross"] else r["Efficiency"] is None
+            checked += 1
+        else:
+            assert r["AvgDailyCapacity"] is None and r["TotalDailyCapacity"] is None and r["Efficiency"] is None
+    assert checked > len(found) * 5
     first = found[0]
     line = next(r for r in rows if r["ResourceGroupCode"] == world["g1"] and r["Period"] == first.label)
     assert [line[f] for f in PERIOD_FIELDS] == [first.type, first.label, first.start.isoformat(), first.end.isoformat(), first.week, first.month, first.quarter,
                                                 first.year, first.days]
-    gid = next(g[0] for g in groups if g[1] == world["g1"])
-    own = [m for m in members if m[0] == gid]
-    working = capacity_total = 0.0
-    for _g, _rid, daily, cal in own:
-        day = first.start
-        while day <= first.end:
-            wd = calendar.get((cal, day), 1.0 if day.weekday() < 5 else 0.0)        # takvimde olmayan gün: Pazartesi–Cuma çalışılır
-            working += wd
-            capacity_total += wd * float(daily or 0)
-            day += timedelta(days=1)
-    assert line["ResourceCount"] == len({m[1] for m in own}) and line["WorkingDays"] == pytest.approx(working)
-    assert line["TotalCapacity"] == pytest.approx(capacity_total) == pytest.approx(line["AvailableCapacity"]) and line["Efficiency"] == pytest.approx(1.0)
-    assert line["ResourceGroupId"] == gid and line["Id"] == gid * 1000 + 1
-    # kaynağı olmayan grup: satırları var, değerleri 0, verimlilik boş
-    empty = [g for g in groups if g[0] not in {m[0] for m in members}]
-    for g in empty[:1]:
-        row = next(r for r in rows if r["ResourceGroupCode"] == g[1])
-        assert (row["ResourceCount"], row["TotalCapacity"], row["Efficiency"]) == (0, 0, None)
+    # bilerek konmuş durumlar: üç tezgâh × 15 saat (ISL3) → ortalama 15, toplam 45; TASLAMA'da verimlilik %85; çalışma düzeni olmayan grup 0
+    isl3 = next(r for r in rows if r["ResourceGroupCode"] == "ISL3" and r["Period"] == found[1].label)
+    assert (isl3["AvgDailyCapacity"], isl3["TotalDailyCapacity"]) == (pytest.approx(15.0), pytest.approx(45.0))
+    assert next(r for r in rows if r["ResourceGroupCode"] == "TASLAMA" and r["Period"] == found[1].label)["Efficiency"] == pytest.approx(0.85)
+    kapla = next(r for r in rows if r["ResourceGroupCode"] == "F-KAPLA" and r["Period"] == found[1].label)
+    assert (kapla["ResourceCount"], kapla["WorkingDays"], kapla["TotalCapacity"], kapla["Efficiency"]) == (1, 0, 0, None)
+    # ERP'nin kalan fazla mesaisi: kaynakların toplamı, her dönemde aynı
+    months = {r["RemainingOvertimeMonth"] for r in rows if r["ResourceGroupCode"] == "CG-MON"}
+    assert len(months) == 1
 
 
 @pytest.mark.db
@@ -283,21 +314,25 @@ def test_first_and_last_period_value(api, db_engine, world, clean):
 
 @pytest.mark.db
 def test_related_fields_calculated_value_and_weighted_default(api, db_engine, world, clean):
-    """Ana kayıt üzerinden ilişkili alan (satır, filtre); oranlar toplamda ağırlıklı ortalama ve toplamlardan hesap aynı sonucu verir."""
+    """Ana kayıt üzerinden ilişkili alan (satır, filtre); verimlilik toplamda kapasiteyle ağırlıklı; hazır oranlar toplamlardan."""
     found = horizon_of(db_engine, world["base"])
     efficiency(db_engine, world["base"], world["r1"], 77, found[0].start, found[1].end)
     values = [{"id": "e", "field": "Efficiency", "fn": "wavg", "weight": "TotalCapacity"}, {"id": "avg", "field": "Efficiency", "fn": "avg"},
               {"id": "a", "field": "AvailableCapacity", "fn": "sum"}, {"id": "t", "field": "TotalCapacity", "fn": "sum"},
-              {"id": "x", "kind": "calc", "a": "a", "op": "div", "b": "t", "percent": True}]
+              {"id": "x", "kind": "calc", "a": "a", "op": "div", "b": "t", "percent": True},
+              {"id": "ad", "field": "AvgDailyCapacity", "fn": "avg"}, {"id": "td", "field": "TotalDailyCapacity", "fn": "avg"}]
     pv = post(api, "/pivot", rows=[{"field": "ResourceGroupId/IsCritical"}, {"field": "ResourceGroupCode"}], values=values,
               totals={"rows": True, "columns": False, "subtotals": True}, limit=100, filters=[{"field": "ResourceGroupId/CapacityUnit", "op": "equals", "value": "SAAT"}])
     num = lambda c: c["v"] if isinstance(c, dict) else c  # noqa: E731
     row = next(r for r in pv["rows"] if r["key"][1:] == [world["g1"]])
-    assert num(row["cells"][0][0]) < 1 and num(row["cells"][0][0]) == pytest.approx(num(row["cells"][2][0]) / num(row["cells"][3][0]))
-    assert num(row["cells"][4][0]) == pytest.approx(num(row["cells"][0][0]))                             # toplamlardan = kapasiteyle ağırlıklı ortalama
-    assert num(row["cells"][1][0]) != pytest.approx(num(row["cells"][0][0]))                             # dönemlerin düz ortalaması farklı
-    grand = pv["rows"][-1]
-    assert num(grand["cells"][0][0]) == pytest.approx(num(grand["cells"][2][0]) / num(grand["cells"][3][0]))
+    one = all_rows(api, filters=[{"field": "ResourceGroupCode", "op": "in", "values": [world["g1"]]}], fields=["Efficiency", "TotalCapacity", "AvgDailyCapacity"])
+    weighted = sum(r["Efficiency"] * r["TotalCapacity"] for r in one if r["Efficiency"] is not None) / sum(r["TotalCapacity"] for r in one)
+    assert num(row["cells"][0][0]) < 1 and num(row["cells"][0][0]) == pytest.approx(weighted)             # kapasiteyle ağırlıklı ortalama
+    plain = [r["Efficiency"] for r in one if r["Efficiency"] is not None]
+    assert num(row["cells"][1][0]) == pytest.approx(sum(plain) / len(plain)) and num(row["cells"][1][0]) != pytest.approx(weighted)
+    assert num(row["cells"][4][0]) == pytest.approx(num(row["cells"][2][0]) / num(row["cells"][3][0]))    # kullanılabilirlik toplamlardan
+    daily = [r["AvgDailyCapacity"] for r in one if r["AvgDailyCapacity"] is not None]
+    assert num(row["cells"][5][0]) == pytest.approx(sum(daily) / len(daily)) == pytest.approx(15.0)       # günlük kapasite toplanmaz: ortalama
     assert {r["key"][0] for r in pv["rows"] if r["key"]} <= {True, False}
     rows = all_rows(api, fields=["ResourceGroupCode", "ResourceGroupId/CapacityUnit"], filters=[{"field": "ResourceGroupCode", "op": "in", "values": [world["g1"]]}])
     assert rows and {r["ResourceGroupId/CapacityUnit"] for r in rows} == {"SAAT"}
@@ -311,11 +346,13 @@ def test_scenario_comes_from_the_request_or_the_user(api, db_engine, world, clea
     one = [{"field": "ResourceGroupCode", "op": "in", "values": [world["g2"]]}, {"field": "Period", "op": "in", "values": [found[0].label]}]
     base_row = all_rows(api, filters=one)[0]
     own_row = all_rows(api, filters=one, scenario_id=world["follower"])[0]
-    assert base_row["Efficiency"] == pytest.approx(1.0) and own_row["Efficiency"] < 1 and own_row["TotalCapacity"] == pytest.approx(base_row["TotalCapacity"])
-    assert own_row["AvailableCapacity"] < base_row["AvailableCapacity"]
+    assert base_row["Efficiency"] == pytest.approx(1.0) and own_row["Efficiency"] < 1 and own_row["TotalCapacity"] < base_row["TotalCapacity"]
+    assert own_row["AvailableCapacity"] < base_row["AvailableCapacity"] and own_row["WorkingDays"] == base_row["WorkingDays"]
     kept = stored(db_engine, world["follower"])
-    assert kept and {k[0] for k in kept} == {world["r2"]} and len(kept) == found[0].days                 # yalnız kendi girişi olan kaynak ve günler
-    assert len(stored(db_engine, world["base"])) > 50 * len(kept)
+    mine = {k for k in kept if k[0] == world["r2"]}
+    # izleyen senaryo yalnız Baz'dan farklı çıkan satırları tutar: bu kaynakta girişin kapsadığı çalışılan günler (çalışılmayan günde sonuç aynı)
+    assert mine and all(found[0].start <= k[1] <= found[0].end and k[1].weekday() < 5 for k in mine) and len(mine) <= found[0].days
+    assert len(stored(db_engine, world["base"])) > len(kept)
     same_as_scratch(db_engine, world["follower"])
     same_as_scratch(db_engine, world["base"])
     with db_engine.begin() as c:   # kullanıcının seçili senaryosu
@@ -333,145 +370,10 @@ def test_scenario_comes_from_the_request_or_the_user(api, db_engine, world, clea
     free_periods = horizon_of(db_engine, world["free"])
     labels = [r["Period"] for r in all_rows(api, scenario_id=world["free"], filters=one[:1], sort=[{"field": "PeriodStart", "dir": "asc"}], fields=["Period"])]
     assert labels == [p.label for p in free_periods]
-    assert len(stored(db_engine, world["free"])) == same_as_scratch(db_engine, world["free"])
+    assert len(stored(db_engine, world["free"])) == same_as_scratch(db_engine, world["free"])              # izlemeyen senaryo tamamını kendisi tutar
     assert api.post(U + "/query", json={"scenario_id": 999999999, "limit": 5}).status_code == 404
     end = api.post(U + "/query", json={"limit": 5}, headers=auth(world["users"][END_USER]))               # End user okur
     assert end.status_code == 200 and end.json()["rows"]
-
-
-@pytest.mark.db
-def test_triggers_refresh_only_what_is_affected(db_engine, world, clean):
-    """Her tetikleyicide: doğru ana kayıt ve günler yenilenir, başkasına dokunulmaz; önbellek sıfırdan hesaplananla birebir aynı kalır."""
-    base, follower, r1, r2 = world["base"], world["follower"], world["r1"], world["r2"]
-    found = horizon_of(db_engine, base)
-    start, end = found[0].start, found[-1].end
-    assert ensure(db_engine, follower) == {base: "built", follower: "built"}
-    assert ensure(db_engine, follower) == {base: "ready", follower: "ready"}                              # kuruluysa hiçbir şey yapılmaz
-    before = stored(db_engine, base)
-    assert before and stored(db_engine, follower) == {}                                                   # izleyen senaryonun kendi girişi yok: satır tutmaz
-    same_as_scratch(db_engine, base)
-    same_as_scratch(db_engine, follower)
-
-    def changed(a: dict, b: dict) -> set:
-        return {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
-
-    # (1) Baz'da kaynağa giriş eklendi: yalnız o kaynak, kaydın tarih aralığı; izleyen senaryo Baz'dan okuduğu için onda da geçerli
-    a, b = start + timedelta(days=3), start + timedelta(days=12)
-    efficiency(db_engine, base, r1, 77, a, b)
-    with Session(db_engine) as s:
-        done = cache.invalidate(s, CACHE, base, [r1], a, b)
-        s.commit()
-    after = stored(db_engine, base)
-    diff = changed(before, after)
-    assert diff and all(k[0] == r1 and a <= k[1] <= b for k in diff) and set(after) == set(before)
-    assert all(after[k][2] == pytest.approx(after[k][1] * 0.77) for k in diff)
-    assert done[base] == (b - a).days + 1 and done.get(follower) == 0                                     # izleyen senaryoda yeniden yazılan satır yok (kendi girişi yok)
-    assert stored(db_engine, follower) == {}
-    same_as_scratch(db_engine, base)
-    same_as_scratch(db_engine, follower)
-
-    # (2) izleyen senaryoda başka kaynağa giriş: yalnız o senaryoda, o kaynak ve günler; Baz'a dokunulmaz
-    c, d = start + timedelta(days=1), start + timedelta(days=5)
-    efficiency(db_engine, follower, r2, 33, c, d)
-    with Session(db_engine) as s:
-        cache.invalidate(s, CACHE, follower, [r2], c, d)
-        s.commit()
-    own = stored(db_engine, follower)
-    assert set(own) == {(r2, c + timedelta(days=i)) for i in range(5)} and stored(db_engine, base) == after
-    same_as_scratch(db_engine, follower)
-
-    # (3) Baz'daki değişiklik izleyen senaryonun kendi satırı olan kaynak ve günleri de yeniler (sonuç Baz girişine de bağlı): başka giriş, aynı kaynak
-    efficiency(db_engine, base, r2, 66, c, d)
-    with Session(db_engine) as s:
-        done = cache.invalidate(s, CACHE, base, [r2], c, d)
-        s.commit()
-    assert done == {base: 5, follower: 5} and stored(db_engine, follower) == own                          # izleyenin kendi girişi (%33) önceliklidir: değer aynı
-    assert changed(after, stored(db_engine, base)) == {(r2, c + timedelta(days=i)) for i in range(5)} - {k for k in own if after[k][1] == 0}
-    same_as_scratch(db_engine, base)
-    same_as_scratch(db_engine, follower)
-
-    # (4) kaydın tarih aralığı değişti (eski ve yeni aralık), sonra silindi: izleyen senaryonun satırları yeni aralığa taşınır, sonra kalmaz
-    with db_engine.begin() as conn:
-        conn.execute(sa.text("UPDATE param.ResourceEfficiency SET ValidFrom = :a, ValidTo = :b WHERE ScenarioDefinitionId = :s AND EfficiencyPct = 33"),
-                     {"a": d + timedelta(days=2), "b": d + timedelta(days=3), "s": follower})
-    with Session(db_engine) as s:
-        cache.invalidate(s, CACHE, follower, [r2], c, d + timedelta(days=3))
-        s.commit()
-    assert set(stored(db_engine, follower)) == {(r2, d + timedelta(days=2)), (r2, d + timedelta(days=3))}
-    same_as_scratch(db_engine, follower)
-    with db_engine.begin() as conn:
-        conn.execute(sa.text("DELETE FROM param.ResourceEfficiency WHERE ScenarioDefinitionId = :s AND EfficiencyPct = 33"), {"s": follower})
-    with Session(db_engine) as s:
-        cache.invalidate(s, CACHE, follower, [r2])                                                        # tarih verilmezse önbellekteki bütün günler
-        s.commit()
-    assert stored(db_engine, follower) == {}
-    same_as_scratch(db_engine, follower)
-
-    # (5) bütün kaynaklar, belirli günler (fabrika takvimi gibi): yalnız o günler yeniden yazılır; sonuç aynı kalır
-    snapshot = stored(db_engine, base)
-    with Session(db_engine) as s:
-        done = cache.invalidate(s, CACHE, base, None, a, a)
-        s.commit()
-    assert done[base] == len({k[0] for k in snapshot}) and stored(db_engine, base) == snapshot
-    with Session(db_engine) as s:
-        assert cache.invalidate(s, CACHE, base, [], a, b) == {base: 0, follower: 0}                       # etkilenen kayıt yoksa iş yok
-
-    # (6) planlama ufku ilerledi: geçmiş gün silinir, yalnız eksik günler hesaplanır; ötekilere dokunulmaz
-    with Session(db_engine) as s:
-        assert cache.ensure(s, CACHE, follower, start + timedelta(days=1), end + timedelta(days=2))[follower] in ("extended", "trimmed")
-    moved = stored(db_engine, base)
-    assert {k[1] for k in moved} >= {end + timedelta(days=2)} and min(k[1] for k in moved) == start       # Baz izleyen adına yalnız genişler
-    assert all(moved[k] == snapshot[k] for k in snapshot)
-    with Session(db_engine) as s:
-        assert cache.ensure(s, CACHE, base, start + timedelta(days=1), end + timedelta(days=2))[base] == "trimmed"   # Baz'ın kendi isteği geçmiş günü siler
-    assert min(k[1] for k in stored(db_engine, base)) == start + timedelta(days=1)
-
-    # (7) hesap kodunun sürümü ya da veri versiyonu değişti: senaryonun önbelleği baştan kurulur
-    with Session(db_engine) as s:
-        newer = dataclasses.replace(CACHE, code_version=CACHE.code_version + 1)
-        assert cache.ensure(s, newer, base, start, end)[base] == "built"
-        assert cache.ensure(s, CACHE, base, start, end)[base] == "built"
-        s.execute(sa.text("UPDATE cache.PeriodCacheState SET DataVersionId = -1 WHERE ScenarioDefinitionId = :s"), {"s": base})
-        s.commit()
-        assert cache.ensure(s, CACHE, base, start, end)[base] == "built"
-        assert cache.ensure(s, CACHE, base, start, end)[base] == "ready"
-    same_as_scratch(db_engine, base)
-
-
-@pytest.mark.db
-def test_scenario_lifecycle_and_commands(db_engine, world, clean, capsys):
-    """Yeni senaryonun önbelleği ilk kullanımda kurulur; pasif yapılınca, Baz'dan ayrılınca ve silinince düşer. Yönetim komutu."""
-    with Session(db_engine) as s:
-        new = scenarios.create_copy(s, "pytest dönem önbelleği", world["base"], follows_base=True)
-        s.commit()
-        sid = new["Id"]
-    try:
-        found = horizon_of(db_engine, sid)
-        efficiency(db_engine, sid, world["r1"], 44, found[0].start, found[0].end)
-        assert ensure(db_engine, sid)[sid] == "built" and len(stored(db_engine, sid)) == found[0].days
-        with Session(db_engine) as s:
-            scenarios.detach(s, sid)                                    # Baz'dan ayır: artık tamamını kendisi tutar; baştan kurulur
-            s.commit()
-        assert stored(db_engine, sid) == {}
-        assert ensure(db_engine, sid) == {sid: "built"} and len(stored(db_engine, sid)) == same_as_scratch(db_engine, sid) > 100
-        with Session(db_engine) as s:
-            scenarios.set_active(s, sid, False)                         # pasif senaryonun önbelleği tutulmaz
-            s.commit()
-        assert stored(db_engine, sid) == {}
-        assert ensure(db_engine, sid) == {sid: "built"}
-    finally:
-        with Session(db_engine) as s:
-            scenarios.delete(s, sid)
-            s.commit()
-    assert stored(db_engine, sid) == {}
-    with db_engine.connect() as c:
-        assert c.execute(sa.text("SELECT COUNT(*) FROM cache.PeriodCacheState WHERE ScenarioDefinitionId = :s"), {"s": sid}).scalar() == 0
-    ensure(db_engine, world["base"])
-    assert periods_cli(["status"]) == 0 and f"senaryo {world['base']}" in capsys.readouterr().out
-    assert periods_cli(["drop", "--scenario", str(world["base"])]) == 0 and stored(db_engine, world["base"]) == {}
-    assert periods_cli(["rebuild", "--scenario", str(world["base"])]) == 0
-    out = capsys.readouterr().out
-    assert "kuruldu" in out and same_as_scratch(db_engine, world["base"]) == len(stored(db_engine, world["base"]))
 
 
 @pytest.mark.db
@@ -495,11 +397,11 @@ def test_excel_carries_the_scenario(api, db_engine, world, clean):
     wb = load_workbook(io.BytesIO(r.content))
     assert [c.value for c in wb["Pivot"][1]][2:2 + len(found)] == [p.label for p in horizon_of(db_engine, world["base"])]
     info = {row[0].value: row[1].value for row in wb["Bilgi"].iter_rows() if row[0].value}
-    assert info["Senaryo"] == "Baz" and "Kaynak sayısı · Son dönem değeri" in info["Değerler"]
+    assert info["Senaryo"] == "Baz" and "Toplam kapasite · Toplam" in info["Değerler"]
     counts = defaultdict(int)
     for row in wb["Pivot"].iter_rows(min_row=3):
         counts[row[1].value] += 1
-    assert counts["Kaynak sayısı · Son dönem değeri"] > 1
+    assert counts["Toplam kapasite · Toplam"] > 1 and counts["Duruş · Toplam"] == counts["Toplam kapasite · Toplam"]
 
 
 @pytest.mark.db
@@ -510,6 +412,7 @@ def test_grouping_by_every_period_and_master_field(api, db_engine, world, clean)
     efficiency(db_engine, world["base"], world["r1"], 77, found[0].start, found[1].end)
     names = [c["field"] for c in api.get(U + "/columns").json()["columns"]]
     sent = {"WorkingDays": {"fn": "sum"}, "TotalCapacity": {"fn": "sum"}, "AvailableCapacity": {"fn": "sum"}, "Efficiency": {"fn": "wavg"}}   # ağırlıksız: ilk demo gövdesi
+    weight = lambda g: g["aggregates"]["TotalCapacity"]  # noqa: E731
     order = {"Month": [p.month for p in found], "Period": [p.label for p in found], "Week": [p.week for p in found], "Quarter": [p.quarter for p in found],
              "Year": [p.year for p in found], "PeriodType": [p.type for p in found]}
     totals = all_rows(api, fields=["TotalCapacity", "AvailableCapacity"])
@@ -525,8 +428,7 @@ def test_grouping_by_every_period_and_master_field(api, db_engine, world, clean)
             got = sum((g["aggregates"]["TotalCapacity"] or 0) for g in groups)
             assert got == pytest.approx(capacity), field                                                       # ara toplamlar kayıtlarla tutar
         for g in groups:
-            a, t, e = g["aggregates"]["AvailableCapacity"], g["aggregates"]["TotalCapacity"], g["aggregates"]["Efficiency"]
-            assert e is None if not t else e == pytest.approx(a / t), field                                    # verimlilik kapasiteyle ağırlıklı
+            assert (g["aggregates"]["Efficiency"] is None) == (not weight(g)), field                           # verimlilik kapasiteyle ağırlıklı: kapasite yoksa boş
     # iki düzey ve azalan sıralama; grubun satırları
     out = post(api, "/groups", group_by=["Month", "ResourceGroupCode"], fields=names, aggregates=sent, filters=[], sort=[{"field": "Month", "dir": "desc"}])
     months = list(dict.fromkeys(p.month for p in found))
@@ -536,4 +438,30 @@ def test_grouping_by_every_period_and_master_field(api, db_engine, world, clean)
     assert rows["filtered"] == first["children"][0]["count"] == len(rows["rows"])
     # arayüz varsayılanlarını göndermezse: sunucunun varsayılanı (Son dönem değeri gruplamada yok)
     plain = post(api, "/groups", group_by=["Month"], fields=names)
-    assert set(plain["aggregate_specs"]) == {"WorkingDays", "TotalCapacity", "AvailableCapacity", "Efficiency"}
+    assert set(plain["aggregate_specs"]) == {"WorkingDays", "Downtime", "WorkableDays", "AvgDailyCapacity", "TotalDailyCapacity", "Efficiency", "TotalCapacity",
+                                             "AvailableCapacity", "OvertimeLimit"}                           # Son dönem değeri gruplamada yok
+
+
+@pytest.mark.db
+def test_label_chart_value_and_merged_period_headers_in_excel(api, db_engine, world, clean):
+    """K-186: "Çalışılabilir gün"; grafik ilk açılışta Kullanılabilir kapasite; Ay › Dönem'de aylık dönemin iki başlığı Excel'de tek hücre."""
+    cols = api.get(U + "/columns").json()
+    assert {c["field"]: c["label"] for c in cols["columns"]}["WorkableDays"] == "Çalışılabilir gün" and cols["chart_value"] == "AvailableCapacity"
+    found = horizon_of(db_engine, world["base"])
+    monthly = [p.label for p in found if p.type == "Ay"]
+    weekly_months = {p.month for p in found if p.type == "Hafta"}
+    assert monthly and weekly_months
+    body = {"rows": [{"field": "ResourceGroupCode"}], "columns": [{"field": "Month"}, {"field": "Period"}],
+            "values": [{"id": "d1", "field": "TotalCapacity", "fn": "sum"}], "values_on": "rows", "scenario_id": world["base"]}
+    r = api.post(U + "/pivot/export", json=body)
+    assert r.status_code == 200, r.text
+    ws = load_workbook(io.BytesIO(r.content))["Pivot"]
+    merged = {str(m): m for m in ws.merged_cells.ranges}
+    top = {ws.cell(1, c).value: c for c in range(3, ws.max_column + 1) if ws.cell(1, c).value}
+    for label in monthly:                                   # aylık dönem: üstte ve altta aynı yazı → iki satır tek hücre
+        column = top[label]
+        letter = ws.cell(1, column).column_letter
+        assert f"{letter}1:{letter}2" in merged and ws.cell(2, column).value is None
+    weekly = next(m for m in weekly_months if m in top)     # haftaları olan ay: üstte ay (haftaları boyunca), altta haftalar
+    assert ws.cell(2, top[weekly]).value.startswith("H") and not any(m.min_row == 1 and m.max_row == 2 and m.min_col == top[weekly] for m in merged.values())
+    assert "A4:A4" not in merged and ws["A4"].value                                                  # tek değer satırı: birleşme gerekmez

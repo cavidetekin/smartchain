@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
 
-from . import dataset as d
+from . import capacity, dataset as d
 from .dataset import Dataset, add_business_days
 
 
@@ -60,12 +60,8 @@ def members(ds: Dataset, group: dict) -> list[dict]:
 
 
 def weekly_capacity(ds: Dataset, group: dict, week: int) -> float:
-    """Grubun haftalık kapasitesi: kapasite kaynakta hesaplanır, grupta toplanır (K-180)."""
-    total = 0.0
-    for resource in members(ds, group):
-        working = {r["Date"] for r in ds.rows("CalendarDay") if r["IsWorkingDay"] and r["CalendarId"] == resource["CalendarId"]}
-        total += sum(1 for i in range(7) if ds.day(week, i) in working) * (resource["DailyCapacity"] or 0.0)
-    return total
+    """Grubun haftalık toplam kapasitesi: kapasite kaynakta hesaplanır, grupta toplanır (K-180); girişler çalışma düzeninden (K-185)."""
+    return capacity.group_total(ds, group["Id"], ds.day(week, 0), ds.day(week, 6))
 
 
 def weekly_load(ds: Dataset, group_code: str) -> dict[int, float]:
@@ -171,14 +167,13 @@ def check_impossible_due(ds: Dataset) -> Check:
 
 def check_downtime_and_absence(ds: Dataset) -> Check:
     res = ds.get("Resource", Code=d.MAINTENANCE_RESOURCE)
-    downs = [r for r in ds.rows("ResourceDowntime") if r["ResourceId"] == res["Id"] and r["DowntimeType"] == "Bakım"]
-    working = {r["Date"] for r in ds.rows("CalendarDay") if r["IsWorkingDay"]}
-    down_ok = any(ds.start <= r["StartAt"].date() <= ds.horizon_end and r["StartAt"].date() in working for r in downs)
+    downs = [r for r in ds.params["ResourceDowntime"] if r["ResourceId"] == res["Id"] and r["DowntimeType"] == "Planlı bakım"]
+    down_ok = any(ds.start <= r["StartDate"] <= ds.horizon_end and r["StartDate"].weekday() < 5 for r in downs)
     absences = {ds.code("Resource", a["ResourceId"]): a for a in ds.rows("EmployeeAbsence")}
     abs_ok = (absences.get(d.LEAVE_WORKER, {}).get("AbsenceType") == "İzin"
               and absences.get(d.SICK_WORKER, {}).get("AbsenceType") == "Rapor")
-    detail = (f"{d.MAINTENANCE_RESOURCE} bakım {downs[0]['StartAt']:%d.%m}–"
-              f"{downs[0]['EndAt'] - timedelta(seconds=1):%d.%m}; "
+    detail = (f"{d.MAINTENANCE_RESOURCE} bakım {downs[0]['StartDate']:%d.%m}–"
+              f"{downs[0]['EndDate']:%d.%m}; "
               f"{d.LEAVE_WORKER} izin, {d.SICK_WORKER} rapor") if downs else "bakım kaydı yok"
     return Check(5, "Bakım duruşu ve izin", down_ok and abs_ok, detail)
 
@@ -208,14 +203,14 @@ def check_no_demand_warning(ds: Dataset) -> Check:
 
 
 def check_past_due(ds: Dataset) -> Check:
-    """9 (K-174): teslim tarihi dün ve bugün olan açık siparişler; kritik ve kapasitesi boş kaynak."""
+    """9 (K-174, K-185): teslim tarihi dün ve bugün olan açık siparişler; kritik gruba üye, ne kendisinde ne grubunda çalışma düzeni olan kaynak."""
     late = ds.get("SalesOrderLine", OrderNo=d.PAST_DUE_ORDER)
     today = ds.get("SalesOrderLine", OrderNo=d.DUE_TODAY_ORDER)
     res = ds.get("Resource", Code=d.NO_CAPACITY_RESOURCE)
     groups = {m["ResourceGroupId"] for m in ds.rows("ResourceGroupMember") if m["ResourceId"] == res["Id"]}
     critical = any(g["IsCritical"] for g in ds.rows("ResourceGroup") if g["Id"] in groups)  # kritiklik kaynak grubundadır (K-180)
     ok = (late["RequestedDate"] < ds.generated_on and today["RequestedDate"] == ds.generated_on and late["OpenQuantity"] > 0
-          and critical and res["DailyCapacity"] is None)
+          and critical and res["Id"] in capacity.undefined(ds, ds.generated_on))
     return Check(9, "Tarih geçince çıkan uyarı; kapasitesi tanımsız kaynak", ok, f"{d.PAST_DUE_ORDER} {late['RequestedDate']:%d.%m}, {d.DUE_TODAY_ORDER} bugün")
 
 

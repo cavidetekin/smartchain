@@ -1,8 +1,8 @@
-"""Dönem tablosu önbelleği (K-184): ana kayıt × gün ara sonucu `cache` şemasında durur. Veri değildir: girişlerden hesaplanır, silinirse yeniden
+"""Dönem tablosu önbelleği (K-184): günlük ara sonuç `cache` şemasında durur. Veri değildir: girişlerden hesaplanır, silinirse yeniden
 üretilir. Ekran açılırken hesap yapılmaz; okuma önbellekten. Giriş değişince yalnız etkilenen ana kayıt ve günler yenilenir (`invalidate`).
 
-Boyut kuralları: yalnız ufuktaki günler tutulur; Baz'ı izleyen senaryo yalnız kendi girişi olan ana kayıt ve günleri tutar (gerisi Baz'ın
-satırlarından okunur); eski veri versiyonunun önbelleği tutulmaz; silinen ya da pasif yapılan senaryonun satırları düşer.
+Boyut kuralları: yalnız ufuktaki günler tutulur; Baz'ı izleyen senaryo yalnız Baz'dan farklı çıkan satırları tutar (gerisi Baz'ın satırlarından
+okunur); eski veri versiyonunun önbelleği tutulmaz; silinen ya da pasif yapılan senaryonun satırları düşer.
 """
 import json
 import logging
@@ -37,22 +37,28 @@ class Scope:
 
 @dataclass(frozen=True)
 class DayCache:
-    """Bir önbellek tablosu ve hesabı. `select(own_only)` günlük satırları üreten SELECT metnidir (kolonlar tablonun sırasıyla; parametreler
-    `Scope.params()`): own_only doğruysa yalnız senaryonun kendi girişi olan ana kayıt ve günler (Baz'ı izleyen senaryonun tuttuğu fark)."""
+    """Bir önbellek tablosu ve hesabı. `select()` senaryonun geçerli günlük satırlarını üreten SELECT metnidir (kolonlar tablodaki adlarla;
+    parametreler `Scope.params()`): Baz'ı izleyen senaryoda Baz'dan okunan girişler dahil tam sonuç. İzleyen senaryoda yalnız Baz'ın
+    önbelleğinden farklı çıkan satırlar yazılır."""
     name: str
     table: sa.Table
-    master: str                              # ana kayıt kolonu (ör. ResourceId)
+    keys: tuple[str, ...]                    # gün dışındaki anahtar kolonları (ör. ResourceId, ResourceGroupId)
+    master: str                              # yenilemede süzülen ana kayıt kolonu (ör. ResourceId)
     values: tuple[str, ...]                  # değer kolonları
     code_version: int                        # hesap değişince artırılır: önbellek düşürülüp yeniden kurulur
-    select: Callable[[bool], str]
+    select: Callable[[], str]
+    # İzleyen senaryonun kendi girişi var mı: yoksa sonucu Baz'ınkiyle aynıdır, hesap yapılmadan boş bırakılır
+    has_own: Callable[[Session, int], bool] | None = None
+    # Hesaptan önce çalışır (ör. girdileri oturumun geçici tablolarına alır); `select()` onun hazırladığını okur
+    prepare: Callable[[Session, "Scope"], None] | None = None
 
     @property
     def full_name(self) -> str:
         return f"[{self.table.schema}].[{self.table.name}]"
 
     @property
-    def columns(self) -> str:
-        return ", ".join(f"[{c}]" for c in ("ScenarioDefinitionId", self.master, "Date", *self.values))
+    def row_columns(self) -> tuple[str, ...]:
+        return ("ScenarioDefinitionId", *self.keys, "Date", *self.values)
 
 
 def scenario_row(session: Session, scenario_id: int) -> dict:
@@ -105,11 +111,23 @@ def _delete(session: Session, cache: DayCache, scenario_id: int, date_from: date
 
 
 def _fill(session: Session, cache: DayCache, scope: Scope) -> int:
-    """Kapsamın satırlarını girişlerden hesaplayıp yazar (önce silinmiş olmalı)."""
+    """Kapsamın satırlarını girişlerden hesaplayıp yazar (önce silinmiş olmalı). Baz'ı izleyen senaryoda yalnız Baz'ın önbelleğindeki satırdan
+    farklı çıkanlar yazılır; Baz'ın aynı kapsamı önce kurulmuş ya da yenilenmiş olmalıdır."""
     if scope.date_from > scope.date_to:
         return 0
-    sql = f"INSERT INTO {cache.full_name} ({cache.columns}) {cache.select(scope.base_id is not None)}"
-    return session.execute(sa.text(sql), scope.params()).rowcount
+    cols = ", ".join(f"[{c}]" for c in cache.row_columns)
+    picked = ", ".join(f"x.[{c}]" for c in cache.row_columns)
+    sql = f"INSERT INTO {cache.full_name} ({cols}) SELECT {picked} FROM ({cache.select()}) x"
+    if scope.base_id is not None:
+        if cache.has_own is not None and not cache.has_own(session, scope.scenario_id):
+            return 0   # kendi girişi yok: sonucu Baz'ınkiyle aynı
+        same = " AND ".join(f"b.[{c}] = x.[{c}]" for c in (*cache.keys, "Date", *cache.values))
+        sql += f" WHERE NOT EXISTS (SELECT 1 FROM {cache.full_name} b WHERE b.[ScenarioDefinitionId] = :base AND {same})"
+    if cache.prepare is not None:
+        cache.prepare(session, scope)
+    statement = sa.text(sql)
+    wanted = {k: v for k, v in scope.params().items() if f":{k}" in sql}   # hazırlık yapan hesap kapsamı kendi alır; deyimde geçmeyen parametre gönderilmez
+    return session.execute(statement, wanted).rowcount
 
 
 def _save_state(session: Session, cache: DayCache, scenario_id: int, date_from: date, date_to: date, version: int | None, built: bool) -> None:
@@ -131,19 +149,21 @@ def ensure(session: Session, cache: DayCache, scenario_id: int, date_from: date,
     # Baz'ın satırlarını izleyen senaryolar da okur: Baz'ın aralığı izleyen adına yalnız genişler; Baz'ın kendi isteğinde sonu kısalmaz
     if base is not None:
         done[base] = _ensure_one(session, cache, base, None, date_from, date_to, keep_start=True, keep_end=True)
-    done[scenario_id] = _ensure_one(session, cache, scenario_id, base, date_from, date_to, keep_end=bool(scenario["IsBase"]))
+    done[scenario_id] = _ensure_one(session, cache, scenario_id, base, date_from, date_to, keep_end=bool(scenario["IsBase"]),
+                                    rebuild=base is not None and done[base] == "built")
     if any(v != "ready" for v in done.values()):
         session.commit()
     return done
 
 
 def _ensure_one(session: Session, cache: DayCache, scenario_id: int, base: int | None, date_from: date, date_to: date,
-                keep_start: bool = False, keep_end: bool = False) -> str:
+                keep_start: bool = False, keep_end: bool = False, rebuild: bool = False) -> str:
+    """rebuild: izleyen senaryoda Baz baştan kuruldu; fark Baz'a göre tutulduğu için senaryo da baştan kurulur."""
     version = _data_version(session)
 
     def read() -> tuple[dict | None, bool, date, date]:
         state = _state(session, cache, scenario_id)
-        fresh = state is not None and state["CodeVersion"] == cache.code_version and state["DataVersionId"] == version
+        fresh = state is not None and state["CodeVersion"] == cache.code_version and state["DataVersionId"] == version and not rebuild
         start = min(date_from, state["DateFrom"]) if fresh and keep_start else date_from
         end = max(date_to, state["DateTo"]) if fresh and keep_end else date_to
         return state, fresh, start, end
@@ -187,9 +207,9 @@ def followers(session: Session) -> list[int]:
 def invalidate(session: Session, cache: DayCache, scenario_id: int, masters: Iterable[int] | None = None,
                date_from: date | None = None, date_to: date | None = None) -> dict[int, int]:
     """Giriş değişti: yalnız etkilenen ana kayıt ve günler silinip girişlerden yeniden hesaplanır (masters None: bütün ana kayıtlar; tarih
-    None: önbellekteki bütün günler). Baz'da çağrılırsa Baz'ı izleyen senaryolarda da aynı ana kayıt ve günler yenilenir. Kurulmamış
-    önbelleğe dokunulmaz (ilk kullanımda zaten girişlerden kurulur). Girişi kaydeden işlemle aynı işlemde çalışır; commit çağıranındır.
-    Dönen: senaryo → yeniden yazılan satır sayısı."""
+    None: önbellekteki bütün günler). Baz'da çağrılırsa önce Baz, sonra Baz'ı izleyen senaryolarda aynı ana kayıt ve günler yenilenir (farkları
+    Baz'a göre tutulur). Kurulmamış önbelleğe dokunulmaz (ilk kullanımda zaten girişlerden kurulur). Girişi kaydeden işlemle aynı işlemde
+    çalışır; commit çağıranındır. Dönen: senaryo → yeniden yazılan satır sayısı."""
     scenario = scenario_row(session, scenario_id)
     ids = None if masters is None else tuple(dict.fromkeys(int(m) for m in masters))
     targets = [scenario_id] + (followers(session) if scenario["IsBase"] else [])
@@ -229,7 +249,10 @@ def status(session: Session, cache: DayCache) -> list[dict]:
 
 def effective_sql(cache: DayCache) -> str:
     """Senaryonun geçerli günlük satırları: senaryonun satırı varsa o, yoksa (Baz'ı izliyorsa) Baz'ın satırı. Parametreler: :sid, :base."""
-    values = ", ".join(f"CASE WHEN s.[{cache.master}] IS NOT NULL THEN s.[{v}] ELSE b.[{v}] END AS [{v}]" for v in cache.values)
-    return (f"SELECT b.[{cache.master}], b.[Date], {values} FROM {cache.full_name} b "
-            f"LEFT JOIN {cache.full_name} s ON s.[ScenarioDefinitionId] = :sid AND :base IS NOT NULL AND s.[{cache.master}] = b.[{cache.master}] AND s.[Date] = b.[Date] "
+    keys = ", ".join(f"b.[{k}]" for k in cache.keys)
+    first = cache.keys[0]
+    values = ", ".join(f"CASE WHEN s.[{first}] IS NOT NULL THEN s.[{v}] ELSE b.[{v}] END AS [{v}]" for v in cache.values)
+    on = " AND ".join(f"s.[{k}] = b.[{k}]" for k in (*cache.keys, "Date"))
+    return (f"SELECT {keys}, b.[Date], {values} FROM {cache.full_name} b "
+            f"LEFT JOIN {cache.full_name} s ON s.[ScenarioDefinitionId] = :sid AND :base IS NOT NULL AND {on} "
             "WHERE b.[ScenarioDefinitionId] = COALESCE(:base, :sid)")

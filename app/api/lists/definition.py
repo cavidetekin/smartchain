@@ -81,6 +81,8 @@ class ListDefinition:
     period: tuple[str, str] | None = None
     # Ürünün Standart görünümündeki pivot (görünüm içeriğindeki `pivot` biçiminde) ve hazır hesaplanan değerler (K-184)
     standard_pivot: Mapping | None = None
+    # Grafik ilk açıldığında serinin alanı (K-186); boşsa görünür ilk sayı alanı
+    chart_value: str | None = None
     calculated: tuple[Mapping, ...] = ()
 
     @property

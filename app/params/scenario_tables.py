@@ -17,6 +17,8 @@ from sqlalchemy.orm import Session
 
 from db.models import metadata
 
+from . import resolve
+
 SETTING, DATA = "Ayar", "Veri"
 KEY = "ScenarioDefinitionId"
 
@@ -34,7 +36,8 @@ class ScenarioTable:
 
 
 def _pending(session: Session, scenario_id: int) -> None:
-    """Fark yapısı ve çözümleme katmanı 7.5'te; o zamana kadar ayırma yalnız seçimi kaydeder."""
+    """Tedarikçi limitlerinin fark yapısı kendi adımında (7.15) gelir; o zamana kadar ayırma yalnız seçimi kaydeder. Kapasite girişlerinde
+    çözümleme katmanı kuruludur (K-185)."""
 
 
 TABLES: tuple[ScenarioTable, ...] = (
@@ -44,8 +47,8 @@ TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("PriorityRule", SETTING),
     ScenarioTable("AllocationRule", SETTING),
     ScenarioTable("SupplierLimit", DATA, _pending),
-    ScenarioTable("ResourceEfficiency", DATA, _pending),
-    ScenarioTable("ResourcePeriodLimit", DATA, _pending),
+    # Kapasite girişleri (K-185): fark yapısı ve çözümleme `app/params/resolve.py`'de
+    *[ScenarioTable(name, DATA, resolve.materializer(name)) for name in resolve.FIELDS],
 )
 BY_NAME = {t.name: t for t in TABLES}
 

@@ -51,14 +51,6 @@ MATERIAL_UNIT = ("MaterialId", "BaseUom")
 CAPACITY_UNIT = ("ResourceGroupId", "CapacityUnit")  # tüketim kaynak grubunun kapasite biriminde (K-180)
 
 
-def _resource_unit(table: sa.Table) -> sa.ColumnElement:
-    """Kaynağın üye olduğu grupların ortak kapasite birimi (K-180): günlük kapasitenin birimi. Grubu yoksa ya da birimler farklıysa boş
-    (ondalık varsayılana düşer). Geçici: günlük kapasite 7.9'da kaynaktan kalkar."""
-    m = metadata.tables["core.ResourceGroupMember"].alias("u_member")
-    g = metadata.tables["core.ResourceGroup"].alias("u_group")
-    return (sa.select(sa.case((sa.func.count(sa.distinct(g.c.CapacityUnit)) == 1, sa.func.min(g.c.CapacityUnit))))
-            .where(m.c.ResourceId == table.c.Id, _current(m), g.c.Id == m.c.ResourceGroupId, _current(g)).correlate(table).scalar_subquery())
-
 MASTER_SPECS: tuple[Spec, ...] = (
     Spec("MaterialReference", "master-material-reference", {"TimeFactor": 2}),
     Spec("ProductionVersion", "master-production-version", ADD, unit_decimals=frozenset({"BaseQuantity"}), unit_ref=MATERIAL_UNIT),
@@ -66,9 +58,8 @@ MASTER_SPECS: tuple[Spec, ...] = (
          unit="ComponentUom", unit_ref=("ComponentMaterialId", "BaseUom")),
     Spec("Routing", "master-routing", {"TransferQuantity": 2, "WaitingTimeHours": 2, "TransferTimeHours": 2, **ADD},
          unit_decimals=frozenset({"Consumption"}), unit_ref=CAPACITY_UNIT),
-    Spec("Resource", "master-resource",
-         {"SubconFixedLeadTimeDays": 2, "SubconVariableDaysPerUnit": 4, "RemainingOverTimeYear": 2, "RemainingOverTimeMonth": 2, **ADD},
-         unit_decimals=frozenset({"DailyCapacity"}), unit_query=_resource_unit),
+    # Kapasite alanları kaynakta durmaz (K-185): Kapasite yönetimi'nin giriş tablolarındadır
+    Spec("Resource", "master-resource", {"RemainingOverTimeYear": 2, "RemainingOverTimeMonth": 2, **ADD}),
     Spec("ResourceGroup", "master-resource-group", ADD),
     Spec("ResourceGroupMember", "master-resource-group-member", {f"AdditionalNumber{i}": 2 for i in range(1, 3)}),
     Spec("Supplier", "master-supplier", ADD),

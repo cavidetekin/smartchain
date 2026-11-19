@@ -40,6 +40,16 @@ export interface PivotValue {
   rules?: PivotRule[];
   /** Kurallar toplam satır ve sütunlarına da uygulanır (varsayılan kapalı). */
   rules_on_totals?: boolean;
+  /** Değerin satır biçimi (K-186): zemin, yazı rengi, kalın. Değerler satırlardayken satırına, sütunlardayken sütunlarına uygulanır. */
+  format?: PivotRowFormat;
+}
+export type PivotRowFormat = Pick<RuleFormat, "fill" | "color" | "bold">;
+/** "Değer" kolonunun genişlik anahtarı (değerler satırlardayken). */
+export const PIVOT_VALUE_WIDTH = "__value";
+/** Boş biçim saklanmaz: yalnız dolu özellikler; hiçbiri yoksa undefined. */
+export function cleanRowFormat(f: PivotRowFormat | null | undefined): PivotRowFormat | undefined {
+  const out: PivotRowFormat = { ...(f?.fill ? { fill: f.fill } : {}), ...(f?.color ? { color: f.color } : {}), ...(f?.bold ? { bold: true } : {}) };
+  return Object.keys(out).length ? out : undefined;
 }
 export const isCalc = (v: Pick<PivotValue, "kind">) => v.kind === "calc";
 /** Hesaplanan değerin işleneni olabilir mi: alan değeri ve sonucu sayı (tarihte En erken · En geç olamaz). */
@@ -65,6 +75,8 @@ export interface PivotConfig {
   values_on: "columns" | "rows";
   totals: PivotTotals;
   sort: PivotSort;
+  /** Satır başlığı kolonlarının genişliği (rem; K-186): satır alanı → genişlik; "Değer" kolonu `PIVOT_VALUE_WIDTH`. Yalnız gösterim. */
+  widths?: Record<string, number>;
 }
 
 /** Hücre: sayı, boş, birimi karışık, biriminin ondalığıyla sayı ya da tarih (En erken · En geç; ISO metin). */
@@ -131,10 +143,12 @@ export function normalizePivot(raw: Partial<PivotConfig> | null | undefined): Pi
       id: v.id, field: v.field ?? null, fn: v.fn ?? "sum", weight: v.weight ?? null, decimals: v.decimals ?? null, name: v.name?.trim() ? v.name.trim() : null,
       ...(v.kind === "calc" ? { kind: "calc" as const, a: v.a ?? null, op: v.op ?? "div", b: v.b ?? null, percent: Boolean(v.percent) } : {}),
       ...(v.rules?.length ? { rules: v.rules } : {}), ...(v.rules_on_totals ? { rules_on_totals: true } : {}),
+      ...(cleanRowFormat(v.format) ? { format: cleanRowFormat(v.format) } : {}),
     })),
     values_on: raw.values_on ?? "columns",
     totals: { ...base.totals, ...(raw.totals ?? {}) },
     sort: { ...base.sort, ...(raw.sort ?? {}) },
+    ...(raw.widths && Object.keys(raw.widths).length ? { widths: { ...raw.widths } } : {}),
   };
 }
 
@@ -146,9 +160,12 @@ export function fitPivot(pivot: PivotConfig | null, columns: ListColumn[]): Pivo
   const ids = new Set(fields.map((v) => v.id));
   // hesaplanan değer işlenenleriyle yaşar: biri giderse o da gider
   const values = pivot.values.filter((v) => (isCalc(v) ? ids.has(v.a ?? "") && ids.has(v.b ?? "") : ids.has(v.id)));
+  const { widths, ...rest } = pivot;
+  const kept = Object.fromEntries(Object.entries(widths ?? {}).filter(([f]) => f === PIVOT_VALUE_WIDTH || known.has(f)));
   return {
-    ...pivot, rows: pivot.rows.filter((a) => known.has(a.field)), columns: pivot.columns.filter((a) => known.has(a.field)), values,
+    ...rest, rows: pivot.rows.filter((a) => known.has(a.field)), columns: pivot.columns.filter((a) => known.has(a.field)), values,
     sort: pivot.sort.by === "name" || values.some((v) => v.id === pivot.sort.by) ? pivot.sort : { by: "name", dir: "asc" },
+    ...(Object.keys(kept).length ? { widths: kept } : {}),
   };
 }
 
@@ -231,7 +248,9 @@ export function pivotExportRequest(p: PivotConfig, filters: ListFilter[], select
   const { offset: _o, limit: _l, values, ...rest } = pivotRequest(p, filters, selection, scenarioId, 0, 1);
   return {
     ...rest, values_on: p.values_on,
-    values: values.map((v, i) => ({ ...v, ...(p.values[i].decimals != null ? { decimals: p.values[i].decimals } : {}), ...(p.values[i].name ? { name: p.values[i].name } : {}) })),
+    values: values.map((v, i) => ({ ...v, ...(p.values[i].decimals != null ? { decimals: p.values[i].decimals } : {}), ...(p.values[i].name ? { name: p.values[i].name } : {}),
+                                    ...(cleanRowFormat(p.values[i].format) ? { format: cleanRowFormat(p.values[i].format) } : {}) })),
+    ...(p.widths && Object.keys(p.widths).length ? { widths: p.widths } : {}),
     names: Object.fromEntries(p.values.map((v) => [v.id, valueName(v, byField)])),
   };
 }

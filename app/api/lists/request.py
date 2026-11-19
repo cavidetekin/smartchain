@@ -1,6 +1,6 @@
 """Liste sorgusu istek gövdeleri (docs/08, K-87). Yapı burada, anlam (alan, operatör, tip) query.py'de doğrulanır."""
 from datetime import date
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -392,6 +392,12 @@ class PivotValue(PivotValueSpec):
     """Görünümde saklanan değer: gösterim ayarıyla."""
     decimals: int | None = Field(default=None, ge=0, le=6)
     name: str | None = Field(default=None, max_length=60)  # kullanıcının verdiği ad; boşsa "Alan · Hesaplama"
+    # Değerin satır biçimi (K-186): zemin, yazı rengi, kalın; değerler satırlardayken satırına, sütunlardayken sütunlarına uygulanır (ikon yok)
+    format: RuleFormat | None = None
+
+
+PIVOT_VALUE_WIDTH = "__value"   # "Değer" kolonunun genişlik anahtarı (değerler satırlardayken)
+PivotWidths = dict[str, Annotated[float, Field(ge=4, le=60)]]   # satır başlığı kolonu → genişlik (rem; K-186)
 
 
 class PivotExportRequest(BaseModel):
@@ -406,6 +412,7 @@ class PivotExportRequest(BaseModel):
     scenario_id: int | None = None
     values_on: Literal["columns", "rows"] = "columns"
     names: dict[str, str] = {}       # değer id → ekrandaki ad (kısa ad ya da özel ad)
+    widths: PivotWidths = {}         # satır başlığı kolonlarının ekrandaki genişliği (K-186)
     title: str | None = Field(default=None, max_length=80)
 
 
@@ -419,6 +426,7 @@ class PivotDefinition(BaseModel):
     values_on: Literal["columns", "rows"] = "columns"
     totals: PivotTotals = PivotTotals()
     sort: PivotSort = PivotSort()
+    widths: PivotWidths = {}         # satır başlığı kolonlarının genişliği (K-186); yalnız gösterim
 
 
 class ViewColumn(BaseModel):

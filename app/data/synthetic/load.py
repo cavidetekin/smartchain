@@ -22,15 +22,15 @@ log = logging.getLogger("smartchain.synthetic")
 
 # Bağımlılık sırası (K-79). Location ve UnitOfMeasure versiyonsuz; ayrı yazılır.
 LOAD_ORDER = [
-    "Calendar", "CalendarDay", "ResourceGroup", "Supplier", "Customer", "ProjectGroup",
-    "Project", "Material", "UomConversion", "Resource", "ResourceCapacityProfile", "ResourceDowntime",
+    "ResourceGroup", "Supplier", "Customer", "ProjectGroup",
+    "Project", "Material", "UomConversion", "Resource",
     "ResourceGroupMember", "EmployeeAbsence", "ProductionVersion", "BOM", "Routing", "MaterialSupplier", "MaterialReference",
     "SalesOrderLine", "Forecast", "Stock", "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "PurchaseOrderLine",
     "ProductionConfirmation",
 ]
-PARAM_ORDER = ["PriorityRule", "SupplierLimit"]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
-PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "ResourceEfficiency",
-                  "ResourcePeriodLimit", "SupplierLimit"]
+CAPACITY_TABLES = ["WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar"]  # kapasite girişleri (K-185)
+PARAM_ORDER = ["PriorityRule", "SupplierLimit", *CAPACITY_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
+PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "SupplierLimit", *CAPACITY_TABLES]
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
 
 
@@ -200,6 +200,40 @@ def _scenarios(conn: Connection, base_id: int) -> int:
     return len(SCENARIOS)
 
 
+def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> None:
+    """Baz'ı izleyen senaryoların kapasite farkları (docs/11, K-185): fark satırı (alan düzeyinde), geçersiz yapılmış Baz satırı ve senaryonun
+    kendi satırı. Baz'ı izlemeyen senaryo kopyalanırken Baz'ın satırlarını tam alır (`materialize`)."""
+    def scenario(name: str) -> int:
+        return conn.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE Name = :n AND IsSynthetic = 1"), {"n": name}).scalar_one()
+
+    def group(code: str) -> int:
+        return next(g["Id"] for g in ds.rows("ResourceGroup") if g["Code"] == code)
+
+    def resource(code: str) -> int:
+        return next(r["Id"] for r in ds.rows("Resource") if r["Code"] == code)
+
+    overtime, mono = scenario("Fazla mesaili"), scenario("Kısıtsız kapasite")
+    # Fazla mesaili: montajcıların ek mesai limiti 2 → 4 (Baz satırının farkı: yalnız DailyLimit); montaj hattına senaryonun kendi limiti
+    conn.execute(text(
+        "INSERT INTO param.OvertimeLimit (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, ResourceGroupId, ResourceId, ValidFrom, ValidTo, DailyLimit, UpdatedAt) "
+        "SELECT :s, b.Id, N',DailyLimit,', b.IsValid, b.ResourceGroupId, b.ResourceId, b.ValidFrom, b.ValidTo, 4, :now FROM param.OvertimeLimit b "
+        "WHERE b.ScenarioDefinitionId = :base AND b.ResourceGroupId = :g"), {"s": overtime, "base": base_id, "g": group("CG-MON"), "now": now})
+    conn.execute(text(
+        "INSERT INTO param.OvertimeLimit (ScenarioDefinitionId, IsValid, ResourceGroupId, ValidFrom, DailyLimit, UpdatedAt) VALUES (:s, 1, :g, :a, 3, :now)"),
+        {"s": overtime, "g": group("MONTAJ"), "a": ds.start, "now": now})
+    # Kısıtsız kapasite: T-02'nin planlı bakımı bu senaryoda geçersiz (Baz satırı silinmez; "Geçersiz yap")
+    conn.execute(text(
+        "INSERT INTO param.ResourceDowntime (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, ResourceGroupId, ResourceId, StartDate, EndDate, DowntimeType, "
+        "Reason, UpdatedAt) SELECT :s, b.Id, N',IsValid,', 0, b.ResourceGroupId, b.ResourceId, b.StartDate, b.EndDate, b.DowntimeType, b.Reason, :now "
+        "FROM param.ResourceDowntime b WHERE b.ScenarioDefinitionId = :base AND b.ResourceId = :r"), {"s": mono, "base": base_id, "r": resource("T-02"), "now": now})
+
+
+def _drop_period_cache(conn: Connection) -> None:
+    """Önbellek veri değildir (K-184): sentetik veri değişince boşaltılır, ilk kullanımda yeniden kurulur."""
+    conn.execute(text("DELETE FROM cache.ResourceCapacityDay"))
+    conn.execute(text("DELETE FROM cache.PeriodCacheState"))
+
+
 def _load(conn: Connection, ds: Dataset) -> dict:
     """Yüklemenin gövdesi: önceki sentetik veriyi siler, temiz hâli yazar (çağıranın işleminde)."""
     removed = _delete(conn)
@@ -248,11 +282,15 @@ def _load(conn: Connection, ds: Dataset) -> dict:
         raise SyntheticLockError(NO_BASE)
     for name in PARAM_ORDER:
         table = _table(name, "param")
-        rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ScenarioDefinitionId": set_id} for r in ds.params[name]]
+        stamp = {"UpdatedAt": now} if "UpdatedAt" in table.c else {}
+        rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ScenarioDefinitionId": set_id, **stamp} for r in ds.params.get(name, [])]
         rows = _validate(table, rows)
-        conn.execute(sa.insert(table), rows)
+        if rows:
+            conn.execute(sa.insert(table), rows)
         counts[f"param.{name}"] = len(rows)
     counts["param.ScenarioDefinition"] = _scenarios(conn, set_id)
+    _scenario_differences(conn, ds, set_id, now)
+    _drop_period_cache(conn)
     log.info("Sentetik veri yüklendi: veri versiyonu %s, lokasyon %s, senaryo %s (Baz)", version, location_id, set_id)
     return {"data_version_id": version, "location_id": location_id, "scenario_definition_id": set_id,
             "removed_versions": removed, "counts": counts}

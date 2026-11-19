@@ -137,7 +137,6 @@ def test_uom_conversion_is_expanded_and_units_created(s):
 def test_second_transfer_keeps_unchanged_versions_changed_and_closes(s):
     first = transfer.run_transfer(s, None)["data_version"]
     before = core_rows(s, "Material", "Code = N'T-OK' AND LocationId = :l", l=loc_id(s, L1))[0]
-    s.execute(sa.text("UPDATE core.Resource SET DailyCapacity = 8 WHERE Code = N'TR-1' AND VersionTo IS NULL"))
     set_prc(s, "Material", "Code = N'T-ERR'", Name="Yeni ad", RowStatus="Hatalı")    # Hatalı: önceki hâli kalır
     set_prc(s, "Material", "Code = N'T-PAS'", IsActive=0)                           # pasif: kapanır; ona bakan sipariş de
     set_prc(s, "Resource", "Code = N'TR-1'", Name="Tezgâh 2")                         # değişen
@@ -158,7 +157,6 @@ def test_second_transfer_keeps_unchanged_versions_changed_and_closes(s):
     res = core_rows(s, "Resource", "Code = N'TR-1'", current=False)
     old, new = sorted(res, key=lambda x: x["VersionFrom"])
     assert old["VersionTo"] == v - 1 and new["VersionFrom"] == v and new["Id"] == old["Id"] and new["Name"] == "Tezgâh 2"
-    assert new["DailyCapacity"] == 8                                                                  # Smartchain alanı korunur (K-117)
     assert t["Resource"]["changed"] == 1
     assert not core_rows(s, "Customer", "Code = N'TC-1'") and core_rows(s, "Customer", "Code = N'TC-2'")  # staging'de yok: kapatıldı
     assert t["Customer"]["closed"] >= 1 and t["Customer"]["new"] == 1

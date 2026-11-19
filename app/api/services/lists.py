@@ -108,6 +108,7 @@ def columns(session: Session | None, defn: ListDefinition) -> dict:
                 # Dönem tablosu (K-184): İlk · Son dönem değeri sunulur; ürünün Standart'ı pivot; hazır hesaplanan değerler
                 **({"period_table": True} if defn.period else {}),
                 **({"standard_pivot": dict(defn.standard_pivot)} if defn.standard_pivot else {}),
+                **({"chart_value": defn.chart_value} if defn.chart_value else {}),
                 **({"calculated_values": [dict(c) for c in defn.calculated]} if defn.calculated else {}),
                 "export": {"title": defn.title or defn.name, "file_slug": defn.file_slug or defn.name,
                            "sync_max_rows": limits["ExportSyncMaxRows"], "max_rows": limits["ExportMaxRows"],

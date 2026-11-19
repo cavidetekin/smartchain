@@ -99,8 +99,8 @@ def write_pivot_workbook(target: "str | BinaryIO", model: dict, info: list[tuple
     head = formats.header_format()
     cache: dict[tuple, object] = {}
 
-    def fmt(bold=False, fill=None, color=None, num=None, left=False, header=False, align=None):
-        key = (bold, fill, color, num, left, header, align)
+    def fmt(bold=False, fill=None, color=None, num=None, left=False, header=False, align=None, top=False, over=False):
+        key = (bold, fill, color, num, left, header, align, top, over)
         if key not in cache:
             spec: dict = {}
             if bold:
@@ -117,6 +117,10 @@ def write_pivot_workbook(target: "str | BinaryIO", model: dict, info: list[tuple
                 spec.update(left=2, left_color=head.color if header else head.fill)
             if align:
                 spec["align"] = align
+            if top:
+                spec["valign"] = "top"
+            if over:  # en dıştaki satır grubunun ilk satırı: üstünde ince kenarlık (ekrandaki 1 px çizgi, K-186)
+                spec.update(top=1, top_color=head.fill)
             cache[key] = wb.add_format(spec)
         return cache[key]
 
@@ -126,6 +130,9 @@ def write_pivot_workbook(target: "str | BinaryIO", model: dict, info: list[tuple
     span = 1 if on_rows else V
     levels = model["header"]                     # sütun alanı katları (yoksa boş)
     ws.set_column(0, max(left_cols - 1, 0), 22)
+    for j, rem in enumerate(model.get("widths") or []):   # satır başlığı kolonları ekrandaki genişlikte (K-186)
+        if rem is not None:
+            ws.set_column(j, j, width_chars(rem))
     ws.set_column(left_cols, left_cols + len(model["columns"]) * span, 16)
     r = 0
     for level in levels:
@@ -158,31 +165,42 @@ def write_pivot_workbook(target: "str | BinaryIO", model: dict, info: list[tuple
     header_rows = r + 1
     ws.freeze_panes(header_rows, left_cols)
     written = 0
+    lines = V if on_rows else 1                  # bir görüntü satırının Excel satırı sayısı
     for row in model["rows"]:
-        for sub in range(V if on_rows else 1):
+        for sub in range(lines):
             y = header_rows + written
+            over = bool(row.get("group_start")) and sub == 0
             for j, label in enumerate(row["labels"]):
-                if label and sub == 0:
-                    ws.write_string(y, j, label, fmt(bold=row["total"]))
+                if sub:
+                    continue
+                height = (row.get("spans") or [1] * R)[j] * lines   # satır alanı hücresi grubu boyunca birleşir, değer üstte (K-186)
+                if height > 1:
+                    ws.merge_range(y, j, y + height - 1, j, label, fmt(bold=row["total"], top=True, over=over))
+                elif label or over:
+                    ws.write_string(y, j, label, fmt(bold=row["total"], over=over))
+            own = values[sub].get("format") if on_rows else None   # değerin satır biçimi (K-186)
             if on_rows:
-                ws.write_string(y, R, values[sub]["name"], fmt(bold=row["total"]))
+                ws.write_string(y, R, values[sub]["name"], fmt(bold=row["total"] or bool(own and own.bold), fill=own.fill if own else None,
+                                                             color=own.color if own else None, over=over))
             for s, col in enumerate(model["columns"]):
                 for k in ([sub] if on_rows else range(V)):
                     x = left_cols + s * span + (0 if on_rows else k)
                     value = row["cells"][k][s]
                     rule = (row.get("formats", {}).get(k) or [None] * len(model["columns"]))[s]
+                    base = values[k].get("format")
+                    rule = base.merged(rule) if base else rule     # kural tutan hücrede kuralın biçimi kazanır
                     bold = row["total"] or col["total"] or bool(rule and rule.bold)
                     left = col["start"] and (on_rows or k == 0)
                     fill, color = (rule.fill, rule.color) if rule else (None, None)
                     if value is None:
-                        if left or fill:
-                            ws.write_blank(y, x, None, fmt(fill=fill, left=left))
+                        if left or fill or over:
+                            ws.write_blank(y, x, None, fmt(fill=fill, left=left, over=over))
                     elif isinstance(value, str):     # karışık birim
-                        ws.write_string(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, align="right"))
+                        ws.write_string(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, align="right", over=over))
                     elif isinstance(value, (datetime, date)):
-                        ws.write_datetime(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, num=values[k]["num_format"]))
+                        ws.write_datetime(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, num=values[k]["num_format"], over=over))
                     else:
-                        ws.write_number(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, num=row["num_formats"][k][s]))
+                        ws.write_number(y, x, value, fmt(bold=bold, fill=fill, color=color, left=left, num=row["num_formats"][k][s], over=over))
             written += 1
     write_info(wb, _Formats(wb), info)
     wb.close()

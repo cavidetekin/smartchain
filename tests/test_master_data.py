@@ -38,7 +38,7 @@ def test_relations_show_codes_not_ids():
     for d in (*MASTER_LISTS, *TRANSACTION_LISTS):
         assert not {f for f in cols(d.name) if f.endswith("Id")}, d.name
     assert {"MaterialCode", "ComponentMaterialCode", "LocationCode"} <= set(cols("master-bom"))
-    assert "CalendarCode" in cols("master-resource") and "SubcontractorCode" not in cols("master-resource")
+    assert not {"CalendarCode", "SubcontractorCode"} & set(cols("master-resource"))  # takvim ataması kalktı (K-185)
     assert "SubcontractorCode" in cols("master-resource-group")  # fasoncu grupta (K-180)
     assert {"ResourceGroupCode"} <= set(cols("master-routing")) and "ResourceCode" not in cols("master-routing")
     assert {"ResourceGroupCode", "ResourceCode"} <= set(cols("master-resource-group-member"))
@@ -55,8 +55,7 @@ def test_number_format():
     assert (c["OperationNo"]["type"], c["OperationNo"]["decimals"]) == ("integer", 0)
     assert cols("master-routing")["Consumption"]["decimals_from_unit"] and cols("master-routing")["WaitingTimeHours"]["decimals"] == 2
     c = cols("master-resource")
-    assert c["DailyCapacity"]["decimals_from_unit"]
-    assert (c["SubconFixedLeadTimeDays"]["decimals"], c["SubconVariableDaysPerUnit"]["decimals"]) == (2, 4)
+    assert not {"DailyCapacity", "CalendarId", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"} & set(c)  # kapasite alanları kalktı (K-185)
     c = cols("master-material-supplier")
     assert (c["QuotaRatio"]["percent"], c["FixedLeadTimeDays"]["decimals"], c["VariableLeadTimeDays"]["decimals"]) == (True, 0, 4)
     assert c["MinimumOrderQuantity"]["decimals_from_unit"]

@@ -215,9 +215,8 @@ def test_resource_keeps_identity_only():
     core = metadata.tables["core.Resource"].c
     gone = ("IsEmployee", "IsMachine", "IsFurnace", "IsMold", "IsOther", "IsSubcontractor", "IsCritical", "CapacityUnit", "SubcontractorId", "CapacitySource", "Quantity")
     assert not set(gone) & set(core.keys()) and not {"SubcontractorCode", *gone} & set(found)
-    for name in ("DailyCapacity", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit", "CalendarId"):
-        assert name in core and name not in found and core[name].nullable, name          # geçici alanlar
-    assert all("geçici alan" in core[n].comment for n in ("DailyCapacity", "CalendarId", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"))
+    temporary = {"DailyCapacity", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit", "CalendarId"}
+    assert not temporary & set(core.keys()) and not temporary & set(found)               # 7.5'in geçici alanları 7.9'da kalktı (K-185)
     keys = {t: next(i for i in metadata.tables[f"{t}.Resource"].indexes if i.unique) for t in ("core",)}
     assert stg_key("Resource") == ["LocationCode", "Code"] and [c.name for c in keys["core"].columns] == ["LocationId", "Code"]
     assert contract.entity("Resource").version == 4
@@ -227,7 +226,8 @@ def test_resource_group_is_the_planning_unit():
     """K-180: tip bayrakları, kritik, kapasite birimi ve fasoncu kaynak grubunda; grup eşleşmesi tarihsiz ve ek alanlı; vardiya tabloları yok."""
     for gone in ("Worker", "CompetenceGroup", "WorkerCompetence", "WorkerAbsence", "ResourceGroupAssignment", "Shift", "ShiftPlan"):
         assert contract.entity(gone) is None and f"stg.{gone}" not in metadata.tables and f"core.{gone}" not in metadata.tables
-    assert "param.OvertimeLimit" not in metadata.tables
+    limit = metadata.tables["param.OvertimeLimit"].c                    # vardiyaya bağlı tablo kalktı; yenisi grup ya da kaynak için günlük limit (K-185)
+    assert {"ResourceGroupId", "ResourceId", "DailyLimit", "ValidFrom"} <= set(limit.keys()) and not {"ShiftId", "WeeklyLimit"} & set(limit.keys())
     group = {f.name: f for f in fields("ResourceGroup")}
     assert list(group) == ["LocationCode", "Code", "Name", "Type", "IsEmployee", "IsMachine", "IsFurnace", "IsMold", "IsOther", "IsSubcontractor", "IsActive", "IsCritical",
                            "CapacityUnit", "SubcontractorCode"]

@@ -436,6 +436,26 @@ def rule_hit(cell, rules: list) -> int | None:
 MONTHS = period_list.MONTHS
 
 
+def row_groups(rows: list[dict], depth: int) -> list[list[int]]:
+    """Satır alanı hücrelerinin birleşmesi (K-186): her görüntü satırı ve satır alanı için, hücre o satırda başlıyorsa kapsadığı görüntü satırı
+    sayısı, üstteki hücrenin devamıysa 0. Kural ekrandakiyle aynı: aynı öneki (ilk j + 1 anahtar) paylaşan ardışık satırlar tek hücredir; ara
+    toplam satırı dış düzeylerin grubunun içindedir, kendi adını taşıdığı kolon ve sağındakiler ayrı hücredir; genel toplam hep ayrıdır."""
+    def group(n: int, row: dict, j: int):
+        inside = j < (row["level"] - 1 if row["total"] else len(row["key"]))
+        return tuple(row["key"][: j + 1]) if inside else ("#", n)
+
+    out = [[1] * depth for _ in rows]
+    for j in range(depth):
+        start = 0
+        for n in range(1, len(rows)):
+            if group(n, rows[n], j) == group(start, rows[start], j):
+                out[start][j] += 1
+                out[n][j] = 0
+            else:
+                start = n
+    return out
+
+
 def key_label(value, kind: str, bucket: str | None) -> str:
     """Satır ve sütun anahtarının yazısı (Excel; ekrandaki etiketlerle aynı): dönem, Evet / Hayır, boşta "(Boş)"."""
     if value is None or value == "":

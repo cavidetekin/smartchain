@@ -104,38 +104,6 @@ UomConversion = sa.Table(
     comment="Malzeme bazında birim dönüşümü.",
 )
 
-Calendar = sa.Table(
-    "Calendar", metadata,
-    sa.Column("Id", sa.Integer(), primary_key=True, autoincrement=False, comment="Takvim kimliği", info={'label': "Takvim kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("Code", sa.Unicode(30), nullable=False, comment="Takvim kodu", info={'label': "Takvim kodu", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("Name", sa.Unicode(100), nullable=True, comment="Takvim adı", info={'label': "Takvim adı", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("VersionFrom", sa.Integer(), primary_key=True, autoincrement=False, comment="Kaydın geçerli olduğu ilk veri versiyonu", info={'label': "Kaydın geçerli olduğu ilk veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("VersionTo", sa.Integer(), nullable=True, comment="Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş", info={'label': "Kaydın geçerli olduğu son veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=True, comment="Kaydı getiren yükleme partisi", info={'label': "Kaydı getiren yükleme partisi", 'source': "Sistem", 'workspace': False}),
-    sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı; kod ya da kodların birleşimi", info={'label': "İş anahtarı", 'source': "Sistem", 'workspace': False}),
-    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı", 'source': "Sistem", 'workspace': False}),
-    sa.Index("UX_Calendar_Code", "Code", unique=True, mssql_where=sa.text("VersionTo IS NULL")),
-    schema="core",
-    info={'field_class': "Ana veri"},
-    comment="Çalışma takvimi başlığı (kaynaklara bağlanır). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
-)
-
-CalendarDay = sa.Table(
-    "CalendarDay", metadata,
-    sa.Column("CalendarId", sa.Integer(), index=True, primary_key=True, autoincrement=False, comment="Takvim", info={'label': "Takvim", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("Date", mssql.DATE(), primary_key=True, autoincrement=False, comment="Gün", info={'label': "Gün", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("IsWorkingDay", sa.Boolean(), nullable=False, comment="Çalışma günü mü", info={'label': "Çalışma günü mü", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("WorkingFraction", sa.Numeric(5, 4), nullable=True, comment="Günün çalışılan oranı (yarım gün 0,5)", info={'label': "Çalışma oranı", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "tam gün"}),
-    sa.Column("VersionFrom", sa.Integer(), primary_key=True, autoincrement=False, comment="Kaydın geçerli olduğu ilk veri versiyonu", info={'label': "Kaydın geçerli olduğu ilk veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("VersionTo", sa.Integer(), nullable=True, comment="Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş", info={'label': "Kaydın geçerli olduğu son veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=True, comment="Kaydı getiren yükleme partisi", info={'label': "Kaydı getiren yükleme partisi", 'source': "Sistem", 'workspace': False}),
-    sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı; kod ya da kodların birleşimi", info={'label': "İş anahtarı", 'source': "Sistem", 'workspace': False}),
-    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı", 'source': "Sistem", 'workspace': False}),
-    schema="core",
-    info={'field_class': "Ana veri"},
-    comment="Takvimin gün bazında çalışma durumu. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
-)
-
 Resource = sa.Table(
     "Resource", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
@@ -147,11 +115,6 @@ Resource = sa.Table(
     sa.Column("ProductionLocation", sa.Unicode(50), nullable=True, comment="Lokasyonun alt tanımı (hol, hat)", info={'label': "Üretim yeri", 'source': "ERP", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("RemainingOverTimeYear", sa.Numeric(9, 2), nullable=True, comment="Yıllık kalan fazla mesai (saat)", info={'label': "Yıllık kalan fazla mesai (saat)", 'source': "ERP", 'workspace': False, 'if_empty': "sınırsız"}),
     sa.Column("RemainingOverTimeMonth", sa.Numeric(9, 2), nullable=True, comment="Aylık kalan fazla mesai (saat)", info={'label': "Aylık kalan fazla mesai (saat)", 'source': "ERP", 'workspace': False, 'if_empty': "sınırsız"}),
-    sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=True, comment="Kaynağın bir çalışma günündeki kapasitesi; geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Günlük kapasite", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("CalendarId", sa.Integer(), index=True, nullable=True, comment="Çalışma takvimi (Smartchain ekranında atanır); geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Çalışma takvimi", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("SubconPlanningType", sa.Unicode(15), nullable=True, comment="Fasonda: İş yeri | Tedarik süresi", info={'label': "Fason planlama tipi", 'values': ["İş yeri", "Tedarik süresi"], 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("SubconFixedLeadTimeDays", sa.Numeric(9, 2), nullable=True, comment="Fasonda sabit süre (taşıma ve kuyruk); geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Fason sabit süresi (gün)", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("SubconVariableDaysPerUnit", sa.Numeric(18, 6), nullable=True, comment="Fasonda birim başına gün (fasoncunun hızı); geçici alan (Kapasite yönetimi adımında kalkar)", info={'label': "Fason birim süresi (gün)", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("AdditionalText1", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AdditionalText2", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AdditionalText3", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
@@ -209,69 +172,6 @@ ResourceGroup = sa.Table(
     schema="core",
     info={'field_class': "Ana veri"},
     comment="Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez.",
-)
-
-ResourceCapacityProfile = sa.Table(
-    "ResourceCapacityProfile", metadata,
-    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak", info={'label': "Kaynak", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("ValidTo", mssql.DATE(), nullable=False, comment="Bitiş", info={'label': "Bitiş", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=False, comment="Bu aralıktaki günlük kapasite", info={'label': "Günlük kapasite", 'source': "Kural ya da elle", 'workspace': True, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("VersionFrom", sa.Integer(), primary_key=True, autoincrement=False, comment="Kaydın geçerli olduğu ilk veri versiyonu", info={'label': "Kaydın geçerli olduğu ilk veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("VersionTo", sa.Integer(), nullable=True, comment="Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş", info={'label': "Kaydın geçerli olduğu son veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=True, comment="Kaydı getiren yükleme partisi", info={'label': "Kaydı getiren yükleme partisi", 'source': "Sistem", 'workspace': False}),
-    sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı; kod ya da kodların birleşimi", info={'label': "İş anahtarı", 'source': "Sistem", 'workspace': False}),
-    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı", 'source': "Sistem", 'workspace': False}),
-    schema="core",
-    info={'field_class': "Ana veri"},
-    comment="Günlük kapasitenin dönemsel değişikliği. Birim kaynağın gruplarının ortak kapasite birimi; ekranda gösterilir, ayrı saklanmaz. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180). Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
-)
-
-ResourceDowntime = sa.Table(
-    "ResourceDowntime", metadata,
-    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak", info={'label': "Kaynak", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("DowntimeType", sa.Unicode(10), nullable=False, comment="Bakım | Arıza", info={'label': "Duruş tipi", 'values': ["Bakım", "Arıza"], 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("StartAt", mssql.DATETIME2(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Kural ya da elle", 'workspace': True, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("EndAt", mssql.DATETIME2(), nullable=False, comment="Bitiş", info={'label': "Bitiş", 'source': "Kural ya da elle", 'workspace': True, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("AffectedQuantity", sa.Integer(), nullable=False, comment="Etkilenen kaynak adedi", info={'label': "Etkilenen kaynak adedi", 'source': "Kural ya da elle", 'workspace': True, 'if_empty': "hata (satır atlanır)"}),
-    sa.Column("DurationDays", sa.Numeric(9, 4), nullable=True, comment="Süre, gün olarak (yarım gün 0,5)", info={'label': "Süre (gün)", 'source': "Ön hesap", 'workspace': False}),
-    sa.Column("Note", sa.Unicode(400), nullable=True, comment="Açıklama", info={'label': "Açıklama", 'source': "Kullanıcı", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("VersionFrom", sa.Integer(), primary_key=True, autoincrement=False, comment="Kaydın geçerli olduğu ilk veri versiyonu", info={'label': "Kaydın geçerli olduğu ilk veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("VersionTo", sa.Integer(), nullable=True, comment="Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş", info={'label': "Kaydın geçerli olduğu son veri versiyonu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=True, comment="Kaydı getiren yükleme partisi", info={'label': "Kaydı getiren yükleme partisi", 'source': "Sistem", 'workspace': False}),
-    sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı; kod ya da kodların birleşimi", info={'label': "İş anahtarı", 'source': "Sistem", 'workspace': False}),
-    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı", 'source': "Sistem", 'workspace': False}),
-    schema="core",
-    info={'field_class': "Ana veri"},
-    comment="Bakım ve arıza takvimi; kapasiteden düşülür. Çalışmada geçici değiştirilebilir. Smartchain'de ekrandan girilir; entegrasyondan gelmez (K-65).",
-)
-
-ResourceEfficiency = sa.Table(
-    "ResourceEfficiency", metadata,
-    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ValidTo", mssql.DATE(), nullable=False, comment="Bitiş", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("EfficiencyPct", sa.Numeric(6, 2), nullable=False, server_default=sa.text("100"), comment="Verim (%)", info={'label': "Verim (%)", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "100"}),
-    schema="param",
-    info={'field_class': "Parametre"},
-    comment="Kaynak ve dönem bazında verim (kapasite katsayısı); senaryoya özel.",
-)
-
-ResourcePeriodLimit = sa.Table(
-    "ResourcePeriodLimit", metadata,
-    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ValidTo", mssql.DATE(), nullable=False, comment="Bitiş", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("UpperLimit", sa.Numeric(18, 4), nullable=False, comment="Dönem üst limiti", info={'label': "Dönem üst limiti", 'source': "Smartchain (parametre)", 'workspace': True}),
-    schema="param",
-    info={'field_class': "Parametre"},
-    comment="Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın gruplarının ortak kapasite birimi. Geçici tablo: Kapasite yönetimi adımında yeniden tasarlanır (K-180).",
 )
 
 ResourceGroupMember = sa.Table(
@@ -1871,16 +1771,122 @@ License = sa.Table(
     comment="Çevrimdışı imzalı lisans.",
 )
 
+WorkPattern = sa.Table(
+    "WorkPattern", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: \",ValidTo,DailyCapacity,\"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz (\"Geçersiz yap\")", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş", info={'label': "Kaynak grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak (kaynağa girilen kayıt); grup doluysa boş", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("ValidTo", mssql.DATE(), nullable=True, comment="Bitiş (dahil); boşsa süresiz", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=False, comment="Tam çalışma günündeki kapasite, kaynak başına, grubun kapasite biriminde; yarım günde yarısı", info={'label': "Günlük kapasite", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("DayMon", sa.Numeric(2, 1), nullable=False, server_default=sa.text("1"), comment="Pazartesi: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor", info={'label': "Pazartesi", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "1"}),
+    sa.Column("DayTue", sa.Numeric(2, 1), nullable=False, server_default=sa.text("1"), comment="Salı: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor", info={'label': "Salı", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "1"}),
+    sa.Column("DayWed", sa.Numeric(2, 1), nullable=False, server_default=sa.text("1"), comment="Çarşamba: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor", info={'label': "Çarşamba", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "1"}),
+    sa.Column("DayThu", sa.Numeric(2, 1), nullable=False, server_default=sa.text("1"), comment="Perşembe: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor", info={'label': "Perşembe", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "1"}),
+    sa.Column("DayFri", sa.Numeric(2, 1), nullable=False, server_default=sa.text("1"), comment="Cuma: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor", info={'label': "Cuma", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "1"}),
+    sa.Column("DaySat", sa.Numeric(2, 1), nullable=False, server_default=sa.text("0"), comment="Cumartesi: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor", info={'label': "Cumartesi", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "0"}),
+    sa.Column("DaySun", sa.Numeric(2, 1), nullable=False, server_default=sa.text("0"), comment="Pazar: 1 Tam · 0,5 Yarım · 0 Çalışılmıyor", info={'label': "Pazar", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "0"}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Değiştiren", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Çalışma düzeni (K-185): günlük kapasite ve haftanın günleri. Çalışma günü yalnız buradan gelir. Geçerlilik: önce seviye (kaynakta o günü kapsayan kayıt varsa kaynağınkiler, yoksa grubunkiler), sonra başlangıcı en ileri olan.",
+)
+
+ResourceEfficiency = sa.Table(
+    "ResourceEfficiency", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: \",ValidTo,DailyCapacity,\"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz (\"Geçersiz yap\")", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş", info={'label': "Kaynak grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak (kaynağa girilen kayıt); grup doluysa boş", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("ValidTo", mssql.DATE(), nullable=True, comment="Bitiş (dahil); boşsa süresiz", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("EfficiencyPct", sa.Numeric(6, 2), nullable=False, server_default=sa.text("100"), comment="Verimlilik (%)", info={'label': "Verimlilik (%)", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "100"}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Değiştiren", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Verimlilik (K-185): kapasite katsayısı, yüzde. Giriş yoksa %100. Geçerlilik kuralı çalışma düzenindeki gibi, kendi kayıtlarından.",
+)
+
+OvertimeLimit = sa.Table(
+    "OvertimeLimit", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: \",ValidTo,DailyCapacity,\"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz (\"Geçersiz yap\")", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş", info={'label': "Kaynak grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak (kaynağa girilen kayıt); grup doluysa boş", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("ValidTo", mssql.DATE(), nullable=True, comment="Bitiş (dahil); boşsa süresiz", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("DailyLimit", sa.Numeric(18, 4), nullable=False, comment="Günlük ek mesai limiti, kaynak başına", info={'label': "Günlük limit", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Değiştiren", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Ek mesai limiti (K-185): çalışılan günde kaynak başına yapılabilecek ek mesai, grubun kapasite biriminde. Giriş yoksa ek mesai yok. Her gruba girilebilir. ERP'den gelen kalan fazla mesai (kaynakta) ayrıdır, birleştirilmez.",
+)
+
+ResourceDowntime = sa.Table(
+    "ResourceDowntime", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: \",ValidTo,DailyCapacity,\"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz (\"Geçersiz yap\")", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak grubu (gruba girilen kayıt); kaynak doluysa boş", info={'label': "Kaynak grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ResourceId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak (kaynağa girilen kayıt); grup doluysa boş", info={'label': "Kaynak", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("StartDate", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("EndDate", mssql.DATE(), nullable=False, comment="Bitiş (dahil)", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("DowntimeType", sa.Unicode(20), nullable=False, comment="Planlı bakım | Arıza | Diğer", info={'label': "Tip", 'values': ["Planlı bakım", "Arıza", "Diğer"], 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("Reason", sa.Unicode(255), nullable=True, comment="Sebep (serbest metin)", info={'label': "Sebep", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Değiştiren", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Bakım ve duruş (K-185): kapasiteden düşülür. Gruba girilen duruş grubun bütün kaynaklarına uygulanır. Geçerlilik kuralının dışındadır: duruşlar birleşir, gün bir kez düşer. Çalışan izni ERP'den gelir (`core.EmployeeAbsence`), burada tutulmaz.",
+)
+
+FactoryCalendar = sa.Table(
+    "FactoryCalendar", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: \",ValidTo,DailyCapacity,\"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz (\"Geçersiz yap\")", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("StartDate", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("EndDate", mssql.DATE(), nullable=False, comment="Bitiş (dahil)", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("Name", sa.Unicode(100), nullable=False, comment="Ad (ör. Yılbaşı)", info={'label': "Ad", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("DayValue", sa.Numeric(2, 1), nullable=False, server_default=sa.text("0"), comment="O günlerde çalışılan oran: 0 Çalışılmıyor · 0,5 Yarım gün", info={'label': "Çalışma", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "0"}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Değiştiren", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Fabrika takvimi (K-185): bütün kaynak gruplarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır.",
+)
+
 ResourceCapacityDay = sa.Table(
     "ResourceCapacityDay", metadata,
     sa.Column("ScenarioDefinitionId", sa.Integer(), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo"}),
     sa.Column("ResourceId", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kaynak", info={'label': "Kaynak"}),
+    sa.Column("ResourceGroupId", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kaynak grubu", info={'label': "Kaynak grubu"}),
     sa.Column("Date", mssql.DATE(), primary_key=True, autoincrement=False, comment="Gün", info={'label': "Gün"}),
-    sa.Column("WorkingDay", sa.Numeric(5, 2), nullable=False, comment="Çalışma günü (tam 1, yarım 0,5, çalışılmıyor 0)", info={'label': "Çalışma günü (tam 1, yarım 0,5, çalışılmıyor 0)"}),
-    sa.Column("Capacity", sa.Numeric(18, 4), nullable=False, comment="Günün toplam kapasitesi", info={'label': "Günün toplam kapasitesi"}),
-    sa.Column("AvailableCapacity", sa.Numeric(18, 4), nullable=False, comment="Kullanılabilir kapasite (toplam × verim)", info={'label': "Kullanılabilir kapasite (toplam × verim)"}),
+    sa.Column("WorkingDay", sa.Numeric(2, 1), nullable=False, comment="Çalışma günü (Tam 1, Yarım 0,5, Çalışılmıyor 0; çalışma düzeni yoksa 0)", info={'label': "Çalışma günü (Tam 1, Yarım 0,5, Çalışılmıyor 0"}),
+    sa.Column("Downtime", sa.Numeric(5, 4), nullable=False, comment="Duruş (gün; çalışma gününü aşmaz)", info={'label': "Duruş (gün"}),
+    sa.Column("DailyCapacity", sa.Numeric(18, 4), nullable=False, comment="O gün geçerli günlük kapasite (çalışma düzeni yoksa 0)", info={'label': "O gün geçerli günlük kapasite (çalışma düzeni yoksa 0)"}),
+    sa.Column("Capacity", sa.Numeric(18, 4), nullable=False, comment="Toplam kapasite: çalışma günü × günlük kapasite × verimlilik", info={'label': "Toplam kapasite: çalışma günü × günlük kapasite × verimlilik"}),
+    sa.Column("AvailableCapacity", sa.Numeric(18, 4), nullable=False, comment="Kullanılabilir kapasite: (çalışma günü − duruş) × günlük kapasite × verimlilik", info={'label': "Kullanılabilir kapasite: (çalışma günü − duruş) × günlük kapasite × verimlilik"}),
+    sa.Column("OvertimeLimit", sa.Numeric(18, 4), nullable=False, comment="Ek mesai limiti: (çalışma günü − duruş) × günlük limit", info={'label': "Ek mesai limiti: (çalışma günü − duruş) × günlük limit"}),
     schema="cache",
-    comment="Kaynak × gün kapasite ara sonucu (K-184): dönem tablosu \"Kaynak grubu × dönem\" bundan toplanır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız kendi girişi olan kaynak ve günler (gerisi Baz'ın satırlarından okunur). 7.8'de deneme hesabının alanlarını taşır; 7.9'da gerçek kapasite alanlarıyla yeniden düzenlenir. Kümelenmiş anahtar senaryo, kaynak, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan.",
+    comment="Kaynak grubu × kaynak × gün kapasite ara sonucu (K-184, K-185): dönem tablosu \"Kaynak grubu × dönem\" bundan toplanır. Grup kaydı o grubun içinde uygulandığı için birden fazla gruba üye kaynak her grubunda ayrı satırdır. Yalnız planlama ufkundaki günler; Baz'ı izleyen senaryoda yalnız Baz'dan farklı çıkan satırlar (gerisi Baz'ın satırlarından okunur). Kümelenmiş anahtar senaryo, kaynak, grup, gün: tek kaynağın yenilenmesi ve senaryonun gün aralığı okuması aynı sıradan.",
 )
 
 PeriodCacheState = sa.Table(

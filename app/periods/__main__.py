@@ -12,7 +12,7 @@ from datetime import date
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
-from . import CACHES, cache, periods
+from . import CACHES, cache, load, periods
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -21,6 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scenario", type=int, default=None)
     args = parser.parse_args(argv)
     from app.api.db import get_engine
+    load()   # hesapların kaydı
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     with sessionmaker(bind=get_engine())() as session:

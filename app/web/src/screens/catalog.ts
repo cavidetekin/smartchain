@@ -2,10 +2,9 @@
 // step: ekranın geleceği geliştirme adımı (GELISTIRME_ADIMLARI.md); description: docs/05'teki tek satır.
 import type { LucideIcon } from "lucide-react";
 import {
-  GitCompareArrows,
-  Activity, Boxes, CalendarClock, CalendarRange, ChartGantt, ClipboardList, Database, Factory, FileChartColumn,
-  FlaskConical, Gauge, HeartPulse, House, KeyRound, Layers, Lightbulb, ListChecks, ListOrdered, Moon, Network, Package, Plug, ScrollText, Send, Settings,
-  ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles,
+  Activity, Boxes, CalendarClock, CalendarRange, ChartGantt, ClipboardList, Database, Factory, FileChartColumn, FlaskConical, Gauge,
+  GitCompareArrows, HeartPulse, House, KeyRound, Layers, Lightbulb, ListChecks, ListOrdered, Moon, Network, Package, Plug, ScrollText, Send,
+  Settings, ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles,
 } from "lucide-react";
 
 export type GroupId = "planlama" | "takip" | "veri" | "parametre" | "yonetim";
@@ -98,6 +97,8 @@ export const SCREENS: Screen[] = [
 
   { no: "06", fn: 22, name: "Parametreler", path: "/parametre/parametreler", group: "parametre", step: "7.1", scenarioBound: true,
     icon: SlidersVertical, description: "Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, zaman, plan kararlılığı." },
+  { no: "30", fn: 24, name: "Kapasite yönetimi", path: "/parametre/kapasite-yonetimi", group: "parametre", step: "7.9", scenarioBound: true,
+    icon: CalendarRange, description: "Seçili senaryonun kapasitesi: kaynak grubu × dönem özeti; çalışma düzeni, duruş, verimlilik ve ek mesai girişleri." },
   { no: "07", fn: 27, name: "Senaryolar", path: "/parametre/senaryolar", group: "parametre", step: "7.3",
     icon: Moon, description: "Senaryoların listesi ve yönetimi: yeni senaryo, gece çalışsın ve gece sırası, Baz'ı izler." },
 

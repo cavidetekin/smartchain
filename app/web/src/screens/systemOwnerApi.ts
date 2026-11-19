@@ -46,7 +46,10 @@ export type Level = "full" | "owner" | "self" | "read" | "none";
 
 export interface PermissionMatrix {
   roles: string[];
-  groups: { key: string; name: string; levels: Record<string, Level> }[];
+  groups: { key: string; name: string; first: number; last: number; levels: Record<string, Level> }[];
+  /** Fonksiyonlar (numara, ad, rol düzeyleri; satırı numara aralığıyla bulunur) ve istisnaların nedeni (numara → metin). */
+  functions: { no: number; name: string; group: string; levels: Record<string, Level> }[];
+  exceptions: Record<string, string>;
 }
 
 const path = (table: string, field: string) => `/api/field-definitions/${encodeURIComponent(table)}/${encodeURIComponent(field)}`;

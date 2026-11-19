@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from "react-router";
 
 import type { Me } from "./auth/authApi";
 import { AuditLog } from "./screens/AuditLog";
+import { CapacityManagement } from "./screens/CapacityManagement";
 import { DataLoad } from "./screens/DataLoad";
 import { DataQuality } from "./screens/DataQuality";
 import { Parameters } from "./screens/Parameters";
@@ -23,14 +24,13 @@ import { StyleGuide } from "./screens/StyleGuide";
 import { SystemHealth } from "./screens/SystemHealth";
 import { SystemOwner } from "./screens/SystemOwner";
 import { TransactionData } from "./screens/TransactionData";
-import { PeriodTableDemo } from "./screens/PeriodTableDemo";
 import { TableDemo } from "./screens/TableDemo";
 import { Users } from "./screens/Users";
 import { Shell } from "./shell/Shell";
 import { useShell } from "./shell/ShellContext";
 
 /** Yazılmış ekranlar; öteki ekranlar boş sayfasını gösterir. */
-const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "03": <MasterData />, "29": <TransactionData />, "28": <RawCompare />, "04": <DataRules />, "05": <DataQuality />, "06": <Parameters />, "07": <Scenarios />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
+const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "03": <MasterData />, "29": <TransactionData />, "28": <RawCompare />, "04": <DataRules />, "05": <DataQuality />, "06": <Parameters />, "30": <CapacityManagement />, "07": <Scenarios />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
 
 /** Senaryoya bağlı ekran (K-177): seçili senaryo yüklenince çizilir, senaryo değişince baştan yüklenir (taslak ve durum sıfırlanır). */
 function ScenarioBound({ children }: { children: ReactNode }) {
@@ -56,7 +56,6 @@ export function App({ initialMe }: { initialMe?: Me | null }) {
             <Route path="/stil" element={<StyleGuide />} />
             {/* Tablo bileşeni denemesi (K-87): ekran değildir, menüde yoktur */}
             <Route path="/tablo" element={<ScreenGate fn={10}><TableDemo /></ScreenGate>} />
-            <Route path="/donem-tablosu" element={<ScreenGate fn={10}><PeriodTableDemo /></ScreenGate>} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

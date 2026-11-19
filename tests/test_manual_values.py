@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.api.main import create_app
 from app.api.permissions import END_USER, KEY_USER, SYSTEM_OWNER
 from app.api.services import manual_values as service
-from app.manual import ACTIVE_REASON, CAPACITY_REASON, KEY_REASON, RELATION_REASON, SYSTEM_REASON, TABLE_REASON, core_table, not_manual_reason, state_column
+from app.manual import ACTIVE_REASON, KEY_REASON, RELATION_REASON, SYSTEM_REASON, TABLE_REASON, core_table, not_manual_reason, state_column
 from app.transfer import engine as transfer
 
 from auth_helpers import auth, ensure_user
@@ -29,7 +29,7 @@ from validation_helpers import clean
     ("Material", "Code", KEY_REASON), ("Routing", "RouteCode", KEY_REASON), ("SalesOrderLine", "OrderNo", KEY_REASON),
     ("BOM", "ComponentMaterialId", KEY_REASON), ("SalesOrderLine", "CustomerId", RELATION_REASON), ("Routing", "ResourceGroupId", RELATION_REASON), ("ProductionVersion", "BOMCode", RELATION_REASON),
     ("Material", "Id", SYSTEM_REASON), ("Material", "UpdatedAt", SYSTEM_REASON), ("WorkOrderComponent", "RemainingQuantity", SYSTEM_REASON),
-    ("Material", "IsActive", ACTIVE_REASON), ("Resource", "DailyCapacity", CAPACITY_REASON), ("Calendar", "Name", TABLE_REASON),
+    ("Material", "IsActive", ACTIVE_REASON), ("WorkPattern", "DailyCapacity", TABLE_REASON),
 ])
 def test_manual_capable_fields(table, field, reason):
     assert not_manual_reason(table, field) == reason

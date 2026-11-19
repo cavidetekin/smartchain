@@ -80,6 +80,8 @@ export interface ColumnsResponse {
   period_table?: boolean;
   /** Ürünün Standart görünümündeki pivot (görünüm içeriğindeki `pivot` biçiminde). */
   standard_pivot?: unknown;
+  /** Grafik ilk açıldığında serinin alanı (K-186). */
+  chart_value?: string;
   /** Hazır hesaplanan değerler: pivot panelinde seçilince işlenenleriyle birlikte eklenir. */
   calculated_values?: CalculatedValue[];
 }

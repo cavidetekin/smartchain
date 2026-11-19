@@ -27,14 +27,10 @@ SCREEN_TABLES = frozenset({
 })
 UNVERSIONED = frozenset({"Location", "UnitOfMeasure"})
 NOT_MANUAL_SOURCES = frozenset({"Sistem", "Ön hesap", "Yüklemede diğer tablolardan"})
-# Kaynağın Kapasite yönetimi'nde girilen alanları (7.3, K-167): ana veride salt okunur, manuel değer değil
-# Geçici alanlar: 7.9'da kaynaktan kalkar (K-180)
-RESOURCE_CAPACITY = frozenset({"DailyCapacity", "CalendarId", "SubconPlanningType", "SubconFixedLeadTimeDays", "SubconVariableDaysPerUnit"})
 
 KEY_REASON = "Anahtar alana manuel değer girilemez."
 RELATION_REASON = "İlişki alanına manuel değer girilemez."
 SYSTEM_REASON = "Sistem alanına manuel değer girilemez."
-CAPACITY_REASON = "Kapasite yönetimi'nde girilir."
 TABLE_REASON = "Manuel değer yalnız ana veri ve işlem verisinde girilir."
 ACTIVE_REASON = "Aktif, kaydın aktarımda açık kalıp kalmayacağını belirler; manuel değer girilemez."
 # Kod üzerinden ilişki kuran metin alanları (üretim versiyonunun ağacı ve rotası): ilişki alanı sayılır
@@ -66,8 +62,6 @@ def not_manual_reason(table: str, field: str) -> str | None:
         return RELATION_REASON
     if field == "IsActive":  # aktarım pasif kaydı kapatır (K-149)
         return ACTIVE_REASON
-    if table == "Resource" and field in RESOURCE_CAPACITY:
-        return CAPACITY_REASON
     return None
 
 

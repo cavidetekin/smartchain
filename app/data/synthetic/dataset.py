@@ -65,6 +65,8 @@ NO_ROUTE_PART = "PRC-033"       # kirli hâlde rotası çıkarılır (H1)
 DEEP_MATERIAL, DEEP_SUPPLIER = "HAM-022", "TED-02"       # 6: tedarik süresi ikisi de boş, MAM-002'nin üç seviye altında
 NO_DEMAND_MATERIAL = "ALT-099"                            # 7: hiçbir talebin ağacında değil; ağacında bileşen miktarı 0
 PAST_DUE_ORDER, DUE_TODAY_ORDER = "SO-1043", "SO-1044"    # 9: teslim tarihi dün / bugün, açık
+CONFLICT_DAILY = 7.0                                      # CG-KAL günlük kapasitesi: CG-MON'dan (7,5) farklı; ikisine üye işçide çelişki (K-185)
+FASON_NO_CAPACITY = "F-KAPLA"                             # fason grup ve kaynağı: çalışma düzeni yok (kritik değil: Normal uyarı)
 NO_CAPACITY_RESOURCE = "T-05"                             # 9: kritik, günlük kapasitesi boş (K-117)
 FORECAST_PRODUCT = "MAM-001"                              # tahmin: gelecek iki ay
 REFERENCE_PRODUCT, REFERENCE_SOURCE = "MAM-011", "MAM-001"  # kendi versiyonu yok; MAM-001'in ağacı ve rotası izlenir
@@ -183,13 +185,6 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
     for code, name, decimals in [("ADET", "Adet", 0), ("KG", "Kilogram", 3), ("M", "Metre", 2), ("SAAT", "Saat", 2)]:
         b.add("UnitOfMeasure", with_id=False, Code=code, Name=name, Decimals=decimals)
 
-    cal = b.add("Calendar", Code="STD", Name="Standart · hafta içi")
-    d = ds.start - timedelta(days=HISTORY_DAYS)
-    while d <= ds.horizon_end:
-        b.add("CalendarDay", with_id=False, CalendarId=cal["Id"], Date=d, IsWorkingDay=d.weekday() < 5,
-              WorkingFraction=1.0 if d.weekday() < 5 else 0.0)
-        d += timedelta(days=1)
-
     def group(code, name, kind, flag, critical):
         """Kaynak grubu planlama birimidir (K-180): tip bayrağı, kritiklik, kapasite birimi ve fasoncu gruptadır."""
         flags = dict(IsEmployee=False, IsMachine=False, IsFurnace=False, IsMold=False, IsOther=False, IsSubcontractor=False)
@@ -207,8 +202,9 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
         group(code, name, "Fason", "IsSubcontractor", False)
 
     def resource(code, name, kind, daily, **extra):
-        """Kaynak: kimlik ve ham tip (yalnız bilgi); günlük kapasite ve takvim geçici alanlar (7.9'da kalkar, K-180)."""
-        return b.add("Resource", LocationId=1, Code=code, Name=name, ResourceType=kind, IsActive=True, DailyCapacity=daily, CalendarId=cal["Id"], **extra)
+        """Kaynak: kimlik ve ham tip (yalnız bilgi). Günlük kapasite kaynakta durmaz (K-185): çalışma düzenindedir (`_capacity`); `daily` oraya
+        taşınan eski değerdir, belge olarak kalır."""
+        return b.add("Resource", LocationId=1, Code=code, Name=name, ResourceType=kind, IsActive=True, **extra)
 
     def assign(resource_row, group_code):
         b.add("ResourceGroupMember", LocationId=1, ResourceGroupId=b.id("ResourceGroup", group_code), ResourceId=resource_row["Id"])
@@ -223,21 +219,7 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
         assign(resource(code, name, "Makine", daily, ProductionLocation="Hol 1"), group_code)
     # Fason kaynak kendi grubundadır; grup tedarikçiye bağlanır (_suppliers'ta SubcontractorId yazılır).
     for code, name, lead in [("F-ISIL", "Fason ısıl işlem", 5), ("F-KAPLA", "Fason kaplama", 4)]:
-        assign(resource(code, name, "Fason", 24.0, SubconPlanningType="Tedarik süresi", SubconFixedLeadTimeDays=lead, SubconVariableDaysPerUnit=0.0), code)
-
-    b.add("ResourceCapacityProfile", ResourceId=b.id("Resource", "G-02"), ValidFrom=ds.day(9), ValidTo=ds.day(10, 6),
-          DailyCapacity=7.5)
-    b.add("ResourceCapacityProfile", ResourceId=b.id("Resource", "T-04"), ValidFrom=ds.day(12), ValidTo=ds.day(13, 6),
-          DailyCapacity=22.5)
-    # Durum 5: planlı bakım, hafta 2 Salı–Çarşamba.
-    b.add("ResourceDowntime", ResourceId=b.id("Resource", MAINTENANCE_RESOURCE), DowntimeType="Bakım",
-          StartAt=datetime.combine(ds.day(2, 1), time(0, 0)), EndAt=datetime.combine(ds.day(2, 3), time(0, 0)),
-          AffectedQuantity=1, DurationDays=2.0, Note="Planlı bakım: iş mili rulmanları")
-    b.add("ResourceDowntime", ResourceId=b.id("Resource", "G-01"), DowntimeType="Bakım",
-          StartAt=datetime.combine(ds.day(8, 4), time(0, 0)), EndAt=datetime.combine(ds.day(8, 5), time(0, 0)),
-          AffectedQuantity=1, DurationDays=1.0, Note="Yıllık bakım")
-
-
+        assign(resource(code, name, "Fason", 24.0), code)  # fason parametreleri (tedarik süresi) bu adımda yok (K-185)
     names = set()
     for i in range(1, 26):
         while True:
@@ -266,6 +248,54 @@ def _organisation(b: _Builder, rng: random.Random) -> None:
         b.add("EmployeeAbsence", LocationId=1, ResourceId=b.id("Resource", code), AbsenceType=kind, StartDate=start,
               EndDate=end - timedelta(days=1), HoursPerDay=4.0 if code == "W-021" else None)
 
+    _capacity(b)
+
+
+def _capacity(b: _Builder) -> None:
+    """Kapasite girişleri (K-185; Baz senaryoya yüklenir): çalışma düzeni, verimlilik, ek mesai limiti, bakım ve duruş, fabrika takvimi.
+
+    Bilerek konmuş durumlar: grup seviyesinde düzen (çoğu grup) · kaynak seviyesinde düzen (TORNA'da grup kaydı yok, tezgâhların kendi kaydı
+    var; Q-01 Cumartesi yarım gün) · geçici kayıt (G-02 hafta 9–10 yarı kapasite, T-04 hafta 12–13 yüksek kapasite: başlangıcı en ileri olan
+    geçerlidir, bitince öncekine dönülür) · planlı bakım ve arıza (kaynak ve grup seviyesinde) · fabrika takvimi (yarım gün, tatil, toplu izin)
+    · verimlilik (grupta %85, kaynakta geçici %110) · ek mesai limiti (işçi grupları) · iki grupta çelişen değer (CG-KAL günlük 7,0; CG-MON 7,5:
+    ikisine de üye işçiler) · çalışma düzeni olmayan kaynaklar (T-05: kritik TORNA'da, kendi kaydı yok; F-KAPLA: fason, grubunda kayıt yok)."""
+    ds = b.ds
+    since = ds.start - timedelta(days=HISTORY_DAYS)
+
+    def owner(group=None, resource=None) -> dict:
+        return {"ResourceGroupId": b.id("ResourceGroup", group) if group else None, "ResourceId": b.id("Resource", resource) if resource else None}
+
+    def pattern(daily, start=since, end=None, sat=0.0, **who):
+        b.add("param.WorkPattern", ScenarioDefinitionId=1, **owner(**who), ValidFrom=start, ValidTo=end, DailyCapacity=daily,
+              DayMon=1.0, DayTue=1.0, DayWed=1.0, DayThu=1.0, DayFri=1.0, DaySat=sat, DaySun=0.0, IsValid=True)
+
+    for code, daily in [("ISL3", 15.0), (BOTTLENECK_GROUP, 15.0), ("TASLAMA", 15.0), ("MONTAJ", 15.0), ("KALITE", 7.5),
+                        ("CG-CNC", 7.5), (LABOR_GROUP, 7.5), ("CG-KAL", CONFLICT_DAILY), ("F-ISIL", 24.0)]:
+        pattern(daily, group=code)
+    for i in range(1, 5):                                       # TORNA: grup kaydı yok, tezgâhların kendi kaydı
+        pattern(15.0, resource=f"T-0{i}")
+    pattern(7.5, resource="Q-01", sat=0.5)                      # kaynak seviyesinde farklı günler: Cumartesi yarım
+    pattern(7.5, start=ds.day(9), end=ds.day(10, 6), resource="G-02")     # geçici: iki hafta yarı kapasite
+    pattern(22.5, start=ds.day(12), end=ds.day(13, 6), resource="T-04")   # geçici: iki hafta yüksek kapasite (kendi kaydının üstüne)
+
+    b.add("param.ResourceEfficiency", ScenarioDefinitionId=1, **owner(group="TASLAMA"), ValidFrom=since, ValidTo=None, EfficiencyPct=85.0, IsValid=True)
+    b.add("param.ResourceEfficiency", ScenarioDefinitionId=1, **owner(resource="A-01"), ValidFrom=ds.day(4), ValidTo=ds.day(8, 6), EfficiencyPct=110.0,
+          IsValid=True)
+    for code, limit in [(LABOR_GROUP, 2.0), ("CG-CNC", 1.5)]:
+        b.add("param.OvertimeLimit", ScenarioDefinitionId=1, **owner(group=code), ValidFrom=since, ValidTo=None, DailyLimit=limit, IsValid=True)
+
+    def downtime(kind, reason, start, end, **who):
+        b.add("param.ResourceDowntime", ScenarioDefinitionId=1, **owner(**who), StartDate=start, EndDate=end, DowntimeType=kind, Reason=reason, IsValid=True)
+
+    downtime("Planlı bakım", "Planlı bakım: iş mili rulmanları", ds.day(2, 1), ds.day(2, 2), resource=MAINTENANCE_RESOURCE)   # durum 5: hafta 2 Salı–Çarşamba
+    downtime("Planlı bakım", "Yıllık bakım", ds.day(8, 4), ds.day(8, 4), resource="G-01")
+    downtime("Arıza", "Mil arızası", ds.day(5, 2), ds.day(5, 3), resource="M3-02")
+    downtime("Planlı bakım", "Ölçüm cihazlarının kalibrasyonu", ds.day(11, 0), ds.day(11, 0), group="KALITE")
+
+    eve = date(ds.start.year if ds.start <= date(ds.start.year, 12, 31) else ds.start.year + 1, 12, 31)
+    for name, start, end, value in [("Yılbaşı arifesi", eve, eve, 0.5), ("Yılbaşı", eve + timedelta(days=1), eve + timedelta(days=1), 0.0),
+                                    ("Yıllık toplu izin", ds.day(16, 0), ds.day(16, 4), 0.0)]:
+        b.add("param.FactoryCalendar", ScenarioDefinitionId=1, StartDate=start, EndDate=end, Name=name, DayValue=value, IsValid=True)
 
 # --- Malzemeler ---
 
@@ -673,7 +703,7 @@ def _quality(b: _Builder) -> None:
               IsCustomTracked=False, OpenQuantity=5.0, OrderedQuantity=5.0, DeliveredQuantity=0.0, RequestedDate=when, ConfirmedDate=None)
     # 9: kritik gruba üye, günlük kapasitesi boş tezgâh (K-117, K-180)
     t04 = b.find("Resource", "T-04")
-    t05 = _copy(b, "Resource", t04, Code=NO_CAPACITY_RESOURCE, Name="Torna T-05 (kapasitesi tanımsız)", DailyCapacity=None)
+    t05 = _copy(b, "Resource", t04, Code=NO_CAPACITY_RESOURCE, Name="Torna T-05 (kapasitesi tanımsız)")  # ne kendisinde ne grubunda çalışma düzeni var
     for row in [r for r in b.t["ResourceGroupMember"] if r["ResourceId"] == t04["Id"]]:  # T-04'ün grubunda (talep zincirinde)
         _copy(b, "ResourceGroupMember", row, ResourceId=t05["Id"])
     # Tahmin: gelecek iki ay (ay başı), planlama ufku içinde
@@ -732,13 +762,10 @@ def _business_keys(ds: Dataset) -> None:
         "Material": lambda r: f"{LOCATION_CODE}|{r['Code']}",  # K-113
         "BOM": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Code']}|{c('Material', r['ComponentMaterialId'])}|"
                          f"{r['OperationNo'] or ''}|{r['SequenceNo']}",  # K-115
-        "CalendarDay": lambda r: f"{c('Calendar', r['CalendarId'])}|{_iso(r['Date'])}",
         "ProductionVersion": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Code']}",  # K-114
         "Routing": lambda r: f"{LOCATION_CODE}|{r['RouteCode']}|{r['OperationNo']}|{r['SequenceNo']}",  # K-116
         "MaterialSupplier": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{c('Supplier', r['SupplierId'])}",  # K-118
         "UomConversion": lambda r: f"{c('Material', r['MaterialId'])}|{r['FromUom']}|{r['ToUom']}",
-        "ResourceCapacityProfile": lambda r: f"{c('Resource', r['ResourceId'])}|{_iso(r['ValidFrom'])}",
-        "ResourceDowntime": lambda r: f"{c('Resource', r['ResourceId'])}|{_iso(r['StartAt'])}",
         "BorrowPayback": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{c('Project', r['LendingProjectId'])}|"
                                    f"{c('Project', r['BorrowingProjectId'])}|{_iso(r['BorrowDate'])}",  # K-119
         "Resource": lambda r: f"{LOCATION_CODE}|{r['Code']}",  # K-117

@@ -31,7 +31,7 @@ from ..lists.groups import build_tree
 from ..lists.query import UNIT, Builder, ListQueryError
 from ..lists import chart as chart_query
 from ..lists import pivot as pivot_query
-from ..lists.request import ChartExportLogRequest, ChartExportRequest, ExportRequest, PivotExportRequest, PivotRequest, PivotValueSpec
+from ..lists.request import PIVOT_VALUE_WIDTH, ChartExportLogRequest, ChartExportRequest, ExportRequest, PivotExportRequest, PivotRequest, PivotValueSpec
 from ..repositories import data_versions, export as repo, lists as list_repo, views as view_repo
 from ..settings import get_settings
 from . import lists as list_service
@@ -494,7 +494,16 @@ def start_pivot(session: Session | None, defn: ListDefinition, user_id: int, req
                     n = 1
                     while i + n < len(columns) and columns[i + n]["level"] > level and columns[i + n]["key"][: level + 1] == c["key"][: level + 1]:
                         n += 1
-                    cells.append(("" if c.get("empty") and level > 0 else label_of(c["key"][level], col_fields[level]), n * span, 1, starts[i]))
+                    if (left_cols + i * span) in occupied[level]:   # üstteki aynı yazılı başlıkla birleşti (K-186)
+                        i += n
+                        continue
+                    text = "" if c.get("empty") and level > 0 else label_of(c["key"][level], col_fields[level])
+                    down = 1
+                    if n == 1:   # tek alt sütun: alt başlık aynı yazıysa tek hücrede birleşir (ör. Ay › Dönem'de aylık dönem)
+                        while level + down < C and c["level"] > level + down and label_of(c["key"][level + down], col_fields[level + down]) == text:
+                            occupied[level + down].update(range(left_cols + i * span, left_cols + (i + 1) * span))
+                            down += 1
+                    cells.append((text, n * span, down, starts[i]))
                     i += n
                 else:
                     if c["level"] == level:
@@ -522,24 +531,29 @@ def start_pivot(session: Session | None, defn: ListDefinition, user_id: int, req
             return cell
 
         rules = {k: [rule_format(r.format) for r in v.rules if r.enabled] for k, v in enumerate(req.values)}
-        out_rows, previous = [], None
-        for row in rows:
+        out_rows = []
+        groups = pivot_query.row_groups(rows, R)   # satır alanı hücrelerinin birleşmesi (K-186): ekrandakiyle aynı kural
+        for n, row in enumerate(rows):
             texts = [""] * R
             if row["total"]:
                 at = max(row["level"] - 1, 0)
                 texts[at] = "Genel toplam" if row["level"] == 0 else f"{label_of(row['key'][row['level'] - 1], row_fields[row['level'] - 1])} toplamı"
             else:
                 for j in range(R):
-                    if previous is None or len(previous) <= j or previous[: j + 1] != row["key"][: j + 1]:
+                    if groups[n][j]:
                         texts[j] = label_of(row["key"][j], row_fields[j])
-            previous = row["key"]
             formats_of = {int(k): [None if h is None else rules[int(k)][h] for h in hits] for k, hits in row.get("formats", {}).items()}
-            out_rows.append({"labels": texts, "total": row["total"], "formats": formats_of,
+            outer = lambda x: ("#",) if x["total"] and x["level"] == 0 else tuple(x["key"][:1])  # noqa: E731
+            # en dıştaki satır grubunun başı (ekrandaki ince yatay çizgi, K-186): grup yoksa (tek alan, değerler sütunlarda) çizgi yok
+            line = (R > 1 or on_rows) and n > 0 and outer(rows[n - 1]) != outer(row)
+            out_rows.append({"labels": texts, "spans": groups[n], "total": row["total"], "formats": formats_of, "group_start": line,
                              "cells": [[cell_value(infos[k], c) for c in row["cells"][k]] for k in range(V)],
                              "num_formats": [[number_format(infos[k], c) for c in row["cells"][k]] for k in range(V)]})
         names = [_pivot_value_name(b, v, req.names) for v in req.values]
         model = {"row_labels": [labels.get(f["field"], f["field"]) for f in row_fields], "column_labels": [labels.get(f["field"], f["field"]) for f in col_fields],
-                 "values": [{"name": names[k], "num_format": "dd.mm.yyyy hh:mm" if infos[k].get("type") == "datetime" else "dd.mm.yyyy"} for k in range(V)],
+                 "values": [{"name": names[k], "num_format": "dd.mm.yyyy hh:mm" if infos[k].get("type") == "datetime" else "dd.mm.yyyy",
+                             "format": rule_format(req.values[k].format) if req.values[k].format else None} for k in range(V)],   # satır biçimi (K-186)
+                 "widths": [req.widths.get(f["field"]) for f in row_fields] + ([req.widths.get(PIVOT_VALUE_WIDTH)] if on_rows else []),
                  "values_on": req.values_on, "header": header, "occupied": occupied, "columns": [{"total": c["total"], "start": starts[i]} for i, c in enumerate(columns)],
                  "rows": out_rows}
         bucket_of = lambda a: f" ({BUCKETS[a.bucket]})" if a.bucket else ""  # noqa: E731

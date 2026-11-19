@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from openpyxl import load_workbook
 
 from app.api.lists import definition
+from app.api.lists import pivot as pivot_query
 from app.api.lists.materials import MATERIALS
 from app.api.main import create_app
 from app.api.permissions import END_USER, KEY_USER
@@ -216,7 +217,7 @@ def test_excel_has_the_shape_on_screen_and_is_audited(api, exporter, db_engine):
     months = [c for c in shown["columns"] if not c["total"]]
     # başlık: üstte dönemler (dört değer boyunca birleşik) ve "Toplam"; altta satır alanları ve değer adları; ikisi de dondurulmuş
     assert ws.freeze_panes == "C3"
-    merged = {str(m) for m in ws.merged_cells.ranges}
+    merged = {str(m) for m in ws.merged_cells.ranges if m.min_row <= 2}                           # başlıktaki birleşmeler (satır hücreleri ayrı testte, K-186)
     assert {"A1:B1", "C1:F1"} <= merged and len(merged) == len(months) + 2
     assert re.fullmatch(r"\S{3} \d{4}", ws["C1"].value) and ws.cell(1, 3 + 4 * len(months)).value == "Toplam"
     assert [ws.cell(2, i).value for i in range(1, 7)] == ["Müşteri", "Malzeme", "Açık", "Sipariş miktarı · Toplam", "İstek tarihi · En erken", "Açık oranı · Toplamlardan"]
@@ -327,3 +328,79 @@ def test_default_calculation_comes_from_the_list_definition(api):
     weighted = dataclasses.replace(MATERIALS, aggregates={**MATERIALS.aggregates, "ScrapRatio": "wavg"}, aggregate_weights={"ScrapRatio": "SafetyStock"})
     out = {c["field"]: c for c in definition.columns(weighted, {})}
     assert out["ScrapRatio"]["aggregate"] == "wavg" and out["ScrapRatio"]["aggregate_weight"] == "SafetyStock" and out["SafetyStock"]["aggregate_weight"] is None
+
+
+# --- 7.9a demo bulguları (K-186): satır hücrelerinin birleşmesi, değerin satır biçimi, satır başlığı genişliği ------------------------------
+
+def test_row_groups_follow_the_screen_rule():
+    """Aynı öneki paylaşan ardışık satırlar tek hücre; ara toplam dış düzeyin grubunda, adını taşıdığı kolon ayrı; genel toplam ayrı."""
+    row = lambda key, level, total=False: {"key": key, "level": level, "total": total}  # noqa: E731
+    rows = [row(["A", "x"], 2), row(["A", "y"], 2), row(["A"], 1, True), row(["B", "x"], 2), row([], 0, True)]
+    assert pivot_query.row_groups(rows, 2) == [[2, 1], [0, 1], [1, 1], [1, 1], [1, 1]]
+    three = [row(["A", "x", 1], 3), row(["A", "x", 2], 3), row(["A", "x"], 2, True), row(["A", "y", 1], 3), row(["A"], 1, True)]
+    assert pivot_query.row_groups(three, 3) == [[4, 2, 1], [0, 0, 1], [0, 1, 1], [0, 1, 1], [1, 1, 1]]   # iç ara toplam dış grubun (A) içinde
+
+
+def test_excel_merges_row_cells_and_carries_row_format_and_widths(api, exporter):
+    """Excel ekrandaki gibi (K-186): satır alanı hücreleri birleşik ve üstte hizalı; değerin satır biçimi satırına ya da sütunlarına; kural tutan
+    hücrede kural kazanır; satır başlığı kolonları ekrandaki genişlikte."""
+    own = "#ffe8a3"
+    values = [{"id": "q", "field": "OpenQuantity", "fn": "sum", "format": {"fill": own, "bold": True}}, {"id": "o", "field": "OrderedQuantity", "fn": "sum"}]
+    body = {"rows": [{"field": "CustomerCode"}, {"field": "MaterialCode"}], "columns": [{"field": "RequestedDate", "bucket": "month"}], "values": values}
+    shown = pivot(api, ORDERS, **{**body, "values": [{k: v for k, v in x.items() if k != "format"} for x in values]})
+    first = shown["rows"][0]["key"][0]
+    size = sum(1 for r in shown["rows"] if r["key"][0] == first)
+    assert size > 1 and shown["row_count"] <= 100
+
+    r = api.post(ORDERS + "/pivot/export", headers=auth(exporter), json={**body, "values_on": "columns", "widths": {"CustomerCode": 30, "MaterialCode": 6}})
+    assert r.status_code == 200, r.text
+    ws = load_workbook(io.BytesIO(r.content))["Pivot"]
+    merged = {str(m) for m in ws.merged_cells.ranges}
+    assert f"A3:A{2 + size}" in merged and ws["A3"].value == first and ws["A3"].alignment.vertical == "top"    # müşteri hücresi malzemeleri boyunca
+    assert not any(m.min_col == 2 and m.min_row >= 3 for m in ws.merged_cells.ranges)                         # en içteki alan satır başına tek hücre
+    # dış grubun ilk satırının üstünde ince kenarlık (ekrandaki 1 px çizgi); ilk grupta ve grubun içinde yok; dikey ayraç kalın kalır
+    second = 3 + size
+    assert all(c.border.top.style == "thin" for c in ws[second][:4]) and ws.cell(second, 1).value != first
+    assert all(c.border.top.style is None for c in ws[3][:4]) and all(c.border.top.style is None for c in ws[4][1:4])
+    assert ws.column_dimensions["A"].width > ws.column_dimensions["B"].width * 3                              # 30 rem ve 6 rem
+    data = list(ws.iter_rows(min_row=3))
+    q_cells = [row[2 + 2 * i] for row in data for i in range(len(shown["columns"])) if row[2 + 2 * i].value is not None]
+    o_cells = [row[3 + 2 * i] for row in data for i in range(len(shown["columns"])) if row[3 + 2 * i].value is not None]
+    assert q_cells and all(rgb(c.fill.fgColor) == own[1:] and c.font.bold for c in q_cells)                   # değerin sütunları
+    assert o_cells and all(rgb(c.fill.fgColor) != own[1:] and not c.font.bold for c in o_cells)
+
+    # değerler satırlarda: müşteri hücresi malzeme × değer satırları boyunca, malzeme hücresi değer satırları boyunca; biçim değerin satırında
+    ruled = [{**values[0], "rules": [rule("k1", "always")]}, values[1]]
+    r = api.post(ORDERS + "/pivot/export", headers=auth(exporter), json={**body, "values": ruled, "values_on": "rows", "widths": {"__value": 40}})
+    assert r.status_code == 200, r.text
+    ws = load_workbook(io.BytesIO(r.content))["Pivot"]
+    merged = {str(m) for m in ws.merged_cells.ranges}
+    assert f"A3:A{2 + 2 * size}" in merged and "B3:B4" in merged and ws["B3"].alignment.vertical == "top"
+    assert ws.column_dimensions["C"].width > 40                                                               # "Değer" kolonu 40 rem
+    assert rgb(ws["C3"].fill.fgColor) == own[1:] and ws["C3"].font.bold and rgb(ws["C4"].fill.fgColor) != own[1:]   # değer adı hücresi
+    line = [c for c in list(ws.iter_rows(min_row=3, max_row=3))[0][3:] if c.value is not None]
+    assert line and all(rgb(c.fill.fgColor) == FILL[1:] and c.font.bold for c in line)                        # kural zemini kazanır; kalın satır biçiminden
+
+    for bad in ({"widths": {"CustomerCode": 200}}, {"values": [{**values[0], "format": {"fill": "kırmızı"}}, values[1]]}):
+        assert api.post(ORDERS + "/pivot/export", headers=auth(exporter), json={**body, **bad}).status_code == 422
+
+
+def test_row_format_and_widths_are_saved_with_the_view(api, db_engine):
+    base = {"v": 1, "columns": [{"field": "OrderNo"}], "pinned": 0, "sort": [], "filters": [], "group_by": []}
+    values = [{"id": "d1", "field": "OpenQuantity", "fn": "sum", "format": {"fill": "#FFE8A3", "bold": True}},
+              {"id": "d2", "field": "OrderedQuantity", "fn": "sum"}]
+    definition_ = {"v": 1, "open": True, "rows": [{"field": "CustomerCode"}], "columns": [], "values": values, "values_on": "rows",
+                   "totals": {"rows": False, "columns": False, "subtotals": False}, "sort": {"by": "name", "dir": "asc"},
+                   "widths": {"CustomerCode": 18.5, "__value": 22, "MaterialCode": 9}}
+    saved = api.post(ORDERS + "/views", json={"name": "pytest hesap biçim", "is_shared": False, "definition": {**base, "pivot": definition_}})
+    assert saved.status_code == 201, saved.text
+    got = {v["name"]: v for v in api.get(ORDERS + "/views").json()["views"]}["pytest hesap biçim"]["definition"]["pivot"]
+    assert got["values"][0]["format"] == {"fill": "#ffe8a3", "bold": True} and "format" not in got["values"][1]
+    assert got["widths"] == {"CustomerCode": 18.5, "__value": 22}                                                 # satırda olmayan alanın genişliği atılır
+    bad = api.post(ORDERS + "/views", json={"name": "pytest hesap bozuk", "is_shared": False, "definition": {**base, "pivot": {**definition_, "widths": {"CustomerCode": 1}}}})
+    assert bad.status_code == 422
+    empty = {**definition_, "values": [{**values[1], "id": "d1", "format": {"bold": False}}]}                    # boş biçim gönderilmez (istemci saklamaz); sunucu reddeder
+    assert api.post(ORDERS + "/views", json={"name": "pytest hesap bozuk", "is_shared": False, "definition": {**base, "pivot": empty}}).status_code == 422
+    # biçim ve genişlik yalnız gösterim: pivot isteği bunları taşımasa da aynı sonucu verir
+    plain = pivot(api, ORDERS, rows=definition_["rows"], values=[{k: v for k, v in x.items() if k != "format"} for x in values])
+    assert plain["row_count"] > 0

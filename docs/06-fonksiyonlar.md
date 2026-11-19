@@ -1741,7 +1741,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
 - **22 · Parametreler:** Senaryonun planlama parametrelerini ve hedeflerini yönetmek; her senaryo parametrelerinin tamamını taşır (K-175).
 - **23 · Zaman yapısı:** Senaryonun ufkunu ve dönem dizisini tanımlamak (dönem tipi, kapsam, kapsam birimi); tarihler plan başlangıcından hesaplanır. Parametreler ekranının Zaman başlığı (K-175).
-- **24 · Kapasite parametreleri:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.9, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
+- **24 · Kapasite yönetimi:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.9, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
 - **25 · Alokasyon ve öncelik kuralı:** Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
 - **26 · Uyarı eşikleri:** Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
 - **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo açmak, yeniden adlandırmak, pasif yapmak, silmek, Baz'dan ayırmak; senaryolar arasında geçmek (K-177).
@@ -1882,13 +1882,23 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Açık kalanlar:** dönemden uzun operasyonun bölünmesi ve sabit dönemin dönemlerle ilişkisi motor tasarımında (Aşama 10).
 - **Uygulama (7.1, K-175):** uygulandı. `app/params/horizon.py`; `GET/PUT /api/parameters/time-buckets/{plan|rapor}`, `POST …/preview` (taslağın tarihleri ve dönem listesi); `TimeBucketDefinition.Axis` ve `SpanUnit` (geçiş 0058).
 
-### 24 · Kapasite parametreleri
+### 24 · Kapasite yönetimi
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Çalışma prensibi 1/3</sub>
 
 - Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.9, K-167) yönetmek: kaynak × dönem verim, kısıtsız kaynak ve fason için dönem üst limitleri, vardiya × dönem fazla mesai limitleri. Bunlar parametre değil veridir; senaryoya bağlıdır (`ScenarioDefinitionId`, K-175).
 
 - **Kapsam (K-167):** Kapasite yönetimi ekranına (7.9) döner. Kayıt yerinde güncellenir, yeni veri versiyonu açmaz.
 - **Uygulama (7.5, K-180):** vardiya kavramı kalktı: vardiya tanımı, vardiya planı, "kapasite kaynağı", paralel adet ve vardiyaya bağlı fazla mesai limiti (`OvertimeLimit`) yoktur; aşağıdaki "vardiya × dönem" anlatımı geçersizdir, ek mesai limiti 7.9'da yeniden tasarlanır. Sonraki adımın kararları: kapasite kaynakta hesaplanır, grupta toplanır; plan ve yük kaynak grubu düzeyindedir; kapasite girişleri senaryolu ayrı tablolardadır (K-176), grup ya da kaynak için girilir; adlandırılmış takvim yerine "çalışma düzeni" (haftanın günleri: tam, yarım, çalışılmıyor) ve fabrika takvimi gelir; fason parametreleri ayrı ele alınır; hedef doluluk 7.10'da. Kaynaktaki günlük kapasite, takvim ve fason parametreleri ile takvim, duruş, kapasite profili, verim ve dönem limiti tabloları o adıma kadar geçici olarak durur. Metindeki "Parametre setleri" atfı K-175 ile geçersizdir (tek kavram senaryo).
+- **Uygulama (7.9, K-185):** bu bölümün aşağıdaki "verim matrisi", "dönem limitleri" ve "vardiya" anlatımı geçersizdir; geçerli tasarım şudur (ayrıntı `plans/7.9.md`, docs/02 "Kapasite girişleri", docs/08 "Kapasite yönetimi", docs/12 "Kapasite yönetimi"):
+  - **Ekran:** Kapasite yönetimi (ekran 30), menüde Parametreler ile Senaryolar arasında; senaryoya bağlı. Girişleri Key user ve üstü yapar; End user görür (salt okunur), görünüm, pivot ve Excel serbesttir.
+  - **Girişler (hepsi senaryolu, `param`):** çalışma düzeni (`WorkPattern`: günlük kapasite ve haftanın günleri tam · yarım · çalışılmıyor), verimlilik (`ResourceEfficiency`), ek mesai limiti (`OvertimeLimit`: günlük), bakım ve duruş (`ResourceDowntime`), fabrika takvimi (`FactoryCalendar`: çalışılmıyor ya da yarım gün). İlk dördü kaynak grubuna ya da kaynağa girilir; ilk üçü geçerlilik aralıklıdır (başlangıç zorunlu, bitiş boşsa süresiz). Kayıt yeni veri versiyonu açmaz.
+  - **Geçerlilik kuralı (tek işlev):** bir gün için önce seviye (kaynakta o günü kapsayan kayıt varsa kaynağınki, yoksa grubunki), sonra o seviyede o günü kapsayanlardan başlangıcı en ileri olan. Geçici kayıt bitince bir önceki geçerli olur. Birden fazla gruba üye kaynak her grupta o grubun değeriyle hesaplanır; gruplar farklı değer veriyorsa veri kalitesi uyarır.
+  - **Hesap (kaynak grubu × kaynak × gün):** çalışma günü çalışma düzeninden (1 · 0,5 · 0). Duruş = fabrika takvimi, bakım ve duruş, çalışan izni (ERP; günlük saat doluysa saat ÷ günlük kapasite, en çok 1; boşsa tam gün) birleşimi: en büyüğü alınır, günün çalışma değerini aşamaz, gün bir kez düşer. Toplam kapasite = çalışma günü × günlük kapasite × verimlilik; kullanılabilir kapasite = (çalışma günü − duruş) × günlük kapasite × verimlilik; ek mesai limiti = (çalışma günü − duruş) × günlük limit. Verimlilik girilmemişse %100.
+  - **Senaryo (K-176):** Baz'ı izleyen senaryo Baz'ın satırlarını okur; değiştirdiği alanı fark satırında tutar (`BaseRowId`, `OverriddenFields`), bir Baz satırını kendisi için geçersiz yapabilir (`IsValid`), kendi satırını ekleyebilir. Baz'dan ayrılınca o anki geçerli değerler tam kopyalanır.
+  - **Kapasite özeti:** dönem tablosu "Kaynak grubu × dönem" (K-184); bütün gruplar (kritik olmayan ve fason dahil). Değerler: Kaynak sayısı · Çalışma günü · Duruş · Çalışılabilir gün · Ortalama günlük kapasite · Toplam günlük kapasite · Verimlilik · Toplam kapasite · Kullanılabilir kapasite · Ek mesai limiti · Kalan fazla mesai (ay) · Kalan fazla mesai (yıl; ikisi ERP'den, dönemlere dağıtılmaz).
+  - **Motor:** yalnız kritik grupları kısıtlar; kapasiteyi aynı hesap işlevinden okur (docs/09).
+  - **Kalkanlar:** kaynaktaki günlük kapasite, takvim ve fason parametre alanları; `Calendar`, `CalendarDay`, `ResourceCapacityProfile`, `ResourcePeriodLimit`. Fason limitleri ve kısıtsız kaynak dönem limiti Faz 1 kapsamında yeniden tasarlanana kadar yoktur.
+  - **Durum:** 7.9a (tablolar, çözümleme, hesap, önbellek, Kapasite özeti) uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş ekranları 7.9b, geçerlilik görünümü ve aktarım bağlantısı 7.9c.
 
 #### NASIL ÇALIŞIR
 
@@ -1910,7 +1920,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Set sürümü ve denetim izi
 - **06:** Kaydedilince ResourceEfficiency, ResourcePeriodLimit, OvertimeLimit yazılır; dönem kapasitesi (net) hemen yeniden hesaplanır, doluluk ve uyarılar yeni plan hesabında güncellenir.
 
-### 24 · Kapasite parametreleri · kurallar ve etkiler
+### 24 · Kapasite yönetimi · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Çalışma prensibi 2/3</sub>
 
 - **KURALLAR VE SINIRLAR**
@@ -1931,7 +1941,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kaynak doluluk raporu 'kapasite' satırı yeni hesapta değişir.
 - **ÖRNEK:** Freze merkezi H46–H49 verim %80 → %85: net kapasite +11 sa/hafta; Montajcı W-011 H48–H49 %92 → %80. Fason kaplama H47–H48 limiti 300 → 400 adet. 2. vardiya haftalık 15 → 18 sa.
 
-### 24 · Kapasite parametreleri · yeniden hesaplanacak alanlar
+### 24 · Kapasite yönetimi · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Çalışma prensibi 3/3</sub>
 
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
@@ -1942,30 +1952,30 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Senaryo metrikleri:** PlanMetric Gece senaryoları yeni değerlerle
 - **Açık çalışma:** Workspace · PlanRun Otomatik değil; yeniden hesapta
 
-### 24 · Kapasite parametreleri · Verim matrisi
+### 24 · Kapasite yönetimi · Verim matrisi
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Mockup 1/3</sub>
 
-![24 · Kapasite parametreleri · Verim matrisi](mockups/m24f-0442-24-kapasite-parametreleri-verim-matrisi.png)
+![24 · Kapasite yönetimi · Verim matrisi](mockups/m24f-0442-24-kapasite-parametreleri-verim-matrisi.png)
 
 - **Kaynak × dönem:** Varsayılan sütunu kilitli (ana veri); dönem istisnaları mavi çerçeveli.
 - **Toplu doldurma:** Değer ve dönem aralığı seçilip birden çok hücre doldurulur.
 - **Formül görünür:** Net kapasite formülü altta; kullanıcı etkiyi bilir.
 - **Excel yolu:** Matris Excel'e alınır ve yüklenir; satır varsayılana döndürülebilir.
 
-### 24 · Kapasite parametreleri · Limitler ve fazla mesai
+### 24 · Kapasite yönetimi · Limitler ve fazla mesai
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Mockup 2/3</sub>
 
-![24 · Kapasite parametreleri · Limitler ve fazla mesai](mockups/m24f-0443-24-kapasite-parametreleri-limitler-ve-fazla-mesai.png)
+![24 · Kapasite yönetimi · Limitler ve fazla mesai](mockups/m24f-0443-24-kapasite-parametreleri-limitler-ve-fazla-mesai.png)
 
 - **Kaynağın birimi:** Fason ve kısıtsız kaynak limitleri adet, ton ya da saat; boş = sınırsız.
 - **Vardiya × dönem:** Günlük, haftalık, aylık limit ve uygulanan kaynak grupları.
 - **Tutarlılık hatası:** Haftalık limit günlük × gün ile çelişince hücre kırmızı, Kaydet kapalı, neden yazar.
 - **Senaryo bağı:** Fazla mesainin yalnız açık senaryolarda eklendiği bilgi kutusunda.
 
-### 24 · Kapasite parametreleri · Kaydet ve yeniden hesap
+### 24 · Kapasite yönetimi · Kaydet ve yeniden hesap
 <sub>24. Ekranlar ve fonksiyonlar · F24 · C Parametre · Mockup 3/3</sub>
 
-![24 · Kapasite parametreleri · Kaydet ve yeniden hesap](mockups/m24f-0444-24-kapasite-parametreleri-kaydet-ve-yeniden-hesap.png)
+![24 · Kapasite yönetimi · Kaydet ve yeniden hesap](mockups/m24f-0444-24-kapasite-parametreleri-kaydet-ve-yeniden-hesap.png)
 
 - **Değişiklik listesi:** Sekme, hücre ve eski → yeni; kaç hücre.
 - **Yeniden hesaplanacak:** Dönem kapasitesi hemen (sayıyla), doluluk ve uyarılar yeni hesapta.

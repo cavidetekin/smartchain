@@ -243,3 +243,13 @@ def importance(session: Session) -> None:
             f"UPDATE w SET Importance = :high FROM adm.DataQualityWarning w JOIN core.[{name}] t ON t.Id = TRY_CAST(w.RecordKey AS bigint) {cur} "
             "JOIN adm.DemandChain d ON d.EntityName = N'Material' AND d.RecordId = t.MaterialId "
             "WHERE w.EntityName = :entity AND w.Importance <> :high"), {**p, "entity": name})
+    # Kontrole özel önem (K-185): Yüksek = kayıt talep zincirinde VE kontrolün koşulu tutuyor (ör. kaynağın grubu kritik); geri kalanı Normal
+    for check in CHECKS:
+        if check.high_when is None:
+            continue
+        t = chain.core(check.table)
+        session.execute(sa.update(W).where(W.c.CheckCode == check.code).values(Importance=NORMAL))
+        qualifies = sa.select(sa.cast(t.c.Id, sa.Unicode(60))).where(chain.current(t), check.high_when(t))
+        in_chain = sa.text("EXISTS (SELECT 1 FROM adm.DemandChain d WHERE d.EntityName = :entity AND d.RecordId = TRY_CAST(adm.DataQualityWarning.RecordKey AS bigint))")
+        session.execute(sa.update(W).where(W.c.CheckCode == check.code, W.c.RecordKey.in_(qualifies), in_chain).values(Importance=HIGH),
+                        {"entity": check.table})

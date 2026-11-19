@@ -72,6 +72,7 @@ GROUP_ROWS: tuple[GroupRow, ...] = (
 # Fonksiyon istisnaları: grup düzeyinden ayrılan hücreler (rol → düzey) ve gerekçesi.
 EXCEPTIONS: dict[int, tuple[dict[str, Level], str]] = {
     9: ({ADMIN: R, KEY_USER: R}, "Ham veri temizliğini yalnız System owner başlatır; Admin ve Key user sonucu görür (K-156)"),
+    24: ({END_USER: R}, "Kapasite yönetimi'ni End user görür (özet ve girişler salt okunur); girişleri Key user ve üstü yapar (K-185)"),
     48: ({END_USER: S}, "End user kendi işlerini görür: arka planda hazırlanan Excel'in bildirimi ve indirmesi (K-99)"),
     86: ({END_USER: F}, "Excel'e aktarma End user'ın hakkı (K-99)"),
     87: ({END_USER: S}, "End user yalnız kendi dışa aktarım kayıtlarını görür"),
@@ -105,7 +106,7 @@ _NAMES = """
 21 Kalite düzeltme aksiyonu
 22 Parametreler
 23 Zaman yapısı
-24 Kapasite parametreleri
+24 Kapasite yönetimi
 25 Alokasyon ve öncelik kuralı
 26 Uyarı eşikleri
 27 Senaryo yönetimi

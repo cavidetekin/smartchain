@@ -3,7 +3,7 @@
 Kapasitesi tanımsız kaynak kontrolü kritik gruba üyelikten okur; talep zinciri rota → grup → eşleşme → kaynak yolundan geçer; kayıt kartının
 İlişkili kayıtları; tüketimin ve günlük kapasitenin ondalığı grubun kapasite biriminden gelir.
 """
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 import sqlalchemy as sa
@@ -44,26 +44,37 @@ def _members(engine, **match) -> list[tuple[int, int]]:
     return [tuple(r) for r in _sql(engine, f"SELECT ResourceGroupId, ResourceId FROM core.ResourceGroupMember WHERE VersionTo IS NULL AND {where}", **match)]
 
 
-def test_no_capacity_check_reads_the_critical_group(eng):
-    """Kontrol: aktif, en az bir aktif kritik gruba üye, günlük kapasitesi boş kaynak. Grup kritik değilse uyarı kalkar; kritiklik kaynakta yok."""
+def test_no_capacity_check_reads_work_patterns_and_the_critical_group(eng):
+    """K-185: ne kendisinde ne grubunda geçerli çalışma düzeni olan kaynak; bütün gruplar için çıkar. Önem: Yüksek = aktif kritik gruba üye ve
+    talep zincirinde; kritik olmayan (ya da pasif) grupta Normal. Gruba çalışma düzeni girilince uyarı kalkar; bitmiş kayıt sayılmaz."""
     group = core_id(eng, "ResourceGroup", Code=NO_CAPACITY_GROUP)
     resource = core_id(eng, "Resource", Code=d.NO_CAPACITY_RESOURCE)
+    fason = core_id(eng, "Resource", Code=d.FASON_NO_CAPACITY)
     assert _members(eng, ResourceId=resource) == [(group, resource)]
-    check(eng)
-    found = warning(eng, "SC.RES_NO_CAPACITY")
-    assert [(w["EntityName"], w["RecordKey"]) for w in found] == [("Resource", str(resource))]
-    assert found[0]["Importance"] == "Yüksek"  # grubu rotada: kaynak talep zincirinde
+
+    def found() -> dict:
+        check(eng)
+        return {w["RecordKey"]: w["Importance"] for w in warning(eng, "SC.RES_NO_CAPACITY") if w["EntityName"] == "Resource"}
+
+    assert found() == {str(resource): "Yüksek", str(fason): "Normal"}   # T-05: grubu kritik ve rotada; F-KAPLA: fason, kritik değil
+    base = _sql(eng, "SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1").scalar()
     try:
         _sql(eng, "UPDATE core.ResourceGroup SET IsCritical = 0 WHERE Id = :g AND VersionTo IS NULL", g=group)
-        check(eng)
-        assert warning(eng, "SC.RES_NO_CAPACITY") == []
+        assert found() == {str(resource): "Normal", str(fason): "Normal"}   # kritik olmayan grupta da çıkar, önemi Normal
         _sql(eng, "UPDATE core.ResourceGroup SET IsCritical = 1, IsActive = 0 WHERE Id = :g AND VersionTo IS NULL", g=group)
-        check(eng)
-        assert warning(eng, "SC.RES_NO_CAPACITY") == []  # pasif grup sayılmaz
+        assert found()[str(resource)] == "Normal"                           # pasif grup kritik sayılmaz
+        _sql(eng, "UPDATE core.ResourceGroup SET IsCritical = 1, IsActive = 1 WHERE Id = :g AND VersionTo IS NULL", g=group)
+        insert = ("INSERT INTO param.WorkPattern (ScenarioDefinitionId, IsValid, ResourceGroupId, ValidFrom, ValidTo, DailyCapacity, DayMon, DayTue, DayWed, DayThu, "
+                  "DayFri, DaySat, DaySun, UpdatedAt) VALUES (:s, :v, :g, :a, :b, 9.25, 1, 1, 1, 1, 1, 0, 0, SYSUTCDATETIME())")
+        _sql(eng, insert, s=base, v=1, g=group, a=date.today() - timedelta(days=30), b=date.today() - timedelta(days=1))   # bitmiş kayıt sayılmaz
+        _sql(eng, insert, s=base, v=0, g=group, a=date.today() - timedelta(days=30), b=None)                               # geçersiz kayıt sayılmaz
+        assert str(resource) in found()
+        _sql(eng, insert, s=base, v=1, g=group, a=date.today() - timedelta(days=30), b=None)                               # gruba geçerli kayıt: uyarı kalkar
+        assert found() == {str(fason): "Normal"}
     finally:
         _sql(eng, "UPDATE core.ResourceGroup SET IsCritical = 1, IsActive = 1 WHERE Id = :g AND VersionTo IS NULL", g=group)
-    check(eng)
-    assert len(warning(eng, "SC.RES_NO_CAPACITY")) == 1
+        _sql(eng, "DELETE FROM param.WorkPattern WHERE DailyCapacity = 9.25 AND ResourceGroupId = :g", g=group)
+    assert len(found()) == 2
 
 
 def test_demand_chain_reaches_the_resource_through_its_group(eng):
@@ -122,9 +133,7 @@ def test_consumption_decimals_come_from_the_group_unit(api, db_engine):
     of_resource = dict(_sql(db_engine, "SELECT r.Code, MIN(u.Decimals) FROM core.Resource r JOIN core.ResourceGroupMember m ON m.ResourceId = r.Id AND m.VersionTo IS NULL "
                                        "JOIN core.ResourceGroup g ON g.Id = m.ResourceGroupId AND g.VersionTo IS NULL JOIN core.UnitOfMeasure u ON u.Code = g.CapacityUnit "
                                        "WHERE r.VersionTo IS NULL GROUP BY r.Code HAVING COUNT(DISTINCT g.CapacityUnit) = 1").all())
-    r = api.post("/api/master-resource/query", json={"fields": ["Code", "DailyCapacity"], "limit": 100})
-    assert r.status_code == 200, r.text
-    rows = {row["Code"]: row for row in r.json()["rows"]}
-    assert of_resource and all(rows[code]["_unit_decimals"] == decimals for code, decimals in of_resource.items())
+    names = {c["field"] for c in api.get("/api/master-resource/columns").json()["columns"]}
+    assert of_resource and "Code" in names and not {"DailyCapacity", "CalendarId"} & names   # kaynakta kapasite alanı yok (K-185): birimli sayı da yok
     columns = {c["field"] for c in api.get("/api/master-routing/columns").json()["columns"]}
     assert "ResourceGroupCode" in columns and not {"ResourceCode", "ResourceId"} & columns  # rotada kaynak kolonu yok

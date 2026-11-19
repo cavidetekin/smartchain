@@ -101,8 +101,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Benzetilen ürün (MaterialReference) | Ana veri | API · SQL · Excel | ERP | Gece tam | LocationCode + MaterialCode + ReferenceMaterialCode + ValidFrom | İsteğe bağlı |
 | Kaynak grubu ve kaynak (ResourceGroup, Resource) | Ana veri | Excel · SQL · API | ERP, kapasite tanımları Smartchain ekranında | Gece tam / elle | LocationCode + Code | Zorunlu (kaynak grubu planlama birimidir, K-180) |
 | Kaynak grup eşleşmesi ve devamsızlık (ResourceGroupMember, EmployeeAbsence) | Ana veri · İşlem verisi | API · SQL · Excel | ERP | Gece tam | LocationCode + ResourceGroupCode + ResourceCode · LocationCode + ResourceCode + StartDate + AbsenceType | Kaynak grup eşleşmesi zorunlu · devamsızlık işçi grubu varsa |
-| Takvim ve gün (Calendar, CalendarDay) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | Zorunlu |
-| Duruş ve kapasite profili (ResourceDowntime, ResourceCapacityProfile) | Ana veri | Smartchain (ekran) | Smartchain | Elle | — | İsteğe bağlı |
+| Kapasite girişleri (WorkPattern, ResourceEfficiency, OvertimeLimit, ResourceDowntime, FactoryCalendar; K-185) | Parametre (senaryolu) | Smartchain (Kapasite yönetimi ekranı) | Smartchain | Elle | — | Çalışma düzeni zorunlu (yoksa veri kalitesi uyarır); ötekiler isteğe bağlı |
 | Tedarikçi ve malzeme-tedarikçi (Supplier, MaterialSupplier) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code · LocationCode + MaterialCode + SupplierCode | Zorunlu |
 | Müşteri (Customer) | Ana veri | API · SQL | ERP | Gece tam | Code | Zorunlu |
 | Proje (Project, ProjectGroup) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code | Proje bazlı planlamada |
@@ -828,7 +827,7 @@ FROM erp.WorkCenter;
 | Tarih | '20261023' → 2026-10-23; vade: ConfirmedDate yoksa RequestedDate | Biçim view'da ya da adaptörde; boş tarihin anlamı alanın BOŞSA kolonundadır, gerekirse veri kuralıyla doldurulur. |
 | Türetme | İş emri: açık miktar = sipariş − teslim | View'da ya da adaptörde; sözleşme alanı tek değer alır. |
 | Birleştirme | Stok: depo + lot + durum + proje → tek satır | Anahtar sözleşmede; ERP daha ayrıntılıysa toplanır, daha kabasa alanlar boş kalır (anlamı BOŞSA kolonunda). |
-| Smartchain alanı | Resource.DailyCapacity, verim | Entegre edilmez (K-117); Smartchain ekranında tanımlanır. |
+| Smartchain girişi | Günlük kapasite (çalışma düzeni), verimlilik | Entegre edilmez (K-117); Kapasite yönetimi ekranında girilir (K-185); kaynakta alan değildir. |
 
 ### İlişki haritası (K-146)
 <sub>26. Entegrasyon tasarımı · Referans kontrolü ve kod→Id</sub>
@@ -900,7 +899,7 @@ FROM erp.WorkCenter;
 | Ana veri (malzeme, ağaç, rota, tedarikçi, müşteri, proje) | ERP | Salt okunur; manuel değer alan bazında | ERP ezer; manuel değer alan ayarına göre kalır (FieldDefinition.ManualOverrides) |
 | Kaynak temel bilgisi (kod, ad, grup) | ERP ya da Excel | Salt okunur | Kaynağa göre |
 | Kaynak planlama alanları (günlük kapasite, verim, hedef doluluk, fason parametreleri) | Smartchain | Ekranda tanımlanır, entegre edilmez (K-117) | Aktarımda ezilmez |
-| Takvim, duruş | Smartchain (K-65) | Ekrandan girilir | Smartchain değeri kalır |
+| Çalışma düzeni, fabrika takvimi, duruş | Smartchain (K-65, K-185) | Kapasite yönetimi ekranından girilir | Smartchain değeri kalır |
 | Siparişler, stok, iş emirleri, gerçekleşmeler | ERP | Salt okunur | Her aktarımda ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
 | Tahmin | ERP ya da Excel | Excel ile yüklenir | Son yükleme geçerli; versiyonlu |
 | Parametreler, senaryo tanımları, kurallar, manuel değerler | Smartchain | Ekrandan | ERP'ye gitmez |

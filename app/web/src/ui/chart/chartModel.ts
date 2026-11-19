@@ -140,8 +140,8 @@ export function nextId(prefix: string, used: string[]): string {
 }
 
 /** İlk açılış (K-178): grafik boş gelmez. Yatay eksen görünür ilk tarih alanı (dönem Ay), yoksa görünür ilk kategori alanı; seri görünür ilk
- *  sayısal alanın toplamı, çubuk; sayısal alan yoksa adet. Görünür alanlarda yoksa listenin bütün alanlarına bakılır. Çizilecek eksen yoksa null. */
-export function defaultChart(columns: ListColumn[], order: string[]): ChartConfig | null {
+ *  sayısal alanın toplamı (liste tanımı alanı verdiyse o), çubuk; sayısal alan yoksa adet. Görünür alanlarda yoksa listenin bütün alanlarına bakılır. Çizilecek eksen yoksa null. */
+export function defaultChart(columns: ListColumn[], order: string[], preferred?: string): ChartConfig | null {
   const byField = new Map(columns.map((c) => [c.field, c]));
   const visible = order.map((f) => byField.get(f)).filter((c): c is ListColumn => Boolean(c));
   const isCategory = (c: ListColumn) => c.type === "text" || c.type === "bool";
@@ -149,7 +149,8 @@ export function defaultChart(columns: ListColumn[], order: string[]): ChartConfi
   const x = axis(visible) ?? axis(columns);  // önce görünür alanlar (tarih, yoksa kategori); hiçbiri yoksa listenin öteki alanları
   if (!x) return null;
   const number = (from: ListColumn[]) => from.find((c) => c.type === "number") ?? from.find((c) => c.type === "integer" && c.field !== x.field);
-  const value = number(visible) ?? number(columns);
+  // liste tanımı grafiğin ilk değer alanını verebilir (K-186; ör. Kapasite özeti'nde Kullanılabilir kapasite)
+  const value = (preferred ? columns.find((c) => c.field === preferred && NUMERIC_TYPES.includes(c.type)) : undefined) ?? number(visible) ?? number(columns);
   return {
     v: 1, open: true, kind: "xy", layout: "split", height: DEFAULT_HEIGHT,
     x: { field: x.field, bucket: isDateField(x) ? "month" : null }, split: null, order: "value", limit: MAX_CATEGORIES,
