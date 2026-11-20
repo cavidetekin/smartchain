@@ -69,6 +69,11 @@
   --chart-11: #c08fba;
   --chart-12: #bfa07e;
 
+  /* Geçerlilik zaman çubuğu dilimleri (K-188; mockup zaman-cubugu-renk.html B): zaman çubuğunun kendi renkleri, grafik paletinin dışında.
+     İki renk, bir anlam; durum rengi, indigo ve beyaz yazı değil */
+  --span-group-bg: #cfebdd;  --span-group-text: #1f5b43;  /* nane: değer grubun kaydından */
+  --span-own-bg: #ffdfa3;    --span-own-text: #7a5200;    /* amber: kaynağın kendi kaydı */
+
   /* Form alanları (mockup m24f-0757) */
   --field-bg: #ffffff;
   --field-border: var(--lead-300);

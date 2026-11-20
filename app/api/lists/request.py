@@ -434,6 +434,12 @@ class ViewColumn(BaseModel):
     width: float | None = Field(default=None, ge=MIN_WIDTH_REM, le=MAX_WIDTH_REM)  # rem; boşsa tipin varsayılanı
 
 
+class AbovePane(BaseModel):
+    """Tablonun üstündeki bölmenin (ör. Geçerlilik zaman çubuğu, K-188) görünümle saklanan ayarı: yükseklik oranı ve yakınlaştırma."""
+    height: float = Field(default=0.4, ge=0.15, le=0.85)
+    zoom: float = Field(default=1, ge=1, le=12)
+
+
 class ViewDefinition(BaseModel):
     """Görünüm içeriği, sürüm 1. Göreli tarih filtresi göreli saklanır (op relative), tarih değil."""
     v: Literal[1] = 1
@@ -446,6 +452,7 @@ class ViewDefinition(BaseModel):
     rules: list[FormatRule] = Field(default=[], max_length=MAX_RULES)  # koşullu biçim, sıralı (K-95)
     chart: ChartDefinition | None = None  # tablonun grafiği (K-178); yoksa grafik kapalı
     pivot: PivotDefinition | None = None  # pivot görünümü (K-183); yoksa pivot kurulmamış
+    above: AbovePane | None = None  # tablonun üstündeki bölme (K-188); yoksa varsayılan
 
 
 class ViewCreate(BaseModel):

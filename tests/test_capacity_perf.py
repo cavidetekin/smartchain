@@ -126,3 +126,29 @@ def test_read_from_cache_under_target(big, name):
     ms = median_ms(lambda: work(session))
     print(f"\ndönem tablosu ({name}): ortanca {ms:.0f} ms")
     assert ms < target
+
+
+# --- Geçerlilik ve "Gün" (7.9c, K-188): istekte girişlerden hesaplanır (önbellek yok). Yazıldı, tam performans ölçümüyle birlikte koşulur ---
+VALIDITY_MS, VALIDITY_FILTERED_MS, DOWNTIME_MS = 800, 300, 800
+
+
+def _validity_reads():
+    from app.api.lists.capacity import DOWNTIME, VALIDITY_LISTS
+    work_patterns = VALIDITY_LISTS[0]
+    return {
+        "geçerlilik tablosunun ilk parçası": (VALIDITY_MS, lambda s: service.query(s, work_patterns, QueryRequest(limit=100))),
+        "geçerlilik, tek gruba süzülmüş": (VALIDITY_FILTERED_MS, lambda s: service.query(s, work_patterns, QueryRequest.model_validate(
+            {"limit": 100, "filters": [{"field": "GroupCode", "op": "in", "values": ["PERF-G-7"]}]}))),
+        "bakım ve duruşlar (Gün kolonuyla) ilk parça": (DOWNTIME_MS, lambda s: service.query(s, DOWNTIME, QueryRequest(limit=100))),
+    }
+
+
+@pytest.mark.parametrize("name", ["geçerlilik tablosunun ilk parçası", "geçerlilik, tek gruba süzülmüş", "bakım ve duruşlar (Gün kolonuyla) ilk parça"])
+def test_validity_under_target(big, name):
+    """Geçerlilik aralıkları kırılma noktalarıyla bulunur; satır sayısı kaynak × kayıt mertebesindedir (gün sayısından bağımsız)."""
+    session, _base = big
+    target, work = _validity_reads()[name]
+    work(session)
+    ms = median_ms(lambda: work(session))
+    print(f"\n{name}: ortanca {ms:.0f} ms")
+    assert ms < target

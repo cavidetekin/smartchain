@@ -44,7 +44,7 @@ import {
 import { RulesPanel } from "./RulesPanel";
 import {
   type AggSpec, type ExportInfo, type ExportScope, type FormatRule, listApi, type GroupNode, type ListColumn, type ListFilter,
-  type CalculatedValue, MAX_RULES, type RelatedCatalog, type RelationHeading, type Row, setListScenario,
+  ABOVE_DEFAULT, type AbovePane, type CalculatedValue, clampAbove, MAX_RULES, type RelatedCatalog, type RelationHeading, type Row, setListScenario,
 } from "./types";
 import { PivotGrid, reasonOf } from "./PivotGrid";
 import { emptyPivot, type PivotConfig, pivotExportRequest, pivotReady } from "./pivotModel";
@@ -450,7 +450,7 @@ function RowMenuCell({ row, menu }: { row: Row | undefined; menu: RowMenuSpec })
   );
 }
 
-export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarLead, toolbarEnd, compact = false, toolbarActions, fit = false, fitHeaders = false, onColumns, cellEditing, wrapFields, rowOrder, selectedRowId, cellMenu, onSelection, selectionMenu }: {
+export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fieldHints, rowMenu, reloadKey = 0, baseFilters, toolbarLead, toolbarEnd, compact = false, toolbarActions, fit = false, fitHeaders = false, onColumns, above, reveal: revealRow, cellEditing, wrapFields, rowOrder, selectedRowId, cellMenu, onSelection, selectionMenu }: {
   list: string;
   /** Alana göre hücre içeriği (ör. rozet); Excel düz metin kalır. */
   cellRender?: CellRender;
@@ -492,6 +492,11 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   cellMenu?: (col: ListColumn, row: Row) => CellMenuItem[];
   /** Şeridin en sağında (ör. detay kartında Büyüt ve ✕, K-173). */
   toolbarEnd?: ReactNode;
+  /** Şerit ile tablo arasındaki bölme (ör. Geçerlilik zaman çubuğu, K-188): tabloda yüklenen satırlarla çizilir; tabloyla arasında tutamaç vardır,
+   *  yüksekliği ve yakınlaştırması görünümle saklanır. Gruplamada, pivotta ve grafik açıkken yoktur. */
+  above?: (rows: Row[], pane: AbovePane & { setZoom(zoom: number): void }) => ReactNode;
+  /** Bu satırı görünür alana getir (ör. zaman çubuğunda dilime tıklanınca); `n` aynı satır için yeniden tetikler. Seçili gösterme `selectedRowId` ile. */
+  reveal?: { id: number | string; n: number } | null;
   /** Alçak şerit (detay kartı, K-173). */
   compact?: boolean;
 }) {
@@ -693,6 +698,25 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     if (st.chart?.open) return { ...st, chart: baselineChart ? { ...st.chart, open: false } : null };  // görünümde grafik yoksa kapatınca iz kalmaz
     return { ...st, chart: st.chart ? { ...st.chart, open: true } : defaultChart(columns ?? [], st.order, period.chartValue) };
   });
+  // Tablonun üstündeki bölme (K-188): yükseklik oranı ve yakınlaştırma görünümün parçası
+  const setAbove = (change: Partial<AbovePane>) => update((st) => ({ ...st, above: clampAbove({ ...(st.above ?? ABOVE_DEFAULT), ...change }) }));
+  const onAboveSplit = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    const pane = rootRef.current?.querySelector<HTMLElement>(".sc-above-pane");
+    const scroll = scrollRef.current;
+    if (!pane || !scroll) return;
+    const move = (ev: globalThis.MouseEvent) => {
+      const top = pane.getBoundingClientRect().top;
+      const bottom = scroll.getBoundingClientRect().bottom;
+      if (bottom > top) setAbove({ height: (ev.clientY - top) / (bottom - top) });
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  };
   const setChartHeight = (ratio: number) => update((st) => (st.chart ? { ...st, chart: { ...st.chart, height: clampHeight(ratio) } } : st));
   const onChartSplit = (e: ReactMouseEvent) => {
     e.preventDefault();
@@ -921,6 +945,28 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   // İmleç hücresine odak. Yalnız klavyeyle taşınan imleç görünür alana getirilir (reveal); fareyle kaydırırken imleç hücresi çizimden
   // çıkarsa odak tablo kutusuna geçer (klavye çalışmaya devam eder), kaydırma geri çekilmez (K-172). Odak tablonun dışındaysa (ör. açık
   // pencere, araç çubuğu) ya da tablodaki bir düğme ve kutudaysa alınmaz.
+  // İstenen satır görünür alana gelir (K-188: zaman çubuğunda dilime tıklamak, "Kayda git"). Satır henüz yüklenmemiş bir parçadaysa parçalar
+  // sırayla yüklenir ve her yüklemede yeniden bakılır; listede yoksa (süzülmüş olabilir) bırakılır.
+  const revealId = revealRow?.id, revealN = revealRow?.n;
+  const revealPending = useRef<number | string | null>(null);
+  useEffect(() => { revealPending.current = revealId ?? null; }, [revealId, revealN]);
+  useEffect(() => {
+    const want = revealPending.current;
+    if (want === null || grouped) return;
+    for (let i = 0; i < count; i++) {
+      const found = rowAtIndex(i);
+      if (!found) {
+        flat.ensure(i, Math.min(count - 1, i + (chunkSize ?? 100) - 1));
+        return;
+      }
+      if (found.Id === want) {
+        revealPending.current = null;
+        virtualizer.scrollToIndex(i, { align: "center" });   // başlık satırı üstte yer kaplar: ortalanınca satır hep görünür
+        return;
+      }
+    }
+    if (count > 0) revealPending.current = null;
+  }, [revealId, revealN, rowAtIndex, count]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!cursor || openCell || !gridOn) return;
     const box = scrollRef.current;
@@ -1121,6 +1167,8 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   if (!columns || !state) return <>{bareStrip}<p className="sc-muted">{T.loading}</p></>;
 
   const paddingTop = items[0]?.start ?? 0;
+  const aboveOn = Boolean(above) && !grouped && !pivotOn && !chartOpen;
+  const abovePane = s.above ?? ABOVE_DEFAULT;
   const extraCols = (rowMenu ? 1 : 0) + (selRem ? 1 : 0);
   /** Başlıktaki kutu: yüklü satırların hepsi (parça parça yüklenir; filtrelenmiş liste kaydırdıkça gelir). */
   const loadedRows = (): Row[] => {
@@ -1354,6 +1402,19 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
           <MenuActions items={menu.items} onDone={() => setMenu(null)} end={false} />
         </RowPopMenu>
       )}
+      {aboveOn && (
+        <>
+          <div className="sc-above-pane" style={{ flex: `${abovePane.height} 1 0` }}>{above!(loadedRows(), { ...abovePane, setZoom: (zoom) => setAbove({ zoom }) })}</div>
+          <div role="separator" aria-orientation="horizontal" aria-label={T.aboveResize} tabIndex={0} className="sc-md-splitter sc-chart-splitter"
+               aria-valuenow={Math.round(abovePane.height * 100)} aria-valuemin={15} aria-valuemax={85}
+               onMouseDown={onAboveSplit} onDoubleClick={() => setAbove({ height: ABOVE_DEFAULT.height })}
+               onKeyDown={(e) => {
+                 if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+                 e.preventDefault();
+                 setAbove({ height: abovePane.height + (e.key === "ArrowDown" ? 0.05 : -0.05) });
+               }} />
+        </>
+      )}
       {chartOpen && s.chart && (
         <>
           <ChartPane list={list} columns={columns} filters={chartFilters} chart={s.chart} reloadKey={reloadKey} style={chartFull ? { flex: "1 1 0" } : { flex: `${s.chart.height} 1 0` }}
@@ -1387,7 +1448,8 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
         </div>
       )}
       <div className="sc-table-scroll" ref={scrollRef} data-testid="table-scroll" tabIndex={-1}
-           style={pivotOn ? { display: "none" } : chartOpen && s.chart ? (chartFull ? { display: "none" } : { flex: `${1 - s.chart.height} 1 0` }) : undefined}
+           style={pivotOn ? { display: "none" } : chartOpen && s.chart ? (chartFull ? { display: "none" } : { flex: `${1 - s.chart.height} 1 0` })
+             : aboveOn ? { flex: `${1 - abovePane.height} 1 0` } : undefined}
            onKeyDown={(e) => { if (!onSelectKey(e) && !onCopyKey(e) && gridOn) onGridKey(e); }} onPaste={gridOn ? onGridPaste : undefined}>
         <table className={`sc-table-grid${fit ? " sc-table-grid--fit" : ""}`} aria-rowcount={count + 1} aria-colcount={visible.length + extraCols}
                style={fit ? undefined : { width: `${visible.reduce((sum, c) => sum + width(c.field), (rowMenu ? ROW_MENU_REM : 0) + selRem)}rem` }}>

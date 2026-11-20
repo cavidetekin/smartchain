@@ -45,4 +45,4 @@ def load_parameters(session: Session, scenario_definition_id: int) -> ScenarioPa
 def load_input(session: Session, plan_run_id: int, time_budget_seconds: int) -> EngineInput:
     run = load_plan_run(session, plan_run_id)
     return EngineInput(plan_run=run, parameters=load_parameters(session, run.scenario_definition_id),
-                       data=SqlPlanningData(session, run.data_version_id), time_budget_seconds=time_budget_seconds)
+                       data=SqlPlanningData(session, run.data_version_id, run.scenario_definition_id), time_budget_seconds=time_budget_seconds)

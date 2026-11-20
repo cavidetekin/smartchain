@@ -933,6 +933,50 @@ tr.is-clickable { cursor: pointer; }
 /* Kapasite girişleri (K-176, K-185): senaryoda değişen hücrenin işareti (lila köşe); geçersiz yapılan satır soluk ve üstü çizili */
 .sc-table-grid td.sc-cell-diff { background-image: linear-gradient(225deg, var(--violet-700) 0 0.4615rem, transparent 0.4615rem); background-repeat: no-repeat; background-position: top right; }
 .sc-table-grid tr.sc-row-invalid td { color: var(--text-muted); text-decoration: line-through; }
+/* Kapasite yönetimi › Geçerlilik (K-188): tablo seçimi; zaman çubuğu (ufuk; her kaynak bir satır, her aralık bir dilim). Ay ekseni ve kaynak
+   listesi kaydırırken sabit; yakınlaştırınca çubuk yatayda kayar. Tablonun üstündeki bölme (sc-above-pane) tutamaçla boyutlanır. */
+.sc-table-choice { width: auto; min-height: 2.1538rem; flex: none; }
+.sc-above-pane { display: flex; min-height: 5rem; overflow: hidden; }
+.sc-validity { flex: 1 1 auto; min-width: 0; overflow: auto; background: var(--surface); border: 1px solid var(--table-border); border-radius: var(--radius); }
+/* ızgaranın genişliği içeriği kadar (bileşen satır içi verir): sabit kolon yatay kaydırmanın sonuna kadar yerinde kalır */
+.sc-validity-grid { display: grid; grid-template-columns: 9rem minmax(0, 1fr); align-items: stretch; }
+.sc-validity-line { display: contents; }
+/* başlık satırı: solda "Kaynak" ve yakınlaştırma, sağda aylar; kaydırırken sabit */
+.sc-validity-corner { position: sticky; top: 0; left: 0; z-index: 3; display: flex; align-items: center;
+  height: 2.4615rem; padding: 0 var(--space-3); background: var(--lead-50); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  font-size: var(--fs-sm); }
+.sc-validity-corner > b { font-weight: var(--fw-semibold); }
+/* yakınlaştırma düğmeleri başlık satırının sağ ucunda; yatay kaydırırken yerinde */
+.sc-validity-zooms { position: sticky; right: 0; z-index: 1; float: right; display: inline-flex; align-items: center; gap: var(--space-1); height: 100%;
+  padding: 0 var(--space-2); background: var(--lead-50); border-left: 1px solid var(--line); }
+.sc-validity-zoom { width: 1.5385rem; height: 1.5385rem; padding: 0; border: 1px solid var(--field-border); border-radius: var(--radius); background: var(--surface);
+  color: var(--text); font: inherit; line-height: 1; cursor: pointer; }
+.sc-validity-zoom:hover:not(:disabled) { border-color: var(--lead-600); }
+.sc-validity-zoom:disabled { color: var(--lead-300); cursor: default; }
+.sc-validity-axis { position: sticky; top: 0; z-index: 2; height: 2.4615rem; background: var(--lead-50); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
+/* ay adı ortalı ve kalın; ay sınırında ince dikey çizgi (ilk ayın solunda köşenin çizgisi var) */
+.sc-validity-month { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
+.sc-validity-month + .sc-validity-month { border-left: 1px solid var(--line); }
+.sc-validity-month > b { font-weight: var(--fw-semibold); }
+/* kaynak satırı: solda kod (sabit), sağda dilimler; satırlar arasında ince yatay çizgi */
+.sc-validity-label { position: sticky; left: 0; z-index: 1; display: flex; align-items: center; min-width: 0; height: 2.6154rem; padding: 0 var(--space-3);
+  overflow: hidden; white-space: nowrap; background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--lead-100); }
+.sc-validity-bar { position: relative; height: 2.6154rem; border-bottom: 1px solid var(--lead-100); }
+.sc-validity-tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--lead-100); }
+/* dilim: düğme yalnız yeri tutar (iki yanında 1 px boşluk: komşu dilimler ayrışır); görünen şekil içindeki çiptir (satırı doldurmaz, köşeleri yuvarlak) */
+.sc-validity-span { position: absolute; top: 0.3077rem; height: 2rem; display: flex; align-items: stretch; padding: 0 1px; border: 0; background: none; cursor: pointer;
+  font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); color: inherit; }
+.sc-validity-chip { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; border: 0.1154rem solid transparent; border-radius: 0.3846rem;
+  overflow: clip; white-space: nowrap; }
+/* değer çipin ortasında; çipin bir kısmı görünen alanın dışındaysa bileşen değeri görünen kısmın ortasına kaydırır */
+.sc-validity-chip > b { font-weight: var(--fw-semibold); }
+.sc-validity [data-tight] > b { visibility: hidden; }   /* sığmayan yazı yazılmaz; ipucunda */
+.sc-validity-span.is-group > .sc-validity-chip { background-color: var(--span-group-bg); color: var(--span-group-text); }
+.sc-validity-span.is-own > .sc-validity-chip { background-color: var(--span-own-bg); color: var(--span-own-text); }
+.sc-validity-span:hover > .sc-validity-chip { filter: brightness(0.96); }
+/* seçili dilim: çerçeve çipin şeklini izler (aynı yuvarlaklık, taşma yok) ve yazı rengiyle çizilir */
+.sc-validity-span:focus-visible { outline: none; }
+.sc-validity-span:focus-visible > .sc-validity-chip, .sc-validity-span.is-picked > .sc-validity-chip { border-color: currentColor; }
 /* Giriş penceresi standardı (K-187, docs/12 "Pencere ve form standardı"): iki kolonlu ızgara; tam satır alan; seviye ve kod satırı */
 .sc-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); align-items: start; }
 .sc-form-grid > .sc-form-full { grid-column: 1 / -1; }

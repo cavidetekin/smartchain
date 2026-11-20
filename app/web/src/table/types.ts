@@ -231,6 +231,14 @@ export interface GroupsResponse {
 }
 
 /** Kayıtlı görünüm içeriği, sürüm 1 (K-89, docs/08). Genişlik rem. */
+export interface AbovePane { height: number; zoom: number }
+export const ABOVE_DEFAULT: AbovePane = { height: 0.4, zoom: 1 };
+export const ABOVE_MAX_ZOOM = 12;
+export const clampAbove = (p: Partial<AbovePane> | null | undefined): AbovePane => ({
+  height: Math.min(0.85, Math.max(0.15, Math.round((Number(p?.height) || ABOVE_DEFAULT.height) * 1000) / 1000)),
+  zoom: Math.min(ABOVE_MAX_ZOOM, Math.max(1, Number(p?.zoom) || 1)),
+});
+
 export interface ViewDefinition {
   v: 1;
   columns: { field: string; width?: number | null }[];
@@ -246,6 +254,8 @@ export interface ViewDefinition {
   chart?: ChartConfig | null;
   /** Pivot görünümü (K-183); yoksa pivot kurulmamış. */
   pivot?: PivotConfig | null;
+  /** Tablonun üstündeki bölme (ör. Geçerlilik zaman çubuğu, K-188): yükseklik oranı ve yakınlaştırma; yoksa varsayılan. */
+  above?: AbovePane | null;
 }
 
 export interface SavedView {

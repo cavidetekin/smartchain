@@ -72,12 +72,12 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 
 ## Dönem değerleri (7.8, K-184)
 
-Kapasite gibi dönem bazındaki değerlerin tek bir hesabı vardır. Kapasitede: `app.periods.values(session, "resource-capacity-day", senaryo, gün aralığı)` → kaynak grubu × kaynak × gün satırları (`WorkingDay`, `Downtime`, `DailyCapacity`, `Capacity`, `AvailableCapacity`, `OvertimeLimit`; senaryonun Baz'dan okuduğu girişler dahil). Ekran bu işlevle kurulan önbellekten okur; motor plan hesabında aynı işlevi doğrudan çağırır (önbellekten okumaz). İkisinin birebir aynı sonucu verdiği testle sabittir (`tests/test_capacity.py`). Motor yükleyicisinin bu işleve bağlanması 7.9c'de.
+Kapasite gibi dönem bazındaki değerlerin tek bir hesabı vardır. Kapasitede: `app.periods.values(session, "resource-capacity-day", senaryo, gün aralığı)` → kaynak grubu × kaynak × gün satırları (`WorkingDay`, `Downtime`, `DailyCapacity`, `Capacity`, `AvailableCapacity`, `OvertimeLimit`; senaryonun Baz'dan okuduğu girişler dahil). Ekran bu işlevle kurulan önbellekten okur; motor plan hesabında aynı işlevi doğrudan çağırır (önbellekten okumaz). İkisinin birebir aynı sonucu verdiği testle sabittir (`tests/test_capacity.py`). Motorun veri erişimi (7.9c, K-188): `PlanningData.period_values(name, date_from, date_to)` planın senaryosu için bu işlevi çağırır (`SqlPlanningData`; ad `"resource-capacity-day"`). Girişler senaryoludur ve versiyonlanmaz: hesap güncel girişleri ve güncel üyelikleri okur (planın veri versiyonu eskiyse de). Sahte motor kullanmaz.
 
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.
-- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) WarningDefinition'da yoksa geliştirme ve testte `ensure_fixture_warning_definitions` ekler; tanımlar 7.14'te ekrandan gelir.
+- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) WarningDefinition'da yoksa geliştirme ve testte `ensure_fixture_warning_definitions` ekler; tanımlar 7.11'de ekrandan gelir.
 - EngineUsed senaryonun `ModelType` parametresidir (yoksa LP), Solver `Sahte`.
 - Sahte motora özel PlanningSetting anahtarları (gerçek motor okumaz):
 

@@ -1,5 +1,6 @@
 """PlanningData'nın SQL uygulaması: core.* tablolarını veri versiyonuna göre salt okunur verir (K-58, K-63)."""
 from collections.abc import Sequence
+from datetime import date
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
@@ -8,9 +9,17 @@ from db.models import metadata
 
 
 class SqlPlanningData:
-    def __init__(self, session: Session, data_version_id: int):
+    def __init__(self, session: Session, data_version_id: int, scenario_definition_id: int | None = None):
         self.session = session
         self.data_version_id = data_version_id
+        self.scenario_definition_id = scenario_definition_id
+
+    def period_values(self, name: str, date_from: date, date_to: date) -> list[dict]:
+        """Dönem değerleri (docs/09): ekranın önbelleğini kuran hesabın kendisi; girişler senaryoludur, güncel girişler ve üyelikler okunur."""
+        if self.scenario_definition_id is None:
+            raise ValueError("Dönem değerleri için senaryo gerekir.")
+        from app import periods
+        return periods.values(self.session, name, self.scenario_definition_id, date_from, date_to)
 
     def read(self, table: str, columns: Sequence[str] | None = None) -> list[dict]:
         name = table if "." in table else f"core.{table}"

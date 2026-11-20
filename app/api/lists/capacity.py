@@ -6,7 +6,7 @@ Giriş satırının kimliği (`Id`) çözümleme katmanındaki `RowId`'dir: Baz 
 """
 import sqlalchemy as sa
 
-from app.capacity import compute
+from app.capacity import compute, validity
 from app.params import resolve
 from app.periods import cache
 
@@ -117,10 +117,10 @@ def _source(select: str, types: dict, name: str):
     """İstekte kaynağı kuran işlev: senaryonun çözümlenmiş satırları (geçersiz yapılanlar dahil; ekranda görünür ve geri alınabilir)."""
     def factory(ctx: SourceContext) -> sa.FromClause:
         scenario = cache.scenario_row(ctx.session, ctx.scenario_id)
-        text = sa.text(select).bindparams(sa.bindparam("cap_sid", ctx.scenario_id, sa.Integer()),
-                                          sa.bindparam("cap_base", cache.base_of(ctx.session, scenario), sa.Integer()),
-                                          sa.bindparam("cap_is_base", 1 if scenario["IsBase"] else 0, sa.Integer()))
-        return text.columns(*[sa.column(n, t) for n, t in types.items()]).subquery(name)
+        binds = [sa.bindparam("cap_sid", ctx.scenario_id, sa.Integer()), sa.bindparam("cap_base", cache.base_of(ctx.session, scenario), sa.Integer())]
+        if ":cap_is_base" in select:
+            binds.append(sa.bindparam("cap_is_base", 1 if scenario["IsBase"] else 0, sa.Integer()))
+        return sa.text(select).bindparams(*binds).columns(*[sa.column(n, t) for n, t in types.items()]).subquery(name)
     return factory
 
 
@@ -129,10 +129,12 @@ def _resolved(table: str) -> str:
 
 
 def _entry(name: str, table: str, title: str, slug: str, values: dict, select: str, labels: dict, *, decimals=None, unit_decimals=(), lists=None,
-           owner: bool = True, start: str = "ValidFrom", extra_sql: str = "", sort=None) -> ListDefinition:
+           owner: bool = True, start: str = "ValidFrom", extra_sql: str = "", sort=None, wrap=None) -> ListDefinition:
     types = {**_COMMON, **(_OWNER if owner else {}), **values}
     head = f"{_HEAD}, {_OWNER_SELECT}, " if owner else f"{_HEAD}, "
     sql = f"SELECT {head}{select} FROM ({_resolved(table)}) z {_OWNER_JOIN if owner else ''}{extra_sql}"
+    if wrap is not None:   # listenin üstüne hesaplanan kolon (ör. "Gün")
+        sql = wrap(sql)
     shown = (*(("Level", "Code") if owner else ()), *[f for f in values if f not in ("CapacityUnit",)], "Origin", "IsValid")
     if owner and "CapacityUnit" in labels:           # Birim, değerin hemen ardında
         at = shown.index(labels["CapacityUnit"]) + 1
@@ -168,7 +170,16 @@ OVERTIME_LIMITS = _entry(
     {"ValidFrom": sa.Date(), "ValidTo": sa.Date(), "DailyLimit": sa.Numeric(18, 4)},
     "z.ValidFrom, z.ValidTo, z.DailyLimit", {"DailyLimit": "Günlük limit", "CapacityUnit": "DailyLimit"}, unit_decimals=("DailyLimit",))
 
-# Bakım ve duruşlar: elle girilenler ve ERP'den gelen çalışan izinleri (salt okunur; kimliği negatif)
+# Bakım ve duruşlar: elle girilenler ve ERP'den gelen çalışan izinleri (salt okunur; kimliği negatif). "Gün" (K-188): kaydın kayıp günü
+def _with_lost_days(sql: str) -> str:
+    """Listenin satırlarına "Gün" eklenir: kayıp gün bütün kayıtlar için bir kez hesaplanır ve kimlikle birleştirilir."""
+    rows = ("SELECT d.RowId AS Id, d.ResourceId, d.ResourceGroupId, d.StartDate, d.EndDate, CAST(NULL AS decimal(9,2)) AS Hours "
+            f"FROM ({resolve.sql('ResourceDowntime', valid_only=False, sid=':cap_sid', base=':cap_base')}) d "
+            "UNION ALL SELECT -ab.Id, ab.ResourceId, CAST(NULL AS bigint), ab.StartDate, ab.EndDate, ab.HoursPerDay FROM core.EmployeeAbsence ab WHERE ab.VersionTo IS NULL")
+    lost = validity.lost_days_sql(rows, sid=":cap_sid", base=":cap_base")
+    return f"SELECT u.*, CAST(COALESCE(ld.LostDays, 0) AS decimal(18,4)) AS LostDays FROM ({sql}) u LEFT JOIN ({lost}) ld ON ld.Id = u.Id"
+
+
 _LEAVE_SQL = (f" UNION ALL SELECT -ab.Id AS Id, CAST(NULL AS bigint) AS StoredId, N'{ERP}' AS Origin, CAST(1 AS bit) AS IsValid, CAST(NULL AS varchar(400)) AS OverriddenFields, "
               "CAST(NULL AS nvarchar(max)) AS BaseValues, N'Kaynak' AS [Level], r.Code, CAST(NULL AS bigint) AS ResourceGroupId, ab.ResourceId, "
               "N',r' + CAST(ab.ResourceId AS nvarchar(20)) + N',' + COALESCE((SELECT STRING_AGG(N'g' + CAST(m4.ResourceGroupId AS nvarchar(max)), N',') + N',' "
@@ -177,9 +188,10 @@ _LEAVE_SQL = (f" UNION ALL SELECT -ab.Id AS Id, CAST(NULL AS bigint) AS StoredId
               "FROM core.EmployeeAbsence ab JOIN core.Resource r ON r.Id = ab.ResourceId AND r.VersionTo IS NULL WHERE ab.VersionTo IS NULL")
 DOWNTIME = _entry(
     "capacity-downtime", "ResourceDowntime", "Bakım ve duruşlar", "kapasite-bakim-ve-duruslar",
-    {"DowntimeType": sa.Unicode(20), "Reason": sa.Unicode(255), "StartDate": sa.Date(), "EndDate": sa.Date()},
+    {"DowntimeType": sa.Unicode(20), "Reason": sa.Unicode(255), "StartDate": sa.Date(), "EndDate": sa.Date(), "LostDays": sa.Numeric(18, 4)},
     "CAST(z.DowntimeType AS nvarchar(20)) AS DowntimeType, CAST(z.Reason AS nvarchar(255)) AS Reason, z.StartDate, z.EndDate",
-    {"DowntimeType": "Tip", "Reason": "Sebep"}, lists={"DowntimeType": [*DOWNTIME_TYPES, LEAVE_TYPE]}, start="StartDate", extra_sql=_LEAVE_SQL,
+    {"DowntimeType": "Tip", "Reason": "Sebep", "LostDays": "Gün"}, decimals={"LostDays": 1},
+    lists={"DowntimeType": [*DOWNTIME_TYPES, LEAVE_TYPE]}, start="StartDate", extra_sql=_LEAVE_SQL, wrap=_with_lost_days,
     sort=(("StartDate", "asc"), ("Code", "asc")))
 
 FACTORY_CALENDAR = _entry(
@@ -189,4 +201,55 @@ FACTORY_CALENDAR = _entry(
     {"Name": "Ad", "DayValue": "Çalışma"}, lists={"DayValue": list(DAY_VALUE_TEXT.values())}, owner=False, start="StartDate")
 
 ENTRY_LISTS = (WORK_PATTERNS, EFFICIENCY, OVERTIME_LIMITS, DOWNTIME, FACTORY_CALENDAR)
-CAPACITY_LISTS = (RESOURCE_GROUPS, RESOURCES, *ENTRY_LISTS)
+
+# --- Geçerlilik (7.9c, K-188): kaynak grubu × kaynak × aralık; salt okunur -------------------------------------------------------------
+
+_VALIDITY_HEAD = {"Id": sa.BigInteger(), "ResourceGroupId": sa.BigInteger(), "ResourceId": sa.BigInteger(), "GroupCode": sa.Unicode(50), "Code": sa.Unicode(50),
+                  "ValidFrom": sa.Date(), "ValidTo": sa.Date()}
+_VALIDITY_TAIL = {"CapacityUnit": sa.Unicode(20), "SourceRecord": sa.Unicode(120), "SourceRowId": sa.BigInteger(), "SourceSpan": sa.Unicode(160),
+                  "SourceLevel": sa.Unicode(10), "SourceOrigin": sa.Unicode(20), "OwnerKeys": sa.Unicode(100)}
+_DATE = "CONVERT(nvarchar(10), {0}, 104)"
+_SPAN = (f"CASE WHEN v.RecTo IS NULL THEN {_DATE.format('v.RecFrom')} + NCHAR(39) + N'dan itibaren' ELSE {_DATE.format('v.RecFrom')} + N' – ' + {_DATE.format('v.RecTo')} END")
+
+
+def _validity(kind: str, title: str, slug: str, values: dict, select: str, labels: dict, *, decimals=None, unit_decimals=(), lists=None) -> ListDefinition:
+    table, fields = validity.KINDS[kind]
+    types = {**_VALIDITY_HEAD, **values, **_VALIDITY_TAIL}
+    sql = (f"SELECT ROW_NUMBER() OVER (ORDER BY v.ResourceGroupId, v.ResourceId, v.ValidFrom) AS Id, v.ResourceGroupId, v.ResourceId, g.Code AS GroupCode, r.Code, "
+           f"v.ValidFrom, v.ValidTo, {select}, g.CapacityUnit, src.Label + N' · ' + {_DATE.format('v.RecFrom')} AS SourceRecord, v.RowId AS SourceRowId, "
+           f"src.Label + N' · ' + {_SPAN} AS SourceSpan, CASE WHEN v.lvl = 0 THEN N'Kaynak' ELSE N'Grup' END AS SourceLevel, "
+           "CASE WHEN :cap_is_base = 1 THEN N'Baz' ELSE v.Origin END AS SourceOrigin, "
+           "N',g' + CAST(v.ResourceGroupId AS nvarchar(20)) + N',r' + CAST(v.ResourceId AS nvarchar(20)) + N',' AS OwnerKeys "
+           f"FROM ({validity.intervals_sql(table, fields, ':cap_sid', ':cap_base')}) v "
+           "JOIN core.Resource r ON r.Id = v.ResourceId AND r.VersionTo IS NULL JOIN core.ResourceGroup g ON g.Id = v.ResourceGroupId AND g.VersionTo IS NULL "
+           "CROSS APPLY (SELECT CASE WHEN v.lvl = 0 THEN N'Kaynak ' + r.Code ELSE N'Grup ' + g.Code END AS Label) src")
+    shown = ["GroupCode", "Code", "ValidFrom", "ValidTo", *values, "SourceRecord"]
+    if unit_decimals:                                   # Birim, değerin hemen ardında
+        shown.insert(shown.index(unit_decimals[0]) + 1, "CapacityUnit")
+    return ListDefinition(
+        name=f"capacity-{kind}-validity", table=f"param.{table}", function=FUNCTION, versioned=False, title=f"{title} · Geçerlilik", file_slug=f"{slug}-gecerlilik",
+        source=skeleton(types, "capv"), source_factory=_source(sql, types, "capv"),
+        fields=tuple(shown), default_visible=tuple(shown),
+        default_sort=(("GroupCode", "asc"), ("Code", "asc"), ("ValidFrom", "asc")),
+        server_values=frozenset({"GroupCode", "Code", "CapacityUnit", "SourceRecord"}),
+        decimals=decimals or {}, unit_field="CapacityUnit" if unit_decimals else None, unit_decimals=frozenset(unit_decimals), values=lists or {},
+        labels={"GroupCode": "Kaynak grubu", "Code": "Kaynak", "ValidFrom": "Başlangıç", "ValidTo": "Bitiş", "CapacityUnit": "Birim", "SourceRecord": "Geçerli kayıt",
+                "SourceRowId": "Geçerli kayıt no", "SourceSpan": "Geçerli kaydın aralığı", "SourceLevel": "Geçerli kaydın seviyesi",
+                "SourceOrigin": "Geçerli kaydın kaynağı", "OwnerKeys": "Sahip anahtarları", "ResourceId": "Kaynak no",
+                "ResourceGroupId": "Kaynak grubu no", **labels},
+        notes={"SourceRecord": "Değerin geldiği kayıt: seviyesi, kodu ve başlangıcı"},
+        key_fields=("SourceRowId", "SourceSpan", "SourceLevel", "SourceOrigin", "ResourceGroupId", "ResourceId"), filter_only=("OwnerKeys",),
+    )
+
+
+_VDAYS_SQL = ", ".join(f"{_case('v.[' + d + ']', {'1': 'Tam', '0.5': 'Yarım', '0': '—'})} AS [{d}]" for d in resolve.DAYS)
+VALIDITY_LISTS = (
+    _validity("work-patterns", "Çalışma düzeni", "kapasite-calisma-duzeni", {"DailyCapacity": sa.Numeric(18, 4), **{d: sa.Unicode(10) for d in resolve.DAYS}},
+              f"v.DailyCapacity, {_VDAYS_SQL}", {"DailyCapacity": "Günlük kapasite", **DAY_LABELS}, unit_decimals=("DailyCapacity",),
+              lists={d: list(DAY_TEXT.values()) for d in resolve.DAYS}),
+    _validity("efficiency", "Verimlilik", "kapasite-verimlilik", {"EfficiencyPct": sa.Numeric(6, 2)}, "v.EfficiencyPct", {"EfficiencyPct": "Verimlilik (%)"},
+              decimals={"EfficiencyPct": 2}),
+    _validity("overtime-limits", "Ek mesai limitleri", "kapasite-ek-mesai-limitleri", {"DailyLimit": sa.Numeric(18, 4)}, "v.DailyLimit", {"DailyLimit": "Günlük limit"},
+              unit_decimals=("DailyLimit",)),
+)
+CAPACITY_LISTS = (RESOURCE_GROUPS, RESOURCES, *ENTRY_LISTS, *VALIDITY_LISTS)

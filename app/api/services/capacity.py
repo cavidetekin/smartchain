@@ -7,6 +7,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
+from app import periods
 from app.capacity import entries
 from app.params import scenarios
 
@@ -51,6 +52,21 @@ def _run(session: Session | None, user: CurrentUser, scenario_id: int | None, wo
             raise _error(err) from None
         session.commit()
         return result
+
+    return auth._db(inner)
+
+
+def horizon(session: Session | None, user: CurrentUser, scenario_id: int | None) -> dict:
+    """Senaryonun planlama ufku (ilk dönemin başı, son dönemin sonu): Geçerlilik zaman çubuğu (K-188)."""
+    session = auth._require(session)
+
+    def inner():
+        try:
+            scenario = scenarios.resolve(session, user.id, scenario_id)
+        except scenarios.ScenarioError as err:
+            raise AppError(err.code, err.message, err.status) from None
+        found = periods.read_periods(session, scenario["Id"], today())
+        return {"start": found[0].start.isoformat() if found else None, "end": found[-1].end.isoformat() if found else None}
 
     return auth._db(inner)
 

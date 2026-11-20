@@ -14,6 +14,12 @@ from ..services.auth import CurrentUser
 
 router = APIRouter(tags=["Kapasite yönetimi"])
 write24 = require(24, Access.WRITE)
+read24 = require(24, Access.READ)
+
+
+@router.get("/capacity/horizon", summary="Senaryonun planlama ufku (Geçerlilik zaman çubuğu)")
+def horizon(scenario_id: int | None = None, user: CurrentUser = Depends(read24), session: Session = Depends(get_session)) -> dict:
+    return service.horizon(session, user, scenario_id)
 
 
 class NewEntry(BaseModel):

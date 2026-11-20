@@ -21,6 +21,8 @@ class SmartchainCheck:
     fix_field: str | None = None  # Kural oluştur'un hedefi; Smartchain alanı veri kuralıyla doldurulamaz
     # Bu kontrole özel önem (K-185): verilirse genel kural (talep zinciri) yerine "Yüksek = zincirde VE bu koşul"; değilse Normal
     high_when: Callable[[sa.Table], sa.ColumnElement] | None = None
+    # Kapanmış kayıtlara bakar (K-188): güncel veride olmayan kaydın son versiyonu (ör. kapanan kaynağa girilmiş kapasite kaydı)
+    closed: bool = False
 
 
 def _active(t) -> sa.ColumnElement:
@@ -95,10 +97,30 @@ def _group_conflict(t) -> sa.ColumnElement:
     return sa.and_(_active(t), sa.or_(*parts))
 
 
+ENTRY_TABLES = ("WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime")
+
+
+def _orphan(column: str) -> Callable[[sa.Table], sa.ColumnElement]:
+    """Kapanan kaynağa ya da gruba Baz'da girilmiş, geçerli ve bitmemiş kapasite kaydı var (K-188). Kayıt silinmez; kaynak geri gelirse uyarı kalkar."""
+    def where(t) -> sa.ColumnElement:
+        found = []
+        for name in ENTRY_TABLES:
+            w = metadata.tables[f"param.{name}"].alias(f"sc_orphan_{name}")
+            end = w.c.ValidTo if "ValidTo" in w.c else w.c.EndDate
+            found.append(sa.exists().where(w.c.ScenarioDefinitionId == _base(), w.c.BaseRowId.is_(None), w.c.IsValid == sa.true(), w.c[column] == t.c.Id,
+                                           sa.or_(end.is_(None), end >= _today())))
+        return sa.or_(*found)
+    return where
+
+
 CHECKS: tuple[SmartchainCheck, ...] = (
     # Bütün gruplar için çıkar; önem: Yüksek = grup kritik ve açık bir talebin zincirinde (K-185 H)
     SmartchainCheck("SC.RES_NO_CAPACITY", "Resource", "Kapasitesi tanımsız kaynak", "Kapasite tanımsız (çalışma düzeni yok):", _no_work_pattern,
                     high_when=_in_critical_group),
     SmartchainCheck("SC.RES_GROUP_CONFLICT", "Resource", "Grupları çelişen kaynak", "Grupları farklı kapasite değeri veriyor:", _group_conflict),
+    SmartchainCheck("SC.CAP_ORPHAN", "Resource", "Kapanan kaynağa girilmiş kapasite kaydı", "Güncel veride olmayan kaynağa kapasite kaydı girilmiş:",
+                    _orphan("ResourceId"), closed=True),
+    SmartchainCheck("SC.CAP_ORPHAN", "ResourceGroup", "Kapanan kaynak grubuna girilmiş kapasite kaydı", "Güncel veride olmayan kaynak grubuna kapasite kaydı girilmiş:",
+                    _orphan("ResourceGroupId"), closed=True),
 )
-BY_CODE = {c.code: c for c in CHECKS}
+BY_CODE = {(c.code, c.table): c for c in CHECKS}

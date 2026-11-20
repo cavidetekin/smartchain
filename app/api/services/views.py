@@ -17,7 +17,7 @@ from ..errors import DB_UNAVAILABLE, AppError
 from ..lists.definition import ListDefinition, field_title
 from ..lists import chart as chart_query, pivot as pivot_query, relations
 from ..lists.query import Builder, ListQueryError
-from ..lists.request import (
+from ..lists.request import (AbovePane, 
     PIVOT_VALUE_WIDTH, AggSpec, ChartDefinition, DefaultViewRequest, FilterItem, FormatRule, PivotDefinition, StandardUpdate, ViewCreate, ViewDefinition, ViewUpdate,
 )
 from ..repositories import audit, lists as list_repo, views as repo
@@ -275,6 +275,11 @@ def _clean(b: Builder, raw: str) -> tuple[dict, list[str]]:
         pivot = _clean_pivot(b, data["pivot"], gone, warnings)
         if pivot is not None:
             definition["pivot"] = pivot
+    if data.get("above"):  # tablonun üstündeki bölme (K-188); bozuksa atılır
+        try:
+            definition["above"] = AbovePane.model_validate(data["above"]).model_dump(mode="json")
+        except ValidationError:
+            pass
     return definition, warnings
 
 

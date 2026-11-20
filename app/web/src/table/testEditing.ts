@@ -9,7 +9,8 @@ export function cellOf(rowText: string, header: string): HTMLElement {
   const headers = screen.getAllByRole("columnheader");
   const index = headers.findIndex((h) => h.querySelector(".sc-table-label")?.textContent === header);
   if (index < 0) throw new Error(`kolon yok: ${header}`);
-  const row = screen.getAllByText(rowText, { exact: true }).map((el) => el.closest("tr")).find((tr) => tr?.classList.contains("sc-table-row"));
+  const row = screen.getAllByText(rowText, { exact: true }).map((el) => el.closest("tr"))
+    .find((tr) => tr?.classList.contains("sc-table-row") && !tr.closest('[style*="display: none"]'));   // gizli duran sekmenin tablosu sayılmaz (K-188)
   if (!row) throw new Error(`satır yok: ${rowText}`);
   return row.children[index] as HTMLElement;
 }

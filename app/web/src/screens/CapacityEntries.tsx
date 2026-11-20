@@ -34,7 +34,7 @@ const HINTS: FieldHints = {
 const ownerOf = (row: Row): Owner | null => (typeof row.ResourceId === "number" ? { level: "resource", id: row.ResourceId, code: String(row.Code ?? "") }
   : typeof row.ResourceGroupId === "number" ? { level: "group", id: row.ResourceGroupId, code: String(row.Code ?? "") } : null);
 
-export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail, selectedRowId, onChanged, onSelection, reloadKey = 0 }: {
+export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail, selectedRowId, onChanged, onSelection, reloadKey = 0, focus }: {
   spec: EntrySpec;
   /** Kartta süzme: grubun kendisi ve üyeleri ya da yalnız kaynak. */
   filters?: ListFilter[];
@@ -50,6 +50,8 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
   /** Çoklu seçim değişti (K-171: kart seçili kayıtların hepsini gösterir). */
   onSelection?(ids: string[]): void;
   reloadKey?: number;
+  /** "Kayda git" (K-188): bu kayıt seçili gösterilir ve görünür alana getirilir. */
+  focus?: { id: number; n: number };
 }) {
   const { scenario } = useShell();
   const { me } = useAuth();
@@ -177,7 +179,7 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
     <>
       <DataTable list={spec.list} baseFilters={filters} toolbarLead={toolbarLead} toolbarEnd={end} compact={compact} fieldHints={HINTS} onColumns={setColumns}
                  reloadKey={reloadKey + tick} cellEditing={write ? editing : undefined} cellRender={cellRender} cellClass={cellClass} cellWrap={cellWrap}
-                 rowProps={rowProps} cellMenu={NO_ITEMS} rowMenu={hasMenu ? menu.rowMenu : undefined} selectedRowId={selectedRowId} onSelection={onSelection}
+                 rowProps={rowProps} cellMenu={NO_ITEMS} rowMenu={hasMenu ? menu.rowMenu : undefined} selectedRowId={selectedRowId ?? focus?.id ?? null} reveal={focus} onSelection={onSelection}
                  toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void save()} onDiscard={() => { edits.discard(); setProblems({}); }} />} />
       {menu.element}
       <UnsavedGuard dirty={edits.dirty} />

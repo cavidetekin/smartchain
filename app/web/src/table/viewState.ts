@@ -1,7 +1,7 @@
 // Tablo durumu ve kayıtlı görünüm içeriği (K-89, docs/08 "Görünümler"). Saf işlevler: dönüşüm, karşılaştırma, taşıma.
 import { type ChartConfig, fitChart, normalizeChart } from "../ui/chart/chartModel";
 import { fitPivot, normalizePivot, type PivotConfig } from "./pivotModel";
-import type { AggSpec, ColumnType, FormatRule, ListColumn, ListFilter, SortItem, ViewDefinition } from "./types";
+import { type AbovePane, type AggSpec, clampAbove, type ColumnType, type FormatRule, type ListColumn, type ListFilter, type SortItem, type ViewDefinition } from "./types";
 
 export interface TableState {
   /** Görünen alanlar, görünen sırada. */
@@ -22,6 +22,8 @@ export interface TableState {
   chart: ChartConfig | null;
   /** Pivot görünümü (K-183): ayarları ve açık olması görünümün parçasıdır; yoksa null. */
   pivot: PivotConfig | null;
+  /** Tablonun üstündeki bölmenin yüksekliği ve yakınlaştırması (K-188); değiştirilmediyse yok (varsayılan). */
+  above?: AbovePane | null;
 }
 
 /** Tipin varsayılan genişliği (rem; 13 px'te 180 / 120 / 140 / 100 px). */
@@ -57,6 +59,7 @@ export function fromDefinition(def: ViewDefinition, columns: ListColumn[]): Tabl
     rules: (def.rules ?? []).filter((r) => known.has(r.field) && (!r.condition.field_ref || known.has(r.condition.field_ref))),
     chart: def.chart ? fitChart(normalizeChart(def.chart), columns) : null,
     pivot: fitPivot(normalizePivot(def.pivot), columns),
+    above: def.above ? clampAbove(def.above) : null,
   };
 }
 
@@ -72,6 +75,7 @@ export function toDefinition(s: TableState): ViewDefinition {
     rules: s.rules,
     ...(s.chart ? { chart: s.chart } : {}),
     ...(s.pivot ? { pivot: s.pivot } : {}),
+    ...(s.above ? { above: s.above } : {}),
   };
 }
 
@@ -90,6 +94,7 @@ function normalize(def: ViewDefinition): string {
     rules: (def.rules ?? []).map((r) => [r.id, r.field, r.enabled, clean(r.condition as ListFilter), clean(r.format as ListFilter)]),
     chart: def.chart ? normalizeChart(def.chart) : null,
     pivot: normalizePivot(def.pivot),
+    above: def.above ? [def.above.height, def.above.zoom] : null,
   });
 }
 

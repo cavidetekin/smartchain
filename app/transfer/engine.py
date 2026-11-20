@@ -483,6 +483,9 @@ def run_transfer(session: Session, user_id: int | None, progress: Callable[[str]
                                                          ChangedCount=res.changed, ClosedCount=res.closed, NotTransferredCount=res.not_transferred,
                                                          Note=res.note))
         results.append(res)
+    # Kapasite önbelleği (K-188): yalnız etkilenen kaynaklar yenilenir, önbellek yeni veri versiyonuna çekilir (aktarımın işleminde)
+    from app.capacity import triggers as capacity_triggers
+    capacity_triggers.after_transfer(session, run.version)
     return {"data_version": run.version, "tables": [r.as_dict() for r in results]}
 
 

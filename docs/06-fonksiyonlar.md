@@ -1666,12 +1666,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü
-  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.16; K-167)
+  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.13; K-167)
 - **01:** Malzeme seçilir, blokaj türü (üretim, satın alma ya da satış), başlangıç ve bitiş tarihi ile neden girilir.
 - **02:** Kayıt saklanır, iz bırakır; süresi biten blokaj kendiliğinden geçersiz olur, kayıt silinmez.
 - **GIRDI**
   - LocationCode, MaterialCode, HoldType, StartDate, EndDate, Reason
-- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.16'da açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
+- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.13'te açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
 - **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motorda uygulanışı Aşama 10.
 - **Uygulama (K-126):** Henüz uygulanmadı; yalnız tanım.
 
@@ -1757,7 +1757,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (okuma ve yazma); End user ekranı görmez
   - Nereden: Parametreler ekranı (06); ekran bağlam çubuğunda seçili senaryonun parametrelerini gösterir, ekranda ayrıca senaryo seçimi yoktur
-- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.14'te eklenir).
+- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.11'de eklenir).
 - **02:** Form başlığında solda alt başlıklar, sağda sıkı kart; değer değişince Kaydet ve Vazgeç etkinleşir (kartın altında, sağda). Tek alt başlıklı başlıkta sol menü yoktur.
 - **03:** "Kaydet" yalnız değişen parametreleri yazar; biri geçersizse hiçbiri yazılmaz, sorun alanın altında gösterilir.
 - **04:** Kaydedilmemiş değişiklikle başka alt başlığa, başlığa ya da ekrana geçilirse uyarı çıkar (K-132).
@@ -1836,7 +1836,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PLAN_DEVIATION | Önceki plandan sapma |  |  | Hayır |
 | OVER_TARGET_LOAD | Hedef doluluğun üstü |  |  | Hayır |
 
-- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.11'de tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
+- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.14'te tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
 - **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.9). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
 - **Hata durumları:** geçersiz değer (liste dışı seçenek, sayı olmayan değer, sınır dışı) kaydı durdurur; bilinmeyen anahtar reddedilir.
 - **YENİDEN HESAPLANACAK ALANLAR:** kayıt hesap başlatmaz; bir sonraki plan hesabı (gece ya da çalışma) yeni değerleri okur. Veri kalitesinin tahmin ufku bir sonraki kontrolde güncellenir.
@@ -1897,8 +1897,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - **Senaryo (K-176):** Baz'ı izleyen senaryo Baz'ın satırlarını okur; değiştirdiği alanı fark satırında tutar (`BaseRowId`, `OverriddenFields`), bir Baz satırını kendisi için geçersiz yapabilir (`IsValid`), kendi satırını ekleyebilir. Baz'dan ayrılınca o anki geçerli değerler tam kopyalanır.
   - **Kapasite özeti:** dönem tablosu "Kaynak grubu × dönem" (K-184); bütün gruplar (kritik olmayan ve fason dahil). Değerler: Kaynak sayısı · Çalışma günü · Duruş · Çalışılabilir gün · Ortalama günlük kapasite · Toplam günlük kapasite · Verimlilik · Toplam kapasite · Kullanılabilir kapasite · Ek mesai limiti · Kalan fazla mesai (ay) · Kalan fazla mesai (yıl; ikisi ERP'den, dönemlere dağıtılmaz).
   - **Motor:** yalnız kritik grupları kısıtlar; kapasiteyi aynı hesap işlevinden okur (docs/09).
+  - **Geçerlilik görünümü (7.9c, K-188):** Çalışma düzeni, Verimlilik ve Ek mesai limitleri'nde tablo seçimi Kayıtlar · Geçerlilik. Geçerlilik her kaynak için hangi aralıkta hangi değerin uygulandığını ve hangi kayıttan geldiğini gösterir (zaman çubuğu senaryonun ufku; tablo kayıtların kendi tarihleriyle); salt okunur. Bakım ve duruşlar'da "Gün" kaydın kayıp gününü gösterir (çalışma düzeninden). Aktarım yalnız etkilenen kaynakların önbelleğini yeniler; kapanan kaynağa ya da gruba girilmiş kayıt veri kalitesinde uyarıdır (`SC.CAP_ORPHAN`).
   - **Kalkanlar:** kaynaktaki günlük kapasite, takvim ve fason parametre alanları; `Calendar`, `CalendarDay`, `ResourceCapacityProfile`, `ResourcePeriodLimit`. Fason limitleri ve kısıtsız kaynak dönem limiti Faz 1 kapsamında yeniden tasarlanana kadar yoktur.
-  - **Durum:** 7.9a (tablolar, çözümleme, hesap, önbellek, Kapasite özeti) uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş ekranları uygulandı (7.9b; sürüm 0.48.0, K-187); geçerlilik görünümü ve aktarım bağlantısı 7.9c.
+  - **Durum:** 7.9a (tablolar, çözümleme, hesap, önbellek, Kapasite özeti) uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş ekranları uygulandı (7.9b; sürüm 0.48.0, K-187); geçerlilik görünümü ve aktarım bağlantısı uygulandı (7.9c; sürüm 0.49.0, K-188). 7.9 kapandı.
 
 #### NASIL ÇALIŞIR
 

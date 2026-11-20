@@ -125,6 +125,15 @@ def evaluate_rule(session: Session, rule: dict, rdef: cat.RuleDef, day: date | N
             session.execute(sa.insert(HITS).from_select(COLS, sel))
 
 
+def _rows_of(check, t) -> sa.ColumnElement:
+    """Kontrolün baktığı satırlar: güncel kayıtlar; `closed` kontrolde güncel veride olmayan kaydın son versiyonu (K-188)."""
+    if not getattr(check, "closed", False):
+        return chain.current(t)
+    newer, now = t.alias("sc_newer"), t.alias("sc_now")
+    return sa.and_(t.c.VersionTo.is_not(None), ~sa.exists().where(now.c.Id == t.c.Id, now.c.VersionTo.is_(None)),
+                   ~sa.exists().where(newer.c.Id == t.c.Id, newer.c.VersionFrom > t.c.VersionFrom))
+
+
 def evaluate_check(session: Session, check) -> None:
     t = chain.core(check.table)
     label = record_label(t, check.table, key_labels(session, check.table))  # core'da bulunan anahtar alanlarıyla ("Kaynak: T-05")
@@ -132,7 +141,7 @@ def evaluate_check(session: Session, check) -> None:
     sel = sa.select(sa.literal(check.code, sa.Unicode(60)), sa.literal(SOURCE_SMARTCHAIN, sa.Unicode(12)), sa.null(), sa.literal(check.table, sa.Unicode(60)),
                     sa.cast(t.c.Id, sa.Unicode(60)), label, sa.literal(check.title, sa.Unicode(200)),
                     sa.func.left(sa.func.concat(sa.literal(check.message, sa.Unicode), sa.literal(" ", sa.Unicode), code), 400),
-                    sa.literal(check.fix_field, sa.Unicode(60))).where(chain.current(t), check.where(t))
+                    sa.literal(check.fix_field, sa.Unicode(60))).where(_rows_of(check, t), check.where(t))
     session.execute(sa.insert(HITS).from_select(COLS, sel))
 
 

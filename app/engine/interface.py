@@ -6,6 +6,7 @@ Sözleşme: docs/09-motor-arayuzu.md.
 """
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Protocol
 
 # PlanRun.Status (docs/02)
@@ -76,6 +77,11 @@ class PlanningData(Protocol):
 
     def read(self, table: str, columns: Sequence[str] | None = None) -> list[dict]:
         """table: 'Material' ya da 'core.Material'. Versiyonlu tabloda yalnız bu versiyonda geçerli satırlar."""
+        ...
+
+    def period_values(self, name: str, date_from: date, date_to: date) -> list[dict]:
+        """Dönem değerlerinin tek hesabı (docs/09, K-184, K-188): planın senaryosu için gün bazında satırlar. name: 'resource-capacity-day'
+        (kaynak grubu × kaynak × gün kapasite). Ekrandaki önbellek aynı hesapla kurulur."""
         ...
 
 

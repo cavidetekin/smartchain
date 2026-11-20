@@ -36,7 +36,7 @@ class ScenarioTable:
 
 
 def _pending(session: Session, scenario_id: int) -> None:
-    """Tedarikçi limitlerinin fark yapısı kendi adımında (7.15) gelir; o zamana kadar ayırma yalnız seçimi kaydeder. Kapasite girişlerinde
+    """Tedarikçi limitlerinin fark yapısı kendi adımında (7.12) gelir; o zamana kadar ayırma yalnız seçimi kaydeder. Kapasite girişlerinde
     çözümleme katmanı kuruludur (K-185)."""
 
 

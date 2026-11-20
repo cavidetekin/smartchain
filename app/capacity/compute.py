@@ -26,6 +26,9 @@ from app.periods.cache import DayCache, Scope
 INPUTS = (("#cap_wp", "WorkPattern", ("DailyCapacity", *resolve.DAYS)), ("#cap_ef", "ResourceEfficiency", ("EfficiencyPct",)),
           ("#cap_ol", "OvertimeLimit", ("DailyLimit",)))
 EFFECTIVE = {"#cap_wp": "#eff_wp", "#cap_ef": "#eff_ef", "#cap_ol": "#eff_ol"}
+# Geçerlilik kuralının sıralaması (K-185 C), tek yerde: önce seviye (0 kaynak, 1 grup), sonra başlangıcı en ileri olan, eşitlikte son girilen.
+# Günlük hesap ve geçerlilik aralıkları (`validity.py`) aynı sıralamayı kullanır.
+RULE_ORDER = "{a}.lvl, {a}.ValidFrom DESC, {a}.RowId DESC"
 TEMPS = ("#cap_m", "#cap_d", "#cap_wp", "#cap_ef", "#cap_ol", "#cap_dt", "#cap_fc", "#cap_ab", "#eff_wp", "#eff_ef", "#eff_ol", "#eff_mt", "#eff_lv")
 
 
@@ -57,7 +60,7 @@ def effective_sql(source: str, fields: tuple[str, ...]) -> str:
              f"JOIN #cap_m m ON m.ResourceGroupId = w.ResourceGroupId {days}")
     picked = ", ".join(f"q.[{f}]" for f in fields)
     return (f"SELECT q.ResourceGroupId, q.ResourceId, q.[Date], q.RowId, {picked} FROM (SELECT u.*, ROW_NUMBER() OVER (PARTITION BY u.ResourceGroupId, u.ResourceId, u.[Date] "
-            f"ORDER BY u.lvl, u.ValidFrom DESC, u.RowId DESC) AS rn FROM ({own} UNION ALL {group}) u) q WHERE q.rn = 1")
+            f"ORDER BY {RULE_ORDER.format(a='u')}) AS rn FROM ({own} UNION ALL {group}) u) q WHERE q.rn = 1")
 
 
 def prepare(session: Session, scope: Scope) -> None:
