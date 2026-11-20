@@ -868,6 +868,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **100 · Validasyon kuralı tanımlama:** Staging'deki veride hangi durumun Hata, Uyarı ya da Bilgi olacağını tablo başına tanımlamak; hazır kuralların sınıfını değiştirmek ya da kapatmak, kullanıcı kuralı eklemek, hata eşiğini girmek (K-136).
 - **101 · Dünden bugüne:** Ham veride tablo başına son veri ile önceki günün son verisini karşılaştırmak: satır sayısı değişimi, yeni gelen, gelmeyen ve güncellenen kayıtlar (K-159, K-160).
 - **102 · İşlem verisi görüntüleme:** Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi ve çalışan izni verisini Ana veri'nin düzeninde, salt okunur görüntülemek (K-169).
+- **103 · Model kısıtları:** Kaynak grubunun kısıtsız kapasite çarpanını ve hedef doluluğunu senaryo bazında yönetmek (Baz + fark); değer hücreye yazılır, yalnız kritik gruplarda uygulanır (7.10, K-189).
 
 ### 10 · Ana veri görüntüleme
 <sub>24. Ekranlar ve fonksiyonlar · F10 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
@@ -1982,6 +1983,23 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Yeniden hesaplanacak:** Dönem kapasitesi hemen (sayıyla), doluluk ve uyarılar yeni hesapta.
 - **Kim etkilenir:** Gece senaryoları ve açık çalışma ayrı ayrı.
 - **Sürüm:** Set sürümü artar; önceki değerlere dönülebilir.
+
+### 103 · Model kısıtları
+<sub>24. Ekranlar ve fonksiyonlar · F103 · C Parametre · Çalışma prensibi 1/1</sub>
+
+- Kaynak grubunun model kısıtlarını Model kısıtları ekranında (ekran 31; 7.10, K-189) yönetmek: kısıtsız kapasite çarpanı ve hedef doluluk. Parametre değil veridir; senaryoya bağlıdır (Baz + fark, K-176).
+  - Kim: Key user ve üstü yazar; End user görür (salt okunur), görünüm, pivot ve Excel serbesttir
+  - Nereden: Model kısıtları ekranı (menüde Parametre grubunda, Kapasite yönetimi ile Senaryolar arasında)
+- **Girdiler (kaynak grubu başına, tarihsiz, tek değer):**
+  - **Kısıtsız kapasite çarpanı:** Kaynak kısıtı = "Kısıtsız" olan senaryoda (fonksiyon 22) grubun dönem üst sınırı = kullanılabilir kapasite × çarpan. En az 1, iki ondalık. Boşsa sınır yok; varsayılan değer yok (K-138). "Kısmi" kaynak kısıtında davranış motor tasarımına kalır (A-46).
+  - **Hedef doluluk (%):** kesin sınır değil, hedef. Model gerekirse üstüne çıkar ama azaltmaya çalışır; karşılığı hedefler listesindeki "Hedef doluluğun üstü" (fonksiyon 22). Kesin sınır kullanılabilir kapasitedir (ve açıksa ek mesai). 0'dan büyük, en çok 100; "%85" biçiminde gösterilir. Boşsa hedef yok.
+- **Kritiklik:** ikisi de yalnız kritik gruplarda uygulanır; kritik olmayan grup için hiçbir koşulda kısıt yazılmaz. Giriş kısıtlanmaz: değer bütün gruplara girilebilir ve saklanır; motor yalnız kritik grupların değerini okur (grup sonradan kritik olursa değer uygulanır).
+- **Ekran:** sekmeli (bu adımda tek sekme "Kaynak grubu"; ileride başka sekmeler eklenebilir). Her kaynak grubu bir satır (kaydı olmayan dahil): Kaynak grubu · Ad · Kritik · Kapasite birimi · Kısıtsız kapasite çarpanı · Hedef doluluk (%) · Kaynağı. "Yeni kayıt" ve pencere yok: değer hücreye yazılır, silmek için hücre boşaltılır.
+- **Senaryo (K-176):** Baz'ı izleyen senaryo Baz'ın değerlerini okur; değiştirdiği değeri fark olarak tutar (hücre işaretli, ipucunda Baz'daki değer; "Kaynağı": Senaryo farkı). Her senaryoda her grup tek satırdır: senaryonun kendi kaydı ile Baz'ın kaydı aynı gruptaysa senaryonun değeri geçerlidir ve fark sayılır. Satır menüsünde "Senaryo farkını kaldır" (değeri senaryodan gelen her satırda) değeri Baz'a döndürür; Baz'da değer yoksa boşaltır. Baz'dan ayrılınca o anki değerler tam kopyalanır.
+- **Geçmiş:** ⋯ › Detay kartında (yalnız Geçmiş); kaynak grubu kimliğiyle tutulur, "Değiştiren" ve senaryo adıyla.
+- **Motor:** değerleri motor arayüzünden okur (`PlanningData.model_constraints`, docs/09): yalnız kritik ve güncel gruplar. Uygulaması Aşama 10'da. İki değer Kapasite özeti'ne alan olarak eklenmez.
+- **Uygulama (7.10, K-189):** uygulandı (7.10; sürüm 0.50.0, geçiş 0068, K-189; iki demo).
+
 
 ### 25 · Alokasyon ve öncelik kuralı
 <sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Çalışma prensibi 1/2</sub>
@@ -6782,6 +6800,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | B · Validasyon kuralları | 100 | tam | tam | salt okunur | yok |
 | A · Dünden bugüne | 101 | tam | tam | tam | salt okunur |
 | B · İşlem verisi | 102 | tam | tam | tam | salt okunur |
+| C · Model kısıtları | 103 | tam | tam | tam | salt okunur |
 
 - **Fonksiyon istisnaları:** 89 Giriş ve oturum herkese tam · 86 Excel'e aktarma End user'a tam · 48 İş bitti bildirimi End user'a kendi (kendi aktarım işleri) · 87 Dışa aktarım izi End user'a kendi · 90 Rol bazlı yetki Admin'e salt okunur · 92 Zamanlanmış işler Admin'e salt okunur (K-163) · 09 Ham veri temizliği Admin ve Key user'a salt okunur (K-156).
 - **Raporlama serbestliği (K-99):** görünüm kaydetme, alan ekleme ve çıkarma, sıralama, filtre, gruplama ve koşullu biçim fonksiyon sayılmaz; okuma yetkisi olan her listede herkese açıktır.

@@ -134,12 +134,14 @@ def relations_of(table: str, labels: Labels = NO_LABELS, level: int = 1) -> list
     return out
 
 
-def _fields(relation: Relation, labels: Labels, level: int) -> dict[str, dict]:
+def _fields(relation: Relation, labels: Labels, level: int, base: ListDefinition | None = None) -> dict[str, dict]:
     """İlişkinin sunduğu alanlar: hedef listenin alanlarından hedef tablonun kendi kolonu olanlar ("Manuel değer", ilişki kodları ve sistem alanları hariç);
-    birinci seviyede tabloda zaten kolon olan kod da hariç."""
+    birinci seviyede tabloda zaten kolon olan kod da hariç. base: ilişkinin çıktığı liste; kod kolonu o listede yoksa (ör. kapasite giriş tabloları:
+    satır lokasyonun kimliğini taşır, kodunu taşımaz; K-189) kod da sunulur."""
     defn = _definition(relation.target)
     table = core(relation.target)
-    shown = REFS[relation.column][3] if level == 1 else None
+    has_code = base is None or REFS[relation.column][1] in (*base.fields, *base.key_fields)
+    shown = REFS[relation.column][3] if level == 1 and has_code else None
     out = {}
     for c in columns(defn, labels(relation.target)):
         if c["field"] not in table.c or c["field"] == shown:
@@ -181,7 +183,7 @@ def resolve(defn: ListDefinition, name: str, labels: Labels = NO_LABELS) -> Reso
     rels = _walk(defn, tuple(path), labels)
     if rels is None:
         return None
-    base = _fields(rels[-1], labels, len(rels)).get(field)
+    base = _fields(rels[-1], labels, len(rels), defn).get(field)
     if base is None:
         return None
     return Resolved(name, tuple(path), field, _column(rels, name, base), bool(base["decimals_from_unit"]))
@@ -200,7 +202,7 @@ def catalog(defn: ListDefinition, path: str, labels: Labels = NO_LABELS) -> dict
     rels = _walk(defn, parts, labels)
     if rels is None:
         return None
-    fields = [_column(rels, SEP.join([*parts, f]), c) for f, c in _fields(rels[-1], labels, len(rels)).items()]
+    fields = [_column(rels, SEP.join([*parts, f]), c) for f, c in _fields(rels[-1], labels, len(rels), defn).items()]
     below = [] if len(rels) >= MAX_DEPTH else [
         {"path": SEP.join([*parts, r.column]), "label": LABEL_SEP.join([*(x.label for x in rels), r.label])}
         for r in relations_of(rels[-1].target, labels, len(rels) + 1)]

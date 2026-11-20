@@ -21,6 +21,10 @@ SCENARIOS = (
     ("Kısıtsız kapasite", True, True, {"ResourceConstraint": "Kısıtsız"}, 2),
     ("MILP deneme", False, False, {"ModelType": "MILP", "ProductionMinLot": True, "ProductionLotMultiple": True}, 1),
 )
+# Model kısıtları (K-189): kaynak grubu, kısıtsız kapasite çarpanı, hedef doluluk (%). "Kısıtsız kapasite" senaryosunun farkları yüklemede yazılır
+MODEL_CONSTRAINTS = (("TORNA", None, 85.0), ("ISL3", None, 90.0), ("MONTAJ", 1.5, None))
+MODEL_CONSTRAINT_DIFF = ("MONTAJ", 2.0)        # "Kısıtsız kapasite": Baz'daki çarpanın farkı
+MODEL_CONSTRAINT_OWN = ("TASLAMA", 1.25)       # "Kısıtsız kapasite": senaryonun kendi değeri (Baz'da yok)
 HISTORY_DAYS = 21
 
 FINISHED = [  # kod, ad, kısa ad
@@ -283,6 +287,10 @@ def _capacity(b: _Builder) -> None:
           IsValid=True)
     for code, limit in [(LABOR_GROUP, 2.0), ("CG-CNC", 1.5)]:
         b.add("param.OvertimeLimit", ScenarioDefinitionId=1, **owner(group=code), ValidFrom=since, ValidTo=None, DailyLimit=limit, IsValid=True)
+    # Model kısıtları (docs/11, K-189): iki kritik grupta hedef doluluk, birinde kısıtsız kapasite çarpanı; kritik olmayan grupta değer yok
+    for code, factor, target in MODEL_CONSTRAINTS:
+        b.add("param.ResourceGroupConstraint", ScenarioDefinitionId=1, ResourceGroupId=b.id("ResourceGroup", code), UnconstrainedCapacityFactor=factor,
+              TargetUtilizationPct=target, IsValid=True)
 
     def downtime(kind, reason, start, end, **who):
         b.add("param.ResourceDowntime", ScenarioDefinitionId=1, **owner(**who), StartDate=start, EndDate=end, DowntimeType=kind, Reason=reason, IsValid=True)

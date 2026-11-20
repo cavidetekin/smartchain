@@ -61,7 +61,7 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
     const read = async (list: string): Promise<Row[]> => {
       const all: Row[] = [];
       for (;;) {
-        const page = await listApi(list).query({ offset: all.length, limit: 100, sort: [{ field: "Code", dir: "asc" }], filters: [], fields: ["Code", "Name", "CapacityUnit"] },
+        const page = await listApi(list).query({ offset: all.length, limit: 100, sort: [{ field: "Code", dir: "asc" }], filters: [], fields: ["LocationCode", "Code", "Name", "CapacityUnit"] },
                                                ctrl.signal);
         all.push(...page.rows);
         if (!page.rows.length || all.length >= page.filtered) return all;
@@ -70,7 +70,7 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
     const readResources = async (): Promise<Row[]> => {   // kaynakta birim görünen alan değil, her satırda dönen alandır
       const all: Row[] = [];
       for (;;) {
-        const page = await listApi("capacity-resources").query({ offset: all.length, limit: 100, sort: [{ field: "Code", dir: "asc" }], filters: [], fields: ["Code", "Name"] },
+        const page = await listApi("capacity-resources").query({ offset: all.length, limit: 100, sort: [{ field: "Code", dir: "asc" }], filters: [], fields: ["LocationCode", "Code", "Name"] },
                                                                ctrl.signal);
         all.push(...page.rows);
         if (!page.rows.length || all.length >= page.filtered) return all;
@@ -84,6 +84,9 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
 
   const set = (name: string, v: unknown) => setValues((all) => ({ ...all, [name]: v }));
   const list = options?.[level] ?? [];
+  // Veride birden çok lokasyon varsa seçenek "lokasyon · kod · ad" yazılır (K-189); tek lokasyonda yalnız kod ve ad
+  const manyLocations = new Set([...(options?.group ?? []), ...(options?.resource ?? [])].map((o) => o.LocationCode).filter(Boolean)).size > 1;
+  const codeOf = (o: Row) => (manyLocations && o.LocationCode ? `${String(o.LocationCode)} · ${String(o.Code)}` : String(o.Code));
   const picked = list.find((o) => String(o.Id) === ownerId);
   const unit = editing ? row.CapacityUnit : picked?.CapacityUnit;
   // Zorunlu alan boşken Kaydet pasif (K-187); alan adında işaret yoktur
@@ -144,7 +147,7 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
             <Segment<"group" | "resource"> label={T.level} value={level} onChange={(v) => { setLevel(v); setOwnerId(""); }}
                                            options={[{ value: "group", label: T.levelGroup }, { value: "resource", label: T.levelResource }]} />
             <SearchSelect label={level === "group" ? T.resourceGroup : T.resource} value={ownerId} onChange={setOwnerId} error={ownerProblem} emptyText={T.noMatch}
-                          options={list.map((o) => ({ value: String(o.Id), code: String(o.Code), name: o.Name ? String(o.Name) : undefined }))} />
+                          options={list.map((o) => ({ value: String(o.Id), code: codeOf(o), name: o.Name ? String(o.Name) : undefined }))} />
           </div>
         )}
         {spec.owner && editing && (

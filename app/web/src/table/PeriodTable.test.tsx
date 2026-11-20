@@ -112,10 +112,10 @@ describe("ekran 30 · Kapasite yönetimi · Kapasite özeti (K-184, K-185)", () 
     const tabs = within(screen.getByRole("radiogroup", { name: "Kapasite yönetimi bölümleri" })).getAllByRole("radio");
     expect(tabs[0]).toHaveTextContent("Kapasite özeti");
     expect(tabs[0]).toHaveAttribute("aria-checked", "true");
-    // menüde Parametre grubunda, Parametreler ile Senaryolar arasında
+    // menüde Parametre grubunda: Parametreler · Kapasite yönetimi · Model kısıtları (K-189) · Senaryolar
     const links = screen.getAllByRole("link").map((l) => l.textContent);
     const at = links.indexOf("Kapasite yönetimi");
-    expect(links.slice(at - 1, at + 2)).toEqual(["Parametreler", "Kapasite yönetimi", "Senaryolar"]);
+    expect(links.slice(at - 1, at + 3)).toEqual(["Parametreler", "Kapasite yönetimi", "Model kısıtları", "Senaryolar"]);
     expect(screen.queryByRole("complementary", { name: "Pivot ayarları" })).toBeNull();
     expect(screen.getByRole("button", { name: "Tablo ayarları" })).toHaveAttribute("title", "Tablo ayarları");   // kaydedilmemiş değişiklik sayılmaz
     const heads = within(table).getAllByRole("columnheader").map((h) => h.textContent);

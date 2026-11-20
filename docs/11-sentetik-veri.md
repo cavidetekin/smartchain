@@ -89,6 +89,7 @@ python -m app.data.synthetic check                                     # sayıla
   - Verimlilik: `TASLAMA` %85 (süresiz); `A-01` hafta 4–8 %110. Ek mesai limiti: `CG-MON` 2 saat/gün, `CG-CNC` 1,5 saat/gün.
   - Bakım ve duruş: `T-02` hafta 2 Salı–Çarşamba (Planlı bakım), `G-01` bir gün (Planlı bakım), `M3-02` iki gün (Arıza), `KALITE` grubuna bir gün (Planlı bakım). Fabrika takvimi: Yılbaşı arifesi (yarım gün), Yılbaşı, yıllık toplu izin (hafta 16).
   - Bilerek konmuş durumlar: `T-05` ne kendisinde ne grubunda çalışma düzeni (kritik grup, talep zincirinde: Yüksek); `F-KAPLA` fason, çalışma düzeni yok (kritik değil: Normal); `CG-MON` (7,5) ve `CG-KAL` (7,0) gruplarının ikisine üye işçilerde "Grupları çelişen kaynak".
+  - Model kısıtları (7.10, K-189): Baz'da `TORNA` hedef doluluk %85, `ISL3` hedef doluluk %90, `MONTAJ` kısıtsız kapasite çarpanı 1,50. **Kısıtsız kapasite** senaryosu `MONTAJ` çarpanını 2,00'a çıkarır (fark) ve `TASLAMA`'ya 1,25 çarpanını kendisi ekler. Kritik olmayan grupta (`F-KAPLA`, `F-ISIL`) değer yok.
   - Senaryo farkları: **Fazla mesaili** `CG-MON` ek mesai limitini 4 saate çıkarır (fark satırı) ve `MONTAJ`'a 3 saatlik kendi limitini ekler; **Kısıtsız kapasite** `T-02` bakımını kendisi için geçersiz yapar; **MILP deneme** Baz'ı izlemez (tam kopya).
   - Bağımsız doğrulama: `app/data/synthetic/capacity.py` aynı kuralın saf Python hesabıdır; veritabanındaki hesap bununla birebir karşılaştırılır (test).
 - **Birimler:** ADET (0 ondalık), KG (3), M (2), SAAT (2); UnitOfMeasure.Decimals (K-88).

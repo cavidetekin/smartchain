@@ -103,7 +103,7 @@
 | `core.TransferOrder` | Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep). | İşlem verisi | evet | 13 |
 | `core.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | İşlem verisi | evet | 13 |
 
-## `param` · Planlama parametreleri ve senaryo tanımları (13 tablo)
+## `param` · Planlama parametreleri ve senaryo tanımları (14 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -117,6 +117,7 @@
 | `param.ScenarioDefinition` | Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz. | Parametre |  | 9 |
 | `param.WorkPattern` | Çalışma düzeni (K-185): günlük kapasite ve haftanın günleri. Çalışma günü yalnız buradan gelir. Geçerlilik: önce seviye (kaynakta o günü kapsayan kayıt varsa kaynağınkiler, yoksa grubunkiler), sonra başlangıcı en ileri olan. | Parametre |  | 19 |
 | `param.ResourceEfficiency` | Verimlilik (K-185): kapasite katsayısı, yüzde. Giriş yoksa %100. Geçerlilik kuralı çalışma düzenindeki gibi, kendi kayıtlarından. | Parametre |  | 12 |
+| `param.ResourceGroupConstraint` | Model kısıtları (K-189): kaynak grubu başına, tarihsiz iki değer. Kısıtsız kapasite çarpanı: Kaynak kısıtı = Kısıtsız olan senaryoda grubun dönem üst sınırı = kullanılabilir kapasite × çarpan (boşsa sınır yok). Hedef doluluk: kesin sınır değil, "Hedef doluluğun üstü" hedefinin eşiği (boşsa hedef yok). Yalnız kritik gruplarda uygulanır; kritik olmaktan çıkan grubun değeri saklanır ama uygulanmaz. Senaryo ve kaynak grubu başına en çok bir kendi satırı; iki değeri de boş kalan satır silinir. | Parametre |  | 10 |
 | `param.OvertimeLimit` | Ek mesai limiti (K-185): çalışılan günde kaynak başına yapılabilecek ek mesai, grubun kapasite biriminde. Giriş yoksa ek mesai yok. Her gruba girilebilir. ERP'den gelen kalan fazla mesai (kaynakta) ayrıdır, birleştirilmez. | Parametre |  | 12 |
 | `param.ResourceDowntime` | Bakım ve duruş (K-185): kapasiteden düşülür. Gruba girilen duruş grubun bütün kaynaklarına uygulanır. Geçerlilik kuralının dışındadır: duruşlar birleşir, gün bir kez düşer. Çalışan izni ERP'den gelir (`core.EmployeeAbsence`), burada tutulmaz. | Parametre |  | 13 |
 | `param.FactoryCalendar` | Fabrika takvimi (K-185): bütün kaynak gruplarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır. | Parametre |  | 11 |

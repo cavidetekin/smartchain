@@ -168,7 +168,7 @@ def test_rows_fields_and_values(api, db_engine, world, clean):
     cols = api.get(U + "/columns").json()
     names = [c["field"] for c in cols["columns"]]
     at = names.index("PeriodType")
-    assert names[at:at + 9] == PERIOD_FIELDS and names[:3] == ["ResourceGroupCode", "ResourceGroupName", "CapacityUnit"]
+    assert names[at:at + 9] == PERIOD_FIELDS and names[:4] == ["LocationCode", "ResourceGroupCode", "ResourceGroupName", "CapacityUnit"]
     assert [c["label"] for c in cols["columns"][at:at + 9]] == ["Dönem tipi", "Dönem", "Dönem başı", "Dönem sonu", "Hafta", "Ay", "Çeyrek", "Yıl", "Dönem takvim günü"]
     assert names[at + 9:] == ["ResourceCount", "WorkingDays", "Downtime", "WorkableDays", "AvgDailyCapacity", "TotalDailyCapacity", "Efficiency", "TotalCapacity",
                               "AvailableCapacity", "OvertimeLimit", "RemainingOvertimeMonth", "RemainingOvertimeYear"]

@@ -11,13 +11,14 @@ import { can } from "../auth/permissions";
 import { formatNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { useShell } from "../shell/ShellContext";
-import { DataTable } from "../table/DataTable";
+import { DataTable, type FieldHints } from "../table/DataTable";
 import { ABOVE_MAX_ZOOM, listApi, type ListFilter, type Row, setListScenario } from "../table/types";
 import { type MenuAction, MenuActions, RowPopMenu } from "../ui/PopMenu";
 import { CapacityEntryDialog } from "./CapacityEntryDialog";
 import { ENTRIES, type EntryKind, ORIGIN_DIFF, type Owner } from "./capacityModel";
 
 const T = tr.capacity;
+const LOCATION_HINT: FieldHints = { LocationCode: { width: 6.5 } };   // Lokasyon kodu dar kolon (K-189)
 const DAY = 86_400_000;
 const MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 const ZOOMS = [1, 1.5, 2, 3, 4, 6, 8, ABOVE_MAX_ZOOM];   // − ve + düğmelerinin basamakları
@@ -68,11 +69,13 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
     const total = end - start + 1;
     if (!(total > 0)) return null;
     const lines = new Map<string, Line>();
+    // Veride birden çok lokasyon varsa soldaki kaynak kodu lokasyonla yazılır ("ORM-01 · T-01"; K-189)
+    const manyLocations = new Set(rows.map((r) => r.LocationCode).filter(Boolean)).size > 1;
     for (const row of rows) {
       const from = Math.max(dayOf(String(row.ValidFrom)), start);
       const to = Math.min(row.ValidTo ? dayOf(String(row.ValidTo)) : end, end);
       const key = `${row.ResourceGroupId}|${row.ResourceId}`;
-      const code = String(row.Code ?? "");
+      const code = manyLocations && row.LocationCode ? `${String(row.LocationCode)} · ${String(row.Code ?? "")}` : String(row.Code ?? "");
       const title = `${code} · ${String(row.GroupCode ?? "")}`;
       let line = lines.get(key);
       if (!line) {
@@ -254,7 +257,7 @@ export function ValidityView({ kind, filters, lead, end, compact, reloadKey = 0,
 
   return (
     <>
-      <DataTable list={spec.list} baseFilters={filters} toolbarLead={lead} toolbarEnd={end} compact={compact} reloadKey={reloadKey + tick}
+      <DataTable list={spec.list} baseFilters={filters} toolbarLead={lead} toolbarEnd={end} compact={compact} fieldHints={LOCATION_HINT} reloadKey={reloadKey + tick}
                  cellMenu={(_col, row) => items(row)} selectedRowId={picked?.id ?? null} reveal={picked}
                  above={horizon ? (rows, pane) => {
                    onZoomOf.current = pane.setZoom;

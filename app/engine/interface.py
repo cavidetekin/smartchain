@@ -84,6 +84,11 @@ class PlanningData(Protocol):
         (kaynak grubu × kaynak × gün kapasite). Ekrandaki önbellek aynı hesapla kurulur."""
         ...
 
+    def model_constraints(self) -> list[dict]:
+        """Model kısıtları (docs/09, K-189): planın senaryosunda geçerli {ResourceGroupId, UnconstrainedCapacityFactor, TargetUtilizationPct};
+        yalnız kritik ve güncel kaynak grupları. Kritik olmayan grubun saklı değeri dönmez."""
+        ...
+
 
 @dataclass(frozen=True)
 class EngineInput:

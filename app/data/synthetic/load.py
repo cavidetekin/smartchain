@@ -29,8 +29,9 @@ LOAD_ORDER = [
     "ProductionConfirmation",
 ]
 CAPACITY_TABLES = ["WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar"]  # kapasite girişleri (K-185)
-PARAM_ORDER = ["PriorityRule", "SupplierLimit", *CAPACITY_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
-PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "SupplierLimit", *CAPACITY_TABLES]
+MODEL_TABLES = ["ResourceGroupConstraint"]  # model kısıtları (K-189)
+PARAM_ORDER = ["PriorityRule", "SupplierLimit", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
+PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "SupplierLimit", *CAPACITY_TABLES, *MODEL_TABLES]
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
 
 
@@ -226,6 +227,16 @@ def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> N
         "INSERT INTO param.ResourceDowntime (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, ResourceGroupId, ResourceId, StartDate, EndDate, DowntimeType, "
         "Reason, UpdatedAt) SELECT :s, b.Id, N',IsValid,', 0, b.ResourceGroupId, b.ResourceId, b.StartDate, b.EndDate, b.DowntimeType, b.Reason, :now "
         "FROM param.ResourceDowntime b WHERE b.ScenarioDefinitionId = :base AND b.ResourceId = :r"), {"s": mono, "base": base_id, "r": resource("T-02"), "now": now})
+    # Kısıtsız kapasite (K-189): bir grupta çarpan farkı (Baz satırının farkı: yalnız çarpan) ve Baz'da değeri olmayan bir grupta senaryonun kendi çarpanı
+    from .dataset import MODEL_CONSTRAINT_DIFF, MODEL_CONSTRAINT_OWN
+    conn.execute(text(
+        "INSERT INTO param.ResourceGroupConstraint (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, ResourceGroupId, UnconstrainedCapacityFactor, "
+        "TargetUtilizationPct, UpdatedAt) SELECT :s, b.Id, N',UnconstrainedCapacityFactor,', 1, b.ResourceGroupId, :f, b.TargetUtilizationPct, :now "
+        "FROM param.ResourceGroupConstraint b WHERE b.ScenarioDefinitionId = :base AND b.ResourceGroupId = :g"),
+        {"s": mono, "base": base_id, "g": group(MODEL_CONSTRAINT_DIFF[0]), "f": MODEL_CONSTRAINT_DIFF[1], "now": now})
+    conn.execute(text(
+        "INSERT INTO param.ResourceGroupConstraint (ScenarioDefinitionId, IsValid, ResourceGroupId, UnconstrainedCapacityFactor, UpdatedAt) VALUES (:s, 1, :g, :f, :now)"),
+        {"s": mono, "g": group(MODEL_CONSTRAINT_OWN[0]), "f": MODEL_CONSTRAINT_OWN[1], "now": now})
 
 
 def _drop_period_cache(conn: Connection) -> None:

@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 import { childrenOf, GROUPS, SCREENS } from "./catalog";
 
 describe("ekran kataloğu", () => {
-  it("30 ekranı birer kez içerir", () => {
+  it("31 ekranı birer kez içerir", () => {
     const nos = SCREENS.map((s) => s.no).sort();
-    expect(nos).toEqual(Array.from({ length: 30 }, (_, i) => String(i + 1).padStart(2, "0")));
-    expect(new Set(SCREENS.map((s) => s.path)).size).toBe(30);
+    expect(nos).toEqual(Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")));
+    expect(new Set(SCREENS.map((s) => s.path)).size).toBe(31);
   });
 
   it("grup sırası K-82'deki gibi", () => {

@@ -21,6 +21,13 @@ class SqlPlanningData:
         from app import periods
         return periods.values(self.session, name, self.scenario_definition_id, date_from, date_to)
 
+    def model_constraints(self) -> list[dict]:
+        """Model kısıtları (docs/09, K-189): senaryoda geçerli değerler; yalnız kritik ve güncel kaynak grupları."""
+        if self.scenario_definition_id is None:
+            raise ValueError("Model kısıtları için senaryo gerekir.")
+        from app import modelconstraints
+        return modelconstraints.constraints(self.session, self.scenario_definition_id)
+
     def read(self, table: str, columns: Sequence[str] | None = None) -> list[dict]:
         name = table if "." in table else f"core.{table}"
         if not name.startswith("core."):

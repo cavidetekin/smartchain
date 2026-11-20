@@ -1816,6 +1816,23 @@ ResourceEfficiency = sa.Table(
     comment="Verimlilik (K-185): kapasite katsayısı, yüzde. Giriş yoksa %100. Geçerlilik kuralı çalışma düzenindeki gibi, kendi kayıtlarından.",
 )
 
+ResourceGroupConstraint = sa.Table(
+    "ResourceGroupConstraint", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: \",TargetUtilizationPct,\"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Ortak yapı gereği durur; bu tabloda her zaman Evet (değer boşaltılarak kaldırılır)", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=False, comment="Kaynak grubu", info={'label': "Kaynak grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("UnconstrainedCapacityFactor", sa.Numeric(9, 4), nullable=True, comment="Kısıtsız kapasite çarpanı (en az 1); boşsa sınır yok", info={'label': "Kısıtsız kapasite çarpanı", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("TargetUtilizationPct", sa.Numeric(6, 2), nullable=True, comment="Hedef doluluk, yüzde (0'dan büyük, en çok 100); boşsa hedef yok", info={'label': "Hedef doluluk (%)", 'source': "Smartchain (parametre)", 'workspace': True}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Değiştiren", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Model kısıtları (K-189): kaynak grubu başına, tarihsiz iki değer. Kısıtsız kapasite çarpanı: Kaynak kısıtı = Kısıtsız olan senaryoda grubun dönem üst sınırı = kullanılabilir kapasite × çarpan (boşsa sınır yok). Hedef doluluk: kesin sınır değil, \"Hedef doluluğun üstü\" hedefinin eşiği (boşsa hedef yok). Yalnız kritik gruplarda uygulanır; kritik olmaktan çıkan grubun değeri saklanır ama uygulanmaz. Senaryo ve kaynak grubu başına en çok bir kendi satırı; iki değeri de boş kalan satır silinir.",
+)
+
 OvertimeLimit = sa.Table(
     "OvertimeLimit", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),

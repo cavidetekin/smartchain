@@ -253,6 +253,19 @@
         "Key user": "full",
         "End user": "read"
       }
+    },
+    {
+      "key": "C2",
+      "letter": "C",
+      "name": "Model kısıtları",
+      "first": 103,
+      "last": 103,
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
     }
   ],
   "functions": [
@@ -1371,6 +1384,17 @@
       "no": 102,
       "name": "İşlem verisi görüntüleme",
       "group": "B",
+      "levels": {
+        "System owner": "full",
+        "Admin": "full",
+        "Key user": "full",
+        "End user": "read"
+      }
+    },
+    {
+      "no": 103,
+      "name": "Model kısıtları",
+      "group": "C",
       "levels": {
         "System owner": "full",
         "Admin": "full",

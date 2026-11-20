@@ -74,6 +74,18 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 
 Kapasite gibi dönem bazındaki değerlerin tek bir hesabı vardır. Kapasitede: `app.periods.values(session, "resource-capacity-day", senaryo, gün aralığı)` → kaynak grubu × kaynak × gün satırları (`WorkingDay`, `Downtime`, `DailyCapacity`, `Capacity`, `AvailableCapacity`, `OvertimeLimit`; senaryonun Baz'dan okuduğu girişler dahil). Ekran bu işlevle kurulan önbellekten okur; motor plan hesabında aynı işlevi doğrudan çağırır (önbellekten okumaz). İkisinin birebir aynı sonucu verdiği testle sabittir (`tests/test_capacity.py`). Motorun veri erişimi (7.9c, K-188): `PlanningData.period_values(name, date_from, date_to)` planın senaryosu için bu işlevi çağırır (`SqlPlanningData`; ad `"resource-capacity-day"`). Girişler senaryoludur ve versiyonlanmaz: hesap güncel girişleri ve güncel üyelikleri okur (planın veri versiyonu eskiyse de). Sahte motor kullanmaz.
 
+## Model kısıtları (7.10, K-189)
+
+`PlanningData.model_constraints()` planın senaryosunda geçerli değerleri verir (`SqlPlanningData`): `[{ResourceGroupId, UnconstrainedCapacityFactor, TargetUtilizationPct}]`; yalnız kritik ve güncel kaynak grupları, en az bir değeri dolu olanlar. Kritik olmayan (ya da kritik olmaktan çıkmış) grubun saklı değeri dönmez. Senaryonun Baz'dan okuduğu değerler dahildir. Sahte motor kullanmaz.
+
+Motorun uygulayacağı kural (Aşama 10):
+- Kaynak kısıtı (`ResourceConstraint`) = Kısıtsız ve çarpan dolu → grubun dönem üst sınırı = dönemin kullanılabilir kapasitesi × çarpan. Çarpan boşsa sınır yok.
+- Kaynak kısıtı = Kısıtlı → çarpan kullanılmaz; kesin sınır kullanılabilir kapasitedir (ve açıksa ek mesai).
+- Kaynak kısıtı = Kısmi → tanımı ve davranışı açık (A-46); çarpan bugün yalnız Kısıtsız'da uygulanır.
+- Hedef doluluk dolu ve "Hedef doluluğun üstü" hedefi (`OVER_TARGET_LOAD`) açık → dönem yükünün (kullanılabilir kapasite × hedef %) üstünde kalan kısmı bu hedefte cezalandırılır. Hedef kapalıysa değer kullanılmaz.
+- Kritik olmayan grup için hiçbir koşulda kısıt yazılmaz.
+
+
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.

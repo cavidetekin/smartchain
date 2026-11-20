@@ -581,6 +581,11 @@ Parametre menüsünde, adres `/parametre/parametreler`; mockup `plans/7.1-mockup
 - **Kaydedilmemiş değişiklik:** başka alt başlığa, başlığa ya da ekrana geçişte uyarı (K-132). Başarılı kayıtta bildirim yok; hata alanın altında ya da hücre ipucunda.
 - **Yetki:** Key user ve üstü; End user'da ekran menüde yok.
 
+### Lokasyon alanı (genel kural; 7.10, K-189)
+
+İş anahtarı lokasyon içeren kaydı (kaynak, kaynak grubu, malzeme…) gösteren her tabloda Lokasyon tablonun kendi alanıdır: Alanlar'da tablonun alanları arasında listelenir (İlişkili alanlar'dan eklenmesi gerekmez), Standart görünümde açıktır ve kodun solunda gelir. Gerekçe: kod tek başına kaydı tanımlamaz; farklı lokasyonlarda aynı kod olabilir. Ana veri ve İşlem verisi tabloları kuralı baştan uygular (Lokasyon ilk kolon). Kapasite yönetimi'nde: Kapasite özeti (tablo görünümünde ve alan listesinde; Standart pivotun satır alanı değildir), Kaynak grubu, Kaynak, Çalışma düzeni, Bakım ve duruşlar, Verimlilik, Ek mesai limitleri, Geçerlilik tabloları ve kart sekmeleri; Model kısıtları. Fabrika takviminde lokasyon yoktur (sahibi yok). Veride birden fazla lokasyon varsa kaydı kodla gösteren öteki yerler de lokasyonu yazar: giriş penceresindeki aramalı seçim ("ORM-01 · T-01 · CNC torna 1") ve Geçerlilik zaman çubuğunun kaynak kolonu ("ORM-01 · T-01"); tek lokasyonda yalnız kod.
+
+
 ### Kapasite yönetimi (7.9, K-185; ekran 30, fonksiyon 24)
 
 Menüde Parametre grubunda, Parametreler ile Senaryolar arasında (`/parametre/kapasite-yonetimi`); senaryoya bağlı ekran: bağlam çubuğunda senaryo değişince baştan yüklenir. Ekranda açıklama metni yoktur.
@@ -590,6 +595,7 @@ Menüde Parametre grubunda, Parametreler ile Senaryolar arasında (`/parametre/k
 | Düzen | Başlık "Kapasite yönetimi"; altında tablonun üst şeridinin başında sekme şeridi (taşan sekmeler "Diğer" menüsünde); sekmenin tablosu ekranı doldurur; kart açıkken ana–detay düzeni (`ui/MasterDetail`) |
 | Sekmeler | Kapasite özeti · Kaynak grubu · Kaynak · Çalışma düzeni · Bakım ve duruşlar · Verimlilik · Fabrika takvimi · Ek mesai limitleri. Seçili sekme adreste saklanır (`?sekme=`) |
 | Şerit (7.9b) | Solda sekmeler ve giriş sekmelerinde "Yeni kayıt" (ana aksiyon; simgesiz, K-187); sağda tablo kontrolleri; değişiklik varken "Vazgeç" ve "Kaydet" (K-132) |
+| Alanlar ve İlişkili alanlar (7.10, K-189) | Kaynak grubu ve Kaynak sekmeleri ana verideki bütün alanları Alanlar'da sunar (Standart görünümde aşağıdaki alanlar açık, ötekiler kapalı) ve İlişkili alanlar bölümü çıkar (Lokasyon). Giriş sekmelerinde (fabrika takvimi dışında) ve Geçerlilik tablolarında İlişkili alanlar: Kaynak grubu, Kaynak, Lokasyon (satır sahibinin lokasyonunu taşır; birinci seviye ilişki) |
 | Kaynak grubu · Kaynak (7.9b) | Salt okunur listeler (aktarılan veri). Kaynak grubu: Kaynak grubu · Ad · Tip · Kritik · Kapasite birimi · Kaynak sayısı. Kaynak: Kaynak · Ad · Kaynak grupları · Üretim yeri · Aktif · Kalan fazla mesai (ay) · Kalan fazla mesai (yıl). ⋯ › Detay alttaki kartı açar (ana–detay düzeni); kart açıkken satıra tıklamak kartı o satıra çevirir |
 | Kaynak grubu kartı (7.9b) | Sekmeler: Dönem özeti (o grubun dönem tablosu; Standart'ta pivot, değerler satırlarda) · Kaynaklar · Çalışma düzeni · Bakım ve duruşlar · Verimlilik · Ek mesai limitleri. Giriş sekmeleri grubun kendisine ve kaynaklarına girilmiş kayıtları gösterir; "Yeni kayıt" seviyeyi (Grup) ve grubu dolu getirir |
 | Kaynak kartı (7.9b) | Sekmeler: Çalışma düzeni · Bakım ve duruşlar · Verimlilik · Ek mesai limitleri (Geçmiş yok, K-187; kaynağın geçmişi Ana veri › Kaynak kartında). Yalnız kaynağa girilmiş kayıtlar (ve o kaynağın çalışan izinleri); "Yeni kayıt" seviyeyi (Kaynak) ve kaynağı dolu getirir |
@@ -611,6 +617,24 @@ Menüde Parametre grubunda, Parametreler ile Senaryolar arasında (`/parametre/k
 | Geçerlilik tablosu (7.9c) | Kaynak grubu · Kaynak · Başlangıç · Bitiş · değer (Çalışma düzeninde Günlük kapasite · Birim · Pzt … Paz; Verimlilik (%); Günlük limit · Birim) · Geçerli kayıt ("Grup TORNA · 01.01.2026"). Ortak tablo (sıralama, filtre, alanlar, Excel); hücre düzenleme, satır menüsü düğmesi ve kart yok. Sağ tıkta "Düzenle" (aralığın geldiği kaydın Düzenle penceresi), "Yeni kayıt" (pencere o kaynak seçili açılır; seviye ve kod değiştirilebilir) ve "Kayda git" (Kayıtlar'a geçer, kaydı seçili gösterir ve görünür alana getirir; satır henüz yüklenmediyse de). Düzenle ve Yeni kayıt yazma yetkisi olanda. Aralıklar kayıtların kendi tarihleriyle; kayıt olmayan aralık satır değildir |
 | Zaman çubuğu (7.9c, K-188) | Tablonun üstünde, senaryonun planlama ufku. Üstte ay ekseni, solda kaynak kodu (grup ipucunda); ikisi de kaydırırken sabit. Solda "Kaynak" başlığı ve kaynak kodları (tablodaki kod yazısıyla aynı); bu kolon her yakınlaştırmada yatay kaydırmanın sonuna kadar sabit kalır. Kaynak satırları arasında ince yatay çizgi; ay adları ortalı ve kalın, ay sınırlarında ince dikey çizgi. Satır 34 px, dilim 26 px (üstte ve altta 4 px). Yakınlaştırılmış uzun dilimde değer dilimin görünen kısmının ortasında durur. Her kaynak bir satır, her aralık bir dilim; kayıt olmayan aralık boş. Dilim satırı doldurmaz (üstte ve altta boşluk), köşeleri yuvarlak; dilimler arasında küçük boşluk (aynı renkteki komşular da ayrışır); üzerine gelince hafif koyulaşır. **Renk (zaman çubuğunun kendi renkleri; grafik paletinin dışında, mockup `zaman-cubugu-renk.html` B):** grubun kaydı nane (zemin `#CFEBDD`, yazı `#1F5B43`), kaynağın kendi kaydı amber (zemin `#FFDFA3`, yazı `#7A5200`); beyaz yazı, indigo ve durum rengi kullanılmaz. Seçili dilimin çerçevesi dilimin şeklini izler ve yazı rengiyle çizilir. Senaryo farkından gelen dilimde işaret yoktur (fark tabloda). Değer dilime sığmıyorsa yazılmaz; verimlilik "%110" biçiminde yazılır. **İpucu** satır satır: kaynak · grup / değerin adı: değer birim (verimlilikte "%110") / aralık / "Grup kaydı" ya da "Kaynağın kendi kaydı" / varsa "Senaryo farkı". **Yakınlaştırma:** başlık satırının sağ ucundaki − ve + ya da Ctrl + fare tekerleği (imlecin altındaki tarih yerinde kalır; çubuk yatayda kayar); düz tekerlek dikey kaydırır. Eksen ay adımındadır (haftaya ve güne geçiş 8.7 Gantt ile). **Tutamaç:** çubuk ile tablo arasında, sürüklenir (çift tık varsayılan). Yükseklik ve yakınlaştırma görünümle saklanır. **Tıklama** tabloda o aralığın satırını seçer ve görünür alana getirir; **sağ tık** tablodaki menünün aynısı (Düzenle · Yeni kayıt · Kayda git). Tabloda yüklenen satırları çizer (süzme ve sıralamayla aynı). Renk açıklaması (lejant) yoktur |
 | Durum | uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş sekmeleri ve kartlar uygulandı (7.9b; sürüm 0.48.0, K-187); Geçerlilik görünümü uygulandı (7.9c; sürüm 0.49.0, K-188) |
+
+### Model kısıtları (7.10, K-189; ekran 31, fonksiyon 103)
+
+Menüde Parametre grubunda, Kapasite yönetimi ile Senaryolar arasında (`/parametre/model-kisitlari`); senaryoya bağlı ekran: bağlam çubuğunda senaryo değişince baştan yüklenir. Mockup yok: Kapasite yönetimi'nin giriş tablosuyla aynı kalıp.
+
+| Konu | Kural |
+|---|---|
+| Şerit | Solda sekmeler (ortak sekme şeridi; bu adımda tek sekme "Kaynak grubu", seçili sekme adreste `?sekme=`); sağda tablo kontrolleri; değişiklik varken "Vazgeç" ve "Kaydet" (K-132). "Yeni kayıt" yok |
+| Tablo | Her senaryoda her kaynak grubu tek satır (kaydı olmayan dahil). Standart: Lokasyon · Kaynak grubu · Ad · Kritik · Kapasite birimi · Kısıtsız kapasite çarpanı · Hedef doluluk (%) · Kaynağı. Ana verideki öteki alanlar ve İlişkili alanlar (Lokasyon) Alanlar'dan açılır |
+| Düzenleme | İki değer hücresi hücre düzenleme standardıyla (K-172, K-187): tek tıkla seçilir, yazınca üzerine yazar; çoklu satıra aynı değer, Ctrl+D. Hücreyi boşaltmak değeri kaldırır. Değişen hücre indigo çerçeveli; reddedilen kırmızı, nedeni ipucunda |
+| Yazım | Çarpan iki ondalık ("1,50"). Hedef doluluk "%85" (gereksiz ondalık yazılmaz; Geçerlilik zaman çubuğundaki yazım); düzenlerken sayı yazılır (85) |
+| Kritik olmayan grup | Listelenir ve değer girilebilir (giriş kısıtlanmaz); motor yalnız kritik grupların değerini okur |
+| "Kaynağı" ve fark | Değer yoksa boş; Baz · Senaryo farkı · Senaryo. İzleyen senaryoda Baz'dan farklı olan hücre lila köşeli, ipucunda Baz'daki değer ("Baz: 1,50", "Baz: boş"). Grubun hem senaryoda hem Baz'da kaydı varsa tek satır: senaryonun değeri, "Senaryo farkı" |
+| Satır menüsü | Detay; Baz'ı izleyen senaryoda değeri senaryodan gelen satırda (Kaynağı: Senaryo farkı ya da Senaryo) ayrıca "Senaryo farkını kaldır": değer Baz'a döner, Baz'da değer yoksa boşalır |
+| Kart | Tek sekme Geçmiş (kaynak grubu kimliğiyle; "Değiştiren" ve senaryo adıyla); çoklu seçimde seçili grupların hepsi (K-171) |
+| End user | Görür; düzenleme, Kaydet ve "Senaryo farkını kaldır" yok |
+| Durum | uygulandı (7.10; sürüm 0.50.0, geçiş 0068, K-189; iki demo) |
+
 
 ### Senaryolar (7.3, K-177; ekran 07, fonksiyon 27, 28)
 

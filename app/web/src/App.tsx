@@ -5,6 +5,7 @@ import { Navigate, Route, Routes } from "react-router";
 import type { Me } from "./auth/authApi";
 import { AuditLog } from "./screens/AuditLog";
 import { CapacityManagement } from "./screens/CapacityManagement";
+import { ModelConstraints } from "./screens/ModelConstraints";
 import { DataLoad } from "./screens/DataLoad";
 import { DataQuality } from "./screens/DataQuality";
 import { Parameters } from "./screens/Parameters";
@@ -30,7 +31,7 @@ import { Shell } from "./shell/Shell";
 import { useShell } from "./shell/ShellContext";
 
 /** Yazılmış ekranlar; öteki ekranlar boş sayfasını gösterir. */
-const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "03": <MasterData />, "29": <TransactionData />, "28": <RawCompare />, "04": <DataRules />, "05": <DataQuality />, "06": <Parameters />, "30": <CapacityManagement />, "07": <Scenarios />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
+const PAGES: Record<string, ReactNode> = { "02": <DataLoad />, "03": <MasterData />, "29": <TransactionData />, "28": <RawCompare />, "04": <DataRules />, "05": <DataQuality />, "06": <Parameters />, "30": <CapacityManagement />, "31": <ModelConstraints />, "07": <Scenarios />, "22": <Users />, "23": <Integration />, "24": <SystemHealth />, "25": <SystemOwner />, "26": <AuditLog />, "27": <ValidationRules /> };
 
 /** Senaryoya bağlı ekran (K-177): seçili senaryo yüklenince çizilir, senaryo değişince baştan yüklenir (taslak ve durum sıfırlanır). */
 function ScenarioBound({ children }: { children: ReactNode }) {

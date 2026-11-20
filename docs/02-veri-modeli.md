@@ -96,7 +96,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Genel görünüm</sub>
 
 - **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
-- **Kaynak  9 tablo:** Resource · ResourceGroup · ResourceGroupMember · EmployeeAbsence · WorkPattern · ResourceEfficiency · OvertimeLimit · ResourceDowntime · FactoryCalendar
+- **Kaynak  10 tablo:** Resource · ResourceGroup · ResourceGroupMember · EmployeeAbsence · WorkPattern · ResourceEfficiency · OvertimeLimit · ResourceDowntime · FactoryCalendar · ResourceGroupConstraint
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
 - **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · AllocationRule
 - yükleme
@@ -136,6 +136,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **OvertimeLimit:** Ek mesai limiti (günlük, kaynak başına)
 - **ResourceDowntime:** Bakım ve duruş
 - **FactoryCalendar:** Fabrika takvimi (toplu duruş)
+- **ResourceGroupConstraint:** Model kısıtları: kaynak grubunun kısıtsız kapasite çarpanı ve hedef doluluğu (K-189)
 - **EmployeeAbsence:** Kişi bazında izin ve rapor
 
 ### Tablo listesi
@@ -2133,6 +2134,25 @@ Kapasitenin girişleri Kapasite yönetimi ekranında (ekran 30) girilir; `param`
 | ValidFrom | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | E | E |  |
 | ValidTo | date |  | Bitiş (dahil); boşsa süresiz | Bitiş | Smartchain (parametre) | E | H |  |
 | EfficiencyPct | decimal(6,2) |  | Verimlilik (%) | Verimlilik (%) | Smartchain (parametre) | E | E | 100 |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş | Değiştiren | Sistem | H | H |  |
+
+### ResourceGroupConstraint
+<sub>21. Veri modeli · Kaynak</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Model kısıtları (K-189): kaynak grubu başına, tarihsiz iki değer. Kısıtsız kapasite çarpanı: Kaynak kısıtı = Kısıtsız olan senaryoda grubun dönem üst sınırı = kullanılabilir kapasite × çarpan (boşsa sınır yok). Hedef doluluk: kesin sınır değil, "Hedef doluluğun üstü" hedefinin eşiği (boşsa hedef yok). Yalnız kritik gruplarda uygulanır; kritik olmaktan çıkan grubun değeri saklanır ama uygulanmaz. Senaryo ve kaynak grubu başına en çok bir kendi satırı; iki değeri de boş kalan satır silinir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",TargetUtilizationPct,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Ortak yapı gereği durur; bu tabloda her zaman Evet (değer boşaltılarak kaldırılır) | Geçerli | Smartchain (parametre) | H | E | 1 |
+| ResourceGroupId | bigint | FK | Kaynak grubu | Kaynak grubu | Smartchain (parametre) | H | E |  |
+| UnconstrainedCapacityFactor | decimal(9,4) |  | Kısıtsız kapasite çarpanı (en az 1); boşsa sınır yok | Kısıtsız kapasite çarpanı | Smartchain (parametre) | E | H |  |
+| TargetUtilizationPct | decimal(6,2) |  | Hedef doluluk, yüzde (0'dan büyük, en çok 100); boşsa hedef yok | Hedef doluluk (%) | Smartchain (parametre) | E | H |  |
 | UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
 | UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş | Değiştiren | Sistem | H | H |  |
 

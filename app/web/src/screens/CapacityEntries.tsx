@@ -24,7 +24,7 @@ const lowerFirst = (s: string) => s.charAt(0).toLocaleLowerCase("tr") + s.slice(
 // Kolon genişlikleri (rem): giriş tablosu ekrana sığsın (çalışma düzeninde yedi gün kolonu dar)
 const DAY_HINT = { width: 4.9, left: true };
 const HINTS: FieldHints = {
-  Level: { width: 4.8 }, Code: { width: 6.5 }, ValidFrom: { width: 7.2 }, ValidTo: { width: 7.2 }, StartDate: { width: 7.2 }, EndDate: { width: 7.2 },
+  Level: { width: 4.8 }, LocationCode: { width: 6.5 }, Code: { width: 6.5 }, ValidFrom: { width: 7.2 }, ValidTo: { width: 7.2 }, StartDate: { width: 7.2 }, EndDate: { width: 7.2 },
   DailyCapacity: { width: 10.4 }, DailyLimit: { width: 9 }, EfficiencyPct: { width: 9.5 }, CapacityUnit: { width: 4.2 }, Origin: { width: 7 }, IsValid: { width: 5 },
   DowntimeType: { width: 9 }, Reason: { width: 18 }, Name: { width: 18 }, DayValue: { width: 9 },
   DayMon: DAY_HINT, DayTue: DAY_HINT, DayWed: DAY_HINT, DayThu: DAY_HINT, DayFri: DAY_HINT, DaySat: DAY_HINT, DaySun: DAY_HINT,

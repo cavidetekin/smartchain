@@ -84,7 +84,7 @@ def test_validity_follows_the_rule_like_the_mockup(api, db_engine, world, clean)
 
     # End user görür; yazma ucu yok (salt okunur liste)
     cols = api.get(f"/api/{WP}/columns").json()
-    assert [c["field"] for c in cols["columns"]][:5] == ["GroupCode", "Code", "ValidFrom", "ValidTo", "DailyCapacity"]
+    assert [c["field"] for c in cols["columns"]][:6] == ["LocationCode", "GroupCode", "Code", "ValidFrom", "ValidTo", "DailyCapacity"]
 
     # görünüm zaman çubuğunun yüksekliğini ve yakınlaştırmasını saklar (K-188); sınır dışı değer reddedilir
     definition = {"v": 1, "columns": [{"field": "Code"}, {"field": "ValidFrom"}], "above": {"height": 0.3, "zoom": 2}}

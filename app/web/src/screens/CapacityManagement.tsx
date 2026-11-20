@@ -11,7 +11,7 @@ import { useLocation, useNavigate } from "react-router";
 import { formatNumber } from "../format";
 import { tr } from "../i18n/tr";
 import { useShell } from "../shell/ShellContext";
-import { DataTable } from "../table/DataTable";
+import { DataTable, type FieldHints } from "../table/DataTable";
 import { useRowMenu } from "../table/rowMenu";
 import type { ListFilter, Row } from "../table/types";
 import { type DetailTab, MasterDetail, OverflowTabs } from "../ui";
@@ -22,6 +22,7 @@ import { ENTRIES, type EntryKind, type Owner } from "./capacityModel";
 
 const T = tr.capacity;
 const NO_ITEMS = () => [];
+const MASTER_HINTS: FieldHints = { LocationCode: { width: 6.5 } };   // Lokasyon kodu dar kolon (K-189)
 type Tab = "ozet" | "grup" | "kaynak" | "calisma-duzeni" | "duruslar" | "verimlilik" | "takvim" | "ek-mesai";
 const TABS: { value: Tab; label: string }[] = [
   { value: "ozet", label: T.tabs.summary }, { value: "grup", label: T.tabs.groups }, { value: "kaynak", label: T.tabs.resources },
@@ -108,7 +109,7 @@ function OwnerTab({ level, lead, shared }: { level: "group" | "resource"; lead: 
     <MasterDetail id={`capacity-${level}`} onClose={() => setCard(null)} hideTitle
                   master={(
                     <>
-                      <DataTable list={list} toolbarLead={lead} fitHeaders cellMenu={NO_ITEMS} rowMenu={menu.rowMenu} selectedRowId={row?.Id ?? null} onSelection={setPicked}
+                      <DataTable list={list} toolbarLead={lead} fitHeaders fieldHints={MASTER_HINTS} cellMenu={NO_ITEMS} rowMenu={menu.rowMenu} selectedRowId={row?.Id ?? null} onSelection={setPicked}
                                  rowProps={(r) => { seen.current.set(r.Id, String(r.Code ?? "")); return card ? { onClick: () => open(r) } : {}; }} />
                       {menu.element}
                     </>

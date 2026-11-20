@@ -1372,6 +1372,19 @@ export const tr = {
     } as Record<string, string>,
   },
   // Kapasite yönetimi (ekran 30, K-185)
+  modelConstraints: {
+    title: "Model kısıtları", sections: "Model kısıtları bölümleri", tabs: { groups: "Kaynak grubu" },
+    factor: "Kısıtsız kapasite çarpanı", target: "Hedef doluluk (%)", history: "Geçmiş", cardTabs: "Kayıt bölümleri",
+    record: (code: string) => `Kaynak grubu ${code}`,
+    rowActions: (code: string) => `${code} işlemleri`,
+    menu: { detail: "Detay", restore: "Senaryo farkını kaldır" },
+    manyRecords: (n: string) => `${n} kayıt`,
+    baseValue: (value: string) => `Baz: ${value}`,
+    baseEmpty: "Baz: boş",
+    failed: "İşlem yapılamadı",
+    notSavedOne: (record: string, field: string, problem: string) => `Kaydedilmedi: ${record} · ${field}: ${problem}`,
+    notSavedMany: (n: number) => `Kaydedilmedi: ${n} hücre reddedildi. Kırmızı hücrelerin üzerine gelince nedeni yazar.`,
+  },
   capacity: {
     title: "Kapasite yönetimi", sections: "Kapasite yönetimi bölümleri",
     tabs: { summary: "Kapasite özeti", groups: "Kaynak grubu", resources: "Kaynak", workPatterns: "Çalışma düzeni", downtime: "Bakım ve duruşlar",

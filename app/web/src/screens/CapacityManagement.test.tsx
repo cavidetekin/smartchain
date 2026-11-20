@@ -59,7 +59,7 @@ type Call = { method: string; url: string; body: Record<string, unknown> };
 const STRICT_FIELDS = new Set(["capacity-work-patterns", "capacity-efficiency", "capacity-overtime-limits"]);   // sunucu olmayan alanı reddeder (docs/08)
 
 function backend(options: { scenario?: { id: number; name: string; is_base: boolean }; reply?: (call: Call) => Reply | undefined; validity?: object[];
-                            patterns?: object[] } = {}) {
+                            patterns?: object[]; resources?: object[] } = {}) {
   const scenario = options.scenario ?? { id: 1, name: "Baz", is_base: true };
   const calls: Call[] = [];
   const queries: Record<string, Record<string, unknown>[]> = {};
@@ -109,7 +109,8 @@ function backend(options: { scenario?: { id: number; name: string; is_base: bool
         StartDate: "2026-11-17", EndDate: "2026-11-18" },
     ]),
     ...list("capacity-resource-groups", GROUP_COLUMNS, [{ Id: 12, Code: "ISL3", Name: "3 eksen işleme", ResourceCount: 3 }, { Id: 7, Code: "CG-CNC", Name: "CNC operatörü", ResourceCount: 10 }]),
-    ...list("capacity-resources", [col("Code", "Kaynak", "text", "text"), col("Name", "Ad", "text", "text")], [{ Id: 5, Code: "M3-01", Name: "Tezgâh 1", CapacityUnit: "SAAT" }, { Id: 6, Code: "M3-02", Name: "Tezgâh 2", CapacityUnit: "SAAT" }]),
+    ...list("capacity-resources", [col("Code", "Kaynak", "text", "text"), col("Name", "Ad", "text", "text")],
+            options.resources ?? [{ Id: 5, Code: "M3-01", Name: "Tezgâh 1", CapacityUnit: "SAAT" }, { Id: 6, Code: "M3-02", Name: "Tezgâh 2", CapacityUnit: "SAAT" }]),
     ...list("record-history", HISTORY_COLUMNS, [{ Id: 1, At: "2026-11-19T10:42:00", FieldLabel: "Günlük kapasite", OldValue: "20", NewValue: "22,5", ChangedBy: "planlama", SourceText: "Kapasite yönetimi · planlama" }]),
     "/api/capacity/": (url: string, init?: RequestInit) => {
       const call = { method: init?.method ?? "GET", url, body: init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {} };
@@ -196,6 +197,18 @@ describe("ekran 30 · Kapasite yönetimi · giriş sekmeleri (K-185, 7.9b)", () 
     await user.type(capacity, "20{Enter}");                                                              // Enter kaydeder
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect((calls[1].body.values as { DailyCapacity: number }).DailyCapacity).toBe(20);
+  });
+
+  it("veride birden çok lokasyon varsa aramalı seçimde seçenek 'lokasyon · kod · ad' yazılır (K-189); tek lokasyonda yalnız kod ve ad", async () => {
+    const { user, queries } = await open("calisma-duzeni", "Key user", { resources: [
+      { Id: 5, LocationCode: "ORM-01", Code: "M3-01", Name: "Tezgâh 1" }, { Id: 6, LocationCode: "ORM-02", Code: "M3-01", Name: "Tezgâh 1" }] });
+    await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
+    const dialog = await screen.findByRole("dialog", { name: "Çalışma düzeni · Yeni kayıt" });
+    await user.click(within(dialog).getByRole("radio", { name: "Kaynak" }));
+    await user.click(within(dialog).getByRole("combobox", { name: "Kaynak" }));
+    await waitFor(() => expect(within(screen.getByRole("listbox", { name: "Kaynak" })).getAllByRole("option").map((o) => o.textContent))
+      .toEqual(["ORM-01 · M3-01Tezgâh 1", "ORM-02 · M3-01Tezgâh 1"]));
+    expect(queries["capacity-resources"].at(-1)?.fields).toEqual(["LocationCode", "Code", "Name"]);
   });
 
   it("pencere dolu alanla açılmaz: Tip ve Çalışma düğmedir, boş gelir; alan sırası tarihler sonra değerler; Esc pencereyi kapatır", async () => {
@@ -508,6 +521,11 @@ describe("ekran 30 · Kapasite yönetimi · Geçerlilik (K-188, 7.9c)", () => {
     await user.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Kayda git" }));
     await waitFor(() => expect(choice()).toHaveValue("kayitlar"));
     await waitFor(() => expect(rowsOf().filter((r) => r.classList.contains("is-selected")).map((r) => within(r).getAllByRole("cell")[1].textContent)).toEqual(["ISL3"]));
+  });
+
+  it("veride birden çok lokasyon varsa soldaki kaynak kodu lokasyonla yazılır (K-189)", async () => {
+    const { box } = await toValidity("calisma-duzeni", "Key user", { validity: [{ ...VALIDITY_ROWS[0], LocationCode: "ORM-01" }, { ...VALIDITY_ROWS[3], LocationCode: "ORM-02" }] });
+    expect([...box.querySelectorAll(".sc-validity-label")].map((l) => l.textContent)).toEqual(["ORM-01 · M3-01", "ORM-02 · M3-02"]);
   });
 
   it("verimlilik '%110' biçiminde yazılır (zaman çubuğunda ve ipucunda)", async () => {

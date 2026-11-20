@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity, Boxes, CalendarClock, CalendarRange, ChartGantt, ClipboardList, Database, Factory, FileChartColumn, FlaskConical, Gauge,
   GitCompareArrows, HeartPulse, House, KeyRound, Layers, Lightbulb, ListChecks, ListOrdered, Moon, Network, Package, Plug, ScrollText, Send,
-  Settings, ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles,
+  Settings, ShieldCheck, SlidersHorizontal, SlidersVertical, Table2, TriangleAlert, Upload, Users, WandSparkles, Ruler,
 } from "lucide-react";
 
 export type GroupId = "planlama" | "takip" | "veri" | "parametre" | "yonetim";
@@ -99,6 +99,8 @@ export const SCREENS: Screen[] = [
     icon: SlidersVertical, description: "Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, zaman, plan kararlılığı." },
   { no: "30", fn: 24, name: "Kapasite yönetimi", path: "/parametre/kapasite-yonetimi", group: "parametre", step: "7.9", scenarioBound: true,
     icon: CalendarRange, description: "Seçili senaryonun kapasitesi: kaynak grubu × dönem özeti; çalışma düzeni, duruş, verimlilik ve ek mesai girişleri." },
+  { no: "31", fn: 103, name: "Model kısıtları", path: "/parametre/model-kisitlari", group: "parametre", step: "7.10", scenarioBound: true,
+    icon: Ruler, description: "Seçili senaryoda kaynak grubunun model kısıtları: kısıtsız kapasite çarpanı ve hedef doluluk." },
   { no: "07", fn: 27, name: "Senaryolar", path: "/parametre/senaryolar", group: "parametre", step: "7.3",
     icon: Moon, description: "Senaryoların listesi ve yönetimi: yeni senaryo, gece çalışsın ve gece sırası, Baz'ı izler." },
 

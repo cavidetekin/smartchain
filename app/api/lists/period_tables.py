@@ -31,8 +31,8 @@ def skeleton(types: dict[str, sa.types.TypeEngine], name: str) -> sa.FromClause:
 
 
 # --- Kaynak grubu × dönem (K-185 E) -----------------------------------------------------------------------------------
-_MASTER = {"Id": sa.BigInteger(), "ResourceGroupId": sa.BigInteger(), "ResourceGroupCode": sa.Unicode(50), "ResourceGroupName": sa.Unicode(200),
-           "CapacityUnit": sa.Unicode(20)}
+_MASTER = {"Id": sa.BigInteger(), "ResourceGroupId": sa.BigInteger(), "LocationCode": sa.Unicode(50), "ResourceGroupCode": sa.Unicode(50),
+           "ResourceGroupName": sa.Unicode(200), "CapacityUnit": sa.Unicode(20)}
 _VALUES = {"ResourceCount": sa.Integer(), "WorkingDays": sa.Numeric(18, 2), "Downtime": sa.Numeric(18, 4), "WorkableDays": sa.Numeric(18, 4),
            "AvgDailyCapacity": sa.Numeric(18, 4), "TotalDailyCapacity": sa.Numeric(18, 4), "Efficiency": sa.Numeric(18, 6),
            "TotalCapacity": sa.Numeric(18, 4), "AvailableCapacity": sa.Numeric(18, 4), "OvertimeLimit": sa.Numeric(18, 4),
@@ -41,7 +41,8 @@ _TYPES = {**_MASTER, **PERIOD_TYPES, **_VALUES}
 
 # Brüt = çalışma günü × günlük kapasite (verimliliksiz): ortalama ve toplam günlük kapasitenin ve verimliliğin payı ya da paydası
 _SQL = f"""
-SELECT CAST(g.Id AS bigint) * 1000 + p.[no] AS Id, g.Id AS ResourceGroupId, g.Code AS ResourceGroupCode, g.Name AS ResourceGroupName, g.CapacityUnit,
+SELECT CAST(g.Id AS bigint) * 1000 + p.[no] AS Id, g.Id AS ResourceGroupId, (SELECT l.Code FROM core.Location l WHERE l.Id = g.LocationId) AS LocationCode,
+       g.Code AS ResourceGroupCode, g.Name AS ResourceGroupName, g.CapacityUnit,
        {PERIOD_SELECT},
        COALESCE(mc.n, 0) AS ResourceCount, COALESCE(v.WorkingDays, 0) AS WorkingDays, COALESCE(v.Downtime, 0) AS Downtime,
        CAST(COALESCE(v.WorkingDays - v.Downtime, 0) AS decimal(18,4)) AS WorkableDays,
@@ -83,10 +84,11 @@ _CAPACITY = ("AvgDailyCapacity", "TotalDailyCapacity", "TotalCapacity", "Availab
 RESOURCE_GROUP_PERIODS = ListDefinition(
     name="period-resource-group",
     table="cache.ResourceCapacityDay",   # etiketler tanımdan; tablo adı yalnız alan tanımı aramasında kullanılır
-    fields=("ResourceGroupCode", "ResourceGroupName", "CapacityUnit", *PERIOD_FIELDS, *_VALUES),
-    default_visible=("ResourceGroupCode", "ResourceGroupName", "CapacityUnit", *PERIOD_FIELDS, *_VALUES),
+    # Lokasyon listenin kendi alanı, kodun solunda (K-189); Standart pivotun satır alanı değil
+    fields=("LocationCode", "ResourceGroupCode", "ResourceGroupName", "CapacityUnit", *PERIOD_FIELDS, *_VALUES),
+    default_visible=("LocationCode", "ResourceGroupCode", "ResourceGroupName", "CapacityUnit", *PERIOD_FIELDS, *_VALUES),
     default_sort=(("ResourceGroupCode", "asc"), ("PeriodStart", "asc")),
-    server_values=frozenset({"ResourceGroupCode", "CapacityUnit", "PeriodType", "Period", "Week", "Month", "Quarter", "Year"}),
+    server_values=frozenset({"LocationCode", "ResourceGroupCode", "CapacityUnit", "PeriodType", "Period", "Week", "Month", "Quarter", "Year"}),
     title="Kaynak grubu × dönem", file_slug="kaynak-grubu-donem", function=24,
     decimals={"WorkingDays": 1, "Downtime": 1, "WorkableDays": 1, "Efficiency": 1, "RemainingOvertimeMonth": 2, "RemainingOvertimeYear": 2},
     unit_field="CapacityUnit", unit_decimals=frozenset(_CAPACITY),
@@ -99,7 +101,7 @@ RESOURCE_GROUP_PERIODS = ListDefinition(
     aggregate_weights={"Efficiency": "TotalCapacity"},
     versioned=False,
     source=skeleton(_TYPES, "pt"), source_factory=_resource_group_source,
-    labels={"ResourceGroupCode": "Kaynak grubu", "ResourceGroupName": "Kaynak grubu adı", "CapacityUnit": "Kapasite birimi", **PERIOD_LABELS,
+    labels={"LocationCode": "Lokasyon", "ResourceGroupCode": "Kaynak grubu", "ResourceGroupName": "Kaynak grubu adı", "CapacityUnit": "Kapasite birimi", **PERIOD_LABELS,
             "ResourceCount": "Kaynak sayısı", "WorkingDays": "Çalışma günü", "Downtime": "Duruş", "WorkableDays": "Çalışılabilir gün",
             "AvgDailyCapacity": "Ortalama günlük kapasite", "TotalDailyCapacity": "Toplam günlük kapasite", "Efficiency": "Verimlilik",
             "TotalCapacity": "Toplam kapasite", "AvailableCapacity": "Kullanılabilir kapasite", "OvertimeLimit": "Ek mesai limiti",

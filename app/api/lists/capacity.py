@@ -10,7 +10,11 @@ from app.capacity import compute, validity
 from app.params import resolve
 from app.periods import cache
 
+from app.manual import MANUAL_COLUMN
+
+from . import relations
 from .definition import ListDefinition, SourceContext
+from .master_data import BY_NAME
 from .period_tables import skeleton
 
 FUNCTION = 24
@@ -22,69 +26,88 @@ DOWNTIME_TYPES = ("Planlı bakım", "Arıza", "Diğer")
 DAY_LABELS = dict(zip(resolve.DAYS, ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")))
 
 # --- Kaynak grubu ve Kaynak (aktarılan veri) -------------------------------------------------------------------------------------------
+# Ana verinin Kaynak grubu ve Kaynak listelerinden türetilir (K-189): ana verideki bütün alanlar Alanlar'da sunulur (Standart'ta 7.9'daki alanlar
+# açık, ötekiler kapalı), kapasiteye özgü hesaplanan alanlar eklenir ve İlişkili alanlar çalışır (`related_table`: Lokasyon).
 
-_GROUP_TYPES = {"Id": sa.BigInteger(), "Code": sa.Unicode(50), "Name": sa.Unicode(200), "Type": sa.Unicode(50), "IsCritical": sa.Boolean(),
-                "CapacityUnit": sa.Unicode(20), "ResourceCount": sa.Integer()}
-_GROUP_SQL = f"""
-SELECT g.Id, g.Code, g.Name, g.[Type], g.IsCritical, g.CapacityUnit, COALESCE(mc.n, 0) AS ResourceCount
-FROM core.ResourceGroup g
-LEFT JOIN (SELECT m.ResourceGroupId, COUNT(*) AS n FROM ({compute.members_sql()}) m GROUP BY m.ResourceGroupId) mc ON mc.ResourceGroupId = g.Id
-WHERE g.VersionTo IS NULL
-"""
-_RESOURCE_TYPES = {"Id": sa.BigInteger(), "Code": sa.Unicode(50), "Name": sa.Unicode(200), "Groups": sa.Unicode(400), "ProductionLocation": sa.Unicode(100),
-                   "IsActive": sa.Boolean(), "RemainingOvertimeMonth": sa.Numeric(9, 2), "RemainingOvertimeYear": sa.Numeric(9, 2), "GroupKeys": sa.Unicode(400),
-                   "CapacityUnit": sa.Unicode(20)}
-_RESOURCE_SQL = f"""
-SELECT r.Id, r.Code, r.Name, mg.Groups, r.ProductionLocation, COALESCE(r.IsActive, 1) AS IsActive,
-       r.RemainingOverTimeMonth AS RemainingOvertimeMonth, r.RemainingOverTimeYear AS RemainingOvertimeYear, mg.GroupKeys, mg.CapacityUnit
-FROM core.Resource r
-OUTER APPLY (SELECT STRING_AGG(CAST(g.Code AS nvarchar(max)), N', ') WITHIN GROUP (ORDER BY g.Code) AS Groups,
-                    N',' + STRING_AGG(CAST(m.ResourceGroupId AS nvarchar(max)), N',') + N',' AS GroupKeys,
-                    CASE WHEN MIN(g.CapacityUnit) = MAX(g.CapacityUnit) THEN MIN(g.CapacityUnit) END AS CapacityUnit
-             FROM ({compute.members_sql()}) m JOIN core.ResourceGroup g ON g.Id = m.ResourceGroupId AND g.VersionTo IS NULL
-             WHERE m.ResourceId = r.Id) mg
-WHERE r.VersionTo IS NULL
-"""
+def from_master(master: ListDefinition, extra: sa.FromClause, name: str, more: tuple = (), drop: tuple[str, ...] = ()) -> sa.FromClause:
+    """Ana veri listesinin güncel satırları + kimlikle (`JoinId`) birleştirilen ek kolonlar. more: ana verinin kolonlarından türetilen ek kolonlar;
+    drop: ana verinin sunulmayan kolonları (aynı adın başka yazımıyla yeniden verilenler: SQL Server büyük küçük harf ayırmaz)."""
+    m = master.source
+    cols = [*[c for c in m.c if c.name not in drop], *[c for c in extra.c if c.name != "JoinId"], *[fn(m) for fn in more]]
+    return sa.select(*cols).select_from(m.outerjoin(extra, extra.c.JoinId == m.c.Id)).where(m.c.VersionTo.is_(None)).subquery(name)
+
+
+def master_fields(master: ListDefinition, shown: tuple[str, ...], extra: tuple[str, ...] = (), drop: tuple[str, ...] = ()) -> tuple[str, ...]:
+    """Alan sırası: önce Standart'ta açık olanlar (bugünkü sırayla), sonra ana verinin öteki alanları, sonra açık olmayan ek alanlar. "Manuel değer"
+    kolonu yok (bu listelerde elle değer girilmez)."""
+    rest = [f for f in master.fields if f != MANUAL_COLUMN and f not in shown and f not in drop]
+    return (*shown, *rest, *[f for f in extra if f not in shown])
 
 
 def _static(sql: str, types: dict, name: str) -> sa.FromClause:
     return sa.text(sql).columns(*[sa.column(n, t) for n, t in types.items()]).subquery(name)
 
 
+_GROUP_MASTER, _RESOURCE_MASTER = BY_NAME["master-resource-group"], BY_NAME["master-resource"]
+_GROUP_EXTRA = _static(f"SELECT m.ResourceGroupId AS JoinId, COUNT(*) AS n FROM ({compute.members_sql()}) m GROUP BY m.ResourceGroupId",
+                       {"JoinId": sa.BigInteger(), "n": sa.Integer()}, "cap_group_count")
+_GROUP_SHOWN = ("LocationCode", "Code", "Name", "Type", "IsCritical", "CapacityUnit", "ResourceCount")   # Lokasyon kodun solunda (K-189)
+
 RESOURCE_GROUPS = ListDefinition(
     name="capacity-resource-groups", table="core.ResourceGroup", function=FUNCTION, versioned=False,
     title="Kaynak grupları (kapasite)", file_slug="kapasite-kaynak-gruplari",
-    source=_static(_GROUP_SQL, _GROUP_TYPES, "cap_groups"),
-    fields=("Code", "Name", "Type", "IsCritical", "CapacityUnit", "ResourceCount"),
-    default_visible=("Code", "Name", "Type", "IsCritical", "CapacityUnit", "ResourceCount"),
+    source=from_master(_GROUP_MASTER, _GROUP_EXTRA, "cap_groups", more=(lambda m: sa.func.coalesce(_GROUP_EXTRA.c.n, 0).label("ResourceCount"),)),
+    fields=master_fields(_GROUP_MASTER, _GROUP_SHOWN), default_visible=_GROUP_SHOWN,
     default_sort=(("Code", "asc"),),
-    server_values=frozenset({"Type", "CapacityUnit"}),
-    labels={"Code": "Kaynak grubu", "Name": "Ad", "Type": "Tip", "IsCritical": "Kritik", "CapacityUnit": "Kapasite birimi", "ResourceCount": "Kaynak sayısı"},
+    server_values=_GROUP_MASTER.server_values | frozenset({"Type", "CapacityUnit"}),
+    decimals=dict(_GROUP_MASTER.decimals), values=dict(_GROUP_MASTER.values),
+    labels={**_GROUP_MASTER.labels, "Code": "Kaynak grubu", "Name": "Ad", "Type": "Tip", "IsCritical": "Kritik", "CapacityUnit": "Kapasite birimi",
+            "ResourceCount": "Kaynak sayısı"},
+    filter_only=("Id",), related_table="ResourceGroup",
 )
+
+_RESOURCE_EXTRA_TYPES = {"JoinId": sa.BigInteger(), "Groups": sa.Unicode(400), "GroupKeys": sa.Unicode(400), "CapacityUnit": sa.Unicode(20)}
+_RESOURCE_EXTRA = _static(f"""
+SELECT m.ResourceId AS JoinId, STRING_AGG(CAST(g.Code AS nvarchar(max)), N', ') WITHIN GROUP (ORDER BY g.Code) AS Groups,
+       N',' + STRING_AGG(CAST(m.ResourceGroupId AS nvarchar(max)), N',') + N',' AS GroupKeys,
+       CASE WHEN MIN(g.CapacityUnit) = MAX(g.CapacityUnit) THEN MIN(g.CapacityUnit) END AS CapacityUnit
+FROM ({compute.members_sql()}) m JOIN core.ResourceGroup g ON g.Id = m.ResourceGroupId AND g.VersionTo IS NULL GROUP BY m.ResourceId
+""", _RESOURCE_EXTRA_TYPES, "cap_resource_groups")
+# 7.9'daki alan adları korunur (kayıtlı görünümler): kalan fazla mesai bu listede "Overtime" yazımıyla; ana verideki "OverTime" yazımlı alanlar sunulmaz
+_RESOURCE_SHOWN = ("LocationCode", "Code", "Name", "Groups", "ProductionLocation", "IsActive", "RemainingOvertimeMonth", "RemainingOvertimeYear")
+_RESOURCE_DROP = ("RemainingOverTimeMonth", "RemainingOverTimeYear")
 
 RESOURCES = ListDefinition(
     name="capacity-resources", table="core.Resource", function=FUNCTION, versioned=False,
     title="Kaynaklar (kapasite)", file_slug="kapasite-kaynaklar",
-    source=_static(_RESOURCE_SQL, _RESOURCE_TYPES, "cap_resources"),
-    fields=("Code", "Name", "Groups", "ProductionLocation", "IsActive", "RemainingOvertimeMonth", "RemainingOvertimeYear"),
-    default_visible=("Code", "Name", "Groups", "ProductionLocation", "IsActive", "RemainingOvertimeMonth", "RemainingOvertimeYear"),
+    source=from_master(_RESOURCE_MASTER, _RESOURCE_EXTRA, "cap_resources",
+                       more=(lambda m: m.c.RemainingOverTimeMonth.label("RemainingOvertimeMonth"), lambda m: m.c.RemainingOverTimeYear.label("RemainingOvertimeYear")),
+                       drop=_RESOURCE_DROP),
+    fields=master_fields(_RESOURCE_MASTER, _RESOURCE_SHOWN, drop=_RESOURCE_DROP), default_visible=_RESOURCE_SHOWN,
     default_sort=(("Code", "asc"),),
-    server_values=frozenset({"ProductionLocation"}),
-    decimals={"RemainingOvertimeMonth": 2, "RemainingOvertimeYear": 2},
-    labels={"Code": "Kaynak", "Name": "Ad", "Groups": "Kaynak grupları", "ProductionLocation": "Üretim yeri", "IsActive": "Aktif",
+    server_values=_RESOURCE_MASTER.server_values | frozenset({"ProductionLocation"}),
+    decimals={**{f: d for f, d in _RESOURCE_MASTER.decimals.items() if f not in _RESOURCE_DROP}, "RemainingOvertimeMonth": 2, "RemainingOvertimeYear": 2},
+    values=dict(_RESOURCE_MASTER.values),
+    labels={**_RESOURCE_MASTER.labels, "Code": "Kaynak", "Name": "Ad", "Groups": "Kaynak grupları", "ProductionLocation": "Üretim yeri", "IsActive": "Aktif",
             "RemainingOvertimeMonth": "Kalan fazla mesai (ay)", "RemainingOvertimeYear": "Kalan fazla mesai (yıl)", "GroupKeys": "Grup anahtarları",
             "CapacityUnit": "Kapasite birimi"},
     notes={"RemainingOvertimeMonth": "ERP'den (saat)", "RemainingOvertimeYear": "ERP'den (saat)"},
-    filter_only=("GroupKeys",), key_fields=("CapacityUnit",),
+    filter_only=("Id", "GroupKeys"), key_fields=("CapacityUnit",), related_table="Resource",
 )
 
 # --- Giriş tabloları -------------------------------------------------------------------------------------------------------------------
 
 _COMMON = {"Id": sa.BigInteger(), "StoredId": sa.BigInteger(), "Origin": sa.Unicode(20), "IsValid": sa.Boolean(), "OverriddenFields": sa.Unicode(400),
            "BaseValues": sa.UnicodeText()}
-_OWNER = {"Level": sa.Unicode(10), "Code": sa.Unicode(50), "ResourceGroupId": sa.BigInteger(), "ResourceId": sa.BigInteger(), "OwnerKeys": sa.Unicode(400),
-          "CapacityUnit": sa.Unicode(20)}
-_COMMON_LABELS = {"Origin": "Kaynağı", "IsValid": "Geçerli", "Level": "Seviye", "Code": "Kod", "CapacityUnit": "Birim", "ValidFrom": "Başlangıç", "ValidTo": "Bitiş",
+_OWNER = {"Level": sa.Unicode(10), "LocationCode": sa.Unicode(50), "Code": sa.Unicode(50), "ResourceGroupId": sa.BigInteger(), "ResourceId": sa.BigInteger(),
+          "OwnerKeys": sa.Unicode(400), "CapacityUnit": sa.Unicode(20), "LocationId": sa.Integer()}
+# Lokasyon alanı (K-189, genel kural): kaynağın ya da grubun kodunu gösteren her tabloda Lokasyon tablonun kendi alanıdır (kod tek başına kaydı tanımlamaz)
+LOCATION_LABEL = "Lokasyon"
+_LOCATION_CODE = "(SELECT l.Code FROM core.Location l WHERE l.Id = {0})"
+# İlişkili alanlar (K-182, K-189): satırın taşıdığı üç kimlik birinci seviye ilişkidir. Kayıt gruba girildiyse Kaynak, kaynağa girildiyse Kaynak grubu boştur;
+# Lokasyon sahibinin lokasyonudur (kaynağın, yoksa grubun).
+OWNER_LINKS = (("ResourceGroupId", "Kaynak grubu"), ("ResourceId", "Kaynak"), ("LocationId", "Lokasyon"))
+_COMMON_LABELS = {"Origin": "Kaynağı", "IsValid": "Geçerli", "Level": "Seviye", "LocationCode": "Lokasyon", "Code": "Kod", "CapacityUnit": "Birim", "ValidFrom": "Başlangıç", "ValidTo": "Bitiş",
                   "StartDate": "Başlangıç", "EndDate": "Bitiş", "OwnerKeys": "Sahip anahtarları", "ResourceId": "Kaynak no", "ResourceGroupId": "Kaynak grubu no",
                   "StoredId": "Saklanan satır", "OverriddenFields": "Senaryoda değişen alanlar", "BaseValues": "Baz değerleri"}
 _NOTES = {"Origin": "Baz: Baz senaryodan okunur · Senaryo farkı: Baz satırı bu senaryoda değiştirildi · Senaryo: yalnız bu senaryoda",
@@ -99,8 +122,9 @@ _UNIT = (f"COALESCE(g.CapacityUnit, (SELECT CASE WHEN MIN(g2.CapacityUnit) = MAX
 _GROUP_KEYS = ("CASE WHEN z.ResourceId IS NULL THEN N',g' + CAST(z.ResourceGroupId AS nvarchar(20)) + N',' ELSE N',r' + CAST(z.ResourceId AS nvarchar(20)) + N',' + "
                "COALESCE((SELECT STRING_AGG(N'g' + CAST(m3.ResourceGroupId AS nvarchar(max)), N',') + N',' "
                f"FROM ({compute.members_sql()}) m3 WHERE m3.ResourceId = z.ResourceId), N'') END")
-_OWNER_SELECT = (f"CASE WHEN z.ResourceId IS NULL THEN N'Grup' ELSE N'Kaynak' END AS [Level], COALESCE(r.Code, g.Code) AS Code, z.ResourceGroupId, z.ResourceId, "
-                 f"{_GROUP_KEYS} AS OwnerKeys, {_UNIT} AS CapacityUnit")
+_OWNER_SELECT = (f"CASE WHEN z.ResourceId IS NULL THEN N'Grup' ELSE N'Kaynak' END AS [Level], {_LOCATION_CODE.format('COALESCE(r.LocationId, g.LocationId)')} AS LocationCode, "
+                 "COALESCE(r.Code, g.Code) AS Code, z.ResourceGroupId, z.ResourceId, "
+                 f"{_GROUP_KEYS} AS OwnerKeys, {_UNIT} AS CapacityUnit, COALESCE(r.LocationId, g.LocationId) AS LocationId")
 _OWNER_JOIN = ("LEFT JOIN core.Resource r ON r.Id = z.ResourceId AND r.VersionTo IS NULL "
                "LEFT JOIN core.ResourceGroup g ON g.Id = z.ResourceGroupId AND g.VersionTo IS NULL")
 # Baz senaryoda (ve Baz'ı izlemeyen senaryoda) kendi satırı: Baz'da "Baz", ötekinde "Senaryo"
@@ -135,7 +159,7 @@ def _entry(name: str, table: str, title: str, slug: str, values: dict, select: s
     sql = f"SELECT {head}{select} FROM ({_resolved(table)}) z {_OWNER_JOIN if owner else ''}{extra_sql}"
     if wrap is not None:   # listenin üstüne hesaplanan kolon (ör. "Gün")
         sql = wrap(sql)
-    shown = (*(("Level", "Code") if owner else ()), *[f for f in values if f not in ("CapacityUnit",)], "Origin", "IsValid")
+    shown = (*(("Level", "LocationCode", "Code") if owner else ()), *[f for f in values if f not in ("CapacityUnit",)], "Origin", "IsValid")
     if owner and "CapacityUnit" in labels:           # Birim, değerin hemen ardında
         at = shown.index(labels["CapacityUnit"]) + 1
         shown = (*shown[:at], "CapacityUnit", *shown[at:])
@@ -144,11 +168,12 @@ def _entry(name: str, table: str, title: str, slug: str, values: dict, select: s
         source=skeleton(types, "cap"), source_factory=_source(sql, types, "cap"),
         fields=shown, default_visible=shown,
         default_sort=sort or ((("Level", "asc"), ("Code", "asc"), (start, "asc")) if owner else ((start, "asc"),)),
-        server_values=frozenset({"Code", "CapacityUnit"} if owner else set()),
+        server_values=frozenset({"LocationCode", "Code", "CapacityUnit"} if owner else set()),
         decimals=decimals or {}, unit_field="CapacityUnit" if unit_decimals else None, unit_decimals=frozenset(unit_decimals),
         values={"Origin": ["Baz", "Senaryo farkı", "Senaryo", ERP], "Level": ["Grup", "Kaynak"], **(lists or {})},
         labels={**_COMMON_LABELS, **{k: v for k, v in labels.items() if k != "CapacityUnit"}}, notes=_NOTES,
         key_fields=(*KEYS, *(OWNER_KEYS if owner else ())), filter_only=("OwnerKeys",) if owner else (),
+        related_table=relations.register_links(name, OWNER_LINKS) if owner else None,   # fabrika takviminin sahibi yok: ilişkili alanı yok
     )
 
 
@@ -181,10 +206,11 @@ def _with_lost_days(sql: str) -> str:
 
 
 _LEAVE_SQL = (f" UNION ALL SELECT -ab.Id AS Id, CAST(NULL AS bigint) AS StoredId, N'{ERP}' AS Origin, CAST(1 AS bit) AS IsValid, CAST(NULL AS varchar(400)) AS OverriddenFields, "
-              "CAST(NULL AS nvarchar(max)) AS BaseValues, N'Kaynak' AS [Level], r.Code, CAST(NULL AS bigint) AS ResourceGroupId, ab.ResourceId, "
+              "CAST(NULL AS nvarchar(max)) AS BaseValues, N'Kaynak' AS [Level], " + _LOCATION_CODE.format("r.LocationId") + " AS LocationCode, r.Code, "
+              "CAST(NULL AS bigint) AS ResourceGroupId, ab.ResourceId, "
               "N',r' + CAST(ab.ResourceId AS nvarchar(20)) + N',' + COALESCE((SELECT STRING_AGG(N'g' + CAST(m4.ResourceGroupId AS nvarchar(max)), N',') + N',' "
               f"FROM ({compute.members_sql()}) m4 WHERE m4.ResourceId = ab.ResourceId), N'') AS OwnerKeys, "
-              f"CAST(NULL AS nvarchar(20)) AS CapacityUnit, N'{LEAVE_TYPE}' AS DowntimeType, CAST(ab.AbsenceType AS nvarchar(255)) AS Reason, ab.StartDate, ab.EndDate "
+              f"CAST(NULL AS nvarchar(20)) AS CapacityUnit, r.LocationId, N'{LEAVE_TYPE}' AS DowntimeType, CAST(ab.AbsenceType AS nvarchar(255)) AS Reason, ab.StartDate, ab.EndDate "
               "FROM core.EmployeeAbsence ab JOIN core.Resource r ON r.Id = ab.ResourceId AND r.VersionTo IS NULL WHERE ab.VersionTo IS NULL")
 DOWNTIME = _entry(
     "capacity-downtime", "ResourceDowntime", "Bakım ve duruşlar", "kapasite-bakim-ve-duruslar",
@@ -204,9 +230,10 @@ ENTRY_LISTS = (WORK_PATTERNS, EFFICIENCY, OVERTIME_LIMITS, DOWNTIME, FACTORY_CAL
 
 # --- Geçerlilik (7.9c, K-188): kaynak grubu × kaynak × aralık; salt okunur -------------------------------------------------------------
 
-_VALIDITY_HEAD = {"Id": sa.BigInteger(), "ResourceGroupId": sa.BigInteger(), "ResourceId": sa.BigInteger(), "GroupCode": sa.Unicode(50), "Code": sa.Unicode(50),
+_VALIDITY_HEAD = {"Id": sa.BigInteger(), "ResourceGroupId": sa.BigInteger(), "ResourceId": sa.BigInteger(), "LocationCode": sa.Unicode(50), "GroupCode": sa.Unicode(50),
+                  "Code": sa.Unicode(50),
                   "ValidFrom": sa.Date(), "ValidTo": sa.Date()}
-_VALIDITY_TAIL = {"CapacityUnit": sa.Unicode(20), "SourceRecord": sa.Unicode(120), "SourceRowId": sa.BigInteger(), "SourceSpan": sa.Unicode(160),
+_VALIDITY_TAIL = {"LocationId": sa.Integer(), "CapacityUnit": sa.Unicode(20), "SourceRecord": sa.Unicode(120), "SourceRowId": sa.BigInteger(), "SourceSpan": sa.Unicode(160),
                   "SourceLevel": sa.Unicode(10), "SourceOrigin": sa.Unicode(20), "OwnerKeys": sa.Unicode(100)}
 _DATE = "CONVERT(nvarchar(10), {0}, 104)"
 _SPAN = (f"CASE WHEN v.RecTo IS NULL THEN {_DATE.format('v.RecFrom')} + NCHAR(39) + N'dan itibaren' ELSE {_DATE.format('v.RecFrom')} + N' – ' + {_DATE.format('v.RecTo')} END")
@@ -215,15 +242,16 @@ _SPAN = (f"CASE WHEN v.RecTo IS NULL THEN {_DATE.format('v.RecFrom')} + NCHAR(39
 def _validity(kind: str, title: str, slug: str, values: dict, select: str, labels: dict, *, decimals=None, unit_decimals=(), lists=None) -> ListDefinition:
     table, fields = validity.KINDS[kind]
     types = {**_VALIDITY_HEAD, **values, **_VALIDITY_TAIL}
-    sql = (f"SELECT ROW_NUMBER() OVER (ORDER BY v.ResourceGroupId, v.ResourceId, v.ValidFrom) AS Id, v.ResourceGroupId, v.ResourceId, g.Code AS GroupCode, r.Code, "
-           f"v.ValidFrom, v.ValidTo, {select}, g.CapacityUnit, src.Label + N' · ' + {_DATE.format('v.RecFrom')} AS SourceRecord, v.RowId AS SourceRowId, "
+    sql = (f"SELECT ROW_NUMBER() OVER (ORDER BY v.ResourceGroupId, v.ResourceId, v.ValidFrom) AS Id, v.ResourceGroupId, v.ResourceId, "
+           f"{_LOCATION_CODE.format('r.LocationId')} AS LocationCode, g.Code AS GroupCode, r.Code, "
+           f"v.ValidFrom, v.ValidTo, {select}, r.LocationId, g.CapacityUnit, src.Label + N' · ' + {_DATE.format('v.RecFrom')} AS SourceRecord, v.RowId AS SourceRowId, "
            f"src.Label + N' · ' + {_SPAN} AS SourceSpan, CASE WHEN v.lvl = 0 THEN N'Kaynak' ELSE N'Grup' END AS SourceLevel, "
            "CASE WHEN :cap_is_base = 1 THEN N'Baz' ELSE v.Origin END AS SourceOrigin, "
            "N',g' + CAST(v.ResourceGroupId AS nvarchar(20)) + N',r' + CAST(v.ResourceId AS nvarchar(20)) + N',' AS OwnerKeys "
            f"FROM ({validity.intervals_sql(table, fields, ':cap_sid', ':cap_base')}) v "
            "JOIN core.Resource r ON r.Id = v.ResourceId AND r.VersionTo IS NULL JOIN core.ResourceGroup g ON g.Id = v.ResourceGroupId AND g.VersionTo IS NULL "
            "CROSS APPLY (SELECT CASE WHEN v.lvl = 0 THEN N'Kaynak ' + r.Code ELSE N'Grup ' + g.Code END AS Label) src")
-    shown = ["GroupCode", "Code", "ValidFrom", "ValidTo", *values, "SourceRecord"]
+    shown = ["LocationCode", "GroupCode", "Code", "ValidFrom", "ValidTo", *values, "SourceRecord"]
     if unit_decimals:                                   # Birim, değerin hemen ardında
         shown.insert(shown.index(unit_decimals[0]) + 1, "CapacityUnit")
     return ListDefinition(
@@ -231,14 +259,15 @@ def _validity(kind: str, title: str, slug: str, values: dict, select: str, label
         source=skeleton(types, "capv"), source_factory=_source(sql, types, "capv"),
         fields=tuple(shown), default_visible=tuple(shown),
         default_sort=(("GroupCode", "asc"), ("Code", "asc"), ("ValidFrom", "asc")),
-        server_values=frozenset({"GroupCode", "Code", "CapacityUnit", "SourceRecord"}),
+        server_values=frozenset({"LocationCode", "GroupCode", "Code", "CapacityUnit", "SourceRecord"}),
         decimals=decimals or {}, unit_field="CapacityUnit" if unit_decimals else None, unit_decimals=frozenset(unit_decimals), values=lists or {},
-        labels={"GroupCode": "Kaynak grubu", "Code": "Kaynak", "ValidFrom": "Başlangıç", "ValidTo": "Bitiş", "CapacityUnit": "Birim", "SourceRecord": "Geçerli kayıt",
+        labels={"LocationCode": LOCATION_LABEL, "GroupCode": "Kaynak grubu", "Code": "Kaynak", "ValidFrom": "Başlangıç", "ValidTo": "Bitiş", "CapacityUnit": "Birim", "SourceRecord": "Geçerli kayıt",
                 "SourceRowId": "Geçerli kayıt no", "SourceSpan": "Geçerli kaydın aralığı", "SourceLevel": "Geçerli kaydın seviyesi",
                 "SourceOrigin": "Geçerli kaydın kaynağı", "OwnerKeys": "Sahip anahtarları", "ResourceId": "Kaynak no",
                 "ResourceGroupId": "Kaynak grubu no", **labels},
         notes={"SourceRecord": "Değerin geldiği kayıt: seviyesi, kodu ve başlangıcı"},
-        key_fields=("SourceRowId", "SourceSpan", "SourceLevel", "SourceOrigin", "ResourceGroupId", "ResourceId"), filter_only=("OwnerKeys",),
+        key_fields=("SourceRowId", "SourceSpan", "SourceLevel", "SourceOrigin", "ResourceGroupId", "ResourceId", "LocationCode"), filter_only=("OwnerKeys",),   # LocationCode: zaman çubuğu etiketi (alan kapalıyken de)
+        related_table=relations.register_links(f"capacity-{kind}-validity", OWNER_LINKS),
     )
 
 

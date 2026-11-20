@@ -28,6 +28,8 @@ FIELD_LABELS = {
     "ValidFrom": "Başlangıç", "ValidTo": "Bitiş", "StartDate": "Başlangıç", "EndDate": "Bitiş", "DailyCapacity": "Günlük kapasite", "EfficiencyPct": "Verimlilik (%)",
     "DailyLimit": "Günlük limit", "DowntimeType": "Tip", "Reason": "Sebep", "DayValue": "Çalışma", "IsValid": "Geçerli",
     "DayMon": "Pzt", "DayTue": "Sal", "DayWed": "Çar", "DayThu": "Per", "DayFri": "Cum", "DaySat": "Cmt", "DaySun": "Paz",
+    # Model kısıtları (K-189)
+    "UnconstrainedCapacityFactor": "Kısıtsız kapasite çarpanı", "TargetUtilizationPct": "Hedef doluluk (%)",
     # Senaryolar (K-177)
     "FollowsBase": "Baz'ı izler", "RunsNightly": "Gece çalışsın", "NightlyPriority": "Gece sırası", "plan_versions": "Plan versiyonu sayısı",
     # İş

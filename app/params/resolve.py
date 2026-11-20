@@ -22,6 +22,10 @@ FIELDS: dict[str, tuple[str, ...]] = {
     "ResourceDowntime": (*OWNER, "StartDate", "EndDate", "DowntimeType", "Reason"),
     "FactoryCalendar": ("StartDate", "EndDate", "Name", "DayValue"),
 }
+# Kapasite hesabına giren tablolar (önbelleğin "senaryonun kendi girişi var mı" sorusu yalnız bunlara bakar)
+CAPACITY_TABLES = tuple(FIELDS)
+# Model kısıtları (K-189): kaynak grubu başına tarihsiz iki değer; kapasite hesabına girmez
+FIELDS["ResourceGroupConstraint"] = ("ResourceGroupId", "UnconstrainedCapacityFactor", "TargetUtilizationPct")
 BASE, DIFF, OWN = "Baz", "Senaryo farkı", "Senaryo"
 
 
@@ -49,7 +53,7 @@ def sql(table: str, valid_only: bool = True, sid: str = ":sid", base: str = ":ba
     return f"SELECT z.* FROM ({union}) z WHERE z.IsValid = 1" if valid_only else union
 
 
-def has_own(session: Session, scenario_id: int, tables: tuple[str, ...] = tuple(FIELDS)) -> bool:
+def has_own(session: Session, scenario_id: int, tables: tuple[str, ...] = CAPACITY_TABLES) -> bool:
     """Senaryonun bu tablolarda saklanan satırı var mı (fark ya da kendi satırı). Yoksa izleyen senaryonun sonucu Baz'ınkiyle aynıdır."""
     for table in tables:
         if session.execute(sa.text(f"SELECT TOP 1 1 FROM param.[{table}] WHERE ScenarioDefinitionId = :s"), {"s": scenario_id}).first():

@@ -118,7 +118,7 @@ def test_lists_show_the_resolved_rows_of_the_scenario(api, db_engine, world, cle
     assert {r["Id"] for r in in_group} == {r for g, r in world["members"] if g == g1}
 
     cols = api.get("/api/capacity-work-patterns/columns").json()["columns"]
-    assert [c["label"] for c in cols] == ["Seviye", "Kod", "Başlangıç", "Bitiş", "Günlük kapasite", "Birim", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz", "Kaynağı", "Geçerli"]
+    assert [c["label"] for c in cols] == ["Seviye", "Lokasyon", "Kod", "Başlangıç", "Bitiş", "Günlük kapasite", "Birim", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz", "Kaynağı", "Geçerli"]
     in_base, in_follower = rows(api, WP, base), rows(api, WP, follower)
     assert in_base and {r["Origin"] for r in in_base} == {"Baz"} and {r["Origin"] for r in in_follower} == {"Baz"}
     assert [r["Id"] for r in in_base] == [r["Id"] for r in in_follower]                       # izleyen senaryo Baz'ın satırlarını aynı kimlikle okur

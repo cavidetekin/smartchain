@@ -32,6 +32,7 @@ def _lit(text: str) -> sa.ColumnElement:
 
 fc, dv, u, r, fd = FIELD_CHANGE, DATA_VERSION, USER, RULE, FIELDS_DEF
 CAPACITY_SOURCE = "Kapasite yönetimi"
+MODEL_SOURCE = "Model kısıtları"   # K-189
 LABEL_KEYS = ("Code", "OrderNo", "PurchaseOrderNo", "WorkOrderNo", "ConfirmationNo", "RouteCode")  # kartın label_of'uyla aynı sıra
 
 
@@ -68,7 +69,7 @@ SOURCE = sa.select(
             (fc.c.Source == MANUAL_SOURCE, _lit(MANUAL_SOURCE) + _by),
             (fc.c.Source == MANUAL_REMOVE, _lit("Manuel değer kaldırıldı") + _by),
             # Kapasite yönetimi (K-185): Baz dışındaki senaryoda yapılan değişiklikte senaryonun adı (notta)
-            (fc.c.Source == CAPACITY_SOURCE, fc.c.Source + sa.case((fc.c.Note.is_(None), _lit("")), else_=_lit(" · ") + fc.c.Note) + _by),
+            (fc.c.Source.in_((CAPACITY_SOURCE, MODEL_SOURCE)), fc.c.Source + sa.case((fc.c.Note.is_(None), _lit("")), else_=_lit(" · ") + fc.c.Note) + _by),
             else_=fc.c.Source + _by).label("SourceText"),
     _person.label("ChangedBy"),   # Değiştiren (K-185): kişi; aktarımda boş
 ).select_from(
