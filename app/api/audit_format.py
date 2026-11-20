@@ -24,6 +24,10 @@ FIELD_LABELS = {
     "Value": "Değer", "Label": "Etiket", "Name": "Ad", "IsShared": "Paylaşılan", "Definition": "Tanım", "view_id": "Görünüm no",
     # Parametreler: hedefler (K-175)
     "Seq": "Sıra", "TimeBudgetSeconds": "Süre bütçesi (sn)", "TolerancePct": "Ödün payı (%)",
+    # Kapasite yönetimi (K-185)
+    "ValidFrom": "Başlangıç", "ValidTo": "Bitiş", "StartDate": "Başlangıç", "EndDate": "Bitiş", "DailyCapacity": "Günlük kapasite", "EfficiencyPct": "Verimlilik (%)",
+    "DailyLimit": "Günlük limit", "DowntimeType": "Tip", "Reason": "Sebep", "DayValue": "Çalışma", "IsValid": "Geçerli",
+    "DayMon": "Pzt", "DayTue": "Sal", "DayWed": "Çar", "DayThu": "Per", "DayFri": "Cum", "DaySat": "Cmt", "DaySun": "Paz",
     # Senaryolar (K-177)
     "FollowsBase": "Baz'ı izler", "RunsNightly": "Gece çalışsın", "NightlyPriority": "Gece sırası", "plan_versions": "Plan versiyonu sayısı",
     # İş

@@ -48,7 +48,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### PARAMETRE
 
 - **06 · Parametreler:** Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, planlama ufku, plan kararlılığı (K-175).
-- **30 · Kapasite yönetimi:** Seçili senaryonun kapasitesi: kaynak grubu × dönem özeti (çalışma günü, duruş, günlük kapasite, verimlilik, toplam ve kullanılabilir kapasite, ek mesai limiti); çalışma düzeni, bakım ve duruş, verimlilik, fabrika takvimi ve ek mesai limiti girişleri (7.9, K-185). Menüde Parametreler ile Senaryolar arasında. 7.9a: Kapasite özeti sekmesi uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş sekmeleri 7.9b'de.
+- **30 · Kapasite yönetimi:** Seçili senaryonun kapasitesi: kaynak grubu × dönem özeti (çalışma günü, duruş, günlük kapasite, verimlilik, toplam ve kullanılabilir kapasite, ek mesai limiti); çalışma düzeni, bakım ve duruş, verimlilik, fabrika takvimi ve ek mesai limiti girişleri (7.9, K-185). Menüde Parametreler ile Senaryolar arasında. 7.9a: Kapasite özeti sekmesi uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş sekmeleri ve kartlar uygulandı (7.9b; sürüm 0.48.0, K-187).
 - **07 · Senaryolar:** Senaryoların listesi ve yönetimi: yeni senaryo (kopyalayarak), gece çalışsın ve gece sırası, Baz'ı izler, pasif, silme (K-177).
 
 ### Ekran listesi

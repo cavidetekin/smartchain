@@ -63,7 +63,7 @@ python -m app.data.synthetic sql                                       # kirli h
 python -m app.data.synthetic check                                     # sayılar ve bilerek konmuş durumlar
 ```
 
-- **Tohum ve tarih:** Tohum 22 (MDD adım 22). Hafta 1, üretim gününün Pazartesi'sidir; bütün tarihler hafta ve gün olarak göreli tanımlanır. Tek istisna aylık tedarikçi limitidir (durum 3); takvim ayına bağlıdır.
+- **Tohum ve tarih:** Tohum 22 (MDD adım 22). Hafta 1, üretim gününün Pazartesi'sidir; bütün tarihler hafta ve gün olarak göreli tanımlanır. Tek istisna aylık tedarikçi limitidir (durum 3); takvim ayına bağlıdır. Rastgele satın alma siparişlerinin tarihi en erken üretim gününden sonraki ilk iş günüdür: hafta 1'in geçmişte kalan gününe düşen tarih oraya çekilir (set haftanın hangi günü üretilirse üretilsin beklenmeyen PO.PAST_DUE vermez).
 - **Kodlama:** mamul `MAM-001…010`, alt montaj `ALT-`, işlenmiş parça `PRC-`, hammadde `HAM-`, satın alma parçası `SAT-`, tedarikçi `TED-`, müşteri `MUS-`, satış siparişi `SO-`, satın alma `PO-`, iş emri `WO-`, çalışan `W-`.
 - **Yükleme:** Lokasyon `ORM-01` (hem tesis hem depo: `IsFactory` ve `IsDepot` 1, `IsSubcontractor` 0, `IsActive` 1; K-111), her yüklemede yeni veri versiyonu (LoadType Tam). Satırlarda `VersionFrom` = bu versiyon, `VersionTo` ve `ImportBatchId` boş, `BusinessKey` sözleşmedeki iş anahtarı. Id'ler tablo başına 1'den.
 - **Yeniden yükleme:** Önce `ORM-01`'in veri versiyonlarına bağlı her şey silinir: ana tablo satırları, o versiyonlarla açılmış plan hesapları, senaryolar, çalışmalar ve Baz senaryoya bağlanmış sentetik satırlar (öncelik kuralı, tedarikçi limiti). Baz'ın parametrelerine dokunulmaz (K-175). Hepsi tek işlemde yapılır.

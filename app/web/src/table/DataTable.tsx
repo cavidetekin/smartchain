@@ -251,6 +251,47 @@ interface RowEditing {
 }
 type Move = "down" | "right" | "left" | null;
 
+/** Listeli hücrenin düzenleyicisi (K-187): liste açık gelir (ikinci tık gerekmez). Ok tuşları ya da seçeneğin baş harfi işaretler; Enter taslağa
+ *  alıp alttaki hücreye, Tab sağdaki hücreye geçer; tıklamak seçer; Esc ve odak kaybı vazgeçer. Liste ekranda sabit konumdadır (tablonun
+ *  kaydırma kutusu kesmez). */
+function CellListBox({ spec, label, onDone }: { spec: EditorSpec; label: string; onDone(result: { text: string; move: Move } | null): void }) {
+  const options = spec.options ?? [];
+  const [active, setActive] = useState(Math.max(0, options.indexOf(spec.text)));
+  const anchor = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  useFloating(list, anchor, true);
+  useEffect(() => list.current?.focus({ preventScroll: true }), []);
+  const fold = (t: string) => t.toLocaleLowerCase("tr");
+  const onKey = (e: KeyboardEvent<HTMLUListElement>) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") setActive((i) => (options.length ? (i + (e.key === "ArrowDown" ? 1 : -1) + options.length) % options.length : 0));
+    else if (e.key === "Enter") onDone({ text: options[active] ?? spec.text, move: "down" });
+    else if (e.key === "Tab") onDone({ text: options[active] ?? spec.text, move: e.shiftKey ? "left" : "right" });
+    else if (e.key === "Escape") onDone(null);
+    else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {   // baş harfle seçim; aynı harfle sıradaki
+      const from = fold(options[active]?.charAt(0) ?? "") === fold(e.key) ? active + 1 : 0;
+      const order = [...options.keys()].map((i) => (i + from) % options.length);
+      const hit = order.find((i) => fold(options[i].charAt(0)) === fold(e.key));
+      if (hit === undefined) return;
+      setActive(hit);
+    } else return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const keep = (e: ReactMouseEvent) => { e.preventDefault(); e.stopPropagation(); };   // hücreye yeniden tıklamak listeyi kapatmaz
+  return (
+    <div ref={anchor} className="sc-cell-editor sc-cell-list-anchor" onMouseDown={keep} onClick={keep} onDoubleClick={keep}>
+      <span>{spec.text}</span>
+      <ul ref={list} role="listbox" aria-label={label} tabIndex={0} className="sc-cell-list sc-floating" style={{ minWidth: anchor.current?.offsetWidth }}
+          aria-activedescendant={undefined} onKeyDown={onKey} onBlur={() => onDone(null)}>
+        {options.map((o, i) => (
+          <li key={o} role="option" aria-selected={o === spec.text} className={i === active ? "is-active" : undefined} onMouseEnter={() => setActive(i)}
+              onClick={(e) => { e.stopPropagation(); onDone({ text: o, move: null }); }}>{o}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Hücreyi kaplayan düzenleyici: Enter ve Tab taslağa alır, sonraki hücreye geçer; Esc vazgeçer; odak kaybı taslağa alır. */
 function CellEditorBox({ spec, label, initial, onDone }: {
   spec: EditorSpec; label: string; initial: string | null; onDone(result: { text: string; move: Move } | null): void;
@@ -258,12 +299,15 @@ function CellEditorBox({ spec, label, initial, onDone }: {
   const [text, setText] = useState(initial !== null && spec.kind === "text" ? initial : spec.text);
   const done = useRef(false);
   const box = useRef<HTMLInputElement & HTMLSelectElement>(null);
-  useEffect(() => {  // odak kaydırmasız (tablo kaymasın); metinde imleç sona
+  useEffect(() => {  // odak kaydırmasız (tablo kaymasın). Yazarak açıldıysa imleç sonda; çift tık, Enter ya da F2 ile açıldıysa değer seçili (K-187)
     const el = box.current;
     if (!el) return;
     el.focus({ preventScroll: true });
-    if (el instanceof HTMLInputElement) el.setSelectionRange(el.value.length, el.value.length);
-  }, []);
+    if (el instanceof HTMLInputElement) {
+      if (initial === null) el.select();
+      else el.setSelectionRange(el.value.length, el.value.length);
+    }
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
   const finish = (result: { text: string; move: Move } | null) => {
     if (done.current) return;
     done.current = true;
@@ -278,14 +322,7 @@ function CellEditorBox({ spec, label, initial, onDone }: {
     e.stopPropagation();
   };
   const stop = (e: ReactMouseEvent) => e.stopPropagation();
-  if (spec.kind === "select") {
-    return (
-      <select ref={box} className="sc-cell-editor" aria-label={label} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey}
-              onBlur={() => finish({ text, move: null })} onClick={stop} onDoubleClick={stop}>
-        {(spec.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
-    );
-  }
+  if (spec.kind === "select") return <CellListBox spec={spec} label={label} onDone={finish} />;
   return (
     <input ref={box} className="sc-cell-editor" aria-label={label} value={text} placeholder={spec.placeholder} onChange={(e) => setText(e.target.value)}
            onKeyDown={onKey} onBlur={() => finish({ text, move: null })} onClick={stop} onDoubleClick={stop} />
@@ -356,7 +393,11 @@ const DataRow = memo(function DataRow({ index, row, cells, selected, picked, onS
               {...(edit || onMenu ? { "data-cell": `${index}|${col.field}` } : {})}
               {...(edit ? {
                 tabIndex: isCursor ? 0 : -1,
-                onClick: () => edit.onCell(index, col.field),
+                onClick: (e: ReactMouseEvent) => {
+                  edit.onCell(index, col.field);
+                  // listeli hücre tek tıkla liste açık gelir (K-187); Ctrl / Shift ile tıklamak satır seçimidir
+                  if (editable && row && !open && !e.ctrlKey && !e.shiftKey && !e.metaKey && edit.spec.editor(col, row).kind === "select") edit.onStart(index, col.field);
+                },
                 onDoubleClick: editable ? () => edit.onStart(index, col.field) : undefined,
               } : onPick ? { onClick: () => onPick(index, col.field) } : {})}
               onContextMenu={row && onMenu ? (e: ReactMouseEvent<HTMLTableCellElement>) => {  // hücrenin tamamında (metnin dışında da)
@@ -473,10 +514,10 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   }, [list]);
   const [chunkSize, setChunkSize] = useState(0);
   const [exportInfo, setExportInfo] = useState<ExportInfo | null>(null);
-  const [period, setPeriod] = useState<{ table: boolean; standardPivot?: unknown; calculated: CalculatedValue[]; chartValue?: string }>({ table: false, calculated: [] });
+  const [period, setPeriod] = useState<{ table: boolean; scenario?: boolean; standardPivot?: unknown; calculated: CalculatedValue[]; chartValue?: string }>({ table: false, calculated: [] });
   const scenarioRef = useRef(scenario?.id);
   scenarioRef.current = scenario?.id;
-  if (period.table) setListScenario(list, scenario?.id);  // senaryo değişince sonraki istekler yenisini taşır
+  if (period.table || period.scenario) setListScenario(list, scenario?.id);  // senaryo değişince sonraki istekler yenisini taşır
   const [pivotExporting, setPivotExporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [columnsError, setColumnsError] = useState<ApiError | null>(null);
@@ -516,10 +557,10 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   useEffect(() => {
     const ctrl = new AbortController();
     listApi(list).columns(ctrl.signal)
-      .then(({ columns: cols, chunk_size, export: info, relations: rels, period_table, standard_pivot, calculated_values, chart_value }) => {
+      .then(({ columns: cols, chunk_size, export: info, relations: rels, period_table, scenario_list, standard_pivot, calculated_values, chart_value }) => {
         // Dönem tablosu (K-184): istekler seçili senaryoyu taşır; ürünün Standart'ı pivot; hazır hesaplanan değerler
-        setListScenario(list, period_table ? scenarioRef.current : undefined);
-        setPeriod({ table: Boolean(period_table), standardPivot: standard_pivot, calculated: calculated_values ?? [], chartValue: chart_value });
+        setListScenario(list, period_table || scenario_list ? scenarioRef.current : undefined);
+        setPeriod({ table: Boolean(period_table), scenario: Boolean(scenario_list), standardPivot: standard_pivot, calculated: calculated_values ?? [], chartValue: chart_value });
         setColumns(cols);
         setRelations(rels ?? []);
         onColumns?.(cols);
@@ -744,7 +785,15 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
   const finishEdit = useCallback((index: number, field: string, result: { text: string; move: Move } | null) => {
     const row = rowAtIndex(index);
     const col = byField.get(field);
-    if (result && row && col && cellEditing) cellEditing.commit(col, row, result.text);
+    if (result && row && col && cellEditing) {
+      cellEditing.commit(col, row, result.text);
+      const selection = selectionRef.current;
+      if (selection && selection.ids.length > 1 && selection.ids.includes(String(row.Id))) {
+        void selection.rows().then((rows) => rows.forEach((other) => {
+          if (other.Id !== row.Id && cellEditing.canEdit(col, other)) cellEditing.commit(col, other, result.text);
+        }));
+      }
+    }
     setOpenCell(null);
     if (result?.move) moveCursor({ index, field }, result.move === "down" ? 1 : 0, result.move === "right" ? 1 : result.move === "left" ? -1 : 0);
   }, [rowAtIndex, byField, cellEditing, moveCursor]);
@@ -821,9 +870,27 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
         if (!row || !col || !cellEditing?.clear?.(col, row)) return;
         break;
       }
-      default:
+      default: {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {   // aşağı doldur (K-187): en üstteki seçili satırın değeri öteki seçili satırlara
+          const col = byField.get(cursor.field);
+          const selection = selectionRef.current;
+          if (!col || !cellEditing || !selection || selection.ids.length < 2) return;
+          const ids = new Set(selection.ids);
+          const source = loadedRows().find((r) => ids.has(String(r.Id)));
+          if (!source) return;
+          const text = cellEditing.editor(col, source).text;
+          void selection.rows().then((rows) => rows.forEach((other) => {
+            if (other.Id !== source.Id && cellEditing.canEdit(col, other)) cellEditing.commit(col, other, text);
+          }));
+          break;
+        }
         if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
-        startEdit(cursor.index, cursor.field, e.key);  // yazmaya başlamak düzenleyiciyi açar
+        const row = rowAtIndex(cursor.index);
+        const col = byField.get(cursor.field);
+        // listeli hücrede harf listeyi açar (baş harfle seçim listede sürer); metin ve sayıda yazılan harf değerin yerine geçer
+        const listed = Boolean(row && col && cellEditing?.canEdit(col, row) && cellEditing.editor(col, row).kind === "select");
+        startEdit(cursor.index, cursor.field, listed ? null : e.key);
+      }
     }
     e.preventDefault();
   };
@@ -1102,7 +1169,8 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     }
     anchorRef.current = index;
     plainRef.current = true;
-    if (picked.size) setPicked(new Set());
+    // düzenlenebilir tabloda seçili satırın hücresine tıklamak seçimi bozmaz (K-187: girilen değer seçili satırların hepsine uygulanır)
+    if (picked.size && !(gridOn && picked.has(id))) setPicked(new Set());
     setSelectedId(row.Id);
     return false;
   };

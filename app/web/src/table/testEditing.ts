@@ -14,21 +14,32 @@ export function cellOf(rowText: string, header: string): HTMLElement {
   return row.children[index] as HTMLElement;
 }
 
-/** Çift tıklayıp düzenleyiciyi açar. */
-export async function openEditor(user: User, cell: HTMLElement): Promise<HTMLInputElement | HTMLSelectElement> {
-  await user.dblClick(cell);
-  const editor = cell.querySelector<HTMLInputElement | HTMLSelectElement>(".sc-cell-editor");
+/** Düzenleyiciyi açar: önce tek tık (listeli hücrede liste açık gelir, K-187); açılmadıysa çift tık (metin ve sayı). */
+export async function openEditor(user: User, cell: HTMLElement): Promise<HTMLInputElement | HTMLElement> {
+  await user.click(cell);
+  let editor = cell.querySelector<HTMLInputElement | HTMLElement>(".sc-cell-editor");
+  if (!editor) {
+    await user.dblClick(cell);
+    editor = cell.querySelector<HTMLInputElement | HTMLElement>(".sc-cell-editor");
+  }
   if (!editor) throw new Error("düzenleyici açılmadı");
   return editor;
 }
 
+/** Açık listeli hücrenin seçenekleri. */
+export const listOptions = (cell: HTMLElement): HTMLElement[] => [...cell.querySelectorAll<HTMLElement>(".sc-cell-list [role='option']")];
+
 /** Hücreye değer girer ve Enter ile taslağa alır. */
 export async function setCell(user: User, rowText: string, header: string, value: string): Promise<void> {
-  const editor = await openEditor(user, cellOf(rowText, header));
-  if (editor instanceof HTMLSelectElement) await user.selectOptions(editor, value);
-  else {
-    await user.clear(editor);
-    if (value) await user.type(editor, value);
+  const cell = cellOf(rowText, header);
+  const editor = await openEditor(user, cell);
+  if (!(editor instanceof HTMLInputElement)) {   // listeli hücre: seçenek tıklanır, taslağa alınır
+    const option = listOptions(cell).find((o) => o.textContent === value);
+    if (!option) throw new Error(`seçenek yok: ${value}`);
+    await user.click(option);
+    return;
   }
+  await user.clear(editor);
+  if (value) await user.type(editor, value);
   await user.keyboard("{Enter}");
 }

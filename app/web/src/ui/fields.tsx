@@ -62,8 +62,10 @@ export function TextField({ label, help, error, required, tip, value, onChange, 
 }
 
 /** Sayı: Inter, eşit genişlikte rakam (K-86), sağa yaslı; "1.234,5" biçiminde girilir; geçersizse hata ve değer değişmez. */
-export function NumberField({ label, help, error, required, tip, value, onChange, decimals = 0, ...rest }: InputProps & {
-  value: number | null; onChange(v: number | null): void; decimals?: number;
+export function NumberField({ label, help, error, required, tip, value, onChange, decimals = 0, unit, live = false, ...rest }: InputProps & {
+  value: number | null; onChange(v: number | null): void; decimals?: number; live?: boolean;
+  /** Birim kutunun içinde sağda yazar (K-187; ör. grubun kapasite birimi). */
+  unit?: string | null;
 }) {
   const id = useId();
   const [text, setText] = useState(value === null ? "" : formatNumber(value, decimals));
@@ -86,12 +88,21 @@ export function NumberField({ label, help, error, required, tip, value, onChange
     }
   };
   const shownError = error ?? (invalid ? tr.ui.invalidNumber : undefined);
+  // live: değer yazarken de bildirilir (ör. zorunlu alan dolunca Kaydet hemen açılsın, K-187); değilse odak çıkınca ya da Enter'da
+  const typed = (value_: string) => {
+    setText(value_);
+    if (!live) return;
+    if (!value_.trim()) onChange(null);
+    else { const n = parseTrNumber(value_); if (n !== null) onChange(n); }
+  };
+  const box = (
+    <input id={id} className="sc-input sc-input--number" inputMode="decimal" value={text} required={required}
+           aria-invalid={Boolean(shownError)} aria-describedby={describedBy(id, { label, help, error: shownError, tip })}
+           onChange={(e) => typed(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && commit()} {...rest} />
+  );
   return (
     <Field {...{ label, help, error: shownError, required, tip, id }}>
-      <input id={id} className="sc-input sc-input--number" inputMode="decimal" value={text} required={required}
-             aria-invalid={Boolean(shownError)} aria-describedby={describedBy(id, { label, help, error: shownError, tip })}
-             onChange={(e) => setText(e.target.value)} onBlur={commit}
-             onKeyDown={(e) => e.key === "Enter" && commit()} {...rest} />
+      {unit ? <span className="sc-input-unit">{box}<span className="sc-input-unit-text" aria-hidden="true">{unit}</span></span> : box}
     </Field>
   );
 }
@@ -277,7 +288,8 @@ export function Segment<T extends string | number>({ label, options, value, onCh
          aria-labelledby={hideLabel ? undefined : id} onKeyDown={onKey}>
       {options.map((o) => (
         <button key={String(o.value)} type="button" role="radio" aria-checked={o.value === value}
-                data-value={String(o.value)} tabIndex={o.value === value ? 0 : -1} disabled={o.disabled} onClick={() => onChange(o.value)}>
+                data-value={String(o.value)} tabIndex={o.value === value || (index < 0 && o === options.find((x) => !x.disabled)) ? 0 : -1} disabled={o.disabled}
+                onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}

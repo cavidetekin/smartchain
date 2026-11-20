@@ -108,9 +108,9 @@ describe("ekran 30 · Kapasite yönetimi · Kapasite özeti (K-184, K-185)", () 
   it("pivot açık gelir, ayar paneli kapalı, görünüm değişmiş sayılmaz; sütunlar sunucunun sırasıyla; istekler seçili senaryoyu taşır", async () => {
     const { bodies, table } = await open();
     expect(screen.getByRole("heading", { level: 1, name: "Kapasite yönetimi" })).toBeInTheDocument();
-    // sekme şeridi: 7.9a'da yalnız Kapasite özeti (giriş sekmeleri 7.9b'de eklenir; boş sekme gösterilmez)
+    // sekme şeridi: ilk sekme Kapasite özeti (giriş sekmeleri CapacityManagement.test'te)
     const tabs = within(screen.getByRole("radiogroup", { name: "Kapasite yönetimi bölümleri" })).getAllByRole("radio");
-    expect(tabs.map((t) => t.textContent)).toEqual(["Kapasite özeti"]);
+    expect(tabs[0]).toHaveTextContent("Kapasite özeti");
     expect(tabs[0]).toHaveAttribute("aria-checked", "true");
     // menüde Parametre grubunda, Parametreler ile Senaryolar arasında
     const links = screen.getAllByRole("link").map((l) => l.textContent);

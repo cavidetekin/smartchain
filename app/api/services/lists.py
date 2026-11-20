@@ -107,6 +107,8 @@ def columns(session: Session | None, defn: ListDefinition) -> dict:
                 "relations": relations.headings(defn, labels_of(session)),  # İlişkili alanların başlıkları (K-182)
                 # Dönem tablosu (K-184): İlk · Son dönem değeri sunulur; ürünün Standart'ı pivot; hazır hesaplanan değerler
                 **({"period_table": True} if defn.period else {}),
+                # Kaynağı senaryoya göre kurulan liste (K-185): arayüz isteklere seçili senaryoyu ekler
+                **({"scenario_list": True} if defn.source_factory else {}),
                 **({"standard_pivot": dict(defn.standard_pivot)} if defn.standard_pivot else {}),
                 **({"chart_value": defn.chart_value} if defn.chart_value else {}),
                 **({"calculated_values": [dict(c) for c in defn.calculated]} if defn.calculated else {}),

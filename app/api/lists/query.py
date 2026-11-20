@@ -209,6 +209,10 @@ class Builder:
             return self.is_empty(col)
 
         if kind == "text":
+            if f.op == "contains" and f.values:   # herhangi biri (K-187): değerlerden birini içeren satırlar
+                if f.value is not None or any(not isinstance(v, str) or not v.strip() for v in f.values):
+                    return bad("Metin değerleri girilmeli; value ile values birlikte verilmez", "values")
+                return sa.or_(*[turkish_like(col, "%" + like_escape(v.strip()) + "%") for v in f.values])
             if not isinstance(f.value, str) or not f.value.strip():
                 return bad("Metin girilmeli")
             v = f.value.strip()

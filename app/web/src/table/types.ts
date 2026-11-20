@@ -80,6 +80,8 @@ export interface ColumnsResponse {
   period_table?: boolean;
   /** Ürünün Standart görünümündeki pivot (görünüm içeriğindeki `pivot` biçiminde). */
   standard_pivot?: unknown;
+  /** Kaynağı senaryoya göre kurulan liste (K-185; ör. kapasite girişleri): istekler seçili senaryoyu taşır. */
+  scenario_list?: boolean;
   /** Grafik ilk açıldığında serinin alanı (K-186). */
   chart_value?: string;
   /** Hazır hesaplanan değerler: pivot panelinde seçilince işlenenleriyle birlikte eklenir. */

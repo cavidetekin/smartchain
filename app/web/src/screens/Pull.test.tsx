@@ -70,8 +70,7 @@ describe("tablo içi düzenleme (K-132)", () => {
     expect(cellOf("Malzeme", "Yöntem").querySelector("select, input")).toBeNull();
     const editor = await openEditor(user, cellOf("Malzeme", "Yöntem"));
     expect(within(editor).getAllByRole("option").map((o) => o.textContent)).toEqual(["Excel", "SQL"]);
-    await user.selectOptions(editor, "Excel");
-    await user.keyboard("{Enter}");
+    await user.click(within(editor).getByRole("option", { name: "Excel" }));   // listeli hücre: liste açık gelir, seçenek tıklanır (K-187)
     expect(cellOf("Malzeme", "Yöntem")).toHaveClass("is-draft");
     expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(0);
     await setCell(user, "Stok", "Yöntem", "SQL");

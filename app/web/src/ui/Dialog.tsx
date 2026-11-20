@@ -53,6 +53,23 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
     return () => (back as HTMLElement | null)?.focus?.();
   }, []);
 
+  // Esc bütün pencereleri kapatır (K-187): odak pencerenin dışında kalsa da (ör. boş alana tıklandıktan sonra) en üstteki pencere kapanır;
+  // içinde açılır liste, takvim ya da menü açıksa önce o kapanır. Odak içerideyken aşağıdaki onKey çalışır.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    if (!dismissible) return undefined;
+    const onDocument = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented || !ref.current || ref.current.contains(e.target as Node)) return;
+      const all = document.querySelectorAll(".sc-dialog");
+      if (all[all.length - 1] !== ref.current || document.querySelector(".sc-floating, [role='menu']")) return;
+      e.preventDefault();
+      closeRef.current();
+    };
+    document.addEventListener("keydown", onDocument);
+    return () => document.removeEventListener("keydown", onDocument);
+  }, [dismissible]);
+
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       e.stopPropagation();

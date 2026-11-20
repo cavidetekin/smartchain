@@ -646,8 +646,10 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
               IsPurchaseRequest=kind == "Satın alma talebi", IsPurchase=kind == "Satın alma", IsSubcontract=kind == "Fason",  # K-121
               IsActive=True, IsCustomTracked=False)
 
+    earliest = add_business_days(ds.generated_on, 1)
     for m in rng.sample(candidates, 20):
-        req = ds.day(rng.randint(1, 6), rng.randint(0, 4))
+        # en erken üretim gününden sonraki ilk iş günü: hafta 1'in geçmiş günü beklenmeyen PO.PAST_DUE vermesin (docs/11)
+        req = max(ds.day(rng.randint(1, 6), rng.randint(0, 4)), earliest)
         po(m["Id"], rng.choice([50, 100, 200, 400]), req, req if rng.random() < 0.7 else None, supplier_of[m["Id"]])
     # Durum 3: limit ayında teyitli siparişler limiti dolduruyor.
     month_start, month_end = limit_month(ds)

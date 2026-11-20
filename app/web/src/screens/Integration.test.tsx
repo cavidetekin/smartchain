@@ -103,8 +103,7 @@ describe("ekran 23", () => {
     const { user, fetchMock } = await open("System owner");
     const method = await openEditor(user, cellOf("Kaynak", "Yöntem"));
     expect(within(method).getAllByRole("option").map((o) => o.textContent)).toEqual(["Excel", "SQL"]);
-    await user.selectOptions(method, "SQL");
-    await user.keyboard("{Enter}");
+    await user.click(within(method).getByRole("option", { name: "SQL" }));   // listeli hücre: liste açık gelir, seçenek tıklanır (K-187)
     await setCell(user, "Kaynak", "Kaynak", "View_Resource");
     await setCell(user, "Malzeme", "Kaynak", "View_Yeni");
     expect(calls(fetchMock, "PUT", "/api/integration/entities")).toHaveLength(0);

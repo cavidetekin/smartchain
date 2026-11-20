@@ -31,6 +31,7 @@ def _lit(text: str) -> sa.ColumnElement:
 
 
 fc, dv, u, r, fd = FIELD_CHANGE, DATA_VERSION, USER, RULE, FIELDS_DEF
+CAPACITY_SOURCE = "Kapasite yönetimi"
 LABEL_KEYS = ("Code", "OrderNo", "PurchaseOrderNo", "WorkOrderNo", "ConfirmationNo", "RouteCode")  # kartın label_of'uyla aynı sıra
 
 
@@ -66,13 +67,16 @@ SOURCE = sa.select(
     sa.case((fc.c.Source == TRANSFER, _transfer),
             (fc.c.Source == MANUAL_SOURCE, _lit(MANUAL_SOURCE) + _by),
             (fc.c.Source == MANUAL_REMOVE, _lit("Manuel değer kaldırıldı") + _by),
+            # Kapasite yönetimi (K-185): Baz dışındaki senaryoda yapılan değişiklikte senaryonun adı (notta)
+            (fc.c.Source == CAPACITY_SOURCE, fc.c.Source + sa.case((fc.c.Note.is_(None), _lit("")), else_=_lit(" · ") + fc.c.Note) + _by),
             else_=fc.c.Source + _by).label("SourceText"),
+    _person.label("ChangedBy"),   # Değiştiren (K-185): kişi; aktarımda boş
 ).select_from(
     fc.outerjoin(dv, dv.c.Id == fc.c.DataVersionId).outerjoin(u, u.c.Id == fc.c.UserId).outerjoin(r, r.c.Id == fc.c.DataRuleId)
       .outerjoin(fd, sa.and_(fd.c.TableName == fc.c.TableName, fd.c.FieldName == fc.c.FieldName))
 ).subquery("fc_history")
 
-FIELDS = ("At", "DataVersion", "FieldLabel", "OldValue", "NewValue", "SourceText")
+FIELDS = ("At", "DataVersion", "FieldLabel", "OldValue", "NewValue", "ChangedBy", "SourceText")
 
 
 @cache
@@ -106,9 +110,9 @@ RECORD_HISTORY = ListDefinition(
     fields=FIELDS,
     default_visible=FIELDS,
     default_sort=(("At", "desc"),),
-    labels={"At": "Tarih", "DataVersion": "Veri", "FieldLabel": "Alan", "OldValue": "Eski değer", "NewValue": "Yeni değer", "SourceText": "Kaynak",
+    labels={"At": "Tarih", "DataVersion": "Veri", "FieldLabel": "Alan", "OldValue": "Eski değer", "NewValue": "Yeni değer", "ChangedBy": "Değiştiren", "SourceText": "Kaynak",
             "TableName": "Tablo", "RecordKey": "Kayıt", "FieldName": "Alan adı"},
-    server_values=frozenset({"FieldLabel", "SourceText", "TableName", "RecordKey"}),
+    server_values=frozenset({"FieldLabel", "ChangedBy", "SourceText", "TableName", "RecordKey"}),
     filter_only=("TableName", "RecordKey"),
     key_fields=("TableName", "FieldName"),
     row_format=format_rows,

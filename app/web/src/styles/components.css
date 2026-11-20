@@ -421,6 +421,7 @@
 .sc-dialog-message { margin: 0; }
 .sc-dialog-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-2); }
 .sc-dialog--wide { width: min(46rem, calc(100vw - 2rem)); }
+.sc-dialog--form { width: min(40rem, calc(100vw - 2rem)); }   /* giriş penceresi (K-187) */
 .sc-dialog--xwide { width: min(60rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); }
 .sc-dialog--xwide .sc-dialog-body { min-height: 0; overflow: auto; }
 .sc-dialog-subtitle { margin: var(--space-1) 0 0; color: var(--text-muted); }
@@ -921,6 +922,53 @@ tr.is-clickable { cursor: pointer; }
 .sc-table-grid td.sc-cell-manual.is-changed { background-image: linear-gradient(225deg, var(--status-risk) 0 0.4615rem, transparent 0.4615rem); }
 .sc-table-grid tr.sc-table-row td.is-invalid { box-shadow: inset 0 0 0 2px var(--status-over); }  /* imleçte de kırmızı */
 .sc-cell-source { position: relative; display: block; min-width: 0; }
+/* Listeli hücre (K-187): hücre değeri yerinde, liste açık ve ekranda sabit konumda */
+.sc-cell-list-anchor { display: flex; align-items: center; background: var(--surface); border: 1px solid var(--field-border-focus); cursor: default; }
+.sc-cell-list-anchor > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-cell-list { list-style: none; margin: 0; padding: var(--space-1) 0; max-height: 16rem; overflow: auto; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-popover); outline: none; text-align: left; font-weight: var(--fw-regular, 400); }
+.sc-cell-list li { padding: 0.3077rem var(--space-3); white-space: nowrap; cursor: pointer; }
+.sc-cell-list li.is-active { background: var(--indigo-50); }
+.sc-cell-list li[aria-selected="true"] { font-weight: var(--fw-semibold); }
+/* Kapasite girişleri (K-176, K-185): senaryoda değişen hücrenin işareti (lila köşe); geçersiz yapılan satır soluk ve üstü çizili */
+.sc-table-grid td.sc-cell-diff { background-image: linear-gradient(225deg, var(--violet-700) 0 0.4615rem, transparent 0.4615rem); background-repeat: no-repeat; background-position: top right; }
+.sc-table-grid tr.sc-row-invalid td { color: var(--text-muted); text-decoration: line-through; }
+/* Giriş penceresi standardı (K-187, docs/12 "Pencere ve form standardı"): iki kolonlu ızgara; tam satır alan; seviye ve kod satırı */
+.sc-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); align-items: start; }
+.sc-form-grid > .sc-form-full { grid-column: 1 / -1; }
+.sc-form-owner { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.sc-form-grid .sc-segment-field { align-items: stretch; }
+.sc-form-grid .sc-segment { min-height: 2.4615rem; }
+.sc-form-grid .sc-segment button { padding: 0 var(--space-4); }
+.sc-form-grid .sc-form-full > .sc-segment, .sc-form-grid .sc-form-full .sc-segment { align-self: flex-start; }
+/* Birimli sayı kutusu: birim kutunun içinde sağda */
+.sc-input-unit { position: relative; display: block; }
+.sc-input-unit .sc-input { padding-right: 4.3rem; }
+.sc-input-unit-text { position: absolute; top: 0; right: var(--space-3); height: 100%; display: flex; align-items: center; color: var(--text-muted); font-size: var(--fs-sm); pointer-events: none; }
+/* Aramalı seçim */
+.sc-search-select-box { position: relative; }
+.sc-search-select-box .sc-input { padding-right: 2.2rem; }
+.sc-search-select-box > svg { position: absolute; top: 50%; right: var(--space-2); width: 1.0769rem; height: 1.0769rem; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+.sc-search-select-list { list-style: none; margin: 0; padding: var(--space-1) 0; max-height: 18rem; overflow: auto; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-popover); }
+.sc-search-select-list li { display: flex; gap: var(--space-3); padding: 0.3846rem var(--space-3); cursor: pointer; white-space: nowrap; }
+.sc-search-select-list li.is-active { background: var(--indigo-50); }
+.sc-search-select-list li[aria-selected="true"] .sc-search-select-code { font-weight: var(--fw-semibold); }
+.sc-search-select-code { min-width: 4.6rem; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.sc-search-select-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted); }
+.sc-search-select-list mark { background: none; color: var(--indigo-700); font-weight: var(--fw-semibold); }
+.sc-search-select-empty { color: var(--text-muted); cursor: default !important; }
+/* Gün kutuları: yedi gün tek sırada; ad, doluluk çizgisi, değer (tam okunur) */
+.sc-day-boxes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-1); }
+.sc-day-box { display: flex; flex-direction: column; align-items: stretch; gap: 0.3077rem; padding: 0.4615rem 0 0.3846rem; border: 1px solid var(--field-border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font: inherit; text-align: center; cursor: pointer; }
+.sc-day-box:hover { border-color: var(--indigo-300); }
+.sc-day-box:focus-visible { outline: none; border-color: var(--field-border-focus); box-shadow: 0 0 0 0.2308rem var(--focus-ring); }
+.sc-day-box b { font-weight: var(--fw-semibold); font-size: var(--fs-sm); }
+.sc-day-box i { font-style: normal; font-size: 0.7692rem; color: var(--text-muted); white-space: nowrap; }
+.sc-day-bar { display: block; height: 0.3077rem; margin: 0 0.7rem; border-radius: 0.1538rem; background: var(--lead-100); overflow: hidden; }
+.sc-day-bar > span { display: block; height: 100%; background: var(--indigo-500); }
+.sc-day-box.is-off b, .sc-day-box.is-off i { color: var(--lead-300); }
 .sc-cell-value { display: block; overflow: hidden; text-overflow: ellipsis; }
 .sc-cell-removed { color: var(--violet-700); font-style: italic; }
 /* İpuçlu onay kutusu satırı (ör. veri sözlüğünde pasif Manuel ve nedeni, K-170): sarmalayıcıyla da aynı iki kolonlu satır */

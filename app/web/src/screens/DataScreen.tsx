@@ -47,7 +47,8 @@ const HINTS: FieldHints = {
 };
 /** Kart tablolarında hücre menüsü Detay · Kopyala (ek öğe yok, K-173). */
 const NO_ITEMS = () => [];
-const HISTORY_HINTS: FieldHints = { RecordLabel: { width: 10 }, At: { width: 10 }, DataVersion: { width: 5 }, FieldLabel: { width: 12 }, OldValue: { width: 12 }, NewValue: { width: 12 }, SourceText: { width: 22 } };
+export const HISTORY_HINTS: FieldHints = { RecordLabel: { width: 10 }, At: { width: 10 }, DataVersion: { width: 5 }, FieldLabel: { width: 12 }, OldValue: { width: 11 }, NewValue: { width: 11 },
+                                           ChangedBy: { width: 10 }, SourceText: { width: 20 } };
 
 interface Card { id: string; tab: CardTab }
 

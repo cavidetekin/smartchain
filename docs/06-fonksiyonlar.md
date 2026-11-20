@@ -1898,7 +1898,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - **Kapasite özeti:** dönem tablosu "Kaynak grubu × dönem" (K-184); bütün gruplar (kritik olmayan ve fason dahil). Değerler: Kaynak sayısı · Çalışma günü · Duruş · Çalışılabilir gün · Ortalama günlük kapasite · Toplam günlük kapasite · Verimlilik · Toplam kapasite · Kullanılabilir kapasite · Ek mesai limiti · Kalan fazla mesai (ay) · Kalan fazla mesai (yıl; ikisi ERP'den, dönemlere dağıtılmaz).
   - **Motor:** yalnız kritik grupları kısıtlar; kapasiteyi aynı hesap işlevinden okur (docs/09).
   - **Kalkanlar:** kaynaktaki günlük kapasite, takvim ve fason parametre alanları; `Calendar`, `CalendarDay`, `ResourceCapacityProfile`, `ResourcePeriodLimit`. Fason limitleri ve kısıtsız kaynak dönem limiti Faz 1 kapsamında yeniden tasarlanana kadar yoktur.
-  - **Durum:** 7.9a (tablolar, çözümleme, hesap, önbellek, Kapasite özeti) uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş ekranları 7.9b, geçerlilik görünümü ve aktarım bağlantısı 7.9c.
+  - **Durum:** 7.9a (tablolar, çözümleme, hesap, önbellek, Kapasite özeti) uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş ekranları uygulandı (7.9b; sürüm 0.48.0, K-187); geçerlilik görünümü ve aktarım bağlantısı 7.9c.
 
 #### NASIL ÇALIŞIR
 
