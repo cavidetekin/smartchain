@@ -31,6 +31,7 @@ FIELD_LABELS = {
     # Uyarı eşikleri (K-190)
     "ThresholdLow": "Düşük", "ThresholdMedium": "Orta", "ThresholdHigh": "Yüksek", "ThresholdCritical": "Kritik", "Severity": "Önem",
     # Model kısıtları (K-189)
+    "UpperLimit": "Limit", "LimitPeriod": "Limitin dönemi",   # tedarikçi limiti (K-191)
     "UnconstrainedCapacityFactor": "Kısıtsız kapasite çarpanı", "TargetUtilizationPct": "Hedef doluluk (%)",
     # Senaryolar (K-177)
     "FollowsBase": "Baz'ı izler", "RunsNightly": "Gece çalışsın", "NightlyPriority": "Gece sırası", "plan_versions": "Plan versiyonu sayısı",

@@ -28,6 +28,13 @@ class SqlPlanningData:
         from app import modelconstraints
         return modelconstraints.constraints(self.session, self.scenario_definition_id)
 
+    def supplier_limits(self, date_from: date, date_to: date) -> list[dict]:
+        """Tedarikçi limiti (docs/09, K-191): senaryonun gün bazında üst limitleri ve kapanışları."""
+        if self.scenario_definition_id is None:
+            raise ValueError("Tedarikçi limiti için senaryo gerekir.")
+        from app import supplierlimits
+        return supplierlimits.daily(self.session, self.scenario_definition_id, date_from, date_to)
+
     def warning_thresholds(self) -> list[dict]:
         """Uyarı eşikleri (docs/09, K-190): senaryonun aktif uyarıları."""
         if self.scenario_definition_id is None:

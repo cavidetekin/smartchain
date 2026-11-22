@@ -192,7 +192,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **TimeBucketDefinition:** Zaman yapısı: senaryonun ufuk ve dönem dizisi (plan ve raporlama ekseni)
 - **ObjectiveDefinition:** Senaryonun hedefleri: sıra, süre bütçesi, ödün payı (leksikografik)
 - **PriorityRule:** Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih)
-- **AllocationRule:** Kapasite alokasyonu: talep sınıfına kaynak (grubu) ve dönem bazında pay
+- **AllocationRule:** Faz 1 dışı (K-192): kapasite alokasyonu, talep sınıfına kaynak grubu ve dönem bazında pay
 - **WarningDefinition:** Uyarı kataloğu: kod ve kategori (K-190)
 - **WarningThreshold:** Senaryonun uyarı eşikleri: kademeli eşik, önem, aktiflik (K-190)
 
@@ -500,17 +500,26 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Malzeme</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66).
+- Tedarikçi limiti (K-191; problem 39): satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; iki kayıt türü tek tabloda. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
-| SupplierId | bigint | FK | Tedarikçi |  | Smartchain (parametre) | H | E |  |
-| MaterialId | bigint | FK | Malzeme; boşsa tedarikçinin bütün malzemeleri (yalnız kapalı dönem) |  | Smartchain (parametre) | H | H |  |
-| ValidFrom | date |  | Başlangıç |  | Smartchain (parametre) | H | E |  |
-| ValidTo | date |  | Bitiş |  | Smartchain (parametre) | H | E |  |
-| UpperLimit | decimal(18,4) |  | Dönem üst limiti, malzemenin temel biriminde; malzeme boşsa 0 | Dönem üst limiti | Smartchain (parametre) | E | E | 0 |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Geçersiz yapılan kayıt uygulanmaz; izleyen senaryoda Baz satırı fark satırıyla geçersiz yapılır | Geçerli | Smartchain (parametre) | H | E | 1 |
+| LimitType | nvarchar(15) |  | Üst limit \| Kapanış | Tür | Smartchain (parametre) | H | E |  |
+| LocationId | int | FK,IX | Lokasyon (malzeme tedarikçisi kaydının lokasyonu) | Lokasyon | Smartchain (parametre) | H | E |  |
+| SupplierId | bigint | FK,IX | Tedarikçi | Tedarikçi | Smartchain (parametre) | H | E |  |
+| MaterialId | bigint | FK | Malzeme; üst limitte zorunlu, kapanışta boşsa tedarikçinin bütün malzemeleri | Malzeme | Smartchain (parametre) | H | H |  |
+| ValidFrom | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | H | E |  |
+| ValidTo | date |  | Bitiş; üst limitte boşsa süresiz, kapanışta zorunlu | Bitiş | Smartchain (parametre) | H | H |  |
+| UpperLimit | decimal(18,4) |  | Üst limit (sıfırdan büyük), malzemenin temel biriminde; yalnız üst limitte | Limit | Smartchain (parametre) | H | H |  |
+| LimitPeriod | nvarchar(10) |  | Gün \| Hafta \| Ay \| Çeyrek \| Yıl | Limitin dönemi | Smartchain (parametre) | H | H |  |
+| Reason | nvarchar(255) |  | Sebep (serbest metin, isteğe bağlı); üst limitte ve kapanışta | Sebep | Smartchain (parametre) | H | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş |  | Sistem | H | H |  |
 
 ### ProductionVersion
 <sub>21. Veri modeli · Malzeme</sub>
@@ -1034,7 +1043,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Parametre</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Kapasite alokasyonu: talep sınıfına kaynak grubu ve dönem bazında pay (K-180).
+- Faz 1 dışı (K-192): kapasite alokasyonu, talep sınıfına kaynak grubu ve dönem bazında pay (K-180). Tablo durur, hiçbir ekran ve motor okumaz.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|

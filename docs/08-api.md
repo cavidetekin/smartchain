@@ -845,6 +845,18 @@ Aktarım (tam ve kısmi) eşleşen satırda gelen değeri alttaki değer olarak 
 - **Motor:** `PlanningData.model_constraints()` (docs/09). Önbellek yok; değerler kapasite hesabına girmez.
 - **Durum:** uygulandı (7.10; sürüm 0.50.0, geçiş 0068, K-189; iki demo).
 
+### Tedarikçi limiti (7.12, K-191; ekran 31 ikinci sekme, fonksiyon 103)
+
+Kurallar `app/supplierlimits/` ve ortak giriş altyapısındadır (`app/capacity/entries.py`; sahip tanımı parametreli: kaynak grubu ya da kaynak · lokasyon, tedarikçi, malzeme). Çözümleme `app/params/resolve.py`.
+
+- **Listeler** (liste sorgu sözleşmesiyle; `scenario_id`): `supplier-limits` (Kayıtlar: senaryonun çözümlenmiş kayıtları, iki tür birlikte; alanlar Tür · Lokasyon · Tedarikçi · Tedarikçi adı · Malzeme · Malzeme adı · Başlangıç · Bitiş · Limit · Limitin dönemi · Birim · Sebep · Kaynağı · Geçerli; anahtar alanlar `StoredId`, `OverriddenFields`, `BaseValues`, `LocationId`, `SupplierId`, `MaterialId`) ve `supplier-limits-validity` (Geçerlilik: tedarikçi ve malzeme başına uygulanan aralıklar; Durum "Üst limit" ya da "Kapalı"; `DailyAverage` aralığın ilk gününün günlük ortalaması; kapanışlar birleşmiş, bütün malzemeleri kapsayan kapanış tedarikçinin limiti ya da kapanışı olan her malzemesinde ve "Tümü" satırında). Lokasyon kendi alanıdır, kodun solunda; İlişkili alanlar: Tedarikçi, Malzeme, Lokasyon.
+- **Seçenekler:** `GET /api/model-constraints/supplier-limits/options?scenario_id=` → `{suppliers: [{location_id, location, supplier_id, code, name, materials: [{id, code, name, unit}]}]}`: yalnız aktif ve güncel malzeme tedarikçisi kayıtları.
+- **Yazma:** `POST /api/model-constraints/supplier-limits` · `{"values": {LimitType, LocationId, SupplierId, MaterialId | MaterialIds, ValidFrom, ValidTo, UpperLimit, LimitPeriod, Reason}}` → 201 `{ids, warnings}` (kapanışta `MaterialIds` ile birden fazla malzeme: her biri ayrı kayıt, hepsi ya da hiçbiri); `PUT …` · `{"changes": [{id, field, value}]}`; `DELETE …/{id}`; `POST …/{id}/invalidate` · `/validate` · `/restore` (Kapasite yönetimi'ndeki uçlarla aynı anlam).
+- **Doğrulamalar (422, alan bazında):** tür; tedarikçi ve malzeme güncel ve aktif malzeme tedarikçisi kaydı olmalı ("Bu tedarikçinin bu malzeme için tanımlı kaydı yok."); üst limitte malzeme, limit (sıfırdan büyük) ve dönem zorunlu, sebep isteğe bağlı (iki türde de); kapanışta bitiş zorunlu; bitiş başlangıçtan önce olamaz; aynı tedarikçi, malzeme ve başlangıçla ikinci geçerli üst limit olamaz. Tür, tedarikçi ve malzeme kayıttan sonra değişmez.
+- **Senaryo çakışması (K-191 madde 10; genel):** çözümleme, izleyen senaryonun kendi kaydı ile aynı sahip ve başlangıçlı Baz kaydını tek satır verir: senaryonun değeri, `Origin` Senaryo farkı, `BaseValues` Baz kaydının değerleri, `OverriddenFields` farklı alanlar; `restore` senaryonun kaydını siler (Baz'a döner). Kapasite yönetimi'nin Çalışma düzeni, Verimlilik ve Ek mesai limiti listelerinde de aynıdır.
+- **İz:** `adm.FieldChange` (tablo `SupplierLimit`; kaynak "Model kısıtları") ve denetim izi.
+- **Durum:** uygulandı (7.12; sürüm 0.52.0, geçiş 0070 ve 0071, K-191; A-47 kapandı).
+
 
 ## Senaryolar (ekran 07, fonksiyon 27, 28; K-177)
 

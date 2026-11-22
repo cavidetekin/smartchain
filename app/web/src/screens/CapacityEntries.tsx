@@ -1,6 +1,7 @@
 // Kapasite yönetimi · giriş tablosu (K-185, 7.9b; docs/12 "Kapasite yönetimi"): üst sekmelerde ve kartlarda aynı bileşen. Şeritte "Yeni kayıt";
 // hücreler tabloda düzenlenir (K-132: değişen hücre işaretli, Kaydet hepsini birlikte gönderir); satır menüsü Detay · Düzenle · Yeni kayıt · Sil
 // (izleyen senaryoda Baz satırında Geçersiz yap ve Senaryo farkını kaldır). Senaryoda değişen hücre işaretlidir; ipucunda Baz'daki değer.
+// Bileşen sahipten bağımsızdır (K-191): Model kısıtları › Tedarikçi limiti aynı bileşeni `spec.adapter` ile kullanır (uçlar, yetki, sahip, pencere).
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 
 import { ApiError, emitNotice } from "../api/client";
@@ -16,7 +17,7 @@ import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
 import { Button, ConfirmDialog, Tooltip } from "../ui";
 import type { MenuAction } from "../ui/PopMenu";
 import { CapacityEntryDialog } from "./CapacityEntryDialog";
-import { baseText, capacityApi, DAY_CHOICES, DAY_OFF_CELL, type EntrySpec, ORIGIN_DIFF, ORIGIN_ERP, type Owner } from "./capacityModel";
+import { baseText, boundCapacityApi, DAY_CHOICES, DAY_OFF_CELL, type EntryKind, type EntrySpec, ORIGIN_DIFF, ORIGIN_ERP, type Owner } from "./capacityModel";
 
 const T = tr.capacity;
 const NO_ITEMS = () => [];
@@ -55,7 +56,11 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
 }) {
   const { scenario } = useShell();
   const { me } = useAuth();
-  const write = Boolean(me && can(me, 24, "write"));
+  const adapter = spec.adapter;
+  const write = Boolean(me && can(me, adapter?.writeFunction ?? 24, "write"));
+  const api = useMemo(() => adapter?.api ?? boundCapacityApi(spec.kind as EntryKind), [adapter, spec.kind]);
+  const DialogView = adapter?.Dialog ?? CapacityEntryDialog;
+  const hints = useMemo(() => (adapter?.hints ? { ...HINTS, ...adapter.hints } : HINTS), [adapter]);
   const sid = scenario?.id ?? 0;
   const edits = useTableEdits();
   const [columns, setColumns] = useState<ListColumn[]>([]);
@@ -70,7 +75,8 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
   const cellKey = (row: Row, field: string) => `${row.Id}|${field}`;
   const shown = useCallback((field: string, row: Row) => { const col = byField.get(field); return col ? formatCell(col, row[field], row) : String(row[field] ?? ""); }, [byField]);
   const editable = (row: Row) => write && row.Origin !== ORIGIN_ERP;
-  const label = (row: Row) => (spec.owner ? `${String(row.Level ?? "")} ${String(row.Code ?? "")} · ${shown(spec.start, row)}` : String(row.Name ?? ""));
+  const label = (row: Row) => (adapter ? adapter.label(row, shown)
+    : spec.owner ? `${String(row.Level ?? "")} ${String(row.Code ?? "")} · ${shown(spec.start, row)}` : String(row.Name ?? ""));
 
   const changed = () => { setTick((n) => n + 1); onChanged?.(); };
   const run = async (work: () => Promise<unknown>) => {
@@ -84,7 +90,7 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
 
   const editing: CellEditing = useMemo(() => ({
     editableColumn: (col) => write && fields.has(col.field),
-    canEdit: (col, row) => fields.has(col.field) && editable(row),
+    canEdit: (col, row) => fields.has(col.field) && editable(row) && (adapter?.canEdit?.(col.field, row) ?? true),
     editor: (col, row) => {
       const f = fields.get(col.field)!;
       const text = edits.get(key(row), col.field, shown(col.field, row));
@@ -93,7 +99,7 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
     // gün hücresinde liste "Çalışılmıyor" der, hücre "—" yazar
     commit: (col, row, text) => edits.set(key(row), col.field, fields.get(col.field)?.kind === "day" && text === DAY_CHOICES[2] ? DAY_OFF_CELL : text, shown(col.field, row)),
     label: (col, row) => `${label(row)} · ${col.label}`,
-  }), [write, fields, edits, shown]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }), [write, fields, edits, shown, adapter]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const cellRender: CellRender = useMemo(() => Object.fromEntries(spec.fields.map((f) => [f.name, (_v: unknown, row: Row) =>
     edits.get(key(row), f.name, shown(f.name, row))])), [spec, edits, shown]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -134,7 +140,7 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
     setSaving(true);
     setProblems({});
     try {
-      const out = await capacityApi.change(spec.kind, sid, changes);
+      const out = await api.change(sid, changes);
       edits.discard();
       for (const w of out.warnings ?? []) emitNotice(w);
       changed();
@@ -156,13 +162,13 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
     if (onDetail) items.push({ label: T.menu.detail, onClick: () => onDetail(row) });
     if (!editable(row)) return items;
     items.push({ label: T.menu.edit, onClick: () => setDialog({ row, owner: null }) });
-    items.push({ label: T.menu.add, onClick: () => setDialog({ row: null, owner: owner ?? ownerOf(row) }) });
+    items.push({ label: T.menu.add, onClick: () => setDialog({ row: null, owner: owner ?? (adapter ? adapter.ownerOf(row) : ownerOf(row)) }) });
     const inherited = !scenario?.isBase && row.Origin !== "Senaryo";   // izleyen senaryoda Baz'dan okunan satır: silinmez, geçersiz yapılır
     if (!inherited) items.push({ label: T.menu.remove, onClick: () => setRemoving(row) });
     else {
-      items.push(row.IsValid === false ? { label: T.menu.validate, onClick: () => void run(() => capacityApi.validate(spec.kind, sid, row.Id)) }
-        : { label: T.menu.invalidate, onClick: () => void run(() => capacityApi.invalidate(spec.kind, sid, row.Id)) });
-      if (row.Origin === ORIGIN_DIFF) items.push({ label: T.menu.restore, onClick: () => void run(() => capacityApi.restore(spec.kind, sid, row.Id)) });
+      items.push(row.IsValid === false ? { label: T.menu.validate, onClick: () => void run(() => api.validate(sid, row.Id)) }
+        : { label: T.menu.invalidate, onClick: () => void run(() => api.invalidate(sid, row.Id)) });
+      if (row.Origin === ORIGIN_DIFF) items.push({ label: T.menu.restore, onClick: () => void run(() => api.restore(sid, row.Id)) });
     }
     return items;
   });
@@ -177,19 +183,19 @@ export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail,
 
   return (
     <>
-      <DataTable list={spec.list} baseFilters={filters} toolbarLead={toolbarLead} toolbarEnd={end} compact={compact} fieldHints={HINTS} onColumns={setColumns}
+      <DataTable list={spec.list} baseFilters={filters} toolbarLead={toolbarLead} toolbarEnd={end} compact={compact} fieldHints={hints} onColumns={setColumns}
                  reloadKey={reloadKey + tick} cellEditing={write ? editing : undefined} cellRender={cellRender} cellClass={cellClass} cellWrap={cellWrap}
                  rowProps={rowProps} cellMenu={NO_ITEMS} rowMenu={hasMenu ? menu.rowMenu : undefined} selectedRowId={selectedRowId ?? focus?.id ?? null} reveal={focus} onSelection={onSelection}
                  toolbarActions={<EditBar dirty={edits.dirty} busy={saving} onSave={() => void save()} onDiscard={() => { edits.discard(); setProblems({}); }} />} />
       {menu.element}
       <UnsavedGuard dirty={edits.dirty} />
       {dialog && (
-        <CapacityEntryDialog spec={spec} scenario={sid} row={dialog.row} owner={dialog.owner} onClose={() => setDialog(null)}
-                             onSaved={() => { setDialog(null); changed(); }} />
+        <DialogView spec={spec} scenario={sid} row={dialog.row} owner={dialog.owner} onClose={() => setDialog(null)}
+                    onSaved={() => { setDialog(null); changed(); }} />
       )}
       {removing && (
         <ConfirmDialog title={T.removeTitle} message={T.removeText(label(removing))} confirmLabel={T.menu.remove} danger onCancel={() => setRemoving(null)}
-                       onConfirm={() => { const row = removing; setRemoving(null); void run(() => capacityApi.remove(spec.kind, sid, row.Id)); }} />
+                       onConfirm={() => { const row = removing; setRemoving(null); void run(() => api.remove(sid, row.Id)); }} />
       )}
     </>
   );

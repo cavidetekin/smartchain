@@ -244,6 +244,14 @@ def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> N
     conn.execute(text("UPDATE param.WarningThreshold SET ThresholdLow = :l, ThresholdMedium = :m, ThresholdHigh = :h, ThresholdCritical = :c "
                       "WHERE ScenarioDefinitionId = :s AND WarningCode = :w"), {"s": mono, "w": code, "l": low, "m": medium, "h": high, "c": critical})
     conn.execute(text("UPDATE param.WarningThreshold SET IsActive = 0 WHERE ScenarioDefinitionId = :s AND WarningCode = :w"), {"s": mono, "w": WARNING_THRESHOLD_OFF})
+    # Kısıtsız kapasite (K-191): haftalık tedarikçi limiti bu senaryoda daha yüksek (Baz satırının farkı: yalnız limit)
+    from .dataset import SUPLIM_UPPER, SUPLIM_WEEKLY, SUPLIM_WEEKLY_DIFF, supplier_material
+    weekly = supplier_material(ds, SUPLIM_WEEKLY[0])
+    conn.execute(text(
+        "INSERT INTO param.SupplierLimit (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, LimitType, LocationId, SupplierId, MaterialId, ValidFrom, ValidTo, "
+        "UpperLimit, LimitPeriod, Reason, UpdatedAt) SELECT :s, b.Id, N',UpperLimit,', b.IsValid, b.LimitType, b.LocationId, b.SupplierId, b.MaterialId, b.ValidFrom, "
+        "b.ValidTo, :q, b.LimitPeriod, b.Reason, :now FROM param.SupplierLimit b WHERE b.ScenarioDefinitionId = :base AND b.LimitType = :t AND b.MaterialId = :m "
+        "AND b.LimitPeriod = N'Hafta'"), {"s": mono, "base": base_id, "t": SUPLIM_UPPER, "m": weekly["Id"], "q": SUPLIM_WEEKLY_DIFF, "now": now})
 
 
 def _drop_period_cache(conn: Connection) -> None:
@@ -301,7 +309,8 @@ def _load(conn: Connection, ds: Dataset) -> dict:
     for name in PARAM_ORDER:
         table = _table(name, "param")
         stamp = {"UpdatedAt": now} if "UpdatedAt" in table.c else {}
-        rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ScenarioDefinitionId": set_id, **stamp} for r in ds.params.get(name, [])]
+        place = {"LocationId": location_id} if "LocationId" in table.c else {}      # tedarikçi limiti lokasyon taşır (K-191)
+        rows = [{**{k: v for k, v in r.items() if k != "Id"}, "ScenarioDefinitionId": set_id, **stamp, **place} for r in ds.params.get(name, [])]
         rows = _validate(table, rows)
         if rows:
             conn.execute(sa.insert(table), rows)

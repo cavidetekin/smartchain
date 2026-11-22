@@ -113,6 +113,17 @@ def _orphan(column: str) -> Callable[[sa.Table], sa.ColumnElement]:
     return where
 
 
+def _supplier_limit(t) -> sa.ColumnElement:
+    """Bu malzeme tedarikçisi kaydına Baz'da girilmiş, geçerli ve bitmemiş tedarikçi limiti ya da kapanışı var (K-191)."""
+    w = metadata.tables["param.SupplierLimit"].alias("sc_suplim")
+    return sa.exists().where(w.c.ScenarioDefinitionId == _base(), w.c.BaseRowId.is_(None), w.c.IsValid == sa.true(), w.c.LocationId == t.c.LocationId,
+                             w.c.SupplierId == t.c.SupplierId, w.c.MaterialId == t.c.MaterialId, sa.or_(w.c.ValidTo.is_(None), w.c.ValidTo >= _today()))
+
+
+def _passive_with_limit(t) -> sa.ColumnElement:
+    return sa.and_(t.c.IsActive == sa.false(), _supplier_limit(t))
+
+
 CHECKS: tuple[SmartchainCheck, ...] = (
     # Bütün gruplar için çıkar; önem: Yüksek = grup kritik ve açık bir talebin zincirinde (K-185 H)
     SmartchainCheck("SC.RES_NO_CAPACITY", "Resource", "Kapasitesi tanımsız kaynak", "Kapasite tanımsız (çalışma düzeni yok):", _no_work_pattern,
@@ -122,5 +133,10 @@ CHECKS: tuple[SmartchainCheck, ...] = (
                     _orphan("ResourceId"), closed=True),
     SmartchainCheck("SC.CAP_ORPHAN", "ResourceGroup", "Kapanan kaynak grubuna girilmiş kapasite kaydı", "Güncel veride olmayan kaynak grubuna kapasite kaydı girilmiş:",
                     _orphan("ResourceGroupId"), closed=True),
+    # Tedarikçi limiti (K-191): limit yalnız aktif ve güncel malzeme tedarikçisi kaydına girilir; kayıt sonradan kapanır ya da pasifleşirse limit durur, uygulanmaz
+    SmartchainCheck("SC.SUPLIM_ORPHAN", "MaterialSupplier", "Kapanan malzeme tedarikçisine girilmiş tedarikçi limiti",
+                    "Güncel veride olmayan malzeme tedarikçisine tedarikçi limiti girilmiş:", _supplier_limit, closed=True),
+    SmartchainCheck("SC.SUPLIM_PASSIVE", "MaterialSupplier", "Pasif malzeme tedarikçisine girilmiş tedarikçi limiti",
+                    "Pasif malzeme tedarikçisine tedarikçi limiti girilmiş:", _passive_with_limit),
 )
 BY_CODE = {(c.code, c.table): c for c in CHECKS}

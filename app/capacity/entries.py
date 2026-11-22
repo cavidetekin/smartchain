@@ -4,10 +4,16 @@ Senaryo (K-176): Baz'da ve Baz'ı izlemeyen senaryoda satır yerinde yazılır. 
 yazılır: yalnız değişen alanlar `OverriddenFields`'ta durur; değer Baz'dakine dönerse alan farktan çıkar, fark kalmazsa satır silinir. Baz satırı
 izleyen senaryodan silinmez: o senaryo için geçersiz yapılır (`IsValid`).
 
+Giriş altyapısı ortaktır (K-191): "sahip" tanımı (`Owner`) parametrelidir. Kapasite girişlerinde sahip kaynak grubu ya da kaynaktır; tedarikçi
+limitinde lokasyon, tedarikçi ve malzeme (`app/supplierlimits`). Senaryo çakışması (aynı sahip ve başlangıç için hem senaryonun hem Baz'ın kaydı)
+çözümleme katmanındadır (`resolve.KEYS`): senaryonun kendi satırı Baz satırını örter ve burada kendi satırı gibi yazılır; "Senaryo farkını kaldır"
+onu siler.
+
 Her işlem aynı veritabanı işleminde alan geçmişini (`adm.FieldChange`) yazar ve kapasite önbelleğinin yalnız etkilenen kaynak ve günlerini
 yeniler (`triggers`). Commit ve denetim izi çağırandadır (`app/api/services/capacity.py`). Doğrulama hatası `EntryError` (alan, neden).
 """
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field as dataclass_field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -43,34 +49,62 @@ class Field:
 
 
 @dataclass(frozen=True)
+class Owner:
+    """Kaydın sahibi (K-191): kayıttan sonra değişmeyen alanlar ve onların kuralları."""
+    fields: tuple[str, ...]                                   # sahip kolonları
+    check: Callable[[Session, dict], list[dict]]              # seçimi doğrular ve değerleri düzeltir (kimlik tipi, türetilen alan); sorunlar
+    label: Callable[[Session, dict], str]                     # kaydın okunur adı ("Grup TORNA", "TED-05 · SAT-003")
+    key: Callable[[dict], tuple | None]                       # aynı başlangıç denetiminin anahtarı (None: denetlenmez)
+    duplicate: str = "Bu kaynak ya da grup için aynı başlangıç tarihli başka bir kayıt var."
+    locked: str = "Seviye ve kod kayıttan sonra değişmez; kaydı silip yeniden girin."
+    locked_fields: tuple[str, ...] = ("Level", "Code")        # listede sahibi gösteren, düzenlenemeyen alanlar
+
+
+@dataclass(frozen=True)
 class Kind:
     key: str                  # adresteki ad
     table: str
     title: str                # denetim izinde ve mesajlarda
     fields: tuple[Field, ...]
-    owner: bool = True        # kaynak grubuna ya da kaynağa girilir
+    owner: Owner | None = None   # sahibi olan giriş (kaynak grubu ya da kaynak; tedarikçi ve malzeme); None: sahipsiz (fabrika takvimi)
     start: str = "ValidFrom"
     end: str = "ValidTo"
     end_required: bool = False
-    unique_start: bool = False   # aynı seviyede aynı sahip için aynı başlangıçlı ikinci geçerli kayıt olamaz
+    unique_start: bool = False   # aynı sahip için aynı başlangıçlı ikinci geçerli kayıt olamaz
+    fixed: dict = dataclass_field(default_factory=dict)       # türü belirleyen sabit alanlar (aynı tabloda birden çok tür: {"LimitType": "Üst limit"})
+    source: str = "Kapasite yönetimi"                         # adm.FieldChange.Source
+    rules: Callable[[dict], list[tuple[str, str]]] | None = None   # türün kendi kuralları: [(alan, neden)]
 
     def field(self, name: str) -> Field | None:
         return next((f for f in self.fields if f.name == name), None)
 
+    def matches(self, row: dict) -> bool:
+        return all(row.get(k) == v for k, v in self.fixed.items())
+
 
 _VALIDITY = (Field("ValidFrom", "Başlangıç", "date"), Field("ValidTo", "Bitiş", "date", required=False))
 _PERIOD = (Field("StartDate", "Başlangıç", "date"), Field("EndDate", "Bitiş", "date"))
+def _resource_check(session: Session, values: dict) -> list[dict]:
+    return _owner_problems(session, values)
+
+
+def _resource_key(row: dict) -> tuple | None:
+    level = "ResourceId" if row.get("ResourceId") is not None else "ResourceGroupId"
+    return None if row.get(level) is None else (level, row[level])
+
+
+RESOURCE = Owner(OWNER, _resource_check, lambda session, row: owner_label(session, row), _resource_key)   # kaynak grubu ya da kaynak
 KINDS = {k.key: k for k in (
     Kind("work-patterns", "WorkPattern", "Çalışma düzeni",
-         (*_VALIDITY, Field("DailyCapacity", "Günlük kapasite", "number"), *[Field(d, DAY_LABELS[d], "day") for d in resolve.DAYS]), unique_start=True),
-    Kind("efficiency", "ResourceEfficiency", "Verimlilik", (*_VALIDITY, Field("EfficiencyPct", "Verimlilik (%)", "number", decimals=2)), unique_start=True),
-    Kind("overtime-limits", "OvertimeLimit", "Ek mesai limiti", (*_VALIDITY, Field("DailyLimit", "Günlük limit", "number")), unique_start=True),
+         (*_VALIDITY, Field("DailyCapacity", "Günlük kapasite", "number"), *[Field(d, DAY_LABELS[d], "day") for d in resolve.DAYS]), RESOURCE, unique_start=True),
+    Kind("efficiency", "ResourceEfficiency", "Verimlilik", (*_VALIDITY, Field("EfficiencyPct", "Verimlilik (%)", "number", decimals=2)), RESOURCE, unique_start=True),
+    Kind("overtime-limits", "OvertimeLimit", "Ek mesai limiti", (*_VALIDITY, Field("DailyLimit", "Günlük limit", "number")), RESOURCE, unique_start=True),
     Kind("downtime", "ResourceDowntime", "Bakım ve duruş",
          (Field("DowntimeType", "Tip", "choice", choices=DOWNTIME_TYPES), Field("Reason", "Sebep", "text", required=False, max_length=255), *_PERIOD),
-         start="StartDate", end="EndDate", end_required=True),
+         RESOURCE, start="StartDate", end="EndDate", end_required=True),
     Kind("factory-calendar", "FactoryCalendar", "Fabrika takvimi",
          (*_PERIOD, Field("Name", "Ad", "text", max_length=100), Field("DayValue", "Çalışma", "day_value")),
-         owner=False, start="StartDate", end="EndDate", end_required=True),
+         start="StartDate", end="EndDate", end_required=True),
 )}
 BY_TABLE = {k.table: k for k in KINDS.values()}
 
@@ -200,7 +234,13 @@ def _rows(session: Session, kind: Kind, scope: Scope, row_id: int | None = None)
     where = " WHERE x.RowId = :rid" if row_id is not None else ""
     sql = f"SELECT x.* FROM ({resolve.sql(kind.table, valid_only=False, detail=True)}) x{where}"
     params = {"sid": scope.scenario_id, "base": scope.base_id, **({"rid": row_id} if row_id is not None else {})}
-    return [dict(r) for r in session.execute(sa.text(sql), params).mappings()]
+    return [r for r in (dict(r) for r in session.execute(sa.text(sql), params).mappings()) if kind.matches(r)]
+
+
+def is_own(row: dict) -> bool:
+    """Senaryonun kendi satırı: yerinde yazılır ve silinir. Aynı anahtarlı Baz satırını örten kendi satırı da böyledir ("Kaynağı" Senaryo farkı
+    görünür ama saklanan satır senaryonundur; K-191)."""
+    return row["Origin"] == resolve.OWN or row.get("ShadowId") is not None
 
 
 def _get(session: Session, kind: Kind, scope: Scope, row_id: int) -> dict:
@@ -213,7 +253,7 @@ def _get(session: Session, kind: Kind, scope: Scope, row_id: int) -> dict:
 def history_key(scope: "Scope", row: dict) -> str:
     """Geçmişin kayıt anahtarı (`adm.FieldChange.RecordKey`): satırın kimliği; izleyen senaryonun Baz satırındaki değişikliğinde
     "<kimlik>@<senaryo>" (FieldChange'te senaryo kolonu yok; fark kaldırılsa da geçmişi durur, Baz'ın geçmişine karışmaz)."""
-    return str(row["RowId"]) if row["Origin"] == resolve.OWN else f"{row['RowId']}@{scope.scenario_id}"
+    return str(row["RowId"]) if is_own(row) else f"{row['RowId']}@{scope.scenario_id}"
 
 
 def _stored(session: Session, kind: Kind, row_id: int) -> dict:
@@ -233,7 +273,8 @@ def owner_label(session: Session, row: dict) -> str:
 
 def record_label(session: Session, kind: Kind, row: dict) -> str:
     start = row.get(kind.start)
-    return f"{owner_label(session, row)} · {start:%d.%m.%Y}" if isinstance(start, date) else owner_label(session, row)
+    name = kind.owner.label(session, row) if kind.owner else owner_label(session, row)
+    return f"{name} · {start:%d.%m.%Y}" if isinstance(start, date) else name
 
 
 # --- doğrulama -----------------------------------------------------------------------------------------------------------------------------
@@ -257,11 +298,13 @@ def _problems(session: Session, kind: Kind, scope: Scope, row: dict, row_id: int
         bad("EfficiencyPct", "0'dan büyük, en çok 999,99 olmalı.")
     if kind.table == "OvertimeLimit" and row.get("DailyLimit") is not None and row["DailyLimit"] < 0:
         bad("DailyLimit", "Negatif olamaz.")
-    if kind.unique_start and start is not None and row.get("IsValid", True):
-        level = "ResourceId" if row.get("ResourceId") is not None else "ResourceGroupId"
+    for name, problem in (kind.rules(row) if kind.rules else ()):
+        bad(name, problem)
+    if kind.unique_start and kind.owner and start is not None and row.get("IsValid", True):
+        key = kind.owner.key(row)
         for other in _rows(session, kind, scope):
-            if other["RowId"] != row_id and other["IsValid"] and other.get(level) == row.get(level) and other.get(level) is not None and other[kind.start] == start:
-                bad(kind.start, "Bu kaynak ya da grup için aynı başlangıç tarihli başka bir kayıt var.")
+            if key is not None and other["RowId"] != row_id and other["IsValid"] and kind.owner.key(other) == key and other[kind.start] == start:
+                bad(kind.start, kind.owner.duplicate)
                 break
     return out
 
@@ -294,6 +337,8 @@ def _range(kind: Kind, row: dict) -> triggers.Range:
 
 def _refresh(session: Session, kind: Kind, scope: Scope, row: dict, ranges: list[triggers.Range]) -> None:
     """Önbellekte yalnız etkilenen kaynak ve günler (K-184, K-185 F): kaydın eski ve yeni aralığı."""
+    if kind.table not in resolve.CAPACITY_TABLES:      # kapasite hesabına girmeyen girişin (tedarikçi limiti) önbelleği yok
+        return
     if kind.owner:
         triggers.entry_changed(session, scope.scenario_id, resource_id=row.get("ResourceId"), group_id=row.get("ResourceGroupId"), ranges=ranges)
     else:
@@ -323,12 +368,12 @@ def _fields_of(overridden: str | None) -> list[str]:
 
 def create(session: Session, kind: Kind, scope: Scope, user_id: int | None, raw: dict, today: date) -> dict:
     """Yeni kayıt (senaryonun kendi satırı). Dönen: {id, label, values (okunur), warnings}."""
-    unknown = [k for k in raw if kind.field(k) is None and not (kind.owner and k in OWNER)]
+    unknown = [k for k in raw if kind.field(k) is None and not (kind.owner and k in kind.owner.fields) and k not in kind.fixed]
     problems = [{"field": k, "problem": "Bilinmeyen alan."} for k in unknown]
-    values: dict = {}
+    values: dict = dict(kind.fixed)
     if kind.owner:
-        values.update({k: raw.get(k) for k in OWNER})
-        problems += _owner_problems(session, values)
+        values.update({k: raw.get(k) for k in kind.owner.fields})
+        problems += kind.owner.check(session, values)
     for f in kind.fields:
         value = raw.get(f.name)
         if f.name == kind.end and kind.end_required and not kind.owner and (value is None or value == ""):
@@ -342,7 +387,7 @@ def create(session: Session, kind: Kind, scope: Scope, user_id: int | None, raw:
     if problems:
         raise EntryError(problems)
     new_id = _insert(session, kind, scope, {"IsValid": 1, **values}, user_id)
-    history.record(session, kind.table, new_id, None, None, None, SOURCE, user_id, change_type=history.CREATED, note=scope.note)
+    history.record(session, kind.table, new_id, None, None, None, kind.source, user_id, change_type=history.CREATED, note=scope.note)
     _refresh(session, kind, scope, values, [_range(kind, values)])
     return {"id": new_id, "label": record_label(session, kind, values), "values": {f.name: show(f, values[f.name]) for f in kind.fields},
             "warnings": warnings_of(kind, values, today)}
@@ -362,7 +407,9 @@ def change(session: Session, kind: Kind, scope: Scope, user_id: int | None, chan
         for name, value in fields.items():
             f = kind.field(name)
             if f is None:
-                problems.append({"id": row_id, "field": name, "record": label, "problem": LOCKED if name in OWNER or name in ("Level", "Code") else "Bu alan düzenlenemez."})
+                owner = kind.owner or RESOURCE
+                locked = name in owner.fields or name in owner.locked_fields or name in kind.fixed
+                problems.append({"id": row_id, "field": name, "record": label, "problem": owner.locked if locked else "Bu alan düzenlenemez."})
                 continue
             new, problem = parse(f, value)
             if problem:
@@ -383,7 +430,7 @@ def change(session: Session, kind: Kind, scope: Scope, user_id: int | None, chan
         _write(session, kind, scope, row, delta, user_id)
         for name, new in delta.items():
             f = kind.field(name)
-            history.record(session, kind.table, history_key(scope, row), name, show(f, row[name]), show(f, new), SOURCE, user_id, note=scope.note)
+            history.record(session, kind.table, history_key(scope, row), name, show(f, row[name]), show(f, new), kind.source, user_id, note=scope.note)
         _refresh(session, kind, scope, row, [_range(kind, row), _range(kind, after)])
         events.append({"label": label, "old": {n: show(kind.field(n), row[n]) for n in delta},
                        "new": {n: show(kind.field(n), v) for n, v in delta.items()}})
@@ -394,7 +441,7 @@ def change(session: Session, kind: Kind, scope: Scope, user_id: int | None, chan
 
 def _write(session: Session, kind: Kind, scope: Scope, row: dict, delta: dict, user_id: int | None, is_valid: bool | None = None) -> int:
     """Değişikliği yazar; dönen: yazılan (saklanan) satırın kimliği. Kendi satırı yerinde; Baz satırı izleyen senaryoda fark satırına."""
-    if row["Origin"] == resolve.OWN:
+    if is_own(row):
         values = {**delta, **({} if is_valid is None else {"IsValid": 1 if is_valid else 0})}
         _update(session, kind, row["RowId"], values, user_id)
         return row["RowId"]
@@ -411,7 +458,8 @@ def _write(session: Session, kind: Kind, scope: Scope, row: dict, delta: dict, u
         if row["StoredId"] is not None:
             _delete(session, kind, row["StoredId"])
         return row["StoredId"] or row["RowId"]
-    values = {**{k: base[k] for k in OWNER if k in base}, **{n: (current[n] if n in overridden else base[n]) for n in names},
+    kept = (*(kind.owner.fields if kind.owner else ()), *kind.fixed)          # sahip ve tür fark satırında Baz'daki gibi durur
+    values = {**{k: base[k] for k in kept if k in base}, **{n: (current[n] if n in overridden else base[n]) for n in names},
               "IsValid": 1 if valid else 0, "OverriddenFields": "," + ",".join(sorted(overridden)) + ","}
     if row["StoredId"] is not None:
         _update(session, kind, row["StoredId"], values, user_id)
@@ -422,11 +470,11 @@ def _write(session: Session, kind: Kind, scope: Scope, row: dict, delta: dict, u
 def remove(session: Session, kind: Kind, scope: Scope, user_id: int | None, row_id: int) -> dict:
     """Senaryonun kendi satırını siler. Baz'dan okunan satır izleyen senaryodan silinmez (geçersiz yapılır)."""
     row = _get(session, kind, scope, row_id)
-    if row["Origin"] != resolve.OWN:
+    if not is_own(row):
         raise EntryError(code="base_row", message="Bu kayıt Baz'dan okunuyor; bu senaryoda silinemez, geçersiz yapılabilir.", status=409)
     label = record_label(session, kind, row)
     _delete(session, kind, row_id)
-    history.record(session, kind.table, row_id, None, None, None, SOURCE, user_id, change_type=history.CLOSED, note=scope.note)
+    history.record(session, kind.table, row_id, None, None, None, kind.source, user_id, change_type=history.CLOSED, note=scope.note)
     _refresh(session, kind, scope, row, [_range(kind, row)])
     return {"label": label, "values": {f.name: show(f, row[f.name]) for f in kind.fields}}
 
@@ -442,24 +490,25 @@ def set_valid(session: Session, kind: Kind, scope: Scope, user_id: int | None, r
         if problems:
             raise EntryError([{"id": row_id, "record": label, **p} for p in problems], message="Geçerli yapılamadı.")
     _write(session, kind, scope, row, {}, user_id, is_valid=valid)
-    history.record(session, kind.table, history_key(scope, row), "IsValid", "Evet" if row["IsValid"] else "Hayır", "Evet" if valid else "Hayır", SOURCE, user_id, note=scope.note)
+    history.record(session, kind.table, history_key(scope, row), "IsValid", "Evet" if row["IsValid"] else "Hayır", "Evet" if valid else "Hayır", kind.source, user_id, note=scope.note)
     _refresh(session, kind, scope, row, [_range(kind, row)])
     return {"label": label, "changed": True}
 
 
 def restore(session: Session, kind: Kind, scope: Scope, user_id: int | None, row_id: int) -> dict:
-    """Senaryo farkını kaldırır: fark satırı silinir, değerler Baz'a döner."""
+    """Senaryo farkını kaldırır: fark satırı silinir, değerler Baz'a döner. Aynı anahtarlı Baz satırını örten kendi satırında (K-191) senaryonun
+    satırı silinir; Baz satırı yeniden görünür."""
     row = _get(session, kind, scope, row_id)
     if row["Origin"] != resolve.DIFF or row["StoredId"] is None:
         raise EntryError(code="no_difference", message="Bu kayıtta senaryo farkı yok.", status=409)
     label = record_label(session, kind, row)
-    base = _stored(session, kind, row["RowId"])
+    base = _stored(session, kind, row["ShadowId"] if row.get("ShadowId") is not None else row["RowId"])
     changed = [n for n in _fields_of(row.get("OverriddenFields")) if n != "IsValid" and kind.field(n)]
     for name in changed:
         f = kind.field(name)
-        history.record(session, kind.table, history_key(scope, row), name, show(f, row[name]), show(f, base[name]), SOURCE, user_id, note=scope.note)
-    if not row["IsValid"]:
-        history.record(session, kind.table, history_key(scope, row), "IsValid", "Hayır", "Evet", SOURCE, user_id, note=scope.note)
+        history.record(session, kind.table, history_key(scope, row), name, show(f, row[name]), show(f, base[name]), kind.source, user_id, note=scope.note)
+    if not row["IsValid"] and base["IsValid"]:
+        history.record(session, kind.table, history_key(scope, row), "IsValid", "Hayır", "Evet", kind.source, user_id, note=scope.note)
     _delete(session, kind, row["StoredId"])
     _refresh(session, kind, scope, row, [_range(kind, row), _range(kind, base)])
     return {"label": label, "old": {n: show(kind.field(n), row[n]) for n in changed},

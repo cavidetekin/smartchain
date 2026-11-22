@@ -85,6 +85,20 @@ Motorun uygulayacağı kural (Aşama 10):
 - Hedef doluluk dolu ve "Hedef doluluğun üstü" hedefi (`OVER_TARGET_LOAD`) açık → dönem yükünün (kullanılabilir kapasite × hedef %) üstünde kalan kısmı bu hedefte cezalandırılır. Hedef kapalıysa değer kullanılmaz.
 - Kritik olmayan grup için hiçbir koşulda kısıt yazılmaz.
 
+## Eşit öncelikte paylaşım (K-192)
+
+Aynı öncelik grubundaki talepler arasında kaynak ya da malzeme yetmediğinde istek tarihi erken olan önce karşılanır. Ayarı yoktur. Alokasyon (talep sınıfına kaynak grubu ve dönem bazında kapasite payı; `param.AllocationRule`) Faz 1 dışıdır: motor bu tabloyu okumaz.
+
+## Tedarikçi limiti (7.12, K-191)
+
+`PlanningData.supplier_limits(date_from, date_to)` planın senaryosunda gün bazında satır verir (`SqlPlanningData`, `app/supplierlimits`): `[{LocationId, SupplierId, MaterialId, Day, DailyLimit, Closed}]`; yalnız üst limiti ya da kapanışı olan günler. `DailyLimit` o günün günlük ortalamasıdır (limit ÷ limitin döneminin gün sayısı: Gün 1, Hafta 7; Ay, Çeyrek, Yıl için o takvim döneminin gerçek gün sayısı); limiti olmayan kapalı günde boştur. Aynı modülün `period_limit` ve `material_limit` işlevleri dönem ve malzeme düzeyini aynı kuralla hesaplar. Motorun uygulayacağı kural (Aşama 10):
+- Tedarikçi + malzeme, plan dönemi: dönemin günleri limitli-açık, kapalı ya da limitsiz-açıktır. Limitsiz ve açık gün varsa dönem sınırsızdır. Yoksa sınır, limitli-açık günlerin günlük ortalamalarının toplamıdır (kapalı günün katkısı sıfır; kapalı günde limit de varsa kapanış kazanır). Bütün günler kapalıysa tedarikçi o dönemde o malzemede kapalıdır (sınır 0).
+- Malzeme: tedarikçilerinin (aktif ve güncel malzeme tedarikçisi kayıtları) sınırlarının toplamı; birinin sınırı yoksa malzeme o dönemde sınırsızdır.
+- Açık satın alma siparişleri limite sayılır: teslim tarihi o döneme düşen açık siparişler sınırdan düşer; plan yalnız kalanı önerebilir (limit 400, açık sipariş 150 ise en çok 250).
+- Kaydı olmayan tedarikçi + malzeme sınırsızdır. Fason kapasitesi bu tabloda değildir.
+
+Bu adımda motor kuralı uygulanmaz; giriş, saklama, geçerlilik hesabı ve arayüz vardır.
+
 ## Uyarı eşikleri (7.11, K-190)
 
 `PlanningData.warning_thresholds()` planın senaryosundaki aktif uyarıları verir (`SqlPlanningData`): `[{Code, Category, Unit, Direction, Low, Medium, High, Critical, Severity}]`. Kapalı uyarı dönmez. Motorun ve plan ekranlarının uygulayacağı kural (Aşama 8 ve 10):

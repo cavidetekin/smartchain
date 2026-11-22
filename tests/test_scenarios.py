@@ -102,11 +102,12 @@ def test_copy_brings_all_settings_and_follows_rules(db_engine, base, client, peo
     assert client.get(f"/api/parameters?scenario_id={base}", headers=admin).json()["values"]["UseOvertime"] == "0"
     # kopyanın kopyası: parametreler ve Baz'ı izler seçimi gelir; veri satırları kaynağın kendi satırlarıdır
     with db_engine.begin() as c:
-        c.execute(sa.text("INSERT INTO param.SupplierLimit (ScenarioDefinitionId, SupplierId, MaterialId, ValidFrom, ValidTo, UpperLimit) "
-                          "SELECT :a, SupplierId, MaterialId, ValidFrom, ValidTo, 7 FROM param.SupplierLimit WHERE ScenarioDefinitionId = :b"), {"a": a, "b": base})
+        c.execute(sa.text("INSERT INTO param.SupplierLimit (ScenarioDefinitionId, IsValid, LimitType, LocationId, SupplierId, MaterialId, ValidFrom, ValidTo, UpperLimit, "
+                          "LimitPeriod, UpdatedAt) SELECT :a, 1, LimitType, LocationId, SupplierId, MaterialId, DATEADD(year, 5, ValidFrom), DATEADD(year, 5, ValidTo), 7, "
+                          "LimitPeriod, SYSUTCDATETIME() FROM param.SupplierLimit WHERE ScenarioDefinitionId = :b AND LimitType = N'Üst limit'"), {"a": a, "b": base})
     b = new(client, admin, "Fazla mesaili · MILP", a, follows=False)
     got = client.get(f"/api/parameters?scenario_id={b}", headers=admin).json()["values"]
-    assert (got["UseOvertime"], got["ModelType"]) == ("1", "MILP") and rows_of(db_engine, "SupplierLimit", b) == rows_of(db_engine, "SupplierLimit", a)
+    assert (got["UseOvertime"], got["ModelType"]) == ("1", "MILP") and rows_of(db_engine, "SupplierLimit", b) == rows_of(db_engine, "SupplierLimit", a) + rows_of(db_engine, "SupplierLimit", base)   # izlemeyen kopya: Baz'ın değerleri tam kopyalanır (K-191), kaynağın kendi satırları da gelir
     # ad: zorunlu, tekil, en çok 100
     for name, problem in (("", "Senaryo adı boş olamaz."), (PREFIX + "Fazla mesaili", "Bu adla bir senaryo var."), ("x" * 101, "En çok 100 karakter.")):
         bad = client.post("/api/scenarios", headers=admin, json={"name": name, "source_id": base, "follows_base": True})

@@ -89,6 +89,11 @@ class PlanningData(Protocol):
         yalnız kritik ve güncel kaynak grupları. Kritik olmayan grubun saklı değeri dönmez."""
         ...
 
+    def supplier_limits(self, date_from: date, date_to: date) -> list[dict]:
+        """Tedarikçi limiti (docs/09, K-191): planın senaryosunda gün bazında {LocationId, SupplierId, MaterialId, Day, DailyLimit, Closed}; yalnız üst
+        limiti ya da kapanışı olan günler. Dönem ve malzeme düzeyi `app.supplierlimits`'in `period_limit` ve `material_limit` işlevleriyle."""
+        ...
+
     def warning_thresholds(self) -> list[dict]:
         """Uyarı eşikleri (docs/09, K-190): planın senaryosundaki aktif uyarılar {Code, Category, Unit, Direction, Low, Medium, High, Critical,
         Severity}. Yön `above`: değer > eşik; `below`: değer < eşik (eşik dahil değil); önem, tutulan en yüksek kademedir."""

@@ -15,7 +15,7 @@ import { DataTable, type FieldHints } from "../table/DataTable";
 import { ABOVE_MAX_ZOOM, listApi, type ListFilter, type Row, setListScenario } from "../table/types";
 import { type MenuAction, MenuActions, RowPopMenu } from "../ui/PopMenu";
 import { CapacityEntryDialog } from "./CapacityEntryDialog";
-import { ENTRIES, type EntryKind, ORIGIN_DIFF, type Owner } from "./capacityModel";
+import { ENTRIES, type EntryKind, type EntrySpec, ORIGIN_DIFF, type Owner } from "./capacityModel";
 
 const T = tr.capacity;
 const LOCATION_HINT: FieldHints = { LocationCode: { width: 6.5 } };   // Lokasyon kodu dar kolon (K-189)
@@ -53,14 +53,34 @@ const pct = (n: number) => `${(n * 100).toFixed(3)}%`;
 const percentText = (value: number) => `%${formatNumber(value, Number.isInteger(value) ? 0 : Number.isInteger(value * 10) ? 1 : 2)}`;
 const clampZoom = (zoom: number) => Math.min(ABOVE_MAX_ZOOM, Math.max(1, Math.round(zoom * 100) / 100));
 
-interface Segment { row: Row; left: number; width: number; text: string; lines: string[]; own: boolean }
+interface Segment { row: Row; left: number; width: number; text: string; lines: string[]; own: boolean; top: boolean }
 interface Line { key: string; code: string; title: string; segments: Segment[] }
+/** Bir satırın zaman çubuğundaki yeri ve yazımı (sahipten bağımsız kullanım, K-191). key: satırın anahtarı; code: solda yazan ad; text: dilimde
+ *  yazan; own: amber dilim (değilse nane); top: üstte çizilir (ör. kapanış, üst limitin üstünde); lines: ipucunun satırları. */
+export interface SpanInfo { key: string; code: string; title: string; text: string; own: boolean; top?: boolean; lines: string[] }
+/** Geçerlilik görünümünün sahipten bağımsız tanımı (K-191: tedarikçi limiti). */
+export interface ValidityCustom {
+  list: string; entry: EntrySpec;
+  /** Soldaki kolonun başlığı ("Kaynak", "Tedarikçi · Malzeme") ve genişliği (rem; verilmezse kaynak kodunun genişliği). */
+  corner: string; labelRem?: number;
+  /** Geçerlilik tablosunun kolon genişlikleri (rem). */
+  hints?: FieldHints;
+  describe(row: Row): SpanInfo;
+  /** Aralığın geldiği kaydı Kayıtlar listesinde bulmak için sahip süzmesi (`OwnerKeys` değeri). */
+  ownerKey(row: Row): string;
+  /** "Yeni kayıt"ta dolu gelen sahip. */
+  newOwner(row: Row): Owner;
+  /** Satır menüsünün erişilebilir adı. */
+  label(row: Row): string;
+}
 
 /** Zaman çubuğu: her kaynak bir satır, her aralık bir dilim; ufkun dışı kesilir, kayıt olmayan aralık boş kalır. Renk (zaman çubuğunun kendi
  *  renkleri): nane grubun kaydı, amber kaynağın kendi kaydı. Başlık satırı (Kaynak, aylar) ve kaynak listesi kaydırırken sabittir; − ve + ya da
  *  Ctrl + fare tekerleği çubuğu yatayda yakınlaştırır (tekerlekte imlecin altındaki tarih yerinde kalır). */
-export function ValidityTimeline({ rows, horizon, value, decimals, label, percent, zoom, onZoom, picked, onPick, onMenu }: {
+export function ValidityTimeline({ rows, horizon, value, decimals, label, percent, zoom, onZoom, picked, onPick, onMenu, describe, corner, labelRem = LABEL_REM }: {
   rows: Row[]; horizon: Horizon; value: string; decimals: number; label: string; percent?: boolean;
+  /** Sahipten bağımsız kullanım (K-191): satırın çubuktaki yeri ve yazımı; verilmezse kapasite girişinin (kaynak, değer) yazımı. */
+  describe?(row: Row): SpanInfo; corner?: string; labelRem?: number;
   zoom: number; onZoom(zoom: number): void;
   picked?: number | null; onPick?(row: Row): void; onMenu?(row: Row, anchor: HTMLElement): void;
 }) {
@@ -74,21 +94,26 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
     for (const row of rows) {
       const from = Math.max(dayOf(String(row.ValidFrom)), start);
       const to = Math.min(row.ValidTo ? dayOf(String(row.ValidTo)) : end, end);
-      const key = `${row.ResourceGroupId}|${row.ResourceId}`;
-      const code = manyLocations && row.LocationCode ? `${String(row.LocationCode)} · ${String(row.Code ?? "")}` : String(row.Code ?? "");
-      const title = `${code} · ${String(row.GroupCode ?? "")}`;
+      const custom = describe?.(row);
+      const key = custom?.key ?? `${row.ResourceGroupId}|${row.ResourceId}`;
+      const code = custom?.code ?? (manyLocations && row.LocationCode ? `${String(row.LocationCode)} · ${String(row.Code ?? "")}` : String(row.Code ?? ""));
+      const title = custom?.title ?? `${code} · ${String(row.GroupCode ?? "")}`;
       let line = lines.get(key);
       if (!line) {
         line = { key, code, title, segments: [] };
         lines.set(key, line);
       }
       if (to < from) continue;
+      if (custom) {
+        line.segments.push({ row, left: (from - start) / total, width: (to - from + 1) / total, text: custom.text, own: custom.own, top: Boolean(custom.top), lines: custom.lines });
+        continue;
+      }
       const own = row.SourceLevel === LEVEL_RESOURCE;
       const number = Number(row[value]);
       const text = percent ? percentText(number) : formatNumber(number, decimals);
       const unit = percent || !row.CapacityUnit ? "" : ` ${String(row.CapacityUnit)}`;
       const range = row.ValidTo ? `${trDate(String(row.ValidFrom))} – ${trDate(String(row.ValidTo))}` : T.view.since(trDate(String(row.ValidFrom)));
-      line.segments.push({ row, left: (from - start) / total, width: (to - from + 1) / total, text, own,
+      line.segments.push({ row, left: (from - start) / total, width: (to - from + 1) / total, text, own, top: false,
                            lines: [title, `${label}: ${text}${unit}`, range, own ? T.view.ownRecord : T.view.groupRecord,
                                    ...(row.SourceOrigin === ORIGIN_DIFF ? [T.view.scenarioDiff] : [])] });
     }
@@ -99,8 +124,9 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
       const a = Math.max(Math.round(Date.UTC(y, m, 1) / DAY), start), b = Math.min(Math.round(Date.UTC(y, m + 1, 0) / DAY), end);
       if (b >= a) months.push({ key: `${y}-${m}`, label: `${MONTHS[m]} ${y}`, left: (a - start) / total, width: (b - a + 1) / total });
     }
+    for (const line of lines.values()) line.segments.sort((a, b) => Number(a.top) - Number(b.top));   // üstte çizilecek dilim sonda
     return { lines: [...lines.values()], months };
-  }, [rows, horizon, value, decimals, label, percent]);
+  }, [rows, horizon, value, decimals, label, percent, describe]);
 
   // Dilime ya da ay hücresine sığmayan yazı yazılmaz (ipucunda görünür). Yakınlaştırılmış uzun dilimde değer dilimin görünen kısmının ortasında
   // durur (dilimin ortası ekran dışındaysa kaydırılır). Her çizimde, kaydırınca ve boyut değişince ölçülür.
@@ -169,8 +195,9 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
     <div className="sc-validity" role="group" aria-label={T.view.timeline} ref={box}>
       {/* Izgaranın genişliği içeriği kadardır (kaynak kolonu + yakınlaştırılmış çubuk): sabit kolon, kapsayıcısı ızgara olduğu için, yatay
           kaydırmanın sonuna kadar yerinde kalır. Genişlik kutunun genişliğinde kalsaydı kolon o genişlik bitince kayardı. */}
-      <div className="sc-validity-grid" data-zoom={zoom} style={{ width: `calc(${LABEL_REM}rem + (100% - ${LABEL_REM}rem) * ${zoom})` }}>
-        <div className="sc-validity-corner"><b>{T.resource}</b></div>
+      <div className="sc-validity-grid" data-zoom={zoom}
+           style={{ width: `calc(${labelRem}rem + (100% - ${labelRem}rem) * ${zoom})`, ["--validity-label" as string]: `${labelRem}rem` }}>
+        <div className="sc-validity-corner"><b>{corner ?? T.resource}</b></div>
         <div className="sc-validity-axis">
           {model.months.map((m) => <span key={m.key} className="sc-validity-month" aria-hidden="true" title={m.label} style={{ left: pct(m.left), width: pct(m.width) }}><b>{m.label}</b></span>)}
           <span className="sc-validity-zooms">
@@ -201,8 +228,10 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
 
 /** Geçerlilik tablosu ve üstünde zaman çubuğu. Hücre düzenleme, satır menüsü düğmesi ve kart yok; sağ tıkta Düzenle ve Yeni kayıt (yazma yetkisi
  *  olanda) ve Kayda git. */
-export function ValidityView({ kind, filters, lead, end, compact, reloadKey = 0, onChanged, onGoToRecord }: {
-  kind: EntryKind; filters?: ListFilter[]; lead?: ReactNode; end?: ReactNode; compact?: boolean; reloadKey?: number;
+export function ValidityView({ kind, custom, filters, lead, end, compact, reloadKey = 0, onChanged, onGoToRecord }: {
+  /** Kapasite girişi; sahipten bağımsız kullanımda `custom` verilir (K-191). */
+  kind?: EntryKind; custom?: ValidityCustom;
+  filters?: ListFilter[]; lead?: ReactNode; end?: ReactNode; compact?: boolean; reloadKey?: number;
   /** Kayıt düzenlendi ya da eklendi (öteki tablolar yenilensin). */
   onChanged?(): void;
   /** "Kayda git": Kayıtlar'a geçilir, kayıt seçili gösterilir. */
@@ -210,9 +239,10 @@ export function ValidityView({ kind, filters, lead, end, compact, reloadKey = 0,
 }) {
   const { scenario } = useShell();
   const { me } = useAuth();
-  const write = Boolean(me && can(me, 24, "write"));
-  const spec = VALIDITY[kind]!;
-  const entry = ENTRIES[kind];
+  const entry = custom?.entry ?? ENTRIES[kind!];
+  const write = Boolean(me && can(me, entry.adapter?.writeFunction ?? 24, "write"));
+  const spec = custom ? { list: custom.list, value: "", decimals: 0, label: "", percent: false } : VALIDITY[kind!]!;
+  const DialogView = entry.adapter?.Dialog ?? CapacityEntryDialog;
   const sid = scenario?.id ?? 0;
   const [horizon, setHorizon] = useState<Horizon | null>(null);
   const [picked, setPicked] = useState<{ id: number; n: number } | null>(null);
@@ -231,7 +261,7 @@ export function ValidityView({ kind, filters, lead, end, compact, reloadKey = 0,
   /** Aralığın geldiği kayıt (Kayıtlar listesindeki satırı): Düzenle penceresi bu satırla açılır. */
   const openEdit = async (row: Row) => {
     setListScenario(entry.list, sid);
-    const owner = row.SourceLevel === LEVEL_RESOURCE ? `,r${row.ResourceId},` : `,g${row.ResourceGroupId},`;
+    const owner = custom ? custom.ownerKey(row) : row.SourceLevel === LEVEL_RESOURCE ? `,r${row.ResourceId},` : `,g${row.ResourceGroupId},`;
     try {
       // İstenen alanlar listenin kendi kolonlarıdır: girişlerin alanları aynı değildir (Verimlilik'te "Birim" yok; olmayan alan isteği reddettirir)
       const fields = (await listApi(entry.list).columns()).columns.map((c) => c.field);
@@ -247,7 +277,7 @@ export function ValidityView({ kind, filters, lead, end, compact, reloadKey = 0,
     }
   };
   // Yeni kayıt: pencere aralığın kaynağı seçili açılır; seviye ve kod pencerede değiştirilebilir
-  const openNew = (row: Row) => setDialog({ row: null, owner: { level: "resource", id: Number(row.ResourceId), code: String(row.Code ?? "") } });
+  const openNew = (row: Row) => setDialog({ row: null, owner: custom ? custom.newOwner(row) : { level: "resource", id: Number(row.ResourceId), code: String(row.Code ?? "") } });
   const items = (row: Row): MenuAction[] => [
     ...(write ? [{ label: T.menu.edit, onClick: () => void openEdit(row) }, { label: T.menu.add, onClick: () => openNew(row) }] : []),
     ...(onGoToRecord ? [{ label: T.view.goToRecord, onClick: () => onGoToRecord(Number(row.SourceRowId)) }] : []),
@@ -257,25 +287,25 @@ export function ValidityView({ kind, filters, lead, end, compact, reloadKey = 0,
 
   return (
     <>
-      <DataTable list={spec.list} baseFilters={filters} toolbarLead={lead} toolbarEnd={end} compact={compact} fieldHints={LOCATION_HINT} reloadKey={reloadKey + tick}
+      <DataTable list={spec.list} baseFilters={filters} toolbarLead={lead} toolbarEnd={end} compact={compact} fieldHints={custom?.hints ?? LOCATION_HINT} reloadKey={reloadKey + tick}
                  cellMenu={(_col, row) => items(row)} selectedRowId={picked?.id ?? null} reveal={picked}
                  above={horizon ? (rows, pane) => {
                    onZoomOf.current = pane.setZoom;
                    return (
                      <ValidityTimeline rows={rows} horizon={horizon} value={spec.value} decimals={spec.decimals} label={spec.label} percent={spec.percent}
-                                       zoom={pane.zoom} onZoom={onZoom} picked={picked?.id ?? null}
+                                       zoom={pane.zoom} onZoom={onZoom} picked={picked?.id ?? null} describe={custom?.describe} corner={custom?.corner} labelRem={custom?.labelRem}
                                        onPick={(row) => setPicked((cur) => ({ id: row.Id, n: (cur?.n ?? 0) + 1 }))}
                                        onMenu={(row, anchor) => { if (items(row).length) setMenu({ row, anchor }); }} />
                    );
                  } : undefined} />
       {menu && (
-        <RowPopMenu label={T.rowActions(String(menu.row.Code ?? ""))} anchor={menu.anchor} onClose={() => setMenu(null)}>
+        <RowPopMenu label={T.rowActions(custom ? custom.label(menu.row) : String(menu.row.Code ?? ""))} anchor={menu.anchor} onClose={() => setMenu(null)}>
           <MenuActions items={items(menu.row)} onDone={() => setMenu(null)} end={false} />
         </RowPopMenu>
       )}
       {dialog && (
-        <CapacityEntryDialog spec={entry} scenario={sid} row={dialog.row} owner={dialog.owner} onClose={() => setDialog(null)}
-                             onSaved={() => { setDialog(null); setTick((n) => n + 1); onChanged?.(); }} />
+        <DialogView spec={entry} scenario={sid} row={dialog.row} owner={dialog.owner} onClose={() => setDialog(null)}
+                    onSaved={() => { setDialog(null); setTick((n) => n + 1); onChanged?.(); }} />
       )}
     </>
   );

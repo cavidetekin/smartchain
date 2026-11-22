@@ -689,6 +689,11 @@
 .sc-edit-grid tr.is-off td { color: var(--text-muted); }
 .sc-edit-grid tfoot td { height: var(--row-height); padding: 0 var(--space-2); background: var(--lead-50); font-weight: var(--fw-semibold); }
 .sc-edit-grid .sc-cell-editor.is-num { text-align: right; }
+/* Tedarikçi limiti penceresi (K-191): kapanışta seçilen malzemeler (her biri ayrı kayıt olur); boşken "Tümü" */
+.sc-pick-list { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: var(--space-1) 0 0; padding: 0; list-style: none; }
+.sc-pick-list .sc-tag { display: inline-flex; align-items: center; gap: var(--space-1); }
+.sc-pick-remove { padding: 0 0.1538rem; border: 0; background: transparent; color: inherit; font: inherit; line-height: 1; cursor: pointer; }
+.sc-pick-remove:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 /* Uyarı eşikleri (K-190): eşiksiz uyarıda önem seçimi dört önem kolonunu kaplar (satır yüksekliğini büyütmeyen sıkı parçalı seçim); kapalı uyarının
    satırı belirgin soluk (gri zemin, açık yazı) */
 .sc-edit-grid .sc-severity-choice { display: inline-flex; }
@@ -946,7 +951,8 @@ tr.is-clickable { cursor: pointer; }
 .sc-above-pane { display: flex; min-height: 5rem; overflow: hidden; }
 .sc-validity { flex: 1 1 auto; min-width: 0; overflow: auto; background: var(--surface); border: 1px solid var(--table-border); border-radius: var(--radius); }
 /* ızgaranın genişliği içeriği kadar (bileşen satır içi verir): sabit kolon yatay kaydırmanın sonuna kadar yerinde kalır */
-.sc-validity-grid { display: grid; grid-template-columns: 9rem minmax(0, 1fr); align-items: stretch; }
+/* soldaki kolonun genişliği bileşenden gelir (--validity-label; kaynak kodu 9rem, tedarikçi · malzeme daha geniş) */
+.sc-validity-grid { display: grid; grid-template-columns: var(--validity-label, 9rem) minmax(0, 1fr); align-items: stretch; }
 .sc-validity-line { display: contents; }
 /* başlık satırı: solda "Kaynak" ve yakınlaştırma, sağda aylar; kaydırırken sabit */
 .sc-validity-corner { position: sticky; top: 0; left: 0; z-index: 3; display: flex; align-items: center;

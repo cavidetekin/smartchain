@@ -172,13 +172,20 @@ def _has_warning_thresholds(engine: Engine) -> bool:
                                          "WHERE s.IsSynthetic = 1 AND w.WarningCode = :c AND w.IsActive = 0"), {"c": WARNING_THRESHOLD_OFF}).scalar())
 
 
+def _has_supplier_limits(engine: Engine) -> bool:
+    """Sentetik set tedarikçi limiti örneklerini taşıyor mu (7.12, K-191): eski setle kurulmuş test veritabanı yeniden yüklenir."""
+    with engine.connect() as conn:
+        return conn.execute(sa.text("SELECT COUNT(*) FROM param.SupplierLimit l JOIN param.ScenarioDefinition s ON s.Id = l.ScenarioDefinitionId "
+                                    "WHERE s.IsBase = 1 AND l.LimitType = N'Kapanış'")).scalar() >= 2
+
+
 def ensure_synthetic(engine: Engine) -> bool:
     """Sentetik veri yoksa yükler (docs/11); varsa dokunmaz. Yüklediyse True."""
     with engine.connect() as conn:
         row = conn.execute(sa.text(
             "SELECT TOP 1 v.IsSynthetic, (SELECT COUNT(*) FROM core.Material m WHERE m.VersionFrom <= v.Id "
             "AND (m.VersionTo IS NULL OR m.VersionTo >= v.Id)) FROM adm.DataVersion v ORDER BY v.Id DESC")).first()
-    if row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine) and _has_warning_thresholds(engine):
+    if row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine) and _has_warning_thresholds(engine) and _has_supplier_limits(engine):
         return False
     from app.data.synthetic.dataset import generate
     from app.data.synthetic.load import load

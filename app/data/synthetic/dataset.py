@@ -27,6 +27,12 @@ MODEL_CONSTRAINT_DIFF = ("MONTAJ", 2.0)        # "Kısıtsız kapasite": Baz'dak
 # Uyarı eşikleri (K-190): "Kısıtsız kapasite" senaryosunda farklı eşik (Düşük, Orta, Yüksek, Kritik) ve kapalı bir uyarı
 WARNING_THRESHOLD_CHANGE = ("CAP_OVERLOAD", (None, 110, 125, 150))
 WARNING_THRESHOLD_OFF = "CAP_LOW_LOAD"
+# Tedarikçi limiti (K-191): tür adları; örnek kayıtlar (tedarikçi, limit, ileri tarihli limit) ve senaryo farkı
+SUPLIM_UPPER, SUPLIM_CLOSURE = "Üst limit", "Kapanış"
+SUPLIM_STEADY = ("TED-01", 600, 800)        # tedarikçinin ilk malzemesi: 600 / ay, 8. haftadan itibaren 800 / ay; ikinci malzemesi 5. haftada kapalı
+SUPLIM_WEEKLY = ("TED-02", 150)             # tedarikçinin ilk malzemesi: 150 / hafta
+SUPLIM_WEEKLY_DIFF = 300                    # "Kısıtsız kapasite" senaryosunda aynı limit (fark)
+SUPLIM_HOLIDAY = "TED-03"                   # yıl sonu tatilinde bütün malzemelerde kapalı
 MODEL_CONSTRAINT_OWN = ("TASLAMA", 1.25)       # "Kısıtsız kapasite": senaryonun kendi değeri (Baz'da yok)
 HISTORY_DAYS = 21
 
@@ -771,9 +777,46 @@ def _params(b: _Builder) -> None:
     for seq, (criterion, direction) in enumerate([("Dönem", "Artan"), ("Müşteri önceliği", "Artan"),
                                                   ("Proje önceliği", "Artan"), ("Teslim tarihi", "Artan")], 1):
         b.add("param.PriorityRule", with_id=False, ScenarioDefinitionId=1, Seq=seq, Criterion=criterion, Direction=direction)
+    _supplier_limits(b)
+
+
+def supplier_material(ds_or_builder, supplier: str, nth: int = 0) -> dict:
+    """Tedarikçinin (koduna göre sıralı) n. malzemesi: tedarikçi limiti örnekleri malzeme tedarikçisi kayıtlarından seçilir."""
+    rows = ds_or_builder.t if hasattr(ds_or_builder, "t") else {k: ds_or_builder.rows(k) for k in ("Supplier", "Material", "MaterialSupplier")}
+    sup = next(s for s in rows["Supplier"] if s["Code"] == supplier)
+    ids = {ms["MaterialId"] for ms in rows["MaterialSupplier"] if ms["SupplierId"] == sup["Id"]}
+    return sorted((m for m in rows["Material"] if m["Id"] in ids), key=lambda m: m["Code"])[nth]
+
+
+def year_end_closure(ds: "Dataset") -> tuple[date, date]:
+    """Yıl sonu tatili: ufka düşen ilk 28 Aralık – 3 Ocak."""
+    year = ds.start.year if ds.start <= date(ds.start.year, 12, 28) else ds.start.year + 1
+    return date(year, 12, 28), date(year + 1, 1, 3)
+
+
+def _supplier_limits(b: _Builder) -> None:
+    """Tedarikçi limiti (7.12, K-191; docs/11): durum 3'ün aylık limiti, süresiz bir limit ve onu ileri tarihte değiştiren ikinci kayıt, haftalık bir
+    limit, bir genel kapanış (bütün malzemeler) ve bir malzemeye özel kapanış."""
+    ds = b.ds
+
+    def limit(supplier: str, material_id: int, start: date, end: date | None, qty: float, period: str) -> None:
+        b.add("param.SupplierLimit", ScenarioDefinitionId=1, IsValid=True, LimitType=SUPLIM_UPPER, LocationId=1, SupplierId=b.id("Supplier", supplier),
+              MaterialId=material_id, ValidFrom=start, ValidTo=end, UpperLimit=float(qty), LimitPeriod=period, Reason=None)
+
+    def closure(supplier: str, material_id: int | None, start: date, end: date, reason: str) -> None:
+        b.add("param.SupplierLimit", ScenarioDefinitionId=1, IsValid=True, LimitType=SUPLIM_CLOSURE, LocationId=1, SupplierId=b.id("Supplier", supplier),
+              MaterialId=material_id, ValidFrom=start, ValidTo=end, UpperLimit=None, LimitPeriod=None, Reason=reason)
+
     first, last = limit_month(ds)
-    b.add("param.SupplierLimit", ScenarioDefinitionId=1, SupplierId=b.id("Supplier", LIMIT_SUPPLIER),
-          MaterialId=b.id("Material", LIMIT_MATERIAL), ValidFrom=first, ValidTo=last, UpperLimit=float(LIMIT_QTY))
+    limit(LIMIT_SUPPLIER, b.id("Material", LIMIT_MATERIAL), first, last, LIMIT_QTY, "Ay")           # durum 3 (ilk satır)
+    since = ds.start - timedelta(days=28)
+    steady = supplier_material(b, SUPLIM_STEADY[0])
+    limit(SUPLIM_STEADY[0], steady["Id"], since, None, SUPLIM_STEADY[1], "Ay")                      # süresiz
+    limit(SUPLIM_STEADY[0], steady["Id"], ds.day(8), None, SUPLIM_STEADY[2], "Ay")                  # 8. haftadan itibaren ikinci kayıt
+    weekly = supplier_material(b, SUPLIM_WEEKLY[0])
+    limit(SUPLIM_WEEKLY[0], weekly["Id"], since, None, SUPLIM_WEEKLY[1], "Hafta")
+    closure(SUPLIM_HOLIDAY, None, *year_end_closure(ds), "Yıl sonu tatili")                         # genel kapanış
+    closure(SUPLIM_STEADY[0], supplier_material(b, SUPLIM_STEADY[0], 1)["Id"], ds.day(5), ds.day(5, 6), "Hat bakımı")   # malzemeye özel
 
 
 # --- İş anahtarı (BusinessKey) ---

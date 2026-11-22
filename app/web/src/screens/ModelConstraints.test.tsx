@@ -92,7 +92,7 @@ describe("ekran 31 · Model kısıtları (K-189, 7.10)", () => {
   it("tek sekme; her kaynak grubu bir satır; Yeni kayıt yok; istek seçili senaryoyu taşır; değerler yazımıyla", async () => {
     const { queries } = await open();
     const tabs = within(screen.getByRole("radiogroup", { name: "Model kısıtları bölümleri" })).getAllByRole("radio");
-    expect(tabs.map((t) => [t.textContent, t.getAttribute("aria-checked")])).toEqual([["Kaynak grubu", "true"]]);
+    expect(tabs.map((t) => [t.textContent, t.getAttribute("aria-checked")])).toEqual([["Kaynak grubu", "true"], ["Tedarikçi limiti", "false"]]);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Model kısıtları");
     expect(screen.queryByRole("button", { name: "Yeni kayıt" })).toBeNull();
     expect(queries[LIST][0]).toMatchObject({ scenario_id: 1 });

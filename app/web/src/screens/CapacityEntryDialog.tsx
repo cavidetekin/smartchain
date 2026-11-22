@@ -8,7 +8,7 @@ import { ApiError, emitNotice } from "../api/client";
 import { tr } from "../i18n/tr";
 import { listApi, type Row } from "../table/types";
 import { Alert, DateField, DayBoxes, Dialog, NumberField, SearchSelect, Segment, TextField } from "../ui";
-import { capacityApi, DAY_CHOICES, DAYS, type EntryField, type EntrySpec, isoDate, type Owner, parseIso } from "./capacityModel";
+import { capacityApi, DAY_CHOICES, DAYS, type EntryDialogProps, type EntryField, type EntryKind, type EntrySpec, isoDate, parseIso } from "./capacityModel";
 
 const T = tr.capacity;
 type Values = Record<string, unknown>;
@@ -36,18 +36,12 @@ function wire(f: EntryField, v: unknown): unknown {
 
 const filled = (f: EntryField, v: unknown) => (f.kind === "date" ? v instanceof Date : f.kind === "number" ? typeof v === "number" : typeof v === "string" && v.trim() !== "");
 
-export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSaved }: {
-  spec: EntrySpec; scenario: number;
-  /** Düzenlenen satır; yoksa yeni kayıt. */
-  row: Row | null;
-  /** Yeni kayıtta dolu gelen seviye ve kod (karttan ya da satır menüsünden). */
-  owner?: Owner | null;
-  onClose(): void; onSaved(): void;
-}) {
+export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSaved }: EntryDialogProps) {
+  const kind = spec.kind as EntryKind;   // bu pencere kapasite girişlerinindir (başka girişin penceresi `spec.adapter.Dialog`)
   const editing = row !== null;
   const start = useMemo(() => initial(spec, row), [spec, row]);
   const [values, setValues] = useState<Values>(start);
-  const [level, setLevel] = useState<"group" | "resource">(owner?.level ?? "group");
+  const [level, setLevel] = useState<"group" | "resource">(owner?.level === "resource" ? "resource" : "group");
   const [ownerId, setOwnerId] = useState(owner ? String(owner.id) : "");
   const [options, setOptions] = useState<{ group: Row[]; resource: Row[] } | null>(null);
   const [problems, setProblems] = useState<Record<string, string>>({});
@@ -101,11 +95,11 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
       if (editing) {
         const changes = spec.fields.filter((f) => JSON.stringify(wire(f, values[f.name])) !== JSON.stringify(wire(f, start[f.name])))
           .map((f) => ({ id: row.Id, field: f.name, value: wire(f, values[f.name]) }));
-        if (changes.length) warnings = (await capacityApi.change(spec.kind, scenario, changes)).warnings;
+        if (changes.length) warnings = (await capacityApi.change(kind, scenario, changes)).warnings;
       } else {
         const body: Values = Object.fromEntries(spec.fields.map((f) => [f.name, wire(f, values[f.name])]));
         if (spec.owner) body[level === "group" ? "ResourceGroupId" : "ResourceId"] = ownerId ? Number(ownerId) : null;
-        warnings = (await capacityApi.create(spec.kind, scenario, body)).warnings;
+        warnings = (await capacityApi.create(kind, scenario, body)).warnings;
       }
       for (const w of warnings ?? []) emitNotice(w);
       onSaved();

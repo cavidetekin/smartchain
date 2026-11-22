@@ -1,7 +1,10 @@
 // Kapasite yönetimi (ekran 30, K-185, 7.9b): giriş tablolarının tanımı (liste, alanlar, seçenekler) ve yazma uçları.
 // Okuma ortak liste uçlarından (`capacity-*`); yazma `/api/capacity/<giriş>` (docs/08 "Kapasite yönetimi").
+import type { ComponentType } from "react";
+
 import { sendJson } from "../api/client";
 import { tr } from "../i18n/tr";
+import type { Row } from "../table/types";
 
 const T = tr.capacity;
 
@@ -9,7 +12,41 @@ export type EntryKind = "work-patterns" | "efficiency" | "overtime-limits" | "do
 export type FieldKind = "date" | "number" | "day" | "choice" | "text";
 export interface EntryField { name: string; label: string; kind: FieldKind; required?: boolean; decimals?: number; options?: readonly string[] }
 export interface EntrySpec {
-  kind: EntryKind; list: string; table: string; title: string; owner: boolean; start: string; fields: EntryField[];
+  kind: EntryKind | "supplier-limits"; list: string; table: string; title: string; owner: boolean; start: string; fields: EntryField[];
+  /** Kapasite yönetimi dışındaki giriş (K-191: tedarikçi limiti): uçlar, yetki, sahip ve pencere. Verilmezse kapasite girişinin davranışı. */
+  adapter?: EntryAdapter;
+}
+
+/** Yazma uçları (senaryo istekle gider). */
+export interface EntryApi {
+  change(scenario: number, changes: { id: number; field: string; value: unknown }[]): Promise<Saved & { saved: number }>;
+  remove(scenario: number, id: number): Promise<unknown>;
+  invalidate(scenario: number, id: number): Promise<unknown>;
+  validate(scenario: number, id: number): Promise<unknown>;
+  restore(scenario: number, id: number): Promise<unknown>;
+}
+export interface EntryDialogProps {
+  spec: EntrySpec; scenario: number;
+  /** Düzenlenen satır; yoksa yeni kayıt. */
+  row: Row | null;
+  /** Yeni kayıtta dolu gelen sahip (karttan, satır menüsünden ya da zaman çubuğundan). */
+  owner?: Owner | null;
+  onClose(): void; onSaved(): void;
+}
+/** Giriş altyapısının sahipten bağımsız kullanımı (K-191): aynı tablo, menü, düzenleme ve pencere standardı; sahip ve uçlar burada tanımlanır. */
+export interface EntryAdapter {
+  api: EntryApi;
+  /** Yazma yetkisinin fonksiyonu (kapasite girişlerinde 24). */
+  writeFunction: number;
+  /** Kaydın okunur adı (menü ve onay metinleri). shown: alanın tablodaki yazımı. */
+  label(row: Row, shown: (field: string, row: Row) => string): string;
+  /** Satırın sahibi: "Yeni kayıt" satır menüsünden açılınca dolu gelir. */
+  ownerOf(row: Row): Owner | null;
+  /** Alan bu satırda düzenlenir mi (aynı tabloda iki kayıt türü: türe uymayan hücre düzenlenmez). */
+  canEdit?(field: string, row: Row): boolean;
+  /** Kolon genişlikleri (rem). */
+  hints?: Record<string, { width?: number; left?: boolean }>;
+  Dialog: ComponentType<EntryDialogProps>;
 }
 
 /** Tablodaki gün yazımı (— : çalışılmıyor); pencerede üçüncü seçenek "Çalışılmıyor". */
@@ -42,12 +79,21 @@ export const ORIGIN_ERP = "ERP";
 export const ORIGIN_DIFF = "Senaryo farkı";
 export const ORIGIN_OWN = "Senaryo";
 
-/** Kayıt gruba mı kaynağa mı girilir; kartta "Yeni kayıt" bunu dolu getirir. */
-export interface Owner { level: "group" | "resource"; id: number; code: string }
+/** Kayıt gruba mı kaynağa mı girilir; kartta "Yeni kayıt" bunu dolu getirir. Tedarikçi limitinde sahip tedarikçidir (lokasyonu ve varsa malzemesiyle). */
+export interface Owner { level: "group" | "resource" | "supplier"; id: number; code: string; locationId?: number; materialId?: number | null }
 
 const url = (kind: EntryKind, scenario: number, tail = "") => `/api/capacity/${kind}${tail}?scenario_id=${scenario}`;
 
 export interface Saved { warnings?: string[] }
+/** Kapasite girişinin uçları, girişe bağlanmış (ortak bileşenler `EntryApi` ile çalışır). */
+export const boundCapacityApi = (kind: EntryKind): EntryApi => ({
+  change: (scenario, changes) => capacityApi.change(kind, scenario, changes),
+  remove: (scenario, id) => capacityApi.remove(kind, scenario, id),
+  invalidate: (scenario, id) => capacityApi.invalidate(kind, scenario, id),
+  validate: (scenario, id) => capacityApi.validate(kind, scenario, id),
+  restore: (scenario, id) => capacityApi.restore(kind, scenario, id),
+});
+
 export const capacityApi = {
   create: (kind: EntryKind, scenario: number, values: Record<string, unknown>) => sendJson<Saved & { id: number }>("POST", url(kind, scenario), { values }),
   change: (kind: EntryKind, scenario: number, changes: { id: number; field: string; value: unknown }[]) =>

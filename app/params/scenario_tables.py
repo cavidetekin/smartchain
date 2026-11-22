@@ -35,11 +35,6 @@ class ScenarioTable:
         return metadata.tables[f"param.{self.name}"]
 
 
-def _pending(session: Session, scenario_id: int) -> None:
-    """Tedarikçi limitlerinin fark yapısı kendi adımında (7.12) gelir; o zamana kadar ayırma yalnız seçimi kaydeder. Kapasite girişlerinde
-    çözümleme katmanı kuruludur (K-185)."""
-
-
 TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("PlanningSetting", SETTING),
     ScenarioTable("ObjectiveDefinition", SETTING),
@@ -47,7 +42,6 @@ TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("PriorityRule", SETTING),
     ScenarioTable("AllocationRule", SETTING),
     ScenarioTable("WarningThreshold", SETTING),   # uyarı eşikleri (K-190): ayar, tam kopya
-    ScenarioTable("SupplierLimit", DATA, _pending),
     # Kapasite girişleri (K-185): fark yapısı ve çözümleme `app/params/resolve.py`'de
     *[ScenarioTable(name, DATA, resolve.materializer(name)) for name in resolve.FIELDS],
 )

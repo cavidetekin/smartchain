@@ -1838,7 +1838,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | OVER_TARGET_LOAD | Hedef doluluğun üstü |  |  | Hayır |
 
 - **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.14'te tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
-- **Parametre olmayanlar:** tedarikçi limitleri ve malzeme blokajı ayrı veri giriş ekranlarıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.9). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
+- **Parametre olmayanlar:** tedarikçi limiti Model kısıtları ekranının ikinci sekmesidir (7.12, K-191) ve malzeme blokajı ayrı veri giriş ekranıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.9). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
 - **Hata durumları:** geçersiz değer (liste dışı seçenek, sayı olmayan değer, sınır dışı) kaydı durdurur; bilinmeyen anahtar reddedilir.
 - **YENİDEN HESAPLANACAK ALANLAR:** kayıt hesap başlatmaz; bir sonraki plan hesabı (gece ya da çalışma) yeni değerleri okur. Veri kalitesinin tahmin ufku bir sonraki kontrolde güncellenir.
 - **Uygulama (7.1, K-175):** uygulandı. `app/params/` (katalog, servis), `GET/PUT /api/parameters`, `GET/PUT /api/parameters/objectives`; geçiş 0058 (parametre seti kalktı, Baz açıldı). Motor `ScenarioParameters` ile okur (docs/09).
@@ -1999,10 +1999,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Geçmiş:** ⋯ › Detay kartında (yalnız Geçmiş); kaynak grubu kimliğiyle tutulur, "Değiştiren" ve senaryo adıyla.
 - **Motor:** değerleri motor arayüzünden okur (`PlanningData.model_constraints`, docs/09): yalnız kritik ve güncel gruplar. Uygulaması Aşama 10'da. İki değer Kapasite özeti'ne alan olarak eklenmez.
 - **Uygulama (7.10, K-189):** uygulandı (7.10; sürüm 0.50.0, geçiş 0068, K-189; iki demo).
+- **Tedarikçi limiti (7.12, K-191; aynı ekranın ikinci sekmesi, fonksiyon 103):** uygulandı (7.12; sürüm 0.52.0, geçiş 0070 ve 0071, K-191; A-47 kapandı).
+  - **İki kayıt türü (pencerede seçilir):** Üst limit (tedarikçi, malzeme, başlangıç, isteğe bağlı bitiş, limit, limitin dönemi: Gün · Hafta · Ay · Çeyrek · Yıl, isteğe bağlı sebep; pencere bu tür seçili açılır) ve Tedarikçi kapanışı (tedarikçi, başlangıç ve bitiş, isteğe bağlı sebep; malzeme boşsa bütün malzemeler; birden fazla malzeme seçilirse her biri ayrı kayıt).
+  - **Kurallar:** limit yalnız tanımlı, aktif ve güncel malzeme tedarikçisi kaydına girilir; kayıt yoksa tedarikçi o malzemede sınırsızdır. Limit sıfırdan büyük, malzemenin temel biriminde. Aynı tedarikçi ve malzemede o günü kapsayan üst limit kayıtlarından başlangıcı en ileri olan geçerlidir; aynı başlangıçlı ikinci kayıt reddedilir. Kapanışlar birleşir; kapalı günde limit de varsa kapanış kazanır.
+  - **Plan dönemine çevirme:** limit günlük ortalamaya çevrilir (Gün 1, Hafta 7; Ay, Çeyrek, Yıl için takvim günü) ve dönemin günleri için toplanır; kapalı günün katkısı sıfır. Dönemde limitsiz ve açık gün varsa dönem sınırsızdır; limiti olmayan tedarikçi yalnız dönemin tamamı kapalıysa o dönemde kapalıdır. Çok tedarikçili malzemede üst sınır limitlerin toplamıdır; birinin limiti yoksa sınırsız. Açık satın alma siparişleri limitten düşer.
+  - **Ekran:** Kayıtlar · Geçerlilik; Kapasite yönetimi'ndeki bileşenlerle (Yeni kayıt, ⋯ menüsü, tablo içi düzenleme, senaryo farkı, kartta Geçmiş; zaman çubuğu). Lokasyon tablonun kendi alanıdır.
+  - **Senaryo:** Baz + fark; izleyen senaryoda aynı tedarikçi, malzeme ve başlangıç için hem senaryonun hem Baz'ın kaydı varsa tek kayıt, senaryonun değeri, "Senaryo farkı" (genel kural, K-191 madde 10; Kapasite yönetimi girişlerinde de).
 
 
 ### 25 · Alokasyon ve öncelik kuralı
 <sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Çalışma prensibi 1/2</sub>
+
+- **Kapsam (K-192):** alokasyon (pay ayırma: talep sınıfına kaynak grubu ve dönem bazında kapasite payı) **Faz 1 dışıdır**; bu bölümdeki alokasyon tasarımı, `AllocationRule` tablosuna yapılan atıflar ve "Alokasyon" mockup'ı (m24f-0448) geçersizdir. Öncelik kısmı 7.14 Öncelik yönetimi'nde yeniden tasarlanacak. Eşit öncelikte paylaşım: aynı öncelik grubundaki taleplerde istek tarihi erken olan önce karşılanır; ayarı yoktur (docs/09).
 
 - Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
 
@@ -2065,6 +2073,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ### 25 · Alokasyon ve öncelik kuralı · Alokasyon
 <sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Mockup 2/2</sub>
+
+**Faz 1 dışı / geçersiz (K-192).**
 
 ![25 · Alokasyon ve öncelik kuralı · Alokasyon](mockups/m24f-0448-25-alokasyon-ve-oncelik-kurali-alokasyon.png)
 
@@ -2196,7 +2206,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Baz'ı izler ve Baz'dan ayır (K-176 e):** seçim senaryoda saklanır. Ayırma tek yönlüdür; yeniden bağlama yoktur. Ayırmada (ve "Baz'ı izler: Hayır" ile açılan senaryoda) her veri tablosunun "Baz'ın o anki değerlerini tam kopyala" işlevi çağrılır. Fark yapısı ve çözümleme katmanı 7.9'da geldiği için 7.3'te seçim kaydedilir ve gösterilir; işlevler 7.9'da ve sonraki adımlarda bağlanır.
 - **Silme:** yayınlanmış planı (onaylı plan) olan senaryo silinemez, yalnız pasif yapılır. Silinen senaryoyu seçmiş kullanıcılar Baz'a düşer. Denetim izi senaryonun adını saklar; silinse de okunur.
 - **Seçili senaryo:** kullanıcı bazında hatırlanır; yeniden girişte son seçilen açılır, o senaryo pasifse ya da silindiyse Baz. Senaryoya bağlı uçlar senaryoyu istekle alır (`scenario_id`): iki sekmede iki senaryo açıkken yanlış senaryoya yazılmaz.
-- **Senaryoya bağlı ekranlar:** bugün Parametreler; sonraki adımlarda Kapasite yönetimi, Öncelik kuralları, Alokasyon, Pegging kuralları, Uyarı eşikleri, Tedarikçi limitleri, Malzeme blokajı ve plan ekranları. Geçişte bu ekranlar yeni senaryoyla baştan yüklenir; kaydedilmemiş değişiklik varsa geçiş onay ister.
+- **Senaryoya bağlı ekranlar:** bugün Parametreler; sonraki adımlarda Kapasite yönetimi, Öncelik yönetimi, Pegging kuralları, Uyarı eşikleri, Tedarikçi limitleri, Malzeme blokajı ve plan ekranları. Geçişte bu ekranlar yeni senaryoyla baştan yüklenir; kaydedilmemiş değişiklik varsa geçiş onay ister.
 - **Smartchain'de girilen veri** (kapasite, limitler, blokaj) versiyonlanmaz ve plan hesabı için kopyası tutulmaz; eski planın çıktıları kendi değerlerini taşır, eski girdi değeri değişiklik geçmişinden okunur.
 - **Hata durumları:** boş ya da kullanılan ad; Baz'da yasak işlem; Baz'ı izlemeyen senaryoda ayırma; yayınlanmış planı olan senaryoda silme; Admin altında yönetim işlemi (403).
 - **YENİDEN HESAPLANACAK ALANLAR:** yönetim işlemleri hesap başlatmaz. Silme senaryonun plan versiyonlarını ve çıktılarını siler.

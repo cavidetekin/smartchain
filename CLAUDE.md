@@ -48,7 +48,7 @@ Tedarik zincirindeki orta ölçekli, sipariş odaklı üreticiler için ERP'den 
 
 ## Faz 1 dışı (dokunma)
 
-Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yalnız uyarı var), LLM, çoklu lokasyon, ERP'ye geri yazma, AD / SSO, bulut, verim önerisi (K-128).
+Set-up, kalıp, fırın, faz bazlı işçi tüketimi, raf ömrü kuralları (yalnız uyarı var), LLM, çoklu lokasyon, ERP'ye geri yazma, AD / SSO, bulut, verim önerisi (K-128), alokasyon (talep sınıfına kaynak grubu ve dönem bazında kapasite payı; K-192).
 
 ## Docs haritası
 

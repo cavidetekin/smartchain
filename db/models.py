@@ -340,14 +340,23 @@ SupplierLimit = sa.Table(
     "SupplierLimit", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
     sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçersiz yapılan kayıt uygulanmaz; izleyen senaryoda Baz satırı fark satırıyla geçersiz yapılır", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("LimitType", sa.Unicode(15), nullable=False, comment="Üst limit | Kapanış", info={'label': "Tür", 'values': ["Üst limit", "Kapanış"], 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), index=True, nullable=False, comment="Lokasyon (malzeme tedarikçisi kaydının lokasyonu)", info={'label': "Lokasyon", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("SupplierId", sa.BigInteger(), index=True, nullable=False, comment="Tedarikçi", info={'label': "Tedarikçi", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("MaterialId", sa.BigInteger(), index=True, nullable=True, comment="Malzeme; boşsa tedarikçinin bütün malzemeleri (yalnız kapalı dönem)", info={'label': "Malzeme", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("MaterialId", sa.BigInteger(), index=True, nullable=True, comment="Malzeme; üst limitte zorunlu, kapanışta boşsa tedarikçinin bütün malzemeleri", info={'label': "Malzeme", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("ValidFrom", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ValidTo", mssql.DATE(), nullable=False, comment="Bitiş", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("UpperLimit", sa.Numeric(18, 4), nullable=False, server_default=sa.text("0"), comment="Dönem üst limiti, malzemenin temel biriminde; malzeme boşsa 0", info={'label': "Dönem üst limiti", 'source': "Smartchain (parametre)", 'workspace': True, 'default': "0"}),
+    sa.Column("ValidTo", mssql.DATE(), nullable=True, comment="Bitiş; üst limitte boşsa süresiz, kapanışta zorunlu", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("UpperLimit", sa.Numeric(18, 4), nullable=True, comment="Üst limit (sıfırdan büyük), malzemenin temel biriminde; yalnız üst limitte", info={'label': "Limit", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("LimitPeriod", sa.Unicode(10), nullable=True, comment="Gün | Hafta | Ay | Çeyrek | Yıl", info={'label': "Limitin dönemi", 'values': ["Gün", "Hafta", "Ay", "Çeyrek", "Yıl"], 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Reason", sa.Unicode(255), nullable=True, comment="Sebep (serbest metin, isteğe bağlı); üst limitte ve kapanışta", info={'label': "Sebep", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Son değiştiren kullanıcı", 'source': "Sistem", 'workspace': False}),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66).",
+    comment="Tedarikçi limiti (K-191; problem 39): satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; iki kayıt türü tek tabloda. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.",
 )
 
 ProductionVersion = sa.Table(
@@ -954,7 +963,7 @@ AllocationRule = sa.Table(
     sa.Column("Hardness", sa.Unicode(10), nullable=True, server_default=sa.text("N'Yumuşak'"), comment="Taban | Tavan | Yumuşak", info={'label': "Sınır tipi", 'values': ["Taban", "Tavan", "Yumuşak"], 'source': "Smartchain (parametre)", 'workspace': False, 'default': "Yumuşak"}),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Kapasite alokasyonu: talep sınıfına kaynak grubu ve dönem bazında pay (K-180).",
+    comment="Faz 1 dışı (K-192): kapasite alokasyonu, talep sınıfına kaynak grubu ve dönem bazında pay (K-180). Tablo durur, hiçbir ekran ve motor okumaz.",
 )
 
 WarningDefinition = sa.Table(

@@ -97,8 +97,8 @@ def test_load_writes_every_table(db_engine, ds, loaded):
         ps = c.execute(text("SELECT Name, IsBase, IsSynthetic FROM param.ScenarioDefinition WHERE Id = :p"),
                        {"p": loaded["scenario_definition_id"]}).one()
         assert ps.Name == "Baz" and ps.IsBase and not ps.IsSynthetic  # sentetik satırlar Baz'a bağlanır, Baz sentetik değildir (K-175)
-        limit = c.execute(text("SELECT UpperLimit FROM param.SupplierLimit WHERE ScenarioDefinitionId = :p"),
-                          {"p": loaded["scenario_definition_id"]}).scalar()
+        limit = c.execute(text("SELECT UpperLimit FROM param.SupplierLimit WHERE ScenarioDefinitionId = :p AND SupplierId = (SELECT TOP 1 Id FROM core.Supplier "
+                               "WHERE Code = :s AND VersionTo IS NULL)"), {"p": loaded["scenario_definition_id"], "s": d.LIMIT_SUPPLIER}).scalar()
         assert limit == d.LIMIT_QTY
 
 
