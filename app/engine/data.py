@@ -28,6 +28,13 @@ class SqlPlanningData:
         from app import modelconstraints
         return modelconstraints.constraints(self.session, self.scenario_definition_id)
 
+    def warning_thresholds(self) -> list[dict]:
+        """Uyarı eşikleri (docs/09, K-190): senaryonun aktif uyarıları."""
+        if self.scenario_definition_id is None:
+            raise ValueError("Uyarı eşikleri için senaryo gerekir.")
+        from app.params import service as params
+        return params.warning_thresholds(self.session, self.scenario_definition_id)
+
     def read(self, table: str, columns: Sequence[str] | None = None) -> list[dict]:
         name = table if "." in table else f"core.{table}"
         if not name.startswith("core."):

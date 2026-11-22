@@ -14,7 +14,7 @@ from app.api.deps import COOKIE
 from app.api.services.auth import open_session
 
 _tokens: dict[int, tuple[str, float]] = {}
-REFRESH_SECONDS = 20 * 60  # oturum 30 dk hareketsizlikte kapanır (K-97); yavaş koşuda uzun süre kullanılmayan oturum yenilenir
+REFRESH_SECONDS = 20 * 60  # oturum 30 dk hareketsizlikte kapanır (K-97); yavaş koşuda uzun süre kullanılmayan oturum yenilenir (duvar saati: makine uykuya geçerse de)
 
 
 def token(user_id: int, fresh: bool = False) -> str:
@@ -23,9 +23,9 @@ def token(user_id: int, fresh: bool = False) -> str:
         with Session(get_engine()) as s:
             return open_session(s, user_id, agent="pytest")
     cached = _tokens.get(user_id)
-    if cached is None or time.monotonic() - cached[1] > REFRESH_SECONDS:
-        cached = (token(user_id, fresh=True), time.monotonic())
-    _tokens[user_id] = (cached[0], time.monotonic())
+    if cached is None or time.time() - cached[1] > REFRESH_SECONDS:
+        cached = (token(user_id, fresh=True), time.time())
+    _tokens[user_id] = (cached[0], time.time())
     return cached[0]
 
 

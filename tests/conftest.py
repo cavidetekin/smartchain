@@ -124,6 +124,19 @@ def db_engine():
     return engine
 
 
+@pytest.fixture(autouse=True)
+def _keep_test_sessions_alive(request):
+    """Koşu yavaşlarsa ya da makine koşu sırasında uykuya geçerse testlerin paylaştığı oturumlar (auth_helpers, UserAgent "pytest") 30 dakikalık
+    hareketsizlik sınırına takılmasın (K-97): veritabanı testinden önce, beş dakikadır kullanılmamış açık test oturumlarının son hareket zamanı
+    tazelenir. Hareketsizlik testleri kendi oturumunu test içinde eskitir; etkilenmez."""
+    if "db_engine" not in request.fixturenames:
+        return
+    import sqlalchemy as sa
+    with request.getfixturevalue("db_engine").begin() as c:
+        c.execute(sa.text("UPDATE adm.UserSession SET LastActivityAt = SYSUTCDATETIME() WHERE UserAgent = N'pytest' AND EndedAt IS NULL "
+                          "AND LastActivityAt < DATEADD(minute, -5, SYSUTCDATETIME())"))
+
+
 def _clear_jobs(engine):
     from sqlalchemy import text
     with engine.begin() as conn:

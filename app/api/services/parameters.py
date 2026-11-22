@@ -16,6 +16,7 @@ from .auth import CurrentUser
 ACTION_SETTING = "Parametre değişikliği"
 ACTION_OBJECTIVE = "Hedef değişikliği"
 ACTION_BUCKETS = "Dönem dizisi değişikliği"
+ACTION_WARNING = "Uyarı eşiği değişikliği"
 OBJECT = "Senaryo"
 INVALID = "Girilen bilgiler geçersiz."
 AXES = {"plan": cat.AXIS_PLAN, "rapor": cat.AXIS_REPORT}
@@ -118,6 +119,39 @@ def update_objectives(session: Session | None, actor: CurrentUser, rows: list[di
 
     auth._db(work)
     return objectives(session, actor, scenario_id)
+
+
+def warning_thresholds(session: Session | None, user: CurrentUser, scenario_id: int | None = None) -> dict:
+    """Uyarı eşikleri (fonksiyon 26; K-190): senaryonun eşikleri katalog sırasıyla. Eksik satır başlangıç değerleriyle tamamlanır."""
+    session = auth._require(session)
+
+    def work():
+        sid, _ = _scenario(session, user, scenario_id)
+        added = params.ensure_warning_thresholds(session, sid)
+        rows = params.read_warning_thresholds(session, sid)
+        if added:
+            session.commit()
+        return {"rows": rows, "categories": list(cat.WARNING_CATEGORIES), "severities": list(cat.SEVERITIES)}
+
+    return auth._db(work)
+
+
+def update_warning_thresholds(session: Session | None, actor: CurrentUser, rows: list[dict], scenario_id: int | None = None) -> dict:
+    session = auth._require(session)
+
+    def work():
+        sid, name = _scenario(session, actor, scenario_id)
+        try:
+            saved = params.save_warning_thresholds(session, sid, rows, lambda label, old, new: audit.write_audit(
+                session, ACTION_WARNING, actor.id, OBJECT, _key(name, label), new, old, scenario=name))
+        except params.ParamError as err:
+            session.rollback()
+            raise _invalid(err) from None
+        session.commit()
+        return saved
+
+    saved = auth._db(work)
+    return {**warning_thresholds(session, actor, scenario_id), "saved": saved}
 
 
 def _axis(axis: str) -> str:

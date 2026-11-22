@@ -138,6 +138,11 @@ SECTIONS: tuple[Section, ...] = (
             _b("KeepLockedRecords", "Sabitlenmiş kararlar korunsun", YES),
         )),
     )),
+    # fonksiyon 26 (K-190): kendi uçları ve tablosu; alt başlıklar uyarı kategorileridir (WARNING_CATEGORIES ile aynı adlar, aşağıda doğrulanır)
+    Section("uyari-esikleri", "Uyarı eşikleri", (
+        Sub("talep", "Talep", table="warnings"), Sub("malzeme", "Malzeme", table="warnings"), Sub("kapasite", "Kapasite", table="warnings"),
+        Sub("plan-kalitesi", "Plan kalitesi", table="warnings"),
+    )),
 )
 
 PARAMS: tuple[Param, ...] = tuple(p for s in SECTIONS for sub in s.subs for p in sub.params)
@@ -172,3 +177,53 @@ OBJECTIVE_LABELS: dict[str, str] = {o.code: o.label for o in OBJECTIVES}
 
 # Başlangıç dönem dizisi (plan ekseni): içinde bulunulan ay + 2 ay haftalık, sonra 6 ay aylık
 DEFAULT_BUCKETS: tuple[tuple[str, int, str], ...] = ((WEEK, 3, MONTH), (MONTH, 6, MONTH))
+
+
+# --- Uyarı eşikleri (fonksiyon 26; K-190) ---------------------------------------------------------------------------------------------------
+# Katalog kodda sabittir: kullanıcı uyarı ekleyip silemez; eşik, önem ve aktiflik senaryonun verisidir (param.WarningThreshold).
+SEVERITIES: tuple[str, ...] = ("Düşük", "Orta", "Yüksek", "Kritik")
+TIERS: tuple[str, ...] = ("low", "medium", "high", "critical")                      # API alanları, SEVERITIES sırasıyla
+TIER_COLUMNS: dict[str, str] = {"low": "ThresholdLow", "medium": "ThresholdMedium", "high": "ThresholdHigh", "critical": "ThresholdCritical"}
+WARNING_CATEGORIES: tuple[str, ...] = ("Talep", "Malzeme", "Kapasite", "Plan kalitesi")
+ABOVE, BELOW = "above", "below"       # yön: değer eşikten büyük / küçük olunca (eşik dahil değil)
+UNIT_DAY, UNIT_PCT = "gün", "%"
+
+
+@dataclass(frozen=True)
+class Warning:
+    code: str
+    category: str
+    label: str
+    unit: str | None = None                                        # None: eşiksiz uyarı
+    direction: str | None = None
+    defaults: tuple[float | None, ...] = (None, None, None, None)  # başlangıç eşikleri: Düşük, Orta, Yüksek, Kritik
+    severity: str | None = None                                    # eşiksiz uyarının başlangıç önemi
+
+    @property
+    def has_threshold(self) -> bool:
+        return self.unit is not None
+
+
+WARNINGS: tuple[Warning, ...] = (
+    Warning("ORDER_LATE", "Talep", "Gecikme", UNIT_DAY, ABOVE, (5, 10, 15, 20)),
+    Warning("OTIF_RATE", "Talep", "OTIF oranı", UNIT_PCT, BELOW, (95, 90, 85, 80)),
+    Warning("FILL_RATE", "Talep", "Karşılama oranı", UNIT_PCT, BELOW, (98, 95, 90, 80)),
+    Warning("ORDER_UNMET", "Talep", "Karşılanmayan sipariş", severity="Kritik"),
+    Warning("FORECAST_UNMET", "Talep", "Karşılanmayan tahmin", severity="Orta"),
+    Warning("MAT_SHORTAGE", "Malzeme", "Malzeme eksiği", UNIT_DAY, BELOW, (60, 30, 14, 7)),
+    Warning("MAT_BELOW_SAFETY", "Malzeme", "Güvenlik stoğunun altı", UNIT_PCT, BELOW, (100, 75, 50, 25)),
+    Warning("MAT_EXCESS", "Malzeme", "Fazla stok", UNIT_PCT, ABOVE, (100, 125, 150, None)),
+    Warning("PURCHASE_LATE", "Malzeme", "Geciken satın alma önerisi", UNIT_DAY, ABOVE, (1, 7, 14, 30)),
+    Warning("SHELF_LIFE", "Malzeme", "Raf ömrü", UNIT_DAY, BELOW, (90, 60, 30, 7)),
+    Warning("CAP_OVERLOAD", "Kapasite", "Aşırı yük", UNIT_PCT, ABOVE, (None, 100, 110, 125)),
+    Warning("CAP_OVER_TARGET", "Kapasite", "Hedef doluluğun üstü", UNIT_PCT, ABOVE, (100, 110, None, None)),
+    Warning("CAP_LOW_LOAD", "Kapasite", "Düşük doluluk", UNIT_PCT, BELOW, (40, 20, None, None)),
+    Warning("OVERTIME_USE", "Kapasite", "Ek mesai kullanımı", UNIT_PCT, ABOVE, (50, 80, 100, None)),
+    Warning("PLAN_TIME_LIMIT", "Plan kalitesi", "Süre bütçesi doldu", severity="Orta"),
+    Warning("PLAN_RELAXED", "Plan kalitesi", "Kısıt gevşetildi", severity="Yüksek"),
+    Warning("PLAN_FALLBACK", "Plan kalitesi", "Yedek yöntem çalıştı", severity="Yüksek"),
+)
+WARNING_BY_CODE: dict[str, Warning] = {w.code: w for w in WARNINGS}
+assert len(WARNING_BY_CODE) == len(WARNINGS), "uyarı kodu yinelendi"
+assert all(w.category in WARNING_CATEGORIES and (w.severity in SEVERITIES) != w.has_threshold for w in WARNINGS)
+assert tuple(sub.title for s in SECTIONS if s.key == "uyari-esikleri" for sub in s.subs) == WARNING_CATEGORIES

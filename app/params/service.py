@@ -15,6 +15,7 @@ SCENARIO = metadata.tables["param.ScenarioDefinition"]
 SETTING = metadata.tables["param.PlanningSetting"]
 BUCKET = metadata.tables["param.TimeBucketDefinition"]
 OBJECTIVE = metadata.tables["param.ObjectiveDefinition"]
+WARNING = metadata.tables["param.WarningThreshold"]
 
 
 class ParamError(Exception):
@@ -252,3 +253,115 @@ def horizon_end(session: Session, today: date) -> date | None:
         return None
     found = read_parts(session, base[0], today)
     return found[-1].end if found else None
+
+
+# --- Uyarı eşikleri (fonksiyon 26; K-190) ---------------------------------------------------------------------------------------------------
+
+def _plain(value) -> float | None:
+    return float(value) if value is not None else None
+
+
+def ensure_warning_thresholds(session: Session, scenario_id: int) -> int:
+    """Senaryoda eksik uyarı satırlarını katalogdaki başlangıç değerleriyle ekler (geçiş her senaryoya yazar; kataloğa sonradan eklenen uyarı ve
+    kopyalanmadan açılmış senaryo için). Dönen: eklenen satır sayısı."""
+    have = set(session.execute(sa.select(WARNING.c.WarningCode).where(WARNING.c.ScenarioDefinitionId == scenario_id)).scalars())
+    missing = [w for w in cat.WARNINGS if w.code not in have]
+    for w in missing:
+        session.execute(sa.insert(WARNING).values(ScenarioDefinitionId=scenario_id, WarningCode=w.code, Severity=w.severity, IsActive=True,
+                                                  **{cat.TIER_COLUMNS[t]: v for t, v in zip(cat.TIERS, w.defaults)}))
+    return len(missing)
+
+
+def read_warning_thresholds(session: Session, scenario_id: int) -> list[dict]:
+    """Senaryonun uyarı eşikleri, katalog sırasıyla (kategori, uyarı)."""
+    ensure_warning_thresholds(session, scenario_id)
+    stored = {r["WarningCode"]: r for r in session.execute(sa.select(WARNING).where(WARNING.c.ScenarioDefinitionId == scenario_id)).mappings()}
+    out = []
+    for w in cat.WARNINGS:
+        r = stored[w.code]
+        out.append({"code": w.code, "label": w.label, "category": w.category, "unit": w.unit, "direction": w.direction,
+                    **{t: (_plain(r[cat.TIER_COLUMNS[t]]) if w.has_threshold else None) for t in cat.TIERS},
+                    "severity": None if w.has_threshold else r["Severity"], "active": bool(r["IsActive"])})
+    return out
+
+
+def _threshold(w: cat.Warning, value) -> tuple[Decimal | None, str | None]:
+    """Hücreye yazılan eşik: boş → kademe kullanılmaz; gün tam sayı, yüzde en çok iki ondalık; 0 ya da büyük."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None, None
+    number = _number(str(value).strip().replace("%", "").replace(" ", ""))
+    if number is None:
+        return None, "Sayı girilmeli."
+    if number < 0:
+        return None, "0 ya da daha büyük olmalı."
+    if number >= Decimal(10) ** 9:
+        return None, "Çok büyük."
+    if w.unit == cat.UNIT_DAY and number != number.to_integral_value():
+        return None, "Tam sayı girilmeli."
+    if w.unit == cat.UNIT_PCT and -number.normalize().as_tuple().exponent > 2:
+        return None, "En çok 2 ondalıklı sayı girilmeli."
+    return number, None
+
+
+def save_warning_thresholds(session: Session, scenario_id: int, rows: list[dict], on_change=None) -> int:
+    """Tablonun tamamı gelir (katalogdaki her uyarı bir kez): hepsi ya da hiçbiri; yalnız değişen satır yazılır. Dolu kademeler yöne göre kesin
+    sıralıdır (aşınca: Düşük < Orta < Yüksek < Kritik; altında tersi; boş kademe atlanır). Kapatılan uyarının değerleri durur."""
+    current = {r["code"]: r for r in read_warning_thresholds(session, scenario_id)}
+    if [r.get("code") for r in rows] != list(current):
+        raise ParamError([{"field": "rows", "problem": "Uyarı listesi değişmiş; sayfayı yenileyin."}])
+    problems, planned = [], []
+    for i, row in enumerate(rows, start=1):
+        w = cat.WARNING_BY_CODE[row["code"]]
+        active = bool(row.get("active"))
+        new = {"active": active, "severity": None, **{t: None for t in cat.TIERS}}
+
+        def problem(field: str, text: str) -> None:
+            problems.append({"field": f"rows.{i}.{field}", "problem": text, "record": w.label})
+
+        if not w.has_threshold:
+            if any(row.get(t) not in (None, "") for t in cat.TIERS):
+                problem("severity", "Bu uyarının eşiği yok; yalnız önemi seçilir.")
+            if row.get("severity") not in cat.SEVERITIES:
+                problem("severity", "Önem seçilmeli.")
+            new["severity"] = row.get("severity")
+        else:
+            if row.get("severity") not in (None, ""):
+                problem("severity", "Eşikli uyarıda önem kademelerle belirlenir.")
+            previous = None                                   # (önem, değer): bir önceki dolu kademe
+            for tier, severity in zip(cat.TIERS, cat.SEVERITIES):
+                value, text = _threshold(w, row.get(tier))
+                if text:
+                    problem(tier, text)
+                    continue
+                new[tier] = value
+                if value is None:
+                    continue
+                if previous is not None and not (value > previous[1] if w.direction == cat.ABOVE else value < previous[1]):
+                    problem(tier, f"{severity} eşiği {previous[0]} eşiğinden {'büyük' if w.direction == cat.ABOVE else 'küçük'} olmalı.")
+                previous = (severity, value)
+            if active and previous is None and not any(p["field"].startswith(f"rows.{i}.") for p in problems):
+                problem("active", "Aktif uyarıda en az bir kademe dolu olmalı.")
+        planned.append((w, new))
+    if problems:
+        raise ParamError(problems)
+    changed = 0
+    for w, new in planned:
+        old = current[w.code]
+        before = {"IsActive": old["active"], "Severity": old["severity"], **{cat.TIER_COLUMNS[t]: old[t] for t in cat.TIERS}}
+        after = {"IsActive": new["active"], "Severity": new["severity"], **{cat.TIER_COLUMNS[t]: _plain(new[t]) for t in cat.TIERS}}
+        diff = [k for k in after if after[k] != before[k]]
+        if not diff:
+            continue
+        values = {k: (new[t] if (t := next((t for t, c in cat.TIER_COLUMNS.items() if c == k), None)) else after[k]) for k in diff}
+        session.execute(sa.update(WARNING).where(WARNING.c.ScenarioDefinitionId == scenario_id, WARNING.c.WarningCode == w.code).values(**values))
+        changed += 1
+        if on_change:
+            on_change(w.label, {k: before[k] for k in diff}, {k: after[k] for k in diff})
+    return changed
+
+
+def warning_thresholds(session: Session, scenario_id: int) -> list[dict]:
+    """Motorun ve plan ekranlarının okuduğu eşikler (docs/09): senaryonun aktif uyarıları. Eşikli uyarıda dolu kademeler, eşiksiz uyarıda önem."""
+    return [{"Code": r["code"], "Category": r["category"], "Unit": r["unit"], "Direction": r["direction"], "Low": r["low"], "Medium": r["medium"],
+             "High": r["high"], "Critical": r["critical"], "Severity": r["severity"]}
+            for r in read_warning_thresholds(session, scenario_id) if r["active"]]

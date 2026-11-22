@@ -31,7 +31,8 @@ LOAD_ORDER = [
 CAPACITY_TABLES = ["WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar"]  # kapasite girişleri (K-185)
 MODEL_TABLES = ["ResourceGroupConstraint"]  # model kısıtları (K-189)
 PARAM_ORDER = ["PriorityRule", "SupplierLimit", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
-PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "SupplierLimit", *CAPACITY_TABLES, *MODEL_TABLES]
+PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "WarningThreshold", "SupplierLimit", *CAPACITY_TABLES,
+                  *MODEL_TABLES]
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
 
 
@@ -237,6 +238,12 @@ def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> N
     conn.execute(text(
         "INSERT INTO param.ResourceGroupConstraint (ScenarioDefinitionId, IsValid, ResourceGroupId, UnconstrainedCapacityFactor, UpdatedAt) VALUES (:s, 1, :g, :f, :now)"),
         {"s": mono, "g": group(MODEL_CONSTRAINT_OWN[0]), "f": MODEL_CONSTRAINT_OWN[1], "now": now})
+    # Kısıtsız kapasite (K-190): uyarı eşikleri senaryoya göre farklı (ayar, tam kopya): Aşırı yük eşikleri yukarıda, Düşük doluluk kapalı
+    from .dataset import WARNING_THRESHOLD_CHANGE, WARNING_THRESHOLD_OFF
+    code, (low, medium, high, critical) = WARNING_THRESHOLD_CHANGE
+    conn.execute(text("UPDATE param.WarningThreshold SET ThresholdLow = :l, ThresholdMedium = :m, ThresholdHigh = :h, ThresholdCritical = :c "
+                      "WHERE ScenarioDefinitionId = :s AND WarningCode = :w"), {"s": mono, "w": code, "l": low, "m": medium, "h": high, "c": critical})
+    conn.execute(text("UPDATE param.WarningThreshold SET IsActive = 0 WHERE ScenarioDefinitionId = :s AND WarningCode = :w"), {"s": mono, "w": WARNING_THRESHOLD_OFF})
 
 
 def _drop_period_cache(conn: Connection) -> None:

@@ -960,13 +960,27 @@ AllocationRule = sa.Table(
 WarningDefinition = sa.Table(
     "WarningDefinition", metadata,
     sa.Column("Code", sa.Unicode(30), primary_key=True, autoincrement=False, comment="Uyarı kodu", info={'label': "Uyarı kodu", 'source': "Sistem", 'workspace': False}),
-    sa.Column("Category", sa.Unicode(20), nullable=False, comment="Kapasite | Malzeme | Sipariş | Ana veri | İşlem verisi | Veri değişikliği | Plan değişikliği", info={'values': ["Kapasite", "Malzeme", "Sipariş", "Ana veri", "İşlem verisi", "Veri değişikliği", "Plan değişikliği"], 'source': "Sistem", 'workspace': False}),
-    sa.Column("Threshold", sa.Numeric(18, 4), nullable=True, comment="Tolerans eşiği", info={'label': "Tolerans eşiği", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("Severity", sa.Unicode(10), nullable=True, comment="Önem seviyesi", info={'label': "Önem seviyesi", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Aktif", info={'label': "Aktif", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("Category", sa.Unicode(20), nullable=False, comment="Talep | Malzeme | Kapasite | Plan kalitesi", info={'values': ["Talep", "Malzeme", "Kapasite", "Plan kalitesi"], 'source': "Sistem", 'workspace': False}),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Uyarı tanımı, eşik ve önem seviyesi.",
+    comment="Uyarı kataloğu (K-190): sistemin tanıdığı uyarı kodları ve kategorileri. Satırları sistem yazar; eşik, önem ve aktiflik senaryoya bağlıdır (WarningThreshold).",
+)
+
+WarningThreshold = sa.Table(
+    "WarningThreshold", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("WarningCode", sa.Unicode(30), sa.ForeignKey("param.WarningDefinition.Code"), nullable=False, comment="Uyarı kodu (ORDER_LATE, CAP_OVERLOAD…; fonksiyon 26)", info={'label': "Uyarı", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ThresholdLow", sa.Numeric(18, 4), nullable=True, comment="Düşük önemin eşiği; boşsa kademe kullanılmaz", info={'label': "Düşük", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ThresholdMedium", sa.Numeric(18, 4), nullable=True, comment="Orta önemin eşiği; boşsa kademe kullanılmaz", info={'label': "Orta", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ThresholdHigh", sa.Numeric(18, 4), nullable=True, comment="Yüksek önemin eşiği; boşsa kademe kullanılmaz", info={'label': "Yüksek", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ThresholdCritical", sa.Numeric(18, 4), nullable=True, comment="Kritik önemin eşiği; boşsa kademe kullanılmaz", info={'label': "Kritik", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Severity", sa.Unicode(10), nullable=True, comment="Düşük | Orta | Yüksek | Kritik", info={'label': "Önem", 'values': ["Düşük", "Orta", "Yüksek", "Kritik"], 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Kapalı uyarı üretilmez; değerleri durur", info={'label': "Aktif", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Index("UX_WarningThreshold_ScenarioDefinitionId_WarningCode", "ScenarioDefinitionId", "WarningCode", unique=True),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Senaryonun uyarı eşikleri (K-190): her senaryoda her uyarı için bir satır. Kademeli: her önem için ayrı eşik; boş kademe kullanılmaz. Yön uyarıya göre sabittir ve eşik dahil değildir.",
 )
 
 FieldDefinition = sa.Table(

@@ -14,6 +14,7 @@ from ..services.auth import CurrentUser
 router = APIRouter(tags=["Parametreler"])
 read22, write22 = require(22, Access.READ), require(22, Access.WRITE)
 read23, write23 = require(23, Access.READ), require(23, Access.WRITE)
+read26, write26 = require(26, Access.READ), require(26, Access.WRITE)
 
 
 class Changes(BaseModel):
@@ -32,6 +33,22 @@ class ObjectiveRow(BaseModel):
 class Objectives(BaseModel):
     model_config = ConfigDict(extra="forbid")
     rows: list[ObjectiveRow]
+
+
+class WarningRow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str
+    active: bool
+    low: int | float | str | None = None
+    medium: int | float | str | None = None
+    high: int | float | str | None = None
+    critical: int | float | str | None = None
+    severity: str | None = None
+
+
+class Warnings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rows: list[WarningRow]
 
 
 class BucketRow(BaseModel):
@@ -81,3 +98,13 @@ def preview(axis: str, body: Buckets, scenario_id: int | None = None, user: Curr
 @router.put("/parameters/time-buckets/{axis}", summary="Dönem dizisi baştan yazılır, denetim izine (23 yazma)")
 def update_time_buckets(axis: str, body: Buckets, scenario_id: int | None = None, user: CurrentUser = Depends(write23), session: Session = Depends(get_session)) -> dict:
     return service.update_time_buckets(session, user, axis, [r.model_dump() for r in body.rows], scenario_id)
+
+
+@router.get("/parameters/warning-thresholds", summary="Uyarı eşikleri: kademeli eşik, önem, aktiflik (26 okuma)")
+def warning_thresholds(scenario_id: int | None = None, user: CurrentUser = Depends(read26), session: Session = Depends(get_session)) -> dict:
+    return service.warning_thresholds(session, user, scenario_id)
+
+
+@router.put("/parameters/warning-thresholds", summary="Uyarı eşikleri: tablonun tamamı, yalnız değişen satır yazılır (26 yazma)")
+def update_warning_thresholds(body: Warnings, scenario_id: int | None = None, user: CurrentUser = Depends(write26), session: Session = Depends(get_session)) -> dict:
+    return service.update_warning_thresholds(session, user, [r.model_dump() for r in body.rows], scenario_id)

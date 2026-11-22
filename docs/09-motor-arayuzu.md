@@ -85,11 +85,19 @@ Motorun uygulayacağı kural (Aşama 10):
 - Hedef doluluk dolu ve "Hedef doluluğun üstü" hedefi (`OVER_TARGET_LOAD`) açık → dönem yükünün (kullanılabilir kapasite × hedef %) üstünde kalan kısmı bu hedefte cezalandırılır. Hedef kapalıysa değer kullanılmaz.
 - Kritik olmayan grup için hiçbir koşulda kısıt yazılmaz.
 
+## Uyarı eşikleri (7.11, K-190)
+
+`PlanningData.warning_thresholds()` planın senaryosundaki aktif uyarıları verir (`SqlPlanningData`): `[{Code, Category, Unit, Direction, Low, Medium, High, Critical, Severity}]`. Kapalı uyarı dönmez. Motorun ve plan ekranlarının uygulayacağı kural (Aşama 8 ve 10):
+- Eşikli uyarı: değer bir kademenin eşiğini geçiyorsa (yön `above`: değer > eşik; `below`: değer < eşik; eşik dahil değil) uyarı çıkar; önemi tuttuğu en yüksek kademedir. Boş kademe atlanır. Nesne başına tek uyarı.
+- Eşiksiz uyarı: durum oluşunca `Severity` önemiyle çıkar.
+- Uyarı kodları `param.WarningDefinition` kataloğundadır (geçiş 0069 yazar); `PlanWarning.WarningCode` ona bağlıdır.
+
+Bu adımda uyarı üretilmez; yalnız arayüz ve saklama vardır.
 
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.
-- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) WarningDefinition'da yoksa geliştirme ve testte `ensure_fixture_warning_definitions` ekler; tanımlar 7.11'de ekrandan gelir.
+- Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) `param.WarningDefinition` kataloğundadır (7.11, K-190; geçiş 0069); eksikse geliştirme ve testte `ensure_fixture_warning_definitions` ekler.
 - EngineUsed senaryonun `ModelType` parametresidir (yoksa LP), Solver `Sahte`.
 - Sahte motora özel PlanningSetting anahtarları (gerçek motor okumaz):
 

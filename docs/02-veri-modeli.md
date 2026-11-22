@@ -98,7 +98,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
 - **Kaynak  10 tablo:** Resource · ResourceGroup · ResourceGroupMember · EmployeeAbsence · WorkPattern · ResourceEfficiency · OvertimeLimit · ResourceDowntime · FactoryCalendar · ResourceGroupConstraint
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
-- **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · AllocationRule
+- **Parametre  7 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · AllocationRule · WarningThreshold
 - yükleme
 - **Talep  3 tablo:** Customer · SalesOrderLine · Forecast
 - **Arz ve stok  8 tablo:** Stock · BorrowPayback · WorkOrder · PurchaseOrderLine · TransferOrder
@@ -193,7 +193,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ObjectiveDefinition:** Senaryonun hedefleri: sıra, süre bütçesi, ödün payı (leksikografik)
 - **PriorityRule:** Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih)
 - **AllocationRule:** Kapasite alokasyonu: talep sınıfına kaynak (grubu) ve dönem bazında pay
-- **WarningDefinition:** Uyarı tanımı, eşik ve önem seviyesi
+- **WarningDefinition:** Uyarı kataloğu: kod ve kategori (K-190)
+- **WarningThreshold:** Senaryonun uyarı eşikleri: kademeli eşik, önem, aktiflik (K-190)
 
 ### Tablo listesi
 <sub>21. Veri modeli · Tablo listesi · 5/6</sub>
@@ -1050,15 +1051,30 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Parametre</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Uyarı tanımı, eşik ve önem seviyesi.
+- Uyarı kataloğu (K-190): sistemin tanıdığı uyarı kodları ve kategorileri. Satırları sistem yazar; eşik, önem ve aktiflik senaryoya bağlıdır (WarningThreshold).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|
 | Code | nvarchar(30) | PK | Uyarı kodu | Sistem | H | E |  |
-| Category | nvarchar(20) |  | Kapasite \| Malzeme \| Sipariş \| Ana veri \| İşlem verisi \| Veri değişikliği \| Plan değişikliği | Sistem | H | E |  |
-| Threshold | decimal(18,4) |  | Tolerans eşiği | Smartchain (parametre) | H | H |  |
-| Severity | nvarchar(10) |  | Önem seviyesi | Smartchain (parametre) | H | H |  |
-| IsActive | bit |  | Aktif | Smartchain (parametre) | H | H | 1 |
+| Category | nvarchar(20) |  | Talep \| Malzeme \| Kapasite \| Plan kalitesi | Sistem | H | E |  |
+
+### WarningThreshold
+<sub>21. Veri modeli · Parametre</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Senaryonun uyarı eşikleri (K-190): her senaryoda her uyarı için bir satır. Kademeli: her önem için ayrı eşik; boş kademe kullanılmaz. Yön uyarıya göre sabittir ve eşik dahil değildir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK,UK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| WarningCode | nvarchar(30) | FK,UK | Uyarı kodu (ORDER_LATE, CAP_OVERLOAD…; fonksiyon 26) | Uyarı | Smartchain (parametre) | H | E |  |
+| ThresholdLow | decimal(18,4) |  | Düşük önemin eşiği; boşsa kademe kullanılmaz | Düşük | Smartchain (parametre) | H | H |  |
+| ThresholdMedium | decimal(18,4) |  | Orta önemin eşiği; boşsa kademe kullanılmaz | Orta | Smartchain (parametre) | H | H |  |
+| ThresholdHigh | decimal(18,4) |  | Yüksek önemin eşiği; boşsa kademe kullanılmaz | Yüksek | Smartchain (parametre) | H | H |  |
+| ThresholdCritical | decimal(18,4) |  | Kritik önemin eşiği; boşsa kademe kullanılmaz | Kritik | Smartchain (parametre) | H | H |  |
+| Severity | nvarchar(10) |  | Düşük \| Orta \| Yüksek \| Kritik | Önem | Smartchain (parametre) | H | H |  |
+| IsActive | bit |  | Kapalı uyarı üretilmez; değerleri durur | Aktif | Smartchain (parametre) | H | H | 1 |
 
 ### FieldDefinition
 <sub>21. Veri modeli · Veri yönetimi</sub>

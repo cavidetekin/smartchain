@@ -119,6 +119,25 @@ def test_reload_replaces_previous_version_and_its_plans(db_engine, ds, loaded):
     loaded.update(again)
 
 
+def test_reload_keeps_warning_thresholds_complete(db_engine, ds, loaded):
+    """Uyarı eşikleri (K-190, geçiş 0069): yeniden yüklemede sentetik senaryolar eşikleriyle birlikte silinip Baz'dan kopyalanır; her senaryoda her uyarı
+    tek satırdır, sentetik fark yerindedir, sahipsiz satır kalmaz. Yükleme senaryoya bağlı her param tablosunu kapsar (yeni tablo unutulursa
+    senaryo silinirken yabancı anahtar hatası verir)."""
+    from app.data.synthetic.load import PARAM_CHILDREN
+    from app.params import catalog as cat, scenario_tables
+    assert scenario_tables.model_tables() <= set(PARAM_CHILDREN)
+    loaded.update(load(db_engine, ds))
+    with db_engine.connect() as c:
+        per = c.execute(text("SELECT s.Name, COUNT(w.Id), COUNT(DISTINCT w.WarningCode) FROM param.ScenarioDefinition s LEFT JOIN param.WarningThreshold w "
+                             "ON w.ScenarioDefinitionId = s.Id WHERE s.IsSynthetic = 1 OR s.IsBase = 1 GROUP BY s.Name")).all()
+        assert len(per) == 4 and all((n, k) == (len(cat.WARNINGS), len(cat.WARNINGS)) for _, n, k in per), per
+        assert c.execute(text("SELECT COUNT(*) FROM param.WarningThreshold w WHERE NOT EXISTS (SELECT 1 FROM param.ScenarioDefinition s WHERE s.Id = w.ScenarioDefinitionId)")).scalar() == 0
+        code, (low, medium, high, critical) = d.WARNING_THRESHOLD_CHANGE
+        row = c.execute(text("SELECT w.ThresholdLow, w.ThresholdMedium, w.ThresholdHigh, w.ThresholdCritical FROM param.WarningThreshold w JOIN param.ScenarioDefinition s "
+                             "ON s.Id = w.ScenarioDefinitionId WHERE s.Name = N'Kısıtsız kapasite' AND w.WarningCode = :c"), {"c": code}).one()
+        assert tuple(None if v is None else float(v) for v in row) == (low, medium, high, critical)
+
+
 LOCK_CASES = {
     "ScenarioDefinition": ("INSERT INTO param.ScenarioDefinition (Name, IsBase, IsSynthetic) OUTPUT inserted.Id VALUES (N'Gerçek senaryo', 0, 0)",
                            "DELETE FROM param.ScenarioDefinition WHERE Id = :id", "senaryo 'Gerçek senaryo'"),

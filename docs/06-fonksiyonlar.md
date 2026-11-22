@@ -1744,7 +1744,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **23 · Zaman yapısı:** Senaryonun ufkunu ve dönem dizisini tanımlamak (dönem tipi, kapsam, kapsam birimi); tarihler plan başlangıcından hesaplanır. Parametreler ekranının Zaman başlığı (K-175).
 - **24 · Kapasite yönetimi:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.9, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
 - **25 · Alokasyon ve öncelik kuralı:** Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
-- **26 · Uyarı eşikleri:** Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
+- **26 · Uyarı eşikleri:** (7.11, K-190: dört kategoride uyarıların kademeli eşiği, önemi ve aktifliği senaryo bazında; eski tanım geçersiz) Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
 - **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo açmak, yeniden adlandırmak, pasif yapmak, silmek, Baz'dan ayırmak; senaryolar arasında geçmek (K-177).
 - **28 · Gece çalışsın ve gece sırası:** Senaryonun gece akışında hesaplanıp hesaplanmayacağını ve gece çalışanların sırasını belirlemek (K-177).
 
@@ -1758,7 +1758,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü (okuma ve yazma); End user ekranı görmez
   - Nereden: Parametreler ekranı (06); ekran bağlam çubuğunda seçili senaryonun parametrelerini gösterir, ekranda ayrıca senaryo seçimi yoktur
-- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.11'de eklenir).
+- **01:** Şeritte ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı · Uyarı eşikleri (7.11, K-190).
 - **02:** Form başlığında solda alt başlıklar, sağda sıkı kart; değer değişince Kaydet ve Vazgeç etkinleşir (kartın altında, sağda). Tek alt başlıklı başlıkta sol menü yoktur.
 - **03:** "Kaydet" yalnız değişen parametreleri yazar; biri geçersizse hiçbiri yazılmaz, sorun alanın altında gösterilir.
 - **04:** Kaydedilmemiş değişiklikle başka alt başlığa, başlığa ya da ekrana geçilirse uyarı çıkar (K-132).
@@ -2076,7 +2076,19 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 26 · Uyarı eşikleri
 <sub>24. Ekranlar ve fonksiyonlar · F26 · C Parametre · Çalışma prensibi 1/3</sub>
 
-- Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
+- **Uygulama (7.11, K-190):** uygulandı (7.11; sürüm 0.51.0, geçiş 0069, K-190; iki demo). Bu bölümün aşağıdaki eski tasarımı ve mockup'ları (m24f-0452, m24f-0453) **geçersizdir (K-190)**; geçerli tasarım:
+  - **Kapsam:** yalnız eşiklerin tanımı, girişi ve saklanması. Uyarı üretimi, uyarı listesi, önizleme, mesaj şablonu, "nerede görünsün", bildirim ayarı ve satır çekmecesi yok. Veri kalitesi uyarıları bu ekrana girmez (K-174).
+  - **Yer:** Parametreler ekranı (ekran 06) › "Uyarı eşikleri" başlığı; seçili senaryonun eşikleri. Kim: Key user ve üstü (fonksiyon 26).
+  - **Düzen ve tablo:** öteki başlıklardaki gibi solda alt başlıklar (Talep · Malzeme · Kapasite · Plan kalitesi), sağda seçili kategorinin kartı; Vazgeç ve Kaydet kartın altında. Kolonlar: Uyarı · Birim · Yön ("Aşınca" / "Altına düşünce") · Düşük · Orta · Yüksek · Kritik · Aktif. Her önem için ayrı eşik (kademeli); boş hücre o kademenin kullanılmadığını gösterir. Eşiksiz uyarıda dört önem kolonunun yerinde tek seçim düğmesi ("Düşük | Orta | Yüksek | Kritik"). Yüzde "%95" biçiminde. Değişen hücre işaretli; kaydetme kategori başınadır, Vazgeç geri alır; kaydedilmemiş değişiklikle başka kategoriye geçişte uyarı. Kapatılan uyarının satırı belirgin soluktur.
+  - **Kural:** bir nesne için tek uyarı çıkar; önemi tuttuğu en yüksek kademedir. Yön uyarıya göre sabittir ve eşik dahil değildir: "aşınca" değer eşikten büyük, "altında" değer eşikten küçük olunca; eşiğe eşit değer uyarı vermez.
+  - **Uyarılar:** Talep: Gecikme (gün; sipariş satırı, istenen tarihe göre; aşınca) · OTIF oranı (%; plan geneli; altında) · Karşılama oranı (%; plan geneli; altında) · Karşılanmayan sipariş (eşiksiz) · Karşılanmayan tahmin (eşiksiz). Malzeme (malzeme başına): Malzeme eksiği (gün; eksiğin bugünden kaç gün sonra başladığı; altında) · Güvenlik stoğunun altı (%; dönem sonu stoğu ÷ güvenlik stoğu; altında) · Fazla stok (%; dönem sonu stoğu ÷ maksimum stok; aşınca) · Geciken satın alma önerisi (gün; aşınca) · Raf ömrü (gün; son kullanma tarihine kalan gün; altında; Faz 1'de yalnız uyarı). Kapasite (kaynak grubu ve dönem başına): Aşırı yük (%; yük ÷ kullanılabilir kapasite; aşınca) · Hedef doluluğun üstü (%; yük ÷ hedef kapasite; aşınca; hedef girilmemiş grupta çıkmaz) · Düşük doluluk (%; altında) · Ek mesai kullanımı (%; planlanan ek mesai ÷ limit; aşınca). Plan kalitesi (eşiksiz): Süre bütçesi doldu · Kısıt gevşetildi · Yedek yöntem çalıştı.
+  - **Önemlerin anlamı sabittir:** Kritik yayın öncesi kontrolde sayılır ve ana sayfada öne çıkar; Yüksek planı etkiler; Orta izlenir; Düşük bilgi niteliğindedir.
+  - **Doğrulama:** gün tam sayı; yüzde en çok iki ondalık; 0 ya da büyük. Dolu kademeler yöne göre sıralı olmalı (aşınca: Düşük < Orta < Yüksek < Kritik; altında tersi); sıra bozuksa hücre reddedilir. Aktif eşikli uyarıda en az bir kademe dolu. Kapatılan uyarının değerleri durur.
+  - **Senaryolar:** eşikler ayardır (tam kopya): kopyalanan senaryo kaynağının eşiklerini alır; Baz'daki değişiklik izleyen senaryoya akmaz; fark işareti yok.
+  - **Başlangıç değerleri** kurulumda görünür gelir (K-190 madde 7).
+  - **İlk sürüm:** liste, uyarı ekranları (Aşama 8) ve sipariş önceliği (7.14) geldiğinde yeniden gözden geçirilecek; talep uyarıları sipariş önceliğiyle birleştirilecek.
+  - **Aşama 8 notu:** plan uyarıları listesi (Önem · Uyarı · nesne · Dönem · Değer · Eşik), uyarıdan ilgili kayda geçiş, doluluk hücrelerinin bu eşiklerle renklenmesi.
+- **Eski tasarım (geçersiz, K-190):** Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
 
 #### NASIL ÇALIŞIR
 
@@ -2129,6 +2141,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 26 · Uyarı eşikleri · Eşik listesi ve önizleme
 <sub>24. Ekranlar ve fonksiyonlar · F26 · C Parametre · Mockup 1/2</sub>
 
+**Geçersiz (K-190).**
+
 ![26 · Uyarı eşikleri · Eşik listesi ve önizleme](mockups/m24f-0452-26-uyari-esikleri-esik-listesi-ve-onizleme.png)
 
 - **Kategoriye göre liste:** Eşik, önem ve aktif satırda düzenlenir; değiştirilenler mavi çerçeveli.
@@ -2138,6 +2152,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ### 26 · Uyarı eşikleri · Uyarı tanımı çekmecesi
 <sub>24. Ekranlar ve fonksiyonlar · F26 · C Parametre · Mockup 2/2</sub>
+
+**Geçersiz (K-190).**
 
 ![26 · Uyarı eşikleri · Uyarı tanımı çekmecesi](mockups/m24f-0453-26-uyari-esikleri-uyari-tanimi-cekmecesi.png)
 

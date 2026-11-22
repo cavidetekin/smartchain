@@ -141,7 +141,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### PARAMETRE (DEVAM)
 
-- **26 · Uyarı eşikleri:** Doluluk, gecikme, stok gibi eşik değerleri.
+- **26 · Uyarı eşikleri:** Uyarıların kademeli eşikleri, önemi ve aktifliği; Parametreler ekranında "Uyarı eşikleri" başlığı (7.11, K-190).
 - **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo, yeniden adlandırma, pasif, silme, Baz'dan ayır; senaryo geçişi.
 - **28 · Gece çalışsın ve gece sırası:** Senaryonun gece akışında hesaplanıp hesaplanmayacağı ve sırası.
 
@@ -355,7 +355,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Mockup geçersiz (K-175):** parametre seti, set listesi ve sekmeleri yok. Güncel mockup `plans/7.1-mockups/parametreler.html`.
 - **Tek kavram senaryo:** ekran, bağlam çubuğunda seçili senaryonun parametrelerini gösterir; ekranda ayrıca senaryo seçimi yoktur. 7.1'de tek senaryo Baz'dır.
-- **Şerit:** yalnız ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı ("Uyarı eşikleri" 7.11'de).
+- **Şerit:** yalnız ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı · Uyarı eşikleri (7.11, K-190; alt başlıkları Talep · Malzeme · Kapasite · Plan kalitesi).
 - **Form başlıkları:** Sistem ayarları düzeni (docs/12): solda alt başlıklar, sağda sıkı kart, Kaydet ve Vazgeç kartın altında, 44×24 anahtarlar. Tek alt başlıklı başlıkta sol menü yok.
 - **Tablo başlıkları** (Hedefler, Planlama ufku › Ufuk ve dönemler): tablo standardının görünümü ve hücre düzenleme standardı; sıra sürüklenir; Kaydet ve Vazgeç tablonun altında, sağda.
 - **Hedefler:** Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%) · Aktif; altta toplam süre. Leksikografik: ağırlık yok.

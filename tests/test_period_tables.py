@@ -341,7 +341,8 @@ def test_related_fields_calculated_value_and_weighted_default(api, db_engine, wo
 @pytest.mark.db
 def test_scenario_comes_from_the_request_or_the_user(api, db_engine, world, clean):
     """Dönemler isteğin senaryosundan; verilmezse kullanıcının seçili senaryosu, o da yoksa Baz. Baz'ı izleyen senaryo yalnız farkını tutar."""
-    found = horizon_of(db_engine, world["base"])
+    # ilk tam dönem: ufuk hafta sonunda başlarsa ilk dönem çalışma günü olmayan kısa haftadır (verimlilik boş çıkar); test haftanın gününe bağlı olmasın
+    found = [next(p for p in horizon_of(db_engine, world["base"]) if p.days >= 5)]
     efficiency(db_engine, world["follower"], world["r2"], 33, found[0].start, found[0].end)
     one = [{"field": "ResourceGroupCode", "op": "in", "values": [world["g2"]]}, {"field": "Period", "op": "in", "values": [found[0].label]}]
     base_row = all_rows(api, filters=one)[0]

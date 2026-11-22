@@ -986,6 +986,23 @@ export const tr = {
     secondsProblem: "1 ya da daha büyük tam sayı girilmeli.",
     toleranceProblem: "0 ile 100 arasında, en çok 2 ondalıklı sayı girilmeli.",
     oneActive: "En az bir hedef aktif olmalı.",
+    // Uyarı eşikleri (fonksiyon 26; K-190)
+    warnings: {
+      title: "Uyarı eşikleri",
+      warning: "Uyarı",
+      unit: "Birim",
+      direction: "Yön",
+      above: "Aşınca",
+      below: "Altına düşünce",
+      severityOf: (name: string) => `${name} önemi`,
+      tableOf: (category: string) => `Uyarı eşikleri · ${category}`,
+      notNumber: "Sayı girilmeli.",
+      negative: "0 ya da daha büyük olmalı.",
+      notInteger: "Tam sayı girilmeli.",
+      twoDecimals: "En çok 2 ondalıklı sayı girilmeli.",
+      order: (severity: string, before: string, above: boolean) => `${severity} eşiği ${before} eşiğinden ${above ? "büyük" : "küçük"} olmalı.`,
+      noTier: "Aktif uyarıda en az bir kademe dolu olmalı.",
+    },
     // Zaman
     buckets: "Ufuk ve dönemler",
     reportBuckets: "Raporlama ekseni dönemleri",

@@ -25,6 +25,10 @@ export interface GridColumn<R> {
     options?: readonly string[];
     can?(row: R): boolean;
   };
+  /** Metin düzenleyicisi olmadan düzenlenen kolon (ör. anahtar): başlıkta düzenleme işareti. */
+  marked?: boolean;
+  /** Hücrenin kapladığı kolon sayısı (bu kolondan başlayarak); kaplanan kolonların hücresi o satırda çizilmez. */
+  span?(row: R): number;
   changed?(row: R): boolean;
   /** Hücredeki sorun (kırmızı çerçeve, ipucunda metin). */
   problem?(row: R, index: number): string | undefined;
@@ -158,7 +162,7 @@ export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, 
             {columns.map((c) => (
               <th key={c.key} scope="col" className={[c.num ? "is-num" : "", c.cls ?? ""].filter(Boolean).join(" ") || undefined}>
                 {c.label}
-                {editable && c.edit && <span className="sc-table-edit-mark" title={tr.table.editableColumn} aria-label={tr.table.editableColumn}>✎</span>}
+                {editable && (c.edit || c.marked) && <span className="sc-table-edit-mark" title={tr.table.editableColumn} aria-label={tr.table.editableColumn}>✎</span>}
               </th>
             ))}
           </tr>
@@ -167,9 +171,16 @@ export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, 
           {rows.map((row, index) => {
             const id = rowKey(row);
             const drop = over?.id === id ? ` is-drop-${over.side}` : "";
+            let covered = 0;   // önceki hücrenin kapladığı kolonlar çizilmez
             return (
               <tr key={id} className={`sc-table-row ${rowClass?.(row) ?? ""}${drop}${dragging === id ? " is-dragging" : ""}`} {...dragProps(row)}>
                 {columns.map((col) => {
+                  if (covered > 0) {
+                    covered -= 1;
+                    return null;
+                  }
+                  const span = col.span?.(row) ?? 1;
+                  covered = span - 1;
                   const cell = canEdit(col, row);
                   const here = cursor?.row === id && cursor.col === col.key;
                   const problem = col.problem?.(row, index);
@@ -177,7 +188,7 @@ export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, 
                                problem ? "is-invalid" : ""].filter(Boolean).join(" ");
                   const isOpen = here && editing !== null && cell;
                   return (
-                    <td key={col.key} className={cls || undefined} title={problem}
+                    <td key={col.key} className={cls || undefined} title={problem} colSpan={span > 1 ? span : undefined}
                         onClick={col.edit ? () => { if (!isOpen) { setCursor({ row: id, col: col.key }); setEditing(null); } } : undefined}
                         onDoubleClick={cell ? () => { setCursor({ row: id, col: col.key }); setEditing(col.edit!.text(row)); } : undefined}>
                       {isOpen ? (

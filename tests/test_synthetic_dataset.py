@@ -184,3 +184,17 @@ def test_bottleneck_orders(ds):
             load_by_order[so["OrderNo"]] = s.resource_hours(ds, so["MaterialId"], so["OpenQuantity"], m5)
     heavy = {k for k, v in load_by_order.items() if v >= 40}
     assert heavy == {f"SO-{n}" for n in range(1011, 1017)}
+
+
+@pytest.mark.parametrize("offset", range(7))
+def test_no_accidental_past_due_on_any_weekday(offset):
+    """Tarihten bağımsızlık (7.11): set haftanın hangi günü üretilirse üretilsin, bilerek konan sipariş (durum 9) dışında hiçbir açık sipariş, iş emri
+    ya da satın alma siparişi "tarihi geçmiş" durumda değildir (kirli veri testi ve veri kalitesi beklenmeyen uyarı görmez). Pazartesi'den Pazar'a."""
+    on = date(2026, 11, 16) + timedelta(days=offset)
+    assert on.weekday() == offset
+    ds = generate(on)
+    late_orders = sorted(r["OrderNo"] for r in ds.rows("SalesOrderLine") if r["OpenQuantity"] > 0 and r["RequestedDate"] < on)
+    assert late_orders == [d.PAST_DUE_ORDER]
+    assert [r["WorkOrderNo"] for r in ds.rows("WorkOrder") if r["OpenQuantity"] > 0 and r["DueDate"] < on] == []
+    assert [r["OrderNo"] for r in ds.rows("PurchaseOrderLine") if r["OpenQuantity"] > 0 and (r["ConfirmedDate"] or r["RequestedDate"]) < on] == []
+    assert all(r["StartDate"] <= r["DueDate"] for r in ds.rows("WorkOrder"))

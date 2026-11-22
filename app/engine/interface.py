@@ -89,6 +89,11 @@ class PlanningData(Protocol):
         yalnız kritik ve güncel kaynak grupları. Kritik olmayan grubun saklı değeri dönmez."""
         ...
 
+    def warning_thresholds(self) -> list[dict]:
+        """Uyarı eşikleri (docs/09, K-190): planın senaryosundaki aktif uyarılar {Code, Category, Unit, Direction, Low, Medium, High, Critical,
+        Severity}. Yön `above`: değer > eşik; `below`: değer < eşik (eşik dahil değil); önem, tutulan en yüksek kademedir."""
+        ...
+
 
 @dataclass(frozen=True)
 class EngineInput:

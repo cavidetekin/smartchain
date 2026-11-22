@@ -80,7 +80,7 @@ def test_registry_covers_every_scenario_table():
     """Modelde senaryo kimliği taşıyan her param tablosu kayıt defterinde; türü Ayar ya da Veri, Veri tablosunun ayırma işlevi bağlı."""
     assert registry.model_tables() == set(registry.BY_NAME)
     assert {t.name for t in registry.TABLES if t.kind == registry.SETTING} == {
-        "PlanningSetting", "ObjectiveDefinition", "TimeBucketDefinition", "PriorityRule", "AllocationRule"}
+        "PlanningSetting", "ObjectiveDefinition", "TimeBucketDefinition", "PriorityRule", "AllocationRule", "WarningThreshold"}
     assert all(t.materialize is not None for t in registry.TABLES if t.kind == registry.DATA)
 
 

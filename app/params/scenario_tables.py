@@ -46,6 +46,7 @@ TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("TimeBucketDefinition", SETTING),
     ScenarioTable("PriorityRule", SETTING),
     ScenarioTable("AllocationRule", SETTING),
+    ScenarioTable("WarningThreshold", SETTING),   # uyarı eşikleri (K-190): ayar, tam kopya
     ScenarioTable("SupplierLimit", DATA, _pending),
     # Kapasite girişleri (K-185): fark yapısı ve çözümleme `app/params/resolve.py`'de
     *[ScenarioTable(name, DATA, resolve.materializer(name)) for name in resolve.FIELDS],

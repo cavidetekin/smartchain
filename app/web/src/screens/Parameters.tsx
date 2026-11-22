@@ -20,6 +20,7 @@ import { dropId } from "./DataRules";
 import { type Axis, type BucketPart, type BucketRow, type BucketsData, type ObjectiveRow, type ParamDef, type ParametersData, type ParamValues,
          parametersApi, type Period, type SubDef } from "./parametersApi";
 import { useShell } from "../shell/ShellContext";
+import { WarningThresholds } from "./WarningThresholds";
 
 const T = tr.parameters;
 /** Seçili senaryonun uçları (K-177); ekran senaryo yüklendikten sonra çizilir (App `ScenarioBound`). */
@@ -213,7 +214,7 @@ function Objectives({ canWrite, onDirty }: { canWrite: boolean; onDirty(dirty: b
     { key: "tolerance", label: T.tolerance, num: true, width: 10, render: (r) => <span className="sc-num">{r.active ? r.toleranceText : ""}</span>,
       edit: { text: (r) => r.toleranceText, commit: (r, text) => patch(r.id, { toleranceText: text.trim() }), can: (r) => r.active },
       changed: (r) => cellChanged(r, "tolerance"), problem: toleranceProblem },
-    { key: "active", label: T.active, width: 5,
+    { key: "active", label: T.active, width: 5.5, marked: true,
       render: (r) => <SwitchCell label={T.activeOf(r.label)} checked={r.active} editable={canWrite} changed={cellChanged(r, "active")} onToggle={(v) => toggle(r, v)} />,
       changed: (r) => cellChanged(r, "active") },
   ];
@@ -454,6 +455,8 @@ export function Parameters() {
   let body;
   if (section.table === "objectives") {
     body = <Objectives key={formKey} canWrite={canWrite} onDirty={onGridDirty} />;
+  } else if (sub?.table === "warnings") {   // Uyarı eşikleri (K-190): alt başlık = kategori; kaydetme kategori başına
+    body = <WarningThresholds key={`${sub.key}:${formKey}`} category={sub.title} canWrite={can(me, 26, "write")} onDirty={onGridDirty} />;
   } else if (sub?.table === "buckets") {
     body = <Buckets key={`plan:${formKey}`} axis="plan" label={T.buckets} periodsLabel={T.periods} canWrite={canWrite} onDirty={onGridDirty} />;
   } else if (sub) {

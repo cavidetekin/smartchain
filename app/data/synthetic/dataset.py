@@ -24,6 +24,9 @@ SCENARIOS = (
 # Model kısıtları (K-189): kaynak grubu, kısıtsız kapasite çarpanı, hedef doluluk (%). "Kısıtsız kapasite" senaryosunun farkları yüklemede yazılır
 MODEL_CONSTRAINTS = (("TORNA", None, 85.0), ("ISL3", None, 90.0), ("MONTAJ", 1.5, None))
 MODEL_CONSTRAINT_DIFF = ("MONTAJ", 2.0)        # "Kısıtsız kapasite": Baz'daki çarpanın farkı
+# Uyarı eşikleri (K-190): "Kısıtsız kapasite" senaryosunda farklı eşik (Düşük, Orta, Yüksek, Kritik) ve kapalı bir uyarı
+WARNING_THRESHOLD_CHANGE = ("CAP_OVERLOAD", (None, 110, 125, 150))
+WARNING_THRESHOLD_OFF = "CAP_LOW_LOAD"
 MODEL_CONSTRAINT_OWN = ("TASLAMA", 1.25)       # "Kısıtsız kapasite": senaryonun kendi değeri (Baz'da yok)
 HISTORY_DAYS = 21
 
@@ -170,6 +173,7 @@ def generate(on: date | None = None, seed: int = SEED) -> Dataset:
     _stock(b, rng)
     _work_orders(b, rng)
     _purchase_orders(b, rng)
+    _keep_open_dates_current(b)
     _quality(b)
     _params(b)
     ds.tables = {k: v for k, v in b.t.items() if not k.startswith("param.")}
@@ -686,6 +690,20 @@ def _copy(b: _Builder, table: str, row: dict, **values) -> dict:
 def _first_of_month(d: date, months_ahead: int) -> date:
     m = d.month - 1 + months_ahead
     return date(d.year + m // 12, m % 12 + 1, 1)
+
+
+def _keep_open_dates_current(b: _Builder) -> None:
+    """Üretim günü haftanın sonuna gelince (Cumartesi, Pazar) hafta 1'in geçmiş günü beklenmeyen "tarihi geçmiş" uyarısı vermesin (docs/11): açık
+    siparişin ve iş emrinin hafta 1'de üretim gününden önceye düşen tarihi üretim gününe çekilir. Bilerek geçmiş bırakılan sipariş (durum 9) bu
+    adımdan sonra eklenir; geçmişe ait başlangıç tarihlerine (başlamış iş emri) dokunulmaz. Satın alma tarihleri kendi yerinde aynı kuralla üretilir."""
+    ds, on = b.ds, b.ds.generated_on
+    for row in b.t["SalesOrderLine"]:
+        for field in ("RequestedDate", "ConfirmedDate"):
+            if row.get(field) is not None and ds.start <= row[field] < on:
+                row[field] = on
+    for row in b.t["WorkOrder"]:
+        if row.get("DueDate") is not None and ds.start <= row["DueDate"] < on:
+            row["DueDate"] = on
 
 
 def _quality(b: _Builder) -> None:

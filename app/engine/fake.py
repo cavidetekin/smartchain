@@ -18,8 +18,8 @@ from .interface import STAGES, EngineError, EngineInput, PlanResult, Progress
 
 FIXTURE = Path(__file__).parent / "fixtures" / "plan_v0.json"
 
-# Fikstürdeki uyarı kodları; PlanWarning.WarningCode param.WarningDefinition'a bağlı. Tanımlar 7.5'te ekrandan gelir.
-FIXTURE_WARNING_DEFINITIONS = {"CAP_OVERLOAD": "Kapasite", "ORDER_LATE": "Sipariş"}
+# Fikstürdeki uyarı kodları; PlanWarning.WarningCode param.WarningDefinition'a bağlı. Katalog geçiş 0069'da yazılır (K-190); burada yalnız eksikse eklenir.
+FIXTURE_WARNING_DEFINITIONS = {"CAP_OVERLOAD": "Kapasite", "ORDER_LATE": "Talep"}
 
 
 @lru_cache

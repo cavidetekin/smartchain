@@ -164,13 +164,21 @@ def _has_model_constraints(engine: Engine) -> bool:
     return found >= len(MODEL_CONSTRAINTS)
 
 
+def _has_warning_thresholds(engine: Engine) -> bool:
+    """Sentetik set uyarı eşiği farkını taşıyor mu (7.11, K-190): eski setle kurulmuş test veritabanı yeniden yüklenir."""
+    from app.data.synthetic.dataset import WARNING_THRESHOLD_OFF
+    with engine.connect() as conn:
+        return bool(conn.execute(sa.text("SELECT COUNT(*) FROM param.WarningThreshold w JOIN param.ScenarioDefinition s ON s.Id = w.ScenarioDefinitionId "
+                                         "WHERE s.IsSynthetic = 1 AND w.WarningCode = :c AND w.IsActive = 0"), {"c": WARNING_THRESHOLD_OFF}).scalar())
+
+
 def ensure_synthetic(engine: Engine) -> bool:
     """Sentetik veri yoksa yükler (docs/11); varsa dokunmaz. Yüklediyse True."""
     with engine.connect() as conn:
         row = conn.execute(sa.text(
             "SELECT TOP 1 v.IsSynthetic, (SELECT COUNT(*) FROM core.Material m WHERE m.VersionFrom <= v.Id "
             "AND (m.VersionTo IS NULL OR m.VersionTo >= v.Id)) FROM adm.DataVersion v ORDER BY v.Id DESC")).first()
-    if row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine):
+    if row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine) and _has_warning_thresholds(engine):
         return False
     from app.data.synthetic.dataset import generate
     from app.data.synthetic.load import load
