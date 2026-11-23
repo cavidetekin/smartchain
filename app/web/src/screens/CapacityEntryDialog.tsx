@@ -2,6 +2,9 @@
 // girişlerde aynı düzen: iki kolonlu ızgara; seviye ve kod, tarihler, değerler. Kaynak ya da kaynak grubu aramalı seçilir; kısa listeler düğmedir;
 // çalışma düzeninin günleri kutudur. Zorunlu alan boşken Kaydet pasiftir ("(zorunlu)" yazmaz); sunucunun reddettiği alanın altında neden yazar.
 // Pencere dolu alanla açılmaz (K-138): yalnız çalışma düzeninin günleri Pzt–Cum Tam gelir. Düzenlemede seviye ve kod değişmez.
+// Lokasyon ilk alandır (K-194): kod listesi seçili lokasyona süzülür, lokasyon değişince kod temizlenir; tek lokasyonda dolu gelir; Düzenle'de kilitli.
+// Fabrika takvimi lokasyon bazlıdır: seviye ve kod yok, yalnız Lokasyon. Lokasyon listesi verideki bütün lokasyonlardır (`/api/capacity/locations`);
+// seçilen lokasyonda kaynak ya da grup yoksa kod listesi boştur ("Bu lokasyonda kayıt yok.") ve Kaydet pasif kalır.
 import { useEffect, useMemo, useState } from "react";
 
 import { ApiError, emitNotice } from "../api/client";
@@ -9,6 +12,7 @@ import { tr } from "../i18n/tr";
 import { listApi, type Row } from "../table/types";
 import { Alert, DateField, DayBoxes, Dialog, NumberField, SearchSelect, Segment, TextField } from "../ui";
 import { capacityApi, DAY_CHOICES, DAYS, type EntryDialogProps, type EntryField, type EntryKind, type EntrySpec, isoDate, parseIso } from "./capacityModel";
+import { emptyTextOf, LocationField, locationsOf, useLocationChoice, useLocations } from "./locationField";
 
 const T = tr.capacity;
 type Values = Record<string, unknown>;
@@ -44,6 +48,7 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
   const [level, setLevel] = useState<"group" | "resource">(owner?.level === "resource" ? "resource" : "group");
   const [ownerId, setOwnerId] = useState(owner ? String(owner.id) : "");
   const [options, setOptions] = useState<{ group: Row[]; resource: Row[] } | null>(null);
+  const calendar = kind === "factory-calendar";       // lokasyon bazlı: sahibi lokasyondur
   const [problems, setProblems] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,14 +82,20 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
   }, [spec.owner, editing]);
 
   const set = (name: string, v: unknown) => setValues((all) => ({ ...all, [name]: v }));
-  const list = options?.[level] ?? [];
-  // Veride birden çok lokasyon varsa seçenek "lokasyon · kod · ad" yazılır (K-189); tek lokasyonda yalnız kod ve ad
-  const manyLocations = new Set([...(options?.group ?? []), ...(options?.resource ?? [])].map((o) => o.LocationCode).filter(Boolean)).size > 1;
-  const codeOf = (o: Row) => (manyLocations && o.LocationCode ? `${String(o.LocationCode)} · ${String(o.Code)}` : String(o.Code));
+  // Lokasyonlar: verideki bütün lokasyonlar (kaydı olmayan da); kaynak ve grup listeleri lokasyonu koduyla taşıdığı için orada anahtar koddur
+  const derived = useMemo(() => (calendar ? [] : options && locationsOf([...options.group, ...options.resource],
+    (o) => (o.LocationCode ? { id: String(o.LocationCode), code: String(o.LocationCode) } : null))), [calendar, options]);
+  const locations = useLocations(derived, calendar ? "id" : "code");
+  // Karttan, satırdan ya da zaman çubuğundan açılınca lokasyon da dolu gelir: sahibin kendi lokasyonu
+  const given = calendar ? (owner?.level === "location" ? String(owner.id) : "")
+    : String((owner && options?.[owner.level === "resource" ? "resource" : "group"].find((o) => o.Id === owner.id)?.LocationCode) ?? "");
+  const [location, setLocation] = useLocationChoice(locations, calendar ? given : "");
+  useEffect(() => { if (!calendar && given && location === "") setLocation(given); }, [calendar, given, location, setLocation]);
+  const list = (options?.[level] ?? []).filter((o) => String(o.LocationCode ?? "") === location);   // kod listesi seçili lokasyona süzülür
   const picked = list.find((o) => String(o.Id) === ownerId);
   const unit = editing ? row.CapacityUnit : picked?.CapacityUnit;
   // Zorunlu alan boşken Kaydet pasif (K-187); alan adında işaret yoktur
-  const missing = spec.fields.some((f) => f.required && !filled(f, values[f.name])) || (spec.owner && !editing && !ownerId);
+  const missing = spec.fields.some((f) => f.required && !filled(f, values[f.name])) || (spec.owner && !editing && !ownerId) || (calendar && !editing && !location);
 
   const submit = async () => {
     setBusy(true);
@@ -99,6 +110,7 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
       } else {
         const body: Values = Object.fromEntries(spec.fields.map((f) => [f.name, wire(f, values[f.name])]));
         if (spec.owner) body[level === "group" ? "ResourceGroupId" : "ResourceId"] = ownerId ? Number(ownerId) : null;
+        if (calendar) body.LocationId = location ? Number(location) : null;
         warnings = (await capacityApi.create(kind, scenario, body)).warnings;
       }
       for (const w of warnings ?? []) emitNotice(w);
@@ -136,12 +148,15 @@ export function CapacityEntryDialog({ spec, scenario, row, owner, onClose, onSav
     <Dialog title={editing ? T.editTitle(spec.title) : T.newTitle(spec.title)} onClose={onClose} onSubmit={() => void submit()} submitLabel={tr.table.editSave} busy={busy}
             submitDisabled={Boolean(missing)} className="sc-dialog--form">
       <div className="sc-form-grid">
+        {/* Lokasyon ilk alan (K-194): Düzenle'de kilitli; değişince seçilmiş kod temizlenir */}
+        {editing ? <LocationField options={[]} value="" onChange={() => undefined} locked={String(row.LocationCode ?? "")} />
+          : <LocationField options={locations ?? []} value={location} onChange={(v) => { setLocation(v); setOwnerId(""); }} error={problems.LocationId} />}
         {spec.owner && !editing && (
           <div className="sc-form-full sc-form-owner">
             <Segment<"group" | "resource"> label={T.level} value={level} onChange={(v) => { setLevel(v); setOwnerId(""); }}
                                            options={[{ value: "group", label: T.levelGroup }, { value: "resource", label: T.levelResource }]} />
-            <SearchSelect label={level === "group" ? T.resourceGroup : T.resource} value={ownerId} onChange={setOwnerId} error={ownerProblem} emptyText={T.noMatch}
-                          options={list.map((o) => ({ value: String(o.Id), code: codeOf(o), name: o.Name ? String(o.Name) : undefined }))} />
+            <SearchSelect label={level === "group" ? T.resourceGroup : T.resource} value={ownerId} onChange={setOwnerId} error={ownerProblem}
+                          emptyText={emptyTextOf(location, list.length)} disabled={!location} options={list.map((o) => ({ value: String(o.Id), code: String(o.Code), name: o.Name ? String(o.Name) : undefined }))} />
           </div>
         )}
         {spec.owner && editing && (

@@ -88,6 +88,7 @@ python -m app.data.synthetic check                                     # sayıla
   - Çalışma düzeni: grup düzeyinde `ISL3`, `ISL5`, `TASLAMA`, `MONTAJ` 15 saat/gün; `KALITE`, `CG-CNC`, `CG-MON` 7,5; `CG-KAL` 7,0; `F-ISIL` 24 (fason grubuna da girilebilir). `TORNA`'nın grup kaydı yoktur: `T-01…T-04` kendi kayıtlarıyla 15 saat/gün. Hafta içi tam, hafta sonu çalışılmıyor; `Q-01` Cumartesi yarım gün. Geçici kayıtlar: `G-02` hafta 9–10 7,5 saat; `T-04` hafta 12–13 22,5 saat (bitince öncekine döner).
   - Verimlilik: `TASLAMA` %85 (süresiz); `A-01` hafta 4–8 %110. Ek mesai limiti: `CG-MON` 2 saat/gün, `CG-CNC` 1,5 saat/gün.
   - Bakım ve duruş: `T-02` hafta 2 Salı–Çarşamba (Planlı bakım), `G-01` bir gün (Planlı bakım), `M3-02` iki gün (Arıza), `KALITE` grubuna bir gün (Planlı bakım). Fabrika takvimi: Yılbaşı arifesi (yarım gün), Yılbaşı, yıllık toplu izin (hafta 16).
+  - Fabrika takvimi lokasyon bazlıdır (K-194): sentetik takvim kayıtları sentetik lokasyona (`ORM-01`) bağlanır.
   - Bilerek konmuş durumlar: `T-05` ne kendisinde ne grubunda çalışma düzeni (kritik grup, talep zincirinde: Yüksek); `F-KAPLA` fason, çalışma düzeni yok (kritik değil: Normal); `CG-MON` (7,5) ve `CG-KAL` (7,0) gruplarının ikisine üye işçilerde "Grupları çelişen kaynak".
   - Model kısıtları (7.10, K-189): Baz'da `TORNA` hedef doluluk %85, `ISL3` hedef doluluk %90, `MONTAJ` kısıtsız kapasite çarpanı 1,50. **Kısıtsız kapasite** senaryosu `MONTAJ` çarpanını 2,00'a çıkarır (fark) ve `TASLAMA`'ya 1,25 çarpanını kendisi ekler. Kritik olmayan grupta (`F-KAPLA`, `F-ISIL`) değer yok.
   - Uyarı eşikleri (7.11, K-190): bütün senaryolar başlangıç değerleriyle (geçiş 0069). **Kısıtsız kapasite** senaryosunda Aşırı yük eşikleri boş / 110 / 125 / 150 ve Düşük doluluk kapalıdır (senaryolar arasında farklı eşik örneği).
@@ -128,6 +129,8 @@ python -m app.data.synthetic check                                     # sayıla
 **Ek alan etiketi (K-104):** yükleme etiketi yalnız boşsa yazar; System owner'ın etiketi korunur.
 
 **Tazeleme (K-103):** testler artık geliştirme veritabanına dokunmaz; geliştirme verisi son `load`'daki hâliyle kalır, tarihler zamanla eskir. Gerektiğinde `python -m app.data.synthetic load` (ya da `veri_demo.bat`). Test veritabanının verisini testler kendisi kurar.
+
+**Hangi komut (K-194):** veritabanında yalnız sentetik veri varsa (aktarım yapılmadıysa) `load` yeter. Aktarım yapıldıysa (sentetik olmayan veri versiyonu ya da lokasyon var; ör. kirli Excel'in aktarımıyla gelen `V-LOC-1`, `R-LOC-1`) `load` durur ve ne yapılacağını söyler; o durumda `reset` gerekir. Emin değilseniz `reset`.
 
 **Sıfırlama (K-153):** geliştirme ya da demo veritabanında tam aktarım yapıldıktan sonra `load` durur (sentetik olmayan veri versiyonu var, K-79). `python -m app.data.synthetic reset` aktarımları geri alır (sentetik olmayan veri versiyonları, onların core satırları ve plan verisi, kural kaynağı satırları, aktarımın eklediği lokasyonlar), aktarımın kapattığı sentetik satırları açar ve sentetik veriyi yeniden yükler; tek işlemdir, staging değişmez. Yalnız sentetik veriyle kurulmuş veritabanında (sentetik veri versiyonu var), onaylı plana bağlı versiyon ve sentetik olmayan parametre seti yokken çalışır; silinecekleri gösterip veritabanının adının yazılmasını ister.
 

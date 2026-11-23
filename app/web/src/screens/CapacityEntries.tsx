@@ -33,7 +33,8 @@ const HINTS: FieldHints = {
 
 /** Satırın sahibi (Yeni kayıt satır menüsünden açılınca dolu gelir). */
 const ownerOf = (row: Row): Owner | null => (typeof row.ResourceId === "number" ? { level: "resource", id: row.ResourceId, code: String(row.Code ?? "") }
-  : typeof row.ResourceGroupId === "number" ? { level: "group", id: row.ResourceGroupId, code: String(row.Code ?? "") } : null);
+  : typeof row.ResourceGroupId === "number" ? { level: "group", id: row.ResourceGroupId, code: String(row.Code ?? "") }
+    : typeof row.LocationId === "number" ? { level: "location", id: row.LocationId, code: String(row.LocationCode ?? "") } : null);   // fabrika takvimi: lokasyon (K-194)
 
 export function EntryTable({ spec, filters, owner, lead, end, compact, onDetail, selectedRowId, onChanged, onSelection, reloadKey = 0, focus }: {
   spec: EntrySpec;

@@ -320,7 +320,7 @@ def _capacity(b: _Builder) -> None:
     eve = date(ds.start.year if ds.start <= date(ds.start.year, 12, 31) else ds.start.year + 1, 12, 31)
     for name, start, end, value in [("Yılbaşı arifesi", eve, eve, 0.5), ("Yılbaşı", eve + timedelta(days=1), eve + timedelta(days=1), 0.0),
                                     ("Yıllık toplu izin", ds.day(16, 0), ds.day(16, 4), 0.0)]:
-        b.add("param.FactoryCalendar", ScenarioDefinitionId=1, StartDate=start, EndDate=end, Name=name, DayValue=value, IsValid=True)
+        b.add("param.FactoryCalendar", ScenarioDefinitionId=1, LocationId=1, StartDate=start, EndDate=end, Name=name, DayValue=value, IsValid=True)   # lokasyon bazlı (K-194)
 
 # --- Malzemeler ---
 

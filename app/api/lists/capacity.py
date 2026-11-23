@@ -92,7 +92,7 @@ RESOURCES = ListDefinition(
             "RemainingOvertimeMonth": "Kalan fazla mesai (ay)", "RemainingOvertimeYear": "Kalan fazla mesai (yıl)", "GroupKeys": "Grup anahtarları",
             "CapacityUnit": "Kapasite birimi"},
     notes={"RemainingOvertimeMonth": "ERP'den (saat)", "RemainingOvertimeYear": "ERP'den (saat)"},
-    filter_only=("Id", "GroupKeys"), key_fields=("CapacityUnit",), related_table="Resource",
+    filter_only=("Id", "GroupKeys"), key_fields=("CapacityUnit", "LocationCode"), related_table="Resource",
 )
 
 # --- Giriş tabloları -------------------------------------------------------------------------------------------------------------------
@@ -107,8 +107,10 @@ _LOCATION_CODE = "(SELECT l.Code FROM core.Location l WHERE l.Id = {0})"
 # İlişkili alanlar (K-182, K-189): satırın taşıdığı üç kimlik birinci seviye ilişkidir. Kayıt gruba girildiyse Kaynak, kaynağa girildiyse Kaynak grubu boştur;
 # Lokasyon sahibinin lokasyonudur (kaynağın, yoksa grubun).
 OWNER_LINKS = (("ResourceGroupId", "Kaynak grubu"), ("ResourceId", "Kaynak"), ("LocationId", "Lokasyon"))
+LOCATION_LINKS = (("LocationId", "Lokasyon"),)      # fabrika takvimi (K-194)
+_LOCATION = {"LocationCode": sa.Unicode(50), "LocationId": sa.Integer()}
 _COMMON_LABELS = {"Origin": "Kaynağı", "IsValid": "Geçerli", "Level": "Seviye", "LocationCode": "Lokasyon", "Code": "Kod", "CapacityUnit": "Birim", "ValidFrom": "Başlangıç", "ValidTo": "Bitiş",
-                  "StartDate": "Başlangıç", "EndDate": "Bitiş", "OwnerKeys": "Sahip anahtarları", "ResourceId": "Kaynak no", "ResourceGroupId": "Kaynak grubu no",
+                  "StartDate": "Başlangıç", "EndDate": "Bitiş", "OwnerKeys": "Sahip anahtarları", "LocationId": "Lokasyon no", "ResourceId": "Kaynak no", "ResourceGroupId": "Kaynak grubu no",
                   "StoredId": "Saklanan satır", "OverriddenFields": "Senaryoda değişen alanlar", "BaseValues": "Baz değerleri"}
 _NOTES = {"Origin": "Baz: Baz senaryodan okunur · Senaryo farkı: Baz satırı bu senaryoda değiştirildi · Senaryo: yalnız bu senaryoda",
           "Level": "Kayıt gruba mı kaynağa mı girildi; kaynakta kayıt varsa o geçerlidir, yoksa grubunki"}
@@ -154,12 +156,13 @@ def _resolved(table: str) -> str:
 
 def _entry(name: str, table: str, title: str, slug: str, values: dict, select: str, labels: dict, *, decimals=None, unit_decimals=(), lists=None,
            owner: bool = True, start: str = "ValidFrom", extra_sql: str = "", sort=None, wrap=None) -> ListDefinition:
-    types = {**_COMMON, **(_OWNER if owner else {}), **values}
-    head = f"{_HEAD}, {_OWNER_SELECT}, " if owner else f"{_HEAD}, "
+    # sahibi kaynak ya da grup olmayan giriş (fabrika takvimi) lokasyon bazlıdır (K-194): Lokasyon tablonun kendi alanı, ilk kolon
+    types = {**_COMMON, **(_OWNER if owner else _LOCATION), **values}
+    head = f"{_HEAD}, {_OWNER_SELECT}, " if owner else f"{_HEAD}, {_LOCATION_CODE.format('z.LocationId')} AS LocationCode, z.LocationId, "
     sql = f"SELECT {head}{select} FROM ({_resolved(table)}) z {_OWNER_JOIN if owner else ''}{extra_sql}"
     if wrap is not None:   # listenin üstüne hesaplanan kolon (ör. "Gün")
         sql = wrap(sql)
-    shown = (*(("Level", "LocationCode", "Code") if owner else ()), *[f for f in values if f not in ("CapacityUnit",)], "Origin", "IsValid")
+    shown = (*(("Level", "LocationCode", "Code") if owner else ("LocationCode",)), *[f for f in values if f not in ("CapacityUnit",)], "Origin", "IsValid")
     if owner and "CapacityUnit" in labels:           # Birim, değerin hemen ardında
         at = shown.index(labels["CapacityUnit"]) + 1
         shown = (*shown[:at], "CapacityUnit", *shown[at:])
@@ -168,12 +171,12 @@ def _entry(name: str, table: str, title: str, slug: str, values: dict, select: s
         source=skeleton(types, "cap"), source_factory=_source(sql, types, "cap"),
         fields=shown, default_visible=shown,
         default_sort=sort or ((("Level", "asc"), ("Code", "asc"), (start, "asc")) if owner else ((start, "asc"),)),
-        server_values=frozenset({"LocationCode", "Code", "CapacityUnit"} if owner else set()),
+        server_values=frozenset({"LocationCode", "Code", "CapacityUnit"} if owner else {"LocationCode"}),
         decimals=decimals or {}, unit_field="CapacityUnit" if unit_decimals else None, unit_decimals=frozenset(unit_decimals),
         values={"Origin": ["Baz", "Senaryo farkı", "Senaryo", ERP], "Level": ["Grup", "Kaynak"], **(lists or {})},
         labels={**_COMMON_LABELS, **{k: v for k, v in labels.items() if k != "CapacityUnit"}}, notes=_NOTES,
-        key_fields=(*KEYS, *(OWNER_KEYS if owner else ())), filter_only=("OwnerKeys",) if owner else (),
-        related_table=relations.register_links(name, OWNER_LINKS) if owner else None,   # fabrika takviminin sahibi yok: ilişkili alanı yok
+        key_fields=(*KEYS, *(OWNER_KEYS if owner else ("LocationId",)), "LocationCode"), filter_only=("OwnerKeys",) if owner else (),
+        related_table=relations.register_links(name, OWNER_LINKS if owner else LOCATION_LINKS),
     )
 
 

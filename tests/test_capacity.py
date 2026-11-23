@@ -134,6 +134,9 @@ def clean(db_engine, world):
 def row(db_engine, table: str, scenario_id: int, **values) -> int:
     """Giriş tablosuna satır yazar (ekranın kayıt işlemi 7.9b'dedir); dönen: kimlik."""
     values = {"ScenarioDefinitionId": scenario_id, "IsValid": 1, **values}
+    with db_engine.begin() as c:
+        if table == "FactoryCalendar" and "LocationId" not in values:      # fabrika takvimi lokasyon bazlıdır (K-194): sentetik lokasyon
+            values["LocationId"] = _sql(c, "SELECT Id FROM core.Location WHERE Code = :c", c=d.LOCATION_CODE).scalar_one()
     names = ", ".join(f"[{k}]" for k in values)
     with db_engine.begin() as c:
         return _sql(c, f"INSERT INTO param.[{table}] ({names}, UpdatedAt) OUTPUT inserted.Id VALUES ({', '.join(':' + k for k in values)}, SYSUTCDATETIME())",
@@ -516,14 +519,14 @@ def test_trigger_entry_changed_on_a_group(db_engine, world, clean):
 
 
 def test_trigger_factory_calendar_changed(db_engine, world, clean):
-    """Fabrika takvimi: bütün kaynaklar, yalnız o günler (kaydın eski ve yeni aralığı)."""
+    """Fabrika takvimi: kaydın lokasyonundaki bütün kaynaklar (K-194; sentetik veride tek lokasyon), yalnız o günler (kaydın eski ve yeni aralığı)."""
     base = world["base"]
     ensure(db_engine, world, base)
     first = stored(db_engine, base)
     d1, d2 = working_days(db_engine, world, 2, world["r1"], world["r2"])
 
     rid = row(db_engine, "FactoryCalendar", base, StartDate=d1, EndDate=d1, Name="pytest tatil", DayValue=0)
-    done = fire(db_engine, triggers.factory_calendar_changed, base, [(d1, d1)])
+    done = fire(db_engine, triggers.factory_calendar_changed, base, world["location"], [(d1, d1)])
     after = stored(db_engine, base)
     moved = changed(first, after)
     assert done[base] == len(world["members"]) and moved and {k[2] for k in moved} == {d1} and set(after) == set(first)
@@ -532,7 +535,7 @@ def test_trigger_factory_calendar_changed(db_engine, world, clean):
     same_as_scratch(db_engine, world, base)
 
     update(db_engine, "FactoryCalendar", rid, StartDate=d2, EndDate=d2, DayValue=0.5)        # gün taşındı: eski ve yeni gün
-    done = fire(db_engine, triggers.factory_calendar_changed, base, [(d1, d1), (d2, d2)])
+    done = fire(db_engine, triggers.factory_calendar_changed, base, world["location"], [(d1, d1), (d2, d2)])
     after = stored(db_engine, base)
     assert done[base] == len(world["members"]) * ((d2 - d1).days + 1) and {k[2] for k in changed(first, after)} == {d2}
     assert after[(world["r1"], world["g1"], d2)][1] == 0.5

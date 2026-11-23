@@ -5,6 +5,7 @@ Her işlem tek veritabanı işlemidir: giriş, alan geçmişi, önbelleğin yeni
 """
 from datetime import date
 
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from app import periods
@@ -54,6 +55,12 @@ def _run(session: Session | None, user: CurrentUser, scenario_id: int | None, wo
         return result
 
     return auth._db(inner)
+
+
+def locations(session: Session | None, user: CurrentUser) -> dict:
+    """Lokasyonlar (K-194): Fabrika takvimi penceresinin lokasyon listesi."""
+    session = auth._require(session)
+    return auth._db(lambda: {"locations": [{"id": r.Id, "code": r.Code, "name": r.Name} for r in session.execute(sa.text("SELECT Id, Code, Name FROM core.Location ORDER BY Code, Id"))]})
 
 
 def horizon(session: Session | None, user: CurrentUser, scenario_id: int | None) -> dict:

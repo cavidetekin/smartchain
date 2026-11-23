@@ -4,11 +4,12 @@
 // ikisi mercan, açık kalan dönem çerçeveli; "%67"); End user.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { meAs, mockApi, renderApp, type Reply } from "../test/helpers";
 import { col, useTableTestSetup } from "../table/testBackend";
 import { cellOf } from "../table/testEditing";
+import { forgetLocations } from "./locationField";
 import { describePeriod, mergePeriods, typeFits } from "./MaterialHolds";
 
 useTableTestSetup();
@@ -58,7 +59,8 @@ const OPTIONS = { types: ["Üretim", "Satın alma", "Üretim ve satın alma"], m
 
 type Call = { method: string; url: string; body: Record<string, unknown> };
 
-function backend(options: { scenario?: { id: number; name: string; is_base: boolean }; rows?: object[]; reply?: (call: Call) => Reply | undefined } = {}) {
+function backend(options: { scenario?: { id: number; name: string; is_base: boolean }; rows?: object[]; reply?: (call: Call) => Reply | undefined;
+                            materials?: object[]; validity?: object[] } = {}) {
   const scenario = options.scenario ?? { id: 1, name: "Baz", is_base: true };
   const calls: Call[] = [];
   const queries: Record<string, Record<string, unknown>[]> = {};
@@ -75,10 +77,12 @@ function backend(options: { scenario?: { id: number; name: string; is_base: bool
     "/api/scenarios/options": { body: { scenarios: [{ id: 1, name: "Baz", is_base: true }, ...(scenario.is_base ? [] : [scenario])] } },
     "/api/capacity/horizon": { body: { start: "2026-11-23", end: "2027-07-31" } },
     ...list(LIST, COLUMNS, options.rows ?? ROWS),
-    ...list(VALIDITY, VALIDITY_COLUMNS, VALIDITY_ROWS),
+    ...list(VALIDITY, VALIDITY_COLUMNS, options.validity ?? VALIDITY_ROWS),
     ...list("model-constraints-resource-groups", [col("Code", "Kaynak grubu", "text", "text")], []),
     ...list("record-history", [col("At", "Tarih", "datetime", "date"), col("FieldLabel", "Alan", "text", "list")], []),
-    "/api/model-constraints/material-holds/options": { body: OPTIONS },
+    "/api/model-constraints/material-holds/options": { body: options.materials ? { ...OPTIONS, materials: options.materials } : OPTIONS },
+    "/api/capacity/locations": { body: { locations: options.materials ? [{ id: 1, code: "ORM-01", name: "Merkez" }, { id: 2, code: "ORM-02", name: "İkinci" },
+                                                                        { id: 3, code: "V-LOC-1", name: "Boş lokasyon" }] : [{ id: 1, code: "ORM-01", name: "Merkez" }] } },
     "/api/model-constraints/material-holds": (url: string, init?: RequestInit) => {
       const call = { method: init?.method ?? "GET", url, body: init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {} };
       calls.push(call);
@@ -108,7 +112,56 @@ const typeDate = async (user: ReturnType<typeof userEvent.setup>, dialog: HTMLEl
 };
 const types = (dialog: HTMLElement) => within(within(dialog).getByRole("radiogroup", { name: "Tür" })).getAllByRole("radio");
 
+beforeEach(forgetLocations);
+
 describe("ekran 31 · Model kısıtları › Malzeme blokajı (K-193, 7.13)", () => {
+  it("Lokasyon ilk alan (K-194): sıra Lokasyon · Malzeme · Tür; tek lokasyonda dolu; iki lokasyonda boş, malzeme listesi pasif ve seçilen lokasyona süzülür; Düzenle'de kilitli", async () => {
+    const two = [...OPTIONS.materials, { location_id: 2, location: "ORM-02", material_id: 281, code: "ALT-020", name: "Mil grubu (2)", producible: true, purchasable: true }];
+    const { user, calls } = await open("Key user", { materials: two });
+    await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
+    let dialog = await screen.findByRole("dialog", { name: "Malzeme blokajı · Yeni kayıt" });
+    expect([...dialog.querySelectorAll(".sc-field-label")].map((l) => l.textContent).slice(0, 3)).toEqual(["Lokasyon", "Malzeme", "Tür"]);
+    const location = within(dialog).getByRole("combobox", { name: "Lokasyon" });
+    const material = within(dialog).getByRole("combobox", { name: "Malzeme" });
+    await waitFor(() => expect(material).toBeDisabled());
+    expect(location).toHaveValue("");
+    await user.click(location);
+    await user.click(await screen.findByRole("option", { name: /^V-LOC-1/ }));                             // malzemesi olmayan lokasyon da listelenir (demo bulgusu)
+    await user.click(material);
+    const empty = await screen.findByRole("listbox", { name: "Malzeme" });
+    expect(within(empty).queryAllByRole("option")).toHaveLength(0);
+    expect(empty).toHaveTextContent("Bu lokasyonda kayıt yok.");
+    await user.click(location);
+    await user.click(await screen.findByRole("option", { name: /^ORM-02/ }));
+    await user.click(material);
+    expect(within(await screen.findByRole("listbox", { name: "Malzeme" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["ALT-020Mil grubu (2)"]);   // aynı kod, öteki lokasyon
+    await user.click(screen.getByRole("option", { name: /ALT-020/ }));
+    await user.click(types(dialog)[0]);
+    await typeDate(user, dialog, "Başlangıç", "01.05.2027");
+    await user.type(within(dialog).getByRole("textbox", { name: "Dönemi kapatma oranı (%)" }), "50");
+    await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "POST")?.body.values).toMatchObject({ LocationId: 2, MaterialId: 281 }));
+    await user.click(screen.getByRole("button", { name: /^SAT-030 · .* işlemleri$/ }));
+    await user.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Düzenle" }));
+    dialog = await screen.findByRole("dialog", { name: "Malzeme blokajı · Düzenle" });
+    const locked = within(dialog).getByRole("textbox", { name: "Lokasyon" }) as HTMLInputElement;
+    expect([locked.value, locked.disabled]).toEqual(["ORM-01", true]);
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: /^SAT-030 · .* işlemleri$/ }));                     // satırdan Yeni kayıt: lokasyon ve malzeme dolu
+    await user.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Yeni kayıt" }));
+    dialog = await screen.findByRole("dialog", { name: "Malzeme blokajı · Yeni kayıt" });
+    await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Malzeme" })).toHaveValue("SAT-030 · Kama 8×7×40"));
+    expect(within(dialog).getByRole("combobox", { name: "Lokasyon" })).toHaveValue("ORM-01 · Merkez");
+  });
+
+  it("Geçerlilik zaman çubuğu: veride birden çok lokasyon varsa sol kolonda kod lokasyonla (K-194)", async () => {
+    const { user, queries } = await open("Key user", { validity: [VALIDITY_ROWS[0], { ...VALIDITY_ROWS[3], LocationCode: "ORM-02", LocationId: 2 }] });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Tablo" }), "gecerlilik");
+    await waitFor(() => expect(queries[VALIDITY]?.length ?? 0).toBeGreaterThan(0));
+    const box = await screen.findByRole("group", { name: "Geçerlilik zaman çubuğu" });
+    expect([...box.querySelectorAll(".sc-validity-label")].map((l) => l.textContent)).toEqual(["ORM-01 · ALT-020", "ORM-02 · SAT-030"]);
+  });
+
   it("üçüncü sekme; Kayıtlar'da Lokasyon kodun solunda; tür, tarihler, oran ve sebep düzenlenir; istek seçili senaryoyu taşır", async () => {
     const { queries } = await open();
     const tabs = within(screen.getByRole("radiogroup", { name: "Model kısıtları bölümleri" })).getAllByRole("radio");

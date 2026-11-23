@@ -2,11 +2,12 @@
 // tablo içi düzenleme, satır menüsü (Baz'da ve izleyen senaryoda), senaryo farkı işareti, geçersiz satır, kartlar ve süzmeleri, End user.
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { meAs, mockApi, renderApp, type Reply } from "../test/helpers";
 import { col, useTableTestSetup } from "../table/testBackend";
 import { cellOf, setCell } from "../table/testEditing";
+import { forgetLocations } from "./locationField";
 
 useTableTestSetup();
 
@@ -59,7 +60,7 @@ type Call = { method: string; url: string; body: Record<string, unknown> };
 const STRICT_FIELDS = new Set(["capacity-work-patterns", "capacity-efficiency", "capacity-overtime-limits"]);   // sunucu olmayan alanı reddeder (docs/08)
 
 function backend(options: { scenario?: { id: number; name: string; is_base: boolean }; reply?: (call: Call) => Reply | undefined; validity?: object[];
-                            patterns?: object[]; resources?: object[] } = {}) {
+                            patterns?: object[]; resources?: object[]; locations?: object[] } = {}) {
   const scenario = options.scenario ?? { id: 1, name: "Baz", is_base: true };
   const calls: Call[] = [];
   const queries: Record<string, Record<string, unknown>[]> = {};
@@ -108,13 +109,21 @@ function backend(options: { scenario?: { id: number; name: string; is_base: bool
       { Id: -2, StoredId: null, Origin: "ERP", IsValid: true, Level: "Kaynak", Code: "W-015", ResourceId: 30, ResourceGroupId: null, DowntimeType: "Çalışan izni", Reason: "Rapor",
         StartDate: "2026-11-17", EndDate: "2026-11-18" },
     ]),
-    ...list("capacity-resource-groups", GROUP_COLUMNS, [{ Id: 12, Code: "ISL3", Name: "3 eksen işleme", ResourceCount: 3 }, { Id: 7, Code: "CG-CNC", Name: "CNC operatörü", ResourceCount: 10 }]),
+    ...list("capacity-resource-groups", GROUP_COLUMNS, [{ Id: 12, LocationCode: "ORM-01", Code: "ISL3", Name: "3 eksen işleme", ResourceCount: 3 },
+                                                        { Id: 7, LocationCode: "ORM-01", Code: "CG-CNC", Name: "CNC operatörü", ResourceCount: 10 }]),
     ...list("capacity-resources", [col("Code", "Kaynak", "text", "text"), col("Name", "Ad", "text", "text")],
-            options.resources ?? [{ Id: 5, Code: "M3-01", Name: "Tezgâh 1", CapacityUnit: "SAAT" }, { Id: 6, Code: "M3-02", Name: "Tezgâh 2", CapacityUnit: "SAAT" }]),
+            options.resources ?? [{ Id: 5, LocationCode: "ORM-01", Code: "M3-01", Name: "Tezgâh 1", CapacityUnit: "SAAT" },
+                                  { Id: 6, LocationCode: "ORM-01", Code: "M3-02", Name: "Tezgâh 2", CapacityUnit: "SAAT" }]),
+    ...list("capacity-factory-calendar", [col("LocationCode", "Lokasyon", "text", "list"), col("StartDate", "Başlangıç", "date", "date"), col("EndDate", "Bitiş", "date", "date"),
+                                          col("Name", "Ad", "text", "text"), col("DayValue", "Çalışma", "text", "list"), col("Origin", "Kaynağı", "text", "list")], [
+      { Id: 71, StoredId: 71, Origin: "Baz", IsValid: true, LocationCode: "ORM-01", LocationId: 1, StartDate: "2026-12-31", EndDate: "2026-12-31", Name: "Yılbaşı arifesi", DayValue: "Yarım gün" },
+      { Id: 72, StoredId: 72, Origin: "Baz", IsValid: true, LocationCode: "ORM-02", LocationId: 2, StartDate: "2027-01-01", EndDate: "2027-01-01", Name: "Yılbaşı", DayValue: "Çalışılmıyor" },
+    ]),
     ...list("record-history", HISTORY_COLUMNS, [{ Id: 1, At: "2026-11-19T10:42:00", FieldLabel: "Günlük kapasite", OldValue: "20", NewValue: "22,5", ChangedBy: "planlama", SourceText: "Kapasite yönetimi · planlama" }]),
     "/api/capacity/": (url: string, init?: RequestInit) => {
       const call = { method: init?.method ?? "GET", url, body: init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {} };
       if (url.includes("/capacity/horizon")) return { body: HORIZON };
+      if (url.includes("/capacity/locations")) return { body: { locations: options.locations ?? [{ id: 1, code: "ORM-01", name: "Merkez fabrika" }] } };
       calls.push(call);
       return options.reply?.(call) ?? { status: call.method === "POST" && !/\/\d+\//.test(url) ? 201 : 200, body: { id: 500, saved: 1, warnings: [] } };
     },
@@ -134,6 +143,8 @@ const menuOf = async (user: ReturnType<typeof userEvent.setup>, name: string) =>
   await user.click(screen.getByRole("button", { name }));
   return within(await screen.findByRole("menu")).getAllByRole("menuitem").map((m) => m.textContent);
 };
+
+beforeEach(forgetLocations);   // lokasyon listesi bir kez okunur; testler arasında sıfırlanır
 
 describe("ekran 30 · Kapasite yönetimi · giriş sekmeleri (K-185, 7.9b)", () => {
   it("sekiz sekme; giriş sekmesinde Yeni kayıt ve düzenlenebilir kolonlar; istekler seçili senaryoyu taşır", async () => {
@@ -199,15 +210,45 @@ describe("ekran 30 · Kapasite yönetimi · giriş sekmeleri (K-185, 7.9b)", () 
     expect((calls[1].body.values as { DailyCapacity: number }).DailyCapacity).toBe(20);
   });
 
-  it("veride birden çok lokasyon varsa aramalı seçimde seçenek 'lokasyon · kod · ad' yazılır (K-189); tek lokasyonda yalnız kod ve ad", async () => {
-    const { user, queries } = await open("calisma-duzeni", "Key user", { resources: [
-      { Id: 5, LocationCode: "ORM-01", Code: "M3-01", Name: "Tezgâh 1" }, { Id: 6, LocationCode: "ORM-02", Code: "M3-01", Name: "Tezgâh 1" }] });
+  it("Lokasyon ilk alan (K-194): iki lokasyonda boş gelir, kod listesi pasif; seçilince liste o lokasyona süzülür ('kod · ad'); değişince kod temizlenir", async () => {
+    const { user, queries, calls } = await open("calisma-duzeni", "Key user", {
+      locations: [{ id: 1, code: "ORM-01", name: "Merkez fabrika" }, { id: 2, code: "ORM-02", name: "İkinci fabrika" }, { id: 3, code: "V-LOC-1", name: "Boş lokasyon" }],
+      resources: [{ Id: 5, LocationCode: "ORM-01", Code: "M3-01", Name: "Tezgâh 1" }, { Id: 6, LocationCode: "ORM-02", Code: "M3-01", Name: "Tezgâh 2" }] });
     await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
     const dialog = await screen.findByRole("dialog", { name: "Çalışma düzeni · Yeni kayıt" });
+    expect([...dialog.querySelectorAll(".sc-field-label")].map((l) => l.textContent).slice(0, 3)).toEqual(["Lokasyon", "Seviye", "Kaynak grubu"]);
+    const location = within(dialog).getByRole("combobox", { name: "Lokasyon" });
+    await waitFor(() => expect(queries["capacity-resources"]?.length ?? 0).toBeGreaterThan(0));
+    expect(location).toHaveValue("");                                                                      // iki lokasyon: dolu gelmez
     await user.click(within(dialog).getByRole("radio", { name: "Kaynak" }));
-    await user.click(within(dialog).getByRole("combobox", { name: "Kaynak" }));
-    await waitFor(() => expect(within(screen.getByRole("listbox", { name: "Kaynak" })).getAllByRole("option").map((o) => o.textContent))
-      .toEqual(["ORM-01 · M3-01Tezgâh 1", "ORM-02 · M3-01Tezgâh 1"]));
+    const code = within(dialog).getByRole("combobox", { name: "Kaynak" });
+    expect(code).toBeDisabled();                                                                           // lokasyon seçilmeden kod listesi pasif
+    await user.click(location);
+    // verideki bütün lokasyonlar listelenir (kaydı olmayan da; demo bulgusu)
+    expect(within(await screen.findByRole("listbox", { name: "Lokasyon" })).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "ORM-01Merkez fabrika", "ORM-02İkinci fabrika", "V-LOC-1Boş lokasyon"]);
+    await user.click(screen.getByRole("option", { name: /^V-LOC-1/ }));                                    // kaydı olmayan lokasyon: kod listesi boş, içinde neden
+    await user.click(code);
+    const empty = await screen.findByRole("listbox", { name: "Kaynak" });
+    expect(within(empty).queryAllByRole("option")).toHaveLength(0);
+    expect(empty).toHaveTextContent("Bu lokasyonda kayıt yok.");
+    expect(within(dialog).getByRole("button", { name: "Kaydet" })).toBeDisabled();
+    await user.click(location);
+    await user.click(await screen.findByRole("option", { name: /^ORM-02/ }));
+    await user.click(code);
+    await waitFor(() => expect(within(screen.getByRole("listbox", { name: "Kaynak" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["M3-01Tezgâh 2"]));
+    await user.click(screen.getByRole("option", { name: /M3-01/ }));
+    expect(code).toHaveValue("M3-01 · Tezgâh 2");
+    await user.click(location);                                                                            // lokasyon değişir: seçilmiş kod temizlenir, liste yeni lokasyonun
+    await user.click(await screen.findByRole("option", { name: /^ORM-01/ }));
+    expect(code).toHaveValue("");
+    await user.click(code);
+    await waitFor(() => expect(within(screen.getByRole("listbox", { name: "Kaynak" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["M3-01Tezgâh 1"]));
+    await user.click(screen.getByRole("option", { name: /M3-01/ }));
+    await user.type(within(dialog).getByRole("textbox", { name: "Başlangıç" }), "01.12.2026");
+    await user.type(within(dialog).getByRole("textbox", { name: /^Günlük kapasite/ }), "8");
+    await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(calls[0]?.body.values).toMatchObject({ ResourceId: 5 }));                    // seçili lokasyonun kaynağı
     expect(queries["capacity-resources"].at(-1)?.fields).toEqual(["LocationCode", "Code", "Name"]);
   });
 
@@ -218,7 +259,8 @@ describe("ekran 30 · Kapasite yönetimi · giriş sekmeleri (K-185, 7.9b)", () 
     const type = within(dialog).getByRole("radiogroup", { name: "Tip" });
     expect(within(type).getAllByRole("radio").map((r) => [r.textContent, r.getAttribute("aria-checked")])).toEqual([["Planlı bakım", "false"], ["Arıza", "false"], ["Diğer", "false"]]);
     const labels = [...dialog.querySelectorAll(".sc-field-label")].map((l) => l.textContent);
-    expect(labels).toEqual(["Seviye", "Kaynak grubu", "Başlangıç", "Bitiş", "Tip", "Sebep"]);           // seviye ve kod, tarihler, değerler
+    expect(labels).toEqual(["Lokasyon", "Seviye", "Kaynak grubu", "Başlangıç", "Bitiş", "Tip", "Sebep"]);   // lokasyon (K-194), seviye ve kod, tarihler, değerler
+    await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Lokasyon" })).toHaveValue("ORM-01 · Merkez fabrika"));   // veride tek lokasyon: dolu gelir, yine görünür
     const owner = within(dialog).getByRole("combobox", { name: "Kaynak grubu" });
     await user.click(owner);
     await user.click(await screen.findByRole("option", { name: /ISL3/ }));
@@ -336,8 +378,51 @@ describe("ekran 30 · Kapasite yönetimi · giriş sekmeleri (K-185, 7.9b)", () 
     await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Kaynak grubu" })).toHaveValue("ISL3 · 3 eksen işleme"));
     await user.type(within(dialog).getByRole("textbox", { name: "Başlangıç" }), "01.02.2027");
     await user.type(within(dialog).getByRole("textbox", { name: "Günlük kapasite" }), "16");
+    expect(within(dialog).getByRole("combobox", { name: "Lokasyon" })).toHaveValue("ORM-01 · Merkez fabrika");   // karttan açılınca lokasyon da dolu (K-194)
     await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(calls[0]?.body.values).toMatchObject({ ResourceGroupId: 12, ValidFrom: "2027-02-01", DailyCapacity: 16 }));
+  });
+
+  it("Fabrika takvimi lokasyon bazlı (K-194): tabloda ilk kolon Lokasyon; pencerede yalnız Lokasyon (seviye ve kod yok); tek lokasyonda dolu; kayıt lokasyonu taşır", async () => {
+    const { user, calls } = await open("takvim");
+    const heads = screen.getAllByRole("columnheader").map((h) => h.querySelector(".sc-table-label")?.textContent).filter(Boolean);
+    expect(heads[0]).toBe("Lokasyon");
+    expect(cellOf("Yılbaşı arifesi", "Lokasyon")).not.toHaveClass("is-editable");
+    await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
+    const dialog = await screen.findByRole("dialog", { name: "Fabrika takvimi · Yeni kayıt" });
+    expect([...dialog.querySelectorAll(".sc-field-label")].map((l) => l.textContent)).toEqual(["Lokasyon", "Başlangıç", "Bitiş", "Ad", "Çalışma"]);
+    await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Lokasyon" })).toHaveValue("ORM-01 · Merkez fabrika"));   // tek lokasyon: dolu gelir
+    await user.type(within(dialog).getByRole("textbox", { name: "Başlangıç" }), "02.01.2027");
+    await user.type(within(dialog).getByRole("textbox", { name: "Ad" }), "Köprü");
+    await user.click(within(dialog).getByRole("radio", { name: "Çalışılmıyor" }));
+    await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(calls[0]?.body.values).toEqual({ StartDate: "2027-01-02", EndDate: null, Name: "Köprü", DayValue: "Çalışılmıyor", LocationId: 1 }));
+  });
+
+  it("Fabrika takvimi · iki lokasyon: Lokasyon boş gelir ve seçilmeden Kaydet pasif; satırdan Yeni kayıt lokasyonu dolu getirir; Düzenle'de Lokasyon kilitli", async () => {
+    const { user, calls } = await open("takvim", "Key user", { locations: [{ id: 1, code: "ORM-01", name: "Merkez fabrika" }, { id: 2, code: "ORM-02", name: "İkinci fabrika" }] });
+    await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
+    let dialog = await screen.findByRole("dialog", { name: "Fabrika takvimi · Yeni kayıt" });
+    const location = within(dialog).getByRole("combobox", { name: "Lokasyon" });
+    await user.type(within(dialog).getByRole("textbox", { name: "Başlangıç" }), "02.01.2027");
+    await user.type(within(dialog).getByRole("textbox", { name: "Ad" }), "Köprü");
+    await user.click(within(dialog).getByRole("radio", { name: "Yarım gün" }));
+    expect(location).toHaveValue("");
+    expect(within(dialog).getByRole("button", { name: "Kaydet" })).toBeDisabled();                          // lokasyon seçilmedi
+    await user.click(location);
+    await user.click(await screen.findByRole("option", { name: /ORM-02/ }));
+    await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(calls[0]?.body.values).toMatchObject({ LocationId: 2, Name: "Köprü" }));
+    await menuOf(user, "Yılbaşı işlemleri");                                                                // ikinci lokasyonun kaydı
+    await user.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Yeni kayıt" }));
+    dialog = await screen.findByRole("dialog", { name: "Fabrika takvimi · Yeni kayıt" });
+    await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Lokasyon" })).toHaveValue("ORM-02 · İkinci fabrika"));
+    await user.keyboard("{Escape}");
+    await menuOf(user, "Yılbaşı işlemleri");
+    await user.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Düzenle" }));
+    dialog = await screen.findByRole("dialog", { name: "Fabrika takvimi · Düzenle" });
+    const locked = within(dialog).getByRole("textbox", { name: "Lokasyon" }) as HTMLInputElement;
+    expect([locked.value, locked.disabled]).toEqual(["ORM-02", true]);
   });
 
   it("Kaynak kartında Geçmiş sekmesi yok; çoklu seçimde kart seçili kayıtların hepsini gösterir (K-171, K-187)", async () => {

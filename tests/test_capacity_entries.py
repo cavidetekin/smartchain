@@ -169,7 +169,7 @@ def test_new_entries_of_every_kind_update_the_summary(api, db_engine, world, peo
     ef = new(api, EF, base, ResourceGroupId=g1, ValidFrom=a.isoformat(), EfficiencyPct=80)                    # gruba, açık bitişli, ISO tarih
     ot = new(api, OT, base, ResourceId=r2, ValidFrom=tr(a), ValidTo=tr(b), DailyLimit=2)
     dt = new(api, DT, base, ResourceId=r2, DowntimeType="Arıza", Reason="Mil arızası", StartDate=tr(a), EndDate=tr(a + timedelta(days=1)))
-    fc = new(api, FC, base, StartDate=tr(b), Name="pytest tatil", DayValue="Yarım gün")                        # bitiş boş: tek gün
+    fc = new(api, FC, base, LocationId=world["location"], StartDate=tr(b), Name="pytest tatil", DayValue="Yarım gün")   # lokasyon bazlı (K-194); bitiş boş: tek gün
     assert one(api, FC, base, fc)["EndDate"] == b.isoformat() and one(api, FC, base, fc)["DayValue"] == "Yarım gün"
     assert one(api, DT, base, dt)["DowntimeType"] == "Arıza" and one(api, OT, base, ot)["DailyLimit"] == 2.0 and one(api, EF, base, ef)["ValidTo"] is None
     assert same_as_scratch(db_engine, world, base) == len(first)                              # beş girişten sonra önbellek = sıfırdan hesap

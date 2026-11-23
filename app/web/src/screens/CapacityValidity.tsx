@@ -101,8 +101,10 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
       const to = Math.min(row.ValidTo ? dayOf(String(row.ValidTo)) : end, end);
       const custom = describe?.(row);
       const key = custom?.key ?? `${row.ResourceGroupId}|${row.ResourceId}`;
-      const code = custom?.code ?? (manyLocations && row.LocationCode ? `${String(row.LocationCode)} · ${String(row.Code ?? "")}` : String(row.Code ?? ""));
-      const title = custom?.title ?? `${code} · ${String(row.GroupCode ?? "")}`;
+      // sahipten bağımsız kullanımda da (tedarikçi limiti, malzeme blokajı) birden çok lokasyonda kod lokasyonla yazılır (K-194)
+      const place = (text: string) => (manyLocations && row.LocationCode ? `${String(row.LocationCode)} · ${text}` : text);
+      const code = custom ? place(custom.code) : place(String(row.Code ?? ""));
+      const title = custom ? place(custom.title) : `${code} · ${String(row.GroupCode ?? "")}`;
       let line = lines.get(key);
       if (!line) {
         line = { key, code, title, segments: [] };

@@ -19,6 +19,7 @@ import { EntryTable } from "./CapacityEntries";
 import { TableChoice, type TableView, VALIDITY, ValidityView } from "./CapacityValidity";
 import { HISTORY_HINTS } from "./DataScreen";
 import { ENTRIES, type EntryKind, type Owner } from "./capacityModel";
+import { useManyLocations, withLocation } from "./locationField";
 
 const T = tr.capacity;
 const NO_ITEMS = () => [];
@@ -67,6 +68,7 @@ function OwnerTab({ level, lead, shared }: { level: "group" | "resource"; lead: 
   const list = level === "group" ? "capacity-resource-groups" : "capacity-resources";
   const [card, setCard] = useState<{ row: Row; tab: CardTab } | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
+  const manyLocations = useManyLocations();   // birden çok lokasyonda kart başlığı "lokasyon · kod" (K-194)
   const seen = useRef(new Map<number, string>());   // çizilen satırların kodu (dönem özeti kodla süzülür; seçili satırlar tıklandığı için çizilmiştir)
   const { views, focus, setView, goTo } = useViews();   // her girişin tablo seçimi ayrı (K-188)
   const tabs = level === "group" ? GROUP_TABS : RESOURCE_TABS;
@@ -114,7 +116,7 @@ function OwnerTab({ level, lead, shared }: { level: "group" | "resource"; lead: 
                       {menu.element}
                     </>
                   )}
-                  detail={card && row ? { title: many ? T.manyRecords(formatNumber(ids.length)) : String(row.Code ?? ""), tabsLabel: T.cardTabs, tabs, tab: card.tab,
+                  detail={card && row ? { title: many ? T.manyRecords(formatNumber(ids.length)) : withLocation(manyLocations, row.LocationCode, String(row.Code ?? "")), tabsLabel: T.cardTabs, tabs, tab: card.tab,
                                           onTab: (t) => setCard({ row, tab: t }), renderBody } : null} />
   );
 }

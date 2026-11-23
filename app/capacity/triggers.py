@@ -46,10 +46,16 @@ def entry_changed(session: Session, scenario_id: int, *, resource_id: int | None
     return cache.invalidate(session, CACHE, scenario_id, resources, start, end)
 
 
-def factory_calendar_changed(session: Session, scenario_id: int, ranges: Iterable[Range]) -> dict[int, int]:
-    """Fabrika takvimi değişti: bütün kaynaklar, o günler (kaydın eski ve yeni aralığı)."""
+def location_resources(session: Session, location_id: int) -> list[int]:
+    """Lokasyonun güncel kaynakları."""
+    return [r[0] for r in session.execute(sa.text("SELECT Id FROM core.Resource WHERE LocationId = :l AND VersionTo IS NULL"), {"l": location_id})]
+
+
+def factory_calendar_changed(session: Session, scenario_id: int, location_id: int | None, ranges: Iterable[Range]) -> dict[int, int]:
+    """Fabrika takvimi değişti: kaydın lokasyonundaki kaynaklar (K-194), o günler (kaydın eski ve yeni aralığı). Lokasyon verilmezse bütün kaynaklar."""
     start, end = _span(ranges)
-    return cache.invalidate(session, CACHE, scenario_id, None, start, end)
+    resources = None if location_id is None else location_resources(session, location_id)
+    return cache.invalidate(session, CACHE, scenario_id, resources, start, end)
 
 
 def transfer_changed(session: Session, resource_ids: Iterable[int], ranges: Iterable[Range] = ((None, None),)) -> dict[int, int]:

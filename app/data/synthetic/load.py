@@ -33,6 +33,7 @@ MODEL_TABLES = ["ResourceGroupConstraint"]  # model kısıtları (K-189)
 PARAM_ORDER = ["PriorityRule", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
 PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "WarningThreshold", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES,
                   *MODEL_TABLES]
+LOCATION_BOUND = ("FactoryCalendar", "SupplierLimit", "MaterialHold")   # lokasyon taşıyan param tabloları
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
 
 
@@ -71,7 +72,8 @@ def _lock(conn: Connection, action: str) -> None:
         raise SyntheticLockError(
             f"Veritabanında sentetik olmayan veri var; sentetik veri {action} ve hiçbir şey silinmedi. "
             f"Sentetik olmayanlar: {', '.join(found)}. "
-            "Sentetik set yalnız geliştirme ve demo veritabanında kullanılır (K-79).")
+            "Sentetik set yalnız geliştirme ve demo veritabanında kullanılır (K-79). "
+            "Aktarımları geri alıp temiz sentetik hâle dönmek için: python -m app.data.synthetic reset")
 
 
 def _delete(conn: Connection) -> list[int]:
@@ -166,6 +168,10 @@ def _remove_transfers(conn: Connection, versions: list[int]) -> None:
         conn.execute(text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId IN :v").bindparams(param), {"v": versions})
         conn.execute(text("DELETE FROM adm.DataVersion WHERE Id IN :v").bindparams(param), {"v": versions})
     conn.execute(text("DELETE FROM adm.FieldValueSource WHERE Source = N'Kural'"))
+    # lokasyona bağlı Smartchain kayıtları (K-191, K-193, K-194: tedarikçi limiti, malzeme blokajı, fabrika takvimi) lokasyonla birlikte silinir;
+    # 0073 çok lokasyonlu veritabanında fabrika takvimini her lokasyona kopyalar, o kopyalar da burada gider
+    for name in LOCATION_BOUND:
+        conn.execute(text(f"DELETE FROM param.[{name}] WHERE LocationId IN (SELECT Id FROM core.Location WHERE ISNULL(IsSynthetic, 0) = 0)"))
     conn.execute(text("DELETE FROM core.Location WHERE ISNULL(IsSynthetic, 0) = 0"))
 
 

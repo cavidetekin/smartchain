@@ -144,3 +144,7 @@ Bu adımda uyarı üretilmez; yalnız arayüz ve saklama vardır.
 | Gerçek motor (29–39), aktif hesaplama belleği | Aşama 10 |
 
 Demo: API açıkken `python scripts/engine_demo.py`; plan hesapları gönderir, servisi çalıştırır, WebSocket'ten ilerlemeyi ve sonuç satır sayılarını yazdırır.
+
+## Fabrika takvimi lokasyon bazlı (K-194)
+
+`PlanningData.period_values('resource-capacity-day', …)` hesabında fabrika takvimi kaydı yalnız kendi lokasyonundaki kaynaklara uygulanır (kaynağın lokasyonu): bir lokasyonun tatili öteki lokasyonun kapasitesini düşürmez. Motorun okuduğu satırların biçimi değişmedi.

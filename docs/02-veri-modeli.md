@@ -2234,7 +2234,7 @@ Kapasitenin girişleri Kapasite yönetimi ekranında (ekran 30) girilir; `param`
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Fabrika takvimi (K-185): bütün kaynak gruplarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır.
+- Fabrika takvimi (K-185, K-194): lokasyonun bütün kaynak gruplarına ve kaynaklarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
@@ -2243,6 +2243,7 @@ Kapasitenin girişleri Kapasite yönetimi ekranında (ekran 30) girilir; `param`
 | BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
 | OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",ValidTo,DailyCapacity,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
 | IsValid | bit |  | Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz ("Geçersiz yap") | Geçerli | Smartchain (parametre) | H | E | 1 |
+| LocationId | int | FK,IX | Lokasyon: kayıt yalnız bu lokasyonun kaynak gruplarına ve kaynaklarına uygulanır (K-194) | Lokasyon | Smartchain (parametre) | H | E |  |
 | StartDate | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | E | E |  |
 | EndDate | date |  | Bitiş (dahil) | Bitiş | Smartchain (parametre) | E | E |  |
 | Name | nvarchar(100) |  | Ad (ör. Yılbaşı) | Ad | Smartchain (parametre) | E | E |  |

@@ -393,7 +393,7 @@ def test_capacity_lists_offer_master_fields_related_fields_and_location(api, wor
     leave = api.post("/api/capacity-downtime/query", json={"limit": 100, "scenario_id": base, "filters": [{"field": "Origin", "op": "in", "values": ["ERP"]}]}).json()["rows"]
     assert leave and {r["LocationCode"] for r in leave} == {d.LOCATION_CODE}                                 # çalışan izni (ERP) satırında da
     calendar = columns("capacity-factory-calendar")
-    assert calendar["relations"] == [] and "LocationCode" not in {c["field"] for c in calendar["columns"]}   # sahibi yok: lokasyon yok
+    assert calendar["relations"] == [{"path": "LocationId", "label": "Lokasyon"}] and calendar["columns"][0]["field"] == "LocationCode"   # lokasyon bazlı (K-194)
 
     # Kapasite özeti: Lokasyon listenin alanı (tablo görünümünde kodun solunda); Standart pivotun satır alanı değil
     summary = columns("period-resource-group")

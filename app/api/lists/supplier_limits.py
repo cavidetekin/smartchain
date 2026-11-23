@@ -63,7 +63,7 @@ SUPPLIER_LIMITS = ListDefinition(
     server_values=frozenset({"LocationCode", "SupplierCode", "MaterialCode", "Uom"}), unit_field="Uom", unit_decimals=frozenset({"UpperLimit"}),
     values={"Origin": _ORIGINS, "LimitType": [rules.UPPER, rules.CLOSURE], "LimitPeriod": list(rules.PERIODS)},
     labels=_LABELS, notes=_NOTES,
-    key_fields=("StoredId", "Origin", "IsValid", "OverriddenFields", "BaseValues", "LocationId", "SupplierId", "MaterialId"), filter_only=("OwnerKeys",),
+    key_fields=("StoredId", "Origin", "IsValid", "OverriddenFields", "BaseValues", "LocationId", "SupplierId", "MaterialId", "LocationCode"), filter_only=("OwnerKeys",),
     related_table=relations.register_links("supplier-limits", LINKS),
 )
 
@@ -85,7 +85,7 @@ SUPPLIER_LIMITS_VALIDITY = ListDefinition(
     server_values=frozenset({"LocationCode", "SupplierCode", "MaterialCode", "Uom"}), unit_field="Uom", unit_decimals=frozenset({"UpperLimit", "DailyAverage"}),
     values={"Status": [rules.UPPER, "Kapalı"], "LimitPeriod": list(rules.PERIODS)},
     labels=_LABELS, notes=_NOTES,
-    key_fields=("SourceRowId", "SourceOrigin", "LocationId", "SupplierId", "MaterialId"), filter_only=("OwnerKeys",),
+    key_fields=("SourceRowId", "SourceOrigin", "LocationId", "SupplierId", "MaterialId", "LocationCode"), filter_only=("OwnerKeys",),
     related_table=relations.register_links("supplier-limits-validity", LINKS),
 )
 

@@ -80,8 +80,8 @@ export const ORIGIN_DIFF = "Senaryo farkı";
 export const ORIGIN_OWN = "Senaryo";
 
 /** Kayıt gruba mı kaynağa mı girilir; kartta "Yeni kayıt" bunu dolu getirir. Tedarikçi limitinde sahip tedarikçidir (lokasyonu ve varsa malzemesiyle);
- *  malzeme blokajında malzeme (lokasyonuyla). */
-export interface Owner { level: "group" | "resource" | "supplier" | "material"; id: number; code: string; locationId?: number; materialId?: number | null }
+ *  malzeme blokajında malzeme (lokasyonuyla); fabrika takviminde lokasyonun kendisi (K-194). Lokasyon da kod gibi dolu gelir. */
+export interface Owner { level: "group" | "resource" | "supplier" | "material" | "location"; id: number; code: string; locationId?: number; materialId?: number | null }
 
 const url = (kind: EntryKind, scenario: number, tail = "") => `/api/capacity/${kind}${tail}?scenario_id=${scenario}`;
 

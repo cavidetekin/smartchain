@@ -2,7 +2,7 @@
 // tedarik planı (üretim, satın alma ya da ikisi) çıkarılmaz. Kapasite yönetimi'nin giriş bileşenleriyle kurulur (aynı tablo, menü, tablo içi
 // düzenleme, senaryo farkı işaretleri, Geçerlilik zaman çubuğu); sahip (lokasyon ve malzeme) burada tanımlanır (`EntryAdapter`, `ValidityCustom`).
 // Pencere 7.9b standardıyla: malzeme aramalı seçim, tür parçalı seçim (malzemenin tedarik biçimine uymayan seçenek pasif), tür ve oran boş açılır,
-// zorunlu alan boşken Kaydet pasif. Geçerlilik dönem bazındadır: tablo satırı malzeme × tedarik biçimi × plan dönemi; zaman çubuğunda dönemin iki
+// zorunlu alan boşken Kaydet pasif. Alan sırası Lokasyon · Malzeme (K-194): malzeme listesi seçili lokasyona süzülür. Geçerlilik dönem bazındadır: tablo satırı malzeme × tedarik biçimi × plan dönemi; zaman çubuğunda dönemin iki
 // satırı tek dilimde birleşir, renk kapalı olan tedarik biçimine göredir (Üretim amber, Satın alma nane, ikisi mercan; açık kalan dönem çerçeveli).
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 
@@ -17,6 +17,7 @@ import { EntryTable } from "./CapacityEntries";
 import { type SpanInfo, TableChoice, type TableView, type ValidityCustom, ValidityView } from "./CapacityValidity";
 import { type EntryDialogProps, type EntrySpec, isoDate, type Owner, parseIso, type Saved } from "./capacityModel";
 import { HISTORY_HINTS } from "./DataScreen";
+import { emptyTextOf, LocationField, locationsOf, useLocationChoice, useLocations, useManyLocations, withLocation } from "./locationField";
 
 const T = tr.modelConstraints.hold;
 const C = tr.capacity;
@@ -57,6 +58,9 @@ export function MaterialHoldDialog({ spec, scenario, row, owner, onClose, onSave
   const [pct, setPct] = useState<number | null>(editing && typeof row.ClosePct === "number" ? row.ClosePct : null);
   const [reason, setReason] = useState(editing ? String(row.Reason ?? "") : "");
   const [options, setOptions] = useState<MaterialOption[] | null>(null);
+  const derived = useMemo(() => options && locationsOf(options, (o) => ({ id: String(o.location_id), code: o.location })), [options]);
+  const locations = useLocations(derived);     // verideki bütün lokasyonlar (malzemesi olmayan lokasyon da)
+  const [location, setLocation] = useLocationChoice(locations, owner?.locationId != null ? String(owner.locationId) : "");
   const [problems, setProblems] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,7 +72,7 @@ export function MaterialHoldDialog({ spec, scenario, row, owner, onClose, onSave
     return () => ctrl.abort();
   }, []);
 
-  const manyLocations = new Set((options ?? []).map((o) => o.location)).size > 1;   // birden çok lokasyonda seçenek "lokasyon · kod · ad" (K-189)
+  const inLocation = (options ?? []).filter((o) => String(o.location_id) === location);   // malzeme listesi seçili lokasyona süzülür (K-194)
   const picked = editing ? (options ?? []).find((o) => o.material_id === row.MaterialId) : (options ?? []).find((o) => materialKey(o) === material);
   const missing = (!editing && !material) || !type || !from || pct === null;
   const pickMaterial = (value: string) => {
@@ -107,10 +111,12 @@ export function MaterialHoldDialog({ spec, scenario, row, owner, onClose, onSave
     <Dialog title={editing ? C.editTitle(spec.title) : C.newTitle(spec.title)} onClose={onClose} onSubmit={() => void submit()} submitLabel={tr.table.editSave} busy={busy}
             submitDisabled={Boolean(missing)} className="sc-dialog--form">
       <div className="sc-form-grid">
+        {editing ? <LocationField options={[]} value="" onChange={() => undefined} locked={String(row.LocationCode ?? "")} />
+          : <LocationField options={locations ?? []} value={location} error={problems.LocationId} onChange={(v) => { setLocation(v); setMaterial(""); setType(""); }} />}
         <div className="sc-form-full">
           {editing ? <TextField label={T.material} value={String(row.MaterialCode ?? "")} onChange={() => undefined} disabled />
-            : <SearchSelect label={T.material} value={material} onChange={pickMaterial} error={problems.MaterialId} emptyText={C.noMatch}
-                            options={(options ?? []).map((o) => ({ value: materialKey(o), code: manyLocations ? `${o.location} · ${o.code}` : o.code, name: o.name ?? undefined }))} />}
+            : <SearchSelect label={T.material} value={material} onChange={pickMaterial} error={problems.MaterialId} emptyText={emptyTextOf(location, inLocation.length)} disabled={!location}
+                            options={inLocation.map((o) => ({ value: materialKey(o), code: o.code, name: o.name ?? undefined }))} />}
         </div>
         <div className="sc-form-full">
           <Segment<string> label={T.type} value={type} onChange={setType} options={TYPES.map((t) => ({ value: t, label: t, disabled: !typeFits(t, picked) }))} />
@@ -191,6 +197,7 @@ export function MaterialHoldsTab({ lead }: { lead: ReactNode }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [focus, setFocus] = useState<{ id: number; n: number } | undefined>(undefined);
   const [version, setVersion] = useState(0);
+  const many = useManyLocations();
   const head = useMemo(() => <>{lead}<TableChoice value={view} onChange={setView} /></>, [lead, view]);
   const onChanged = () => setVersion((n) => n + 1);
   if (view === "gecerlilik") {
@@ -208,7 +215,7 @@ export function MaterialHoldsTab({ lead }: { lead: ReactNode }) {
     <MasterDetail id="model-constraints-holds" onClose={() => setCard(null)} hideTitle
                   master={<EntryTable spec={MATERIAL_HOLDS} lead={head} onDetail={setCard} selectedRowId={card?.Id ?? null} reloadKey={version} onChanged={onChanged}
                                       onSelection={setPicked} focus={focus} />}
-                  detail={card ? { title: ids.length > 1 ? C.manyRecords(formatNumber(ids.length)) : String(card.MaterialCode ?? ""), tabsLabel: tr.modelConstraints.cardTabs,
+                  detail={card ? { title: ids.length > 1 ? C.manyRecords(formatNumber(ids.length)) : withLocation(many, card.LocationCode, String(card.MaterialCode ?? "")), tabsLabel: tr.modelConstraints.cardTabs,
                                    tabs: HISTORY_TABS, tab: "gecmis" as const, onTab: () => undefined, renderBody } : null} />
   );
 }

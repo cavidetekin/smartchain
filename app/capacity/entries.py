@@ -66,7 +66,7 @@ class Kind:
     table: str
     title: str                # denetim izinde ve mesajlarda
     fields: tuple[Field, ...]
-    owner: Owner | None = None   # sahibi olan giriş (kaynak grubu ya da kaynak; tedarikçi ve malzeme); None: sahipsiz (fabrika takvimi)
+    owner: Owner | None = None   # kaydın sahibi (kaynak grubu ya da kaynak; tedarikçi ve malzeme; fabrika takviminde lokasyon, K-194)
     start: str = "ValidFrom"
     end: str = "ValidTo"
     end_required: bool = False
@@ -95,6 +95,34 @@ def _resource_key(row: dict) -> tuple | None:
 
 
 RESOURCE = Owner(OWNER, _resource_check, lambda session, row: owner_label(session, row), _resource_key)   # kaynak grubu ya da kaynak
+CALENDAR = "FactoryCalendar"
+
+
+def _location_check(session: Session, values: dict) -> list[dict]:
+    """Fabrika takvimi lokasyon bazlıdır (K-194): lokasyon seçilmeli ve tanımlı olmalı."""
+    value = values.get("LocationId")
+    if value is None or value == "":
+        values["LocationId"] = None
+        return [{"field": "LocationId", "problem": "Lokasyon seçilmeli."}]
+    try:
+        values["LocationId"] = int(value)
+    except (TypeError, ValueError):
+        return [{"field": "LocationId", "problem": "Geçersiz lokasyon."}]
+    if session.execute(sa.text("SELECT 1 FROM core.Location WHERE Id = :i"), {"i": values["LocationId"]}).first() is None:
+        return [{"field": "LocationId", "problem": "Geçersiz lokasyon."}]
+    return []
+
+
+def _location_label(session: Session, row: dict) -> str:
+    """Fabrika takvimi kaydının okunur adı: ad; veride birden çok lokasyon varsa başında lokasyon kodu ("ORM-01 · Yılbaşı")."""
+    name = str(row.get("Name") or "")
+    found = session.execute(sa.text("SELECT (SELECT COUNT(*) FROM core.Location), (SELECT l.Code FROM core.Location l WHERE l.Id = :i)"), {"i": row.get("LocationId")}).one()
+    return f"{found[1]} · {name}" if found[0] > 1 and found[1] else name
+
+
+# Fabrika takviminin sahibi lokasyondur (K-194): kayıttan sonra değişmez; aynı başlangıç denetlenmez (kayıtlar birleşir)
+LOCATION = Owner(("LocationId",), _location_check, _location_label, lambda row: None, locked="Lokasyon kayıttan sonra değişmez; kaydı silip yeniden girin.",
+                 locked_fields=("LocationCode",))
 KINDS = {k.key: k for k in (
     Kind("work-patterns", "WorkPattern", "Çalışma düzeni",
          (*_VALIDITY, Field("DailyCapacity", "Günlük kapasite", "number"), *[Field(d, DAY_LABELS[d], "day") for d in resolve.DAYS]), RESOURCE, unique_start=True),
@@ -105,7 +133,7 @@ KINDS = {k.key: k for k in (
          RESOURCE, start="StartDate", end="EndDate", end_required=True),
     Kind("factory-calendar", "FactoryCalendar", "Fabrika takvimi",
          (*_PERIOD, Field("Name", "Ad", "text", max_length=100), Field("DayValue", "Çalışma", "day_value")),
-         start="StartDate", end="EndDate", end_required=True),
+         LOCATION, start="StartDate", end="EndDate", end_required=True),
 )}
 BY_TABLE = {k.table: k for k in KINDS.values()}
 
@@ -342,10 +370,10 @@ def _refresh(session: Session, kind: Kind, scope: Scope, row: dict, ranges: list
     """Önbellekte yalnız etkilenen kaynak ve günler (K-184, K-185 F): kaydın eski ve yeni aralığı."""
     if kind.table not in resolve.CAPACITY_TABLES:      # kapasite hesabına girmeyen girişin (tedarikçi limiti) önbelleği yok
         return
-    if kind.owner:
-        triggers.entry_changed(session, scope.scenario_id, resource_id=row.get("ResourceId"), group_id=row.get("ResourceGroupId"), ranges=ranges)
+    if kind.table == CALENDAR:                         # yalnız kaydın lokasyonundaki kaynaklar (K-194)
+        triggers.factory_calendar_changed(session, scope.scenario_id, row.get("LocationId"), ranges)
     else:
-        triggers.factory_calendar_changed(session, scope.scenario_id, ranges)
+        triggers.entry_changed(session, scope.scenario_id, resource_id=row.get("ResourceId"), group_id=row.get("ResourceGroupId"), ranges=ranges)
 
 
 def _insert(session: Session, kind: Kind, scope: Scope, values: dict, user_id: int | None) -> int:
@@ -379,7 +407,7 @@ def create(session: Session, kind: Kind, scope: Scope, user_id: int | None, raw:
         problems += kind.owner.check(session, values)
     for f in kind.fields:
         value = raw.get(f.name)
-        if f.name == kind.end and kind.end_required and not kind.owner and (value is None or value == ""):
+        if f.name == kind.end and kind.end_required and kind.table == CALENDAR and (value is None or value == ""):
             value = raw.get(kind.start)                       # fabrika takvimi: bitiş boşsa tek gün
         parsed, problem = parse(f, value)
         if problem:

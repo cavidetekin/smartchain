@@ -1422,7 +1422,7 @@ export const tr = {
     newRecord: "Yeni kayıt",
     newTitle: (name: string) => `${name} · Yeni kayıt`,
     editTitle: (name: string) => `${name} · Düzenle`,
-    level: "Seviye", levelGroup: "Grup", levelResource: "Kaynak", resourceGroup: "Kaynak grubu", resource: "Kaynak", code: "Kod",
+    level: "Seviye", levelGroup: "Grup", levelResource: "Kaynak", resourceGroup: "Kaynak grubu", resource: "Kaynak", code: "Kod", location: "Lokasyon", noRecordsHere: "Bu lokasyonda kayıt yok.",
     start: "Başlangıç", end: "Bitiş", dailyCapacity: "Günlük kapasite", efficiency: "Verimlilik (%)", dailyLimit: "Günlük limit",
     downtimeType: "Tip", reason: "Sebep", name: "Ad", dayValue: "Çalışma", days: "Günler", noMatch: "Eşleşen kayıt yok",
     manyRecords: (n: string) => `${n} kayıt`,

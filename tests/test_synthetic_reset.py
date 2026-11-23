@@ -46,6 +46,34 @@ def test_reset_removes_transfers_and_reopens_synthetic_rows(transferred):
     assert counts(eng) == {**before, "real_versions": 0, "rs": 0, "closed": 0}
 
 
+def test_reset_removes_records_bound_to_real_locations(transferred):
+    """Sentetik olmayan lokasyona bağlı fabrika takvimi, tedarikçi limiti ve malzeme blokajı kayıtları lokasyonla birlikte silinir (K-194): geçiş 0073
+    çok lokasyonlu veritabanında takvim kayıtlarını her lokasyona kopyalar; sıfırlama o kopyalar yüzünden durmaz. Sentetik lokasyonun kayıtları kalır."""
+    eng, _ = transferred
+    bound = ("FactoryCalendar", "SupplierLimit", "MaterialHold")
+
+    def rows(conn) -> dict:
+        return {t: conn.execute(sa.text(f"SELECT COUNT(*) FROM param.[{t}] x JOIN core.Location l ON l.Id = x.LocationId WHERE ISNULL(l.IsSynthetic, 0) = 0")).scalar() for t in bound}
+
+    with eng.begin() as c:
+        base = c.execute(sa.text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar_one()
+        kept = {t: c.execute(sa.text(f"SELECT COUNT(*) FROM param.[{t}] WHERE ScenarioDefinitionId = :b"), {"b": base}).scalar() for t in bound}
+        loc = c.execute(sa.text("INSERT INTO core.Location (Code, Name, IsActive, IsSynthetic) OUTPUT inserted.Id VALUES (N'RS-LOC-1', N'Sıfırlama lokasyonu', 1, 0)")).scalar_one()
+        p = {"b": base, "l": loc}
+        c.execute(sa.text("INSERT INTO param.FactoryCalendar (ScenarioDefinitionId, IsValid, LocationId, StartDate, EndDate, Name, DayValue, UpdatedAt) "
+                          "VALUES (:b, 1, :l, '20270101', '20270101', N'pytest kopya', 0, SYSUTCDATETIME())"), p)
+        c.execute(sa.text("INSERT INTO param.SupplierLimit (ScenarioDefinitionId, IsValid, LimitType, LocationId, SupplierId, MaterialId, ValidFrom, UpperLimit, LimitPeriod, UpdatedAt) "
+                          "VALUES (:b, 1, N'Üst limit', :l, 1, 1, '20270101', 5, N'Ay', SYSUTCDATETIME())"), p)
+        c.execute(sa.text("INSERT INTO param.MaterialHold (ScenarioDefinitionId, IsValid, LocationId, MaterialId, HoldType, StartDate, ClosePct, UpdatedAt) "
+                          "VALUES (:b, 1, :l, 1, N'Üretim', '20270101', 50, SYSUTCDATETIME())"), p)
+        assert rows(c) == {t: 1 for t in bound}
+    assert reset(eng, generate(), lambda preview: True) is not None                        # yabancı anahtar hatasıyla durmaz
+    with eng.connect() as c:
+        assert rows(c) == {t: 0 for t in bound} and c.execute(sa.text("SELECT COUNT(*) FROM core.Location WHERE Code = N'RS-LOC-1'")).scalar() == 0
+        base = c.execute(sa.text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar_one()
+        assert {t: c.execute(sa.text(f"SELECT COUNT(*) FROM param.[{t}] WHERE ScenarioDefinitionId = :b"), {"b": base}).scalar() for t in bound} == kept   # sentetik kayıtlar yerinde
+
+
 def test_reset_without_confirmation_changes_nothing(transferred):
     eng, _ = transferred
     snapshot = counts(eng)

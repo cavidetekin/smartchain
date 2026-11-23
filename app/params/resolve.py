@@ -27,7 +27,7 @@ FIELDS: dict[str, tuple[str, ...]] = {
     "ResourceEfficiency": (*OWNER, *VALIDITY, "EfficiencyPct"),
     "OvertimeLimit": (*OWNER, *VALIDITY, "DailyLimit"),
     "ResourceDowntime": (*OWNER, "StartDate", "EndDate", "DowntimeType", "Reason"),
-    "FactoryCalendar": ("StartDate", "EndDate", "Name", "DayValue"),
+    "FactoryCalendar": ("LocationId", "StartDate", "EndDate", "Name", "DayValue"),      # lokasyon bazlı (K-194)
 }
 # Kapasite hesabına giren tablolar (önbelleğin "senaryonun kendi girişi var mı" sorusu yalnız bunlara bakar)
 CAPACITY_TABLES = tuple(FIELDS)

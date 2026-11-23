@@ -61,7 +61,7 @@ MATERIAL_HOLDS = ListDefinition(
     server_values=frozenset({"LocationCode", "MaterialCode"}), decimals={"ClosePct": 2},
     values={"Origin": _ORIGINS, "HoldType": list(rules.TYPES)},
     labels=_LABELS, notes=_NOTES,
-    key_fields=("StoredId", "Origin", "IsValid", "OverriddenFields", "BaseValues", "LocationId", "MaterialId"), filter_only=("OwnerKeys",),
+    key_fields=("StoredId", "Origin", "IsValid", "OverriddenFields", "BaseValues", "LocationId", "MaterialId", "LocationCode"), filter_only=("OwnerKeys",),
     related_table=relations.register_links("material-holds", LINKS),
 )
 
@@ -94,7 +94,7 @@ MATERIAL_HOLDS_VALIDITY = ListDefinition(
     values={"Supply": list(rules.SUPPLIES), "Status": [rules.OPEN, rules.CLOSED]},
     labels=_LABELS, notes=_NOTES,
     # zaman çubuğu satırları çizer: gereken alanlar kolon kapatılsa da döner
-    key_fields=("SourceRowId", "LocationId", "MaterialId", "MaterialCode", "Supply", "Period", "PeriodStart", "PeriodEnd", "PeriodDays", "BlockedDays", "Ratio", "Threshold",
+    key_fields=("SourceRowId", "LocationId", "MaterialId", "LocationCode", "MaterialCode", "Supply", "Period", "PeriodStart", "PeriodEnd", "PeriodDays", "BlockedDays", "Ratio", "Threshold",
                 "Status"),
     filter_only=("OwnerKeys",),
     related_table=relations.register_links("material-holds-validity", LINKS),

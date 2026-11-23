@@ -1908,6 +1908,7 @@ FactoryCalendar = sa.Table(
     sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
     sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: \",ValidTo,DailyCapacity,\"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
     sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz (\"Geçersiz yap\")", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), index=True, nullable=False, comment="Lokasyon: kayıt yalnız bu lokasyonun kaynak gruplarına ve kaynaklarına uygulanır (K-194)", info={'label': "Lokasyon", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("StartDate", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': True}),
     sa.Column("EndDate", mssql.DATE(), nullable=False, comment="Bitiş (dahil)", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': True}),
     sa.Column("Name", sa.Unicode(100), nullable=False, comment="Ad (ör. Yılbaşı)", info={'label': "Ad", 'source': "Smartchain (parametre)", 'workspace': True}),
@@ -1916,7 +1917,7 @@ FactoryCalendar = sa.Table(
     sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Değiştiren", 'source': "Sistem", 'workspace': False}),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Fabrika takvimi (K-185): bütün kaynak gruplarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır.",
+    comment="Fabrika takvimi (K-185, K-194): lokasyonun bütün kaynak gruplarına ve kaynaklarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır.",
 )
 
 ResourceCapacityDay = sa.Table(

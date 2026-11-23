@@ -4,11 +4,12 @@
 // limit nane, kapanış amber ve üstte); End user.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { meAs, mockApi, renderApp, type Reply } from "../test/helpers";
 import { col, useTableTestSetup } from "../table/testBackend";
 import { cellOf } from "../table/testEditing";
+import { forgetLocations } from "./locationField";
 
 useTableTestSetup();
 
@@ -59,7 +60,8 @@ const OPTIONS = { suppliers: [
 
 type Call = { method: string; url: string; body: Record<string, unknown> };
 
-function backend(options: { scenario?: { id: number; name: string; is_base: boolean }; rows?: object[]; reply?: (call: Call) => Reply | undefined } = {}) {
+function backend(options: { scenario?: { id: number; name: string; is_base: boolean }; rows?: object[]; reply?: (call: Call) => Reply | undefined;
+                            suppliers?: object[]; locations?: object[] } = {}) {
   const scenario = options.scenario ?? { id: 1, name: "Baz", is_base: true };
   const calls: Call[] = [];
   const queries: Record<string, Record<string, unknown>[]> = {};
@@ -79,7 +81,8 @@ function backend(options: { scenario?: { id: number; name: string; is_base: bool
     ...list(VALIDITY, VALIDITY_COLUMNS, VALIDITY_ROWS),
     ...list("model-constraints-resource-groups", [col("Code", "Kaynak grubu", "text", "text")], []),
     ...list("record-history", [col("At", "Tarih", "datetime", "date"), col("FieldLabel", "Alan", "text", "list")], []),
-    "/api/model-constraints/supplier-limits/options": { body: OPTIONS },
+    "/api/model-constraints/supplier-limits/options": { body: options.suppliers ? { suppliers: options.suppliers } : OPTIONS },
+    "/api/capacity/locations": { body: { locations: options.locations ?? [{ id: 1, code: "ORM-01", name: "Merkez fabrika" }] } },
     "/api/model-constraints/supplier-limits": (url: string, init?: RequestInit) => {
       const call = { method: init?.method ?? "GET", url, body: init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {} };
       calls.push(call);
@@ -108,7 +111,76 @@ const typeDate = async (user: ReturnType<typeof userEvent.setup>, dialog: HTMLEl
   await user.tab();
 };
 
+beforeEach(forgetLocations);
+
 describe("ekran 31 · Model kısıtları › Tedarikçi limiti (K-191, 7.12)", () => {
+  it("Lokasyon ilk alan (K-194): sıra Lokasyon · Tür · Tedarikçi · Malzeme; iki lokasyonda boş, tedarikçi listesi pasif; seçilince o lokasyonun tedarikçileri ('kod · ad')", async () => {
+    const two = [...OPTIONS.suppliers, { location_id: 2, location: "ORM-02", supplier_id: 1, code: "TED-01", name: "Anadolu Çubuk",
+                                         materials: [{ id: 221, code: "HAM-001", name: "Çubuk 20", unit: "KG" }] }];
+    const { user, calls } = await open("Key user", { suppliers: two, locations: [{ id: 1, code: "ORM-01", name: "Merkez" }, { id: 2, code: "ORM-02", name: "İkinci" }] });
+    await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
+    const dialog = await screen.findByRole("dialog", { name: "Tedarikçi limiti · Yeni kayıt" });
+    expect([...dialog.querySelectorAll(".sc-field-label")].map((l) => l.textContent).slice(0, 4)).toEqual(["Lokasyon", "Tür", "Tedarikçi", "Malzeme"]);
+    const location = within(dialog).getByRole("combobox", { name: "Lokasyon" });
+    const supplier = within(dialog).getByRole("combobox", { name: "Tedarikçi" });
+    await waitFor(() => expect(supplier).toBeDisabled());
+    expect(location).toHaveValue("");
+    await user.click(location);
+    await user.click(await screen.findByRole("option", { name: /^ORM-02/ }));
+    await user.click(supplier);
+    expect(within(await screen.findByRole("listbox", { name: "Tedarikçi" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["TED-01Anadolu Çubuk"]);
+    await user.click(screen.getByRole("option", { name: /TED-01/ }));
+    await pick(user, dialog, "Malzeme", "HAM-001");
+    await user.click(location);                                                                            // lokasyon değişir: tedarikçi ve malzeme temizlenir
+    await user.click(await screen.findByRole("option", { name: /^ORM-01/ }));
+    expect(supplier).toHaveValue("");
+    expect(within(dialog).getByRole("combobox", { name: "Malzeme" })).toBeDisabled();
+    await user.click(supplier);
+    expect(within(await screen.findByRole("listbox", { name: "Tedarikçi" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["TED-01Anadolu Çubuk", "TED-02Marmara Levha"]);
+    await user.click(screen.getByRole("option", { name: /TED-02/ }));
+    await pick(user, dialog, "Malzeme", "HAM-002");
+    await typeDate(user, dialog, "Başlangıç", "01.02.2027");
+    await user.type(within(dialog).getByRole("textbox", { name: /^Limit/ }), "10");
+    await user.click(within(within(dialog).getByRole("radiogroup", { name: "Limitin dönemi" })).getByRole("radio", { name: "Ay" }));
+    await user.click(within(dialog).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "POST")?.body.values).toMatchObject({ LocationId: 1, SupplierId: 2, MaterialId: 122 }));
+  });
+
+  it("veride tek lokasyon varsa Lokasyon dolu gelir (K-194)", async () => {
+    const { user } = await open();
+    await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
+    const dialog = await screen.findByRole("dialog", { name: "Tedarikçi limiti · Yeni kayıt" });
+    await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Lokasyon" })).toHaveValue("ORM-01 · Merkez fabrika"));
+  });
+
+  it("iki lokasyon: tedarikçisi olmayan lokasyon da listelenir, seçilince tedarikçi listesi boş ve 'Bu lokasyonda kayıt yok.'; Düzenle'de dört alan kilitli; kart başlığı lokasyonla (K-194)", async () => {
+    const { user } = await open("Key user", { locations: [{ id: 1, code: "ORM-01", name: "Merkez" }, { id: 2, code: "ORM-02", name: "İkinci" }] });
+    await user.click(screen.getByRole("button", { name: "Yeni kayıt" }));
+    let dialog = await screen.findByRole("dialog", { name: "Tedarikçi limiti · Yeni kayıt" });
+    const location = within(dialog).getByRole("combobox", { name: "Lokasyon" });
+    await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Tedarikçi" })).toBeDisabled());
+    expect(location).toHaveValue("");                                                                      // veride iki lokasyon: dolu gelmez (tedarikçiler tek lokasyonda olsa da)
+    await user.click(location);
+    await user.click(await screen.findByRole("option", { name: /^ORM-02/ }));
+    await user.click(within(dialog).getByRole("combobox", { name: "Tedarikçi" }));
+    const empty = await screen.findByRole("listbox", { name: "Tedarikçi" });
+    expect(within(empty).queryAllByRole("option")).toHaveLength(0);
+    expect(empty).toHaveTextContent("Bu lokasyonda kayıt yok.");
+    expect(within(dialog).getByRole("button", { name: "Kaydet" })).toBeDisabled();
+    await user.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: /^TED-01 · HAM-001 .* işlemleri$/ }));
+    await user.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Düzenle" }));
+    dialog = await screen.findByRole("dialog", { name: "Tedarikçi limiti · Düzenle" });
+    expect(["Lokasyon", "Tür", "Tedarikçi", "Malzeme"].map((n) => [(within(dialog).getByRole("textbox", { name: n }) as HTMLInputElement).value,
+                                                                     (within(dialog).getByRole("textbox", { name: n }) as HTMLInputElement).disabled])).toEqual([
+      ["ORM-01", true], ["Üst limit", true], ["TED-01", true], ["HAM-001", true]]);
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: /^TED-01 · HAM-001 .* işlemleri$/ }));
+    await user.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Detay" }));
+    expect(await screen.findByText("ORM-01 · TED-01 · HAM-001")).toBeInTheDocument();                       // veride iki lokasyon: kart başlığı lokasyonla
+  });
+
   it("ikinci sekme; Kayıtlar'da iki tür aynı listede; Lokasyon kodun solunda; türe uymayan hücre düzenlenmez; istek seçili senaryoyu taşır", async () => {
     const { queries } = await open();
     const tabs = within(screen.getByRole("radiogroup", { name: "Model kısıtları bölümleri" })).getAllByRole("radio");

@@ -3,7 +3,7 @@
 Geçerlilik (çalışma düzeni, verimlilik, ek mesai limiti): bir gün için önce seviye (kaynakta o günü kapsayan kayıt varsa kaynağın kayıtları,
 yoksa grubunkiler), sonra o seviyede o günü kapsayanlardan başlangıcı en ileri olan. Grup kaydı o grubun içinde uygulanır: birden fazla gruba
 üye kaynak her grupta o grubun değeriyle hesaplanır.
-Duruş: fabrika takvimi (Çalışılmıyor 1, Yarım gün 0,5), bakım ve duruş (1), çalışan izni (günlük saat doluysa saat ÷ günlük kapasite, en çok 1;
+Duruş: fabrika takvimi (Çalışılmıyor 1, Yarım gün 0,5; yalnız kaydın lokasyonundaki kaynaklara, K-194), bakım ve duruş (1), çalışan izni (günlük saat doluysa saat ÷ günlük kapasite, en çok 1;
 boşsa 1) birleşir: en büyüğü alınır, günün çalışma değerini aşamaz (aynı gün bir kez sayılır; çalışılmayan günde 0).
 
 Hız: senaryonun çözümlenmiş girişleri, üyelikler ve günler önce oturumun geçici tablolarına alınır (`prepare`); geçerli kayıt üyelik × gün
@@ -29,7 +29,7 @@ EFFECTIVE = {"#cap_wp": "#eff_wp", "#cap_ef": "#eff_ef", "#cap_ol": "#eff_ol"}
 # Geçerlilik kuralının sıralaması (K-185 C), tek yerde: önce seviye (0 kaynak, 1 grup), sonra başlangıcı en ileri olan, eşitlikte son girilen.
 # Günlük hesap ve geçerlilik aralıkları (`validity.py`) aynı sıralamayı kullanır.
 RULE_ORDER = "{a}.lvl, {a}.ValidFrom DESC, {a}.RowId DESC"
-TEMPS = ("#cap_m", "#cap_d", "#cap_wp", "#cap_ef", "#cap_ol", "#cap_dt", "#cap_fc", "#cap_ab", "#eff_wp", "#eff_ef", "#eff_ol", "#eff_mt", "#eff_lv")
+TEMPS = ("#cap_m", "#cap_d", "#cap_wp", "#cap_ef", "#cap_ol", "#cap_dt", "#cap_fc", "#cap_fl", "#cap_ab", "#eff_wp", "#eff_ef", "#eff_ol", "#eff_mt", "#eff_lv")
 
 
 def members_sql() -> str:
@@ -76,18 +76,23 @@ def prepare(session: Session, scope: Scope) -> None:
     only = "" if scope.masters is None else f" WHERE x.ResourceId IN (SELECT CAST(value AS bigint) FROM OPENJSON(N'{json.dumps([int(i) for i in scope.masters])}'))"
     key = "(ResourceId, ResourceGroupId, [Date])"
     run = [
-        f"SELECT x.ResourceGroupId, x.ResourceId INTO #cap_m FROM ({members_sql()}) x{only}",
+        # üyelikler, kaynağın lokasyonuyla (fabrika takvimi lokasyon bazlıdır, K-194)
+        f"SELECT x.ResourceGroupId, x.ResourceId, (SELECT r.LocationId FROM core.Resource r WHERE r.Id = x.ResourceId AND r.VersionTo IS NULL) AS LocationId "
+        f"INTO #cap_m FROM ({members_sql()}) x{only}",
         "CREATE UNIQUE CLUSTERED INDEX ix ON #cap_m (ResourceId, ResourceGroupId)",
         f"SELECT ResourceGroupId, ResourceId, StartDate, EndDate INTO #cap_dt FROM ({resolved('ResourceDowntime')}) x WHERE x.EndDate >= {a} AND x.StartDate <= {b}",
-        f"SELECT StartDate, EndDate, DayValue INTO #cap_fc FROM ({resolved('FactoryCalendar')}) x WHERE x.EndDate >= {a} AND x.StartDate <= {b}",
+        f"SELECT LocationId, StartDate, EndDate, DayValue INTO #cap_fc FROM ({resolved('FactoryCalendar')}) x WHERE x.EndDate >= {a} AND x.StartDate <= {b}",
         f"SELECT ab.ResourceId, ab.StartDate, ab.EndDate, ab.HoursPerDay INTO #cap_ab FROM core.EmployeeAbsence ab WHERE ab.VersionTo IS NULL "
         f"AND ab.EndDate >= {a} AND ab.StartDate <= {b}",
-        # günler: haftanın günü (0 Pazartesi … 6 Pazar; DATEFIRST'ten bağımsız) ve fabrika takviminin o günkü kaybı (Çalışılmıyor 1, Yarım gün 0,5)
-        f"SELECT q.[Date], DATEDIFF(day, CAST('19000101' AS date), q.[Date]) % 7 AS wd, "
-        "CAST(COALESCE((SELECT MAX(1 - f.DayValue) FROM #cap_fc f WHERE q.[Date] BETWEEN f.StartDate AND f.EndDate), 0) AS decimal(18,8)) AS factory "
+        # günler: haftanın günü (0 Pazartesi … 6 Pazar; DATEFIRST'ten bağımsız)
+        f"SELECT q.[Date], DATEDIFF(day, CAST('19000101' AS date), q.[Date]) % 7 AS wd "
         f"INTO #cap_d FROM (SELECT DATEADD(day, n.i, {a}) AS [Date] FROM (SELECT TOP (DATEDIFF(day, {a}, {b}) + 1) "
         "ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1 AS i FROM sys.all_objects o1 CROSS JOIN sys.all_objects o2) n) q",
         "CREATE UNIQUE CLUSTERED INDEX ix ON #cap_d ([Date])",
+        # fabrika takviminin lokasyon × gün kaybı (Çalışılmıyor 1, Yarım gün 0,5; aynı günü kapsayan kayıtlardan en büyüğü)
+        "SELECT f.LocationId, d.[Date], CAST(MAX(1 - f.DayValue) AS decimal(18,8)) AS factory INTO #cap_fl FROM #cap_fc f "
+        "JOIN #cap_d d ON d.[Date] BETWEEN f.StartDate AND f.EndDate GROUP BY f.LocationId, d.[Date]",
+        "CREATE UNIQUE CLUSTERED INDEX ix ON #cap_fl (LocationId, [Date])",
     ]
     for temp, table, fields in INPUTS:
         names = ", ".join(fields)
@@ -120,18 +125,20 @@ def _select() -> str:
         "FROM #cap_m m CROSS JOIN #cap_d d "
         f"LEFT JOIN #eff_wp wp ON {on.format(t='wp')} LEFT JOIN #eff_ef ef ON {on.format(t='ef')} LEFT JOIN #eff_ol ol ON {on.format(t='ol')} "
         f"LEFT JOIN #eff_mt mt ON {on.format(t='mt')} LEFT JOIN #eff_lv lv ON lv.ResourceId = m.ResourceId AND lv.[Date] = d.[Date] "
+        "LEFT JOIN #cap_fl fl ON fl.LocationId = m.LocationId AND fl.[Date] = d.[Date] "
         f"CROSS APPLY (SELECT CAST(COALESCE({day_value}, 0) AS decimal(18,8)) AS wd, CAST(COALESCE(wp.DailyCapacity, 0) AS decimal(18,4)) AS cap) a "
         "CROSS APPLY (SELECT CAST(CASE WHEN mt.ResourceId IS NULL THEN 0 ELSE 1 END AS decimal(18,8)) AS maintenance, "
         "CAST(CASE WHEN lv.ResourceId IS NULL THEN 0 WHEN lv.full_day = 1 OR a.cap <= 0 OR lv.hours >= a.cap THEN 1 ELSE lv.hours / a.cap END AS decimal(18,8)) AS leave) l "
         # duruşlar birleşir: en büyüğü; günün çalışma değerini aşamaz
-        "CROSS APPLY (SELECT CASE WHEN d.factory >= l.maintenance AND d.factory >= l.leave THEN d.factory WHEN l.maintenance >= l.leave THEN l.maintenance "
+        "CROSS APPLY (SELECT CAST(COALESCE(fl.factory, 0) AS decimal(18,8)) AS factory) fc "
+        "CROSS APPLY (SELECT CASE WHEN fc.factory >= l.maintenance AND fc.factory >= l.leave THEN fc.factory WHEN l.maintenance >= l.leave THEN l.maintenance "
         "ELSE l.leave END AS loss) s "
         "CROSS APPLY (SELECT a.wd, a.cap, CAST(COALESCE(ef.EfficiencyPct, 100) AS decimal(18,8)) / 100 AS eff, "
         "CAST(COALESCE(ol.DailyLimit, 0) AS decimal(18,4)) AS ol, CASE WHEN s.loss > a.wd THEN a.wd ELSE s.loss END AS dt) x")
 
 
 CACHE = DayCache(name="resource-capacity-day", table=metadata.tables["cache.ResourceCapacityDay"], keys=("ResourceId", "ResourceGroupId"), master="ResourceId",
-                 values=("WorkingDay", "Downtime", "DailyCapacity", "Capacity", "AvailableCapacity", "OvertimeLimit"), code_version=2, select=_select,
+                 values=("WorkingDay", "Downtime", "DailyCapacity", "Capacity", "AvailableCapacity", "OvertimeLimit"), code_version=3, select=_select,
                  prepare=prepare, has_own=lambda session, scenario_id: resolve.has_own(session, scenario_id))
 
 

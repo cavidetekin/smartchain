@@ -20,6 +20,7 @@ import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
 import { type DetailTab, MasterDetail, OverflowTabs, Tooltip } from "../ui";
 import type { MenuAction } from "../ui/PopMenu";
 import { HISTORY_HINTS } from "./DataScreen";
+import { useManyLocations, withLocation } from "./locationField";
 import { MaterialHoldsTab } from "./MaterialHolds";
 import { SupplierLimitsTab } from "./SupplierLimits";
 
@@ -59,6 +60,7 @@ function GroupsTab({ lead }: { lead: ReactNode }) {
   const [tick, setTick] = useState(0);
   const [card, setCard] = useState<Row | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
+  const manyLocations = useManyLocations();   // birden çok lokasyonda kart başlığı "lokasyon · kod" (K-194)
   const key = (row: Row) => String(row.Id);
   const cellKey = (row: Row, field: string) => `${row.Id}|${field}`;
   const label = (row: Row) => T.record(String(row.Code ?? ""));
@@ -155,7 +157,7 @@ function GroupsTab({ lead }: { lead: ReactNode }) {
                       <UnsavedGuard dirty={edits.dirty} />
                     </>
                   )}
-                  detail={card ? { title: ids.length > 1 ? T.manyRecords(formatNumber(ids.length)) : String(card.Code ?? ""), tabsLabel: T.cardTabs, tabs: HISTORY_TABS, tab: "gecmis" as const,
+                  detail={card ? { title: ids.length > 1 ? T.manyRecords(formatNumber(ids.length)) : withLocation(manyLocations, card.LocationCode, String(card.Code ?? "")), tabsLabel: T.cardTabs, tabs: HISTORY_TABS, tab: "gecmis" as const,
                                    onTab: () => undefined, renderBody } : null} />
   );
 }

@@ -48,7 +48,7 @@ RESOURCE_GROUP_CONSTRAINTS = ListDefinition(
     notes={rules.FACTOR: "Kaynak kısıtı Kısıtsız olan senaryoda grubun dönem üst sınırı = kullanılabilir kapasite × çarpan; boşsa sınır yok. Yalnız kritik grupta",
            rules.TARGET: "Kesin sınır değil, hedef: \"Hedef doluluğun üstü\" hedefinin eşiği; boşsa hedef yok. Yalnız kritik grupta",
            "Origin": "Baz: Baz senaryodan okunur · Senaryo farkı: Baz'daki değer bu senaryoda değiştirildi · Senaryo: yalnız bu senaryoda"},
-    key_fields=("StoredId", "OverriddenFields", "BaseValues", "CanRestore"), filter_only=("Id",),
+    key_fields=("StoredId", "OverriddenFields", "BaseValues", "CanRestore", "LocationCode"), filter_only=("Id",),
     related_table="ResourceGroup",
 )
 assert ERP not in RESOURCE_GROUP_CONSTRAINTS.values["Origin"]   # bu listede ERP satırı yok

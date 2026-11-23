@@ -4,6 +4,7 @@
 // uymayan hücre boştur ve düzenlenmez. Pencere 7.9b standardıyla: tür parçalı seçim, tedarikçi ve malzeme aramalı seçim (malzeme listesi yalnız
 // seçili tedarikçinin malzemeleri; kapanışta birden çok malzeme seçilir, boş bırakılırsa bütün malzemeler), zorunlu alan boşken Kaydet pasif.
 // Pencere "Üst limit" seçili açılır; Sebep iki türde de vardır (isteğe bağlı) ve tabloda iki türde de düzenlenir (K-191 demo).
+// Alan sırası Lokasyon · Tür · Tedarikçi · Malzeme (K-194): tedarikçi listesi seçili lokasyona süzülür; Düzenle'de dördü de kilitli.
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { ApiError, emitNotice, getJson, sendJson } from "../api/client";
@@ -17,6 +18,7 @@ import { EntryTable } from "./CapacityEntries";
 import { TableChoice, type TableView, type ValidityCustom, ValidityView } from "./CapacityValidity";
 import { type EntryDialogProps, type EntrySpec, isoDate, type Owner, parseIso, type Saved } from "./capacityModel";
 import { HISTORY_HINTS } from "./DataScreen";
+import { emptyTextOf, LocationField, locationsOf, useLocationChoice, useLocations, useManyLocations, withLocation } from "./locationField";
 
 const T = tr.modelConstraints.supplier;
 const C = tr.capacity;
@@ -62,6 +64,9 @@ export function SupplierLimitDialog({ spec, scenario, row, owner, onClose, onSav
   const [period, setPeriod] = useState<string>(editing ? String(row.LimitPeriod ?? "") : "");
   const [reason, setReason] = useState(editing ? String(row.Reason ?? "") : "");
   const [options, setOptions] = useState<SupplierOption[] | null>(null);
+  const derived = useMemo(() => options && locationsOf(options, (o) => ({ id: String(o.location_id), code: o.location })), [options]);
+  const locations = useLocations(derived);     // verideki bütün lokasyonlar (tedarikçisi olmayan lokasyon da)
+  const [location, setLocation] = useLocationChoice(locations, owner?.locationId != null ? String(owner.locationId) : "");
   const [problems, setProblems] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -75,8 +80,8 @@ export function SupplierLimitDialog({ spec, scenario, row, owner, onClose, onSav
   }, [editing]);
 
   const upper = type === UPPER, closure = type === CLOSURE;
-  const manyLocations = new Set((options ?? []).map((o) => o.location)).size > 1;   // birden çok lokasyonda seçenek "lokasyon · kod · ad" (K-189)
-  const picked = (options ?? []).find((o) => supplierKey(o) === supplier);
+  const inLocation = (options ?? []).filter((o) => String(o.location_id) === location);   // tedarikçi listesi seçili lokasyona süzülür (K-194)
+  const picked = inLocation.find((o) => supplierKey(o) === supplier);
   const offered = picked?.materials ?? [];
   const unit = editing ? row.Uom : offered.find((m) => String(m.id) === material)?.unit;
   const missing = !type || (!editing && !supplier) || !from || (upper && ((!editing && !material) || limit === null || !period)) || (closure && !to);
@@ -118,6 +123,9 @@ export function SupplierLimitDialog({ spec, scenario, row, owner, onClose, onSav
     <Dialog title={editing ? C.editTitle(spec.title) : C.newTitle(spec.title)} onClose={onClose} onSubmit={() => void submit()} submitLabel={tr.table.editSave} busy={busy}
             submitDisabled={Boolean(missing)} className="sc-dialog--form">
       <div className="sc-form-grid">
+        {editing ? <LocationField options={[]} value="" onChange={() => undefined} locked={String(row.LocationCode ?? "")} />
+          : <LocationField options={locations ?? []} value={location} error={problems.LocationId}
+                           onChange={(v) => { setLocation(v); setSupplier(""); setMaterial(""); setMaterials([]); }} />}
         <div className="sc-form-full">
           {editing ? <TextField label={T.type} value={type === CLOSURE ? T.closure : T.upper} onChange={() => undefined} disabled />
             : <Segment<string> label={T.type} value={type} onChange={setType} options={[{ value: UPPER, label: T.upper }, { value: CLOSURE, label: T.closure }]} />}
@@ -132,8 +140,8 @@ export function SupplierLimitDialog({ spec, scenario, row, owner, onClose, onSav
           <>
             <div className="sc-form-full">
               <SearchSelect label={T.supplier} value={supplier} onChange={(v) => { setSupplier(v); setMaterial(""); setMaterials([]); }} error={problems.SupplierId}
-                            emptyText={C.noMatch}
-                            options={(options ?? []).map((o) => ({ value: supplierKey(o), code: manyLocations ? `${o.location} · ${o.code}` : o.code, name: o.name ?? undefined }))} />
+                            emptyText={emptyTextOf(location, inLocation.length)} disabled={!location}
+                            options={inLocation.map((o) => ({ value: supplierKey(o), code: o.code, name: o.name ?? undefined }))} />
             </div>
             {closure ? (
               <div className="sc-form-full">
@@ -230,6 +238,7 @@ export function SupplierLimitsTab({ lead }: { lead: ReactNode }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [focus, setFocus] = useState<{ id: number; n: number } | undefined>(undefined);
   const [version, setVersion] = useState(0);
+  const many = useManyLocations();
   const head = useMemo(() => <>{lead}<TableChoice value={view} onChange={setView} /></>, [lead, view]);
   const onChanged = () => setVersion((n) => n + 1);
   if (view === "gecerlilik") {
@@ -247,7 +256,7 @@ export function SupplierLimitsTab({ lead }: { lead: ReactNode }) {
     <MasterDetail id="model-constraints-suppliers" onClose={() => setCard(null)} hideTitle
                   master={<EntryTable spec={SUPPLIER_LIMITS} lead={head} onDetail={setCard} selectedRowId={card?.Id ?? null} reloadKey={version} onChanged={onChanged}
                                       onSelection={setPicked} focus={focus} />}
-                  detail={card ? { title: ids.length > 1 ? C.manyRecords(formatNumber(ids.length)) : pairCode(card), tabsLabel: tr.modelConstraints.cardTabs, tabs: HISTORY_TABS,
+                  detail={card ? { title: ids.length > 1 ? C.manyRecords(formatNumber(ids.length)) : withLocation(many, card.LocationCode, pairCode(card)), tabsLabel: tr.modelConstraints.cardTabs, tabs: HISTORY_TABS,
                                    tab: "gecmis" as const, onTab: () => undefined, renderBody } : null} />
   );
 }
