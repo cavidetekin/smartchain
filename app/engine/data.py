@@ -35,6 +35,13 @@ class SqlPlanningData:
         from app import supplierlimits
         return supplierlimits.daily(self.session, self.scenario_definition_id, date_from, date_to)
 
+    def material_holds(self, today: date | None = None) -> list[dict]:
+        """Malzeme blokajı (docs/09, K-193): senaryonun plan dönemlerinde kapalı ve açık dönemler."""
+        if self.scenario_definition_id is None:
+            raise ValueError("Malzeme blokajı için senaryo gerekir.")
+        from app import materialholds
+        return materialholds.periods(self.session, self.scenario_definition_id, today or date.today())
+
     def warning_thresholds(self) -> list[dict]:
         """Uyarı eşikleri (docs/09, K-190): senaryonun aktif uyarıları."""
         if self.scenario_definition_id is None:

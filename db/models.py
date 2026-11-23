@@ -359,6 +359,27 @@ SupplierLimit = sa.Table(
     comment="Tedarikçi limiti (K-191; problem 39): satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; iki kayıt türü tek tabloda. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.",
 )
 
+MaterialHold = sa.Table(
+    "MaterialHold", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Geçersiz yapılan kayıt uygulanmaz; izleyen senaryoda Baz satırı fark satırıyla geçersiz yapılır", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), index=True, nullable=False, comment="Lokasyon (malzemenin lokasyonu)", info={'label': "Lokasyon", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("MaterialId", sa.BigInteger(), index=True, nullable=False, comment="Malzeme", info={'label': "Malzeme", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("HoldType", sa.Unicode(25), nullable=False, comment="Üretim | Satın alma | Üretim ve satın alma", info={'label': "Tür", 'values': ["Üretim", "Satın alma", "Üretim ve satın alma"], 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("StartDate", mssql.DATE(), nullable=False, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("EndDate", mssql.DATE(), nullable=True, comment="Bitiş; boşsa süresiz (ufkun sonuna kadar)", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("ClosePct", sa.Numeric(5, 2), nullable=False, comment="Dönemi kapatma oranı (%): blokaj plan döneminin takvim günlerinin en az bu oranını kapsıyorsa dönem kapalıdır; 0'dan büyük, en çok 100", info={'label': "Dönemi kapatma oranı (%)", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Reason", sa.Unicode(255), nullable=True, comment="Sebep (serbest metin, isteğe bağlı)", info={'label': "Sebep", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Son değiştiren kullanıcı", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Malzeme blokajı (K-193): malzeme için belli tarihlerde yeni tedarik planı (üretim, satın alma ya da ikisi) çıkarılmaz. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.",
+)
+
 ProductionVersion = sa.Table(
     "ProductionVersion", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
@@ -951,21 +972,6 @@ PriorityRule = sa.Table(
     comment="Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih).",
 )
 
-AllocationRule = sa.Table(
-    "AllocationRule", metadata,
-    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
-    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("DemandClass", sa.Unicode(100), nullable=False, comment="Talep sınıfı tanımı (müşteri, proje, ürün grubu)", info={'label': "Talep sınıfı", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ResourceGroupId", sa.BigInteger(), index=True, nullable=True, comment="Kaynak grubu", info={'label': "Kaynak grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ValidFrom", mssql.DATE(), nullable=True, comment="Başlangıç", info={'label': "Başlangıç", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("ValidTo", mssql.DATE(), nullable=True, comment="Bitiş", info={'label': "Bitiş", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("SharePct", sa.Numeric(6, 2), nullable=False, comment="Pay (%)", info={'label': "Pay (%)", 'source': "Smartchain (parametre)", 'workspace': True}),
-    sa.Column("Hardness", sa.Unicode(10), nullable=True, server_default=sa.text("N'Yumuşak'"), comment="Taban | Tavan | Yumuşak", info={'label': "Sınır tipi", 'values': ["Taban", "Tavan", "Yumuşak"], 'source': "Smartchain (parametre)", 'workspace': False, 'default': "Yumuşak"}),
-    schema="param",
-    info={'field_class': "Parametre"},
-    comment="Faz 1 dışı (K-192): kapasite alokasyonu, talep sınıfına kaynak grubu ve dönem bazında pay (K-180). Tablo durur, hiçbir ekran ve motor okumaz.",
-)
-
 WarningDefinition = sa.Table(
     "WarningDefinition", metadata,
     sa.Column("Code", sa.Unicode(30), primary_key=True, autoincrement=False, comment="Uyarı kodu", info={'label': "Uyarı kodu", 'source': "Sistem", 'workspace': False}),
@@ -1092,7 +1098,7 @@ FieldChange = sa.Table(
     sa.Column("NewValue", sa.Unicode(400), nullable=True, comment="Yeni değer (metin)", info={'label': "Yeni değer (metin)"}),
     sa.Column("DataVersionId", sa.BigInteger(), nullable=True, comment="Değişikliğin olduğu veri versiyonu; Smartchain girişinde o anki güncel versiyon", info={'label': "Değişikliğin olduğu veri versiyonu"}),
     sa.Column("At", mssql.DATETIME2(), nullable=False, comment="Zaman (UTC)", info={'label': "Zaman (UTC)"}),
-    sa.Column("Source", sa.Unicode(40), nullable=False, comment="Aktarım | Manuel değer | Manuel değer kaldırma | Kapasite yönetimi | Malzeme blokajı", info={'values': ["Aktarım", "Manuel değer", "Manuel değer kaldırma", "Kapasite yönetimi", "Malzeme blokajı"]}),
+    sa.Column("Source", sa.Unicode(40), nullable=False, comment="Aktarım | Manuel değer | Manuel değer kaldırma | Kapasite yönetimi | Model kısıtları", info={'values': ["Aktarım", "Manuel değer", "Manuel değer kaldırma", "Kapasite yönetimi", "Model kısıtları"]}),
     sa.Column("UserId", sa.Integer(), nullable=True, comment="Değiştiren kullanıcı; aktarımda aktarımı başlatan, zamanlanmış işte boş", info={'label': "Değiştiren kullanıcı"}),
     sa.Column("DataRuleId", sa.BigInteger(), nullable=True, comment="Aktarımda hücreyi değiştiren kural", info={'label': "Aktarımda hücreyi değiştiren kural"}),
     sa.Column("Note", sa.Unicode(100), nullable=True, comment="Not (ör. \"Manuel değer korundu\")", info={'label': "Not (ör. \"Manuel değer korundu\")"}),

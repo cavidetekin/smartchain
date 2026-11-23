@@ -15,7 +15,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 |---|---|
 | `EngineInput` | `plan_run` (PlanRunInfo), `parameters` (ScenarioParameters), `data` (PlanningData), `time_budget_seconds` |
 | `PlanRunInfo` | Id, DataVersionId, ScenarioDefinitionId (hesabın parametrelerini taşıyan senaryo tanımı, K-175), ScenarioId, WorkspaceId |
-| `ScenarioParameters` | Senaryonun parametrelerinin tamamı (K-175; 7.1'de `ParameterSetData`'nın yerini aldı): senaryo adı; `settings` (PlanningSetting anahtar → değer, katalogdaki başlangıç değerleriyle tamamlanmış; docs/06 fonksiyon 22); `time_buckets` (plan ekseni: dönem tipi, kapsam, kapsam birimi; takvim kuralları fonksiyon 23, hesap `app/params/horizon.py`); `report_buckets` (raporlama ekseni; planla aynıysa plan dizisi); `objectives` (aktif hedefler sırasıyla: kod, öncelik grubu, süre bütçesi, ödün payı); PriorityRule sırası; AllocationRule satırları |
+| `ScenarioParameters` | Senaryonun parametrelerinin tamamı (K-175; 7.1'de `ParameterSetData`'nın yerini aldı): senaryo adı; `settings` (PlanningSetting anahtar → değer, katalogdaki başlangıç değerleriyle tamamlanmış; docs/06 fonksiyon 22); `time_buckets` (plan ekseni: dönem tipi, kapsam, kapsam birimi; takvim kuralları fonksiyon 23, hesap `app/params/horizon.py`); `report_buckets` (raporlama ekseni; planla aynıysa plan dizisi); `objectives` (aktif hedefler sırasıyla: kod, öncelik grubu, süre bütçesi, ödün payı); PriorityRule sırası |
 | `PlanningData` | Salt okunur veri erişimi: `read(table, columns)` PlanRun'un veri versiyonundaki `core.*` satırlarını verir. Versiyonlu tabloda `VersionFrom ≤ v` ve `VersionTo` boş ya da `≥ v`; versiyonsuz tabloda tümü. Yalnız `core` okunur (K-58); tablo ve alan adları docs/02'ye göre doğrulanır. Sahte motor kullanmaz; gerçek motor ön hesapta (29) bununla okur. |
 | `Engine.run(input, progress)` | `PlanResult` döndürür; veritabanına yazmaz. `progress(adım)` her adım geçişinde çağrılır. İş diliyle hata: `EngineError` (mesaj kullanıcıya gösterilir). |
 | `PlanResult` | EngineUsed (LP \| MILP \| Kurallı \| Kısıtsız MRP), Solver, Status (Bitti \| Kısmen); tablo başına satırlar (PlannedOrder, SupplyRecommendation, DemandFulfillment, CapacityLoad, Pegging, PlanWarning) docs/02 alan adlarıyla; metrikler (PlanMetric); SolverLog. |
@@ -87,7 +87,7 @@ Motorun uygulayacağı kural (Aşama 10):
 
 ## Eşit öncelikte paylaşım (K-192)
 
-Aynı öncelik grubundaki talepler arasında kaynak ya da malzeme yetmediğinde istek tarihi erken olan önce karşılanır. Ayarı yoktur. Alokasyon (talep sınıfına kaynak grubu ve dönem bazında kapasite payı; `param.AllocationRule`) Faz 1 dışıdır: motor bu tabloyu okumaz.
+Aynı öncelik grubundaki talepler arasında kaynak ya da malzeme yetmediğinde istek tarihi erken olan önce karşılanır. Ayarı yoktur. Alokasyon (talep sınıfına kaynak grubu ve dönem bazında kapasite payı) Faz 1 dışıdır; tablosu 7.13'te kaldırıldı (K-193).
 
 ## Tedarikçi limiti (7.12, K-191)
 
@@ -98,6 +98,15 @@ Aynı öncelik grubundaki talepler arasında kaynak ya da malzeme yetmediğinde 
 - Kaydı olmayan tedarikçi + malzeme sınırsızdır. Fason kapasitesi bu tabloda değildir.
 
 Bu adımda motor kuralı uygulanmaz; giriş, saklama, geçerlilik hesabı ve arayüz vardır.
+
+## Malzeme blokajı (7.13, K-193)
+
+`PlanningData.material_holds()` planın senaryosunda plan dönemi bazında satır verir (`SqlPlanningData`, `app/materialholds`): `[{LocationId, MaterialId, Supply, PeriodNo, PeriodStart, PeriodEnd, Days, BlockedDays, ClosePct, Closed}]`; `Supply` "Üretim" ya da "Satın alma"; yalnız blokajlı günü olan dönemler (ekrandaki Geçerlilik tablosuyla aynı hesap). `Closed`: blokajlı gün ÷ dönemin takvim günü ≥ dönemi kapatma oranı (döneme dokunan kayıtların en düşüğü). Motorun uygulayacağı kural (Aşama 10):
+- Kapalı dönemde o malzeme için o tedarik biçiminde yeni öneri üretilmez (Üretim: planlı üretim; Satın alma: satın alma önerisi). Açık kalan dönemde blokaj uygulanmaz.
+- Açık iş emirleri ve açık satın alma siparişleri etkilenmez; gelecek arz sayılır. Eldeki stok kullanılır.
+- Ürün ağacı için ek kural yoktur: blokajlı bileşenin stoğu bitince üst ürün kendiliğinden üretilemez. Satış blokajı yoktur.
+
+Bu adımda motor kuralı uygulanmaz; giriş, saklama, dönem hesabı ve arayüz vardır.
 
 ## Uyarı eşikleri (7.11, K-190)
 

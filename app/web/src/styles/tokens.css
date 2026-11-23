@@ -73,6 +73,7 @@
      İki renk, bir anlam; durum rengi, indigo ve beyaz yazı değil */
   --span-group-bg: #cfebdd;  --span-group-text: #1f5b43;  /* nane: değer grubun kaydından */
   --span-own-bg: #ffdfa3;    --span-own-text: #7a5200;    /* amber: kaynağın kendi kaydı */
+  --span-both-bg: #ffc9b5;   --span-both-text: #8a3a1e;   /* mercan: malzeme blokajında iki tedarik biçimi birden (K-193); mor ve indigo kullanılmaz */
 
   /* Form alanları (mockup m24f-0757) */
   --field-bg: #ffffff;

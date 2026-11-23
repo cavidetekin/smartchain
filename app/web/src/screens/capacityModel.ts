@@ -12,7 +12,7 @@ export type EntryKind = "work-patterns" | "efficiency" | "overtime-limits" | "do
 export type FieldKind = "date" | "number" | "day" | "choice" | "text";
 export interface EntryField { name: string; label: string; kind: FieldKind; required?: boolean; decimals?: number; options?: readonly string[] }
 export interface EntrySpec {
-  kind: EntryKind | "supplier-limits"; list: string; table: string; title: string; owner: boolean; start: string; fields: EntryField[];
+  kind: EntryKind | "supplier-limits" | "material-holds"; list: string; table: string; title: string; owner: boolean; start: string; fields: EntryField[];
   /** Kapasite yönetimi dışındaki giriş (K-191: tedarikçi limiti): uçlar, yetki, sahip ve pencere. Verilmezse kapasite girişinin davranışı. */
   adapter?: EntryAdapter;
 }
@@ -79,8 +79,9 @@ export const ORIGIN_ERP = "ERP";
 export const ORIGIN_DIFF = "Senaryo farkı";
 export const ORIGIN_OWN = "Senaryo";
 
-/** Kayıt gruba mı kaynağa mı girilir; kartta "Yeni kayıt" bunu dolu getirir. Tedarikçi limitinde sahip tedarikçidir (lokasyonu ve varsa malzemesiyle). */
-export interface Owner { level: "group" | "resource" | "supplier"; id: number; code: string; locationId?: number; materialId?: number | null }
+/** Kayıt gruba mı kaynağa mı girilir; kartta "Yeni kayıt" bunu dolu getirir. Tedarikçi limitinde sahip tedarikçidir (lokasyonu ve varsa malzemesiyle);
+ *  malzeme blokajında malzeme (lokasyonuyla). */
+export interface Owner { level: "group" | "resource" | "supplier" | "material"; id: number; code: string; locationId?: number; materialId?: number | null }
 
 const url = (kind: EntryKind, scenario: number, tail = "") => `/api/capacity/${kind}${tail}?scenario_id=${scenario}`;
 

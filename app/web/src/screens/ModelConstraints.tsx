@@ -1,5 +1,5 @@
 // Model kısıtları (ekran 31, fonksiyon 103; K-189; docs/12 "Model kısıtları"): kaynak grubunun kısıtsız kapasite çarpanı ve hedef doluluğu. Sekmeli:
-// "Kaynak grubu" ve "Tedarikçi limiti" (K-191; `SupplierLimits.tsx`); yeni sekme TABS'e eklenir. Her kaynak grubu bir satırdır; "Yeni kayıt" ve pencere yok: değer hücreye yazılır,
+// "Kaynak grubu", "Tedarikçi limiti" (K-191; `SupplierLimits.tsx`) ve "Malzeme blokajı" (K-193; `MaterialHolds.tsx`); yeni sekme TABS'e eklenir. Her kaynak grubu bir satırdır; "Yeni kayıt" ve pencere yok: değer hücreye yazılır,
 // silmek için hücre boşaltılır (K-132: değişen hücre işaretli, Kaydet hepsini birlikte gönderir). Senaryoda değişen hücre işaretlidir, ipucunda Baz'daki
 // değer; değeri senaryodan gelen satırın menüsünde "Senaryo farkını kaldır" (sunucunun `CanRestore` alanı). Giriş kısıtlanmaz: değer kritik olmayan
 // gruba da girilir (motor yalnız kritik grubunkini okur). ⋯ › Detay: kartta Geçmiş. Ekran senaryoya bağlıdır.
@@ -20,6 +20,7 @@ import { EditBar, UnsavedGuard, useTableEdits } from "../table/useTableEdits";
 import { type DetailTab, MasterDetail, OverflowTabs, Tooltip } from "../ui";
 import type { MenuAction } from "../ui/PopMenu";
 import { HISTORY_HINTS } from "./DataScreen";
+import { MaterialHoldsTab } from "./MaterialHolds";
 import { SupplierLimitsTab } from "./SupplierLimits";
 
 const T = tr.modelConstraints;
@@ -29,8 +30,9 @@ const TABLE = "ResourceGroupConstraint";
 export const FACTOR = "UnconstrainedCapacityFactor", TARGET = "TargetUtilizationPct";
 const VALUE_FIELDS = [FACTOR, TARGET];
 const FIELD_LABEL: Record<string, string> = { [FACTOR]: T.factor, [TARGET]: T.target };
-type Tab = "kaynak-grubu" | "tedarikci-limiti";
-const TABS: { value: Tab; label: string }[] = [{ value: "kaynak-grubu", label: T.tabs.groups }, { value: "tedarikci-limiti", label: T.tabs.suppliers }];
+type Tab = "kaynak-grubu" | "tedarikci-limiti" | "malzeme-blokaji";
+const TABS: { value: Tab; label: string }[] = [{ value: "kaynak-grubu", label: T.tabs.groups }, { value: "tedarikci-limiti", label: T.tabs.suppliers },
+                                                 { value: "malzeme-blokaji", label: T.tabs.holds }];
 const HISTORY_TABS: DetailTab<"gecmis">[] = [{ value: "gecmis", label: T.history, count: 1 }];
 const HINTS: FieldHints = { LocationCode: { width: 7 }, Code: { width: 9 }, Name: { width: 18 }, IsCritical: { width: 5.5 }, CapacityUnit: { width: 8 }, [FACTOR]: { width: 13 }, [TARGET]: { width: 11 },
                             Origin: { width: 8 } };
@@ -173,6 +175,7 @@ export function ModelConstraints() {
       </header>
       {current === "kaynak-grubu" && <GroupsTab lead={lead} />}
       {current === "tedarikci-limiti" && <SupplierLimitsTab lead={lead} />}
+      {current === "malzeme-blokaji" && <MaterialHoldsTab lead={lead} />}
     </section>
   );
 }

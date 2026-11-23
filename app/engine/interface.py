@@ -67,7 +67,6 @@ class ScenarioParameters:
     report_buckets: tuple[TimeBucket, ...] = ()  # raporlama ekseni (planla aynıysa plan dizisi)
     objectives: tuple[Objective, ...] = ()       # aktif hedefler, sırasıyla
     priority_rules: tuple[PriorityRule, ...] = ()
-    allocation_rules: tuple[dict, ...] = ()  # AllocationRule satırları (alan adları docs/02)
 
 
 class PlanningData(Protocol):
@@ -92,6 +91,11 @@ class PlanningData(Protocol):
     def supplier_limits(self, date_from: date, date_to: date) -> list[dict]:
         """Tedarikçi limiti (docs/09, K-191): planın senaryosunda gün bazında {LocationId, SupplierId, MaterialId, Day, DailyLimit, Closed}; yalnız üst
         limiti ya da kapanışı olan günler. Dönem ve malzeme düzeyi `app.supplierlimits`'in `period_limit` ve `material_limit` işlevleriyle."""
+        ...
+
+    def material_holds(self, today: date | None = None) -> list[dict]:
+        """Malzeme blokajı (docs/09, K-193): planın senaryosunda plan dönemi bazında {LocationId, MaterialId, Supply ("Üretim" | "Satın alma"), PeriodNo,
+        PeriodStart, PeriodEnd, Days, BlockedDays, ClosePct, Closed}; yalnız blokajlı günü olan dönemler. today: plan başlangıcının günü (boşsa bugün)."""
         ...
 
     def warning_thresholds(self) -> list[dict]:

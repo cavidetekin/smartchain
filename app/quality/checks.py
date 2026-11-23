@@ -1,7 +1,7 @@
 """Smartchain'de yönetilen veriden gelen veri kalitesi kontrolleri (K-174, kaynak b). Validasyon kuralları ekranında görünmez, kapatılamaz.
 
 Kapasite kontrolleri (K-185 H) yalnız Baz senaryoya bakar: kapasitesi tanımsız kaynak (ne kendisinde ne grubunda geçerli çalışma düzeni) ve
-grupları çelişen kaynak (birden fazla gruba üye, kendi kaydı yok, gruplar farklı değer veriyor). Malzeme blokajı kendi kontrollerini ekleyecek.
+grupları çelişen kaynak (birden fazla gruba üye, kendi kaydı yok, gruplar farklı değer veriyor). Malzeme blokajı: kapanan malzemeye girilmiş blokaj (K-193).
 """
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -120,6 +120,13 @@ def _supplier_limit(t) -> sa.ColumnElement:
                              w.c.SupplierId == t.c.SupplierId, w.c.MaterialId == t.c.MaterialId, sa.or_(w.c.ValidTo.is_(None), w.c.ValidTo >= _today()))
 
 
+def _material_hold(t) -> sa.ColumnElement:
+    """Bu malzemeye Baz'da girilmiş, geçerli ve bitmemiş malzeme blokajı var (K-193). Kayıt silinmez; malzeme geri gelirse uyarı kalkar."""
+    w = metadata.tables["param.MaterialHold"].alias("sc_hold")
+    return sa.exists().where(w.c.ScenarioDefinitionId == _base(), w.c.BaseRowId.is_(None), w.c.IsValid == sa.true(), w.c.MaterialId == t.c.Id,
+                             sa.or_(w.c.EndDate.is_(None), w.c.EndDate >= _today()))
+
+
 def _passive_with_limit(t) -> sa.ColumnElement:
     return sa.and_(t.c.IsActive == sa.false(), _supplier_limit(t))
 
@@ -138,5 +145,8 @@ CHECKS: tuple[SmartchainCheck, ...] = (
                     "Güncel veride olmayan malzeme tedarikçisine tedarikçi limiti girilmiş:", _supplier_limit, closed=True),
     SmartchainCheck("SC.SUPLIM_PASSIVE", "MaterialSupplier", "Pasif malzeme tedarikçisine girilmiş tedarikçi limiti",
                     "Pasif malzeme tedarikçisine tedarikçi limiti girilmiş:", _passive_with_limit),
+    # Malzeme blokajı (K-193): malzeme aktarımla kapanırsa blokaj kaydı durur, uygulanacak malzeme yoktur
+    SmartchainCheck("SC.HOLD_ORPHAN", "Material", "Kapanan malzemeye girilmiş malzeme blokajı", "Güncel veride olmayan malzemeye malzeme blokajı girilmiş:",
+                    _material_hold, closed=True),
 )
 BY_CODE = {(c.code, c.table): c for c in CHECKS}

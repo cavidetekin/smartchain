@@ -86,7 +86,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | ERP | Entegrasyondan gelir (API, Excel, SQL view'ları). | Material.Code, SalesOrderLine.OpenQuantity |
 | ERP, yoksa kural | ERP'de varsa oradan; yoksa veri kuralıyla doldurulur. | Material.MaterialLevel, Resource.IsCritical |
 | Kural ya da elle | ERP'de genelde yok; veri kuralıyla ya da ana veri ekranında elle. | Material.IsCustomTracked |
-| Smartchain (parametre) | Smartchain'de tanımlanan planlama parametresi; parametre setine bağlı. | ResourceEfficiency.EfficiencyPct, AllocationRule.SharePct |
+| Smartchain (parametre) | Smartchain'de tanımlanan planlama parametresi; parametre setine bağlı. | ResourceEfficiency.EfficiencyPct, MaterialHold.ClosePct |
 | Kullanıcı | Kullanıcının ekrandan girdiği tanım. | DataRule, ScenarioDefinition |
 | Sistem | Sistemin ürettiği ya da System owner'ın yönettiği değer. | Id alanları, PlanRun, Job |
 | Ön hesap | Ön hesapta türetilen değer. | WorkOrderComponent.RemainingQuantity |
@@ -98,7 +98,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
 - **Kaynak  10 tablo:** Resource · ResourceGroup · ResourceGroupMember · EmployeeAbsence · WorkPattern · ResourceEfficiency · OvertimeLimit · ResourceDowntime · FactoryCalendar · ResourceGroupConstraint
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
-- **Parametre  7 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · AllocationRule · WarningThreshold
+- **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · WarningDefinition · WarningThreshold
 - yükleme
 - **Talep  3 tablo:** Customer · SalesOrderLine · Forecast
 - **Arz ve stok  8 tablo:** Stock · BorrowPayback · WorkOrder · PurchaseOrderLine · TransferOrder
@@ -148,6 +148,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Supplier:** Tedarikçi ve fasoncu
 - **MaterialSupplier:** Malzeme–tedarikçi ilişkisi
 - **SupplierLimit:** Tedarikçi dönem üst limiti; malzeme boşsa kapalı dönem
+- **MaterialHold:** Malzeme blokajı: belli tarihlerde yeni tedarik planı çıkarılmaz (K-193)
 - **ProductionVersion:** Üretim versiyonu: bir malzemenin ürün ağacı ve rota başlığı
 - Ürün ağacı satırı
 - Rota satırı: operasyon–kaynak
@@ -192,7 +193,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **TimeBucketDefinition:** Zaman yapısı: senaryonun ufuk ve dönem dizisi (plan ve raporlama ekseni)
 - **ObjectiveDefinition:** Senaryonun hedefleri: sıra, süre bütçesi, ödün payı (leksikografik)
 - **PriorityRule:** Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih)
-- **AllocationRule:** Faz 1 dışı (K-192): kapasite alokasyonu, talep sınıfına kaynak grubu ve dönem bazında pay
 - **WarningDefinition:** Uyarı kataloğu: kod ve kategori (K-190)
 - **WarningThreshold:** Senaryonun uyarı eşikleri: kademeli eşik, önem, aktiflik (K-190)
 
@@ -518,6 +518,29 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | UpperLimit | decimal(18,4) |  | Üst limit (sıfırdan büyük), malzemenin temel biriminde; yalnız üst limitte | Limit | Smartchain (parametre) | H | H |  |
 | LimitPeriod | nvarchar(10) |  | Gün \| Hafta \| Ay \| Çeyrek \| Yıl | Limitin dönemi | Smartchain (parametre) | H | H |  |
 | Reason | nvarchar(255) |  | Sebep (serbest metin, isteğe bağlı); üst limitte ve kapanışta | Sebep | Smartchain (parametre) | H | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş |  | Sistem | H | H |  |
+
+### MaterialHold
+<sub>21. Veri modeli · Malzeme</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Malzeme blokajı (K-193): malzeme için belli tarihlerde yeni tedarik planı (üretim, satın alma ya da ikisi) çıkarılmaz. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Geçersiz yapılan kayıt uygulanmaz; izleyen senaryoda Baz satırı fark satırıyla geçersiz yapılır | Geçerli | Smartchain (parametre) | H | E | 1 |
+| LocationId | int | FK,IX | Lokasyon (malzemenin lokasyonu) | Lokasyon | Smartchain (parametre) | H | E |  |
+| MaterialId | bigint | FK,IX | Malzeme | Malzeme | Smartchain (parametre) | H | E |  |
+| HoldType | nvarchar(25) |  | Üretim \| Satın alma \| Üretim ve satın alma | Tür | Smartchain (parametre) | H | E |  |
+| StartDate | date |  | Başlangıç | Başlangıç | Smartchain (parametre) | H | E |  |
+| EndDate | date |  | Bitiş; boşsa süresiz (ufkun sonuna kadar) | Bitiş | Smartchain (parametre) | H | H |  |
+| ClosePct | decimal(5,2) |  | Dönemi kapatma oranı (%): blokaj plan döneminin takvim günlerinin en az bu oranını kapsıyorsa dönem kapalıdır; 0'dan büyük, en çok 100 | Dönemi kapatma oranı (%) | Smartchain (parametre) | H | E |  |
+| Reason | nvarchar(255) |  | Sebep (serbest metin, isteğe bağlı) | Sebep | Smartchain (parametre) | H | H |  |
 | UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
 | UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş |  | Sistem | H | H |  |
 
@@ -1039,23 +1062,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Criterion | nvarchar(30) |  | Kriter |  | Smartchain (parametre) | E | E |  |
 | Direction | nvarchar(10) |  | Artan \| Azalan | Yön | Smartchain (parametre) | H | H | Artan |
 
-### AllocationRule
-<sub>21. Veri modeli · Parametre</sub>
-
-- Parametre · versiyonsuz · Faz 1
-- Faz 1 dışı (K-192): kapasite alokasyonu, talep sınıfına kaynak grubu ve dönem bazında pay (K-180). Tablo durur, hiçbir ekran ve motor okumaz.
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
-| DemandClass | nvarchar(100) |  | Talep sınıfı tanımı (müşteri, proje, ürün grubu) | Talep sınıfı | Smartchain (parametre) | H | E |  |
-| ResourceGroupId | bigint | FK | Kaynak grubu |  | Smartchain (parametre) | H | H |  |
-| ValidFrom | date |  | Başlangıç |  | Smartchain (parametre) | H | H |  |
-| ValidTo | date |  | Bitiş |  | Smartchain (parametre) | H | H |  |
-| SharePct | decimal(6,2) |  | Pay (%) |  | Smartchain (parametre) | E | E |  |
-| Hardness | nvarchar(10) |  | Taban \| Tavan \| Yumuşak | Sınır tipi | Smartchain (parametre) | H | H | Yumuşak |
-
 ### WarningDefinition
 <sub>21. Veri modeli · Parametre</sub>
 
@@ -1204,7 +1210,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | NewValue | nvarchar(400) |  | Yeni değer (metin) | Sistem | H | H |  |
 | DataVersionId | bigint |  | Değişikliğin olduğu veri versiyonu; Smartchain girişinde o anki güncel versiyon | Sistem | H | H |  |
 | At | datetime2 |  | Zaman (UTC) | Sistem | H | E |  |
-| Source | nvarchar(40) |  | Aktarım \| Manuel değer \| Manuel değer kaldırma \| Kapasite yönetimi \| Malzeme blokajı | Sistem | H | E |  |
+| Source | nvarchar(40) |  | Aktarım \| Manuel değer \| Manuel değer kaldırma \| Kapasite yönetimi \| Model kısıtları | Sistem | H | E |  |
 | UserId | int |  | Değiştiren kullanıcı; aktarımda aktarımı başlatan, zamanlanmış işte boş | Sistem | H | H |  |
 | DataRuleId | bigint |  | Aktarımda hücreyi değiştiren kural | Sistem | H | H |  |
 | Note | nvarchar(100) |  | Not (ör. "Manuel değer korundu") | Sistem | H | H |  |

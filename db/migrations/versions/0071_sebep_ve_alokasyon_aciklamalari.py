@@ -20,6 +20,8 @@ depends_on = None
 
 OLD_REASON = 'Kapanışın sebebi (serbest metin); yalnız kapanışta'
 OLD_ALLOCATION = 'Kapasite alokasyonu: talep sınıfına kaynak grubu ve dönem bazında pay (K-180).'
+# Tablo 0072'de kalktı (K-193): açıklaması artık modelden okunamaz, burada sabittir
+NEW_ALLOCATION = 'Faz 1 dışı (K-192): kapasite alokasyonu, talep sınıfına kaynak grubu ve dönem bazında pay (K-180). Tablo durur, hiçbir ekran ve motor okumaz.'
 
 
 def _table_comment(table: str, text: str) -> None:
@@ -33,7 +35,7 @@ def upgrade():
     reason = metadata.tables['param.SupplierLimit'].c.Reason
     op.alter_column('SupplierLimit', 'Reason', existing_type=sa.Unicode(length=255), existing_nullable=True, comment=reason.comment, existing_comment=OLD_REASON,
                     schema='param')
-    _table_comment('AllocationRule', metadata.tables['param.AllocationRule'].comment)
+    _table_comment('AllocationRule', NEW_ALLOCATION)
     if not context.is_offline_mode():  # bağlantısız SQL betiğinde satırlar yazılmaz; ilk bağlantılı geçişte kurulur
         sync(op.get_bind(), metadata)
 

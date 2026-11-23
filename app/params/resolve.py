@@ -35,9 +35,11 @@ CAPACITY_TABLES = tuple(FIELDS)
 FIELDS["ResourceGroupConstraint"] = ("ResourceGroupId", "UnconstrainedCapacityFactor", "TargetUtilizationPct")
 # Tedarikçi limiti (K-191): iki kayıt türü tek tabloda; kapasite hesabına girmez
 FIELDS["SupplierLimit"] = ("LimitType", "LocationId", "SupplierId", "MaterialId", "ValidFrom", "ValidTo", "UpperLimit", "LimitPeriod", "Reason")
+# Malzeme blokajı (K-193): blokajlar birleşir (çakışma anahtarı yok); kapasite hesabına girmez
+FIELDS["MaterialHold"] = ("LocationId", "MaterialId", "HoldType", "StartDate", "EndDate", "ClosePct", "Reason")
 BASE, DIFF, OWN = "Baz", "Senaryo farkı", "Senaryo"
 # Senaryo çakışmasının anahtarı (aynı sahip ve aynı başlangıç): yalnız başlangıcı tekil olan tablolar. Birleşen kayıtlarda (duruş, kapanış, fabrika
-# takvimi) çakışma yoktur. İkinci öğe: anahtarın geçerli olduğu satırlar ({a}: tablo takma adı); boşsa bütün satırlar.
+# takvimi, malzeme blokajı) çakışma yoktur. İkinci öğe: anahtarın geçerli olduğu satırlar ({a}: tablo takma adı); boşsa bütün satırlar.
 KEYS: dict[str, tuple[tuple[str, ...], str]] = {
     "WorkPattern": ((*OWNER, "ValidFrom"), ""),
     "ResourceEfficiency": ((*OWNER, "ValidFrom"), ""),

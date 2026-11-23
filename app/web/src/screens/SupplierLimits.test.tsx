@@ -112,7 +112,7 @@ describe("ekran 31 · Model kısıtları › Tedarikçi limiti (K-191, 7.12)", (
   it("ikinci sekme; Kayıtlar'da iki tür aynı listede; Lokasyon kodun solunda; türe uymayan hücre düzenlenmez; istek seçili senaryoyu taşır", async () => {
     const { queries } = await open();
     const tabs = within(screen.getByRole("radiogroup", { name: "Model kısıtları bölümleri" })).getAllByRole("radio");
-    expect(tabs.map((t) => [t.textContent, t.getAttribute("aria-checked")])).toEqual([["Kaynak grubu", "false"], ["Tedarikçi limiti", "true"]]);
+    expect(tabs.map((t) => [t.textContent, t.getAttribute("aria-checked")])).toEqual([["Kaynak grubu", "false"], ["Tedarikçi limiti", "true"], ["Malzeme blokajı", "false"]]);
     expect(screen.getByRole("combobox", { name: "Tablo" })).toHaveValue("kayitlar");                                       // tablo seçimi Kayıtlar · Geçerlilik
     expect(screen.getByRole("button", { name: "Yeni kayıt" })).toBeInTheDocument();
     expect(queries[LIST][0]).toMatchObject({ scenario_id: 1 });

@@ -33,6 +33,13 @@ SUPLIM_STEADY = ("TED-01", 600, 800)        # tedarikçinin ilk malzemesi: 600 /
 SUPLIM_WEEKLY = ("TED-02", 150)             # tedarikçinin ilk malzemesi: 150 / hafta
 SUPLIM_WEEKLY_DIFF = 300                    # "Kısıtsız kapasite" senaryosunda aynı limit (fark)
 SUPLIM_HOLIDAY = "TED-03"                   # yıl sonu tatilinde bütün malzemelerde kapalı
+# Malzeme blokajı (K-193): tür adları ve örnek malzemeler; hepsi dönemi kapatma oranı %50 ile
+HOLD_PRODUCTION, HOLD_PURCHASE, HOLD_BOTH = "Üretim", "Satın alma", "Üretim ve satın alma"
+HOLD_PCT = 50.0
+HOLD_OPEN_MATERIAL = "SAT-030"              # süresiz "Satın alma" blokajı (üretim gününden 5 ay sonraki ayın başından itibaren)
+HOLD_PARTIAL_MATERIAL = "ALT-020"           # hem üretilen hem satın alınan (üç tür de girilebilir); iki kısmi blokaj: 10 gün (ay açık), 20 gün (ay kapalı)
+HOLD_PARTIAL_SUPPLIER = "TED-06"            # ALT-020'nin tedarikçisi (malzeme tedarikçisi kaydı)
+HOLD_SHORT_DAYS, HOLD_LONG_DAYS = 10, 20
 MODEL_CONSTRAINT_OWN = ("TASLAMA", 1.25)       # "Kısıtsız kapasite": senaryonun kendi değeri (Baz'da yok)
 HISTORY_DAYS = 21
 
@@ -777,7 +784,37 @@ def _params(b: _Builder) -> None:
     for seq, (criterion, direction) in enumerate([("Dönem", "Artan"), ("Müşteri önceliği", "Artan"),
                                                   ("Proje önceliği", "Artan"), ("Teslim tarihi", "Artan")], 1):
         b.add("param.PriorityRule", with_id=False, ScenarioDefinitionId=1, Seq=seq, Criterion=criterion, Direction=direction)
+    _make_or_buy(b)
     _supplier_limits(b)
+    _material_holds(b)
+
+
+def _make_or_buy(b: _Builder) -> None:
+    """Hem üretilen hem satın alınan malzeme (K-193; docs/11): `ALT-020` üretilir, gerektiğinde dışarıdan da alınır. Öteki üretimler (stok, sipariş,
+    satın alma) tamamlandıktan sonra işaretlenir: tohumlu üretimin sırası değişmez. Satın alınan malzemenin malzeme tedarikçisi kaydı da eklenir."""
+    m = b.find("Material", HOLD_PARTIAL_MATERIAL)
+    m.update(IsPurchasable=True, GoodsReceiptDays=1)
+    b.add("MaterialSupplier", LocationId=1, MaterialId=m["Id"], SupplierId=b.id("Supplier", HOLD_PARTIAL_SUPPLIER), IsActive=True, Priority=1, QuotaRatio=None,
+          FixedLeadTimeDays=14, VariableLeadTimeDays=None, LeadTimeBasis="Takvim günü", MinimumOrderQuantity=None, OrderLotSize=None, MaximumOrderQuantity=None)
+
+
+def hold_months(ds: "Dataset") -> tuple[date, date, date]:
+    """Malzeme blokajı örneklerinin ayları: üretim gününden 3, 4 ve 5 ay sonraki takvim aylarının ilk günü (plan ekseninin aylık dönemleri)."""
+    return _first_of_month(ds.start, 3), _first_of_month(ds.start, 4), _first_of_month(ds.start, 5)
+
+
+def _material_holds(b: _Builder) -> None:
+    """Malzeme blokajı (7.13, K-193; docs/11): süresiz bir "Satın alma" blokajı ve aynı malzemede dönemi kısmen kapsayan iki blokaj (oranın altı: ay
+    açık kalır; oranın üstü: ay kapanır)."""
+    short, long, open_from = hold_months(b.ds)
+
+    def hold(material: str, kind: str, start: date, end: date | None, reason: str) -> None:
+        b.add("param.MaterialHold", ScenarioDefinitionId=1, IsValid=True, LocationId=1, MaterialId=b.id("Material", material), HoldType=kind, StartDate=start,
+              EndDate=end, ClosePct=HOLD_PCT, Reason=reason)
+
+    hold(HOLD_PARTIAL_MATERIAL, HOLD_PRODUCTION, short, short + timedelta(days=HOLD_SHORT_DAYS - 1), "Hat bakımı")           # 10 gün: ay açık
+    hold(HOLD_PARTIAL_MATERIAL, HOLD_BOTH, long, long + timedelta(days=HOLD_LONG_DAYS - 1), "Tasarım değişikliği")           # 20 gün: ay kapalı
+    hold(HOLD_OPEN_MATERIAL, HOLD_PURCHASE, open_from, None, "Tedarikçi geçişi")                                             # süresiz
 
 
 def supplier_material(ds_or_builder, supplier: str, nth: int = 0) -> dict:

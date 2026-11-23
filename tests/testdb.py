@@ -179,13 +179,24 @@ def _has_supplier_limits(engine: Engine) -> bool:
                                     "WHERE s.IsBase = 1 AND l.LimitType = N'Kapanış'")).scalar() >= 2
 
 
+def _has_material_holds(engine: Engine) -> bool:
+    """Sentetik set malzeme blokajı örneklerini taşıyor mu (7.13, K-193): eski setle kurulmuş test veritabanı yeniden yüklenir."""
+    with engine.connect() as conn:
+        holds = conn.execute(sa.text("SELECT COUNT(*) FROM param.MaterialHold h JOIN param.ScenarioDefinition s ON s.Id = h.ScenarioDefinitionId "
+                                     "WHERE s.IsBase = 1")).scalar()
+        # hem üretilen hem satın alınan malzeme (docs/11): bu olmadan kurulmuş set eskidir
+        both = conn.execute(sa.text("SELECT COUNT(*) FROM core.Material WHERE VersionTo IS NULL AND IsProducible = 1 AND IsPurchasable = 1")).scalar()
+    return holds >= 3 and both >= 1
+
+
 def ensure_synthetic(engine: Engine) -> bool:
     """Sentetik veri yoksa yükler (docs/11); varsa dokunmaz. Yüklediyse True."""
     with engine.connect() as conn:
         row = conn.execute(sa.text(
             "SELECT TOP 1 v.IsSynthetic, (SELECT COUNT(*) FROM core.Material m WHERE m.VersionFrom <= v.Id "
             "AND (m.VersionTo IS NULL OR m.VersionTo >= v.Id)) FROM adm.DataVersion v ORDER BY v.Id DESC")).first()
-    if row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine) and _has_warning_thresholds(engine) and _has_supplier_limits(engine):
+    if (row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine) and _has_warning_thresholds(engine) and _has_supplier_limits(engine)
+            and _has_material_holds(engine)):
         return False
     from app.data.synthetic.dataset import generate
     from app.data.synthetic.load import load

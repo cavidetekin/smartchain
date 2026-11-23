@@ -53,11 +53,14 @@ const pct = (n: number) => `${(n * 100).toFixed(3)}%`;
 const percentText = (value: number) => `%${formatNumber(value, Number.isInteger(value) ? 0 : Number.isInteger(value * 10) ? 1 : 2)}`;
 const clampZoom = (zoom: number) => Math.min(ABOVE_MAX_ZOOM, Math.max(1, Math.round(zoom * 100) / 100));
 
-interface Segment { row: Row; left: number; width: number; text: string; lines: string[]; own: boolean; top: boolean }
+interface Segment { row: Row; left: number; width: number; text: string; lines: string[]; tone: SpanTone; outline: boolean; top: boolean }
+/** Dilimin tonu (zaman çubuğunun kendi renkleri): nane, amber, mercan (K-193: iki tedarik biçimi birden). */
+export type SpanTone = "group" | "own" | "both";
 interface Line { key: string; code: string; title: string; segments: Segment[] }
 /** Bir satırın zaman çubuğundaki yeri ve yazımı (sahipten bağımsız kullanım, K-191). key: satırın anahtarı; code: solda yazan ad; text: dilimde
- *  yazan; own: amber dilim (değilse nane); top: üstte çizilir (ör. kapanış, üst limitin üstünde); lines: ipucunun satırları. */
-export interface SpanInfo { key: string; code: string; title: string; text: string; own: boolean; top?: boolean; lines: string[] }
+ *  yazan; own: amber dilim (değilse nane); tone: verilirse ton (own'un yerine); outline: dolgusuz, çerçeveli dilim (K-193: blokajlı ama açık kalan
+ *  dönem); top: üstte çizilir (ör. kapanış, üst limitin üstünde); lines: ipucunun satırları. */
+export interface SpanInfo { key: string; code: string; title: string; text: string; own: boolean; tone?: SpanTone; outline?: boolean; top?: boolean; lines: string[] }
 /** Geçerlilik görünümünün sahipten bağımsız tanımı (K-191: tedarikçi limiti). */
 export interface ValidityCustom {
   list: string; entry: EntrySpec;
@@ -66,6 +69,8 @@ export interface ValidityCustom {
   /** Geçerlilik tablosunun kolon genişlikleri (rem). */
   hints?: FieldHints;
   describe(row: Row): SpanInfo;
+  /** Zaman çubuğu için satırları birleştirir (K-193: dönemin iki tedarik biçimi tek dilim); dönen satırlar `ValidFrom` ve `ValidTo` taşır. */
+  merge?(rows: Row[]): Row[];
   /** Aralığın geldiği kaydı Kayıtlar listesinde bulmak için sahip süzmesi (`OwnerKeys` değeri). */
   ownerKey(row: Row): string;
   /** "Yeni kayıt"ta dolu gelen sahip. */
@@ -105,7 +110,8 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
       }
       if (to < from) continue;
       if (custom) {
-        line.segments.push({ row, left: (from - start) / total, width: (to - from + 1) / total, text: custom.text, own: custom.own, top: Boolean(custom.top), lines: custom.lines });
+        line.segments.push({ row, left: (from - start) / total, width: (to - from + 1) / total, text: custom.text, tone: custom.tone ?? (custom.own ? "own" : "group"),
+                             outline: Boolean(custom.outline), top: Boolean(custom.top), lines: custom.lines });
         continue;
       }
       const own = row.SourceLevel === LEVEL_RESOURCE;
@@ -113,7 +119,7 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
       const text = percent ? percentText(number) : formatNumber(number, decimals);
       const unit = percent || !row.CapacityUnit ? "" : ` ${String(row.CapacityUnit)}`;
       const range = row.ValidTo ? `${trDate(String(row.ValidFrom))} – ${trDate(String(row.ValidTo))}` : T.view.since(trDate(String(row.ValidFrom)));
-      line.segments.push({ row, left: (from - start) / total, width: (to - from + 1) / total, text, own, top: false,
+      line.segments.push({ row, left: (from - start) / total, width: (to - from + 1) / total, text, tone: own ? "own" : "group", outline: false, top: false,
                            lines: [title, `${label}: ${text}${unit}`, range, own ? T.view.ownRecord : T.view.groupRecord,
                                    ...(row.SourceOrigin === ORIGIN_DIFF ? [T.view.scenarioDiff] : [])] });
     }
@@ -212,7 +218,7 @@ export function ValidityTimeline({ rows, horizon, value, decimals, label, percen
               {model.months.slice(1).map((m) => <i key={m.key} className="sc-validity-tick" style={{ left: pct(m.left) }} aria-hidden="true" />)}
               {line.segments.map((s) => (
                 <button type="button" key={String(s.row.Id)} title={s.lines.join("\n")} aria-label={s.lines.join(", ")} aria-pressed={picked === s.row.Id}
-                        className={`sc-validity-span ${s.own ? "is-own" : "is-group"}${picked === s.row.Id ? " is-picked" : ""}`}
+                        className={`sc-validity-span is-${s.tone}${s.outline ? " is-outline" : ""}${picked === s.row.Id ? " is-picked" : ""}`}
                         style={{ left: pct(s.left), width: pct(s.width) }} onClick={() => onPick?.(s.row)}
                         onContextMenu={(e: ReactMouseEvent<HTMLElement>) => { if (!onMenu) return; e.preventDefault(); onMenu(s.row, e.currentTarget); }}>
                   <span className="sc-validity-chip"><b>{s.text}</b></span>
@@ -292,7 +298,7 @@ export function ValidityView({ kind, custom, filters, lead, end, compact, reload
                  above={horizon ? (rows, pane) => {
                    onZoomOf.current = pane.setZoom;
                    return (
-                     <ValidityTimeline rows={rows} horizon={horizon} value={spec.value} decimals={spec.decimals} label={spec.label} percent={spec.percent}
+                     <ValidityTimeline rows={custom?.merge ? custom.merge(rows) : rows} horizon={horizon} value={spec.value} decimals={spec.decimals} label={spec.label} percent={spec.percent}
                                        zoom={pane.zoom} onZoom={onZoom} picked={picked?.id ?? null} describe={custom?.describe} corner={custom?.corner} labelRem={custom?.labelRem}
                                        onPick={(row) => setPicked((cur) => ({ id: row.Id, n: (cur?.n ?? 0) + 1 }))}
                                        onMenu={(row, anchor) => { if (items(row).length) setMenu({ row, anchor }); }} />

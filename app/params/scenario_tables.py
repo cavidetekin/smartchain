@@ -1,7 +1,7 @@
 """Senaryoya bağlı tabloların kayıt defteri (K-176, K-177): kopyalama, silme ve "Baz'dan ayır" bu listeyi dolaşır.
 
 Tür:
-- Ayar: tam kopya (parametreler, hedefler, planlama ufku, öncelik ve alokasyon kuralları). Kopyalanınca tamamı gelir; ayırmadan etkilenmez.
+- Ayar: tam kopya (parametreler, hedefler, planlama ufku, öncelik kuralları, uyarı eşikleri). Kopyalanınca tamamı gelir; ayırmadan etkilenmez.
 - Veri: "Baz + fark" (kapasite, limitler, blokaj). Baz'ın satırları temel veridir; öteki senaryo yalnız Baz'dan farkını tutar. Kopyalamada
   kaynağın kendi satırları gelir (kaynak Baz ise hiçbiri: yeni senaryo onları Baz'dan okur). "Baz'dan ayır"da ve "Baz'ı izler: Hayır" ile açılan
   senaryoda tablonun `materialize` işlevi çağrılır: Baz'ın o anki değerleri senaryoya tam kopyalanır.
@@ -40,7 +40,6 @@ TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("ObjectiveDefinition", SETTING),
     ScenarioTable("TimeBucketDefinition", SETTING),
     ScenarioTable("PriorityRule", SETTING),
-    ScenarioTable("AllocationRule", SETTING),
     ScenarioTable("WarningThreshold", SETTING),   # uyarı eşikleri (K-190): ayar, tam kopya
     # Kapasite girişleri (K-185): fark yapısı ve çözümleme `app/params/resolve.py`'de
     *[ScenarioTable(name, DATA, resolve.materializer(name)) for name in resolve.FIELDS],

@@ -251,9 +251,9 @@ def test_resource_group_is_the_planning_unit():
     assert contract.entity("ResourceGroupMember").file_name == "smartchain_kaynak-grup-eslesmesi_v2.xlsx" and contract.entity("ResourceGroupMember").name == "Kaynak grup eşleşmesi"
     absence = {f.name: f for f in fields("EmployeeAbsence")}
     assert list(absence) == ["LocationCode", "ResourceCode", "AbsenceType", "StartDate", "EndDate", "HoursPerDay"]
-    load, rule = metadata.tables["planning.CapacityLoad"].c, metadata.tables["param.AllocationRule"].c
+    load = metadata.tables["planning.CapacityLoad"].c
     assert "ResourceGroupId" in load and "ResourceId" not in load and not load.ResourceGroupId.nullable     # plan ve yük grup düzeyinde
-    assert "ResourceGroupId" in rule and "ResourceId" not in rule
+    assert "param.AllocationRule" not in metadata.tables                                                    # alokasyon Faz 1 dışı; tablo kalktı (K-193)
 
 
 def test_routing_v3():

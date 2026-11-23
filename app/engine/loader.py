@@ -36,10 +36,8 @@ def load_parameters(session: Session, scenario_definition_id: int) -> ScenarioPa
                        for o in params.read_objectives(session, scenario_definition_id) if o["active"])
     rules = tuple(PriorityRule(r.Seq, r.Criterion, r.Direction or "Artan") for r in session.execute(text(
         "SELECT Seq, Criterion, Direction FROM param.PriorityRule WHERE ScenarioDefinitionId = :id ORDER BY Seq"), p))
-    allocation = tuple(dict(r) for r in session.execute(text(
-        "SELECT * FROM param.AllocationRule WHERE ScenarioDefinitionId = :id ORDER BY Id"), p).mappings())
     return ScenarioParameters(id=scenario_definition_id, name=name, settings=settings, time_buckets=plan, report_buckets=report,
-                              objectives=objectives, priority_rules=rules, allocation_rules=allocation)
+                              objectives=objectives, priority_rules=rules)
 
 
 def load_input(session: Session, plan_run_id: int, time_budget_seconds: int) -> EngineInput:

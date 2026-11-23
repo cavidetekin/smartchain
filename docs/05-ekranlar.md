@@ -49,7 +49,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **06 · Parametreler:** Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, planlama ufku, plan kararlılığı (K-175).
 - **30 · Kapasite yönetimi:** Seçili senaryonun kapasitesi: kaynak grubu × dönem özeti (çalışma günü, duruş, günlük kapasite, verimlilik, toplam ve kullanılabilir kapasite, ek mesai limiti); çalışma düzeni, bakım ve duruş, verimlilik, fabrika takvimi ve ek mesai limiti girişleri (7.9, K-185). Menüde Parametreler ile Senaryolar arasında. 7.9a: Kapasite özeti sekmesi uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş sekmeleri ve kartlar uygulandı (7.9b; sürüm 0.48.0, K-187); Geçerlilik görünümü (tablo seçimi Kayıtlar · Geçerlilik, zaman çubuğu) uygulandı (7.9c; sürüm 0.49.0, K-188).
-- **31 · Model kısıtları:** Seçili senaryoda kaynak grubunun model kısıtları: kısıtsız kapasite çarpanı ve hedef doluluk (7.10, K-189). İkinci sekme "Tedarikçi limiti": satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; Kayıtlar · Geçerlilik (7.12, K-191). Menüde Kapasite yönetimi ile Senaryolar arasında. Sekmeli (bu adımda tek sekme "Kaynak grubu"); her kaynak grubu bir satır, değer hücreye yazılır. Fonksiyon 103. 7.10: demo bekliyor.
+- **31 · Model kısıtları:** Seçili senaryoda kaynak grubunun model kısıtları: kısıtsız kapasite çarpanı ve hedef doluluk (7.10, K-189). İkinci sekme "Tedarikçi limiti": satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; Kayıtlar · Geçerlilik (7.12, K-191). Üçüncü sekme "Malzeme blokajı": malzeme için belli tarihlerde yeni tedarik planı çıkarılmaz; Kayıtlar · Geçerlilik (7.13, K-193; fonksiyon 99). Menüde Kapasite yönetimi ile Senaryolar arasında. Sekmeli (bu adımda tek sekme "Kaynak grubu"); her kaynak grubu bir satır, değer hücreye yazılır. Fonksiyon 103. 7.10: demo bekliyor.
 - **07 · Senaryolar:** Senaryoların listesi ve yönetimi: yeni senaryo (kopyalayarak), gece çalışsın ve gece sırası, Baz'ı izler, pasif, silme (K-177).
 
 ### Ekran listesi
@@ -127,7 +127,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **19 · Kural uygulama:** Her parti staging'e alınınca (çekim ya da Excel yükleme) otomatik çalışır; elle de tetiklenebilir (K-142).
 - **20 · Veri kalitesi kontrolü:** Ana veri ve işlem verisi uyarıları önem sırasıyla üretilir.
 - **21 · Kalite düzeltme aksiyonu:** Satırdan düzeltme ekranına gidilir ya da önerilen kural uygulanır.
-- **99 · Malzeme blokajı:** Malzemenin üretimi, satın alması ya da satışı belli bir dönem için durdurulur.
+- **99 · Malzeme blokajı:** Malzeme için belli tarihlerde yeni tedarik planı (üretim, satın alma ya da ikisi) çıkarılmaz (K-193; Model kısıtları'nın üçüncü sekmesi).
 
 #### PARAMETRE
 
@@ -304,7 +304,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Değerin kaynağı:** Her hücrede ERP, kural ya da elle etiketi görünür; varsayılan yoktur (K-138).
 - **Elle düzeltme:** Manuel değer girilir; alanın ayarına göre ERP ve kuralı ezer ya da ezmez.
 - **İz:** Her değişiklik kim, ne zaman, eski ve yeni değerle geçmişte tutulur.
-- **Malzeme blokajı (fonksiyon 99, K-126):** Aşama 7'de ayrı ekran (7.13, K-167); ana veri ekranında yok.
+- **Malzeme blokajı (fonksiyon 99, K-193):** Model kısıtları ekranının üçüncü sekmesi (7.13); ana veri ekranında yok.
 - **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; beş sekme: Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, K-169). Çok tablolu sekmede tablo seçimi araç çubuğunun başında açılır liste (kayıt sayılarıyla). Takvim ana veride değil, Kapasite yönetimi'nde (7.9, K-167). Manuel değer ve değerin kaynağı 6.2'de. Standart görünümde aktarılan bütün alanlar açık, tablo yana kayar; Aktif süzgeci yok (K-169).
 - **Uygulama (6.2, K-170, K-172):** uygulandı. "Manuel: Evet" alanlarda manuel değer hücre içinde (Ana veri ve İşlem verisi); ilk kolon "Manuel değer", köşe işareti, kaynak ipucu yalnız manuel değer ve kural sonucunda.
 - **Karar (6.3, K-171, K-173):** detay kartı ("Detay ›" rozeti): Geçmiş ve İlişkili kayıtlar; İşlem verisi'nde yalnız Geçmiş. Denetim izinde "Kayda git".

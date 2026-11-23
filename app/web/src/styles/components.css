@@ -986,6 +986,10 @@ tr.is-clickable { cursor: pointer; }
 .sc-validity [data-tight] > b { visibility: hidden; }   /* sığmayan yazı yazılmaz; ipucunda */
 .sc-validity-span.is-group > .sc-validity-chip { background-color: var(--span-group-bg); color: var(--span-group-text); }
 .sc-validity-span.is-own > .sc-validity-chip { background-color: var(--span-own-bg); color: var(--span-own-text); }
+.sc-validity-span.is-both > .sc-validity-chip { background-color: var(--span-both-bg); color: var(--span-both-text); }
+/* dolgusuz, çerçeveli dilim (K-193: blokajlı ama açık kalan dönem): çerçeve tonun yazı rengiyle; seçilince çerçeve kalınlaşır */
+.sc-validity-span.is-outline > .sc-validity-chip { background-color: transparent; border-color: currentColor; border-width: 1px; }
+.sc-validity-span.is-outline.is-picked > .sc-validity-chip, .sc-validity-span.is-outline:focus-visible > .sc-validity-chip { border-width: 2px; }
 .sc-validity-span:hover > .sc-validity-chip { filter: brightness(0.96); }
 /* seçili dilim: çerçeve çipin şeklini izler (aynı yuvarlaklık, taşma yok) ve yazı rengiyle çizilir */
 .sc-validity-span:focus-visible { outline: none; }

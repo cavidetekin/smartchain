@@ -1390,12 +1390,17 @@ export const tr = {
   },
   // Kapasite yönetimi (ekran 30, K-185)
   modelConstraints: {
-    title: "Model kısıtları", sections: "Model kısıtları bölümleri", tabs: { groups: "Kaynak grubu", suppliers: "Tedarikçi limiti" },
+    title: "Model kısıtları", sections: "Model kısıtları bölümleri", tabs: { groups: "Kaynak grubu", suppliers: "Tedarikçi limiti", holds: "Malzeme blokajı" },
     // Tedarikçi limiti (ikinci sekme; K-191)
     supplier: {
       title: "Tedarikçi limiti", type: "Tür", upper: "Üst limit", closure: "Tedarikçi kapanışı", supplier: "Tedarikçi", material: "Malzeme",
       limit: "Limit", period: "Limitin dönemi", reason: "Sebep", allMaterials: "Tümü", pickedMaterials: "Seçilen malzemeler",
       removeMaterial: (code: string) => `${code} seçimini kaldır`, corner: "Tedarikçi · Malzeme", closed: "Kapalı", dailyAverage: "Günlük ortalama",
+    },
+    // Malzeme blokajı (üçüncü sekme; K-193)
+    hold: {
+      title: "Malzeme blokajı", material: "Malzeme", type: "Tür", pct: "Dönemi kapatma oranı (%)", reason: "Sebep", corner: "Malzeme", threshold: "eşik",
+      days: (blocked: string, days: string) => `${blocked} / ${days} gün`,
     },
     factor: "Kısıtsız kapasite çarpanı", target: "Hedef doluluk (%)", history: "Geçmiş", cardTabs: "Kayıt bölümleri",
     record: (code: string) => `Kaynak grubu ${code}`,

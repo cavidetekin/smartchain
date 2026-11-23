@@ -30,8 +30,8 @@ LOAD_ORDER = [
 ]
 CAPACITY_TABLES = ["WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar"]  # kapasite girişleri (K-185)
 MODEL_TABLES = ["ResourceGroupConstraint"]  # model kısıtları (K-189)
-PARAM_ORDER = ["PriorityRule", "SupplierLimit", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
-PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "AllocationRule", "WarningThreshold", "SupplierLimit", *CAPACITY_TABLES,
+PARAM_ORDER = ["PriorityRule", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
+PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "WarningThreshold", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES,
                   *MODEL_TABLES]
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
 
@@ -252,6 +252,12 @@ def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> N
         "UpperLimit, LimitPeriod, Reason, UpdatedAt) SELECT :s, b.Id, N',UpperLimit,', b.IsValid, b.LimitType, b.LocationId, b.SupplierId, b.MaterialId, b.ValidFrom, "
         "b.ValidTo, :q, b.LimitPeriod, b.Reason, :now FROM param.SupplierLimit b WHERE b.ScenarioDefinitionId = :base AND b.LimitType = :t AND b.MaterialId = :m "
         "AND b.LimitPeriod = N'Hafta'"), {"s": mono, "base": base_id, "t": SUPLIM_UPPER, "m": weekly["Id"], "q": SUPLIM_WEEKLY_DIFF, "now": now})
+    # Kısıtsız kapasite (K-193): 20 günlük malzeme blokajı bu senaryoda geçersiz (Baz satırı silinmez; "Geçersiz yap")
+    from .dataset import HOLD_BOTH
+    conn.execute(text(
+        "INSERT INTO param.MaterialHold (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, LocationId, MaterialId, HoldType, StartDate, EndDate, ClosePct, Reason, "
+        "UpdatedAt) SELECT :s, b.Id, N',IsValid,', 0, b.LocationId, b.MaterialId, b.HoldType, b.StartDate, b.EndDate, b.ClosePct, b.Reason, :now "
+        "FROM param.MaterialHold b WHERE b.ScenarioDefinitionId = :base AND b.HoldType = :t"), {"s": mono, "base": base_id, "t": HOLD_BOTH, "now": now})
 
 
 def _drop_period_cache(conn: Connection) -> None:

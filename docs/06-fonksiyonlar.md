@@ -864,7 +864,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **19 · Kural uygulama:** Tablonun aktif kurallarını sırayla staging'in işlenmiş katmanında çalıştırmak; ham veri değişmez, her çalıştırma ham veriden başlar (K-140).
 - **20 · Veri kalitesi kontrolü:** Ana veri ve işlem verisini plan için gerekli tutarlılık kontrollerinden geçirip önem sırasıyla uyarı listesi üretmek; önceki listeyle karşılaştırıp neyin yeni, neyin kapandığını göstermek.
 - **21 · Kalite düzeltme aksiyonu:** Veri kalitesi uyarısından doğrudan düzeltmeye geçmek: kayda gidip elle düzeltmek, önerilen kuralı uygulamak, uyarıyı gerekçeyle 'bilerek böyle' kapatmak ya da kişiye atamak; tek tek ya da toplu.
-- **99 · Malzeme blokajı:** Belli bir dönem için malzemenin üretimini, satın almasını ya da satışını durdurmak.
+- **99 · Malzeme blokajı:** Malzeme için belli tarihlerde yeni tedarik planı (üretim, satın alma ya da ikisi) çıkarılmasını durdurmak (K-193).
 - **100 · Validasyon kuralı tanımlama:** Staging'deki veride hangi durumun Hata, Uyarı ya da Bilgi olacağını tablo başına tanımlamak; hazır kuralların sınıfını değiştirmek ya da kapatmak, kullanıcı kuralı eklemek, hata eşiğini girmek (K-136).
 - **101 · Dünden bugüne:** Ham veride tablo başına son veri ile önceki günün son verisini karşılaştırmak: satır sayısı değişimi, yeni gelen, gelmeyen ve güncellenen kayıtlar (K-159, K-160).
 - **102 · İşlem verisi görüntüleme:** Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi ve çalışan izni verisini Ana veri'nin düzeninde, salt okunur görüntülemek (K-169).
@@ -1659,22 +1659,26 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Mockup geçersiz (K-174):** kapanan uyarı listede görünmez; geri alma "Yok saymayı kaldır"dır.
 
 ### 99 · Malzeme blokajı
-<sub>24. Ekranlar ve fonksiyonlar · F99 · B Ana veri ve kurallar · Çalışma prensibi</sub>
+<sub>24. Ekranlar ve fonksiyonlar · F99 · B Ana veri ve kurallar · Çalışma prensibi (Geliştirme 7.13, K-193)</sub>
 
-- Belli bir dönem için malzemenin üretimini, satın almasını ya da satışını durdurmak. Mockup yok.
+- Malzeme için belli tarihlerde yeni tedarik planı (üretim, satın alma ya da ikisi) çıkarılmasını durdurmak. Mockup yok.
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü
-  - Nereden: Malzeme blokajı ekranı (Aşama 7, 7.13; K-167)
-- **01:** Malzeme seçilir, blokaj türü (üretim, satın alma ya da satış), başlangıç ve bitiş tarihi ile neden girilir.
-- **02:** Kayıt saklanır, iz bırakır; süresi biten blokaj kendiliğinden geçersiz olur, kayıt silinmez.
+  - Kim: Key user ve üstü; End user görür
+  - Nereden: Model kısıtları ekranı (31), üçüncü sekme "Malzeme blokajı"; tablo seçimi Kayıtlar · Geçerlilik
+- **Anlam:** blokaj yalnız yeni plan önerilerini durdurur. Açık iş emirleri ve açık satın alma siparişleri etkilenmez; plan onları gelecek arz sayar. Ürün ağacı için ek kural yoktur: eldeki stok kullanılır; stok bitince üst ürün kendiliğinden üretilemez. Satış blokajı yoktur.
+- **01:** "Yeni kayıt": malzeme (aramalı), tür (Üretim · Satın alma · Üretim ve satın alma), başlangıç, bitiş (boşsa süresiz), dönemi kapatma oranı (%) ve sebep girilir. Pencere tür ve oran boş açılır; zorunlu alan boşken Kaydet pasiftir.
+- **02:** Tür malzemenin tedarik biçimine uymalıdır: üretilmeyen malzemeye (`IsProducible` Hayır) "Üretim" içeren, satın alınmayan malzemeye (`IsPurchasable` Hayır) "Satın alma" içeren tür girilmez; alan boşsa izin verilir. Pencerede uymayan seçenek pasiftir.
+- **03:** Kayıt saklanır, iz bırakır (Geçmiş). Tür, tarihler, oran ve sebep tabloda da düzenlenir; lokasyon ve malzeme kayıttan sonra değişmez.
+- **04:** Geçerlilik: plan dönemi başına sonuç. Bir gün, türü o tedarik biçimini kapsayan geçerli kayıtlardan herhangi biri kapsıyorsa blokajlıdır (üst üste binen kayıtlar birleşir). Blokajlı gün ÷ dönemin takvim günü, dönemi kapatma oranına eşit ya da ondan büyükse dönem kapalı, küçükse açıktır (oran %50: 30 günün 14'ü açık, 15'i ve 16'sı kapalı). Kayıtların oranları farklıysa en düşük oran geçerlidir. Üretim ve Satın alma ayrı hesaplanır.
 - **GIRDI**
-  - LocationCode, MaterialCode, HoldType, StartDate, EndDate, Reason
-- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Tablosu 7.13'te açılır; kaydedilince yerinde güncellenir, izlenir (K-167).
-- **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motorda uygulanışı Aşama 10.
-- **Uygulama (K-126):** Henüz uygulanmadı; yalnız tanım.
+  - LocationId, MaterialId, HoldType, StartDate, EndDate, ClosePct, Reason (`param.MaterialHold`)
+- **Senaryo (K-176):** Baz + fark. Baz'ı izleyen senaryo Baz'ın kayıtlarını okur; değiştirdiği alan fark olarak durur, Baz kaydı o senaryo için geçersiz yapılabilir, "Senaryo farkını kaldır" Baz'a döndürür. Blokajlar birleştiği için aynı malzeme ve başlangıçla iki kayıt serbesttir (senaryo çakışması kuralı uygulanmaz).
+- **Kurallar:** Entegrasyon tablosu değildir: ERP'den ya da Excel'den gelmez, yüklemede ezilmez. Malzeme aktarımla kapanırsa kayıt durur ve veri kalitesinde uyarı çıkar (`SC.HOLD_ORPHAN`).
+- **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; blokaj bir sonraki plan hesabında dikkate alınır. Motor değerleri motor arayüzünden okur (`PlanningData.material_holds`, docs/09); uygulanışı Aşama 10.
+- **Uygulama (7.13, K-193):** uygulandı (7.13; sürüm 0.53.0, geçiş 0072, K-193; AllocationRule kaldırıldı).
 
 ### 100 · Validasyon kuralı tanımlama
 <sub>24. Ekranlar ve fonksiyonlar · F100 · B Ana veri ve kurallar · Çalışma prensibi (Geliştirme 3.4, K-136)</sub>
@@ -1838,7 +1842,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | OVER_TARGET_LOAD | Hedef doluluğun üstü |  |  | Hayır |
 
 - **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.14'te tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
-- **Parametre olmayanlar:** tedarikçi limiti Model kısıtları ekranının ikinci sekmesidir (7.12, K-191) ve malzeme blokajı ayrı veri giriş ekranıdır; fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.9). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
+- **Parametre olmayanlar:** tedarikçi limiti Model kısıtları ekranının ikinci sekmesidir (7.12, K-191) ve malzeme blokajı aynı ekranın üçüncü sekmesidir (7.13, K-193); fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.9). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
 - **Hata durumları:** geçersiz değer (liste dışı seçenek, sayı olmayan değer, sınır dışı) kaydı durdurur; bilinmeyen anahtar reddedilir.
 - **YENİDEN HESAPLANACAK ALANLAR:** kayıt hesap başlatmaz; bir sonraki plan hesabı (gece ya da çalışma) yeni değerleri okur. Veri kalitesinin tahmin ufku bir sonraki kontrolde güncellenir.
 - **Uygulama (7.1, K-175):** uygulandı. `app/params/` (katalog, servis), `GET/PUT /api/parameters`, `GET/PUT /api/parameters/objectives`; geçiş 0058 (parametre seti kalktı, Baz açıldı). Motor `ScenarioParameters` ile okur (docs/09).
@@ -2005,6 +2009,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - **Plan dönemine çevirme:** limit günlük ortalamaya çevrilir (Gün 1, Hafta 7; Ay, Çeyrek, Yıl için takvim günü) ve dönemin günleri için toplanır; kapalı günün katkısı sıfır. Dönemde limitsiz ve açık gün varsa dönem sınırsızdır; limiti olmayan tedarikçi yalnız dönemin tamamı kapalıysa o dönemde kapalıdır. Çok tedarikçili malzemede üst sınır limitlerin toplamıdır; birinin limiti yoksa sınırsız. Açık satın alma siparişleri limitten düşer.
   - **Ekran:** Kayıtlar · Geçerlilik; Kapasite yönetimi'ndeki bileşenlerle (Yeni kayıt, ⋯ menüsü, tablo içi düzenleme, senaryo farkı, kartta Geçmiş; zaman çubuğu). Lokasyon tablonun kendi alanıdır.
   - **Senaryo:** Baz + fark; izleyen senaryoda aynı tedarikçi, malzeme ve başlangıç için hem senaryonun hem Baz'ın kaydı varsa tek kayıt, senaryonun değeri, "Senaryo farkı" (genel kural, K-191 madde 10; Kapasite yönetimi girişlerinde de).
+- **Malzeme blokajı (7.13, K-193; aynı ekranın üçüncü sekmesi, fonksiyon 99):** uygulandı (7.13; sürüm 0.53.0, geçiş 0072, K-193; AllocationRule kaldırıldı). Tanımı fonksiyon 99'da.
 
 
 ### 25 · Alokasyon ve öncelik kuralı
@@ -2027,7 +2032,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Örnek sipariş kümesi (önizleme için, geçerli veriden)
 - **03:** Alokasyon: satır satır talep sınıfı × kaynak grubu × dönem aralığı için minimum (garanti) ve maksimum (tavan) kapasite payı girilir.
 - **04:** Anında kontrol: aynı kaynak grubu ve dönemde minimum paylar toplamı ≤ %100; maksimum ≥ minimum; dönem aralıkları bucket dizisinde.
-- **05:** 'Kaydet': PriorityRule ve AllocationRule yazılır; set sürümü artar; etkiler gösterilir (MRP netleştirme sırası, model ağırlıkları, alokasyon kısıtları).
+- **05:** 'Kaydet': PriorityRule yazılır (AllocationRule tablosu 7.13'te kaldırıldı, K-193); set sürümü artar; etkiler gösterilir (MRP netleştirme sırası, model ağırlıkları, alokasyon kısıtları).
 - **ÇIKTI**
   - PriorityRule (ölçüt, sıra, yön, ağırlık, aktif) ve AllocationRule (talep sınıfı, kaynak grubu, dönem, min, max)
   - Önizleme (örnek sıralama)

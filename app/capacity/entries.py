@@ -5,7 +5,7 @@ yazılır: yalnız değişen alanlar `OverriddenFields`'ta durur; değer Baz'dak
 izleyen senaryodan silinmez: o senaryo için geçersiz yapılır (`IsValid`).
 
 Giriş altyapısı ortaktır (K-191): "sahip" tanımı (`Owner`) parametrelidir. Kapasite girişlerinde sahip kaynak grubu ya da kaynaktır; tedarikçi
-limitinde lokasyon, tedarikçi ve malzeme (`app/supplierlimits`). Senaryo çakışması (aynı sahip ve başlangıç için hem senaryonun hem Baz'ın kaydı)
+limitinde lokasyon, tedarikçi ve malzeme (`app/supplierlimits`), malzeme blokajında lokasyon ve malzeme (`app/materialholds`). Senaryo çakışması (aynı sahip ve başlangıç için hem senaryonun hem Baz'ın kaydı)
 çözümleme katmanındadır (`resolve.KEYS`): senaryonun kendi satırı Baz satırını örter ve burada kendi satırı gibi yazılır; "Senaryo farkını kaldır"
 onu siler.
 
@@ -74,6 +74,7 @@ class Kind:
     fixed: dict = dataclass_field(default_factory=dict)       # türü belirleyen sabit alanlar (aynı tabloda birden çok tür: {"LimitType": "Üst limit"})
     source: str = "Kapasite yönetimi"                         # adm.FieldChange.Source
     rules: Callable[[dict], list[tuple[str, str]]] | None = None   # türün kendi kuralları: [(alan, neden)]
+    checks: Callable[[Session, dict], list[tuple[str, str]]] | None = None   # veriye bakan kurallar (K-193: tür malzemenin tedarik biçimine uyar)
 
     def field(self, name: str) -> Field | None:
         return next((f for f in self.fields if f.name == name), None)
@@ -299,6 +300,8 @@ def _problems(session: Session, kind: Kind, scope: Scope, row: dict, row_id: int
     if kind.table == "OvertimeLimit" and row.get("DailyLimit") is not None and row["DailyLimit"] < 0:
         bad("DailyLimit", "Negatif olamaz.")
     for name, problem in (kind.rules(row) if kind.rules else ()):
+        bad(name, problem)
+    for name, problem in (kind.checks(session, row) if kind.checks else ()):
         bad(name, problem)
     if kind.unique_start and kind.owner and start is not None and row.get("IsValid", True):
         key = kind.owner.key(row)
