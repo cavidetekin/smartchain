@@ -1,0 +1,119 @@
+# Pegging ve özel alokasyon: karar notları
+
+Tarih: 23–24.11.2026 görüşmeleri.
+
+**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi, K numarası almadı ve `GELISTIRME_ADIMLARI.md`'de adımı yok. Adımlar sırası geldikçe eklenecek; o adımda ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
+
+İşaretler: ✔ karar · ◻ öneri (onay yok) · ? açık konu
+
+---
+
+## 1. Özel alokasyon (sahiplik) kuralı
+
+- ✔ Tek kural: **anahtarlı arz yalnız sahibine gider; anahtarsız arz herkese açıktır.**
+- ✔ Paylaşım kuralları yok. **Proje grubu tablosu ve Takip kuralı kaldırılır.** Ödünç alma ve geri ödeme kapsam dışı.
+- ✔ Sahiplik hiyerarşisi: **sipariş → proje → müşteri** (en detaylıdan genele). Hiyerarşi talepten okunur.
+- ✔ Arzın anahtarı, dolu olan **en detaylı tek alandır** (siparişe ayrılmış arz yalnız siparişi taşır; müşteri ve proje yazılmaz).
+- ✔ Bir malzeme, bir sahip için ayrı izlenir (kendi üretimi, satın alması, bakiyesi) ancak **malzemenin kendisinde ya da alt seviyelerinde, özel alokasyonlu bir malzemede o sahibe ayrılmış arz varsa.** Yoksa genele (grup) düşer.
+- ✔ Belirleme modelden bağımsızdır: her sipariş için ürün ağacında (bütün alternatifler, üretim siparişleri dâhil) aşağı yürünür.
+- ✔ Takip seviyesi, malzemenin kendisinde ve altında bulunan en detaylı seviyedir. Alt seviyede sipariş bazlı takip varsa o siparişin akışı üstteki bütün seviyelerde ayrı kalır (yukarı doğru gevşemez, aşağı doğru gevşeyebilir).
+- ✔ Özel bakiye genel arzı kullanabilir; bu tek yönlü bir **aktarım** kararıdır ve yalnız mevcut genel arzın geldiği dönemlerde gerekir (1. dönem stok, açık siparişler).
+- ✔ Anahtarlı bakiyeler arasında aktarım yoktur. Bir malzemede müşteri, proje ve sipariş arzı birlikte varsa birbirine karışmaz; aktarım yalnız genelden gelir.
+- ✔ Kullanılmayan anahtarlı arz (fazla) boşta kalır ve listelenir. Yeni arz sahip başına ayrı açılır, partiler birleştirilmez, yuvarlama fazlası sahibinindir.
+- ✔ Senaryo parametresi (Parametreler › Malzeme): **"Özel alokasyon": Dikkate al · Dikkate alma.**
+- ◻ "Dikkate alma" seçilince anahtarlı arz da genele girer; bu durumda "sahibi dışında kullanılan ayrılmış arzlar" listesi çıkarılır.
+- ◻ Ayrılmış bir talep, her malzemede "o malzemenin kendisinde arzı olan en detaylı seviye + genel"i kullanır (ayrıntı teyit edilmedi).
+- ? Bugünkü "model proje görmez, tek havuz" ifadesi kıtlık durumunda yanlış sonuç veriyor; değişecek.
+
+## 2. Veri alanları ve tablolar
+
+- ✔ Ad her yerde **`IsCustomAllocated`** (`IsCustomTracked` yerine); arayüzde "Özel alokasyon". Faz 1'den çıkarılan "alokasyon / pay ayırma" konusu ile ilgisi yok.
+- ✔ **Malzemede** `IsCustomAllocated`: kuraldır; yalnız ERP'den ya da veri kuralıyla gelir, **elle girilmez**. Boşsa veri kalitesi uyarısı.
+- ✔ **Arz ve öneri satırlarında** `IsCustomAllocated`: süzme için vardır, **sistem hesaplar** (malzeme özel alokasyonluysa ve satırda sahip bilgisi varsa Evet).
+- ✔ ERP'den gelen satır bayrakları (stok, üretim siparişi, satın alma satırı, müşteri, satış siparişi satırı) sözleşmeden çıkar.
+- ✔ Bütün arzlarda (stok, üretim siparişi, satın alma) yüklemede sistem doldurur: **`AllocationLevel`** (Sipariş · Proje · Müşteri) ve **`AllocationKey`** (ör. `MUS-A`, `PRJ-01`, `SO-1003|10|1`).
+- ✔ Eşleşme seviye + anahtar ile yapılır (içeride Id). **Lokasyon anahtarın parçası değildir.**
+- ✔ Siparişe ayrılmış arzda kalem boşsa anahtar yalnız sipariş numarasıdır ve o siparişin bütün kalemlerine açıktır.
+- ✔ `planning.PlannedOrder`: **`ProjectId` kalkar**; `IsCustomAllocated`, `AllocationLevel`, `AllocationKey` eklenir (motor yazar).
+- ✔ Bakılacak: `PlannedOrder` çok dar (üretim alternatifi, lokasyon, kaynak yok); yapısı sonra yeniden ele alınacak.
+- ✔ Yeni **core** tablo **`MaterialAllocationRule`**: malzeme, lokasyon, `AllocationLevel`, `AllocationKey`, **sebep** (kendi arzı var · alt seviye yüzünden). Sistem üretir; elle değişmez; senaryo değildir; veri versiyonu değişince (yükleme dâhil) yeniden hesaplanır.
+
+## 3. Üretim akışı ekranı
+
+- ✔ Ad: **Üretim akışı** ("Ürün yapısı" reddedildi).
+- ✔ Bir malzemenin altındaki ve üstündeki bütün olası akışları ürün ağacından çizer; plandan, modelden ve senaryodan bağımsızdır.
+- ✔ **Kapalı açılır**: yalnız seçili malzeme görünür; her basış bir seviye açar.
+- ✔ Birden çok ürün ağacı alternatifi varsa önce "Alternatif 1, 2, 3" kutuları gelir, basılan alternatifin malzemeleri açılır; tek alternatif varsa malzemeler doğrudan açılır.
+- ✔ **Sol: beni kullananlar. Sağ: benim kullandıklarım.**
+- ✔ Okların ucu vardır ve malzemenin gittiği yönü gösterir.
+- ◻ Malzeme detayında bir sekme olarak yer alır; "Tümünü kapat" düğmesi; çift tıklama seçili malzemeyi değiştirir; aynı malzeme iki yolda açılırsa iki kutu görünür.
+- ◻ Çok kullanılan malzemede (ör. cıvata) açılan kutu sayısına sınır ("ilk 20 + kalanını göster").
+- ? `GELISTIRME_ADIMLARI.md`'de yeri yok; yeni adım olarak eklenecek, sırası belirlenmedi.
+- Mockup: `plans/7.15-mockups/uretim-akisi.html`
+
+## 4. Pegging: genel ilkeler ve öncelik (sıralama) kararları
+
+- ✔ Ad şimdilik **pegging**.
+- ✔ Pegging **modelden sonra** hesaplanır; **elle müdahale yoktur**, tamamen parametreyle yönetilir.
+- ✔ Tek seviyeli pegging ve **full (çok seviyeli) pegging** birlikte vardır.
+- ✔ Pegging **senaryo bazlıdır.**
+- ✔ Sürekli hesaplanan bir şey olmamalı; **üretim kararı ya da öncelik değişince** yeniden hesaplanır.
+- ✔ Parametre **"Full pegging yöntemi": FIFO · Talep termini.**
+  - FIFO: her seviye kendi ihtiyaç tarihine göre sıralanır.
+  - Talep termini: yalnız en üstteki talebin terminine göre sıralanır.
+- ✔ Bu ayrı bir parametredir; **Hedefler sırasından bağımsızdır** (model kararını vermiştir, pegging ayrıdır).
+- ✔ Müşteri ihtiyacı: uygulanabilir olduğu ve gecikme yaratmadığı sürece, ortak bir alt malzemenin ilk üretimi **termini en yakın siparişe** gitmelidir.
+- ✔ Tek seviyeli pegging'de sıralama kuralı işler.
+- ✔ İhtiyaç satırları: **talep karşılama, üretim ihtiyacı.**
+- ✔ **Güvenlik stoğu ihtiyaç satırı değildir**; artan arz "Güvenlik stoğu için" / "Fazla arz" olarak etiketlenir.
+- ✔ Arz satırları: stok, kalitedeki stok, üretim siparişi, satın alma siparişi, üretim planı, satın alma önerisi.
+- ✔ Stok ve satın almada sıralamaya **raf ömrü** de girer.
+- ◻ Algoritma: sipariş sipariş, yukarıdan aşağı; her malzemede planın bütün ihtiyaçlarına karşı uygulanabilirlik kontrolü (öncelikli sipariş yalnız başkasını geciktirmeyeni alır).
+- ? Sıralama ölçütlerinin kullanıcı tarafından sıralanabilir olması ve nihai ürün / yarı mamul / hammadde için ayrı sıralama isteği: mockup karmaşık bulundu, **çözülmedi**, yeniden ele alınacak. Mockup: `plans/7.15-mockups/pegging.html`
+
+## 5. Pegging'de eşleşme
+
+- ✔ Herkes allocation key üzerinden, hiyerarşiyle eşleşir. Bir ihtiyacın bakacağı arz sırası: Sipariş → Proje → Müşteri → Anahtarsız (genel).
+- ✔ **Genelden gelen miktar:** model aktarım miktarını plan çıktısına yazar; pegging o miktarı **aşamaz ve altında kalamaz**, yalnız arkasındaki gerçek arzı (hangi stok, hangi sipariş) kendi sıralamasıyla seçer. Amaç: pegging modelle çelişmesin.
+- ✔ **Sipariş ve tahminde anahtar yoktur**; talep yalnız kimliğini taşır (sipariş, proje, müşteri). Anahtar her malzemede `MaterialAllocationRule`'dan okunur, çünkü aynı sipariş bir malzemede özel, başka malzemede genel olabilir.
+- ✔ Her malzemede sorulur: kural tablosunda Sipariş var mı → Proje var mı → Müşteri var mı → yoksa genel. İlk bulunanda durur.
+- ✔ **Müşterili tahmin o müşteriye ayrılmış arzı kullanır.** Müşterisi boş tahmin her malzemede geneldir.
+- ✔ Üretim ihtiyacı, hizmet ettiği talebin kimliğini taşır; genel üretimin bileşen ihtiyacı kimliksizdir.
+
+## 6. Pegging sonuç tablosu ve görünümler
+
+- ✔ Üç görünüm: **Tek seviye · Çok seviye ağaç · Çok seviye akış.** Görsel olarak uygun bulundu; alt ayrıntılar yapım sırasında konuşulacak.
+- ✔ Çok seviyeli görünümler kapalı açılır; akış görünümü Üretim akışı ile aynı çizim bileşenini kullanır.
+- ◻ Tek tablo, **her satır bir bağ** (bir arzın bir ihtiyaca verdiği miktar). Bugünkü `planning.Pegging`'e eklenecekler: malzeme, lokasyon, arz tarihi, ihtiyaç tarihi, `AllocationLevel`, `AllocationKey`, genelden mi, kök talep türü, seviye, üst bağ. "Sabit ya da manuel bağ" alanı kalkar.
+- ◻ Pegging veritabanına yazılır (plan hesabına bağlı). Yeniden hesaplama: senaryo çalışınca, plan elle değiştirilip kaydedilince, pegging parametresi değişince. Ekran açılışında hesap yapılmaz.
+- ◻ Kaba boyut tahmini 250 bin – 1 milyon satır / plan hesabı; Aşama 10'da ölçülecek.
+- Mockup: `plans/7.15-mockups/pegging-sonuc.html`
+
+## 7. Pegging raporu ve plan satırları
+
+- ✔ **`PlannedOrder` genel kalır**, sahibe göre bölünmez.
+- ✔ Üretimin kime gittiğini (sipariş, proje, müşteri) **pegging'den türeyen ayrı bir rapor** gösterir: **Pegging raporu.**
+- ✔ Raporlar aşamasında konuşulacak; raporlar listesinde yoksa eklenecek. Müşterinin ERP'sine ne gideceği sorusu da bu raporla şekillenecek.
+
+## 8. Model kısıtları
+
+- ✔ Modele tek yeni boyut eklenir: **bakiye.** Her malzemede genel bakiye hep vardır; özel bakiye yalnız `MaterialAllocationRule`'da satır olan yerde açılır.
+- ✔ **Kapasite ortaktır**; bakiye yalnız malzeme tarafını böler.
+- ✔ Model yazılırken iki şeye bakılır: **"Özel alokasyon" parametresi** ve **`MaterialAllocationRule`.** Talebin kimliği ve arzın anahtarı veri olarak okunur. Model ürün ağacında yeniden yürümez.
+- ✔ Parametre "Dikkate alma" ise tek bakiye (genel) vardır.
+- ✔ Ayrıntı Aşama 10'da (motor) konuşulacak.
+- ◻ Bakiye modelleme katmanında bir indeks (0 = genel); bakiye listesi senaryo başında bellekte kurulur; aktarım miktarları için yeni bir plan çıktı tablosu; çalışma logunda özel bakiye ve değişken sayıları; "budanmış" ile "her şey ayrı" modelin küçük örneklerde aynı sonucu verdiğini gösteren otomatik test.
+- Deneme sonuçları (kesin değil, Aşama 10'da gerçek ölçek, kapasite, MILP ve sıralı hedeflerle tekrarlanacak): küçük örneklerde budanmış model tam modelle aynı sonucu verdi; 30 proje, 10.000 malzeme, 17 seviye, 12 dönemde model yaklaşık 1,3 kat büyüdü; tek havuz modeli ayrılmış arzları ihlal etti.
+
+## 9. Sözleşme dosyalarına işlenirken değişecekler
+
+- `IsCustomTracked` → `IsCustomAllocated` (bütün tablolar, arayüz, sözleşme).
+- Arzlara `AllocationLevel`, `AllocationKey`; ERP satır bayrakları sözleşmeden çıkar.
+- Yeni tablo `MaterialAllocationRule`.
+- `PlannedOrder`: `ProjectId` kalkar, alokasyon alanları eklenir.
+- `ProjectGroup` tablosu ve `TrackingRule` kalkar.
+- "Özel alokasyon" parametresi (Parametreler › Malzeme).
+- "Full pegging yöntemi" parametresi.
+- `planning.Pegging` yapısı; aktarım çıktısı.
+- Model artık tek havuz değil: bakiye boyutu.
+- Yeni ekran: Üretim akışı. Yeni rapor: Pegging raporu.
