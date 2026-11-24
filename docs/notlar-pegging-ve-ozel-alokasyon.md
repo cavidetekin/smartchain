@@ -11,7 +11,9 @@ Tarih: 23–24.11.2026 görüşmeleri.
 ## 1. Özel alokasyon (sahiplik) kuralı
 
 - ✔ Tek kural: **anahtarlı arz yalnız sahibine gider; anahtarsız arz herkese açıktır.**
-- ✔ Paylaşım kuralları yok. **Proje grubu tablosu ve Takip kuralı kaldırılır.** Ödünç alma ve geri ödeme kapsam dışı.
+- ✔ Paylaşım kuralları yok. **Proje grubu tablosu ve Takip kuralı kaldırılır.**
+- ✔ Ödünç ve geri ödeme tablosu (`BorrowPayback`) **kalır.**
+- ? Ödünç kayıtlarının modelde kullanılıp kullanılmayacağı yeniden ele alınacak; kullanılırsa siparişten pek farkı olmayan bir kayıt gibi düşünülebilir.
 - ✔ Sahiplik hiyerarşisi: **sipariş → proje → müşteri** (en detaylıdan genele). Hiyerarşi talepten okunur.
 - ✔ Arzın anahtarı, dolu olan **en detaylı tek alandır** (siparişe ayrılmış arz yalnız siparişi taşır; müşteri ve proje yazılmaz).
 - ✔ Bir malzeme, bir sahip için ayrı izlenir (kendi üretimi, satın alması, bakiyesi) ancak **malzemenin kendisinde ya da alt seviyelerinde, özel alokasyonlu bir malzemede o sahibe ayrılmış arz varsa.** Yoksa genele (grup) düşer.
