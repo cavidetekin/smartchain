@@ -16,6 +16,46 @@ from sqlalchemy.dialects import mssql
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit 8ae4a76); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'param.MaterialHold': {
+        '': 'Malzeme blokajı (K-193): malzeme için belli tarihlerde yeni tedarik planı (üretim, satın alma ya da ikisi) çıkarılmaz. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'BaseRowId': "Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş",
+        'OverriddenFields': 'Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur',
+        'IsValid': 'Geçersiz yapılan kayıt uygulanmaz; izleyen senaryoda Baz satırı fark satırıyla geçersiz yapılır',
+        'LocationId': 'Lokasyon (malzemenin lokasyonu)',
+        'MaterialId': 'Malzeme',
+        'HoldType': 'Üretim | Satın alma | Üretim ve satın alma',
+        'StartDate': 'Başlangıç',
+        'EndDate': 'Bitiş; boşsa süresiz (ufkun sonuna kadar)',
+        'ClosePct': "Dönemi kapatma oranı (%): blokaj plan döneminin takvim günlerinin en az bu oranını kapsıyorsa dönem kapalıdır; 0'dan büyük, en çok 100",
+        'Reason': 'Sebep (serbest metin, isteğe bağlı)',
+        'UpdatedAt': 'Son değişiklik zamanı (UTC)',
+        'UpdatedBy': 'Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş',
+    },
+    'adm.FieldChange': {
+        '': 'Alan değişikliği (K-173): ana veri ve işlem verisinde kaydın alanı her değiştiğinde, değişiklik anında aynı işlemde yazılır; detay kartının Geçmiş sekmesi buradan okunur. Yazanlar aktarım, manuel değer girme ve kaldırma ve Smartchain girişleridir. Değerler alanın tipinden metne çevrilmiş hâldedir. Silinmez.',
+        'Id': 'Kayıt kimliği',
+        'TableName': 'Tablo (core adı)',
+        'RecordKey': 'Kaydın kimliği: Id, bütün versiyonlarda aynı (K-63); birimde kod',
+        'FieldName': 'Alan; kayıt oluştu ya da kapandı satırında boş',
+        'ChangeType': 'Oluştu | Değişti | Kapandı',
+        'OldValue': 'Eski değer (metin)',
+        'NewValue': 'Yeni değer (metin)',
+        'DataVersionId': 'Değişikliğin olduğu veri versiyonu; Smartchain girişinde o anki güncel versiyon',
+        'At': 'Zaman (UTC)',
+        'Source': 'Aktarım | Manuel değer | Manuel değer kaldırma | Kapasite yönetimi | Model kısıtları',
+        'UserId': 'Değiştiren kullanıcı; aktarımda aktarımı başlatan, zamanlanmış işte boş',
+        'DataRuleId': 'Aktarımda hücreyi değiştiren kural',
+        'Note': 'Not (ör. "Manuel değer korundu")',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0072'
 down_revision = '0071'
@@ -30,7 +70,7 @@ DICTIONARY = ('FieldDefinition', 'ManualValue', 'FieldValueSource')   # sözlük
 
 
 def upgrade():
-    c = metadata.tables[f'param.{TABLE}'].c
+    c = FROZEN.tables[f'param.{TABLE}'].c
     op.create_table(TABLE,
     sa.Column('Id', sa.BigInteger(), autoincrement=True, nullable=False, comment=c.Id.comment),
     sa.Column('ScenarioDefinitionId', sa.Integer(), nullable=False, comment=c.ScenarioDefinitionId.comment),
@@ -50,7 +90,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ScenarioDefinitionId'], ['param.ScenarioDefinition.Id'], name=op.f('FK_MaterialHold_ScenarioDefinitionId')),
     sa.PrimaryKeyConstraint('Id', name=op.f('PK_MaterialHold')),
     schema='param',
-    comment=metadata.tables[f'param.{TABLE}'].comment,
+    comment=FROZEN.tables[f'param.{TABLE}'].comment,
     info={'field_class': 'Parametre'}
     )
     op.create_index(op.f('IX_MaterialHold_LocationId'), TABLE, ['LocationId'], unique=False, schema='param')
@@ -60,7 +100,7 @@ def upgrade():
         op.execute(f"DELETE FROM adm.[{table}] WHERE TableName = N'{GONE}'")
     op.drop_index(op.f('IX_AllocationRule_ResourceGroupId'), table_name=GONE, schema='param')
     op.drop_table(GONE, schema='param')
-    source = metadata.tables['adm.FieldChange'].c.Source
+    source = FROZEN.tables['adm.FieldChange'].c.Source
     op.alter_column('FieldChange', 'Source', existing_type=sa.Unicode(length=40), existing_nullable=False, comment=source.comment, existing_comment=OLD_SOURCE,
                     schema='adm')
     if not context.is_offline_mode():  # bağlantısız SQL betiğinde satırlar yazılmaz; ilk bağlantılı geçişte kurulur
@@ -68,7 +108,7 @@ def upgrade():
 
 
 def downgrade():
-    source = metadata.tables['adm.FieldChange'].c.Source
+    source = FROZEN.tables['adm.FieldChange'].c.Source
     op.alter_column('FieldChange', 'Source', existing_type=sa.Unicode(length=40), existing_nullable=False, comment=OLD_SOURCE, existing_comment=source.comment,
                     schema='adm')
     op.create_table(GONE,

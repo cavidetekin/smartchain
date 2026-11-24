@@ -17,6 +17,64 @@ import sqlalchemy as sa
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit da46820); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'adm.AppUser': {
+        '': "Uygulama kullanıcısı (Faz 1'de yerel).",
+        'Id': 'Kullanıcı kimliği',
+        'UserName': 'Kullanıcı adı',
+        'FullName': 'Ad soyad',
+        'Role': 'System owner | Admin | Key user | End user',
+        'PasswordHash': 'Özetlenmiş şifre; Argon2id PHC metni, tuz içinde (K-98); boşsa hesap arayüzden giremez',
+        'MustChangePassword': 'Şifre değiştirilmeli; ilk giriş ya da sıfırlama sonrası',
+        'PasswordChangeReason': 'İlk giriş | Sıfırlama | Süre doldu',
+        'PasswordChangedAt': 'Şifrenin son değiştiği zaman (UTC)',
+        'PasswordExpiresAt': 'Şifrenin süresinin dolduğu zaman (UTC); değişiklik anındaki politikayla hesaplanır',
+        'FailedAttempts': 'Art arda hatalı giriş',
+        'LockedUntil': 'Kilit bitişi (UTC); geçmişse ya da boşsa kilit yok',
+        'LastLoginAt': 'Son başarılı giriş (UTC)',
+        'IsActive': 'Aktif',
+        'FontSize': 'Yazı boyutu tercihi, px: 12, 13, 14 ya da 16 (U-23); boşsa seçilmedi, standart 13 geçerli',
+        'ScenarioDefinitionId': 'Kullanıcının son seçtiği senaryo (K-177); boşsa, senaryo pasifse ya da silinmişse Baz açılır',
+    },
+    'adm.AuditLog': {
+        '': 'Kim, ne zaman, neyi değiştirdi; giriş kayıtları; kayıtlar silinemez (K-109).',
+        'Id': 'Kayıt kimliği',
+        'UserId': 'Kullanıcı',
+        'At': 'Zaman',
+        'Action': 'İşlem',
+        'ObjectType': 'Nesne',
+        'ObjectKey': 'Kayıt',
+        'OldValue': 'Önceki',
+        'NewValue': 'Yeni',
+        'ScenarioName': 'Senaryoya bağlı işlemde senaryonun adı (K-177); veri yönetimi işlemlerinde boş. Ad olarak saklanır: senaryo silinse de iz okunur',
+    },
+    'param.ScenarioDefinition': {
+        '': 'Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz.',
+        'Id': 'Tanım kimliği',
+        'LocationId': 'Lokasyon; Baz kurulumda veri gelmeden açıldığı için boş olabilir',
+        'Name': 'Senaryo adı',
+        'IsBase': 'Baz senaryo: silinemez, pasif yapılamaz; tek kayıtta Evet',
+        'IsActive': 'Aktif; pasif senaryo bağlam çubuğundaki listede görünmez ve gece çalışmaz, parametreleri durur (K-177)',
+        'FollowsBase': "Baz'ı izler: veri tablolarında Baz'ın değerlerini okur, yalnız farkını tutar (K-176); Baz'da boş; Hayır'a dönen senaryo yeniden bağlanmaz",
+        'RunsNightly': 'Gece çalışsın: kapalı senaryo yeniden açılana kadar gece akışında hesaplanmaz (K-177)',
+        'NightlyPriority': "Gece sırası: gece çalışan senaryolar arasında 1'den boşluksuz; gece çalışmayanda boş",
+        'IsSynthetic': 'Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79)',
+    },
+    'planning.Scenario': {
+        '': 'Senaryo sonucu: bir senaryonun bir veri versiyonuyla hesaplanmış planı. Bir sonraki gece silinmez, saklanır; saklama süresi sistem ayarıdır (K-177; ekranda "plan versiyonu").',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Tanım',
+        'DataVersionId': 'Veri versiyonu',
+        'PlanRunId': 'Üreten plan çalışması',
+        'CreatedAt': 'Oluşma',
+        'Status': 'Bitti | Kısmen | Hata',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0062'
 down_revision = '0061'
@@ -44,7 +102,7 @@ def _comment(schema, table, column, text):
 
 def upgrade():
     def new(schema, table, column):
-        t = metadata.tables[f"{schema}.{table}"]
+        t = FROZEN.tables[f"{schema}.{table}"]
         return t.c[column].comment if column else t.comment
 
     op.add_column('AppUser', sa.Column('ScenarioDefinitionId', sa.Integer(), nullable=True, comment=new('adm', 'AppUser', 'ScenarioDefinitionId')), schema='adm')

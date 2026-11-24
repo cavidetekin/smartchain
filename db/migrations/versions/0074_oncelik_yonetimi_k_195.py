@@ -16,6 +16,115 @@ from sqlalchemy.dialects import mssql
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit 7cba57b); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'core.Project': {
+        '': 'Proje.',
+        'Id': 'Kayıt kimliği',
+        'Code': 'Proje kodu',
+        'Name': 'Proje adı',
+        'ProjectGroupId': 'Proje grubu',
+        'TrackingRule': 'Proje bazında takip kuralı (grubu ezer)',
+        'Priority': "ERP önceliği (K-195): ERP'den ya da kuraldan gelen proje önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir",
+        'IsActive': 'Aktif mi',
+        'AdditionalText1': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText2': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText3': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText4': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText5': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText6': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText7': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber1': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber2': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber3': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'VersionFrom': 'Kaydın geçerli olduğu ilk veri versiyonu',
+        'VersionTo': 'Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş',
+        'ImportBatchId': 'Kaydı getiren yükleme partisi',
+        'BusinessKey': 'İş anahtarı; kod ya da kodların birleşimi',
+        'UpdatedAt': 'Son değişiklik zamanı',
+    },
+    'core.Customer': {
+        '': 'Müşteri.',
+        'Id': 'Kayıt kimliği',
+        'Code': 'Müşteri kodu',
+        'Name': 'Ad',
+        'Priority': "ERP önceliği (K-195): ERP'den ya da kuraldan gelen müşteri önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir",
+        'AllowPartialDelivery': 'Kısmi teslimata izin',
+        'CustomerGroup': 'Müşteri grubu',
+        'IsActive': 'Aktif mi',
+        'Country': 'Ülke',
+        'Region': 'Bölge',
+        'City': 'Şehir',
+        'IsCustomTracked': 'Bu müşterinin talepleri ortak havuzdan değil, müşteriye ayrılmış olarak takip edilir',
+        'AdditionalText1': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText2': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText3': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText4': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText5': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText6': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText7': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber1': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber2': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber3': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'VersionFrom': 'Kaydın geçerli olduğu ilk veri versiyonu',
+        'VersionTo': 'Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş',
+        'ImportBatchId': 'Kaydı getiren yükleme partisi',
+        'BusinessKey': 'İş anahtarı; kod ya da kodların birleşimi',
+        'UpdatedAt': 'Son değişiklik zamanı',
+    },
+    'core.SalesOrderLine': {
+        '': 'Müşteri sipariş satırı; teklifler IsQuote ile okunur, plana dahil olmaları senaryo parametresi. Vade: teyit tarihi, yoksa istek tarihi.',
+        'Id': 'Kayıt kimliği',
+        'LocationId': 'Lokasyon',
+        'OrderNo': 'Sipariş no',
+        'LineNo': 'Satır no',
+        'LineItemNo': 'Alt satır no (ERP satırı kırılımlıysa)',
+        'Type': "ERP'den ham sipariş tipi; veri kurallarında kullanılır, değer listesi yok",
+        'CustomerId': 'Müşteri',
+        'MaterialId': 'Malzeme',
+        'ProjectId': 'Proje',
+        'OpenQuantity': 'Açık miktar',
+        'OrderedQuantity': 'Satırın orijinal miktarı',
+        'DeliveredQuantity': 'Teslim edilen miktar',
+        'Uom': 'Açık, sipariş ve teslim miktarının birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir',
+        'RequestedDate': 'İstek tarihi',
+        'ConfirmedDate': 'Teyit tarihi',
+        'Priority': "ERP önceliği (K-195): ERP'den ya da kuraldan gelen satır önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir",
+        'AllowPartialDelivery': 'Kısmi teslimat (müşteriyi ezer)',
+        'Status': "ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok",
+        'IsActive': 'Aktif mi',
+        'IsOnHold': 'Kredi, teknik onay ya da müşteri talebiyle bekletilen satır',
+        'IsCustomTracked': 'Satır düzeyinde özel takip',
+        'IsQuote': "Teklif satırı; Type'tan veri kuralıyla doldurulur",
+        'AdditionalText1': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText2': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalText3': "Ek metin alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber1': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'AdditionalNumber2': "Ek sayı alanları; etiketi FieldDefinition'da",
+        'VersionFrom': 'Kaydın geçerli olduğu ilk veri versiyonu',
+        'VersionTo': 'Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş',
+        'ImportBatchId': 'Kaydı getiren yükleme partisi',
+        'BusinessKey': 'İş anahtarı; kod ya da kodların birleşimi',
+        'UpdatedAt': 'Son değişiklik zamanı',
+    },
+    'param.DemandPriority': {
+        '': 'Öncelik grubu (K-195): müşteri, proje ya da sipariş satırı için bu ekranda girilen 1–5 öncelik grubu. Senaryoya bağlı, Baz + fark (K-176); kayıt başına tek satır. Öncelik yönetimi ekranından girilir.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'BaseRowId': "Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş",
+        'OverriddenFields': 'Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur',
+        'IsValid': 'Ortak yapı gereği durur; bu tabloda her zaman Evet (değer boşaltılarak kaldırılır)',
+        'Level': 'Müşteri | Proje | Sipariş',
+        'RecordId': 'Düzeye göre müşterinin, projenin ya da sipariş satırının kimliği',
+        'PriorityGroup': "Öncelik grubu (1–5; küçük olan önce); izleyen senaryonun fark satırında boşsa Baz'daki değer bu senaryoda kaldırılmıştır",
+        'UpdatedAt': 'Son değişiklik zamanı (UTC)',
+        'UpdatedBy': 'Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0074'
 down_revision = '0073'
@@ -30,13 +139,13 @@ OLD_PRIORITY = {'Project': 'Proje önceliği', 'Customer': 'Müşteri önceliği
 
 def _priority_comments(to_new: bool) -> None:
     for table, old in OLD_PRIORITY.items():
-        new = metadata.tables[f'core.{table}'].c.Priority.comment
+        new = FROZEN.tables[f'core.{table}'].c.Priority.comment
         op.alter_column(table, 'Priority', existing_type=sa.Integer(), existing_nullable=True, comment=new if to_new else old,
                         existing_comment=old if to_new else new, schema='core')
 
 
 def upgrade():
-    c = metadata.tables[f'param.{TABLE}'].c
+    c = FROZEN.tables[f'param.{TABLE}'].c
     op.create_table(TABLE,
     sa.Column('Id', sa.BigInteger(), autoincrement=True, nullable=False, comment=c.Id.comment),
     sa.Column('ScenarioDefinitionId', sa.Integer(), nullable=False, comment=c.ScenarioDefinitionId.comment),
@@ -51,7 +160,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ScenarioDefinitionId'], ['param.ScenarioDefinition.Id'], name=op.f('FK_DemandPriority_ScenarioDefinitionId')),
     sa.PrimaryKeyConstraint('Id', name=op.f('PK_DemandPriority')),
     schema='param',
-    comment=metadata.tables[f'param.{TABLE}'].comment,
+    comment=FROZEN.tables[f'param.{TABLE}'].comment,
     info={'field_class': 'Parametre'}
     )
     op.create_index(op.f('IX_DemandPriority_Level'), TABLE, ['Level'], unique=False, schema='param')

@@ -21,6 +21,28 @@ import sqlalchemy as sa
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit 13818a4); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'param.FactoryCalendar': {
+        '': 'Fabrika takvimi (K-185, K-194): lokasyonun bütün kaynak gruplarına ve kaynaklarına uygulanan toplu duruş (tatil, toplu izin, yarım gün). Tek günde başlangıç ve bitiş aynıdır.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'BaseRowId': "Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş",
+        'OverriddenFields': 'Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",ValidTo,DailyCapacity,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur',
+        'IsValid': 'Geçerli (K-176): Hayır ise kayıt bu senaryoda uygulanmaz ("Geçersiz yap")',
+        'LocationId': 'Lokasyon: kayıt yalnız bu lokasyonun kaynak gruplarına ve kaynaklarına uygulanır (K-194)',
+        'StartDate': 'Başlangıç',
+        'EndDate': 'Bitiş (dahil)',
+        'Name': 'Ad (ör. Yılbaşı)',
+        'DayValue': 'O günlerde çalışılan oran: 0 Çalışılmıyor · 0,5 Yarım gün',
+        'UpdatedAt': 'Son değişiklik zamanı (UTC)',
+        'UpdatedBy': 'Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0073'
 down_revision = '0072'
@@ -82,7 +104,7 @@ def _table_comment(text: str) -> None:
 
 
 def upgrade():
-    c = metadata.tables[T].c
+    c = FROZEN.tables[T].c
     op.add_column(TABLE, sa.Column('LocationId', sa.Integer(), nullable=True, comment=c.LocationId.comment), schema='param')   # doldurulduktan sonra zorunlu
     online = not context.is_offline_mode()
     before = _report(op.get_bind()) if online else None
@@ -100,7 +122,7 @@ def upgrade():
     op.alter_column(TABLE, 'LocationId', existing_type=sa.Integer(), nullable=False, existing_comment=c.LocationId.comment, schema='param')
     op.create_index(op.f('IX_FactoryCalendar_LocationId'), TABLE, ['LocationId'], unique=False, schema='param')
     op.create_foreign_key(op.f('FK_FactoryCalendar_LocationId'), TABLE, 'Location', ['LocationId'], ['Id'], source_schema='param', referent_schema='core')
-    _table_comment(metadata.tables[T].comment)
+    _table_comment(FROZEN.tables[T].comment)
     if online:  # bağlantısız SQL betiğinde satırlar yazılmaz; ilk bağlantılı geçişte kurulur
         sync(op.get_bind(), metadata)
 

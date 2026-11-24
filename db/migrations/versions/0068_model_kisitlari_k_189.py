@@ -13,6 +13,26 @@ from sqlalchemy.dialects import mssql
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit c6f82bc); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'param.ResourceGroupConstraint': {
+        '': 'Model kısıtları (K-189): kaynak grubu başına, tarihsiz iki değer. Kısıtsız kapasite çarpanı: Kaynak kısıtı = Kısıtsız olan senaryoda grubun dönem üst sınırı = kullanılabilir kapasite × çarpan (boşsa sınır yok). Hedef doluluk: kesin sınır değil, "Hedef doluluğun üstü" hedefinin eşiği (boşsa hedef yok). Yalnız kritik gruplarda uygulanır; kritik olmaktan çıkan grubun değeri saklanır ama uygulanmaz. Senaryo ve kaynak grubu başına en çok bir kendi satırı; iki değeri de boş kalan satır silinir.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'BaseRowId': "Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş",
+        'OverriddenFields': 'Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili: ",TargetUtilizationPct,"); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur',
+        'IsValid': 'Ortak yapı gereği durur; bu tabloda her zaman Evet (değer boşaltılarak kaldırılır)',
+        'ResourceGroupId': 'Kaynak grubu',
+        'UnconstrainedCapacityFactor': 'Kısıtsız kapasite çarpanı (en az 1); boşsa sınır yok',
+        'TargetUtilizationPct': "Hedef doluluk, yüzde (0'dan büyük, en çok 100); boşsa hedef yok",
+        'UpdatedAt': 'Son değişiklik zamanı (UTC)',
+        'UpdatedBy': 'Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0068'
 down_revision = '0067'
@@ -37,7 +57,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['ScenarioDefinitionId'], ['param.ScenarioDefinition.Id'], name=op.f('FK_ResourceGroupConstraint_ScenarioDefinitionId')),
     sa.PrimaryKeyConstraint('Id', name=op.f('PK_ResourceGroupConstraint')),
     schema='param',
-    comment=metadata.tables[f'param.{TABLE}'].comment,
+    comment=FROZEN.tables[f'param.{TABLE}'].comment,
     info={'field_class': 'Parametre'}
     )
     op.create_index(op.f('IX_ResourceGroupConstraint_ResourceGroupId'), TABLE, ['ResourceGroupId'], unique=False, schema='param')

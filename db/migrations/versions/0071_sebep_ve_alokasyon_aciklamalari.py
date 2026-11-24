@@ -12,6 +12,32 @@ import sqlalchemy as sa
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit 71a5004); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'param.SupplierLimit': {
+        '': 'Tedarikçi limiti (K-191; problem 39): satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; iki kayıt türü tek tabloda. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'BaseRowId': "Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş",
+        'OverriddenFields': 'Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur',
+        'IsValid': 'Geçersiz yapılan kayıt uygulanmaz; izleyen senaryoda Baz satırı fark satırıyla geçersiz yapılır',
+        'LimitType': 'Üst limit | Kapanış',
+        'LocationId': 'Lokasyon (malzeme tedarikçisi kaydının lokasyonu)',
+        'SupplierId': 'Tedarikçi',
+        'MaterialId': 'Malzeme; üst limitte zorunlu, kapanışta boşsa tedarikçinin bütün malzemeleri',
+        'ValidFrom': 'Başlangıç',
+        'ValidTo': 'Bitiş; üst limitte boşsa süresiz, kapanışta zorunlu',
+        'UpperLimit': 'Üst limit (sıfırdan büyük), malzemenin temel biriminde; yalnız üst limitte',
+        'LimitPeriod': 'Gün | Hafta | Ay | Çeyrek | Yıl',
+        'Reason': 'Sebep (serbest metin, isteğe bağlı); üst limitte ve kapanışta',
+        'UpdatedAt': 'Son değişiklik zamanı (UTC)',
+        'UpdatedBy': 'Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0071'
 down_revision = '0070'
@@ -32,7 +58,7 @@ def _table_comment(table: str, text: str) -> None:
 
 
 def upgrade():
-    reason = metadata.tables['param.SupplierLimit'].c.Reason
+    reason = FROZEN.tables['param.SupplierLimit'].c.Reason
     op.alter_column('SupplierLimit', 'Reason', existing_type=sa.Unicode(length=255), existing_nullable=True, comment=reason.comment, existing_comment=OLD_REASON,
                     schema='param')
     _table_comment('AllocationRule', NEW_ALLOCATION)
@@ -41,7 +67,7 @@ def upgrade():
 
 
 def downgrade():
-    reason = metadata.tables['param.SupplierLimit'].c.Reason
+    reason = FROZEN.tables['param.SupplierLimit'].c.Reason
     op.alter_column('SupplierLimit', 'Reason', existing_type=sa.Unicode(length=255), existing_nullable=True, comment=OLD_REASON, existing_comment=reason.comment,
                     schema='param')
     _table_comment('AllocationRule', OLD_ALLOCATION)

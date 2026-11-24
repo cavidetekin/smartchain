@@ -20,6 +20,117 @@ import sqlalchemy as sa
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit 3eacc0f); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'param.PlanningSetting': {
+        '': "Senaryonun planlama parametreleri (anahtar–değer; K-175). Anahtarlar, tipleri, seçenekleri ve başlangıç değerleri docs/06 fonksiyon 22'deki tabloda (`app/params/catalog.py`).",
+        'ScenarioDefinitionId': 'Senaryo',
+        'SettingKey': 'Parametre adı',
+        'Value': 'Değer',
+    },
+    'param.TimeBucketDefinition': {
+        '': 'Zaman yapısı: senaryonun ufuk ve dönem dizisi. Kullanıcı tarih girmez; her satır bir parçadır: dönem tipi (dönemlerin büyüklüğü) ve kapsam (parçanın ne kadar sürdüğü). Başlangıç ve bitiş plan başlangıcına göre hesaplanır (fonksiyon 23, K-175). Raporlama ekseni ayrı diziyse `Axis` = Rapor satırları. Dönem tipleri ve kapsam birimleri iki eksende aynıdır; kapsam birimi dönem tipinden küçük olamaz (çeyrek ve yıl dönem tipinde Ay da olabilir).',
+        'ScenarioDefinitionId': 'Senaryo',
+        'Axis': 'Plan | Rapor',
+        'Seq': 'Sıra',
+        'BucketType': 'Gün | Hafta | Ay | Çeyrek | Yıl',
+        'Count': 'Kapsam: parçanın kapsam birimi cinsinden uzunluğu',
+        'SpanUnit': 'Gün | Hafta | Ay | Çeyrek | Yıl',
+    },
+    'param.PriorityRule': {
+        '': 'Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih).',
+        'ScenarioDefinitionId': 'Senaryo',
+        'Seq': 'Sıra',
+        'Criterion': 'Kriter',
+        'Direction': 'Artan | Azalan',
+    },
+    'param.ResourceEfficiency': {
+        '': 'Kaynak ve dönem bazında verim (kapasite katsayısı); senaryoya özel.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'ResourceId': 'Kaynak',
+        'ValidFrom': 'Başlangıç',
+        'ValidTo': 'Bitiş',
+        'EfficiencyPct': 'Verim (%)',
+    },
+    'param.ResourcePeriodLimit': {
+        '': 'Dönem bazlı üst limit; kısıtsız kaynaklarda ve fasonda. Birim kaynağın kapasite birimi.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'ResourceId': 'Kaynak',
+        'ValidFrom': 'Başlangıç',
+        'ValidTo': 'Bitiş',
+        'UpperLimit': 'Dönem üst limiti',
+    },
+    'param.OvertimeLimit': {
+        '': 'Fazla mesai üst limiti (vardiya ve dönem bazında).',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'ShiftPlanId': 'Vardiya planı',
+        'MaxOvertimeHours': 'Dönem başına en fazla fazla mesai (saat)',
+    },
+    'param.SupplierLimit': {
+        '': "Tedarikçi dönem üst limiti (problem 39): malzeme bazında maksimum miktar. Malzeme boşsa tedarikçi o dönemde kapalıdır (limit 0). Smartchain'de ekrandan girilir (K-65, K-66).",
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'SupplierId': 'Tedarikçi',
+        'MaterialId': 'Malzeme; boşsa tedarikçinin bütün malzemeleri (yalnız kapalı dönem)',
+        'ValidFrom': 'Başlangıç',
+        'ValidTo': 'Bitiş',
+        'UpperLimit': 'Dönem üst limiti, malzemenin temel biriminde; malzeme boşsa 0',
+    },
+    'param.AllocationRule': {
+        '': 'Kapasite alokasyonu: talep sınıfına kaynak (grubu) ve dönem bazında pay.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'DemandClass': 'Talep sınıfı tanımı (müşteri, proje, ürün grubu)',
+        'ResourceId': 'Kaynak',
+        'ResourceGroupId': 'Kaynak grubu',
+        'ValidFrom': 'Başlangıç',
+        'ValidTo': 'Bitiş',
+        'SharePct': 'Pay (%)',
+        'Hardness': 'Taban | Tavan | Yumuşak',
+    },
+    'param.ScenarioDefinition': {
+        '': 'Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz.',
+        'Id': 'Tanım kimliği',
+        'LocationId': 'Lokasyon; Baz kurulumda veri gelmeden açıldığı için boş olabilir',
+        'Name': 'Senaryo adı',
+        'IsBase': 'Baz senaryo: silinemez, pasif yapılamaz; tek kayıtta Evet',
+        'IsActive': 'Aktif; pasif senaryo seçilemez ve çalışmaz (senaryo yönetimi adımı)',
+        'RunsNightly': 'Gece çalışsın (senaryo yönetimi adımı)',
+        'NightlyPriority': 'Gece çalışma sırası',
+        'IsSynthetic': 'Sentetik veri (geliştirme ve demo); sentetik veri komutları yalnız bunlara dokunur (K-79)',
+    },
+    'param.ObjectiveDefinition': {
+        '': 'Senaryonun hedefleri (leksikografik, ağırlık yok; K-175): motor hedefleri sırayla çözer. Senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'Code': 'Hedefin kodu (UNMET_DEMAND, LATENESS, UNMET_FORECAST…; fonksiyon 22)',
+        'PriorityGroup': 'Sipariş öncelik grubu; boş = bütün siparişler (gruplar öncelik kuralları adımında)',
+        'Seq': "Çözüm sırası; aktif hedeflerde 1'den boşluksuz, kapalı hedefte boş",
+        'TimeBudgetSeconds': 'Süre bütçesi (sn); kapalı hedefte boş',
+        'TolerancePct': 'Ödün payı (%): üst hedeften verilebilecek en çok ödün; 0 = katı',
+        'IsActive': 'Kapalı hedef çözülmez',
+    },
+    'planning.PlanRun': {
+        '': 'Bir plan hesabı (senaryo ya da çalışma); bütün plan çıktıları buna bağlı.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioId': 'Senaryo',
+        'WorkspaceId': 'Çalışma',
+        'DataVersionId': 'Veri versiyonu',
+        'ScenarioDefinitionId': 'Senaryo tanımı: hesabın parametreleri',
+        'EngineUsed': 'LP | MILP | Kurallı | Kısıtsız MRP',
+        'Solver': 'Çözücü',
+        'StartedAt': 'Başlangıç',
+        'EndedAt': 'Bitiş',
+        'Status': 'Sırada | Çalışıyor | Bitti | Kısmen | Hata',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0058'
 down_revision = '0057'
@@ -45,12 +156,22 @@ COMMENTED = [('param', t) for t in (*KEYED, *PLAIN, 'ScenarioDefinition', 'Objec
 BASE = f"(SELECT Id FROM {SD} WHERE IsBase = 1)"
 
 
+# Bu geçişin katalogdan okuduğu değerler sabittir (yazıldığı andaki katalog, commit 3eacc0f): Baz'ın adı, parametrelerin başlangıç değerleri, hedefler
+# (kod, süre, ödün payı) ve başlangıç dönem dizisi. Katalog sonradan değişti (K-196'da iki tahmin türü kalktı; 0075 dönüştürür).
+class _Objective:
+    def __init__(self, code, seconds, tolerance):
+        self.code, self.seconds, self.tolerance = code, seconds, tolerance
+
+
+class _Catalog:
+    BASE_NAME = 'Baz'
+    DEFAULTS = {'ModelType': 'LP', 'ProductionMinLot': '0', 'ProductionLotMultiple': '0', 'ProductionMaxLot': '0', 'RoundPurchaseToLot': '1', 'OptimalityGapPct': '1', 'MrpWarmStart': '1', 'IncludeFirmOrders': '1', 'IncludeQuotes': '0', 'IncludeOnHold': '0', 'IncludeForecast': '1', 'PastDueDemand': 'Gecikmiş say', 'AllowPartialFulfillment': '1', 'MaterialConstraint': '1', 'UseQualityStock': '0', 'MaxStockMode': 'Yalnız uyarı', 'SafetyStockMode': 'Esnek hedef', 'SafetyStockBasis': 'Büyük olan', 'SupplierSelectionRule': 'Öncelik', 'OpenSupplyDate': 'Teyit tarihi', 'PastDueSupply': 'Bugüne çek', 'ResourceConstraint': 'Kısıtlı', 'UseOvertime': '0', 'UseSubcontracting': '0', 'LaborConstraint': '0', 'ReportAxisSameAsPlan': '1', 'WeekStart': 'Pazartesi', 'PlanStart': 'Bugün', 'BucketDate': 'Dönem sonu', 'FixPeriod': '0', 'FixPeriodUnit': 'Gün', 'OpenWorkOrders': 'Yalnız öteleme önerisi', 'OpenPurchaseOrders': 'Sabit', 'KeepLockedRecords': '1'}
+    DEFAULT_BUCKETS = (('Hafta', 3, 'Ay'), ('Ay', 6, 'Ay'))
+    OBJECTIVES = tuple(_Objective(*o) for o in (('UNMET_DEMAND', 300, 0), ('LATENESS', 300, 0), ('UNMET_FORECAST', 120, 2), ('FORECAST_LATENESS', 120, 2), ('SAFETY_STOCK', 60, 5), ('OVERTIME', 60, 5), ('SUBCONTRACT', 60, 5), ('ALTERNATIVE', 60, 5), ('EARLY_BUILD', 60, 5), ('PLAN_DEVIATION', None, None), ('OVER_TARGET_LOAD', None, None)))
+
+
 def _catalog():
-    root = str(Path(__file__).resolve().parents[3])
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    from app.params import catalog
-    return catalog
+    return _Catalog
 
 
 def _n(text: str) -> str:
@@ -60,7 +181,7 @@ def _n(text: str) -> str:
 def _comments():
     """Kolon ve tablo açıklamaları modelden (docs/02): yeniden adlandırılan ve yeni kolonlarda; kolon yoksa atlanır."""
     for schema, name in COMMENTED:
-        table = metadata.tables.get(f"{schema}.{name}")
+        table = FROZEN.tables.get(f"{schema}.{name}")
         if table is None:
             continue
         items = [(None, table.comment)] + [(c.name, c.comment) for c in table.columns]

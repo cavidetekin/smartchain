@@ -58,9 +58,19 @@ def _in(values):
     return ', '.join(f"N'{v}'" for v in values)
 
 
+# Kolonu taşıyan adm tabloları sabittir (geçişin yazıldığı andaki model, commit ddd48b8; K-197): güncel modelden okunmaz.
+ADM_WITH = {
+    'EntityName': ('DataRuleEffect', 'DemandChain', 'IntegrationViewVersion', 'RawCompare', 'RawCompareRow', 'ValidationFinding', 'DataQualityWarning', 'DataRule',
+                   'ImportBatch', 'IntegrationEntity', 'ValidationRule', 'ValidationRun', 'DataVersionEntity'),
+    'TableName': ('FieldChange', 'FieldDefinition', 'ManualValue', 'FieldValueSource'),
+    'DataRuleId': ('DataRuleEffect', 'FieldChange', 'DataRuleCondition', 'FieldValueSource'),
+    'ValidationRuleId': ('ValidationFinding', 'ValidationRuleCondition', 'DataQualityWarning'),
+}
+
+
 def _adm_with(column):
-    """Bu kolonu taşıyan adm tabloları (modelden)."""
-    return [t.name for t in metadata.sorted_tables if t.schema == 'adm' and column in t.c]
+    """Bu kolonu taşıyan adm tabloları."""
+    return list(ADM_WITH[column])
 
 
 def _rename_entity(old, new):

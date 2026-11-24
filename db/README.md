@@ -25,6 +25,14 @@ Veritabanı şeması ve geçişler. Şema docs'tan üretilir (K-64); `models.py`
 7. Kontrol (SSMS): 5 şema (`stg`, `core`, `param`, `planning`, `adm`), 96 tablo ve `dbo.alembic_version`. Tablo ve kolon özelliklerinde Türkçe açıklamalar görünür.
 8. Geri alma testi: `alembic -c db/alembic.ini downgrade base`, ardından yeniden `upgrade head`.
 
+## Geçiş kuralı (K-197)
+
+Geçiş güncel modelden ve katalogdan **okumaz**: yazdığı tablo ve kolon açıklamalarını, başlangıç değerlerini ve listeleri kendi içinde sabit taşır. `metadata.tables[...]` ve `from app...` geçişte kullanılmaz (model sonradan değişince eski geçiş sıfırdan kurulumda başka iş yapar ya da düşer).
+
+- Açıklamalar geçişin başında `COMMENTS = {"şema.Tablo": {"": "tablo açıklaması", "Kolon": "…"}}` sözlüğünde durur; `FROZEN = frozen(COMMENTS)` (`db/frozen.py`) ile `FROZEN.tables["şema.Tablo"].c.Kolon.comment` biçiminde kullanılır. Otomatik üretilen geçişte açıklamalar zaten sabit metindir; elle yazılan kısımda da öyle kalır.
+- İstisna: geçişin sonundaki veri sözlüğü eşitlemesi `sync(op.get_bind(), metadata)` bilerek güncel modelle çalışır.
+- Kuralı `tests/test_migrations.py` denetler.
+
 ## Değişiklik akışı
 
 docs'ta tabloyu ya da alanı değiştir → `python db/generate.py` → `alembic -c db/alembic.ini revision --autogenerate -m "kısa açıklama"` → oluşan geçişi gözden geçir → `upgrade head`.

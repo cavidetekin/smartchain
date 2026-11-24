@@ -96,3 +96,19 @@ def test_latest_migration_goes_forward_back_and_forward(scratch):
 
     check = _alembic(scratch, "check")   # şema modellerle aynı: yeni geçiş gerekmiyor
     assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_migrations_do_not_read_the_live_model_or_catalog():
+    """K-197: geçiş güncel modelden (`metadata.tables`) ve uygulama kodundan (`app.*`) okumaz; yazdığı değerleri sabit taşır (`db/frozen.py`).
+    İstisnalar: veri sözlüğü eşitlemesi (`sync(bind, metadata)`) ve 0055'in yalnız verili veritabanında çalışan geçmiş doldurması."""
+    import re
+    allowed = {"0055_alan_degisikligi_k_173.py": ("from app.history.backfill import backfill",)}
+    problems = []
+    for path in sorted((ROOT / "db" / "migrations" / "versions").glob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            code = line.split("#")[0]
+            if "metadata.tables" in code or re.search(r"^\s*(from|import)\s+app(\.|\s|$)", code) or re.search(r"metadata\.(sorted_tables|schema)", code):
+                if code.strip() not in allowed.get(path.name, ()):
+                    problems.append(f"{path.name}: {code.strip()[:100]}")
+    assert not problems, problems

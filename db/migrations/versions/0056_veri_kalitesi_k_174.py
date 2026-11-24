@@ -22,13 +22,26 @@ JOB_NEW = "Gece senaryosu | Çalışma | Aktarım | Termin sorgusu | Dışa akta
 JOB_OLD = "Gece senaryosu | Çalışma | Aktarım | Termin sorgusu | Dışa aktarım | Excel ön kontrol | Veri çekme | Validasyon | Temizlik …"
 
 
+# Katalogda takibi Evet olan hazır kurallar (tablo, kod): bu geçişin yazıldığı andaki katalogdan (commit f05164f), sabit. Katalog sonradan değişti
+# (kurallar yeniden adlandırıldı); güncel katalogdan okunmaz.
+TRACKED = (('BOM', 'BOM.INACTIVE_COMPONENT'), ('BOM', 'BOM.OPERATION_NOT_IN_ROUTE'), ('BOM', 'BOM.PRIORITY_NO_GROUP'), ('BOM', 'BOM.ZERO_QTY'),
+           ('EmployeeAbsence', 'ABS.NOT_EMPLOYEE'), ('EmployeeAbsence', 'ABS.OVERLAP'), ('Forecast', 'FC.INACTIVE_MATERIAL'), ('Material', 'MAT.NO_SUBCONTRACTOR'),
+           ('Material', 'MAT.NO_SUPPLIER'), ('Material', 'MAT.NO_SUPPLY'), ('Material', 'MAT.NO_VERSION'), ('Material', 'MAT.SAFETY_MAX'),
+           ('Material', 'MAT.SUPPLY_CONFLICT'), ('Material', 'MAT.ZERO_PACK'), ('MaterialReference', 'REF.NO_VERSION'), ('MaterialSupplier', 'MS.INACTIVE_SUPPLIER'),
+           ('MaterialSupplier', 'MS.NO_LEADTIME'), ('MaterialSupplier', 'MS.QUOTA_SUM'), ('ProductionVersion', 'PV.BASEQTY_DIFFERS'), ('ProductionVersion', 'PV.EXPIRED'),
+           ('PurchaseOrderLine', 'PO.CUSTOM_NO_OWNER'), ('PurchaseOrderLine', 'PO.NO_DATE'), ('PurchaseOrderLine', 'PO.PAST_DUE'), ('PurchaseOrderLine', 'PO.SUBCON_NO_WO'),
+           ('PurchaseOrderLine', 'PO.TYPE_FLAGS'), ('Resource', 'RES.MONTH_YEAR'), ('Resource', 'RES.REF_SUBCONTRACTOR'), ('Resource', 'RES.SUBCON_CONFLICT'),
+           ('Resource', 'RES.TYPE_FLAGS'), ('ResourceGroup', 'RG.NO_RESOURCE'), ('ResourceGroup', 'RG.NO_TYPE'), ('ResourceGroupAssignment', 'RGA.COMPETENCE_NOT_EMPLOYEE'),
+           ('Routing', 'RTG.GROUP_UNIT'), ('Routing', 'RTG.INACTIVE_RESOURCE'), ('Routing', 'RTG.NOT_MEMBER'), ('Routing', 'RTG.PRIORITY_NO_GROUP'),
+           ('Routing', 'RTG.SUBCON_RESOURCE'), ('Routing', 'RTG.ZERO_CONSUMPTION'), ('SalesOrderLine', 'SO.INACTIVE_MATERIAL'), ('SalesOrderLine', 'SO.OPEN_MISMATCH'),
+           ('SalesOrderLine', 'SO.PAST_DUE'), ('Stock', 'STK.CUSTOM_NO_OWNER'), ('Stock', 'STK.EXPIRED'), ('Stock', 'STK.NON_STOCKABLE'),
+           ('Stock', 'STK.QUALITY_NO_DATE'), ('Stock', 'STK.STATUS_FLAGS'), ('UomConversion', 'UOM.INVERSE'), ('WorkOrder', 'WO.CUSTOM_NO_OWNER'),
+           ('WorkOrder', 'WO.NO_STRUCTURE'), ('WorkOrder', 'WO.OPEN_ORDERED'), ('WorkOrder', 'WO.PAST_DUE'), ('WorkOrder', 'WO.TYPE_FLAGS'),
+           ('WorkOrderComponent', 'WOC.OPERATION_NOT_IN_WO'))
+
+
 def _tracked() -> list[tuple[str, str]]:
-    """Katalogda takibi Evet olan hazır kurallar (tablo, kod)."""
-    root = str(Path(__file__).resolve().parents[3])
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    from app.validation.catalog import catalog
-    return [(r.table, r.code) for r in catalog() if r.tracked]
+    return list(TRACKED)
 
 
 def upgrade():

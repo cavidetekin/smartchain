@@ -17,6 +17,35 @@ from sqlalchemy.dialects import mssql
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit 71a5004); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'param.SupplierLimit': {
+        '': 'Tedarikçi limiti (K-191; problem 39): satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; iki kayıt türü tek tabloda. Senaryoya bağlı, Baz + fark (K-176). Model kısıtları ekranından girilir.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'BaseRowId': "Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş",
+        'OverriddenFields': 'Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur',
+        'IsValid': 'Geçersiz yapılan kayıt uygulanmaz; izleyen senaryoda Baz satırı fark satırıyla geçersiz yapılır',
+        'LimitType': 'Üst limit | Kapanış',
+        'LocationId': 'Lokasyon (malzeme tedarikçisi kaydının lokasyonu)',
+        'SupplierId': 'Tedarikçi',
+        'MaterialId': 'Malzeme; üst limitte zorunlu, kapanışta boşsa tedarikçinin bütün malzemeleri',
+        'ValidFrom': 'Başlangıç',
+        'ValidTo': 'Bitiş; üst limitte boşsa süresiz, kapanışta zorunlu',
+        'UpperLimit': 'Üst limit (sıfırdan büyük), malzemenin temel biriminde; yalnız üst limitte',
+        'LimitPeriod': 'Gün | Hafta | Ay | Çeyrek | Yıl',
+        'Reason': 'Sebep (serbest metin, isteğe bağlı); üst limitte ve kapanışta',
+        'UpdatedAt': 'Son değişiklik zamanı (UTC)',
+        'UpdatedBy': 'Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş',
+    },
+}
+FROZEN = frozen(COMMENTS)
+# eklenen kolonların tipleri de sabittir (yazıldığı andaki model)
+TYPES = {'BaseRowId': sa.BigInteger(), 'OverriddenFields': sa.Unicode(400), 'LimitType': sa.Unicode(15), 'LocationId': sa.Integer(), 'LimitPeriod': sa.Unicode(10),
+         'Reason': sa.Unicode(255), 'UpdatedAt': mssql.DATETIME2(), 'UpdatedBy': sa.Integer()}
 
 revision = '0070'
 down_revision = '0069'
@@ -43,9 +72,9 @@ def _drop_default(column: str) -> None:
 
 
 def upgrade():
-    c = metadata.tables[T].c
+    c = FROZEN.tables[T].c
     for name in ('BaseRowId', 'OverriddenFields', 'LimitType', 'LocationId', 'LimitPeriod', 'Reason', 'UpdatedAt', 'UpdatedBy'):
-        op.add_column(TABLE, sa.Column(name, c[name].type, nullable=True, comment=c[name].comment), schema='param')   # zorunlular doldurulduktan sonra sıkılaşır
+        op.add_column(TABLE, sa.Column(name, TYPES[name], nullable=True, comment=c[name].comment), schema='param')   # zorunlular doldurulduktan sonra sıkılaşır
     op.add_column(TABLE, sa.Column('IsValid', sa.Boolean(), server_default=sa.text('1'), nullable=False, comment=c.IsValid.comment), schema='param')
     _drop_default('UpperLimit')
     op.alter_column(TABLE, 'UpperLimit', existing_type=sa.NUMERIC(precision=18, scale=4), nullable=True, comment=c.UpperLimit.comment,
@@ -63,16 +92,16 @@ def upgrade():
                f"(SELECT CASE WHEN COUNT(*) = 1 THEN MIN(l.Id) END FROM core.Location l)) FROM {T} s")
     op.execute(f"DELETE FROM {T} WHERE LocationId IS NULL")
     for name in ('LimitType', 'LocationId', 'UpdatedAt'):
-        op.alter_column(TABLE, name, existing_type=c[name].type, nullable=False, existing_comment=c[name].comment, schema='param')
+        op.alter_column(TABLE, name, existing_type=TYPES[name], nullable=False, existing_comment=c[name].comment, schema='param')
     op.create_index(op.f('IX_SupplierLimit_LocationId'), TABLE, ['LocationId'], unique=False, schema='param')
     op.create_foreign_key(op.f('FK_SupplierLimit_LocationId'), TABLE, 'Location', ['LocationId'], ['Id'], source_schema='param', referent_schema='core')
-    _table_comment(metadata.tables[T].comment)
+    _table_comment(FROZEN.tables[T].comment)
     if not context.is_offline_mode():  # bağlantısız SQL betiğinde satırlar yazılmaz; ilk bağlantılı geçişte kurulur
         sync(op.get_bind(), metadata)
 
 
 def downgrade():
-    c = metadata.tables[T].c
+    c = FROZEN.tables[T].c
     for table in ('FieldDefinition', 'ManualValue', 'FieldValueSource'):   # sözlük eşitlemesi silmez
         op.execute(f"DELETE FROM adm.[{table}] WHERE TableName = N'{TABLE}' AND FieldName IN (N'BaseRowId', N'OverriddenFields', N'IsValid', N'LimitType', N'LocationId', "
                    "N'LimitPeriod', N'Reason', N'UpdatedAt', N'UpdatedBy')")

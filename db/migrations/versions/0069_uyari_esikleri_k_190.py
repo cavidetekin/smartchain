@@ -16,6 +16,30 @@ import sqlalchemy as sa
 
 from dictionary import sync
 from models import metadata
+from frozen import frozen
+
+# Bu geçişin okuduğu tablo ve kolon açıklamaları sabittir: geçişin yazıldığı andaki modelden (commit 5e799ca); güncel modelden okunmaz
+# (K-197). Boş anahtar tablonun açıklamasıdır.
+COMMENTS = {
+    'param.WarningThreshold': {
+        '': 'Senaryonun uyarı eşikleri (K-190): her senaryoda her uyarı için bir satır. Kademeli: her önem için ayrı eşik; boş kademe kullanılmaz. Yön uyarıya göre sabittir ve eşik dahil değildir.',
+        'Id': 'Kayıt kimliği',
+        'ScenarioDefinitionId': 'Senaryo',
+        'WarningCode': 'Uyarı kodu (ORDER_LATE, CAP_OVERLOAD…; fonksiyon 26)',
+        'ThresholdLow': 'Düşük önemin eşiği; boşsa kademe kullanılmaz',
+        'ThresholdMedium': 'Orta önemin eşiği; boşsa kademe kullanılmaz',
+        'ThresholdHigh': 'Yüksek önemin eşiği; boşsa kademe kullanılmaz',
+        'ThresholdCritical': 'Kritik önemin eşiği; boşsa kademe kullanılmaz',
+        'Severity': 'Düşük | Orta | Yüksek | Kritik',
+        'IsActive': 'Kapalı uyarı üretilmez; değerleri durur',
+    },
+    'param.WarningDefinition': {
+        '': 'Uyarı kataloğu (K-190): sistemin tanıdığı uyarı kodları ve kategorileri. Satırları sistem yazar; eşik, önem ve aktiflik senaryoya bağlıdır (WarningThreshold).',
+        'Code': 'Uyarı kodu',
+        'Category': 'Talep | Malzeme | Kapasite | Plan kalitesi',
+    },
+}
+FROZEN = frozen(COMMENTS)
 
 revision = '0069'
 down_revision = '0068'
@@ -77,7 +101,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['WarningCode'], ['param.WarningDefinition.Code'], name=op.f('FK_WarningThreshold_WarningCode')),
     sa.PrimaryKeyConstraint('Id', name=op.f('PK_WarningThreshold')),
     schema='param',
-    comment=metadata.tables[f'param.{TABLE}'].comment,
+    comment=FROZEN.tables[f'param.{TABLE}'].comment,
     info={'field_class': 'Parametre'}
     )
     op.create_index('UX_WarningThreshold_ScenarioDefinitionId_WarningCode', TABLE, ['ScenarioDefinitionId', 'WarningCode'], unique=True, schema='param')
@@ -87,7 +111,7 @@ def upgrade():
     op.alter_column('WarningDefinition', 'Category', existing_type=sa.Unicode(length=20), existing_nullable=False, schema='param',
                     comment='Talep | Malzeme | Kapasite | Plan kalitesi',
                     existing_comment='Kapasite | Malzeme | Sipariş | Ana veri | İşlem verisi | Veri değişikliği | Plan değişikliği')
-    _table_comment('WarningDefinition', metadata.tables['param.WarningDefinition'].comment)
+    _table_comment('WarningDefinition', FROZEN.tables['param.WarningDefinition'].comment)
     for table in ('FieldDefinition', 'ManualValue', 'FieldValueSource'):   # kalkan kolonların sözlük satırları (eşitleme silmez)
         op.execute(f"DELETE FROM adm.[{table}] WHERE TableName = N'WarningDefinition' AND FieldName IN (N'Threshold', N'Severity', N'IsActive')")
     if not context.is_offline_mode():  # bağlantısız SQL betiğinde satırlar yazılmaz; ilk bağlantılı geçişte kurulur
