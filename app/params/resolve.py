@@ -37,6 +37,8 @@ FIELDS["ResourceGroupConstraint"] = ("ResourceGroupId", "UnconstrainedCapacityFa
 FIELDS["SupplierLimit"] = ("LimitType", "LocationId", "SupplierId", "MaterialId", "ValidFrom", "ValidTo", "UpperLimit", "LimitPeriod", "Reason")
 # Malzeme blokajı (K-193): blokajlar birleşir (çakışma anahtarı yok); kapasite hesabına girmez
 FIELDS["MaterialHold"] = ("LocationId", "MaterialId", "HoldType", "StartDate", "EndDate", "ClosePct", "Reason")
+# Öncelik yönetimi (K-195): kayıt (düzey + kimlik) başına tek değer; çözümlemesi `app/priorities`'te (Model kısıtları gibi), ayırma buradan
+FIELDS["DemandPriority"] = ("Level", "RecordId", "PriorityGroup")
 BASE, DIFF, OWN = "Baz", "Senaryo farkı", "Senaryo"
 # Senaryo çakışmasının anahtarı (aynı sahip ve aynı başlangıç): yalnız başlangıcı tekil olan tablolar. Birleşen kayıtlarda (duruş, kapanış, fabrika
 # takvimi, malzeme blokajı) çakışma yoktur. İkinci öğe: anahtarın geçerli olduğu satırlar ({a}: tablo takma adı); boşsa bütün satırlar.
@@ -45,6 +47,7 @@ KEYS: dict[str, tuple[tuple[str, ...], str]] = {
     "ResourceEfficiency": ((*OWNER, "ValidFrom"), ""),
     "OvertimeLimit": ((*OWNER, "ValidFrom"), ""),
     "SupplierLimit": (("LocationId", "SupplierId", "MaterialId", "ValidFrom"), "{a}.LimitType = N'Üst limit'"),
+    "DemandPriority": (("Level", "RecordId"), ""),          # ayırmada senaryonun kendi satırı aynı kaydın Baz satırının önüne geçer
 }
 
 

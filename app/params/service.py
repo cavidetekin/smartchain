@@ -114,60 +114,7 @@ def save_settings(session: Session, scenario_id: int, changes: dict, on_change=N
 
 # ------------------------------------------------------------------ hedefler
 
-def read_objectives(session: Session, scenario_id: int) -> list[dict]:
-    """Hedefler: aktifler sırasıyla, kapalılar sonda (katalog sırasıyla)."""
-    order = {o.code: i for i, o in enumerate(cat.OBJECTIVES)}
-    rows = [dict(r) for r in session.execute(sa.select(OBJECTIVE).where(OBJECTIVE.c.ScenarioDefinitionId == scenario_id)).mappings()]
-    rows.sort(key=lambda r: (0, r["Seq"] or 0) if r["IsActive"] else (1, order.get(r["Code"], 99), r["PriorityGroup"] or 0))
-    return [{"id": r["Id"], "code": r["Code"], "priority_group": r["PriorityGroup"], "label": objective_label(r["Code"], r["PriorityGroup"]),
-             "seq": r["Seq"] if r["IsActive"] else None, "seconds": r["TimeBudgetSeconds"] if r["IsActive"] else None,
-             "tolerance": float(r["TolerancePct"]) if r["IsActive"] and r["TolerancePct"] is not None else None, "active": bool(r["IsActive"])}
-            for r in rows]
-
-
-def objective_label(code: str, group: int | None) -> str:
-    label = cat.OBJECTIVE_LABELS.get(code, code)
-    return f"{label} · Öncelik {group}" if group is not None else label
-
-
-def save_objectives(session: Session, scenario_id: int, rows: list[dict], on_change=None) -> int:
-    """Hedeflerin tamamı gelir, listedeki sırasıyla: aktiflerin sırası 1'den boşluksuz yazılır; kapalı hedefin sırası, süresi ve payı boşalır."""
-    current = {r["id"]: r for r in read_objectives(session, scenario_id)}
-    problems = []
-    if {r.get("id") for r in rows} != set(current) or len(rows) != len(current):
-        raise ParamError([{"field": "rows", "problem": "Hedef listesi değişmiş; sayfayı yenileyin."}])
-    seq, planned = 0, []
-    for i, row in enumerate(rows, start=1):
-        old = current[row["id"]]
-        active = bool(row.get("active"))
-        if not active:
-            planned.append((old, dict(Seq=None, TimeBudgetSeconds=None, TolerancePct=None, IsActive=False)))
-            continue
-        seq += 1
-        seconds, tolerance = row.get("seconds"), row.get("tolerance")
-        s = _number(seconds) if seconds not in (None, "") else None
-        t = _number(tolerance) if tolerance not in (None, "") else None
-        if s is None or s != s.to_integral_value() or s < 1:
-            problems.append({"field": f"rows.{i}.seconds", "problem": "1 ya da daha büyük tam sayı girilmeli.", "record": old["label"]})
-        if t is None or not 0 <= t <= 100 or -t.as_tuple().exponent > 2:
-            problems.append({"field": f"rows.{i}.tolerance", "problem": "0 ile 100 arasında, en çok 2 ondalıklı sayı girilmeli.", "record": old["label"]})
-        planned.append((old, dict(Seq=seq, TimeBudgetSeconds=int(s) if s is not None else None, TolerancePct=t, IsActive=True)))
-    if seq == 0:
-        problems.append({"field": "rows", "problem": "En az bir hedef aktif olmalı."})
-    if problems:
-        raise ParamError(problems)
-    changed = 0
-    for old, new in planned:
-        before = dict(Seq=old["seq"], TimeBudgetSeconds=old["seconds"], TolerancePct=old["tolerance"], IsActive=old["active"])
-        after = {**new, "TolerancePct": float(new["TolerancePct"]) if new["TolerancePct"] is not None else None}
-        if before == after:
-            continue
-        session.execute(sa.update(OBJECTIVE).where(OBJECTIVE.c.Id == old["id"]).values(**new))
-        changed += 1
-        if on_change:
-            diff = [k for k in after if after[k] != before[k]]
-            on_change(old["label"], {k: before[k] for k in diff}, {k: after[k] for k in diff})
-    return changed
+# Hedef satırlarının okunması ve yazılması `app/params/objectives.py`'dedir (K-196).
 
 
 def time_budget(session: Session, scenario_id: int) -> int:

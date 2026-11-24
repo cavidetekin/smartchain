@@ -17,6 +17,7 @@ from .capacity import CAPACITY_LISTS
 from .model_constraints import MODEL_CONSTRAINT_LISTS
 from .supplier_limits import SUPPLIER_LIMIT_LISTS
 from .material_holds import MATERIAL_HOLD_LISTS
+from .priorities import PRIORITY_LISTS, TRANSACTION_WITH_PRIORITY
 from .scenarios import SCENARIOS
 from .raw_compare import RAW_COMPARE, RAW_COMPARE_CHANGES, RAW_COMPARE_ROWS
 from .transfer_history import TRANSFER_HISTORY
@@ -27,4 +28,6 @@ LISTS: tuple[ListDefinition, ...] = (INTEGRATION_ENTITIES, MATERIALS, USERS, FIE
                                 VALIDATION_RULES, DATA_RULES, TRANSFER_HISTORY, *RECORDS_LISTS, RAW_COMPARE, RAW_COMPARE_CHANGES, *RAW_COMPARE_ROWS, FLOWS, FLOW_RUNS,
                                 *MASTER_LISTS, *TRANSACTION_LISTS, RECORD_HISTORY, RECORD_HISTORY_MANY,
                                 DATA_QUALITY_WARNINGS, DATA_QUALITY_IGNORED, DATA_QUALITY_DEMAND_CHAIN, SCENARIOS, *PERIOD_TABLES, *CAPACITY_LISTS, *MODEL_CONSTRAINT_LISTS, *SUPPLIER_LIMIT_LISTS,
-                                *MATERIAL_HOLD_LISTS)
+                                *MATERIAL_HOLD_LISTS, *PRIORITY_LISTS)
+# İşlem verisi'nin Satış siparişi ve Tahmin listeleri hesaplanan öncelik alanlarını taşır (K-195): aynı ad, senaryoya göre kurulan kaynak
+LISTS = tuple(TRANSACTION_WITH_PRIORITY.get(d.name, d) for d in LISTS)

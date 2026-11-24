@@ -9,15 +9,16 @@ import { useLocation, useNavigate } from "react-router";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { can } from "../auth/permissions";
-import { formatDate, formatNumber, parseTrNumber, serverDate } from "../format";
+import { formatDate, parseTrNumber, serverDate } from "../format";
 import { tr } from "../i18n/tr";
-import { SwitchCell } from "../table/CellEditors";
+
 import { UnsavedGuard } from "../table/useTableEdits";
 import { Alert, Button, ChoiceRow, ConfirmDialog, EditGrid, type GridColumn, GridSeq, NumberField, OverflowTabs, SelectField, SettingsCard, SettingsFoot,
          SettingsLayout, SwitchRow, UnitRow } from "../ui";
 import { MenuItem, RowPopMenu } from "../ui/PopMenu";
 import { dropId } from "./DataRules";
-import { type Axis, type BucketPart, type BucketRow, type BucketsData, type ObjectiveRow, type ParamDef, type ParametersData, type ParamValues,
+import { Objectives } from "./Objectives";
+import { type Axis, type BucketPart, type BucketRow, type BucketsData, type ParamDef, type ParametersData, type ParamValues,
          parametersApi, type Period, type SubDef } from "./parametersApi";
 import { useShell } from "../shell/ShellContext";
 import { WarningThresholds } from "./WarningThresholds";
@@ -35,7 +36,6 @@ const SEGMENT_MAX = 4;  // daha çok seçenek açılır listeyle (hafta başlang
 const errorText = (e: unknown) => (e instanceof ApiError ? e.message : T.failed);
 const problemsOf = (e: unknown): Record<string, string> =>
   (e instanceof ApiError ? Object.fromEntries(e.details.map((d) => [d.field, d.problem])) : {});
-const trNumber = (v: number | null) => (v === null ? "" : formatNumber(v, Number.isInteger(v) ? 0 : 2));
 
 // ------------------------------------------------------------------ form başlığı
 
@@ -123,112 +123,6 @@ function ParamForm({ title, params, data, canWrite, onSaved, onDirty, onValues }
                             onChange={(v) => set(p.key, v === null ? null : String(v))} />;
       })}
     </SettingsCard>
-  );
-}
-
-// ------------------------------------------------------------------ hedefler
-
-interface ObjectiveDraft extends ObjectiveRow { secondsText: string; toleranceText: string }
-const asDraft = (r: ObjectiveRow): ObjectiveDraft => ({ ...r, secondsText: trNumber(r.seconds), toleranceText: trNumber(r.tolerance) });
-const DEFAULT_SECONDS = "60";
-const DEFAULT_TOLERANCE = "5";
-
-function Objectives({ canWrite, onDirty }: { canWrite: boolean; onDirty(dirty: boolean): void }) {
-  const api = useApi();
-  const [saved, setSaved] = useState<ObjectiveRow[] | null>(null);
-  const [rows, setRows] = useState<ObjectiveDraft[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const load = (rowsIn: ObjectiveRow[]) => {
-    setSaved(rowsIn);
-    setRows(rowsIn.map(asDraft));
-  };
-  useEffect(() => {
-    const ctrl = new AbortController();
-    api.objectives(ctrl.signal).then((d) => load(d.rows)).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
-    return () => ctrl.abort();
-  }, []);
-
-  const byId = useMemo(() => new Map((saved ?? []).map((r, i) => [r.id, { ...r, index: i }])), [saved]);
-  const secondsOf = (r: ObjectiveDraft) => parseTrNumber(r.secondsText);
-  const toleranceOf = (r: ObjectiveDraft) => parseTrNumber(r.toleranceText);
-  const secondsProblem = (r: ObjectiveDraft) => {
-    const n = secondsOf(r);
-    return r.active && (n === null || !Number.isInteger(n) || n < 1) ? T.secondsProblem : undefined;
-  };
-  const toleranceProblem = (r: ObjectiveDraft) => {
-    const n = toleranceOf(r);
-    return r.active && (n === null || n < 0 || n > 100 || Math.round(n * 100) !== n * 100) ? T.toleranceProblem : undefined;
-  };
-  const orderChanged = saved !== null && rows.some((r, i) => saved[i]?.id !== r.id);
-  const cellChanged = (r: ObjectiveDraft, field: "seconds" | "tolerance" | "active") => {
-    const old = byId.get(r.id);
-    if (!old) return false;
-    if (field === "active") return old.active !== r.active;
-    return r.active && (field === "seconds" ? old.seconds !== secondsOf(r) : old.tolerance !== toleranceOf(r));
-  };
-  const dirty = orderChanged || rows.some((r) => cellChanged(r, "seconds") || cellChanged(r, "tolerance") || cellChanged(r, "active"));
-  useEffect(() => onDirty(dirty), [dirty, onDirty]);
-  const noneActive = rows.length > 0 && !rows.some((r) => r.active);
-  const invalid = noneActive || rows.some((r) => secondsProblem(r) || toleranceProblem(r));
-
-  const patch = (id: number, change: Partial<ObjectiveDraft>) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...change } : r)));
-  const toggle = (row: ObjectiveDraft, on: boolean) => setRows((rs) => {
-    const rest = rs.filter((r) => r.id !== row.id);
-    const active = rest.filter((r) => r.active);
-    const off = rest.filter((r) => !r.active);
-    const old = byId.get(row.id);
-    const next: ObjectiveDraft = on
-      ? { ...row, active: true, secondsText: trNumber(old?.seconds ?? null) || DEFAULT_SECONDS, toleranceText: trNumber(old?.tolerance ?? null) || DEFAULT_TOLERANCE }
-      : { ...row, active: false, secondsText: "", toleranceText: "" };
-    return [...active, next, ...off];  // açılan aktiflerin sonuna, kapanan kapalıların başına
-  });
-  const move = (id: string, target: string, side: "before" | "after") => setRows((rs) => {
-    const ids = dropId(rs.filter((r) => r.active).map((r) => String(r.id)), id, target, side);
-    const map = new Map(rs.map((r) => [String(r.id), r]));
-    return [...ids.map((x) => map.get(x)!), ...rs.filter((r) => !r.active)];
-  });
-  const save = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const d = await api.saveObjectives(rows.map((r) => ({ id: r.id, active: r.active, seconds: r.active ? secondsOf(r) : null, tolerance: r.active ? toleranceOf(r) : null })));
-      load(d.rows);
-    } catch (e) {
-      setError(e instanceof ApiError && e.details.length ? `${T.notSaved} ${e.details[0].problem}` : errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!saved) return error ? <Alert tone="error">{error}</Alert> : null;
-  let seq = 0;
-  const seqOf = new Map(rows.map((r) => [r.id, r.active ? ++seq : null]));
-  const total = rows.reduce((sum, r) => sum + (r.active ? secondsOf(r) ?? 0 : 0), 0);
-  const columns: GridColumn<ObjectiveDraft>[] = [
-    { key: "seq", label: T.seq, width: 5, render: (r) => <GridSeq seq={seqOf.get(r.id) ?? null} movable={canWrite && r.active} /> },
-    { key: "label", label: T.objective, render: (r) => r.label },
-    { key: "seconds", label: T.seconds, num: true, width: 11, render: (r) => <span className="sc-num">{r.active ? r.secondsText : ""}</span>,
-      edit: { text: (r) => r.secondsText, commit: (r, text) => patch(r.id, { secondsText: text.trim() }), can: (r) => r.active },
-      changed: (r) => cellChanged(r, "seconds"), problem: secondsProblem },
-    { key: "tolerance", label: T.tolerance, num: true, width: 10, render: (r) => <span className="sc-num">{r.active ? r.toleranceText : ""}</span>,
-      edit: { text: (r) => r.toleranceText, commit: (r, text) => patch(r.id, { toleranceText: text.trim() }), can: (r) => r.active },
-      changed: (r) => cellChanged(r, "tolerance"), problem: toleranceProblem },
-    { key: "active", label: T.active, width: 5.5, marked: true,
-      render: (r) => <SwitchCell label={T.activeOf(r.label)} checked={r.active} editable={canWrite} changed={cellChanged(r, "active")} onToggle={(v) => toggle(r, v)} />,
-      changed: (r) => cellChanged(r, "active") },
-  ];
-  return (
-    <div className="sc-settings-section sc-settings-section--grid sc-settings-section--wide">
-      <section className="sc-settings-card" aria-label={T.objectives}>
-        <EditGrid<ObjectiveDraft> label={T.objectives} columns={columns} rows={rows} rowKey={(r) => String(r.id)} rowClass={(r) => (r.active ? "" : "is-off")}
-                                  editable={canWrite} drag={{ can: (r) => r.active, move }}
-                                  foot={<tr><td /><td>{T.total}</td><td className="is-num"><span className="sc-num">{formatNumber(total)}</span></td><td /><td /></tr>} />
-        <SettingsFoot dirty={dirty} busy={busy} invalid={invalid} onDiscard={() => { setRows(saved.map(asDraft)); setError(null); }} onSave={() => void save()} />
-      </section>
-      {noneActive && <Alert tone="risk">{T.oneActive}</Alert>}
-      {error && <Alert tone="error">{error}</Alert>}
-    </div>
   );
 }
 
@@ -429,6 +323,7 @@ export function Parameters() {
   const [pending, setPending] = useState<{ sekme: string; bolum?: string } | null>(null);
   const [formKey, setFormKey] = useState(0);  // Vazgeçilerek geçişte taslak atılır
   const [draft, setDraft] = useState<ParamValues>({});
+  const [stripEnd, setStripEnd] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     const ctrl = new AbortController();
     api.read(ctrl.signal).then(setData).catch((e: unknown) => { if (!ctrl.signal.aborted) setError(errorText(e)); });
@@ -454,7 +349,7 @@ export function Parameters() {
   const reportOwn = (draft.ReportAxisSameAsPlan ?? data.values.ReportAxisSameAsPlan) === NO;  // anahtar kaydetmeden tabloyu açar ve kapatır
   let body;
   if (section.table === "objectives") {
-    body = <Objectives key={formKey} canWrite={canWrite} onDirty={onGridDirty} />;
+    body = <Objectives key={formKey} canWrite={canWrite} onDirty={onGridDirty} actions={stripEnd} />;
   } else if (sub?.table === "warnings") {   // Uyarı eşikleri (K-190): alt başlık = kategori; kaydetme kategori başına
     body = <WarningThresholds key={`${sub.key}:${formKey}`} category={sub.title} canWrite={can(me, 26, "write")} onDirty={onGridDirty} />;
   } else if (sub?.table === "buckets") {
@@ -472,9 +367,11 @@ export function Parameters() {
       <header className="sc-page-head">
         <h1>{T.title}</h1>
       </header>
-      <div className="sc-section-switch">
+      <div className="sc-section-switch sc-section-switch--actions">
         <OverflowTabs<string> label={T.sections} value={section.key} onChange={(key) => go({ sekme: key })}
                               options={data.sections.map((s) => ({ value: s.key, label: s.title }))} />
+        {/* şerit standardı: tablo başlığının işlemleri sekmelerin hemen yanında, Vazgeç ve Kaydet sağda (Hedefler buraya çizer) */}
+        <div className="sc-section-actions" ref={setStripEnd} />
       </div>
       <SettingsLayout label={section.title} sections={section.subs} current={sub?.key ?? ""} onSelect={(key) => go({ sekme: section.key, bolum: key })}>
         {body}

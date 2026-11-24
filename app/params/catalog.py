@@ -112,7 +112,7 @@ SECTIONS: tuple[Section, ...] = (
     Section("kapasite", "Kapasite", (
         Sub("kapasite", "Kapasite", (
             _c("ResourceConstraint", "Kaynak kısıtı", ("Kısıtsız", "Kısıtlı", "Kısmi"), "Kısıtlı"),
-            _b("UseOvertime", "Fazla mesai", NO),
+            _b("UseOvertime", "Ek mesai", NO),   # K-196: adı "Ek mesai" (anahtar değişmez)
             _b("UseSubcontracting", "Fason", NO),
             _b("LaborConstraint", "İşçi kısıtı", NO),
         )),
@@ -151,29 +151,63 @@ assert len(BY_KEY) == len(PARAMS), "parametre anahtarı yinelendi"
 DEFAULTS: dict[str, str] = {p.key: p.default for p in PARAMS if p.default is not None}
 
 
+# Hedef satırlarının kapsamı (K-196): hedef listesi kullanıcınındır; satırın kapsamı hedefin eksenlerinden seçilir. Eksen: sınıfın adı ve
+# değerleri; değerleri veriden gelen eksende (malzeme grubu) values boştur.
+@dataclass(frozen=True)
+class ObjectiveAxis:
+    key: str
+    label: str
+    values: tuple | None    # None: değerler veriden (açık eksen)
+
+
+DEMAND_FIRM, DEMAND_QUOTE, DEMAND_ON_HOLD, DEMAND_FORECAST = "Kesin sipariş", "Teklif", "Beklemedeki sipariş", "Tahmin"
+DEMAND_TYPES = (DEMAND_FIRM, DEMAND_QUOTE, DEMAND_ON_HOLD, DEMAND_FORECAST)
+# talep türünü plana alan anahtar (Parametreler › Talep); kesin sipariş her zaman plandadır
+DEMAND_SWITCH = {DEMAND_QUOTE: "IncludeQuotes", DEMAND_ON_HOLD: "IncludeOnHold", DEMAND_FORECAST: "IncludeForecast"}
+LEVEL_RAW, LEVEL_SEMI, LEVEL_FINISHED = "Hammadde", "Yarı mamul", "Nihai ürün"
+RES_EMPLOYEE, RES_MACHINE, RES_SUBCONTRACTOR, RES_OTHER = "İşçi", "Makine", "Fason", "Diğer"
+AX_DEMAND_TYPE, AX_PRIORITY, AX_LEVEL, AX_GROUP, AX_RESOURCE = "DemandType", "PriorityGroup", "MaterialLevel", "MaterialGroup", "ResourceType"
+_DEMAND_AXES = (ObjectiveAxis(AX_DEMAND_TYPE, "Talep türü", DEMAND_TYPES), ObjectiveAxis(AX_PRIORITY, "Öncelik grubu", (1, 2, 3, 4, 5)))
+_MATERIAL_AXES = (ObjectiveAxis(AX_LEVEL, "Malzeme seviyesi", (LEVEL_RAW, LEVEL_SEMI, LEVEL_FINISHED)), ObjectiveAxis(AX_GROUP, "Malzeme grubu", None))
+FAMILY_DEMAND, FAMILY_MATERIAL, FAMILY_RESOURCE, FAMILY_OTHER = "talep", "malzeme", "kaynak", "diger"
+FAMILY_LABELS = {FAMILY_DEMAND: "Talep", FAMILY_MATERIAL: "Malzeme", FAMILY_RESOURCE: "Kaynak", FAMILY_OTHER: "Diğer"}   # hedefin grubu (ekranda "Grup")
+
+
 @dataclass(frozen=True)
 class Objective:
     code: str
     label: str
-    seconds: int | None   # başlangıç süre bütçesi; None: kurulumda kapalı
+    seconds: int | None   # türün başlangıç süre bütçesi (aktif gelen satırlarına eşit bölünür); None: kurulumda kapalı
     tolerance: float | None
+    family: str = FAMILY_OTHER
+    axes: tuple[ObjectiveAxis, ...] = ()     # boş: hedef kapsam almaz
+    start: tuple[str, ...] = ()              # başlangıç düzeninde ilk eksenin ayrı satır olan değerleri
+    start_tolerance: tuple[tuple[str, float], ...] = ()   # başlangıç düzeninde ödün payı türünkinden farklı olan satırlar (ilk eksen değeri, pay)
 
 
-# Başlangıç sırası listedeki sıradır. Öncelik grupları 7.4'te gelir: o zamana kadar talep hedefleri tek gruptur (PriorityGroup boş).
+# "Karşılanmayan tahmin" ve "Tahmin gecikmesi" türleri K-196'da kalktı (talep türü Tahmin olan satırlar); süreleri talep hedeflerine eklendi
+# (toplam bütçe aynı: 1.140 sn). Tahmin satırlarının ödün payı korunur: eski tahmin türlerinin başlangıç değeri (%2).
+FORECAST_TOLERANCE = 2
+_DEMAND_START = (DEMAND_FIRM, DEMAND_ON_HOLD, DEMAND_FORECAST, DEMAND_QUOTE)
+_FORECAST_PAY = ((DEMAND_FORECAST, FORECAST_TOLERANCE),)
 OBJECTIVES: tuple[Objective, ...] = (
-    Objective("UNMET_DEMAND", "Karşılanmayan talep", 300, 0),
-    Objective("LATENESS", "Gecikme", 300, 0),
-    Objective("UNMET_FORECAST", "Karşılanmayan tahmin", 120, 2),
-    Objective("FORECAST_LATENESS", "Tahmin gecikmesi", 120, 2),
-    Objective("SAFETY_STOCK", "Güvenlik stoğunun altı", 60, 5),
-    Objective("OVERTIME", "Fazla mesai", 60, 5),
+    Objective("UNMET_DEMAND", "Karşılanmayan talep", 420, 0, FAMILY_DEMAND, _DEMAND_AXES, _DEMAND_START, _FORECAST_PAY),
+    Objective("LATENESS", "Gecikme", 420, 0, FAMILY_DEMAND, _DEMAND_AXES, _DEMAND_START, _FORECAST_PAY),
+    Objective("SAFETY_STOCK", "Güvenlik stoğunun altı", 60, 5, FAMILY_MATERIAL, _MATERIAL_AXES, (LEVEL_FINISHED, LEVEL_SEMI, LEVEL_RAW)),
+    Objective("OVERTIME", "Ek mesai", 60, 5, FAMILY_RESOURCE,
+              (ObjectiveAxis(AX_RESOURCE, "Kaynak grubu tipi", (RES_EMPLOYEE, RES_MACHINE, RES_OTHER)),), (RES_EMPLOYEE, RES_MACHINE, RES_OTHER)),
     Objective("SUBCONTRACT", "Fason", 60, 5),
+    Objective("OVER_TARGET_LOAD", "Hedef doluluğun üstü", None, None, FAMILY_RESOURCE,
+              (ObjectiveAxis(AX_RESOURCE, "Kaynak grubu tipi", (RES_EMPLOYEE, RES_MACHINE, RES_SUBCONTRACTOR, RES_OTHER)),),
+              (RES_EMPLOYEE, RES_MACHINE, RES_SUBCONTRACTOR, RES_OTHER)),
     Objective("ALTERNATIVE", "Alternatif önceliği", 60, 5),
-    Objective("EARLY_BUILD", "Erken üretim ve stok", 60, 5),
+    Objective("EARLY_BUILD", "Erken üretim ve stok", 60, 5, FAMILY_MATERIAL, _MATERIAL_AXES, (LEVEL_FINISHED, LEVEL_SEMI, LEVEL_RAW)),
     Objective("PLAN_DEVIATION", "Önceki plandan sapma", None, None),
-    Objective("OVER_TARGET_LOAD", "Hedef doluluğun üstü", None, None),
 )
 OBJECTIVE_LABELS: dict[str, str] = {o.code: o.label for o in OBJECTIVES}
+OBJECTIVE_BY_CODE: dict[str, Objective] = {o.code: o for o in OBJECTIVES}
+# başlangıç düzeninde talep hedefleri tür tür iç içedir (mockup): Karşılanmayan talep · Kesin, Gecikme · Kesin, Karşılanmayan talep · Beklemedeki…
+START_INTERLEAVED = ("UNMET_DEMAND", "LATENESS")
 
 # Başlangıç dönem dizisi (plan ekseni): içinde bulunulan ay + 2 ay haftalık, sonra 6 ay aylık
 DEFAULT_BUCKETS: tuple[tuple[str, int, str], ...] = ((WEEK, 3, MONTH), (MONTH, 6, MONTH))

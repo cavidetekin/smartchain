@@ -35,6 +35,13 @@ class SqlPlanningData:
         from app import supplierlimits
         return supplierlimits.daily(self.session, self.scenario_definition_id, date_from, date_to)
 
+    def demand_priorities(self) -> dict:
+        """Öncelik yönetimi (docs/09, K-195): talebin geçerli öncelik grubu ve kaynağı."""
+        if self.scenario_definition_id is None:
+            raise ValueError("Öncelikler için senaryo gerekir.")
+        from app import priorities
+        return priorities.demand_priorities(self.session, self.scenario_definition_id)
+
     def material_holds(self, today: date | None = None) -> list[dict]:
         """Malzeme blokajı (docs/09, K-193): senaryonun plan dönemlerinde kapalı ve açık dönemler."""
         if self.scenario_definition_id is None:

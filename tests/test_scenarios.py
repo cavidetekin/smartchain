@@ -80,7 +80,7 @@ def test_registry_covers_every_scenario_table():
     """Modelde senaryo kimliği taşıyan her param tablosu kayıt defterinde; türü Ayar ya da Veri, Veri tablosunun ayırma işlevi bağlı."""
     assert registry.model_tables() == set(registry.BY_NAME)
     assert {t.name for t in registry.TABLES if t.kind == registry.SETTING} == {
-        "PlanningSetting", "ObjectiveDefinition", "TimeBucketDefinition", "PriorityRule", "WarningThreshold"}
+        "PlanningSetting", "ObjectiveDefinition", "TimeBucketDefinition", "WarningThreshold"}
     assert all(t.materialize is not None for t in registry.TABLES if t.kind == registry.DATA)
 
 
@@ -90,7 +90,7 @@ def test_copy_brings_all_settings_and_follows_rules(db_engine, base, client, peo
     admin = auth(people[ADMIN])
     client.put(f"/api/parameters?scenario_id={base}", headers=admin, json={"changes": {"UseOvertime": False}})
     a = new(client, admin, "Fazla mesaili", base)
-    for table in ("PlanningSetting", "ObjectiveDefinition", "TimeBucketDefinition", "PriorityRule"):
+    for table in ("PlanningSetting", "ObjectiveDefinition", "TimeBucketDefinition"):
         assert rows_of(db_engine, table, a) == rows_of(db_engine, table, base), table
     assert rows_of(db_engine, "SupplierLimit", a) == 0 and rows_of(db_engine, "SupplierLimit", base) >= 1   # Baz'ın veri satırları kopyalanmaz
     with db_engine.connect() as c:

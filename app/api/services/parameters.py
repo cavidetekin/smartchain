@@ -6,7 +6,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.params import catalog as cat, horizon, scenarios, service as params
+from app.params import catalog as cat, horizon, objectives as objective_rows, scenarios, service as params
 
 from ..errors import AppError
 from ..repositories import audit
@@ -99,9 +99,51 @@ def objectives(session: Session | None, user: CurrentUser, scenario_id: int | No
 
     def work():
         sid, _ = _scenario(session, user, scenario_id)
-        return {"rows": params.read_objectives(session, sid), "total_seconds": params.time_budget(session, sid)}
+        return {"rows": objective_rows.read_objectives(session, sid), "total_seconds": params.time_budget(session, sid),
+                "catalog": objective_rows.catalog(session)}
 
     return auth._db(work)
+
+
+def _objective_work(session: Session | None, actor: CurrentUser, scenario_id: int | None, action) -> None:
+    """Hedef satırı işlemi (K-196): senaryo çözülür, işlem denetim iziyle çalışır; sorun 422."""
+    session = auth._require(session)
+
+    def work():
+        sid, name = _scenario(session, actor, scenario_id)
+        try:
+            out = action(sid, lambda label, old, new: audit.write_audit(session, ACTION_OBJECTIVE, actor.id, OBJECT, _key(name, label), new, old, scenario=name))
+        except params.ParamError as err:
+            session.rollback()
+            raise _invalid(err) from None
+        session.commit()
+        return out
+
+    return auth._db(work)
+
+
+def create_objective(session: Session | None, actor: CurrentUser, body: dict, scenario_id: int | None = None) -> dict:
+    """"Yeni hedef tanımla": satır listenin sonuna, aktif olarak eklenir."""
+    _objective_work(session, actor, scenario_id, lambda sid, log: objective_rows.create(
+        session, sid, body["code"], body.get("scope"), body.get("description"), body.get("seconds"), body.get("tolerance"), log))
+    return objectives(session, actor, scenario_id)
+
+
+def update_objective(session: Session | None, actor: CurrentUser, row_id: int, body: dict, scenario_id: int | None = None) -> dict:
+    """"Düzenle": hedef, kapsam, açıklama; aktif satırda süre ve ödün payı."""
+    _objective_work(session, actor, scenario_id, lambda sid, log: objective_rows.update(
+        session, sid, row_id, body["code"], body.get("scope"), body.get("description"), body.get("seconds"), body.get("tolerance"), log))
+    return objectives(session, actor, scenario_id)
+
+
+def delete_objective(session: Session | None, actor: CurrentUser, row_id: int, scenario_id: int | None = None) -> dict:
+    _objective_work(session, actor, scenario_id, lambda sid, log: objective_rows.delete(session, sid, row_id, log))
+    return objectives(session, actor, scenario_id)
+
+
+def reset_objectives(session: Session | None, actor: CurrentUser, scenario_id: int | None = None) -> dict:
+    _objective_work(session, actor, scenario_id, lambda sid, log: objective_rows.reset(session, sid, log))
+    return objectives(session, actor, scenario_id)
 
 
 def update_objectives(session: Session | None, actor: CurrentUser, rows: list[dict], scenario_id: int | None = None) -> dict:
@@ -110,7 +152,7 @@ def update_objectives(session: Session | None, actor: CurrentUser, rows: list[di
     def work():
         sid, name = _scenario(session, actor, scenario_id)
         try:
-            params.save_objectives(session, sid, rows, lambda label, old, new: audit.write_audit(
+            objective_rows.save_objectives(session, sid, rows, lambda label, old, new: audit.write_audit(
                 session, ACTION_OBJECTIVE, actor.id, OBJECT, _key(name, label), new, old, scenario=name))
         except params.ParamError as err:
             session.rollback()

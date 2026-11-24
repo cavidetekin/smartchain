@@ -2,10 +2,10 @@
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.params import catalog as cat, service as params
+from app.params import catalog as cat, objectives as objective_rows, service as params
 
 from .data import SqlPlanningData
-from .interface import EngineInput, Objective, PlanRunInfo, PriorityRule, ScenarioParameters, TimeBucket
+from .interface import EngineInput, Objective, PlanRunInfo, ScenarioParameters, TimeBucket
 
 
 class PlanRunNotFound(LookupError):
@@ -32,12 +32,10 @@ def load_parameters(session: Session, scenario_definition_id: int) -> ScenarioPa
     settings = params.all_settings(session, scenario_definition_id)
     plan = _buckets(session, scenario_definition_id, cat.AXIS_PLAN)
     report = plan if settings.get("ReportAxisSameAsPlan") != cat.NO else _buckets(session, scenario_definition_id, cat.AXIS_REPORT)
-    objectives = tuple(Objective(o["seq"], o["code"], o["priority_group"], o["seconds"], o["tolerance"] or 0.0)
-                       for o in params.read_objectives(session, scenario_definition_id) if o["active"])
-    rules = tuple(PriorityRule(r.Seq, r.Criterion, r.Direction or "Artan") for r in session.execute(text(
-        "SELECT Seq, Criterion, Direction FROM param.PriorityRule WHERE ScenarioDefinitionId = :id ORDER BY Seq"), p))
+    objectives = tuple(Objective(o["seq"], o["code"], o["seconds"], o["tolerance"] or 0.0, o["scope"])
+                       for o in objective_rows.read_objectives(session, scenario_definition_id) if o["active"])
     return ScenarioParameters(id=scenario_definition_id, name=name, settings=settings, time_buckets=plan, report_buckets=report,
-                              objectives=objectives, priority_rules=rules)
+                              objectives=objectives)
 
 
 def load_input(session: Session, plan_run_id: int, time_budget_seconds: int) -> EngineInput:

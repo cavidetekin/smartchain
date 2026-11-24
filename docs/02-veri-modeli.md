@@ -98,7 +98,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri yönetimi  19 tablo:** RawCompare · RawCompareRow · ImportBatch · ImportFinding · IntegrationEntity · IntegrationViewVersion · Staging (ham ve işlenmiş katman) · DataRule · DataRuleEffect · FieldDefinition · ManualValue · FieldChange · DataQualityWarning · DemandChain · DemandChainPath · DataVersion
 - **Kaynak  10 tablo:** Resource · ResourceGroup · ResourceGroupMember · EmployeeAbsence · WorkPattern · ResourceEfficiency · OvertimeLimit · ResourceDowntime · FactoryCalendar · ResourceGroupConstraint
 - **Malzeme  9 tablo:** Material · MaterialSupplier · BOM · Routing · MaterialReference · Project
-- **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · PriorityRule · WarningDefinition · WarningThreshold
+- **Parametre  6 tablo:** PlanningSetting · TimeBucketDefinition · ObjectiveDefinition · DemandPriority · WarningDefinition · WarningThreshold
 - yükleme
 - **Talep  3 tablo:** Customer · SalesOrderLine · Forecast
 - **Arz ve stok  8 tablo:** Stock · BorrowPayback · WorkOrder · PurchaseOrderLine · TransferOrder
@@ -191,8 +191,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **PlanningSetting:** Senaryonun planlama parametreleri (anahtar–değer)
 - **TimeBucketDefinition:** Zaman yapısı: senaryonun ufuk ve dönem dizisi (plan ve raporlama ekseni)
-- **ObjectiveDefinition:** Senaryonun hedefleri: sıra, süre bütçesi, ödün payı (leksikografik)
-- **PriorityRule:** Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih)
+- **ObjectiveDefinition:** Senaryonun hedef satırları: kapsam, sıra, süre bütçesi, ödün payı (leksikografik; K-196)
+- **DemandPriority:** Öncelik grubu: müşteri, proje ve sipariş satırı için girilen 1–5 (K-195)
 - **WarningDefinition:** Uyarı kataloğu: kod ve kategori (K-190)
 - **WarningThreshold:** Senaryonun uyarı eşikleri: kademeli eşik, önem, aktiflik (K-190)
 
@@ -691,7 +691,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Name | nvarchar(200) |  | Proje adı |  | ERP ya da kural | H | H | bilinmiyor |
 | ProjectGroupId | bigint | FK | Proje grubu |  | ERP ya da kural | H | H | yok |
 | TrackingRule | nvarchar(20) |  | Proje bazında takip kuralı (grubu ezer) | Takip kuralı | ERP ya da kural | H | H | gruptan |
-| Priority | int |  | Proje önceliği |  | ERP ya da kural | H | H | yok |
+| Priority | int |  | ERP önceliği (K-195): ERP'den ya da kuraldan gelen proje önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir | ERP önceliği | ERP ya da kural | H | H | yok |
 | IsActive | bit |  | Aktif mi | Aktif | ERP ya da kural | H | H | hata (kurallardan sonra) |
 | AdditionalText1–7 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
@@ -708,7 +708,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | Code | nvarchar(50) | UK | Müşteri kodu |  | ERP | H | E | hata (satır atlanır) |
 | Name | nvarchar(200) |  | Ad | Müşteri adı | ERP | H | H | bilinmiyor |
-| Priority | int |  | Müşteri önceliği |  | Kural ya da elle | H | H | yok |
+| Priority | int |  | ERP önceliği (K-195): ERP'den ya da kuraldan gelen müşteri önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir | ERP önceliği | Kural ya da elle | H | H | yok |
 | AllowPartialDelivery | bit |  | Kısmi teslimata izin |  | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
 | CustomerGroup | nvarchar(50) |  | Müşteri grubu |  | ERP | H | H | bilinmiyor |
 | IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
@@ -743,7 +743,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Uom | nvarchar(10) | FK | Açık, sipariş ve teslim miktarının birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | Sipariş birimi | ERP | H | H | temel birim |
 | RequestedDate | date |  | İstek tarihi |  | ERP | H | E | hata (satır atlanır) |
 | ConfirmedDate | date |  | Teyit tarihi |  | ERP | H | H | bilinmiyor |
-| Priority | int |  | Satır önceliği |  | Kural ya da elle | H | H | yok |
+| Priority | int |  | ERP önceliği (K-195): ERP'den ya da kuraldan gelen satır önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir | ERP önceliği | Kural ya da elle | H | H | yok |
 | AllowPartialDelivery | bit |  | Kısmi teslimat (müşteriyi ezer) | Kısmi teslimat | ERP | H | H | müşteriden |
 | Status | nvarchar(50) |  | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | Sipariş durumu | ERP | H | H | bilinmiyor |
 | IsActive | bit |  | Aktif mi | Aktif | ERP, yoksa kural | H | H | hata (kurallardan sonra) |
@@ -1032,35 +1032,42 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Count | int |  | Kapsam: parçanın kapsam birimi cinsinden uzunluğu | Kapsam | Smartchain (parametre) | H | E |  |
 | SpanUnit | nvarchar(10) |  | Gün \| Hafta \| Ay \| Çeyrek \| Yıl | Kapsam birimi | Smartchain (parametre) | H | E |  |
 
-### ObjectiveDefinition
-<sub>21. Veri modeli · Parametre</sub>
+### DemandPriority
+<sub>21. Veri modeli · Talep</sub>
 
 - Parametre · versiyonsuz · Faz 1
-- Senaryonun hedefleri (leksikografik, ağırlık yok; K-175): motor hedefleri sırayla çözer. Senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır.
+- Öncelik grubu (K-195): müşteri, proje ya da sipariş satırı için bu ekranda girilen 1–5 öncelik grubu. Senaryoya bağlı, Baz + fark (K-176); kayıt başına tek satır. Öncelik yönetimi ekranından girilir.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
-| ScenarioDefinitionId | int | FK,UK | Senaryo |  | Smartchain (parametre) | H | E |  |
-| Code | nvarchar(30) | UK | Hedefin kodu (UNMET_DEMAND, LATENESS, UNMET_FORECAST…; fonksiyon 22) | Hedef | Smartchain (parametre) | H | E |  |
-| PriorityGroup | int | UK | Sipariş öncelik grubu; boş = bütün siparişler (gruplar öncelik kuralları adımında) | Öncelik grubu | Smartchain (parametre) | H | H |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| BaseRowId | bigint |  | Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş | Baz satırı | Sistem | H | H |  |
+| OverriddenFields | nvarchar(400) |  | Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur | Değişen alanlar | Sistem | H | H |  |
+| IsValid | bit |  | Ortak yapı gereği durur; bu tabloda her zaman Evet (değer boşaltılarak kaldırılır) | Geçerli | Smartchain (parametre) | H | E | 1 |
+| Level | nvarchar(10) | IX | Müşteri \| Proje \| Sipariş | Düzey | Smartchain (parametre) | H | E |  |
+| RecordId | bigint | IX | Düzeye göre müşterinin, projenin ya da sipariş satırının kimliği | Kayıt | Smartchain (parametre) | H | E |  |
+| PriorityGroup | int |  | Öncelik grubu (1–5; küçük olan önce); izleyen senaryonun fark satırında boşsa Baz'daki değer bu senaryoda kaldırılmıştır | Öncelik grubu | Smartchain (parametre) | H | H |  |
+| UpdatedAt | datetime2 |  | Son değişiklik zamanı (UTC) |  | Sistem | H | E |  |
+| UpdatedBy | int |  | Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş |  | Sistem | H | H |  |
+
+### ObjectiveDefinition
+<sub>21. Veri modeli · Parametre</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Senaryonun hedef satırları (leksikografik, ağırlık yok; K-175): motor satırları sırayla çözer. Senaryonun süre bütçesi aktif satırların sürelerinin toplamıdır. Hedef listesi kullanıcınındır (K-196): her satır bir hedef ve bir kapsamdır (Scope); kapsamlar örtüşebilir, hiçbir satırın kapsamadığı kayıt hiçbir hedefe girmez.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| ScenarioDefinitionId | int | FK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| Code | nvarchar(30) |  | Hedefin kodu (UNMET_DEMAND, LATENESS, SAFETY_STOCK…; fonksiyon 22); bir hedefin birden çok satırı olabilir (K-196) | Hedef | Smartchain (parametre) | H | E |  |
+| Scope | nvarchar(max) |  | Satırın kapsamı (JSON): eksen → seçilen değerler (DemandType, PriorityGroup, MaterialLevel, MaterialGroup, ResourceType); seçim yapılmayan eksen yazılmaz ve "tümü" demektir; boş = hedefin tamamı (K-196) | Kapsam | Smartchain (parametre) | H | H |  |
+| Description | nvarchar(200) |  | Kullanıcının satıra yazdığı açıklama; serbest metin (K-196) | Açıklama | Smartchain (parametre) | H | H |  |
 | Seq | int |  | Çözüm sırası; aktif hedeflerde 1'den boşluksuz, kapalı hedefte boş | Sıra | Smartchain (parametre) | H | H |  |
 | TimeBudgetSeconds | int |  | Süre bütçesi (sn); kapalı hedefte boş | Süre bütçesi | Smartchain (parametre) | H | H |  |
 | TolerancePct | decimal(5,2) |  | Ödün payı (%): üst hedeften verilebilecek en çok ödün; 0 = katı | Ödün payı | Smartchain (parametre) | H | H |  |
 | IsActive | bit |  | Kapalı hedef çözülmez | Aktif | Smartchain (parametre) | H | H | 1 |
-
-### PriorityRule
-<sub>21. Veri modeli · Parametre</sub>
-
-- Parametre · versiyonsuz · Faz 1
-- Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih).
-
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|---|
-| ScenarioDefinitionId | int | PK,FK | Senaryo |  | Smartchain (parametre) | H | E |  |
-| Seq | int | PK | Sıra |  | Smartchain (parametre) | H | E |  |
-| Criterion | nvarchar(30) |  | Kriter |  | Smartchain (parametre) | E | E |  |
-| Direction | nvarchar(10) |  | Artan \| Azalan | Yön | Smartchain (parametre) | H | H | Artan |
 
 ### WarningDefinition
 <sub>21. Veri modeli · Parametre</sub>

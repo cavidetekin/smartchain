@@ -214,6 +214,14 @@ def check_past_due(ds: Dataset) -> Check:
     return Check(9, "Tarih geçince çıkan uyarı; kapasitesi tanımsız kaynak", ok, f"{d.PAST_DUE_ORDER} {late['RequestedDate']:%d.%m}, {d.DUE_TODAY_ORDER} bugün")
 
 
+def check_priority_range(ds: Dataset) -> Check:
+    """10 (K-195): ERP önceliği 1–5 dışında olan proje; değer yok sayılır, projenin siparişlerinde hiyerarşi müşteriye geçer."""
+    project = ds.get("Project", Code=d.PRIORITY_BAD_PROJECT)
+    orders = [r for r in ds.rows("SalesOrderLine") if r["ProjectId"] == project["Id"]]
+    ok = project["Priority"] == d.PRIORITY_BAD_VALUE and not (1 <= project["Priority"] <= 5) and bool(orders)
+    return Check(10, "Aralık dışı ERP önceliği", ok, f"{d.PRIORITY_BAD_PROJECT} ERP önceliği {project['Priority']} · {len(orders)} sipariş satırı")
+
+
 def employees(ds: Dataset) -> set[int]:
     """İşçi kaynaklar: en az bir işçi grubuna (`IsEmployee`) üye olanlar (K-180)."""
     groups = {g["Id"] for g in ds.rows("ResourceGroup") if g["IsEmployee"]}
@@ -222,7 +230,7 @@ def employees(ds: Dataset) -> set[int]:
 
 def all_checks(ds: Dataset) -> list[Check]:
     return [check_bottleneck(ds), check_late_material(ds), check_supplier_limit(ds), check_impossible_due(ds),
-            check_downtime_and_absence(ds), check_deep_warning(ds), check_no_demand_warning(ds), check_past_due(ds)]
+            check_downtime_and_absence(ds), check_deep_warning(ds), check_no_demand_warning(ds), check_past_due(ds), check_priority_range(ds)]
 
 
 def summary(ds: Dataset) -> dict:

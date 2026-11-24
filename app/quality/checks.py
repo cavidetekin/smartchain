@@ -127,6 +127,15 @@ def _material_hold(t) -> sa.ColumnElement:
                              sa.or_(w.c.EndDate.is_(None), w.c.EndDate >= _today()))
 
 
+def _priority_out_of_range(t) -> sa.ColumnElement:
+    """ERP önceliği 1–5 dışında (K-195): değer yok sayılır, hiyerarşi bir alt basamağa geçer."""
+    return sa.and_(t.c.Priority.is_not(None), sa.not_(t.c.Priority.between(1, 5)))
+
+
+def _never(t) -> sa.ColumnElement:
+    return sa.false()
+
+
 def _passive_with_limit(t) -> sa.ColumnElement:
     return sa.and_(t.c.IsActive == sa.false(), _supplier_limit(t))
 
@@ -146,6 +155,9 @@ CHECKS: tuple[SmartchainCheck, ...] = (
     SmartchainCheck("SC.SUPLIM_PASSIVE", "MaterialSupplier", "Pasif malzeme tedarikçisine girilmiş tedarikçi limiti",
                     "Pasif malzeme tedarikçisine tedarikçi limiti girilmiş:", _passive_with_limit),
     # Malzeme blokajı (K-193): malzeme aktarımla kapanırsa blokaj kaydı durur, uygulanacak malzeme yoktur
+    # Öncelik yönetimi (K-195): öncelik grubu 1–5'tir; aralık dışı ERP önceliği kullanılmaz. Önem her zaman Normal
+    *[SmartchainCheck("SC.PRIORITY_RANGE", table, "ERP önceliği 1–5 dışında", "ERP önceliği 1–5 dışında (yok sayılır):", _priority_out_of_range, high_when=_never)
+      for table in ("Customer", "Project", "SalesOrderLine")],
     SmartchainCheck("SC.HOLD_ORPHAN", "Material", "Kapanan malzemeye girilmiş malzeme blokajı", "Güncel veride olmayan malzemeye malzeme blokajı girilmiş:",
                     _material_hold, closed=True),
 )

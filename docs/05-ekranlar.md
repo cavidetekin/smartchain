@@ -50,6 +50,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **06 · Parametreler:** Seçili senaryonun parametreleri: model, hedefler, talep, malzeme, kapasite, planlama ufku, plan kararlılığı (K-175).
 - **30 · Kapasite yönetimi:** Seçili senaryonun kapasitesi: kaynak grubu × dönem özeti (çalışma günü, duruş, günlük kapasite, verimlilik, toplam ve kullanılabilir kapasite, ek mesai limiti); çalışma düzeni, bakım ve duruş, verimlilik, fabrika takvimi ve ek mesai limiti girişleri (7.9, K-185). Menüde Parametreler ile Senaryolar arasında. 7.9a: Kapasite özeti sekmesi uygulandı (7.9a; sürüm 0.47.0, geçiş 0067, K-185, K-186); giriş sekmeleri ve kartlar uygulandı (7.9b; sürüm 0.48.0, K-187); Geçerlilik görünümü (tablo seçimi Kayıtlar · Geçerlilik, zaman çubuğu) uygulandı (7.9c; sürüm 0.49.0, K-188).
 - **31 · Model kısıtları:** Seçili senaryoda kaynak grubunun model kısıtları: kısıtsız kapasite çarpanı ve hedef doluluk (7.10, K-189). İkinci sekme "Tedarikçi limiti": satın alınan malzemede tedarikçi üst limiti ve tedarikçi kapanışı; Kayıtlar · Geçerlilik (7.12, K-191). Üçüncü sekme "Malzeme blokajı": malzeme için belli tarihlerde yeni tedarik planı çıkarılmaz; Kayıtlar · Geçerlilik (7.13, K-193; fonksiyon 99). Menüde Kapasite yönetimi ile Senaryolar arasında. Sekmeli (bu adımda tek sekme "Kaynak grubu"); her kaynak grubu bir satır, değer hücreye yazılır. Fonksiyon 103. 7.10: demo bekliyor.
+- **32 · Öncelik yönetimi:** Seçili senaryoda müşteri, proje ve sipariş satırının öncelik grubu (1–5); sekmeler Müşteri · Proje · Sipariş; kartta kaydın siparişleri ve tahminleri ya da siparişin müşterisi ve projesi; geçerli öncelik grubu ve kaynağı hesaplanır (7.14a, K-195). Menüde Model kısıtları'nın altında. Fonksiyon 25. Durum: demo bekliyor (7.14a, K-195).
 - **07 · Senaryolar:** Senaryoların listesi ve yönetimi: yeni senaryo (kopyalayarak), gece çalışsın ve gece sırası, Baz'ı izler, pasif, silme (K-177).
 
 ### Ekran listesi
@@ -134,7 +135,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **22 · Parametreler:** Senaryonun parametreleri ve hedefleri.
 - **23 · Zaman yapısı:** Ufuk ve dönem dizisi, raporlama ekseni, takvim ayarları (Parametreler › Planlama ufku).
 - **24 · Kapasite yönetimi:** Kapasite yönetimi ekranı (30): çalışma düzeni, bakım ve duruş, verimlilik, fabrika takvimi, ek mesai limiti; kaynak grubu × dönem kapasite özeti (K-185).
-- **25 · Alokasyon ve öncelik kuralı:** Ölçüt, yön, ağırlık; MRP ve model aynı kuralı kullanır. Alokasyon (pay ayırma) Faz 1 dışıdır (K-192); öncelik kısmı 7.14 Öncelik yönetimi'nde.
+- **25 · Öncelik yönetimi:** Müşteri, proje ve sipariş satırı için 1–5 öncelik grubu; sabit hiyerarşiyle (sipariş → proje → müşteri) geçerli öncelik (K-195; ekran 32). Eski ölçüt sırası tasarımı ve alokasyon geçersizdir (K-192).
 
 ### Fonksiyon listesi
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon listesi · 3/8</sub>
@@ -358,7 +359,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Şerit:** yalnız ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı · Uyarı eşikleri (7.11, K-190; alt başlıkları Talep · Malzeme · Kapasite · Plan kalitesi).
 - **Form başlıkları:** Sistem ayarları düzeni (docs/12): solda alt başlıklar, sağda sıkı kart, Kaydet ve Vazgeç kartın altında, 44×24 anahtarlar. Tek alt başlıklı başlıkta sol menü yok.
 - **Tablo başlıkları** (Hedefler, Planlama ufku › Ufuk ve dönemler): tablo standardının görünümü ve hücre düzenleme standardı; sıra sürüklenir; Kaydet ve Vazgeç tablonun altında, sağda.
-- **Hedefler:** Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%) · Aktif; altta toplam süre. Leksikografik: ağırlık yok.
+- **Hedefler:** tablo sayfanın tamamını kaplar: Sıra · Grup · Hedef · Kapsam · Açıklama · Süre bütçesi (sn) · Ödün payı (%) · Aktif; altta satır sayısı ve toplam süre, onun altında grup renklerinin açıklaması. Leksikografik: ağırlık yok. Hedef listesi kullanıcınındır (K-196): "Yeni hedef tanımla", satırda "Düzenle" ve "Hedefi sil", "Başlangıç düzenine getir"; kapsamlar örtüşebilir. "Başlangıç düzenine getir" ve "Yeni hedef tanımla" şeridin solunda, sekmelerin yanındadır; Vazgeç ve Kaydet yalnız değişiklik olunca tablonun sağ üstünde çıkar. Kapalı satırın tamamı soluktur.
 - **Planlama ufku:** yalnız dönem tipi, kapsam ve kapsam birimi girilir; Başlangıç ve Bitiş hesaplanan sonuçtur; altta ufku gösteren şerit ve hesaplanan dönemlerin salt okunur listesi (Dönem · Başlangıç · Bitiş · Dönem tipi · Gün sayısı). Raporlama ekseni "planla aynı" kapatılınca ikinci tablo kaydetmeden açılır.
 - **Plan kararlılığı:** sabit dönem değer ve birimle (Gün, Hafta, Ay) tek satırda; altında son günü.
 - **Yetki:** Key user ve üstü düzenler; End user görmez.

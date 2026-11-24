@@ -154,8 +154,9 @@ def test_e_scenario_not_following_base(api, db_engine, world, clean, at, kind): 
 
 def test_rule_lives_in_the_resolution_layer():
     """Kural tek yerde: başlangıcı tekil tabloların anahtarı `resolve.KEYS`'te; birleşen türlerde (duruş, fabrika takvimi) çakışma kuralı yok."""
-    assert set(resolve.KEYS) == {"WorkPattern", "ResourceEfficiency", "OvertimeLimit", "SupplierLimit"}
-    assert all(k[-1] == "ValidFrom" for k, _ in resolve.KEYS.values())
+    assert set(resolve.KEYS) == {"WorkPattern", "ResourceEfficiency", "OvertimeLimit", "SupplierLimit", "DemandPriority"}
+    assert all(k[-1] == "ValidFrom" for name, (k, _) in resolve.KEYS.items() if name != "DemandPriority")     # tarihli girişlerde anahtar: sahip + başlangıç
+    assert resolve.KEYS["DemandPriority"][0] == ("Level", "RecordId")                                            # öncelik grubu tarihsiz: kayıt başına tek değer (K-195)
     for table in ("ResourceDowntime", "FactoryCalendar"):
         assert "ShadowId" in resolve.sql(table) and "OUTER APPLY" not in resolve.sql(table)
     assert "OUTER APPLY" in resolve.sql("WorkPattern") and "NOT EXISTS" in resolve.sql("WorkPattern")

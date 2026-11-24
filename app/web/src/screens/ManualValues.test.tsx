@@ -91,7 +91,7 @@ describe("hücre düzenleme standardı", () => {
     expect(cellOf("MUS-B", "Müşteri önceliği")).toHaveTextContent("2");
     expect(cellOf("MUS-B", "Müşteri önceliği")).not.toHaveClass("is-draft");
     const select = await openEditor(user, cellOf("MUS-B", "Segment"));
-    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["", "A", "B"]);
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["—", "A", "B"]);
   });
 
   it("köşe işareti; kaynak ipucu yalnız manuel değer ve kural sonucunda (ERP'den olduğu gibi gelen değerde yok); hücrede düğme yok", async () => {

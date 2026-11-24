@@ -527,7 +527,7 @@ Project = sa.Table(
     sa.Column("Name", sa.Unicode(200), nullable=True, comment="Proje adı", info={'label': "Proje adı", 'source': "ERP ya da kural", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("ProjectGroupId", sa.BigInteger(), index=True, nullable=True, comment="Proje grubu", info={'label': "Proje grubu", 'source': "ERP ya da kural", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("TrackingRule", sa.Unicode(20), nullable=True, comment="Proje bazında takip kuralı (grubu ezer)", info={'label': "Takip kuralı", 'source': "ERP ya da kural", 'workspace': False, 'if_empty': "gruptan"}),
-    sa.Column("Priority", sa.Integer(), nullable=True, comment="Proje önceliği", info={'label': "Proje önceliği", 'source': "ERP ya da kural", 'workspace': False, 'if_empty': "yok"}),
+    sa.Column("Priority", sa.Integer(), nullable=True, comment="ERP önceliği (K-195): ERP'den ya da kuraldan gelen proje önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir", info={'label': "ERP önceliği", 'source': "ERP ya da kural", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("IsActive", sa.Boolean(), nullable=True, comment="Aktif mi", info={'label': "Aktif", 'source': "ERP ya da kural", 'workspace': False, 'if_empty': "hata (kurallardan sonra)"}),
     sa.Column("AdditionalText1", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AdditionalText2", sa.Unicode(255), nullable=True, comment="Ek metin alanları; etiketi FieldDefinition'da", info={'source': "ERP", 'workspace': False, 'if_empty': "yok"}),
@@ -555,7 +555,7 @@ Customer = sa.Table(
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
     sa.Column("Code", sa.Unicode(50), nullable=False, comment="Müşteri kodu", info={'label': "Müşteri kodu", 'source': "ERP", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
     sa.Column("Name", sa.Unicode(200), nullable=True, comment="Ad", info={'label': "Müşteri adı", 'source': "ERP", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("Priority", sa.Integer(), nullable=True, comment="Müşteri önceliği", info={'label': "Müşteri önceliği", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "yok"}),
+    sa.Column("Priority", sa.Integer(), nullable=True, comment="ERP önceliği (K-195): ERP'den ya da kuraldan gelen müşteri önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir", info={'label': "ERP önceliği", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AllowPartialDelivery", sa.Boolean(), nullable=True, comment="Kısmi teslimata izin", info={'label': "Kısmi teslimata izin", 'source': "ERP, yoksa kural", 'workspace': False, 'if_empty': "hata (kurallardan sonra)"}),
     sa.Column("CustomerGroup", sa.Unicode(50), nullable=True, comment="Müşteri grubu", info={'label': "Müşteri grubu", 'source': "ERP", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("IsActive", sa.Boolean(), nullable=True, comment="Aktif mi", info={'label': "Aktif", 'source': "ERP, yoksa kural", 'workspace': False, 'if_empty': "hata (kurallardan sonra)"}),
@@ -601,7 +601,7 @@ SalesOrderLine = sa.Table(
     sa.Column("Uom", sa.Unicode(10), sa.ForeignKey("core.UnitOfMeasure.Code"), nullable=True, comment="Açık, sipariş ve teslim miktarının birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir", info={'label': "Sipariş birimi", 'source': "ERP", 'workspace': False, 'if_empty': "temel birim"}),
     sa.Column("RequestedDate", mssql.DATE(), nullable=False, comment="İstek tarihi", info={'label': "İstek tarihi", 'source': "ERP", 'workspace': False, 'if_empty': "hata (satır atlanır)"}),
     sa.Column("ConfirmedDate", mssql.DATE(), nullable=True, comment="Teyit tarihi", info={'label': "Teyit tarihi", 'source': "ERP", 'workspace': False, 'if_empty': "bilinmiyor"}),
-    sa.Column("Priority", sa.Integer(), nullable=True, comment="Satır önceliği", info={'label': "Satır önceliği", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "yok"}),
+    sa.Column("Priority", sa.Integer(), nullable=True, comment="ERP önceliği (K-195): ERP'den ya da kuraldan gelen satır önceliği; 1–5 dışındaysa yok sayılır. Girilen öncelik grubu `param.DemandPriority`'dedir", info={'label': "ERP önceliği", 'source': "Kural ya da elle", 'workspace': False, 'if_empty': "yok"}),
     sa.Column("AllowPartialDelivery", sa.Boolean(), nullable=True, comment="Kısmi teslimat (müşteriyi ezer)", info={'label': "Kısmi teslimat", 'source': "ERP", 'workspace': False, 'if_empty': "müşteriden"}),
     sa.Column("Status", sa.Unicode(50), nullable=True, comment="ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok", info={'label': "Sipariş durumu", 'source': "ERP", 'workspace': False, 'if_empty': "bilinmiyor"}),
     sa.Column("IsActive", sa.Boolean(), nullable=True, comment="Aktif mi", info={'label': "Aktif", 'source': "ERP, yoksa kural", 'workspace': False, 'if_empty': "hata (kurallardan sonra)"}),
@@ -945,31 +945,37 @@ TimeBucketDefinition = sa.Table(
     comment="Zaman yapısı: senaryonun ufuk ve dönem dizisi. Kullanıcı tarih girmez; her satır bir parçadır: dönem tipi (dönemlerin büyüklüğü) ve kapsam (parçanın ne kadar sürdüğü). Başlangıç ve bitiş plan başlangıcına göre hesaplanır (fonksiyon 23, K-175). Raporlama ekseni ayrı diziyse `Axis` = Rapor satırları. Dönem tipleri ve kapsam birimleri iki eksende aynıdır; kapsam birimi dönem tipinden küçük olamaz (çeyrek ve yıl dönem tipinde Ay da olabilir).",
 )
 
+DemandPriority = sa.Table(
+    "DemandPriority", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("BaseRowId", sa.BigInteger(), nullable=True, comment="Baz'ı izleyen senaryoda Baz'daki satırın farkıysa o satırın kimliği; senaryonun kendi satırında ve Baz'da boş", info={'label': "Baz satırı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("OverriddenFields", sa.Unicode(400), nullable=True, comment="Fark satırında senaryonun değiştirdiği alanların adları (virgüllerle çevrili); yalnız bu alanlar senaryodan, gerisi Baz satırından okunur", info={'label': "Değişen alanlar", 'source': "Sistem", 'workspace': False}),
+    sa.Column("IsValid", sa.Boolean(), nullable=False, server_default=sa.text("1"), comment="Ortak yapı gereği durur; bu tabloda her zaman Evet (değer boşaltılarak kaldırılır)", info={'label': "Geçerli", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
+    sa.Column("Level", sa.Unicode(10), index=True, nullable=False, comment="Müşteri | Proje | Sipariş", info={'label': "Düzey", 'values': ["Müşteri", "Proje", "Sipariş"], 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("RecordId", sa.BigInteger(), index=True, nullable=False, comment="Düzeye göre müşterinin, projenin ya da sipariş satırının kimliği", info={'label': "Kayıt", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("PriorityGroup", sa.Integer(), nullable=True, comment="Öncelik grubu (1–5; küçük olan önce); izleyen senaryonun fark satırında boşsa Baz'daki değer bu senaryoda kaldırılmıştır", info={'label': "Öncelik grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı (UTC)", info={'label': "Son değişiklik zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedBy", sa.Integer(), nullable=True, comment="Son değiştiren kullanıcı; sentetik ve geçişle gelen satırda boş", info={'label': "Son değiştiren kullanıcı", 'source': "Sistem", 'workspace': False}),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Öncelik grubu (K-195): müşteri, proje ya da sipariş satırı için bu ekranda girilen 1–5 öncelik grubu. Senaryoya bağlı, Baz + fark (K-176); kayıt başına tek satır. Öncelik yönetimi ekranından girilir.",
+)
+
 ObjectiveDefinition = sa.Table(
     "ObjectiveDefinition", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
     sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), nullable=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("Code", sa.Unicode(30), nullable=False, comment="Hedefin kodu (UNMET_DEMAND, LATENESS, UNMET_FORECAST…; fonksiyon 22)", info={'label': "Hedef", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("PriorityGroup", sa.Integer(), nullable=True, comment="Sipariş öncelik grubu; boş = bütün siparişler (gruplar öncelik kuralları adımında)", info={'label': "Öncelik grubu", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Code", sa.Unicode(30), nullable=False, comment="Hedefin kodu (UNMET_DEMAND, LATENESS, SAFETY_STOCK…; fonksiyon 22); bir hedefin birden çok satırı olabilir (K-196)", info={'label': "Hedef", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Scope", mssql.NVARCHAR(), nullable=True, comment="Satırın kapsamı (JSON): eksen → seçilen değerler (DemandType, PriorityGroup, MaterialLevel, MaterialGroup, ResourceType); seçim yapılmayan eksen yazılmaz ve \"tümü\" demektir; boş = hedefin tamamı (K-196)", info={'label': "Kapsam", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Description", sa.Unicode(200), nullable=True, comment="Kullanıcının satıra yazdığı açıklama; serbest metin (K-196)", info={'label': "Açıklama", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("Seq", sa.Integer(), nullable=True, comment="Çözüm sırası; aktif hedeflerde 1'den boşluksuz, kapalı hedefte boş", info={'label': "Sıra", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("TimeBudgetSeconds", sa.Integer(), nullable=True, comment="Süre bütçesi (sn); kapalı hedefte boş", info={'label': "Süre bütçesi", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("TolerancePct", sa.Numeric(5, 2), nullable=True, comment="Ödün payı (%): üst hedeften verilebilecek en çok ödün; 0 = katı", info={'label': "Ödün payı", 'source': "Smartchain (parametre)", 'workspace': False}),
     sa.Column("IsActive", sa.Boolean(), nullable=True, server_default=sa.text("1"), comment="Kapalı hedef çözülmez", info={'label': "Aktif", 'source': "Smartchain (parametre)", 'workspace': False, 'default': "1"}),
-    sa.Index("UX_ObjectiveDefinition_ScenarioDefinitionId_Code_PriorityGroup", "ScenarioDefinitionId", "Code", "PriorityGroup", unique=True),
     schema="param",
     info={'field_class': "Parametre"},
-    comment="Senaryonun hedefleri (leksikografik, ağırlık yok; K-175): motor hedefleri sırayla çözer. Senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır.",
-)
-
-PriorityRule = sa.Table(
-    "PriorityRule", metadata,
-    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("Seq", sa.Integer(), primary_key=True, autoincrement=False, comment="Sıra", info={'label': "Sıra", 'source': "Smartchain (parametre)", 'workspace': False}),
-    sa.Column("Criterion", sa.Unicode(30), nullable=False, comment="Kriter", info={'label': "Kriter", 'source': "Smartchain (parametre)", 'workspace': True}),
-    sa.Column("Direction", sa.Unicode(10), nullable=True, server_default=sa.text("N'Artan'"), comment="Artan | Azalan", info={'label': "Yön", 'values': ["Artan", "Azalan"], 'source': "Smartchain (parametre)", 'workspace': False, 'default': "Artan"}),
-    schema="param",
-    info={'field_class': "Parametre"},
-    comment="Sıralama kuralı: kriterlerin sırası (bucket > müşteri > proje > satır > tarih).",
+    comment="Senaryonun hedef satırları (leksikografik, ağırlık yok; K-175): motor satırları sırayla çözer. Senaryonun süre bütçesi aktif satırların sürelerinin toplamıdır. Hedef listesi kullanıcınındır (K-196): her satır bir hedef ve bir kapsamdır (Scope); kapsamlar örtüşebilir, hiçbir satırın kapsamadığı kayıt hiçbir hedefe girmez.",
 )
 
 WarningDefinition = sa.Table(

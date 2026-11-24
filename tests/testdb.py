@@ -189,6 +189,19 @@ def _has_material_holds(engine: Engine) -> bool:
     return holds >= 3 and both >= 1
 
 
+def _has_priorities(engine: Engine) -> bool:
+    """Sentetik set öncelik gruplarını taşıyor mu (7.14a, K-195): eski setle kurulmuş test veritabanı yeniden yüklenir."""
+    with engine.connect() as conn:
+        return conn.execute(sa.text("SELECT COUNT(*) FROM param.DemandPriority p JOIN param.ScenarioDefinition s ON s.Id = p.ScenarioDefinitionId WHERE s.IsBase = 1")).scalar() >= 5
+
+
+def _has_objective_rows(engine: Engine) -> bool:
+    """Sentetik senaryolar güncel hedef satırlarını taşıyor mu (7.14b, K-196; açıklamalı örnek satır): eski setle kurulmuş test veritabanı yeniden yüklenir."""
+    with engine.connect() as conn:
+        return conn.execute(sa.text("SELECT COUNT(*) FROM param.ObjectiveDefinition o JOIN param.ScenarioDefinition s ON s.Id = o.ScenarioDefinitionId "
+                                    "WHERE s.IsSynthetic = 1 AND s.Name = N'Fazla mesaili' AND o.Description IS NOT NULL")).scalar() >= 1
+
+
 def ensure_synthetic(engine: Engine) -> bool:
     """Sentetik veri yoksa yükler (docs/11); varsa dokunmaz. Yüklediyse True."""
     with engine.connect() as conn:
@@ -196,7 +209,7 @@ def ensure_synthetic(engine: Engine) -> bool:
             "SELECT TOP 1 v.IsSynthetic, (SELECT COUNT(*) FROM core.Material m WHERE m.VersionFrom <= v.Id "
             "AND (m.VersionTo IS NULL OR m.VersionTo >= v.Id)) FROM adm.DataVersion v ORDER BY v.Id DESC")).first()
     if (row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine) and _has_warning_thresholds(engine) and _has_supplier_limits(engine)
-            and _has_material_holds(engine)):
+            and _has_material_holds(engine) and _has_priorities(engine) and _has_objective_rows(engine)):
         return False
     from app.data.synthetic.dataset import generate
     from app.data.synthetic.load import load

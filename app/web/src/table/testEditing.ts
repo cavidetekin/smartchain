@@ -35,7 +35,7 @@ export async function setCell(user: User, rowText: string, header: string, value
   const cell = cellOf(rowText, header);
   const editor = await openEditor(user, cell);
   if (!(editor instanceof HTMLInputElement)) {   // listeli hücre: seçenek tıklanır, taslağa alınır
-    const option = listOptions(cell).find((o) => o.textContent === value);
+    const option = listOptions(cell).find((o) => (value === "" ? o.querySelector(".sc-cell-list-empty") !== null : o.textContent === value));   // boş seçenek "—" ile çizilir
     if (!option) throw new Error(`seçenek yok: ${value}`);
     await user.click(option);
     return;

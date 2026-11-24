@@ -35,6 +35,16 @@ class Objectives(BaseModel):
     rows: list[ObjectiveRow]
 
 
+class ObjectiveEdit(BaseModel):
+    """"Yeni hedef tanımla" ve "Düzenle" (K-196): hedefin kodu, kapsam (eksen → seçilen değerler; seçim yoksa "tümü"), açıklama, süre, ödün payı."""
+    model_config = ConfigDict(extra="forbid")
+    code: str
+    scope: dict[str, list[Any]] = {}
+    description: str | None = None
+    seconds: int | float | str | None = None
+    tolerance: int | float | str | None = None
+
+
 class WarningRow(BaseModel):
     model_config = ConfigDict(extra="forbid")
     code: str
@@ -83,6 +93,26 @@ def objectives(scenario_id: int | None = None, user: CurrentUser = Depends(read2
 @router.put("/parameters/objectives", summary="Hedefler: liste sırasıyla tamamı yazılır (22 yazma)")
 def update_objectives(body: Objectives, scenario_id: int | None = None, user: CurrentUser = Depends(write22), session: Session = Depends(get_session)) -> dict:
     return service.update_objectives(session, user, [r.model_dump() for r in body.rows], scenario_id)
+
+
+@router.post("/parameters/objectives", summary="Yeni hedef tanımla: satır listenin sonuna, aktif olarak eklenir (22 yazma; K-196)")
+def create_objective(body: ObjectiveEdit, scenario_id: int | None = None, user: CurrentUser = Depends(write22), session: Session = Depends(get_session)) -> dict:
+    return service.create_objective(session, user, body.model_dump(), scenario_id)
+
+
+@router.post("/parameters/objectives/reset", summary="Hedefleri başlangıç düzenine getirir (22 yazma; K-196)")
+def reset_objectives(scenario_id: int | None = None, user: CurrentUser = Depends(write22), session: Session = Depends(get_session)) -> dict:
+    return service.reset_objectives(session, user, scenario_id)
+
+
+@router.put("/parameters/objectives/{row_id}", summary="Hedefi düzenle: hedef, kapsam, açıklama, süre, ödün payı (22 yazma; K-196)")
+def update_objective(row_id: int, body: ObjectiveEdit, scenario_id: int | None = None, user: CurrentUser = Depends(write22), session: Session = Depends(get_session)) -> dict:
+    return service.update_objective(session, user, row_id, body.model_dump(), scenario_id)
+
+
+@router.delete("/parameters/objectives/{row_id}", summary="Hedefi sil: her satır silinebilir (22 yazma; K-196)")
+def delete_objective(row_id: int, scenario_id: int | None = None, user: CurrentUser = Depends(write22), session: Session = Depends(get_session)) -> dict:
+    return service.delete_objective(session, user, row_id, scenario_id)
 
 
 @router.get("/parameters/time-buckets/{axis}", summary="Dönem dizisi (plan | rapor), hesaplanmış başlangıç ve bitişle (23 okuma)")

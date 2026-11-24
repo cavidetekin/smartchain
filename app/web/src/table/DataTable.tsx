@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import {
   type CSSProperties, type DragEvent, type HTMLAttributes, type KeyboardEvent, memo, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject,
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from "react";
 
 import { ApiError, emitNotice, saveBlob } from "../api/client";
@@ -253,12 +253,17 @@ type Move = "down" | "right" | "left" | null;
 
 /** Listeli hücrenin düzenleyicisi (K-187): liste açık gelir (ikinci tık gerekmez). Ok tuşları ya da seçeneğin baş harfi işaretler; Enter taslağa
  *  alıp alttaki hücreye, Tab sağdaki hücreye geçer; tıklamak seçer; Esc ve odak kaybı vazgeçer. Liste ekranda sabit konumdadır (tablonun
- *  kaydırma kutusu kesmez). */
+ *  kaydırma kutusu kesmez), hücrenin hemen altında ve en az hücre genişliğindedir; boş seçenek soluk "—" ile ve öteki seçeneklerle aynı
+ *  yükseklikte gösterilir (K-195 demo; docs/12 "Tabloda düzenleme"). Liste açıkken Ctrl+V tablo yapıştırmasıdır (ızgara yakalar). */
 function CellListBox({ spec, label, onDone }: { spec: EditorSpec; label: string; onDone(result: { text: string; move: Move } | null): void }) {
   const options = spec.options ?? [];
   const [active, setActive] = useState(Math.max(0, options.indexOf(spec.text)));
   const anchor = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
+  // en az hücre genişliği: konumlanmadan önce verilir (ilk çizimde hücre ölçülmemiştir; stil özelliğiyle verilen genişlik boş kalırdı)
+  useLayoutEffect(() => {
+    if (list.current && anchor.current) list.current.style.minWidth = `${anchor.current.offsetWidth}px`;
+  });
   useFloating(list, anchor, true);
   useEffect(() => list.current?.focus({ preventScroll: true }), []);
   const fold = (t: string) => t.toLocaleLowerCase("tr");
@@ -281,11 +286,13 @@ function CellListBox({ spec, label, onDone }: { spec: EditorSpec; label: string;
   return (
     <div ref={anchor} className="sc-cell-editor sc-cell-list-anchor" onMouseDown={keep} onClick={keep} onDoubleClick={keep}>
       <span>{spec.text}</span>
-      <ul ref={list} role="listbox" aria-label={label} tabIndex={0} className="sc-cell-list sc-floating" style={{ minWidth: anchor.current?.offsetWidth }}
+      <ul ref={list} role="listbox" aria-label={label} tabIndex={0} className="sc-cell-list sc-floating"
           aria-activedescendant={undefined} onKeyDown={onKey} onBlur={() => onDone(null)}>
         {options.map((o, i) => (
-          <li key={o} role="option" aria-selected={o === spec.text} className={i === active ? "is-active" : undefined} onMouseEnter={() => setActive(i)}
-              onClick={(e) => { e.stopPropagation(); onDone({ text: o, move: null }); }}>{o}</li>
+          <li key={o} role="option" aria-selected={o === spec.text} aria-label={o === "" ? T.emptyChoice : undefined} className={i === active ? "is-active" : undefined}
+              onMouseEnter={() => setActive(i)} onClick={(e) => { e.stopPropagation(); onDone({ text: o, move: null }); }}>
+            {o === "" ? <span className="sc-cell-list-empty" aria-hidden="true">—</span> : o}
+          </li>
         ))}
       </ul>
     </div>
@@ -806,7 +813,10 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     reveal.current = true;
     setCursor({ index, field });
   }, [visible, count]);
+  /** Düzenleyici açıkken yapıştırma (K-195 demo): düzenleyici kapanır, kapanırken gelen taslağa alma (odak kaybı) yok sayılır. */
+  const pasting = useRef(false);
   const finishEdit = useCallback((index: number, field: string, result: { text: string; move: Move } | null) => {
+    if (pasting.current) return;
     const row = rowAtIndex(index);
     const col = byField.get(field);
     if (result && row && col && cellEditing) {
@@ -919,13 +929,26 @@ export function DataTable({ list, cellRender, cellWrap, cellClass, rowProps, fie
     e.preventDefault();
   };
   const onGridPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    if (!gridOn || !cursor || openCell || !cellEditing?.paste || !fromGrid(e.target)) return;
+    if (!gridOn || !cursor || !cellEditing?.paste) return;
     const text = e.clipboardData.getData("text/plain");
     if (!text) return;
+    const lines = parseClipboard(text);
+    if (openCell) {
+      // Düzenleyici açık (K-195 demo): listeli hücrede Ctrl+V o hücreden başlayan tablo yapıştırmasıdır (liste kapanır). Sayı ve metin hücresinde
+      // panoda birden çok hücre varsa yine tablo yapıştırması; tek değer düzenleyiciye yazılır (tarayıcının kendi yapıştırması).
+      const row = rowAtIndex(openCell.index);
+      const col = byField.get(openCell.field);
+      const listed = Boolean(row && col && cellEditing.editor(col, row).kind === "select");
+      if (!listed && lines.length < 2 && (lines[0]?.length ?? 0) < 2) return;
+      pasting.current = true;
+      setOpenCell(null);
+      window.setTimeout(() => { pasting.current = false; }, 80);   // düzenleyicinin kapanırken gelen odak kaybı geçsin
+      scrollRef.current?.focus({ preventScroll: true });
+    } else if (!fromGrid(e.target)) return;
     e.preventDefault();
     const j = visible.findIndex((c) => c.field === cursor.field);
     const cells: PasteCell[] = [];
-    parseClipboard(text).forEach((line, r) => line.forEach((value, c) => {
+    lines.forEach((line, r) => line.forEach((value, c) => {
       const index = cursor.index + r;
       cells.push({ row: index < count ? rowAtIndex(index) : undefined, col: visible[j + c], text: value });
     }));

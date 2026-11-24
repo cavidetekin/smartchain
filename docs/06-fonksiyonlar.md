@@ -1747,7 +1747,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **22 · Parametreler:** Senaryonun planlama parametrelerini ve hedeflerini yönetmek; her senaryo parametrelerinin tamamını taşır (K-175).
 - **23 · Zaman yapısı:** Senaryonun ufkunu ve dönem dizisini tanımlamak (dönem tipi, kapsam, kapsam birimi); tarihler plan başlangıcından hesaplanır. Parametreler ekranının Zaman başlığı (K-175).
 - **24 · Kapasite yönetimi:** Kaynak kapasitesini etkileyen veriyi Kapasite yönetimi ekranında (7.9, K-167) yönetmek: verim, dönem üst limitleri, fazla mesai limitleri; parametre değil veridir.
-- **25 · Alokasyon ve öncelik kuralı:** Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
+- **25 · Öncelik yönetimi:** Müşteri, proje ve sipariş satırı için 1–5 öncelik grubunu girmek; talebin geçerli öncelik grubunu sabit hiyerarşiyle hesaplamak (K-195).
 - **26 · Uyarı eşikleri:** (7.11, K-190: dört kategoride uyarıların kademeli eşiği, önemi ve aktifliği senaryo bazında; eski tanım geçersiz) Yedi kategorideki uyarıların eşiklerini, önem seviyelerini, mesaj şablonlarını ve görünürlüğünü set bazında yönetmek; motorun hangi durumda uyarı üreteceğini parametrik kılmak (veri kalitesi kontrolünün eşiği yoktur, K-174).
 - **27 · Senaryo yönetimi:** Kopyalayarak yeni senaryo açmak, yeniden adlandırmak, pasif yapmak, silmek, Baz'dan ayırmak; senaryolar arasında geçmek (K-177).
 - **28 · Gece çalışsın ve gece sırası:** Senaryonun gece akışında hesaplanıp hesaplanmayacağını ve gece çalışanların sırasını belirlemek (K-177).
@@ -1806,7 +1806,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | `OpenSupplyDate` | Malzeme › Tedarik | Açık arzın tarihi | Teyit tarihi · İstenen tarih | Teyit tarihi |
 | `PastDueSupply` | Malzeme › Tedarik | Tarihi geçmiş açık arz | Bugüne çek · Plana alma | Bugüne çek |
 | `ResourceConstraint` | Kapasite | Kaynak kısıtı | Kısıtsız · Kısıtlı · Kısmi | Kısıtlı |
-| `UseOvertime` | Kapasite | Fazla mesai | Evet · Hayır | Hayır |
+| `UseOvertime` | Kapasite | Ek mesai | Evet · Hayır | Hayır |
 | `UseSubcontracting` | Kapasite | Fason | Evet · Hayır | Hayır |
 | `LaborConstraint` | Kapasite | İşçi kısıtı | Evet · Hayır | Hayır |
 | `ReportAxisSameAsPlan` | Planlama ufku › Raporlama ekseni | Raporlama ekseni planla aynı | Evet · Hayır | Evet |
@@ -1824,24 +1824,36 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Malzeme:** güvenlik stoğu ve stok gün kapsamı ikisi de doluysa hangisinin geçerli olacağı (K-113); tedarikçi seçim kuralı (K-118); teyit tarihi boş açık arzda istenen tarih kullanılır; tarihi geçmiş açık arz bugüne çekilir ya da plana alınmaz.
 - **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.9).
 - **Plan kararlılığı:** sabit dönem değer ve birimdir (Gün, Hafta, Ay), ekranda tek satırda. Sınırı Planlama ufku'ndaki kapsam kuralıyla hesaplanır: plan başlangıcından başlar; Hafta ve Ay'da içinde bulunulan hafta ya da ay sayıya dahildir ve periyot takvim sınırında biter; 0 sabit dönem yok demektir. Kayıtlı değerin son günü alanın altında yazılır. Ayrıca açık iş emirleri (Sabit, Yalnız öteleme önerisi, Serbest), açık satın alma siparişleri ve "Sabitlenmiş kararlar korunsun" (planlamacının sabitlediği kararlar; docs'ta eski adı "kilit").
-- **Hedefler (leksikografik, ağırlık yok):** her hedef bir satırdır; sıra sürüklenir, motor aktif hedefleri sırayla çözer. Satır: Sıra · Hedef · Süre bütçesi (sn) · Ödün payı (%; üst hedeften verilebilecek en çok ödün, 0 = katı) · Aktif. Kapalı hedef çözülmez; sırası, süresi ve payı boştur, listenin sonunda durur. Altta toplam süre: senaryonun süre bütçesi aktif hedeflerin sürelerinin toplamıdır, ayrı bir senaryo süre parametresi yoktur. Süre 1 ya da daha büyük tam sayı, ödün payı 0–100; en az bir hedef aktiftir.
-- **Hedef listesi ve başlangıç değerleri** (sıra tablodaki sıradır):
+- **Hedefler (leksikografik, ağırlık yok; K-175, K-196):** hedef türleri sabittir; **hedef listesi tamamen kullanıcınındır**: sistem kendiliğinden satır üretmez, bölmez, kaldırmaz, süre paylaştırmaz. Her satır bir hedef ve bir kapsamdır ve ayrı bir çözüm adımıdır. Sıra sürüklenir (farklı hedeflerin satırları iç içe olabilir), motor aktif satırları sırayla çözer. Satır: Sıra · Grup · Hedef · Kapsam · Açıklama · Süre bütçesi (sn) · Ödün payı (%; üst hedeften verilebilecek en çok ödün, 0 = katı) · Aktif. Kapalı satır çözülmez; sırası, süresi ve payı boştur, listenin sonunda durur. Altta toplam: satır sayısı ve süre; senaryonun süre bütçesi aktif satırların sürelerinin toplamıdır, ayrı bir senaryo süre parametresi yoktur. Süre 1 ya da daha büyük tam sayı, ödün payı 0–100. Liste boş olabilir; satır varsa en az biri aktiftir (Kaydet'te denetlenir).
+- **Hedefler, grupları, eksenleri ve başlangıç değerleri** (türün süresi başlangıçta aktif gelen satırlarına eşit bölünür; toplam 1.140 sn):
 
-| KOD | HEDEF | SÜRE BÜTÇESİ (sn) | ÖDÜN PAYI (%) | AKTİF |
-|---|---|---|---|---|
-| UNMET_DEMAND | Karşılanmayan talep | 300 | 0 | Evet |
-| LATENESS | Gecikme | 300 | 0 | Evet |
-| UNMET_FORECAST | Karşılanmayan tahmin | 120 | 2 | Evet |
-| FORECAST_LATENESS | Tahmin gecikmesi | 120 | 2 | Evet |
-| SAFETY_STOCK | Güvenlik stoğunun altı | 60 | 5 | Evet |
-| OVERTIME | Fazla mesai | 60 | 5 | Evet |
-| SUBCONTRACT | Fason | 60 | 5 | Evet |
-| ALTERNATIVE | Alternatif önceliği | 60 | 5 | Evet |
-| EARLY_BUILD | Erken üretim ve stok | 60 | 5 | Evet |
-| PLAN_DEVIATION | Önceki plandan sapma |  |  | Hayır |
-| OVER_TARGET_LOAD | Hedef doluluğun üstü |  |  | Hayır |
+| KOD | HEDEF | GRUP | EKSEN 1 | EKSEN 2 | SÜRE BÜTÇESİ (sn) | ÖDÜN PAYI (%) | AKTİF |
+|---|---|---|---|---|---|---|---|
+| UNMET_DEMAND | Karşılanmayan talep | Talep | Talep türü: Kesin sipariş · Teklif · Beklemedeki sipariş · Tahmin | Öncelik grubu: 1–5 | 420 | 0 (Tahmin satırı 2) | Evet |
+| LATENESS | Gecikme | Talep | Talep türü | Öncelik grubu | 420 | 0 (Tahmin satırı 2) | Evet |
+| SAFETY_STOCK | Güvenlik stoğunun altı | Malzeme | Malzeme seviyesi: Hammadde · Yarı mamul · Nihai ürün | Malzeme grubu: verideki gruplar | 60 | 5 | Evet |
+| OVERTIME | Ek mesai | Kaynak | Kaynak grubu tipi: İşçi · Makine · Diğer (Fason sunulmaz) |  | 60 | 5 | Evet |
+| SUBCONTRACT | Fason | Diğer | kapsam almaz |  | 60 | 5 | Evet |
+| OVER_TARGET_LOAD | Hedef doluluğun üstü | Kaynak | Kaynak grubu tipi: İşçi · Makine · Fason · Diğer |  |  |  | Hayır |
+| ALTERNATIVE | Alternatif önceliği | Diğer | kapsam almaz |  | 60 | 5 | Evet |
+| EARLY_BUILD | Erken üretim ve stok | Malzeme | Malzeme seviyesi | Malzeme grubu | 60 | 5 | Evet |
+| PLAN_DEVIATION | Önceki plandan sapma | Diğer | kapsam almaz |  |  |  | Hayır |
 
-- **Öncelik grupları:** her sipariş öncelik grubu için ayrı "Karşılanmayan talep" ve "Gecikme" hedefi olur (`ObjectiveDefinition.PriorityGroup`). Gruplar 7.14'te tanımlanır; o zamana kadar tek sipariş grubu vardır (grup boş = bütün siparişler).
+- **Kalkan türler (K-196):** "Karşılanmayan tahmin" ve "Tahmin gecikmesi" yoktur; talep türü Tahmin olan satırlarla anlatılır (süreleri talep hedeflerine eklendi: 300 + 120 = 420). **Tahmin satırlarının ödün payı korunur:** başlangıç düzeninde talep hedeflerinin Tahmin satırı eski başlangıç değeriyle (%2) gelir (öteki talep satırları %0); geçişte mevcut senaryoların Tahmin satırları kendi değerini taşır. Sessizce 0'a inmez.
+- **Sınıflar:** talep türü sipariş satırında teklif işaretliyse Teklif (beklemede de işaretli olsa), değilse beklemedeyse Beklemedeki sipariş, değilse Kesin sipariş; tahmin satırı Tahmin. Öncelik grubu, Öncelik yönetimi'nin geçerli öncelik grubudur (fonksiyon 25). Kaynak grubu tipi dört bayraktan (İşçi, Makine, Fason, Diğer) tam biri işaretliyse odur; değilse belirsizdir.
+- **Kapsam:** eksenlerdeki seçimlerin çarpımıdır. Seçim yapılmayan eksen "tümü" demektir ve kapsamda yazılmaz; kapsamda yalnız seçilenler, kategori adıyla yazar ("Talep türü: Kesin sipariş, Teklif · Öncelik grubu: 1, 2, 3"). Hiç seçim yoksa satır hedefin tamamını kapsar ("Tümü"). Bir eksende hepsini seçmek ile hiç seçmemek aynıdır: o eksen kapsama yazılmaz (malzeme grubunda "hepsi", verideki grupların tamamıdır). Kapsam almayan hedeflerde (Fason, Alternatif önceliği, Önceki plandan sapma) kapsam yoktur.
+- **Örtüşme ve boşluk:** kapsamlar örtüşebilir: aynı hedef, aynı ya da kesişen kapsamla birden çok satırda olabilir (kullanıcı aynı talebi sırayla birden fazla hedefe koyabilir); örtüşen satırlar ayrı ayrı hesaplanır. Hiçbir satırın kapsamadığı kayıt hiçbir hedefe girmez: tanımlanmayan kapsam için amaç fonksiyonu yoktur ve uyarı verilmez. Ana satır, "Kalanlar", kendiliğinden bölme ve süre paylaştırma yoktur.
+- **Belirsiz sınıf:** bir eksende sınıfı belirsiz kayıt (malzeme seviyesi ya da grubu boş malzeme; tipi belirsiz kaynak grubu) yalnız o ekseni "tümü" olan satırlara girer. Ek mesaide fason grupları da öyledir (Fason sunulmaz).
+- **Yeni hedef tanımla:** pencere (aşağıda). Yeni satır listenin sonuna (aktiflerin sonuna), aktif olarak eklenir; yerini kullanıcı sürükleyerek belirler. Süre bütçesi ve ödün payı zorunludur (varsayılan yok, K-138).
+- **Düzenle:** satır menüsünden; satırın mevcut seçimleriyle aynı pencere açılır (grup, hedef, kapsam, açıklama, süre, ödün payı). Kapalı satırda süre ve ödün payı boştur ve pencerede düzenlenmez (satır açılınca tabloda girilir).
+- **Hedefi sil:** her satır silinebilir; silinen satırın kapsamı başka satıra geçmez.
+- **Pencere (pencere ve form standardı):** alan sırası Grup (Talep · Malzeme · Kaynak · Diğer) → Hedef (seçilen gruba göre süzülür) → kapsam seçimleri (hedefin eksenleri; aramalı çoklu seçimli liste) → Açıklama → Süre bütçesi → Ödün payı. Grup ve Hedef aramalı seçimdir; seçilmeden önce boştur, listelerde boş seçenek yoktur. Seçim yapılmayan (ya da hepsi seçilen) kapsam alanı "tümü" demektir. Zorunlu alan eksikken "Tanımla" (düzenlemede "Kaydet") pasiftir, mesaj gösterilmez. Seçenek işaretlenirken pencerenin boyutu değişmez; kapsam almayan hedefte kapsam satırı yoktur (pencere bir kez kısalır).
+- **Plana alınmayan talep türü:** Parametreler › Talep'te kapalı türlerden oluşan satır durur ama motor o sınıfı aramaz. Ekranda ayrı görünümü ve ipucu yoktur: soluk yalnız "kapalı satır" demektir (kapalı satırın tamamı aynı solukta). Kapsamdaki kayıt sayısı gösterilmez.
+- **Başlangıç düzeni** (yeni kurulum ve sentetik yüklemenin açtığı senaryolar; 24 satır): talep hedefleri talep türüne, malzeme hedefleri malzeme seviyesine, kaynak hedefleri kaynak grubu tipine göre ayrı satırlarda; kapsam almayan hedefler birer satır. Sıra: Karşılanmayan talep · Kesin sipariş, Gecikme · Kesin sipariş, sonra öteki talep türleri aynı ikiliyle; Güvenlik stoğunun altı (Nihai ürün · Yarı mamul · Hammadde); Ek mesai (İşçi · Makine · Diğer); Fason; Alternatif önceliği; Erken üretim ve stok; kapalılar sonda. Plana alınmayan türlerin satırları ve kurulumda kapalı hedefler (Hedef doluluğun üstü, Önceki plandan sapma) kapalı gelir. Talep ayarlarının başlangıç değerleriyle (Tahmin planda; Teklif ve Beklemedeki sipariş değil) 15 satır aktiftir.
+- **Başlangıç düzenine getir:** onaylı işlem; senaryonun hedef satırları, senaryonun o andaki Talep ayarlarına göre başlangıç düzeniyle baştan yazılır (kullanıcının satırları, sıra, süre ve açıklamalar silinir).
+- **İşlemler ve taslak:** "Yeni hedef tanımla", "Düzenle", "Hedefi sil" ve "Başlangıç düzenine getir" hemen yazılır; tabloda kaydedilmemiş değişiklik (sıra, süre, ödün payı, aktiflik) varken dördü de pasiftir.
+- **Mevcut senaryolar:** geçiş 0075 en az değişiklikle taşıdı (her hedefin satırı ve iki Tahmin satırı; sıra, süre, ödün payı ve aktiflik değişmez). Geçiş 0076 ana satır kavramını kaldırır: "Kalanlar" satırı içerdiği türleri açıkça yazan normal satıra dönüşür (ör. Talep türü: Kesin sipariş, Teklif, Beklemedeki sipariş); ayrımı olmayan hedefin satırı kapsamsız ("Tümü") kalır; sıra, süre ve ödün payı korunur. Hiçbir türü kalmamış "Kalanlar" satırı (başlangıç düzenindeki kapalı satırlar) kaldırılır.
+- **Uygulama (7.14b, K-196):** uygulandı (sürüm 0.56.0). `app/params/objectives.py` (kapsam, `rows_of`, ekleme, düzenleme, silme, başlangıç düzeni), `POST /api/parameters/objectives`, `PUT` ve `DELETE /api/parameters/objectives/{id}`, `POST /api/parameters/objectives/reset`; geçiş 0075 ve 0076; ekran `screens/Objectives.tsx`.
 - **Parametre olmayanlar:** tedarikçi limiti Model kısıtları ekranının ikinci sekmesidir (7.12, K-191) ve malzeme blokajı aynı ekranın üçüncü sekmesidir (7.13, K-193); fazla mesai limitleri, fason limitleri, kısıtsız kaynak dönem limiti ve verim Kapasite yönetimi'ndedir (7.9). Talep çarpanı parametre değildir, sipariş üzerinde bir fonksiyon olarak ayrıca ele alınır; tahmin tüketimi ileriki fazdadır.
 - **Hata durumları:** geçersiz değer (liste dışı seçenek, sayı olmayan değer, sınır dışı) kaydı durdurur; bilinmeyen anahtar reddedilir.
 - **YENİDEN HESAPLANACAK ALANLAR:** kayıt hesap başlatmaz; bir sonraki plan hesabı (gece ya da çalışma) yeni değerleri okur. Veri kalitesinin tahmin ufku bir sonraki kontrolde güncellenir.
@@ -2013,81 +2025,28 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Malzeme blokajı (7.13, K-193; aynı ekranın üçüncü sekmesi, fonksiyon 99):** uygulandı (7.13; sürüm 0.53.0, geçiş 0072, K-193; AllocationRule kaldırıldı). Tanımı fonksiyon 99'da.
 
 
-### 25 · Alokasyon ve öncelik kuralı
-<sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Çalışma prensibi 1/2</sub>
+### 25 · Öncelik yönetimi
+<sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Çalışma prensibi (Geliştirme 7.14a, K-195)</sub>
 
-- **Kapsam (K-192):** alokasyon (pay ayırma: talep sınıfına kaynak grubu ve dönem bazında kapasite payı) **Faz 1 dışıdır**; bu bölümdeki alokasyon tasarımı, `AllocationRule` tablosuna yapılan atıflar ve "Alokasyon" mockup'ı (m24f-0448) geçersizdir. Öncelik kısmı 7.14 Öncelik yönetimi'nde yeniden tasarlanacak. Eşit öncelikte paylaşım: aynı öncelik grubundaki taleplerde istek tarihi erken olan önce karşılanır; ayarı yoktur (docs/09).
-
-- Talebin sıralanma kuralını (ölçüt sırası, yön, ağırlık) ve kapasitenin talep sınıflarına dağıtım kuralını (kaynak grubu × dönem × pay) tek yerde tanımlamak; MRP netleştirmesi ve optimizasyon modeli aynı kuralı okur.
+- Müşteri, proje ve sipariş satırı için 1–5 öncelik grubunu girmek; talebin geçerli öncelik grubunu sabit hiyerarşiyle hesaplamak. Eski "Alokasyon ve öncelik kuralı" tasarımı (ölçüt sırası, yön, ağırlık; `PriorityRule`) ve mockup'ları (m24f-0447, m24f-0448) geçersizdir (K-192, K-195).
 
 #### NASIL ÇALIŞIR
 
 - **KIM VE NEREDEN**
-  - Kim: Key user ve üstü
-  - Nereden: Parametre setleri · 'Zaman yapısı ve öncelik' (öncelik kuralı) ve 'Alokasyon' sekmeleri
-- **01:** Öncelik kuralı: ölçütler sürükle-bırak ile sıralanır, yön seçilir (yüksek / erken / satış önce), ağırlık girilir, ölçüt aç / kapa.
-- **02:** Önizleme: geçerli veriden örnek siparişler yeni kurala göre sıralanır; eski ve yeni sıra yan yana, değişenler oklu.
+  - Kim: Key user ve üstü; End user görür
+  - Nereden: Öncelik yönetimi ekranı (32); sekmeler Müşteri · Proje · Sipariş
+- **Öncelik grubu:** 1–5 arası tam sayı; küçük olan önce gelir. Üç düzeyde girilebilir, hepsi isteğe bağlıdır.
+- **01:** Müşteri, Proje ya da Sipariş sekmesinde "Öncelik grubu" hücresine 1–5 yazılır ya da listeden seçilir; hücre boşaltılırsa değer kalkar. Birden çok satır seçiliyken birine yazılan değer hepsine uygulanır (K-187); Excel'den yapıştırılabilir.
+- **02:** Her düzeyde Öncelik grubu doluysa o, boşsa ERP önceliği (mevcut `Priority` alanı; 1–5 dışındaysa yok sayılır) alınır.
+- **03:** Hiyerarşi sabittir: siparişin değeri varsa o; yoksa projesinin; o da yoksa müşterisinin; hiçbiri yoksa 5. Tahminde proje → müşteri; ikisi de yoksa 5. Proje grubu hiyerarşiye girmez.
+- **04:** Sipariş ve tahminde "Geçerli öncelik grubu" ve "Öncelik kaynağı" (Sipariş · Proje · Müşteri · Yok) hesaplanır; girilen değerle ayrı kolonlardır. İşlem verisi › Satış siparişi ve Tahmin listelerinde de alan olarak açılabilir (seçili senaryoya göre).
+- **Kartlar:** Müşteri ve Proje sekmelerinde kayıt seçilince o kaydın açık siparişleri ve tahminleri; Sipariş sekmesinde siparişin müşterisi ve projesi (kendi ERP önceliği ve öncelik gruplarıyla); Geçmiş.
 - **GIRDI**
-  - Öncelik ölçütleri: sipariş önceliği (müşteri sınıfı), talep tarihi, proje önceliği, sipariş tipi, sipariş miktarı; yön ve ağırlık
-  - Talep sınıfları (müşteri sınıfı, proje, stok siparişi), kaynak grupları, bucket dizisi
-  - Örnek sipariş kümesi (önizleme için, geçerli veriden)
-- **03:** Alokasyon: satır satır talep sınıfı × kaynak grubu × dönem aralığı için minimum (garanti) ve maksimum (tavan) kapasite payı girilir.
-- **04:** Anında kontrol: aynı kaynak grubu ve dönemde minimum paylar toplamı ≤ %100; maksimum ≥ minimum; dönem aralıkları bucket dizisinde.
-- **05:** 'Kaydet': PriorityRule yazılır (AllocationRule tablosu 7.13'te kaldırıldı, K-193); set sürümü artar; etkiler gösterilir (MRP netleştirme sırası, model ağırlıkları, alokasyon kısıtları).
-- **ÇIKTI**
-  - PriorityRule (ölçüt, sıra, yön, ağırlık, aktif) ve AllocationRule (talep sınıfı, kaynak grubu, dönem, min, max)
-  - Önizleme (örnek sıralama)
-  - Set sürümü ve denetim izi
-- **06:** Bir sonraki plan hesabında MRP ön hesap netleştirmeyi bu sırayla yapar, model gecikme cezalarını ağırlıklarla ölçekler, alokasyon açık senaryoda payları kısıt olarak alır.
-
-### 25 · Alokasyon ve öncelik kuralı · kurallar ve etkiler
-<sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Çalışma prensibi 2/2</sub>
-
-- **KURALLAR VE SINIRLAR**
-  - Tek kural, iki kullanım: MRP netleştirme sırası ve model ağırlıkları aynı tanımdan türetilir; ayrı 'MRP önceliği' yoktur.
-  - Ölçütler sırayla kırılır (önceki eşitse sonrakine bakılır); ağırlık modelin gecikme cezasını ölçeklendirir.
-  - Alokasyon minimum payı garanti, maksimum tavan; kalan kapasite öncelik kuralıyla dağıtılır. Alokasyon yalnız 'alokasyon açık' senaryolarda kısıttır.
-  - Sipariş bazlı planlamadaki (56) öncelik değişikliği sipariş düzeyinde istisnadır; kuralı değiştirmez.
-  - Pasif ölçüt sıralamada atlanır; ağırlığı yok sayılır.
-- **HATA VE ISTISNA**
-  - Minimum paylar toplamı > %100: hücre kırmızı, dönem bazlı toplam satırında hangi dönemler aşıyor görünür, Kaydet kapalı.
-  - Maksimum < minimum: hata.
-  - Ölçüt listesi boş kalamaz; en az bir aktif ölçüt (talep tarihi varsayılan).
-  - Önizleme örnek sipariş bulamazsa (veri yok) 'örnek yok' bilgisi.
-- **ETKISI VE TETIKLENENLER**
-  - MRP ön hesap netleştirme sırası (yeni hesapta).
-  - Model amaç fonksiyonu ağırlıkları ve alokasyon kısıtları (yeni çözümde).
-  - Sipariş bazlı planlama 'öncelik' sütunu kuraldan hesaplanan sırayı gösterir.
-  - Gece senaryoları ve açık çalışmalar (yeniden hesapta).
-- **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Talep sıralaması:** DemandFulfillment (sıra) Yeni hesapta; sipariş bazlı planlama listesi
-- **MRP netleştirme sırası:** Ön hesap · Pegging Kullanılabilir stok ve arz önce kime gider
-- **Model gecikme ağırlıkları:** Model kurma (31) Bir sonraki çözümde
-- **Alokasyon kısıtları:** Model kısıtları · CapacityLoad payları 'Alokasyon açık' senaryolarda
-- **Teslim metrikleri:** PlanMetric · PlanWarning Gece senaryoları ve yeniden hesapta
-- **ÖRNEK:** Proje önceliği 3. sıradan 2. sıraya alınınca SO-1206/1 (proje önceliği 2) SO-1185/2'nin (proje yok) önüne geçer. Alokasyon: Talaşlı imalat H45–H48'de A %40 + PRJ-2041 %30 + stok %40 = %110 → hata.
-
-### 25 · Alokasyon ve öncelik kuralı · Öncelik kuralı
-<sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Mockup 1/2</sub>
-
-![25 · Alokasyon ve öncelik kuralı · Öncelik kuralı](mockups/m24f-0447-25-alokasyon-ve-oncelik-kurali-oncelik-kurali.png)
-
-- **Sürükle-sırala:** Ölçütler tutulup taşınır; yön ve ağırlık satırda; pasif ölçüt gri.
-- **Örnek sıralama:** Geçerli veriden 5 sipariş eski ve yeni sırayla; değişenler oklu.
-- **Tek kural, iki kullanım:** MRP sırası ve model ağırlıkları aynı tanımdan; bilgi kutusunda.
-- **Ağırlık anlamı:** Ağırlığın gecikme cezasını ölçeklediği yazar.
-
-### 25 · Alokasyon ve öncelik kuralı · Alokasyon
-<sub>24. Ekranlar ve fonksiyonlar · F25 · C Parametre · Mockup 2/2</sub>
-
-**Faz 1 dışı / geçersiz (K-192).**
-
-![25 · Alokasyon ve öncelik kuralı · Alokasyon](mockups/m24f-0448-25-alokasyon-ve-oncelik-kurali-alokasyon.png)
-
-- **Satır bazlı kural:** Talep sınıfı × kaynak grubu × dönem için min ve max pay.
-- **Toplam kontrolü:** Dönem bazlı minimum toplamı; %100'ü aşan dönemler kırmızı, hata metni açıklar.
-- **Kaydet kapalı:** Hata varken kaydedilemez; kart başlığında hata sayısı.
-- **Senaryo bağı:** Alokasyonun yalnız açık senaryolarda kısıt olduğu bilgi kutusunda.
+  - Level, RecordId, PriorityGroup (`param.DemandPriority`)
+- **Senaryo (K-176):** Baz + fark. İzleyen senaryo Baz'ın değerlerini okur; değiştirdiği hücre işaretlidir (ipucunda Baz'daki değer). Baz'ın değeri izleyen senaryoda boşaltılırsa fark "boş" olarak durur; "Senaryo farkını kaldır" Baz'a döndürür. Kayıt başına tek satır: senaryonun kendi değeri aynı kaydın Baz değerinin önüne geçer (K-191).
+- **Veri kalitesi:** ERP önceliği 1–5 dışındaysa uyarı (`SC.PRIORITY_RANGE`, Normal).
+- **YENİDEN HESAPLANACAK ALANLAR:** Plan kendiliğinden değişmez; öncelikler bir sonraki plan hesabında dikkate alınır. Motor `PlanningData.demand_priorities` ile okur (docs/09); uygulanışı Aşama 10. Eşit öncelikte istek tarihi erken olan önce karşılanır (K-192).
+- **Uygulama (7.14a, K-195):** uygulandı (sürüm 0.56.0, geçiş 0074; 7.14b ile birlikte kapandı).
 
 ### 26 · Uyarı eşikleri
 <sub>24. Ekranlar ve fonksiyonlar · F26 · C Parametre · Çalışma prensibi 1/3</sub>

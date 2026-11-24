@@ -116,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         if r is None:
             return 1
         print(f"Sıfırlandı: aktarım versiyonları {r['removed_transfers'] or 'yok'} silindi; sentetik v0 veri versiyonu {r['data_version_id']}")
+        _queue_quality(get_engine())
         return 0
     try:
         if a.command == "unload":
@@ -142,7 +143,14 @@ def main(argv: list[str] | None = None) -> int:
           f"Baz senaryo {r['scenario_definition_id']}; {sum(r['counts'].values())} satır"
           + (f"; silinen eski versiyonlar {r['removed_versions']}" if r["removed_versions"] else ""))
     _print_check(ds)
+    _queue_quality(engine)
     return 0
+
+
+def _queue_quality(engine) -> None:
+    """Yüklemenin sonunda veri kalitesi işi (K-195 madde 12): uyarılar motor servisi işi çalıştırınca görünür."""
+    from .load import queue_quality
+    print(f"Veri kalitesi işi kuyrukta: #{queue_quality(engine)}. İşi motor servisi çalıştırır (python -m app.engine.service).")
 
 
 if __name__ == "__main__":

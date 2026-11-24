@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8"><title>7.14 · Hedeflerin ayrıştırılması (örnek)</title>
+<style>
+:root{--ink:#1f2330;--mute:#6b7080;--line:#e2e4ea;--indigo:#4f55d6;--soft:#eceefd;--bg:#f4f5f8;
+--talep:#8FB8E8;--malzeme:#E8B85A;--kaynak:#7CC4A4;--diger:#C3C7D1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 "Instrument Sans","Segoe UI",system-ui,sans-serif;padding:28px}
+h1{font-size:18px;margin:0 0 4px}
+.note{color:var(--mute);margin:0 0 22px;max-width:980px}
+h2{font-size:14px;margin:34px 0 4px}
+.sub{color:var(--mute);margin:0 0 12px;max-width:980px}
+.strip{display:inline-flex;border:1px solid var(--line);border-radius:7px;background:#fff;padding:3px;margin-bottom:12px}
+.strip span{padding:5px 12px;border-radius:5px;color:#3a3f4f}
+.strip .on{background:var(--soft);color:var(--indigo);font-weight:600}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;max-width:1080px;overflow:hidden}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.legend{display:flex;gap:16px;color:var(--mute);font-size:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.btn{height:30px;padding:0 14px;border-radius:6px;display:inline-flex;align-items:center;font-weight:600;background:var(--indigo);color:#fff}
+table{width:100%;border-collapse:collapse}
+th{background:#e7e9f8;text-align:left;font-weight:600;font-size:12px;padding:7px 12px}
+td{padding:7px 12px;border-top:1px solid #eef0f4;font-variant-numeric:tabular-nums}
+th.n,td.n{text-align:right}
+td.sira{color:var(--mute);width:54px}
+td.drag{width:26px;color:#b3b8c6;cursor:grab}
+td.h{font-weight:600;border-left:4px solid var(--diger);width:230px}
+tr.talep td.h{border-left-color:var(--talep)}
+tr.malzeme td.h{border-left-color:var(--malzeme)}
+tr.kaynak td.h{border-left-color:var(--kaynak)}
+td.k{color:#3a3f4f}
+td.k em{font-style:normal;color:var(--mute)}
+.sw{display:inline-block;width:30px;height:16px;border-radius:9px;background:var(--indigo);position:relative}
+.sw:after{content:"";position:absolute;right:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff}
+.tot td{font-weight:600;background:#fafbfc}
+.dots{color:#b3b8c6;text-align:right;width:34px}
+.wrap{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.dlg{background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(20,24,50,.16);width:520px;padding:20px 22px 18px}
+.dlg h3{font-size:15px;margin:0 0 16px}
+label{display:block;font-size:12px;color:var(--mute);margin:12px 0 5px}
+.in{height:32px;border:1px solid #d9dbe3;border-radius:6px;padding:0 10px;display:flex;align-items:center;justify-content:space-between}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{border:1px solid #d9dbe3;border-radius:6px;padding:5px 11px;color:#3a3f4f}
+.opt.on{background:var(--soft);border-color:#c5c8f3;color:var(--indigo);font-weight:600}
+.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.ghost{color:var(--indigo);font-weight:600;padding:0 14px;height:30px;display:inline-flex;align-items:center}
+ul{margin:6px 0 0;padding-left:18px;max-width:420px}li{margin:4px 0}
+</style></head><body>
+<h1>Parametreler › Hedefler · hedeflerin ayrıştırılması</h1>
+<p class="note">Örnek görsel. Model hedefleri yukarıdan aşağıya sırayla çözer. Renkli kenar hedefin ailesini gösterir; renkler örnektir.</p>
+
+<div class="strip"><span>Model</span><span class="on">Hedefler</span><span>Talep</span><span>Malzeme</span><span>Kapasite</span><span>Planlama ufku</span><span>Plan kararlılığı</span><span>Uyarı eşikleri</span></div>
+
+<h2>1 · Başlangıç hâli: hedefler ayrışmış gelir</h2>
+<p class="sub">Talep hedefleri talep türüne, malzeme hedefleri malzeme seviyesine, kaynak hedefleri kaynak grubu tipine göre ayrı satırlarda. Öncelik grubu ve malzeme grubu “Tümü”.</p>
+<div class="card"><div class="bar"><div class="legend"><span><i style="background:var(--talep)"></i>Talep</span><span><i style="background:var(--malzeme)"></i>Malzeme</span><span><i style="background:var(--kaynak)"></i>Kaynak</span><span><i style="background:var(--diger)"></i>Diğer</span></div><div class="btn">Yeni hedef tanımla</div></div>
+<table id="t1"></table></div>
+
+<h2>2 · Kullanıcının düzenlediği örnek</h2>
+<p class="sub">Kesin siparişlerde 1. ve 2. öncelik ayrı hedef olarak tanımlanmış ve en üste alınmış; araya makine doluluğu ve işçi ek mesaisi konmuş. Nihai ürünün güvenlik stoğu “Rulman” grubu için ayrıca öne çekilmiş. “Kalanlar” ana satırdır, silinemez.</p>
+<div class="card"><div class="bar"><div class="legend"><span><i style="background:var(--talep)"></i>Talep</span><span><i style="background:var(--malzeme)"></i>Malzeme</span><span><i style="background:var(--kaynak)"></i>Kaynak</span><span><i style="background:var(--diger)"></i>Diğer</span></div><div class="btn">Yeni hedef tanımla</div></div>
+<table id="t2"></table></div>
+
+<h2>3 · “Yeni hedef tanımla” penceresi</h2>
+<div class="wrap">
+<div class="dlg">
+ <h3>Yeni hedef tanımla</h3>
+ <label>Hedef</label><div class="in"><span>Karşılanmayan talep</span><span style="color:#6b7080">▾</span></div>
+ <label>Talep türü</label>
+ <div class="opts"><span class="opt on">Kesin sipariş</span><span class="opt">Beklemedeki sipariş</span><span class="opt">Teklif</span><span class="opt">Tahmin</span></div>
+ <label>Öncelik grubu</label>
+ <div class="opts"><span class="opt on">1</span><span class="opt on">2</span><span class="opt">3</span><span class="opt">4</span><span class="opt">5</span></div>
+ <div class="foot"><span class="ghost">Vazgeç</span><span class="btn">Tanımla</span></div>
+</div>
+<ul>
+ <li>Hedef seçilince altındaki alanlar ona göre değişir: talep hedefinde <b>Talep türü</b> ve <b>Öncelik grubu</b>; malzeme hedefinde <b>Malzeme seviyesi</b> ve <b>Malzeme grubu</b>; kaynak hedefinde <b>Kaynak grubu tipi</b>.</li>
+ <li>Seçilenler o an bulundukları satırdan çıkar ve yeni satıra geçer; açıkta kalan ya da iki satıra giren olmaz.</li>
+ <li>Satır silinince kapsadıkları “Kalanlar” satırına döner.</li>
+ <li>Satırlar sürüklenerek sıralanır.</li>
+</ul>
+</div>
+
+<script>
+function row(i,r){return `<tr class="${r[0]}"><td class="drag">⠿</td><td class="sira">${i}</td><td class="h">${r[1]}</td><td class="k">${r[2]}</td><td class="n">${r[3]}</td><td class="n">${r[4]}</td><td><span class="sw"></span></td><td class="dots">⋯</td></tr>`}
+function fill(id,rows){let s='<tr><th></th><th>Sıra</th><th>Hedef</th><th>Kapsam</th><th class="n">Süre bütçesi (sn)</th><th class="n">Ödün payı (%)</th><th>Aktif</th><th></th></tr>';let tot=0;
+rows.forEach((r,i)=>{s+=row(i+1,r);tot+=r[3]});
+s+=`<tr class="tot"><td></td><td></td><td>Toplam</td><td>${rows.length} hedef</td><td class="n">${tot}</td><td></td><td></td><td></td></tr>`;document.getElementById(id).innerHTML=s}
+const T='<em> · Öncelik grubu: Tümü</em>', G='<em> · Malzeme grubu: Tümü</em>';
+fill('t1',[
+['talep','Karşılanmayan talep','Kesin sipariş'+T,60,0],
+['talep','Gecikme','Kesin sipariş'+T,60,0],
+['talep','Karşılanmayan talep','Beklemedeki sipariş'+T,30,0],
+['talep','Gecikme','Beklemedeki sipariş'+T,30,0],
+['talep','Karşılanmayan talep','Tahmin'+T,30,0],
+['talep','Gecikme','Tahmin'+T,30,0],
+['talep','Karşılanmayan talep','Teklif'+T,30,0],
+['talep','Gecikme','Teklif'+T,30,0],
+['malzeme','Güvenlik stoğunun altı','Nihai ürün'+G,30,0],
+['malzeme','Güvenlik stoğunun altı','Yarı mamul'+G,30,0],
+['malzeme','Güvenlik stoğunun altı','Hammadde'+G,30,0],
+['kaynak','Ek mesai','İşçi',20,0],
+['kaynak','Ek mesai','Makine',20,0],
+['kaynak','Ek mesai','Diğer',20,0],
+['diger','Fason kullanımı','',20,0],
+['kaynak','Hedef doluluğun üstü','İşçi',20,0],
+['kaynak','Hedef doluluğun üstü','Makine',20,0],
+['kaynak','Hedef doluluğun üstü','Fason',20,0],
+['kaynak','Hedef doluluğun üstü','Diğer',20,0],
+['diger','Alternatif önceliği','',20,0],
+['malzeme','Erken üretim ve stok','Nihai ürün'+G,20,0],
+['malzeme','Erken üretim ve stok','Yarı mamul'+G,20,0],
+['malzeme','Erken üretim ve stok','Hammadde'+G,20,0],
+['diger','Önceki plandan sapma','',20,0],
+]);
+fill('t2',[
+['talep','Karşılanmayan talep','Kesin sipariş · Öncelik grubu: 1, 2',60,0],
+['talep','Gecikme','Kesin sipariş · Öncelik grubu: 1, 2',60,0],
+['kaynak','Hedef doluluğun üstü','Makine',20,0],
+['talep','Karşılanmayan talep','Kesin sipariş · Öncelik grubu: 3, 4, 5',60,0],
+['kaynak','Ek mesai','İşçi',20,0],
+['talep','Karşılanmayan talep','Beklemedeki sipariş, Tahmin'+T,30,0],
+['malzeme','Güvenlik stoğunun altı','Nihai ürün · Malzeme grubu: Rulman',30,0],
+['talep','Gecikme','Kalanlar',60,0],
+['talep','Karşılanmayan talep','Kalanlar <em>(Teklif)</em>',30,0],
+['malzeme','Güvenlik stoğunun altı','Kalanlar',30,0],
+['kaynak','Ek mesai','Kalanlar <em>(Makine, Diğer)</em>',20,0],
+['diger','Fason kullanımı','',20,0],
+['kaynak','Hedef doluluğun üstü','Kalanlar <em>(İşçi, Fason, Diğer)</em>',20,0],
+['diger','Alternatif önceliği','',20,0],
+['malzeme','Erken üretim ve stok','Nihai ürün'+G,20,0],
+['malzeme','Erken üretim ve stok','Kalanlar <em>(Yarı mamul, Hammadde)</em>',20,0],
+['diger','Önceki plandan sapma','',20,0],
+]);
+</script>
+</body></html>

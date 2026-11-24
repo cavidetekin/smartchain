@@ -23,10 +23,19 @@ export interface ParametersData {
   computed: { fix_period_end: string | null };
 }
 
+/** Hedef satırı (K-196): hedef listesi kullanıcınındır. `group` hedefin grubu; `scope` eksen → seçilen değerler (seçilmeyen eksen "tümü");
+ *  `scope_parts` kapsam yazısı (kategori adı ve değerleri), `scope_text` düz yazısı. */
 export interface ObjectiveRow {
-  id: number; code: string; label: string; seq: number | null; seconds: number | null; tolerance: number | null; active: boolean;
+  id: number; code: string; label: string; family: "talep" | "malzeme" | "kaynak" | "diger"; group: string; scope: Record<string, (string | number)[]>;
+  scope_parts: { label: string; values: (string | number)[] }[]; scope_text: string; description: string | null;
+  seq: number | null; seconds: number | null; tolerance: number | null; active: boolean;
 }
-export interface ObjectivesData { rows: ObjectiveRow[]; total_seconds: number }
+export interface ObjectiveAxis { key: string; label: string; values: (string | number)[]; open: boolean }
+/** Katalogdaki hedef: kapsam almayan hedefte `axes` boş. */
+export interface ObjectiveKind { code: string; label: string; family: string; group: string; axes: ObjectiveAxis[] }
+/** "Yeni hedef tanımla" ve "Düzenle" gövdesi. */
+export interface ObjectiveEdit { code: string; scope: Record<string, (string | number)[]>; description: string | null; seconds: number | null; tolerance: number | null }
+export interface ObjectivesData { rows: ObjectiveRow[]; total_seconds: number; catalog: ObjectiveKind[] }
 
 /** Uyarı eşikleri (fonksiyon 26; K-190): dört önemin eşiği (API alanları) ve satır. Eşiksiz uyarıda `unit` ve `direction` boş, önem `severity`'de. */
 export const TIERS = ["low", "medium", "high", "critical"] as const;
@@ -53,6 +62,10 @@ export const parametersApi = (scenarioId: number) => {
     objectives: (signal?: AbortSignal) => getJson<ObjectivesData>(`/api/parameters/objectives${q}`, signal),
     saveObjectives: (rows: { id: number; active: boolean; seconds: number | string | null; tolerance: number | string | null }[]) =>
       sendJson<ObjectivesData>("PUT", `/api/parameters/objectives${q}`, { rows }),
+    createObjective: (body: ObjectiveEdit) => postJson<ObjectivesData>(`/api/parameters/objectives${q}`, body),
+    updateObjective: (id: number, body: ObjectiveEdit) => sendJson<ObjectivesData>("PUT", `/api/parameters/objectives/${id}${q}`, body),
+    deleteObjective: (id: number) => sendJson<ObjectivesData>("DELETE", `/api/parameters/objectives/${id}${q}`),
+    resetObjectives: () => postJson<ObjectivesData>(`/api/parameters/objectives/reset${q}`, {}),
     buckets: (axis: Axis, signal?: AbortSignal) => getJson<BucketsData>(`/api/parameters/time-buckets/${axis}${q}`, signal),
     preview: (axis: Axis, rows: BucketRow[], signal?: AbortSignal) => postJson<BucketPreview>(`/api/parameters/time-buckets/${axis}/preview${q}`, { rows }, signal),
     saveBuckets: (axis: Axis, rows: BucketRow[]) => sendJson<BucketsData>("PUT", `/api/parameters/time-buckets/${axis}${q}`, { rows }),

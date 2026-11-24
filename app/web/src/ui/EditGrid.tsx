@@ -4,7 +4,7 @@
 // değişen hücre lila. Sıra veridir: satır sürüklenir; sıralama, filtre ve görünüm araçları yoktur. Kaydetmez: taslağı ekran tutar, Kaydet ve Vazgeç
 // tablonun altındadır.
 import { GripVertical } from "lucide-react";
-import { type DragEvent, type KeyboardEvent, type ReactNode, useRef, useState } from "react";
+import { type DragEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, useRef, useState } from "react";
 
 import { tr } from "../i18n/tr";
 
@@ -44,7 +44,41 @@ export function GridSeq({ seq, movable }: { seq: number | null; movable: boolean
   );
 }
 
-export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, drag, foot }: {
+const MIN_WIDTH_REM = 3;
+const MAX_WIDTH_REM = 60;
+const WIDTH_STEP_REM = 0.5;
+const clampWidth = (rem: number) => Math.min(MAX_WIDTH_REM, Math.max(MIN_WIDTH_REM, Math.round(rem * 100) / 100));
+
+/** Başlığın sağ kenarındaki genişlik tutamağı (tablo standardı, U-10): fareyle sürüklenir, odaktayken ← / → 0,5rem. Genişliği verilmemiş kolonda
+ *  başlangıç genişliği başlığın o anki ölçüsüdür. */
+function GridResize({ label, onWidth }: { label: string; onWidth(rem: number): void }) {
+  const remPx = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const widthOf = (el: HTMLElement) => (el.parentElement?.getBoundingClientRect().width ?? 0) / remPx();
+  const onMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const [x0, w0, px] = [e.clientX, widthOf(e.currentTarget), remPx()];
+    const move = (ev: MouseEvent) => onWidth(clampWidth(w0 + (ev.clientX - x0) / px));
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    e.stopPropagation();
+    onWidth(clampWidth(widthOf(e.currentTarget) + (e.key === "ArrowRight" ? WIDTH_STEP_REM : -WIDTH_STEP_REM)));
+  };
+  return (
+    <div role="separator" aria-orientation="vertical" aria-label={tr.table.widthOf(label)} tabIndex={0} className="sc-table-resize" draggable={false}
+         onDragStart={(e) => e.preventDefault()} onMouseDown={onMouseDown} onKeyDown={onKeyDown} onClick={(e) => e.stopPropagation()} />
+  );
+}
+
+export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, drag, foot, resize }: {
   label: string;
   columns: GridColumn<R>[];
   rows: R[];
@@ -56,6 +90,8 @@ export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, 
   drag?: { can(row: R): boolean; move(id: string, target: string, side: "before" | "after"): void };
   /** Tablonun altındaki özet satırları (tfoot). */
   foot?: ReactNode;
+  /** Kolon genişliği ayarı (tablo standardı): kolon → rem; verilirse adı olan başlıklarda tutamak çıkar. */
+  resize?: { widths: Record<string, number>; onWidth(key: string, rem: number): void };
 }) {
   const [cursor, setCursor] = useState<{ row: string; col: string } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);  // düzenleyicinin metni
@@ -155,7 +191,10 @@ export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, 
     <div className="sc-table-scroll sc-edit-grid-scroll">
       <table ref={tableRef} className="sc-table-grid sc-edit-grid" aria-label={label} tabIndex={editable ? 0 : undefined} onKeyDown={onKey}>
         <colgroup>
-          {columns.map((c) => <col key={c.key} style={c.width ? { width: `${c.width}rem` } : undefined} />)}
+          {columns.map((c) => {
+            const width = resize?.widths[c.key] ?? c.width;
+            return <col key={c.key} style={width ? { width: `${width}rem` } : undefined} />;
+          })}
         </colgroup>
         <thead>
           <tr>
@@ -163,6 +202,7 @@ export function EditGrid<R>({ label, columns, rows, rowKey, rowClass, editable, 
               <th key={c.key} scope="col" className={[c.num ? "is-num" : "", c.cls ?? ""].filter(Boolean).join(" ") || undefined}>
                 {c.label}
                 {editable && (c.edit || c.marked) && <span className="sc-table-edit-mark" title={tr.table.editableColumn} aria-label={tr.table.editableColumn}>✎</span>}
+                {resize && c.label && <GridResize label={c.label} onWidth={(rem) => resize.onWidth(c.key, rem)} />}
               </th>
             ))}
           </tr>

@@ -101,6 +101,8 @@ export const SCREENS: Screen[] = [
     icon: CalendarRange, description: "Seçili senaryonun kapasitesi: kaynak grubu × dönem özeti; çalışma düzeni, duruş, verimlilik ve ek mesai girişleri." },
   { no: "31", fn: 103, name: "Model kısıtları", path: "/parametre/model-kisitlari", group: "parametre", step: "7.10", scenarioBound: true,
     icon: Ruler, description: "Seçili senaryoda kaynak grubunun model kısıtları: kısıtsız kapasite çarpanı ve hedef doluluk." },
+  { no: "32", fn: 25, name: "Öncelik yönetimi", path: "/parametre/oncelik-yonetimi", group: "parametre", step: "7.14", scenarioBound: true,
+    icon: ListOrdered, description: "Seçili senaryoda müşteri, proje ve sipariş satırının öncelik grubu (1–5); geçerli öncelik sabit hiyerarşiyle hesaplanır." },
   { no: "07", fn: 27, name: "Senaryolar", path: "/parametre/senaryolar", group: "parametre", step: "7.3",
     icon: Moon, description: "Senaryoların listesi ve yönetimi: yeni senaryo, gece çalışsın ve gece sırası, Baz'ı izler." },
 

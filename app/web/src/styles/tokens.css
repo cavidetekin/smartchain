@@ -55,6 +55,11 @@
   --occ-over-bg: #f4cfc4;            --occ-over-text: var(--status-over-text-strong); /* aşırı yük > %100: açık kiremit, kalın yazı */
 
   /* Grafik serileri (U-5, K-85): sıra sabit; beyazda ≥ 3:1; kiremit ve kırmızı seri olmaz */
+  /* hedef aileleri (K-196; Parametreler › Hedefler satırının sol kenarı): durum renkleri ve indigo dışında, soluk tonlar */
+  --family-demand: #8fb8e8;          /* talep: açık mavi */
+  --family-material: #e8b85a;        /* malzeme: kehribar */
+  --family-resource: #7cc4a4;        /* kaynak: nane */
+  --family-other: #c3c7d1;           /* diğer: kurşun */
   --chart-1: var(--indigo-500);      /* indigo */
   --chart-2: #2e7d7a;                /* petrol */
   --chart-3: #b8860b;                /* hardal; durum hardalının koyu tonu (#d9a521 beyazda 2,2:1) */

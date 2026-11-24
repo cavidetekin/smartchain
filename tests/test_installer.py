@@ -281,7 +281,11 @@ def test_setup_db_on_local_server(monkeypatch):
             members = [u.upper() for u in setup_db._role_members(c, setup_db.APP_ROLE)]
             assert names[0].upper() in members and names[0].upper() not in [u.upper() for u in setup_db._role_members(c, "db_owner")]
         with setup_db._connect(db) as c:
-            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0073"
+            assert c.execute("SELECT version_num FROM dbo.alembic_version").fetchone()[0] == "0076"
+            # K-196: yeni kurulumda Baz'ın hedefleri başlangıç düzeninde (24 satır, 15 aktif, 1.140 sn; ana satır yok); Tahmin satırlarının ödün payı %2
+            assert tuple(c.execute("SELECT COUNT(*), SUM(CAST(IsActive AS int)), SUM(TimeBudgetSeconds), SUM(CASE WHEN Scope IS NULL THEN 1 ELSE 0 END) "
+                                   "FROM param.ObjectiveDefinition").fetchone()) == (24, 15, 1140, 3)
+            assert [float(r[0]) for r in c.execute("SELECT TolerancePct FROM param.ObjectiveDefinition WHERE Scope LIKE N'%Tahmin%'").fetchall()] == [2.0, 2.0]
             assert c.execute("SELECT DATABASEPROPERTYEX(DB_NAME(), 'Collation')").fetchone()[0] == setup_db.COLLATION
         # İlk hesap (K-102): temiz veritabanında açılır, ikinci çalıştırmada dokunulmaz, --reset yeni şifre verir.
         user_name, password = setup_db.first_account(ROOT, db, reset=False)

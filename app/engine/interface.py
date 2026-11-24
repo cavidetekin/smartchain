@@ -45,16 +45,11 @@ class Objective:
     """Leksikografik hedef (K-175): motor aktif hedefleri sırayla çözer."""
     seq: int
     code: str
-    priority_group: int | None
     time_budget_seconds: int
     tolerance_pct: float  # üst hedeften verilebilecek en çok ödün; 0 = katı
-
-
-@dataclass(frozen=True)
-class PriorityRule:
-    seq: int
-    criterion: str
-    direction: str  # Artan | Azalan
+    # satırın kapsamı (K-196): eksen → seçilen değerler; seçim yapılmayan eksen "tümü", boş = hedefin tamamı. Kapsamlar örtüşebilir; hiçbir
+    # satırın kapsamadığı kayıt hiçbir hedefe girmez (`app/params/objectives.py` `rows_of`)
+    scope: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -65,8 +60,7 @@ class ScenarioParameters:
     settings: dict[str, str] = field(default_factory=dict)  # PlanningSetting: SettingKey → Value (katalog başlangıç değerleriyle tamamlanmış)
     time_buckets: tuple[TimeBucket, ...] = ()    # plan ekseni
     report_buckets: tuple[TimeBucket, ...] = ()  # raporlama ekseni (planla aynıysa plan dizisi)
-    objectives: tuple[Objective, ...] = ()       # aktif hedefler, sırasıyla
-    priority_rules: tuple[PriorityRule, ...] = ()
+    objectives: tuple[Objective, ...] = ()       # aktif hedef satırları, sırasıyla (K-196: liste kullanıcının; her satır ayrı hedef olarak çözülür)
 
 
 class PlanningData(Protocol):
@@ -91,6 +85,12 @@ class PlanningData(Protocol):
     def supplier_limits(self, date_from: date, date_to: date) -> list[dict]:
         """Tedarikçi limiti (docs/09, K-191): planın senaryosunda gün bazında {LocationId, SupplierId, MaterialId, Day, DailyLimit, Closed}; yalnız üst
         limiti ya da kapanışı olan günler. Dönem ve malzeme düzeyi `app.supplierlimits`'in `period_limit` ve `material_limit` işlevleriyle."""
+        ...
+
+    def demand_priorities(self) -> dict:
+        """Öncelik yönetimi (docs/09, K-195): planın senaryosunda talebin geçerli öncelik grubu: {orders: [{SalesOrderLineId, PriorityGroup, Source}],
+        forecasts: [{ForecastId, PriorityGroup, Source}]}; PriorityGroup 1–5 (küçük olan önce), Source Sipariş · Proje · Müşteri · Yok. Yalnız açık
+        sipariş satırları. Aynı grupta istek tarihi erken olan önce (K-192)."""
         ...
 
     def material_holds(self, today: date | None = None) -> list[dict]:

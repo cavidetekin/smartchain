@@ -18,15 +18,22 @@ branch_labels = None
 depends_on = None
 
 OLD = "Sipariş öncelik grubu; boş = bütün siparişler (gruplar 7.4'te)"
+# Bu geçişin yazdığı açıklama sabittir: kolon K-196'da (geçiş 0075) modelden kalktı.
+NEW = "Sipariş öncelik grubu; boş = bütün siparişler (gruplar öncelik kuralları adımında)"
 
 
 def _set(comment: str) -> None:
     text = comment.replace("'", "''")
-    op.execute(f"EXEC sp_updateextendedproperty 'MS_Description', N'{text}', 'schema', 'param', 'table', 'ObjectiveDefinition', 'column', 'PriorityGroup'")
+    # Kolonun açıklaması yoksa eklenir, varsa güncellenir: kolon K-196'da modelden kalktığı için sıfırdan kurulumda 0058 ona açıklama yazmaz
+    # (0058 açıklamaları güncel modelden okur); sonuç iki yolda da aynıdır.
+    where = "'schema', 'param', 'table', 'ObjectiveDefinition', 'column', 'PriorityGroup'"
+    op.execute(f"IF EXISTS (SELECT 1 FROM sys.fn_listextendedproperty('MS_Description', {where})) "
+               f"EXEC sp_updateextendedproperty 'MS_Description', N'{text}', {where} "
+               f"ELSE EXEC sp_addextendedproperty 'MS_Description', N'{text}', {where}")
 
 
 def upgrade():
-    _set(metadata.tables['param.ObjectiveDefinition'].c.PriorityGroup.comment)
+    _set(NEW)
     if not context.is_offline_mode():
         sync(op.get_bind(), metadata)
 

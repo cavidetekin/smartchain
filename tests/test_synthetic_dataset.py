@@ -37,7 +37,7 @@ def test_sizes_match_docs(ds):
 def test_every_core_table_filled_except_documented(ds):
     core = {t.name for t in models.metadata.sorted_tables if t.schema == "core"}
     assert {t for t in core if not ds.rows(t)} == EMPTY
-    assert set(ds.params) == {"PriorityRule", "SupplierLimit", "MaterialHold", "WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar",
+    assert set(ds.params) == {"DemandPriority", "SupplierLimit", "MaterialHold", "WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar",
                               "ResourceGroupConstraint"}  # Baz senaryoya bağlanır (K-175, K-185, K-189)
 
 

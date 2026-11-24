@@ -535,13 +535,13 @@
     },
     {
       "no": 25,
-      "name": "Alokasyon ve öncelik kuralı",
+      "name": "Öncelik yönetimi",
       "group": "C",
       "levels": {
         "System owner": "full",
         "Admin": "full",
         "Key user": "full",
-        "End user": "none"
+        "End user": "read"
       }
     },
     {
@@ -1406,6 +1406,7 @@
   "exceptions": {
     "9": "Ham veri temizliğini yalnız System owner başlatır; Admin ve Key user sonucu görür (K-156)",
     "24": "Kapasite yönetimi'ni End user görür (özet ve girişler salt okunur); girişleri Key user ve üstü yapar (K-185)",
+    "25": "Öncelik yönetimi'ni End user görür; öncelik gruplarını Key user ve üstü girer (K-195)",
     "48": "End user kendi işlerini görür: arka planda hazırlanan Excel'in bildirimi ve indirmesi (K-99)",
     "86": "Excel'e aktarma End user'ın hakkı (K-99)",
     "87": "End user yalnız kendi dışa aktarım kayıtlarını görür",

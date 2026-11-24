@@ -39,7 +39,6 @@ TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("PlanningSetting", SETTING),
     ScenarioTable("ObjectiveDefinition", SETTING),
     ScenarioTable("TimeBucketDefinition", SETTING),
-    ScenarioTable("PriorityRule", SETTING),
     ScenarioTable("WarningThreshold", SETTING),   # uyarı eşikleri (K-190): ayar, tam kopya
     # Kapasite girişleri (K-185): fark yapısı ve çözümleme `app/params/resolve.py`'de
     *[ScenarioTable(name, DATA, resolve.materializer(name)) for name in resolve.FIELDS],

@@ -32,8 +32,9 @@ const SECTIONS = [
 const VALUES = { ModelType: "LP", ProductionMinLot: "0", RoundPurchaseToLot: "1", OptimalityGapPct: "1", MaterialConstraint: "1", SafetyStockMode: "Yumuşak hedef",
                  UseOvertime: "0", ReportAxisSameAsPlan: "1", WeekStart: "Pazartesi", FixPeriod: "2", FixPeriodUnit: "Hafta" };
 const O = (id: number, code: string, label: string, seq: number | null, seconds: number | null, tolerance: number | null) =>
-  ({ id, code, label, priority_group: null, seq, seconds, tolerance, active: seq !== null });
-const OBJECTIVES = [O(1, "UNMET_DEMAND", "Karşılanmayan talep", 1, 300, 0), O(2, "LATENESS", "Gecikme", 2, 300, 0), O(3, "OVERTIME", "Fazla mesai", 3, 60, 5),
+  ({ id, code, label, family: "diger", group: "Diğer", scope: {}, scope_parts: [], scope_text: "", description: null, seq, seconds, tolerance,
+     active: seq !== null });
+const OBJECTIVES = [O(1, "UNMET_DEMAND", "Karşılanmayan talep", 1, 300, 0), O(2, "LATENESS", "Gecikme", 2, 300, 0), O(3, "OVERTIME", "Ek mesai", 3, 60, 5),
                     O(4, "PLAN_DEVIATION", "Önceki plandan sapma", null, null, null)];
 const PART = (bucket_type: string, count: number, span_unit: string, start: string, end: string, days: number) => ({ bucket_type, count, span_unit, start, end, buckets: count, days });
 const PLAN = [PART("Hafta", 3, "Ay", "2026-11-16", "2027-01-31", 77), PART("Ay", 6, "Ay", "2027-02-01", "2027-07-31", 181)];
@@ -54,10 +55,10 @@ function backend(values: Record<string, string | null> = VALUES) {
   mockApi({
     "/api/scenarios/current": { body: { id: 1, name: "Baz", is_base: true, is_active: true } },
     "/api/parameters/objectives": (url: string, init?: RequestInit) => {
-      if (init?.method !== "PUT") return { body: { rows: OBJECTIVES, total_seconds: 660 } };
+      if (init?.method !== "PUT") return { body: { rows: OBJECTIVES, total_seconds: 660, catalog: [] } };
       const rows = record(url, init).rows as { id: number; active: boolean; seconds: number | null; tolerance: number | null }[];
       let seq = 0;
-      return { body: { rows: rows.map((r) => ({ ...OBJECTIVES.find((o) => o.id === r.id)!, ...r, seq: r.active ? ++seq : null })), total_seconds: 0 } };
+      return { body: { rows: rows.map((r) => ({ ...OBJECTIVES.find((o) => o.id === r.id)!, ...r, seq: r.active ? ++seq : null })), total_seconds: 0, catalog: [] } };
     },
     "/api/parameters/time-buckets/plan/preview": (url: string, init?: RequestInit) => {
       const rows = record(url, init).rows as { bucket_type: string; count: number; span_unit: string }[];
@@ -142,22 +143,26 @@ describe("ekran 06 · Parametreler", () => {
     const { user, sent } = await open("/parametre/parametreler?sekme=hedefler");
     const table = await screen.findByRole("table", { name: "Hedefler" });
     expect(screen.queryByRole("button", { name: "Grafik" })).toBeNull();                                               // form içi hafif tabloda grafik yok (K-178)
-    const rows = () => within(table).getAllByRole("row").slice(1, -1).map((r) => r.querySelectorAll("td")[1].textContent);
-    expect(rows()).toEqual(["Karşılanmayan talep", "Gecikme", "Fazla mesai", "Önceki plandan sapma"]);
+    const rows = () => within(table).getAllByRole("row").slice(1, -1).map((r) => r.querySelectorAll("td")[2].textContent);
+    expect(rows()).toEqual(["Karşılanmayan talep", "Gecikme", "Ek mesai", "Önceki plandan sapma"]);
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent?.replace("✎", ""))).toEqual(["Sıra", "Grup", "Hedef", "Kapsam", "Açıklama", "Süre bütçesi (sn)", "Ödün payı (%)", "Aktif", ""]);
     expect(within(table).getByRole("columnheader", { name: /Süre bütçesi/ })).toHaveTextContent("✎");
-    expect(within(table).getAllByRole("row").at(-1)).toHaveTextContent("Toplam660");
-    expect(table.closest(".sc-settings-card")?.querySelector(".sc-settings-foot")).not.toBeNull();   // düğmeler tablonun altında
-    expect(save()).toBeDisabled();
-    await user.dblClick(cell(table, 2, 2));                                                          // Gecikme · süre
+    expect(within(table).getAllByRole("row").at(-1)).toHaveTextContent("Toplam4 hedef660");
+    expect(table.closest("section")?.querySelector(".sc-settings-foot") ?? null).toBeNull();          // Vazgeç ve Kaydet tablonun altında değil, şeritte
+    expect(screen.queryByRole("button", { name: "Kaydet" })).toBeNull();                               // Vazgeç ve Kaydet yalnız değişiklik olunca çıkar (K-132)
+    expect(screen.queryByRole("button", { name: "Vazgeç" })).toBeNull();
+    await user.dblClick(cell(table, 2, 5));                                                          // Gecikme · süre
     const editor = within(table).getByRole("textbox");
     await user.clear(editor);
     await user.type(editor, "120{Enter}");
-    expect(cell(table, 2, 2)).toHaveTextContent("120");
-    expect(cell(table, 2, 2)).toHaveClass("is-draft");
-    expect(within(table).getAllByRole("row").at(-1)).toHaveTextContent("Toplam480");
-    await user.click(within(table).getByRole("switch", { name: "Fazla mesai aktif" }));               // kapanan hedef: değerleri boş, soluk
+    expect(cell(table, 2, 5)).toHaveTextContent("120");
+    expect(cell(table, 2, 5)).toHaveClass("is-draft");
+    expect(save().closest(".sc-section-actions")).not.toBeNull();                                    // tablonun sağ üstünde (şeridin sağında)
+    expect(cancel()).toBeEnabled();
+    expect(within(table).getAllByRole("row").at(-1)).toHaveTextContent("Toplam4 hedef480");
+    await user.click(within(table).getByRole("switch", { name: "Ek mesai aktif" }));                  // kapanan hedef: değerleri boş, soluk
     expect(within(table).getAllByRole("row")[3]).toHaveClass("is-off");
-    expect(cell(table, 3, 2)).toHaveTextContent("");
+    expect(cell(table, 3, 5)).toHaveTextContent("");
     const [first, second] = within(table).getAllByRole("row").slice(1, 3);                            // Karşılanmayan talep, Gecikme'nin arkasına sürüklenir
     const data = { effectAllowed: "", setData: () => undefined };
     fireEvent.dragStart(first, { dataTransfer: data });
@@ -173,11 +178,11 @@ describe("ekran 06 · Parametreler", () => {
   it("Hedefler: geçersiz süre hücrede işaretlenir, Kaydet pasif", async () => {
     const { user } = await open("/parametre/parametreler?sekme=hedefler");
     const table = await screen.findByRole("table", { name: "Hedefler" });
-    await user.dblClick(cell(table, 1, 2));
+    await user.dblClick(cell(table, 1, 5));
     await user.clear(within(table).getByRole("textbox"));
     await user.type(within(table).getByRole("textbox"), "0{Enter}");
-    expect(cell(table, 1, 2)).toHaveClass("is-invalid");
-    expect(cell(table, 1, 2)).toHaveAttribute("title", "1 ya da daha büyük tam sayı girilmeli.");
+    expect(cell(table, 1, 5)).toHaveClass("is-invalid");
+    expect(cell(table, 1, 5)).toHaveAttribute("title", "1 ya da daha büyük tam sayı girilmeli.");
     expect(save()).toBeDisabled();
   });
 

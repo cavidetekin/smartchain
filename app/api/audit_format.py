@@ -24,6 +24,7 @@ FIELD_LABELS = {
     "Value": "Değer", "Label": "Etiket", "Name": "Ad", "IsShared": "Paylaşılan", "Definition": "Tanım", "view_id": "Görünüm no",
     # Parametreler: hedefler (K-175)
     "Seq": "Sıra", "TimeBudgetSeconds": "Süre bütçesi (sn)", "TolerancePct": "Ödün payı (%)",
+    "Objective": "Hedef", "Scope": "Kapsam", "Description": "Açıklama", "RowCount": "Satır sayısı", "Layout": "Düzen",   # hedef satırları (K-196)
     # Kapasite yönetimi (K-185)
     "ValidFrom": "Başlangıç", "ValidTo": "Bitiş", "StartDate": "Başlangıç", "EndDate": "Bitiş", "DailyCapacity": "Günlük kapasite", "EfficiencyPct": "Verimlilik (%)",
     "DailyLimit": "Günlük limit", "DowntimeType": "Tip", "Reason": "Sebep", "DayValue": "Çalışma", "IsValid": "Geçerli",
@@ -33,6 +34,7 @@ FIELD_LABELS = {
     # Model kısıtları (K-189)
     "UpperLimit": "Limit", "LimitPeriod": "Limitin dönemi",   # tedarikçi limiti (K-191)
     "HoldType": "Tür", "ClosePct": "Dönemi kapatma oranı (%)",   # malzeme blokajı (K-193)
+    "PriorityGroup": "Öncelik grubu",   # öncelik yönetimi (K-195)
     "UnconstrainedCapacityFactor": "Kısıtsız kapasite çarpanı", "TargetUtilizationPct": "Hedef doluluk (%)",
     # Senaryolar (K-177)
     "FollowsBase": "Baz'ı izler", "RunsNightly": "Gece çalışsın", "NightlyPriority": "Gece sırası", "plan_versions": "Plan versiyonu sayısı",

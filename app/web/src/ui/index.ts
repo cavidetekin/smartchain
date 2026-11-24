@@ -9,6 +9,7 @@ export { Drawer } from "./Drawer";
 export { ConfirmDialog, Dialog } from "./Dialog";
 export { type DayBox, DayBoxes } from "./DayBoxes";
 export { type SearchOption, SearchSelect } from "./SearchSelect";
+export { MultiSelect } from "./MultiSelect";
 export { Checkbox, ChoiceCards, DateField, NumberField, RadioGroup, SearchField, Segment, SelectField, TextareaField, TextField } from "./fields";
 export { OccupancyCell, OccupancyLegend } from "./Occupancy";
 export { DEFAULT_THRESHOLDS, legendLabels, occupancyLevel, type OccupancyLevel, type OccupancyThresholds } from "./occupancyScale";

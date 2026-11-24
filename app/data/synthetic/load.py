@@ -16,7 +16,8 @@ from sqlalchemy.engine import Connection, Engine
 
 from db import models
 from ..cleanup import delete_plan_data
-from .dataset import FIELD_DEFINITIONS, LOCATION_CODE, SCENARIOS, SET_NAME, Dataset
+from .dataset import (FIELD_DEFINITIONS, LOCATION_CODE, OBJECTIVE_RAISED, OBJECTIVE_RAISED_SECONDS, OBJECTIVE_ROWS, OBJECTIVE_SCENARIO, SCENARIOS, SET_NAME,
+                      Dataset)
 
 log = logging.getLogger("smartchain.synthetic")
 
@@ -30,8 +31,8 @@ LOAD_ORDER = [
 ]
 CAPACITY_TABLES = ["WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar"]  # kapasite girişleri (K-185)
 MODEL_TABLES = ["ResourceGroupConstraint"]  # model kısıtları (K-189)
-PARAM_ORDER = ["PriorityRule", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
-PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "PriorityRule", "WarningThreshold", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES,
+PARAM_ORDER = ["DemandPriority", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
+PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "DemandPriority", "WarningThreshold", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES,
                   *MODEL_TABLES]
 LOCATION_BOUND = ("FactoryCalendar", "SupplierLimit", "MaterialHold")   # lokasyon taşıyan param tabloları
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."
@@ -136,6 +137,16 @@ def _versioned() -> list[sa.Table]:
     return [t for t in models.metadata.sorted_tables if t.schema == "core" and "VersionFrom" in t.c]
 
 
+def queue_quality(engine: Engine) -> int:
+    """Tam kapsamlı "Veri kalitesi" işini kuyruğa koyar (K-195 madde 12; docs/11): komut satırındaki `load` ve `reset` işinin sonunda çağırır,
+    böylece bilerek konmuş durumların uyarıları yüklemeden sonra ekranda görünür. İşi motor servisi çalıştırır. İşin numarası."""
+    from sqlalchemy.orm import Session
+
+    from app import quality
+    with Session(engine) as session:
+        return quality.enqueue(session, None, quality.TRIGGER_DEV)
+
+
 def reset_preview(conn: Connection) -> dict:
     """Sıfırlamanın sileceği ve açacağı (sayılar); sıfırlama yapılamıyorsa neden."""
     synthetic = [r[0] for r in conn.execute(text("SELECT Id FROM adm.DataVersion WHERE IsSynthetic = 1"))]
@@ -193,12 +204,15 @@ def reset(engine: Engine, ds: Dataset, confirm) -> dict | None:
 def _scenarios(conn: Connection, base_id: int) -> int:
     """Sentetik senaryolar (docs/11, K-177): Baz'dan kopyalanır, parametre farkları yazılır; Baz gece 1. sırada çalışır. Baz'ın parametrelerine
     dokunulmaz."""
-    from app.params import scenarios, service as params
+    from app.params import objectives, scenarios, service as params
     conn.execute(text("UPDATE param.ScenarioDefinition SET RunsNightly = 1, NightlyPriority = 1 WHERE Id = :b"), {"b": base_id})
     priority = 1
     for name, follows, nightly, changes, divide in SCENARIOS:
         row = scenarios.create_copy(conn, name, base_id, follows, synthetic=True)
         params.save_settings(conn, row["Id"], changes)
+        objectives.insert_start(conn, row["Id"], params.read_settings(conn, row["Id"]))   # sentetik senaryolar başlangıç düzeninde (K-196)
+        if name == OBJECTIVE_SCENARIO:
+            _objective_rows(conn, row["Id"])
         if divide > 1:
             conn.execute(text("UPDATE param.ObjectiveDefinition SET TimeBudgetSeconds = TimeBudgetSeconds / :n WHERE ScenarioDefinitionId = :s "
                               "AND TimeBudgetSeconds IS NOT NULL"), {"n": divide, "s": row["Id"]})
@@ -206,6 +220,32 @@ def _scenarios(conn: Connection, base_id: int) -> int:
             priority += 1
             conn.execute(text("UPDATE param.ScenarioDefinition SET RunsNightly = 1, NightlyPriority = :p WHERE Id = :s"), {"p": priority, "s": row["Id"]})
     return len(SCENARIOS)
+
+
+def _objective_rows(conn: Connection, scenario_id: int) -> None:
+    """Kullanıcının ekleyeceği gibi hedef satırları (docs/11, K-196): "Karşılanmayan talep · Kesin sipariş · Öncelik grubu: 1, 2" en üstte
+    ("Kesin sipariş" satırıyla örtüşür); hemen altında "Hedef doluluğun üstü · Makine" (açılır; satırlar iç içe sıralı); "Güvenlik stoğunun altı ·
+    Hammadde · Rulman" hammadde satırının üstünde. Yeni satır listenin sonuna eklenir; yerini burada sıra belirler."""
+    from app.params import catalog as cat, objectives
+    above = {}
+    for code, scope, note, seconds, tolerance, before in OBJECTIVE_ROWS:
+        above[objectives.create(conn, scenario_id, code, scope, note, seconds, tolerance)] = before
+    rows = objectives.read_objectives(conn, scenario_id)
+    code, scope = OBJECTIVE_RAISED
+    raised = next(r for r in rows if r["code"] == code and r["scope"] == scope)
+    obj = cat.OBJECTIVE_BY_CODE[code]
+    ordered, placed = [], False
+    for r in rows:
+        if r["id"] in above or r is raised:
+            continue
+        for new_id, (b_code, b_scope) in above.items():
+            if r["code"] == b_code and r["scope"] == b_scope:
+                ordered.append(next(x for x in rows if x["id"] == new_id))
+                if not placed:   # ilk eklenen satırın hemen altına açılan satır
+                    placed = True
+                    ordered.append(dict(raised, active=True, seconds=OBJECTIVE_RAISED_SECONDS, tolerance=obj.tolerance if obj.tolerance is not None else 5))
+        ordered.append(r)
+    objectives.save_objectives(conn, scenario_id, [dict(id=r["id"], active=r["active"], seconds=r["seconds"], tolerance=r["tolerance"]) for r in ordered])
 
 
 def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> None:
@@ -258,6 +298,12 @@ def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> N
         "UpperLimit, LimitPeriod, Reason, UpdatedAt) SELECT :s, b.Id, N',UpperLimit,', b.IsValid, b.LimitType, b.LocationId, b.SupplierId, b.MaterialId, b.ValidFrom, "
         "b.ValidTo, :q, b.LimitPeriod, b.Reason, :now FROM param.SupplierLimit b WHERE b.ScenarioDefinitionId = :base AND b.LimitType = :t AND b.MaterialId = :m "
         "AND b.LimitPeriod = N'Hafta'"), {"s": mono, "base": base_id, "t": SUPLIM_UPPER, "m": weekly["Id"], "q": SUPLIM_WEEKLY_DIFF, "now": now})
+    # Kısıtsız kapasite (K-195): bir müşterinin öncelik grubu bu senaryoda farklı (Baz satırının farkı)
+    from .dataset import PRIORITY_DIFF
+    conn.execute(text(
+        "INSERT INTO param.DemandPriority (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, [Level], RecordId, PriorityGroup, UpdatedAt) "
+        "SELECT :s, b.Id, N',PriorityGroup,', 1, b.[Level], b.RecordId, :g, :now FROM param.DemandPriority b WHERE b.ScenarioDefinitionId = :base AND b.[Level] = N'Müşteri' "
+        "AND b.RecordId = (SELECT TOP 1 Id FROM core.Customer WHERE Code = :c AND VersionTo IS NULL)"), {"s": mono, "base": base_id, "c": PRIORITY_DIFF[0], "g": PRIORITY_DIFF[1], "now": now})
     # Kısıtsız kapasite (K-193): 20 günlük malzeme blokajı bu senaryoda geçersiz (Baz satırı silinmez; "Geçersiz yap")
     from .dataset import HOLD_BOTH
     conn.execute(text(

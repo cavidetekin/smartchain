@@ -21,6 +21,14 @@ SCENARIOS = (
     ("Kısıtsız kapasite", True, True, {"ResourceConstraint": "Kısıtsız"}, 2),
     ("MILP deneme", False, False, {"ModelType": "MILP", "ProductionMinLot": True, "ProductionLotMultiple": True}, 1),
 )
+# Hedef satırları (K-196): sentetik senaryolar başlangıç düzenindedir; "Fazla mesaili"de kullanıcının ekleyeceği gibi satırlar vardır
+# (kod, kapsam, açıklama, süre, ödün payı, hangi satırın üstüne): ilki "Talep türü: Kesin sipariş" satırıyla örtüşür (ikisi de durur). Araya
+# alınan, açılan satır iç içe sıra örneğidir. Nihai ürünlerin tek malzeme grubu olduğu için grup örneği hammaddededir (Rulman).
+OBJECTIVE_SCENARIO = "Fazla mesaili"
+OBJECTIVE_NOTE = "Öncelikli siparişler önce"
+OBJECTIVE_ROWS = (("UNMET_DEMAND", {"DemandType": ["Kesin sipariş"], "PriorityGroup": [1, 2]}, OBJECTIVE_NOTE, 60, 0, ("UNMET_DEMAND", {"DemandType": ["Kesin sipariş"]})),
+                  ("SAFETY_STOCK", {"MaterialLevel": ["Hammadde"], "MaterialGroup": ["Rulman"]}, None, 20, 5, ("SAFETY_STOCK", {"MaterialLevel": ["Hammadde"]})))
+OBJECTIVE_RAISED, OBJECTIVE_RAISED_SECONDS = ("OVER_TARGET_LOAD", {"ResourceType": ["Makine"]}), 20
 # Model kısıtları (K-189): kaynak grubu, kısıtsız kapasite çarpanı, hedef doluluk (%). "Kısıtsız kapasite" senaryosunun farkları yüklemede yazılır
 MODEL_CONSTRAINTS = (("TORNA", None, 85.0), ("ISL3", None, 90.0), ("MONTAJ", 1.5, None))
 MODEL_CONSTRAINT_DIFF = ("MONTAJ", 2.0)        # "Kısıtsız kapasite": Baz'daki çarpanın farkı
@@ -40,6 +48,13 @@ HOLD_OPEN_MATERIAL = "SAT-030"              # süresiz "Satın alma" blokajı (�
 HOLD_PARTIAL_MATERIAL = "ALT-020"           # hem üretilen hem satın alınan (üç tür de girilebilir); iki kısmi blokaj: 10 gün (ay açık), 20 gün (ay kapalı)
 HOLD_PARTIAL_SUPPLIER = "TED-06"            # ALT-020'nin tedarikçisi (malzeme tedarikçisi kaydı)
 HOLD_SHORT_DAYS, HOLD_LONG_DAYS = 10, 20
+# Öncelik yönetimi (K-195): girilen öncelik grupları (düzey, kod, grup). MUS-B'ye girilmez: ERP önceliği (2) geçerlidir. Sipariş düzeyinde ezen iki
+# satır: SO-1003 müşterisinden (MUS-A, 1) düşük, SO-1033 müşterisinden (MUS-C, 4) yüksek. "Kısıtsız kapasite" senaryosunda MUS-C 2 (fark)
+PRIORITY_CUSTOMERS = (("MUS-A", 1), ("MUS-C", 4))
+PRIORITY_PROJECTS = (("PRJ-02", 3),)
+PRIORITY_ORDERS = (("SO-1003", 5), ("SO-1033", 1))
+PRIORITY_DIFF = ("MUS-C", 2)
+PRIORITY_BAD_PROJECT, PRIORITY_BAD_VALUE = "PRJ-01", 9       # 10: ERP önceliği 1–5 dışında (SC.PRIORITY_RANGE); yok sayılır
 MODEL_CONSTRAINT_OWN = ("TASLAMA", 1.25)       # "Kısıtsız kapasite": senaryonun kendi değeri (Baz'da yok)
 HISTORY_DAYS = 21
 
@@ -517,7 +532,7 @@ def _suppliers(b: _Builder, rng: random.Random) -> None:
               Country="Türkiye", Region="Marmara", City="İstanbul", IsCustomTracked=code == "MUS-A")
     b.add("ProjectGroup", Code="PG-01", Name="Enerji santrali projeleri", TrackingRule="Ortaktan beslenir", Priority=1, IsActive=True)
     b.add("Project", Code="PRJ-01", Name="Santral A pompa paketi", ProjectGroupId=1,
-          TrackingRule="Ortaktan beslenir", Priority=1, IsActive=True)
+          TrackingRule="Ortaktan beslenir", Priority=PRIORITY_BAD_VALUE, IsActive=True)      # durum 10: aralık dışı ERP önceliği
     b.add("Project", Code="PRJ-02", Name="Arıtma tesisi redüktörleri", ProjectGroupId=1,
           TrackingRule="Tam izolasyon", Priority=2, IsActive=True)
 
@@ -747,9 +762,9 @@ def _quality(b: _Builder) -> None:
     t05 = _copy(b, "Resource", t04, Code=NO_CAPACITY_RESOURCE, Name="Torna T-05 (kapasitesi tanımsız)")  # ne kendisinde ne grubunda çalışma düzeni var
     for row in [r for r in b.t["ResourceGroupMember"] if r["ResourceId"] == t04["Id"]]:  # T-04'ün grubunda (talep zincirinde)
         _copy(b, "ResourceGroupMember", row, ResourceId=t05["Id"])
-    # Tahmin: gelecek iki ay (ay başı), planlama ufku içinde
+    # Tahmin: gelecek iki ay (ay başı), planlama ufku içinde; müşterili (önceliği müşterisinden gelir, K-195)
     for months, qty in ((1, 40.0), (2, 30.0)):
-        b.add("Forecast", LocationId=1, MaterialId=b.id("Material", FORECAST_PRODUCT), CustomerId=None, ProjectId=None,
+        b.add("Forecast", LocationId=1, MaterialId=b.id("Material", FORECAST_PRODUCT), CustomerId=b.id("Customer", PRIORITY_CUSTOMERS[0][0]), ProjectId=None,
               Period=_first_of_month(on, months), Type="Tahmin", Quantity=qty, Uom=None, DeliveryPoint="Başı", IsActive=True)
     # Benzetilen ürün: kendi versiyonu olmayan mamul, MAM-001'in ağacı ve rotasıyla; tahmini var
     src = b.find("Material", REFERENCE_SOURCE)
@@ -781,12 +796,24 @@ def limit_month(ds: Dataset) -> tuple[date, date]:
 
 def _params(b: _Builder) -> None:
     ds = b.ds
-    for seq, (criterion, direction) in enumerate([("Dönem", "Artan"), ("Müşteri önceliği", "Artan"),
-                                                  ("Proje önceliği", "Artan"), ("Teslim tarihi", "Artan")], 1):
-        b.add("param.PriorityRule", with_id=False, ScenarioDefinitionId=1, Seq=seq, Criterion=criterion, Direction=direction)
+    _priorities(b)
     _make_or_buy(b)
     _supplier_limits(b)
     _material_holds(b)
+
+
+def _priorities(b: _Builder) -> None:
+    """Öncelik grupları (7.14a, K-195; docs/11): iki müşteri, bir proje ve müşterisini ezen iki sipariş satırı."""
+    def group(level: str, record_id: int, value: int) -> None:
+        b.add("param.DemandPriority", ScenarioDefinitionId=1, IsValid=True, Level=level, RecordId=record_id, PriorityGroup=value)
+
+    for code, value in PRIORITY_CUSTOMERS:
+        group("Müşteri", b.id("Customer", code), value)
+    for code, value in PRIORITY_PROJECTS:
+        group("Proje", b.id("Project", code), value)
+    for order_no, value in PRIORITY_ORDERS:
+        line = next(r for r in b.t["SalesOrderLine"] if r["OrderNo"] == order_no)
+        group("Sipariş", line["Id"], value)
 
 
 def _make_or_buy(b: _Builder) -> None:

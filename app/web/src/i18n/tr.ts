@@ -986,6 +986,28 @@ export const tr = {
     secondsProblem: "1 ya da daha büyük tam sayı girilmeli.",
     toleranceProblem: "0 ile 100 arasında, en çok 2 ondalıklı sayı girilmeli.",
     oneActive: "En az bir hedef aktif olmalı.",
+    // Hedef satırları (K-196): liste kullanıcının
+    group: "Grup",
+    scope: "Kapsam",
+    description: "Açıklama",
+    all: "Tümü",
+    noMatch: "Eşleşen yok",
+    define: "Yeni hedef tanımla",
+    defineSubmit: "Tanımla",
+    editObjective: "Düzenle",
+    removeObjective: "Hedefi sil",
+    resetLayout: "Başlangıç düzenine getir",
+    resetConfirm: "Hedef satırları başlangıç düzenine döner; eklediğiniz satırlar, sıra, süreler ve açıklamalar silinir.",
+    removeConfirm: (name: string) => `${name} silinir.`,
+    saveFirst: "Önce değişiklikleri kaydedin ya da vazgeçin.",
+    secondsShort: "Süre bütçesi",
+    secondsUnit: "sn",
+    toleranceShort: "Ödün payı",
+    toleranceUnit: "%",
+    familyLegend: "Grup renkleri",
+    families: { talep: "Talep", malzeme: "Malzeme", kaynak: "Kaynak", diger: "Diğer" },
+    rowsCount: (n: number) => `${n} hedef`,
+    objectiveMenu: (name: string) => `${name} işlemleri`,
     // Uyarı eşikleri (fonksiyon 26; K-190)
     warnings: {
       title: "Uyarı eşikleri",
@@ -1136,6 +1158,7 @@ export const tr = {
     search: "Ara",
     cancel: "Vazgeç",
     save: "Kaydet",
+    selectedCount: (n: number) => `${n} seçili`,
     subMenu: (tab: string) => `${tab} bölümleri`,
     calendar: {
       open: "Takvimden seç",
@@ -1183,6 +1206,7 @@ export const tr = {
   },
   table: {
     editSave: "Kaydet",
+    emptyChoice: "Boş",
     editDiscard: "Vazgeç",
     unsavedTitle: "Kaydedilmemiş değişiklikler var",
     unsavedText: "Çıkarsanız bu değişiklikler kaybolur.",
@@ -1389,6 +1413,14 @@ export const tr = {
     } as Record<string, string>,
   },
   // Kapasite yönetimi (ekran 30, K-185)
+  // Öncelik yönetimi (ekran 32; K-195)
+  priorities: {
+    title: "Öncelik yönetimi", sections: "Öncelik yönetimi bölümleri", group: "Öncelik grubu",
+    pasteNotGroup: (cells: number) => `1–5 dışında değer: ${cells} hücre.`,
+    pasteNotEditable: (fields: string[], cells: number) => `Düzenlenmeyen alanlar: ${fields.join(", ")} (${cells} hücre).`,
+    tabs: { customers: "Müşteri", projects: "Proje", orders: "Sipariş" },
+    cards: { orders: "Siparişler", forecasts: "Tahminler", customer: "Müşteri", project: "Proje" },
+  },
   modelConstraints: {
     title: "Model kısıtları", sections: "Model kısıtları bölümleri", tabs: { groups: "Kaynak grubu", suppliers: "Tedarikçi limiti", holds: "Malzeme blokajı" },
     // Tedarikçi limiti (ikinci sekme; K-191)

@@ -16,7 +16,7 @@ from app.api.main import create_app
 from app.api.permissions import END_USER, KEY_USER, SYSTEM_OWNER
 from app.api.services import parameters as api_service
 from app.engine import loader
-from app.params import catalog as cat, horizon, service as params
+from app.params import catalog as cat, horizon, objectives as objective_rows, service as params
 from app.quality import chain
 
 from auth_helpers import auth, ensure_user
@@ -48,7 +48,7 @@ def test_catalog_defaults_are_valid():
     for p in cat.PARAMS:
         if p.default is not None:
             assert params.normalize(p, p.default) == (p.default, None), p.key
-    assert [o.code for o in cat.OBJECTIVES if o.seconds is None] == ["PLAN_DEVIATION", "OVER_TARGET_LOAD"]
+    assert [o.code for o in cat.OBJECTIVES if o.seconds is None] == ["OVER_TARGET_LOAD", "PLAN_DEVIATION"]
 
 
 # ------------------------------------------------------------------ dönem hesabı
@@ -155,6 +155,8 @@ def base(db_engine, monkeypatch):
     with db_engine.connect() as c:
         sid = c.execute(sa.text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar_one()
         saved = {t: [dict(r) for r in c.execute(sa.text(f"SELECT * FROM param.[{t}] WHERE ScenarioDefinitionId = :s"), {"s": sid}).mappings()] for t in TABLES}
+    with db_engine.begin() as c:   # hedefler başlangıç düzeninde (K-196): test veritabanının geçmişinden bağımsız
+        objective_rows.insert_start(c, sid, params.read_settings(c, sid))
     yield sid
     from db.models import metadata
     with db_engine.begin() as c:
@@ -185,7 +187,7 @@ def test_base_scenario_comes_with_start_values(db_engine, base, client, people):
     labels = {p["key"]: p["label"] for s in body["sections"] for sub in s["subs"] for p in sub["params"]}
     assert labels["FixPeriod"] == "Sabit dönem"
     assert [labels[k] for k in ("IncludeFirmOrders", "IncludeQuotes", "IncludeOnHold", "IncludeForecast")] == ["Kesin sipariş", "Teklif", "Beklemedeki sipariş", "Tahmin"]
-    assert [labels[k] for k in ("UseOvertime", "UseSubcontracting", "LaborConstraint")] == ["Fazla mesai", "Fason", "İşçi kısıtı"]
+    assert [labels[k] for k in ("UseOvertime", "UseSubcontracting", "LaborConstraint")] == ["Ek mesai", "Fason", "İşçi kısıtı"]   # K-196: "Ek mesai"
     assert (labels["MaxLatenessDays"], labels["KeepLockedRecords"]) == ("En fazla gecikebilecek gün", "Sabitlenmiş kararlar korunsun")
     assert (body["values"]["SafetyStockMode"], body["values"]["OpenWorkOrders"]) == ("Esnek hedef", "Yalnız öteleme önerisi")
     fix = next(p for s in body["sections"] for sub in s["subs"] for p in sub["params"] if p["key"] == "FixPeriod")
@@ -240,28 +242,29 @@ def test_objectives_order_budget_and_tolerance(db_engine, base, client, people):
     key = auth(people[KEY_USER])
     body = client.get("/api/parameters/objectives", headers=key).json()
     rows = body["rows"]
-    assert [r["label"] for r in rows] == [o.label for o in cat.OBJECTIVES] and body["total_seconds"] == 1140
-    assert [r["seq"] for r in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9, None, None] and [r["active"] for r in rows][-2:] == [False, False]
-    # Gecikme başa alınır, Fazla mesai kapanır, Önceki plandan sapma açılır
-    by = {r["code"]: r for r in rows}
-    order = ["LATENESS", "UNMET_DEMAND", "UNMET_FORECAST", "FORECAST_LATENESS", "SAFETY_STOCK", "SUBCONTRACT", "ALTERNATIVE", "EARLY_BUILD",
-             "PLAN_DEVIATION", "OVERTIME", "OVER_TARGET_LOAD"]
-    sent = [{"id": by[c]["id"], "active": by[c]["active"], "seconds": by[c]["seconds"], "tolerance": by[c]["tolerance"]} for c in order]
+    assert len(rows) == 24 and body["total_seconds"] == 1140                                              # başlangıç düzeni (K-196)
+    assert [r["seq"] for r in rows] == [*range(1, 16), *[None] * 9] and not any(r["active"] for r in rows[15:])
+    # Gecikme · Kesin sipariş başa alınır, Fason kapanır, Önceki plandan sapma açılır
+    name = lambda r: f"{r['label']} · {r['scope_text']}" if r["scope_text"] else r["label"]   # noqa: E731
+    by = {name(r): r for r in rows}
+    first, closed, opened = "Gecikme · Talep türü: Kesin sipariş", "Fason", "Önceki plandan sapma"
+    order = [first, *[n for n in by if n not in (first, closed, opened) and by[n]["active"]], opened, closed, *[n for n in by if n not in (first, closed, opened) and not by[n]["active"]]]
+    sent = [{"id": by[n]["id"], "active": by[n]["active"], "seconds": by[n]["seconds"], "tolerance": by[n]["tolerance"]} for n in order]
     sent[0]["tolerance"] = 1.5
-    sent[8].update(active=True, seconds=30, tolerance=10)
-    sent[9]["active"] = False
+    sent[14].update(active=True, seconds=30, tolerance=10)
+    sent[15]["active"] = False
     r = client.put("/api/parameters/objectives", headers=key, json={"rows": sent})
     assert r.status_code == 200, r.text
     after = r.json()
-    assert [(x["code"], x["seq"]) for x in after["rows"]][:3] == [("LATENESS", 1), ("UNMET_DEMAND", 2), ("UNMET_FORECAST", 3)]
-    saved = {x["code"]: x for x in after["rows"]}
-    assert (saved["LATENESS"]["tolerance"], saved["PLAN_DEVIATION"]["seq"], saved["PLAN_DEVIATION"]["seconds"]) == (1.5, 9, 30)
-    assert (saved["OVERTIME"]["active"], saved["OVERTIME"]["seq"], saved["OVERTIME"]["seconds"]) == (False, None, None)
+    assert [(name(x), x["seq"]) for x in after["rows"]][:2] == [(first, 1), ("Karşılanmayan talep · Talep türü: Kesin sipariş", 2)]
+    saved = {name(x): x for x in after["rows"]}
+    assert (saved[first]["tolerance"], saved[opened]["seq"], saved[opened]["seconds"]) == (1.5, 15, 30)
+    assert (saved[closed]["active"], saved[closed]["seq"], saved[closed]["seconds"]) == (False, None, None)
     assert after["total_seconds"] == 1140 - 60 + 30
     with db_engine.connect() as c:
         keys = {r[0] for r in c.execute(sa.text("SELECT TOP 20 ObjectKey FROM adm.AuditLog WHERE Action = N'Hedef değişikliği' AND UserId = :u ORDER BY Id DESC"),
                                         {"u": people[KEY_USER]})}
-    assert {"Baz · Gecikme", "Baz · Fazla mesai", "Baz · Önceki plandan sapma"} <= keys
+    assert {f"Baz · {first}", f"Baz · {closed}", f"Baz · {opened}"} <= keys
     # denetimler: süre, ödün payı, en az bir aktif hedef, eksik liste
     bad = [dict(x) for x in sent]
     bad[0].update(seconds=0, tolerance=120)
@@ -346,7 +349,7 @@ def test_quality_horizon_and_engine_read_the_base_scenario(db_engine, base):
         assert chain.horizon(s, MON) == (date(2026, 11, 1), date(2027, 7, 31))
         loaded = loader.load_parameters(s, base)
         assert (loaded.name, loaded.settings["ModelType"], loaded.settings["SupplierSelectionRule"]) == ("Baz", "LP", "Öncelik")
-        assert [o.code for o in loaded.objectives][:2] == ["UNMET_DEMAND", "LATENESS"] and len(loaded.objectives) == 9
+        assert [o.code for o in loaded.objectives][:2] == ["UNMET_DEMAND", "LATENESS"] and len(loaded.objectives) == 15   # aktif satırlar (K-196)
         assert sum(o.time_budget_seconds for o in loaded.objectives) == params.time_budget(s, base) == 1140
         assert [(b.bucket_type, b.count, b.span_unit) for b in loaded.time_buckets] == [("Hafta", 3, "Ay"), ("Ay", 6, "Ay")]
         assert loaded.report_buckets == loaded.time_buckets
