@@ -41,7 +41,7 @@
   "IsSubcontractable": 0,
   "DefaultSupplyType": "Üretim",
   "IsCustomerSupplied": 0,
-  "IsCustomTracked": 0,
+  "IsCustomAllocated": 0,
   "IsPhantom": 0,
   "IsNonStockable": 0,
   "GoodsReceiptDays": 1,
@@ -178,21 +178,11 @@
   "IsActive": 1,
   "Country": "Türkiye",
   "Region": "Marmara",
-  "City": "İstanbul",
-  "IsCustomTracked": 0
- },
- "ProjectGroup": {
-  "Code": "PG-01",
-  "Name": "Enerji santrali projeleri",
-  "TrackingRule": "Ortaktan beslenir",
-  "Priority": 1,
-  "IsActive": 1
+  "City": "İstanbul"
  },
  "Project": {
   "Code": "PRJ-01",
   "Name": "Santral A pompa paketi",
-  "ProjectGroupCode": "PG-01",
-  "TrackingRule": "Ortaktan beslenir",
   "Priority": 1,
   "IsActive": 1
  },
@@ -216,7 +206,6 @@
   "Status": "Açık",
   "IsActive": 1,
   "IsOnHold": 0,
-  "IsCustomTracked": 1,
   "IsQuote": 0
  },
  "Forecast": {
@@ -250,8 +239,7 @@
   "IsAvailable": 0,
   "IsInQuality": 1,
   "IsBlocked": 0,
-  "IsActive": 1,
-  "IsCustomTracked": 1
+  "IsActive": 1
  },
  "BorrowPayback": {
   "LocationCode": "ORM-01",
@@ -291,8 +279,7 @@
   "IsProduction": 1,
   "IsSubcontract": 0,
   "IsRework": 0,
-  "IsOnHold": 0,
-  "IsCustomTracked": 1
+  "IsOnHold": 0
  },
  "WorkOrderComponent": {
   "LocationCode": "ORM-01",
@@ -352,8 +339,7 @@
   "IsPurchaseRequest": 0,
   "IsPurchase": 1,
   "IsSubcontract": 0,
-  "IsActive": 1,
-  "IsCustomTracked": 0
+  "IsActive": 1
  },
  "ProductionConfirmation": {
   "LocationCode": "ORM-01",

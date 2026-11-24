@@ -722,7 +722,7 @@ Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, d
 | Uç nokta | Yetki | Açıklama |
 |---|---|---|
 | Ortak listeler `materials`, `master-…` | 10 okuma | Ana veri: 14 tablo, salt okunur; ilişkiler kodla; miktar ondalığı satırın biriminden |
-| Ortak listeler `transaction-…` | 102 okuma | İşlem verisi: 12 tablo (Proje ve Proje grubu dahil), salt okunur |
+| Ortak listeler `transaction-…` | 102 okuma | İşlem verisi: 11 tablo (Proje dahil), salt okunur |
 | `GET /api/master-data/counts` · `GET /api/transaction-data/counts` | 10 / 102 okuma | Sekmeler, tablolar ve güncel veri versiyonundaki kayıt sayıları (tablo seçimi için); veri yoksa sayı boş |
 
 Uygulandı (6.1, K-168, K-169). Satırlar ortak liste sözleşmesiyle (K-87); yazma ucu yok, manuel değer 6.2'de.

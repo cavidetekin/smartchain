@@ -34,7 +34,7 @@ def test_relations_are_single_valued_and_from_one_place():
     assert heads["transaction-work-order-operation"] == ["LocationId", "WorkOrderId", "ResourceGroupId"]
     assert heads["materials"] == ["LocationId"] and heads["master-resource"] == ["LocationId"]  # Kaynak → takvim yok
     assert heads["master-production-version"] == ["LocationId", "MaterialId"]                    # ağaç ve rota (kodla, çok satır) yok
-    for empty in ("master-supplier", "master-customer", "master-location", "master-unit-of-measure", "transaction-project-group"):
+    for empty in ("master-supplier", "master-customer", "master-location", "master-unit-of-measure", "transaction-project"):
         assert heads[empty] == [], empty
     assert all(p in relations.REFS for paths in heads.values() for p in paths)
     member = BY_NAME["master-resource-group-member"]

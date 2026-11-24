@@ -23,7 +23,7 @@ log = logging.getLogger("smartchain.synthetic")
 
 # Bağımlılık sırası (K-79). Location ve UnitOfMeasure versiyonsuz; ayrı yazılır.
 LOAD_ORDER = [
-    "ResourceGroup", "Supplier", "Customer", "ProjectGroup",
+    "ResourceGroup", "Supplier", "Customer",
     "Project", "Material", "UomConversion", "Resource",
     "ResourceGroupMember", "EmployeeAbsence", "ProductionVersion", "BOM", "Routing", "MaterialSupplier", "MaterialReference",
     "SalesOrderLine", "Forecast", "Stock", "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "PurchaseOrderLine",
@@ -360,6 +360,9 @@ def _load(conn: Connection, ds: Dataset) -> dict:
         counts[name] = len(rows)
         conn.execute(sa.insert(_table("DataVersionEntity", "adm")).values(
             DataVersionId=version, EntityName=name, ImportBatchId=None))
+    # Özel alokasyon (K-198): arz satırlarının seviyesi, anahtarı ve bayrağı aktarımdaki hesapla aynı işlevden; yükleme aktarım olmadığı için yerinde
+    from app import allocation
+    allocation.update_in_place(conn)
 
     set_id = conn.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar()
     if set_id is None:

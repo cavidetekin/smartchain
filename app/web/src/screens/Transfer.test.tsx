@@ -108,7 +108,7 @@ const PARTIAL = {
   busy: null,
   pending: ["Stock"],
   groups: [
-    { name: "Talep", tables: [row("SalesOrderLine", "Satış siparişi"), row("Forecast", "Tahmin", "Veri gelmedi", 0), row("ProjectGroup", "Proje grubu", "Veri gelmedi", 0), row("Project", "Proje", "Veri gelmedi", 0)] },
+    { name: "Talep", tables: [row("SalesOrderLine", "Satış siparişi"), row("Forecast", "Tahmin", "Veri gelmedi", 0), row("Project", "Proje", "Veri gelmedi", 0)] },
     { name: "Stok", tables: [row("Stock", "Stok"), row("BorrowPayback", "Ödünç ve geri ödeme", "Veri gelmedi", 0)] },
     { name: "Üretim", tables: [row("WorkOrder", "İş emri")] },
     { name: "Satın alma", tables: [row("PurchaseOrderLine", "Satın alma siparişi")] },
@@ -128,7 +128,7 @@ describe("Kısmi veri aktarımı", () => {
     expect(within(dialog).getByRole("button", { name: "Aktarımı başlat" })).toBeDisabled();
     await user.click(within(dialog).getByRole("checkbox", { name: /^Talep · Satış siparişi, Tahmin/ }));
     expect(await within(dialog).findByText("1 tablo aktarılacak; ana veri aktarılmaz")).toBeInTheDocument();
-    expect(within(dialog).getAllByText("Aktarılmaz")).toHaveLength(3);
+    expect(within(dialog).getAllByText("Aktarılmaz")).toHaveLength(2);
     await user.click(within(dialog).getByRole("checkbox", { name: /^İzin/ }));
     await user.click(within(dialog).getByRole("button", { name: "Aktarımı başlat" }));
     await waitFor(() => expect(posts(fetchMock, "/api/transfers/partial")).toHaveLength(1));

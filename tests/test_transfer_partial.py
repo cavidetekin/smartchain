@@ -33,7 +33,7 @@ def so(no, material, **extra):
             "IsActive": 1, **SO, **extra}
 
 
-STOCK = {"LocationCode": L1, "Warehouse": "ANA", "Uom": "ADET", "IsAvailable": 1, "IsInQuality": 0, "IsBlocked": 0, "IsCustomTracked": 0, "IsActive": 1}
+STOCK = {"LocationCode": L1, "Warehouse": "ANA", "Uom": "ADET", "IsAvailable": 1, "IsInQuality": 0, "IsBlocked": 0, "IsActive": 1}
 DATA = {
     "Location": [{"Code": L1, "Name": "Kısmi 1", "IsFactory": 1, "IsActive": 1}],
     "Material": [mat("P-OK"), mat("P-PAS"), mat("P-LATE")],
@@ -77,7 +77,7 @@ def one(s, entity, where):
 
 
 def test_groups_match_docs():
-    """docs/00 K-150 ile birebir; her işlem verisi tablosu tam bir grupta; Proje ve Proje grubu Talep'te (istisna)."""
+    """docs/00 K-150 ile birebir; her işlem verisi tablosu tam bir grupta; Proje Talep'te (istisna; Proje grubu K-198'de kalktı)."""
     text = (ROOT / "docs" / "00-kararlar.md").read_text(encoding="utf-8")
     k150 = next(line for line in text.splitlines() if line.startswith("| K-150 |"))
     names = {e.name: e.table for e in ENTITIES}
@@ -86,7 +86,7 @@ def test_groups_match_docs():
     tables = [t for ts in GROUPS.values() for t in ts]
     assert len(tables) == len(set(tables))
     transaction = {e.table for e in ENTITIES if e.data_class == "İşlem verisi"}
-    assert set(tables) - transaction == {"Project", "ProjectGroup"} and transaction <= set(tables)
+    assert set(tables) - transaction == {"Project"} and transaction <= set(tables)
     with pytest.raises(UnknownGroup):
         group_tables(["Talep", "Yok"])
 
@@ -129,11 +129,13 @@ def test_waiting_row_keeps_existing_version(s):
     assert t["SalesOrderLine"]["note"] == transfer.NOTE_WAITING.format(n=2) and t["SalesOrderLine"]["not_transferred"] == 2
 
 
-def test_row_linked_to_unselected_group_waits(s):
-    """PS-9 gelen veride geçerli ama Talep seçilmedi: ona bağlı stok bekler."""
+def test_supply_linked_to_unselected_group_does_not_wait(s):
+    """PS-9 gelen veride geçerli ama Talep seçilmedi: ona bağlı stok beklemez (K-198: arzın sahip ilişkisi isteğe bağlı). Stok aktarılır, iç bağ boş
+    kalır, bağlı sipariş ERP'den geldiği gibi durur."""
     t = by_entity(transfer.run_transfer(s, None, groups=["Stok"]))
-    assert not core_rows(s, "Stock", "LotNo = N'L9'") and core_rows(s, "Stock", "LotNo = N'L1'")
-    assert t["Stock"]["note"] == transfer.NOTE_WAITING.format(n=1)
+    late = one(s, "Stock", "LotNo = N'L9'")
+    assert (late["SalesOrderLineId"], late["SalesOrderNo"], late["SalesOrderLineNo"]) == (None, "PS-9", 1) and core_rows(s, "Stock", "LotNo = N'L1'")
+    assert t["Stock"]["note"] is None and t["Stock"]["not_transferred"] == 0
 
 
 def test_inactive_master_in_incoming_data_still_active_in_existing(s):

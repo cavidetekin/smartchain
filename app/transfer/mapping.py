@@ -1,7 +1,8 @@
 """prc → core kolon eşlemesi (K-146, K-153): ad kuralı ve ilişki haritasından; test core şemasının bütün kolonlarını kapsadığını denetler.
 
 Ad kuralı: aynı adlı kolon olduğu gibi; ilişki alanı `XxxCode` → `XxxId`, `LocationCode` → `LocationId`, `WorkOrderNo` → `WorkOrderId`,
-`ParentWorkOrderNo` → `ParentWorkOrderId`, bağlı sipariş üçlüsü (`SalesOrderNo` …) → `SalesOrderLineId`. Core'da Id karşılığı olmayan ilişki
+`ParentWorkOrderNo` → `ParentWorkOrderId`, bağlı sipariş üçlüsü (`SalesOrderNo` …) → `SalesOrderLineId`; arz tablolarında üçlü `core`'da aynı
+adla da durur (K-198: kalemsiz arzda bağlantı boş, sipariş no dolu). Core'da Id karşılığı olmayan ilişki
 (Üretim versiyonunun ağaç ve rota kodu) kod olarak kalır, aktarımda çözülmez (bütünlüğü validasyon denetler).
 """
 from dataclasses import dataclass
@@ -20,6 +21,8 @@ SYSTEM = ("Id", "VersionFrom", "VersionTo", "ImportBatchId", "BusinessKey", "Upd
 PRESERVED: dict[str, tuple[str, ...]] = {}
 # Ön hesap (fonksiyon 29) kolonları: aktarımda boş
 PRECALC: dict[str, tuple[str, ...]] = {"WorkOrderComponent": ("RemainingQuantity",), "WorkOrderOperation": ("RemainingConsumption",)}
+# Yüklemede öteki tablolardan hesaplanan kolonlar (K-198; `app/allocation`): prc'de yoktur, kod→Id çözümünden sonra yazılır, karşılaştırmaya girer
+COMPUTED: dict[str, tuple[str, ...]] = {t: ("IsCustomAllocated", "AllocationLevel", "AllocationKey") for t in ("Stock", "WorkOrder", "PurchaseOrderLine")}
 UNVERSIONED = {"Location"}  # core.Location versiyonsuz (Id IDENTITY)
 LOCATION_ONLY = {"Location": ("IsSynthetic",)}  # sentetik veri işareti: aktarım eklediği satıra 0 yazar, var olana dokunmaz
 
@@ -54,13 +57,14 @@ class TableMap:
     location: bool                    # LocationCode → LocationId
     preserved: tuple[str, ...]
     precalc: tuple[str, ...]
-    key: tuple[str, ...]              # core'un güncel tekil anahtarı (kolon adları)
-    business_key: tuple[str, ...]     # prc anahtar alanları (BusinessKey için)
+    computed: tuple[str, ...]         # yüklemede hesaplanan kolonlar (özel alokasyon)
+    key: tuple[str, ...] = ()         # core'un güncel tekil anahtarı (kolon adları)
+    business_key: tuple[str, ...] = ()  # prc anahtar alanları (BusinessKey için)
 
     @property
     def compare(self) -> tuple[str, ...]:
         """"Değişti" karşılaştırmasının kolonları: iş kolonları (sistem, korunan ve ön hesap kolonları hariç)."""
-        return self.plain + tuple(r.column for r in self.refs) + (("LocationId",) if self.location else ())
+        return self.plain + tuple(r.column for r in self.refs) + (("LocationId",) if self.location else ()) + self.computed
 
     def prc_to_core(self, field: str) -> str | None:
         """Kural izindeki alan adının core karşılığı (değerin kaynağı, K-148)."""
@@ -92,20 +96,21 @@ def table_map(entity: str) -> TableMap:
         if column in core_cols and column not in prc_cols:
             ref_cols.append(RefColumn(column, r))
     taken = set(SYSTEM) | {r.column for r in ref_cols} | set(PRESERVED.get(entity, ())) | set(PRECALC.get(entity, ())) | set(LOCATION_ONLY.get(entity, ()))
+    taken |= set(COMPUTED.get(entity, ()))
     location = "LocationId" in core_cols and "LocationCode" in prc_cols
     plain = tuple(c.name for c in core.columns if c.name not in taken and c.name != "LocationId" and c.name in prc_cols)
     try:
         key = _unique_key(core)
     except LookupError:
         key = ("Code",)
-    return TableMap(entity, core, prc, plain, tuple(ref_cols), location, PRESERVED.get(entity, ()), PRECALC.get(entity, ()), key,
-                    tuple(key_fields(entity)))
+    return TableMap(entity, core, prc, plain, tuple(ref_cols), location, PRESERVED.get(entity, ()), PRECALC.get(entity, ()),
+                    COMPUTED.get(entity, ()), key, tuple(key_fields(entity)))
 
 
 def unmapped(entity: str) -> list[str]:
     """Eşlemenin kapsamadığı core kolonları (test boş bekler)."""
     m = table_map(entity)
-    known = set(SYSTEM) | set(m.plain) | {r.column for r in m.refs} | set(m.preserved) | set(m.precalc) | set(LOCATION_ONLY.get(entity, ()))
+    known = set(SYSTEM) | set(m.plain) | {r.column for r in m.refs} | set(m.preserved) | set(m.precalc) | set(m.computed) | set(LOCATION_ONLY.get(entity, ()))
     if m.location:
         known.add("LocationId")
     return [c.name for c in m.core.columns if c.name not in known]

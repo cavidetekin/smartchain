@@ -48,6 +48,15 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     for row in stg["UomConversion"]:  # temiz veri: M hiçbir malzemenin temel birimi değil
         if row["FromUom"] == "M":
             x.expect("UomConversion", row, ["UOM.NEW_UOM"])
+    # Sahibi sistemde olmayan ayrılmış arz (K-198; docs/11 durum 12): temiz verideki bilerek konmuş Uyarılar; satır aktarılır, genele düşmez
+    for row in stg["Stock"]:
+        if row["ProjectCode"] == d.MISSING_PROJECT:
+            x.expect("Stock", row, ["STK.REF_PROJECT"])
+        if row["CustomerCode"] == d.MISSING_CUSTOMER:
+            x.expect("Stock", row, ["STK.REF_CUSTOMER"])
+    for row in stg["PurchaseOrderLine"]:
+        if row["SalesOrderNo"] == d.MISSING_ORDER:
+            x.expect("PurchaseOrderLine", row, ["PO.REF_SALES_ORDER"])
     # Veri kalitesi durumları (6.5, K-174; docs/11 durum 6–9): temiz verideki bilerek konmuş Uyarılar
     for row in stg["MaterialSupplier"]:
         if (row["MaterialCode"], row["SupplierCode"]) == (d.DEEP_MATERIAL, d.DEEP_SUPPLIER):
@@ -69,7 +78,6 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     x.add("Customer", x.base("Customer", Code="MUS-A"), None, Code="L-CUS-PAS", Name="Pasif müşteri", IsActive=False)
     x.add("Resource", x.base("Resource", Code="T-01"), None, Code="L-RES-PAS", Name="Pasif kaynak", IsActive=False)
     x.add("Supplier", x.base("Supplier", Code="TED-01"), ["SUP.NO_MATERIAL"], Code="V-SUP-1", Name="Hiçbir malzemeye bağlı olmayan tedarikçi")
-    x.add("Project", x.base("Project", Code="PRJ-01"), ["PRJ.REF_PROJECT_GROUP"], Code="V-PRJ-1", Name="Grubu tanımsız proje", ProjectGroupCode="V-YOK-PG")
 
     # Birim dönüşümü
     uom = x.base("UomConversion", MaterialCode="HAM-001")
@@ -223,7 +231,6 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     st(4, ["STK.QUALITY_NO_DATE"], IsAvailable=False, IsInQuality=True)
     st(5, ["STK.EXPIRED"], ExpiryDate=date(2020, 1, 1))
     st(6, ["STK.NON_STOCKABLE"], MaterialCode="ALT-013")
-    st(7, ["STK.CUSTOM_NO_OWNER"], IsCustomTracked=True)
     st(8, ["STK.ZERO_QTY"], Quantity=0.0)
     st(9, ["STK.REF_MATERIAL"], MaterialCode="V-YOK-MAT")
     st(10, ["STK.INACTIVE_MATERIAL"], MaterialCode="L-MAT-PAS")
@@ -252,7 +259,6 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     w(6, ["WO.ZERO_OPEN"], OpenQuantity=0.0)
     w(7, ["WO.TYPE_FLAGS"], IsSubcontract=True)
     w(8, ["WO.REWORK_NO_PARENT"], IsProduction=False, IsRework=True)
-    w(9, ["WO.CUSTOM_NO_OWNER"], IsCustomTracked=True, ProjectCode=None, CustomerCode=None, SalesOrderNo=None, SalesOrderLineNo=None, SalesOrderLineItemNo=None)
     w(10, ["WO.REF_MATERIAL", "WO.NO_STRUCTURE"], MaterialCode="V-YOK-MAT", ProductionVersionCode=None)
     w(11, ["WO.INACTIVE_MATERIAL"], MaterialCode="L-MAT-PAS", ProductionVersionCode="V-PV-P")
     w(12, ["WO.REF_VERSION", "WO.NO_STRUCTURE"], ProductionVersionCode="V-YOK-PV")
@@ -279,7 +285,6 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     p(4, ["PO.SUBCON_NO_WO"], IsPurchase=False, IsSubcontract=True, WorkOrderNo=None)
     p(5, ["PO.NO_SUPPLIER"], SupplierCode=None)
     p(6, ["PO.NO_DATE"], RequestedDate=None, ConfirmedDate=None)
-    p(7, ["PO.CUSTOM_NO_OWNER"], IsCustomTracked=True)
     p(8, ["PO.REF_MATERIAL", "PO.SUPPLIER_NOT_LISTED"], MaterialCode="V-YOK-MAT")
     p(9, ["PO.INACTIVE_MATERIAL", "PO.SUPPLIER_NOT_LISTED"], MaterialCode="L-MAT-PAS")
     p(10, ["PO.REF_SUPPLIER"], SupplierCode="V-YOK-SUP")

@@ -63,7 +63,7 @@ def test_references_resolve(ds):
     targets = {**{k: (v if isinstance(v, str) else v[0]) for k, v in gen.REF_TARGET.items()},
                "LocationId": "Location",
                "ResourceGroupId": "ResourceGroup",
-               "ProjectGroupId": "ProjectGroup", "CustomerId": "Customer",
+               "CustomerId": "Customer",
                "SalesOrderLineId": "SalesOrderLine"}
     missing = []
     for name, rows in ds.tables.items():

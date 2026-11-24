@@ -43,9 +43,8 @@ def _resolvers(ds: Dataset) -> dict:
         "ReferenceMaterialCode": lambda r: c("Material", r["ReferenceMaterialId"]),
         "ReferenceProductionVersionCode": lambda r: c("ProductionVersion", r.get("ReferenceProductionVersionId")),
         "SupplierCode": lambda r: c("Supplier", r.get("SupplierId")),
-        "CustomerCode": lambda r: c("Customer", r.get("CustomerId")),
-        "ProjectCode": lambda r: c("Project", r.get("ProjectId")),
-        "ProjectGroupCode": lambda r: c("ProjectGroup", r.get("ProjectGroupId")),
+        "CustomerCode": lambda r: r.get("CustomerCode") or c("Customer", r.get("CustomerId")),   # arzda ERP'den geldiği gibi (K-198)
+        "ProjectCode": lambda r: r.get("ProjectCode") or c("Project", r.get("ProjectId")),
         "LendingProjectCode": lambda r: c("Project", r["LendingProjectId"]),
         "BorrowingProjectCode": lambda r: c("Project", r["BorrowingProjectId"]),
         "ResourceCode": lambda r: c("Resource", r.get("ResourceId")),
@@ -54,7 +53,7 @@ def _resolvers(ds: Dataset) -> dict:
         "WorkOrderNo": lambda r: r["WorkOrderNo"] if "WorkOrderNo" in r else wo("WorkOrderId")(r),  # iş emrinin kendi kolonu da bu adda (K-124)
         "ParentWorkOrderNo": wo("ParentWorkOrderId"),
         "ProductionVersionCode": lambda r: c("ProductionVersion", r.get("ProductionVersionId")),
-        "SalesOrderNo": so("OrderNo"),
+        "SalesOrderNo": lambda r: r.get("SalesOrderNo") or so("OrderNo")(r),  # kalemsiz arzda yalnız sipariş no (K-198)
         "SalesOrderLineNo": so("LineNo"),
         "SalesOrderLineItemNo": so("LineItemNo"),
     }

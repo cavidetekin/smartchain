@@ -21,7 +21,12 @@ from .materials import MATERIALS
 from .relations import REFS
 
 SYSTEM = ("VersionFrom", "VersionTo", "ImportBatchId", "BusinessKey")
-HIDDEN = ("IsActive", "UpdatedAt")  # Standart görünümde gizli (K-169)
+# Standart görünümde gizli (K-169). Arz tablolarında (K-198): "Bağlı proje", "Bağlı müşteri", "Bağlı sipariş no" ve "Özel alokasyon" açık; seviye,
+# anahtar, bağlı sipariş satırı ve alt satırı Alanlar panelinde durur, kapalı gelir
+HIDDEN = ("IsActive", "UpdatedAt", "AllocationLevel", "AllocationKey", "SalesOrderLineNo", "SalesOrderLineItemNo")
+# Arz tablolarında iç bağlar (K-198): kolon olarak, Alanlar listesinde ve şablonda yoktur; sahip, ERP'den geldiği gibi ham alanlarda gösterilir
+# (`ProjectCode`, `CustomerCode`, `SalesOrderNo`…). İlişkili alanlar iç bağ üzerinden çalışır ("Bağlı proje · …", "Bağlı müşteri · …", "Bağlı sipariş · …").
+INTERNAL_LINKS = {t: ("ProjectId", "CustomerId", "SalesOrderLineId") for t in ("Stock", "WorkOrder", "PurchaseOrderLine")}
 UNIT_OF_ROW = "UnitOfRow"
 NAMES = {row[0]: row[1] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "Birim"}
 SLUGS = {row[0]: row[4] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "birim"}
@@ -78,7 +83,6 @@ TRANSACTION_SPECS: tuple[Spec, ...] = (
          unit_ref=MATERIAL_UNIT, function=TX),
     Spec("Forecast", "transaction-forecast", ADD, unit_decimals=frozenset({"Quantity"}), unit_ref=MATERIAL_UNIT, function=TX),
     Spec("Project", "transaction-project", ADD, function=TX),
-    Spec("ProjectGroup", "transaction-project-group", ADD, function=TX),
     Spec("Stock", "transaction-stock", ADD, unit_decimals=frozenset({"Quantity"}), unit_ref=MATERIAL_UNIT, function=TX),
     Spec("BorrowPayback", "transaction-borrow-payback", ADD, unit_decimals=frozenset({"BorrowedQuantity", "PaidBackQuantity"}),
          unit_ref=MATERIAL_UNIT, function=TX),
@@ -118,8 +122,10 @@ def _build(spec: Spec) -> ListDefinition:
             a = metadata.tables[f"core.{target}"].alias(f"r_{c.name}")
             aliases[c.name] = a
             joined = joined.outerjoin(a, sa.and_(a.c.Id == c, _current(a)))
-            cols.append(shown(a).label(code))
             cols.append(c)  # ham ilişki alanı: listede alan değildir; ilişkili alanların birleştirmesi buradan (K-182)
+            if c.name in INTERNAL_LINKS.get(spec.table, ()):
+                continue        # iç bağ: kod kolonu yok; aynı adlı ham alan (ör. ProjectCode) tablonun kendi kolonudur
+            cols.append(shown(a).label(code))
             labels[code] = info.get("label") or code
             fields.append(code)
             continue
@@ -189,7 +195,7 @@ MASTER_TABS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("lokasyon-ve-birim", ("master-location", "master-unit-of-measure", "master-uom-conversion")),
 )
 TRANSACTION_TABS: tuple[tuple[str, tuple[str, ...]], ...] = (  # aktarım grupları (K-150)
-    ("talep", ("transaction-sales-order", "transaction-forecast", "transaction-project", "transaction-project-group")),
+    ("talep", ("transaction-sales-order", "transaction-forecast", "transaction-project")),
     ("stok", ("transaction-stock", "transaction-borrow-payback")),
     ("uretim", ("transaction-work-order", "transaction-work-order-component", "transaction-work-order-operation", "transaction-production-confirmation")),
     ("satin-alma", ("transaction-purchase-order",)),

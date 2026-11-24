@@ -98,6 +98,77 @@ def test_latest_migration_goes_forward_back_and_forward(scratch):
     assert check.returncode == 0, check.stdout + check.stderr
 
 
+def test_0077_cleans_user_definitions_and_keeps_renamed_data(scratch):
+    """K-198 (geçiş 0077): kalkan alanları kullanan kullanıcı tanımları silinir ve çıktıda listelenir; malzemedeki eski adı kullananlar yeni ada
+    çevrilir; malzemede elle girilmiş değer silinir, alttaki değer geçerli olur; arzın sipariş alanları bağlı satırdan doldurulur."""
+    up = _alembic(scratch, "upgrade", "0076")
+    assert up.returncode == 0, up.stdout + up.stderr
+    engine = sa.create_engine(scratch)
+    now = "SYSUTCDATETIME()"
+    try:
+        with engine.begin() as c:
+            for table in ("adm.ManualValue", "adm.TableView", "adm.TableViewStandard", "core.Material", "core.Stock", "core.SalesOrderLine"):
+                c.execute(sa.text(f"ALTER TABLE {table} NOCHECK CONSTRAINT ALL"))   # deneme veritabanı: kullanıcı, birim ve parti satırı kurulmaz
+            loc = c.execute(sa.text("INSERT INTO core.Location (Code, IsActive) OUTPUT inserted.Id VALUES (N'G-1', 1)")).scalar_one()
+            c.execute(sa.text(f"INSERT INTO core.Material (Id, LocationId, Code, BaseUom, VersionFrom, BusinessKey, UpdatedAt, IsCustomTracked) "
+                              f"VALUES (1, :l, N'G-M', N'ADET', 1, N'k', {now}, 1)"), {"l": loc})
+            c.execute(sa.text(f"INSERT INTO core.SalesOrderLine (Id, LocationId, OrderNo, [LineNo], LineItemNo, CustomerId, MaterialId, OpenQuantity, RequestedDate, "
+                              f"VersionFrom, BusinessKey, UpdatedAt) VALUES (7, :l, N'G-S', 10, 2, 1, 1, 1, '2026-12-01', 1, N'k', {now})"), {"l": loc})
+            c.execute(sa.text(f"INSERT INTO core.Stock (Id, LocationId, MaterialId, Quantity, SalesOrderLineId, VersionFrom, BusinessKey, UpdatedAt, IsCustomTracked) "
+                              f"VALUES (1, :l, 1, 5, 7, 1, N'k1', {now}, 1), (2, :l, 1, 5, NULL, 1, N'k2', {now}, 0)"), {"l": loc})
+            c.execute(sa.text(f"INSERT INTO adm.ManualValue (TableName, RecordKey, FieldName, Value, UnderlyingValue, CreatedBy, CreatedAt, UpdatedBy, UpdatedAt) "
+                              f"VALUES (N'Material', N'1', N'IsCustomTracked', N'1', N'0', 1, {now}, 1, {now})"))
+
+            def rule(entity, name, target):
+                return c.execute(sa.text("INSERT INTO adm.DataRule (EntityName, Name, Seq, TargetField, ResultKind, ApplyMode, IsActive, ConditionText) OUTPUT inserted.Id "
+                                         "VALUES (:e, :n, 1, :t, N'Değer', N'Boşsa', 1, N'Özel takip boş')"), {"e": entity, "n": name, "t": target}).scalar_one()
+
+            rule("Material", "malzeme kuralı", "IsCustomTracked")
+            rule("Customer", "müşteri kuralı", "IsCustomTracked")
+            rule("ProjectGroup", "grup kuralı", "Priority")
+            by_condition = rule("Project", "proje kuralı", "Priority")
+            rule("Stock", "kalan kural", "IsActive")
+            c.execute(sa.text("INSERT INTO adm.DataRuleCondition (DataRuleId, GroupNo, FieldName, Operator) VALUES (:r, 1, N'TrackingRule', N'boş')"), {"r": by_condition})
+
+            def check(entity, name, field):
+                rid = c.execute(sa.text("INSERT INTO adm.ValidationRule (EntityName, Code, Name, Kind, CheckType, Severity, Message, IsActive, IsCustomized) OUTPUT inserted.Id "
+                                        "VALUES (:e, :c, :n, N'Kullanıcı', N'Mantıksal', N'Uyarı', N'm', 1, 0)"), {"e": entity, "c": f"USR.{name}", "n": name}).scalar_one()
+                c.execute(sa.text("INSERT INTO adm.ValidationRuleCondition (ValidationRuleId, GroupNo, FieldName, Operator) VALUES (:r, 1, :f, N'boş')"), {"r": rid, "f": field})
+
+            check("Stock", "stok kontrolü", "IsCustomTracked")
+            check("Material", "malzeme kontrolü", "IsCustomTracked")
+            for list_name, name, definition in (("transaction-stock", "stok görünümü", '{"columns": ["LotNo", "IsCustomTracked"]}'),
+                                                ("transaction-project", "proje görünümü", '{"columns": ["Code", "ProjectGroupCode"]}'),
+                                                ("master-customer", "müşteri görünümü", '{"columns": ["Code", "IsCustomTracked"]}'),
+                                                ("transaction-sales-order", "sipariş görünümü", '{"columns": ["OrderNo", "MaterialId/IsCustomTracked"]}')):
+                c.execute(sa.text(f"INSERT INTO adm.TableView (ListName, OwnerUserId, Name, IsShared, Definition, CreatedAt, UpdatedAt) "
+                                  f"VALUES (:l, 1, :n, 0, :d, {now}, {now})"), {"l": list_name, "n": name, "d": definition})
+
+        up = _alembic(scratch, "upgrade", "head")
+        assert up.returncode == 0, up.stdout + up.stderr
+        for line in ("Veri kuralı · Customer · müşteri kuralı", "Veri kuralı · ProjectGroup · grup kuralı", "Veri kuralı · Project · proje kuralı",
+                     "Validasyon kuralı · Stock · stok kontrolü", "Kayıtlı görünüm · transaction-project · proje görünümü",
+                     "Kayıtlı görünüm · master-customer · müşteri görünümü", "malzemede silinen manuel 'özel takip' değeri: 1"):
+            assert line in up.stdout, (line, up.stdout)
+        assert "malzeme kuralı" not in up.stdout and "kalan kural" not in up.stdout and "stok görünümü" not in up.stdout
+        with engine.connect() as c:
+            rules = dict(c.execute(sa.text("SELECT Name, TargetField FROM adm.DataRule")).all())
+            assert rules == {"malzeme kuralı": "IsCustomAllocated", "kalan kural": "IsActive"}
+            assert c.execute(sa.text("SELECT ConditionText FROM adm.DataRule WHERE Name = N'malzeme kuralı'")).scalar() == "Özel alokasyon boş"
+            assert c.execute(sa.text("SELECT COUNT(*) FROM adm.DataRuleCondition")).scalar() == 0
+            checks = c.execute(sa.text("SELECT r.Name, x.FieldName FROM adm.ValidationRule r JOIN adm.ValidationRuleCondition x ON x.ValidationRuleId = r.Id")).all()
+            assert [tuple(r) for r in checks] == [("malzeme kontrolü", "IsCustomAllocated")]
+            views = dict(c.execute(sa.text("SELECT Name, Definition FROM adm.TableView")).all())
+            assert views == {"stok görünümü": '{"columns": ["LotNo", "IsCustomAllocated"]}', "sipariş görünümü": '{"columns": ["OrderNo", "MaterialId/IsCustomAllocated"]}'}
+            assert c.execute(sa.text("SELECT COUNT(*) FROM adm.ManualValue")).scalar() == 0
+            assert c.execute(sa.text("SELECT IsCustomAllocated FROM core.Material WHERE Id = 1")).scalar() is False   # alttaki değer geri geldi
+            stock = c.execute(sa.text("SELECT Id, SalesOrderNo, SalesOrderLineNo, SalesOrderLineItemNo, IsCustomAllocated FROM core.Stock ORDER BY Id")).all()
+            assert [tuple(r) for r in stock] == [(1, "G-S", 10, 2, True), (2, None, None, None, False)]   # bayrak değeri yerinde; ilk aktarım yeniden hesaplar
+            assert "core.ProjectGroup" not in _tables(scratch)
+    finally:
+        engine.dispose()
+
+
 def test_migrations_do_not_read_the_live_model_or_catalog():
     """K-197: geçiş güncel modelden (`metadata.tables`) ve uygulama kodundan (`app.*`) okumaz; yazdığı değerleri sabit taşır (`db/frozen.py`).
     İstisnalar: veri sözlüğü eşitlemesi (`sync(bind, metadata)`) ve 0055'in yalnız verili veritabanında çalışan geçmiş doldurması."""

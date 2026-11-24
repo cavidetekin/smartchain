@@ -37,7 +37,7 @@ export interface DataCounts {
 const HINTS: FieldHints = {
   Code: { width: 9 }, MaterialCode: { width: 9 }, ComponentMaterialCode: { width: 9 }, ReferenceMaterialCode: { width: 9 },
   ReferenceProductionVersionCode: { width: 9 }, ResourceCode: { width: 8 }, ResourceGroupCode: { width: 9 }, SupplierCode: { width: 8 },
-  ProjectGroupCode: { width: 9 }, CalendarCode: { width: 8 }, RouteCode: { width: 9 }, BOMCode: { width: 9 }, LocationCode: { width: 8 },
+  CalendarCode: { width: 8 }, RouteCode: { width: 9 }, BOMCode: { width: 9 }, LocationCode: { width: 8 },
   CustomerCode: { width: 8 }, ProjectCode: { width: 8 }, WorkOrderCode: { width: 9 }, ProductionVersionCode: { width: 9 },
   BaseUom: { width: 7 }, ComponentUom: { width: 7 }, CapacityUnit: { width: 8 }, FromUom: { width: 6 }, ToUom: { width: 6 }, Uom: { width: 7 },
   OperationNo: { width: 7.5 }, SequenceNo: { width: 6 }, LineNo: { width: 6 }, Priority: { width: 6 }, Decimals: { width: 6 }, Quantity: { width: 9 },

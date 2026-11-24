@@ -23,6 +23,8 @@ class SmartchainCheck:
     high_when: Callable[[sa.Table], sa.ColumnElement] | None = None
     # Kapanmış kayıtlara bakar (K-188): güncel veride olmayan kaydın son versiyonu (ör. kapanan kaynağa girilmiş kapasite kaydı)
     closed: bool = False
+    # Önem yalnız `high_when` koşuluna bakar, talep zincirine bakmaz (K-198)
+    high_only: bool = False
 
 
 def _active(t) -> sa.ColumnElement:
@@ -132,6 +134,21 @@ def _priority_out_of_range(t) -> sa.ColumnElement:
     return sa.and_(t.c.Priority.is_not(None), sa.not_(t.c.Priority.between(1, 5)))
 
 
+def _allocation_empty(t) -> sa.ColumnElement:
+    """Özel alokasyonu boş malzeme (K-198): arzı genel sayılır; alan yalnız ERP'den ya da veri kuralıyla dolar."""
+    return sa.and_(_active(t), t.c.IsCustomAllocated.is_(None))
+
+
+def _has_owned_supply(t) -> sa.ColumnElement:
+    """Malzemenin sahip bilgisi taşıyan (sipariş, proje ya da müşteri) güncel arzı var: boş alan burada sonucu değiştirir."""
+    parts = []
+    for name in ("Stock", "WorkOrder", "PurchaseOrderLine"):
+        s = metadata.tables[f"core.{name}"].alias(f"sc_alloc_{name.lower()}")
+        parts.append(sa.exists().where(s.c.MaterialId == t.c.Id, s.c.VersionTo.is_(None),
+                                       sa.or_(s.c.SalesOrderNo.is_not(None), s.c.ProjectCode.is_not(None), s.c.CustomerCode.is_not(None))))
+    return sa.or_(*parts)
+
+
 def _never(t) -> sa.ColumnElement:
     return sa.false()
 
@@ -158,6 +175,9 @@ CHECKS: tuple[SmartchainCheck, ...] = (
     # Öncelik yönetimi (K-195): öncelik grubu 1–5'tir; aralık dışı ERP önceliği kullanılmaz. Önem her zaman Normal
     *[SmartchainCheck("SC.PRIORITY_RANGE", table, "ERP önceliği 1–5 dışında", "ERP önceliği 1–5 dışında (yok sayılır):", _priority_out_of_range, high_when=_never)
       for table in ("Customer", "Project", "SalesOrderLine")],
+    # Özel alokasyon (K-198): alan boşsa malzemenin arzı genel sayılır; sahipli arzı varsa Yüksek, yoksa Normal
+    SmartchainCheck("SC.MAT_ALLOC_EMPTY", "Material", "Özel alokasyon boş", "Özel alokasyon boş (arz genel sayılır):", _allocation_empty,
+                    fix_field="IsCustomAllocated", high_when=_has_owned_supply, high_only=True),
     SmartchainCheck("SC.HOLD_ORPHAN", "Material", "Kapanan malzemeye girilmiş malzeme blokajı", "Güncel veride olmayan malzemeye malzeme blokajı girilmiş:",
                     _material_hold, closed=True),
 )

@@ -23,9 +23,9 @@ def mat(code, loc=L1, **extra):
     return {"LocationCode": loc, "Code": code, "Name": f"Ad {code}", "BaseUom": "ADET", "IsActive": 1, "DefaultSupplyType": "Satın alma", **extra}
 
 
-SO = {"RequestedDate": "2026-12-01", "OrderedQuantity": 5, "DeliveredQuantity": 0, "IsOnHold": 0, "IsQuote": 0, "IsCustomTracked": 0}
+SO = {"RequestedDate": "2026-12-01", "OrderedQuantity": 5, "DeliveredQuantity": 0, "IsOnHold": 0, "IsQuote": 0}
 WO = {"OpenQuantity": 1, "OrderedQuantity": 1, "CompletedQuantity": 0, "StartDate": "2026-12-01", "DueDate": "2026-12-10", "IsProduction": 1,
-      "IsSubcontract": 0, "IsRework": 0, "IsReleased": 1, "IsOnHold": 0, "IsCustomTracked": 0}
+      "IsSubcontract": 0, "IsRework": 0, "IsReleased": 1, "IsOnHold": 0}
 DATA = {
     "Location": [{"Code": L1, "Name": "Test 1", "IsFactory": 1, "IsActive": 1}, {"Code": L2, "Name": "Test 2", "IsDepot": 1, "IsActive": 1}],
     "Material": [mat("T-OK", MaterialGroup="G1"), mat("T-OK", L2), mat("T-ERR"), mat("T-PAS"), mat("T-OFF", IsActive=0), mat("T-KUTU", BaseUom="TKUTU")],

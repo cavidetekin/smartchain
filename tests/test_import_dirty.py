@@ -48,7 +48,7 @@ def uploaded(db_engine, tmp_path_factory):
 
 def test_every_file_is_read(uploaded):
     _, manifest, results, _, _ = uploaded
-    assert len(results) == 25  # tahmin ve benzetilen ürün de (K-174)
+    assert len(results) == 24  # tahmin ve benzetilen ürün de (K-174)
     for entity, s in results.items():
         assert s["read"] == manifest["files"][f"{entity}.xlsx"], entity
         assert s["template_version"] == s["current_version"], entity

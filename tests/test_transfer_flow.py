@@ -3,6 +3,7 @@ import json
 
 import pytest
 import sqlalchemy as sa
+import testdb
 from sqlalchemy.orm import Session
 
 from app.api.permissions import END_USER, KEY_USER
@@ -51,7 +52,13 @@ def test_dirty_data_end_to_end(dirty):
             assert not q("SELECT COUNT(*) FROM core.SalesOrderLine WHERE OrderNo = N'V-SO-4'")       # zorunlu müşteri yok (Hata)
             assert q("SELECT COUNT(*) FROM core.SalesOrderLine WHERE OrderNo = N'V-SO-7' AND ProjectId IS NULL AND VersionTo IS NULL") == 1  # isteğe bağlı: boş
             assert t["Forecast"]["not_transferred"] >= 2                                             # boş bağlantı aynı anahtara düştü
-            assert q("SELECT COUNT(*) FROM adm.DataVersionEntity WHERE DataVersionId = :v", v=v) == 25
+            assert q("SELECT COUNT(*) FROM adm.DataVersionEntity WHERE DataVersionId = :v", v=v) == 24
+            # K-198: özel alokasyon örnekleri kirli hâlde de var; tam aktarımdan sonra yerinde ve aynı değerde
+            closed = {e: t[e]["closed"] for e in ("Stock", "WorkOrder", "PurchaseOrderLine")}
+            assert closed == {"Stock": 0, "WorkOrder": 0, "PurchaseOrderLine": 0}, closed
+            assert q("SELECT COUNT(*) FROM core.WorkOrder WHERE WorkOrderNo = N'WO-5013' AND VersionTo IS NULL AND AllocationKey = N'PRJ-02'") == 1
+            assert q("SELECT COUNT(*) FROM core.PurchaseOrderLine WHERE PurchaseOrderNo IN (N'PO-2071', N'PO-2072', N'PO-2073') AND VersionTo IS NULL AND IsCustomAllocated = 1") == 3
+            assert q("SELECT COUNT(*) FROM core.Stock WHERE VersionTo IS NULL AND IsCustomAllocated = 1") == 5   # durum 12 dahil: sahibi bulunamayan iki stok genele düşmez
         finally:
             s.rollback()
 
@@ -83,10 +90,7 @@ def test_plan_lists_tables_and_blocks_while_validation_pending(db_engine):
 def _undo(engine, version: int) -> None:
     """Commit edilen test aktarımını geri al: yalnız Müşteri tablosu yazıldı (öteki tablolarda staging boş)."""
     with engine.begin() as c:
-        c.execute(sa.text("DELETE FROM core.Customer WHERE VersionFrom = :v"), {"v": version})
-        c.execute(sa.text("UPDATE core.Customer SET VersionTo = NULL WHERE VersionTo = :t"), {"t": version - 1})
-        c.execute(sa.text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId = :v"), {"v": version})
-        c.execute(sa.text("DELETE FROM adm.DataVersion WHERE Id = :v"), {"v": version})
+        testdb.undo_transfer(c, version)
 
 
 def _claim(engine) -> dict:

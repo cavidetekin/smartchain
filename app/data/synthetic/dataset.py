@@ -93,6 +93,13 @@ LATE_LEAD_DAYS = 56
 LIMIT_SUPPLIER, LIMIT_MATERIAL, LIMIT_QTY = "TED-05", "SAT-003", 400
 IMPOSSIBLE_ORDER, IMPOSSIBLE_PRODUCT = "SO-1040", "MAM-010"
 MAINTENANCE_RESOURCE, LEAVE_WORKER, SICK_WORKER = "T-02", "W-007", "W-015"
+# Özel alokasyon örnekleri (K-198; docs/11): MAM-006 ve ağacındaki ALLOCATED_RAW özel alokasyonlu; ALLOCATION_EMPTY'nin alanı boş (durum 11)
+ALLOCATED = ("MAM-006", "SAT-009")
+ALLOCATED_RAW = "SAT-009"
+ALLOCATION_EMPTY = "SAT-010"
+ALLOCATED_ORDER_PO, ALLOCATED_CUSTOMER_PO = "PO-2071", "PO-2072"
+# Sahibi sistemde olmayan ayrılmış arz (durum 12): genele düşmez, anahtarı ERP'nin yazdığı gibidir
+MISSING_PROJECT, MISSING_CUSTOMER, MISSING_ORDER, MISSING_ORDER_PO = "PRJ-77", "MUS-Z", "SO-9999", "PO-2073"
 NON_STOCKABLE = ("ALT-013", "SAT-030")   # stok tutulamaz (K-113): üretilen ve satın alınan; ikisinde de stok yok
 ISOLATED_MATERIAL = "SAT-040"   # yalnız Material'da geçer (kirli hâlde tekrar eden anahtar, H4)
 NO_ROUTE_PART = "PRC-033"       # kirli hâlde rotası çıkarılır (H1)
@@ -355,7 +362,7 @@ def _materials(b: _Builder, rng: random.Random) -> None:
                    MRPGroup="URETIM" if producible else "SATINALMA", IsActive=True, IsCritical=False,
                    IsPurchasable=not producible, IsProducible=producible, IsSellable=level == "Nihai ürün",
                    IsSubcontractable=False, DefaultSupplyType="Üretim" if producible else "Satın alma",
-                   IsCustomerSupplied=False, IsCustomTracked=False, IsPhantom=False, IsNonStockable=code in NON_STOCKABLE,
+                   IsCustomerSupplied=False, IsCustomAllocated=None if code == ALLOCATION_EMPTY else code in ALLOCATED, IsPhantom=False, IsNonStockable=code in NON_STOCKABLE,
                    StockCoverageDays=lead if producible else None,
                    GoodsReceiptDays=None if producible else 1,
                    LotSizePolicy="Lot-for-lot" if producible else None,
@@ -367,8 +374,7 @@ def _materials(b: _Builder, rng: random.Random) -> None:
 
     for code, name, _ in FINISHED:
         lead = 3
-        mat(code, name, "Nihai ürün", "Mamul", "ADET", True, lead,
-            IsCustomTracked=code == "MAM-006")
+        mat(code, name, "Nihai ürün", "Mamul", "ADET", True, lead)
     n_alt = n_prc = 0
     for f, (fcode, _, short) in enumerate(FINISHED):
         for a, aname in enumerate(ASSEMBLIES):
@@ -529,12 +535,9 @@ def _suppliers(b: _Builder, rng: random.Random) -> None:
                                       ("MUS-B", "Kuzey Enerji Ekipmanları", 2, True),
                                       ("MUS-C", "Orta Anadolu Makine", 3, True)]:
         b.add("Customer", Code=code, Name=name, Priority=prio, AllowPartialDelivery=partial, CustomerGroup="Yurt içi", IsActive=True,
-              Country="Türkiye", Region="Marmara", City="İstanbul", IsCustomTracked=code == "MUS-A")
-    b.add("ProjectGroup", Code="PG-01", Name="Enerji santrali projeleri", TrackingRule="Ortaktan beslenir", Priority=1, IsActive=True)
-    b.add("Project", Code="PRJ-01", Name="Santral A pompa paketi", ProjectGroupId=1,
-          TrackingRule="Ortaktan beslenir", Priority=PRIORITY_BAD_VALUE, IsActive=True)      # durum 10: aralık dışı ERP önceliği
-    b.add("Project", Code="PRJ-02", Name="Arıtma tesisi redüktörleri", ProjectGroupId=1,
-          TrackingRule="Tam izolasyon", Priority=2, IsActive=True)
+              Country="Türkiye", Region="Marmara", City="İstanbul")
+    b.add("Project", Code="PRJ-01", Name="Santral A pompa paketi", Priority=PRIORITY_BAD_VALUE, IsActive=True)      # durum 10: aralık dışı ERP önceliği
+    b.add("Project", Code="PRJ-02", Name="Arıtma tesisi redüktörleri", Priority=2, IsActive=True)
 
 
 # --- Satış siparişleri ---
@@ -565,22 +568,36 @@ def _orders(b: _Builder, rng: random.Random) -> None:
         b.add("SalesOrderLine", LocationId=1, OrderNo=no, LineNo=1, LineItemNo=0, Type="Kesin", IsQuote=False,
               CustomerId=b.id("Customer", cust), MaterialId=b.id("Material", fg),
               ProjectId=b.id("Project", prj) if prj else None, OpenQuantity=float(qty), OrderedQuantity=float(qty),
-              DeliveredQuantity=0.0, Uom=None, IsActive=True, IsOnHold=False, IsCustomTracked=bool(prj), RequestedDate=due,
+              DeliveredQuantity=0.0, Uom=None, IsActive=True, IsOnHold=False, RequestedDate=due,
               ConfirmedDate=due if rng.random() < 0.6 else None, Priority=None, AllowPartialDelivery=None,
               Status="Açık")
     for no, fg, qty, week in [("SO-1041", "MAM-004", 30, 9), ("SO-1042", "MAM-007", 15, 12)]:  # teklif (K-60)
         b.add("SalesOrderLine", LocationId=1, OrderNo=no, LineNo=1, LineItemNo=0, Type="Teklif", IsQuote=True,
               CustomerId=b.id("Customer", "MUS-B"), MaterialId=b.id("Material", fg), ProjectId=None,
               OpenQuantity=float(qty), OrderedQuantity=float(qty), DeliveredQuantity=0.0, Uom=None, IsActive=True, IsOnHold=False,
-              IsCustomTracked=False, RequestedDate=ds.day(week, 4), ConfirmedDate=None, Status="Açık")
+              RequestedDate=ds.day(week, 4), ConfirmedDate=None, Status="Açık")
 
 
 # --- Stok ---
 
-def _stock_flags(status: str, tracked: bool = False) -> dict:
-    """Sahada bayrakları veri kuralı doldurur (K-121); burada ham durumla uyumlu yazılır."""
-    return {"IsAvailable": status == "Serbest", "IsInQuality": status == "Kalitede", "IsBlocked": status == "Bloke",
-            "IsActive": True, "IsCustomTracked": tracked}
+def _stock_flags(status: str) -> dict:
+    """Sahada bayrakları veri kuralı doldurur (K-121); burada ham durumla uyumlu yazılır. Özel alokasyon alanlarını (bayrak, seviye, anahtar)
+    yükleme hesaplar (K-198; `app.allocation`), burada yazılmaz."""
+    return {"IsAvailable": status == "Serbest", "IsInQuality": status == "Kalitede", "IsBlocked": status == "Bloke", "IsActive": True}
+
+
+def owner_fields(b, project: str | None = None, customer: str | None = None) -> dict:
+    """Arzın bağlı projesi ve müşterisi (K-198): ERP'den geldiği gibi kod ve, kayıt sistemde varsa, iç bağ."""
+    def link(table, code):
+        return next((r["Id"] for r in b.t[table] if r["Code"] == code), None) if code else None
+    return {"ProjectId": link("Project", project), "ProjectCode": project, "CustomerId": link("Customer", customer), "CustomerCode": customer}
+
+
+def order_fields(line: dict | None, order_no: str | None = None) -> dict:
+    """Arzın bağlı siparişi (K-198): satıra bağlıysa iç bağ ve ERP'den geldiği gibi üç alan; kalemsizse yalnız sipariş no."""
+    if line is not None:
+        return {"SalesOrderLineId": line["Id"], "SalesOrderNo": line["OrderNo"], "SalesOrderLineNo": line["LineNo"], "SalesOrderLineItemNo": line["LineItemNo"]}
+    return {"SalesOrderLineId": None, "SalesOrderNo": order_no, "SalesOrderLineNo": None, "SalesOrderLineItemNo": None}
 
 
 def _stock(b: _Builder, rng: random.Random) -> None:
@@ -607,7 +624,19 @@ def _stock(b: _Builder, rng: random.Random) -> None:
     b.add("Stock", LocationId=1, MaterialId=mid("MAM-004"), Warehouse="MAMUL", LotNo=None, Status="Serbest",
           ProjectId=None, Quantity=5.0, **_stock_flags("Serbest"))
     b.add("Stock", LocationId=1, MaterialId=mid("MAM-006"), Warehouse="MAMUL", LotNo=None, Status="Serbest",
-          ProjectId=b.id("Project", "PRJ-01"), Quantity=3.0, **_stock_flags("Serbest", tracked=True))
+          Quantity=3.0, **owner_fields(b, project="PRJ-01"), **_stock_flags("Serbest"))   # projeye ayrılmış (K-198)
+    so_1020 = next(s for s in b.t["SalesOrderLine"] if s["OrderNo"] == "SO-1020")
+    b.add("Stock", LocationId=1, MaterialId=mid("MAM-006"), Warehouse="MAMUL", LotNo=None, Status="Serbest",
+          Quantity=2.0, **owner_fields(b, customer="MUS-A"), **_stock_flags("Serbest"))                  # müşteriye ayrılmış
+    b.add("Stock", LocationId=1, MaterialId=mid("MAM-006"), Warehouse="MAMUL", LotNo=None, Status="Serbest", ProjectId=None,
+          Quantity=1.0, **order_fields(so_1020), **_stock_flags("Serbest"))                              # siparişe ayrılmış
+    b.add("Stock", LocationId=1, MaterialId=mid(ALLOCATION_EMPTY), Warehouse="ANA", LotNo=None, Status="Serbest",
+          Quantity=20.0, **owner_fields(b, project="PRJ-02"), **_stock_flags("Serbest"))  # özel alokasyonu boş malzemede bağlı projeli stok: genel sayılır
+    # durum 12: sahibi sistemde olmayan ayrılmış stok genele düşmez (bulunamayan proje; kapanmış, güncel veride olmayan müşteri)
+    b.add("Stock", LocationId=1, MaterialId=mid("MAM-006"), Warehouse="MAMUL", LotNo=None, Status="Serbest",
+          Quantity=1.0, **owner_fields(b, project=MISSING_PROJECT), **_stock_flags("Serbest"))
+    b.add("Stock", LocationId=1, MaterialId=mid(ALLOCATED_RAW), Warehouse="ANA", LotNo=None, Status="Serbest",
+          Quantity=30.0, **owner_fields(b, customer=MISSING_CUSTOMER), **_stock_flags("Serbest"))
     # Devreye almada açık, ERP'de doğrudan yapılmış ödünç (K-119).
     b.add("BorrowPayback", LocationId=1, MaterialId=mid("MAM-006"), LendingProjectId=b.id("Project", "PRJ-01"),
           BorrowingProjectId=b.id("Project", "PRJ-02"), BorrowedQuantity=2.0, PaidBackQuantity=0.0,
@@ -619,11 +648,13 @@ def _stock(b: _Builder, rng: random.Random) -> None:
 def _work_orders(b: _Builder, rng: random.Random) -> None:
     ds = b.ds
     so_mam004 = next(s for s in b.t["SalesOrderLine"] if s["MaterialId"] == b.id("Material", "MAM-004"))
+    customer_of_mam004 = next(c["Code"] for c in b.t["Customer"] if c["Id"] == so_mam004["CustomerId"])
     plan = [  # (iş emri, malzeme, adet, başladı mı, bitiş haftası)
         ("WO-5001", "MAM-004", 10, False, 2), ("WO-5002", "ALT-010", 10, True, 1), ("WO-5003", "PRC-025", 10, True, 1),
         ("WO-5004", "PRC-004", 20, True, 1), ("WO-5005", "PRC-012", 15, False, 2), ("WO-5006", "ALT-016", 12, False, 3),
         ("WO-5007", "PRC-041", 12, True, 2), ("WO-5008", "PRC-055", 25, False, 3), ("WO-5009", "ALT-019", 8, True, 2),
         ("WO-5010", "PRC-060", 30, False, 4), ("WO-5011", "PRC-068", 10, True, 1), ("WO-5012", "MAM-009", 6, False, 4),
+        ("WO-5013", "MAM-006", 4, False, 5),   # projeye ayrılmış iş emri (K-198)
     ]
     pv_by_mat = {pv["MaterialId"]: pv for pv in b.t["ProductionVersion"]}
     for no, code, qty, started, week in plan:
@@ -634,12 +665,14 @@ def _work_orders(b: _Builder, rng: random.Random) -> None:
                    Status="Başladı" if started else "Yayınlandı", Priority=None, OrderedQuantity=float(qty), OpenQuantity=open_qty,
                    CompletedQuantity=float(qty) - open_qty, ScrapQuantity=0.0, Uom=None,
                    StartDate=ds.start - timedelta(days=rng.choice([5, 8, 12])) if started else ds.day(week, 0),
-                   DueDate=ds.day(week, 4), ProjectId=None, CustomerId=so_mam004["CustomerId"] if no == "WO-5001" else None,
-                   SalesOrderLineId=so_mam004["Id"] if no == "WO-5001" else None,
+                   DueDate=ds.day(week, 4),
+                   # WO-5001: özel alokasyonlu olmayan malzemede sahip dolu; satır genel kalır (K-198)
+                   **owner_fields(b, project="PRJ-02" if no == "WO-5013" else None, customer=customer_of_mam004 if no == "WO-5001" else None),
+                   **order_fields(so_mam004 if no == "WO-5001" else None),
                    ParentWorkOrderId=None,
                    LastActivityDate=ds.generated_on - timedelta(days=1) if started else None,
                    IsFixed=False, IsReleased=True, IsStarted=started, IsProduction=True, IsSubcontract=False, IsRework=False,  # K-121
-                   IsOnHold=False, IsCustomTracked=False)
+                   IsOnHold=False)
         for line in (r for r in b.t["BOM"] if r["MaterialId"] == m["Id"] and r["Code"] == pv["BOMCode"]):
             required = round(line["Quantity"] * qty, 4)
             issued = required if started else 0.0
@@ -677,14 +710,14 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
                   and m["Code"] not in (LATE_MATERIAL, LIMIT_MATERIAL)]
     n = 2000
 
-    def po(material_id, qty, req, conf, supplier_id, kind="Satın alma", wo=None, no=None):
+    def po(material_id, qty, req, conf, supplier_id, kind="Satın alma", wo=None, no=None, customer=None, order_no=None):
         nonlocal n
         n += 1
         b.add("PurchaseOrderLine", LocationId=1, PurchaseOrderNo=no or f"PO-{n}", LineNo=1, OrderType=kind,
               SupplierId=supplier_id, MaterialId=material_id, OpenQuantity=float(qty), OrderedQuantity=float(qty), ReceivedQuantity=0.0,
-              Uom=None, RequestedDate=req, ConfirmedDate=conf, ProjectId=None, CustomerId=None, SalesOrderLineId=None, WorkOrderId=wo, Status="Açık",
+              Uom=None, RequestedDate=req, ConfirmedDate=conf, **owner_fields(b, customer=customer), **order_fields(None, order_no), WorkOrderId=wo, Status="Açık",
               IsPurchaseRequest=kind == "Satın alma talebi", IsPurchase=kind == "Satın alma", IsSubcontract=kind == "Fason",  # K-121
-              IsActive=True, IsCustomTracked=False)
+              IsActive=True)
 
     earliest = add_business_days(ds.generated_on, 1)
     for m in rng.sample(candidates, 20):
@@ -707,6 +740,11 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
     po(b.id("Material", kaplama), 25, ds.day(3, 1), None, b.id("Supplier", "TED-08"), kind="Fason", wo=_subcon_work_order(b, "F-KAPLA"))
     n = 2059
     po(b.id("Material", "SAT-020"), 300, ds.day(2, 1), ds.day(2, 1), supplier_of[b.id("Material", "SAT-020")])  # PO-2060 (H3)
+    # Özel alokasyon (K-198): kalemsiz siparişe ve müşteriye ayrılmış satın alma satırları
+    raw = b.id("Material", ALLOCATED_RAW)
+    po(raw, 40, ds.day(3, 2), ds.day(3, 2), supplier_of[raw], no=ALLOCATED_ORDER_PO, order_no="SO-1021")
+    po(raw, 60, ds.day(4, 2), ds.day(4, 2), supplier_of[raw], no=ALLOCATED_CUSTOMER_PO, customer="MUS-A")
+    po(raw, 20, ds.day(5, 2), ds.day(5, 2), supplier_of[raw], no=MISSING_ORDER_PO, order_no=MISSING_ORDER)   # durum 12: olmayan siparişe bağlı
 
 
 def _copy(b: _Builder, table: str, row: dict, **values) -> dict:
@@ -756,7 +794,7 @@ def _quality(b: _Builder) -> None:
     so_src = next(r for r in b.t["SalesOrderLine"] if r["Type"] == "Kesin")
     for no, when in ((PAST_DUE_ORDER, on - timedelta(days=1)), (DUE_TODAY_ORDER, on)):
         _copy(b, "SalesOrderLine", so_src, OrderNo=no, LineNo=1, LineItemNo=0, MaterialId=b.id("Material", "MAM-004"), ProjectId=None,
-              IsCustomTracked=False, OpenQuantity=5.0, OrderedQuantity=5.0, DeliveredQuantity=0.0, RequestedDate=when, ConfirmedDate=None)
+              OpenQuantity=5.0, OrderedQuantity=5.0, DeliveredQuantity=0.0, RequestedDate=when, ConfirmedDate=None)
     # 9: kritik gruba üye, günlük kapasitesi boş tezgâh (K-117, K-180)
     t04 = b.find("Resource", "T-04")
     t05 = _copy(b, "Resource", t04, Code=NO_CAPACITY_RESOURCE, Name="Torna T-05 (kapasitesi tanımsız)")  # ne kendisinde ne grubunda çalışma düzeni var
@@ -892,7 +930,6 @@ def _iso(v) -> str:
 def _business_keys(ds: Dataset) -> None:
     c = ds.code
     wo = lambda id_: ds.by_id("WorkOrder", id_)["WorkOrderNo"]  # noqa: E731
-    so_line = lambda id_: "|" if id_ is None else "{OrderNo}|{LineNo}".format(**ds.by_id("SalesOrderLine", id_))  # noqa: E731
     keys = {
         "Material": lambda r: f"{LOCATION_CODE}|{r['Code']}",  # K-113
         "BOM": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Code']}|{c('Material', r['ComponentMaterialId'])}|"
@@ -909,7 +946,7 @@ def _business_keys(ds: Dataset) -> None:
         "EmployeeAbsence": lambda r: f"{LOCATION_CODE}|{c('Resource', r['ResourceId'])}|{r['AbsenceType']}|{_iso(r['StartDate'])}",
         "SalesOrderLine": lambda r: f"{LOCATION_CODE}|{r['OrderNo']}|{r['LineNo']}|{_iso(r['LineItemNo'])}",  # K-120
         "Stock": lambda r: f"{LOCATION_CODE}|{c('Material', r['MaterialId'])}|{r['Warehouse']}|{_iso(r['LotNo'])}|{r['Status']}|"
-                           f"{c('Project', r['ProjectId']) or ''}|{c('Customer', r.get('CustomerId')) or ''}|{so_line(r.get('SalesOrderLineId'))}",  # K-123
+                           f"{r.get('ProjectCode') or ''}|{r.get('CustomerCode') or ''}|{r.get('SalesOrderNo') or ''}|{_iso(r.get('SalesOrderLineNo'))}",  # K-123, K-198
         "WorkOrder": lambda r: f"{LOCATION_CODE}|{r['WorkOrderNo']}",  # K-124
         "WorkOrderComponent": lambda r: f"{LOCATION_CODE}|{wo(r['WorkOrderId'])}|{c('Material', r['MaterialId'])}|{_iso(r['OperationNo'])}|{_iso(r['SequenceNo'])}",
         "WorkOrderOperation": lambda r: f"{LOCATION_CODE}|{wo(r['WorkOrderId'])}|{r['OperationNo']}|{r['SequenceNo']}",

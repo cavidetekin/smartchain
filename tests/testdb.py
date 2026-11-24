@@ -122,6 +122,19 @@ def acquire_run_lock(engine: Engine):
     return conn
 
 
+def undo_transfer(conn, version: int) -> None:
+    """Commit edilen test aktarımını geri alır: o versiyonun yazdığı satırlar silinir, kapattığı satırlar açılır. Bütün versiyonlu ana tablolarda:
+    aktarım, yazmadığı arz tablolarında da özel alokasyonu yeniden hesaplayıp yeni versiyon açabilir (K-198; ör. sentetik müşteri kapanınca)."""
+    from db.models import metadata
+    for t in metadata.sorted_tables:
+        if t.schema == "core" and "VersionFrom" in t.c:
+            conn.execute(sa.text(f"DELETE FROM core.[{t.name}] WHERE VersionFrom = :v"), {"v": version})
+            conn.execute(sa.text(f"UPDATE core.[{t.name}] SET VersionTo = NULL WHERE VersionTo = :t"), {"t": version - 1})
+    conn.execute(sa.text("DELETE FROM adm.FieldChange WHERE DataVersionId = :v"), {"v": version})
+    conn.execute(sa.text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId = :v"), {"v": version})
+    conn.execute(sa.text("DELETE FROM adm.DataVersion WHERE Id = :v"), {"v": version})
+
+
 def clear_leftovers(engine: Engine) -> None:
     """Yarıda kesilen koşunun artıkları: işler, ayarlar, motor testi satırları, deneme hesapları."""
     from app.data.cleanup import delete_plan_data
@@ -202,6 +215,13 @@ def _has_objective_rows(engine: Engine) -> bool:
                                     "WHERE s.IsSynthetic = 1 AND s.Name = N'Fazla mesaili' AND o.Description IS NOT NULL")).scalar() >= 1
 
 
+def _has_allocation(engine: Engine) -> bool:
+    """Sentetik set özel alokasyon örneklerini taşıyor mu (K-198; olmayan siparişe bağlı satın alma satırı, durum 12): eski setle kurulmuş test veritabanı yeniden yüklenir."""
+    with engine.connect() as conn:
+        return conn.execute(sa.text("SELECT COUNT(*) FROM core.PurchaseOrderLine WHERE VersionTo IS NULL AND AllocationKey = N'SO-9999' "
+                                    "AND SalesOrderLineId IS NULL AND CustomerCode IS NULL")).scalar() >= 1
+
+
 def ensure_synthetic(engine: Engine) -> bool:
     """Sentetik veri yoksa yükler (docs/11); varsa dokunmaz. Yüklediyse True."""
     with engine.connect() as conn:
@@ -209,7 +229,7 @@ def ensure_synthetic(engine: Engine) -> bool:
             "SELECT TOP 1 v.IsSynthetic, (SELECT COUNT(*) FROM core.Material m WHERE m.VersionFrom <= v.Id "
             "AND (m.VersionTo IS NULL OR m.VersionTo >= v.Id)) FROM adm.DataVersion v ORDER BY v.Id DESC")).first()
     if (row and row[0] and row[1] == SYNTHETIC_MATERIALS and _has_model_constraints(engine) and _has_warning_thresholds(engine) and _has_supplier_limits(engine)
-            and _has_material_holds(engine) and _has_priorities(engine) and _has_objective_rows(engine)):
+            and _has_material_holds(engine) and _has_priorities(engine) and _has_objective_rows(engine) and _has_allocation(engine)):
         return False
     from app.data.synthetic.dataset import generate
     from app.data.synthetic.load import load

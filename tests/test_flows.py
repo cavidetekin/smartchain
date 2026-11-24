@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import pytest
 import sqlalchemy as sa
+import testdb
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
@@ -348,10 +349,7 @@ def test_whole_flow_with_excel_table_transfers_and_skips_cleanup(env, people):
         assert customer["not_transferred"] == 1                     # Excel tablosu aktarıldı; Hatalı satır veri bulgusudur, zamanlanmış işi durdurmaz
     finally:
         with env.begin() as c:
-            c.execute(sa.text("DELETE FROM core.Customer WHERE VersionFrom = :v"), {"v": version})
-            c.execute(sa.text("UPDATE core.Customer SET VersionTo = NULL WHERE VersionTo = :t"), {"t": version - 1})
-            c.execute(sa.text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId = :v"), {"v": version})
-            c.execute(sa.text("DELETE FROM adm.DataVersion WHERE Id = :v"), {"v": version})
+            testdb.undo_transfer(c, version)
 
 
 def test_cleanup_step_and_failed_transfer(env, people):

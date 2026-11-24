@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from app import history
+from app import allocation, history
 from app.integration import references as refs
 from app.integration.contract import ENTITIES, entity as contract_entity
 from app.validation import catalog as cat, engine as validation
@@ -35,6 +35,7 @@ GUARD_NULL, GUARD_KEY, GUARD_PARENT, GUARD_WAIT = 1, 2, 3, 4  # validasyonda gö
 TRANSFERRED, ERROR_ROW = "Aktarıldı", "Hatalı"
 FULL, PARTIAL = "Tam", "Kısmi"
 NOTE_EMPTY = "Veri gelmedi; mevcut veri korunur."
+ALLOCATION_NOTE = "{n} satırın özel alokasyonu yeniden hesaplandı."  # K-198
 NOTE_WAITING = "{n} satır, bağlı ana veri henüz aktarılmadığı için bekliyor (kısmi aktarım)."  # K-151, K-155
 DATA_VERSION = metadata.tables["adm.DataVersion"]
 VERSION_ENTITY = metadata.tables["adm.DataVersionEntity"]
@@ -210,7 +211,9 @@ def _resolve(session: Session, m: TableMap, run: Run, tmp: sa.Table) -> None:
             keep_conds.append(sa.and_(code.is_not(None), expand.c.Id.is_(None)))  # malzeme yoksa aktarılmaz (boş = genel dönüşüm olurdu, K-153)
             continue
         resolved = rs.resolve(rc, i)
-        values[rc.column] = resolved
+        # kalemsiz arz (K-198): bağlı siparişte satır no boşsa bağlantı yazılmaz; ebeveynin varlığı yine aranır (aşağıdaki `missing`)
+        linked = sa.and_(*[p.c[f].is_not(None) for f in r.fields[:r.link_fields]])
+        values[rc.column] = resolved if r.link_fields <= 1 else sa.case((linked, resolved), else_=sa.null())
         missing = sa.and_(code.is_not(None), resolved.is_(None))
         parent_written = r.parent not in run.skipped
         if r.is_error:
@@ -222,6 +225,7 @@ def _resolve(session: Session, m: TableMap, run: Run, tmp: sa.Table) -> None:
         elif r.inactive and parent_written:   # ebeveyn yazılmadıysa mevcut verideki hâli geçerli (K-155)
             close_conds.append(sa.and_(missing, _prc_parent_exists(r, p, lambda a: a.c.IsActive == sa.false())))
     # Savunma: core'da zorunlu kolon boşsa satır aktarılmaz (validasyon bitmemiş ya da kural boşaltmış olabilir; işlem düşmesin); raporda notu
+    values.update({n: sa.cast(sa.null(), m.core.c[n].type) for n in m.computed})  # eşleştirmeden sonra hesaplanır (`allocation.fill`)
     null_conds = [values[n].is_(None) for n in values if not m.core.c[n].nullable]
     ref_keep = list(keep_conds)
     keep_conds += null_conds
@@ -399,6 +403,8 @@ def transfer_table(session: Session, entity: str, run: Run) -> dict:
         _match(session, m, tmp)
         _new_ids(session, m, tmp)
         _self_refs(session, m, tmp)
+        if m.computed:
+            allocation.fill(session, tmp)  # özel alokasyon: seviye, anahtar, satır bayrağı (K-198)
         manual.apply_versioned(session, m.entity, m.core, m.plain, tmp, OK, run)  # manuel değer korunur (K-170)
         _changed(session, m, tmp)
         counts = _counts(session, tmp)
@@ -483,10 +489,18 @@ def run_transfer(session: Session, user_id: int | None, progress: Callable[[str]
                                                          ChangedCount=res.changed, ClosedCount=res.closed, NotTransferredCount=res.not_transferred,
                                                          Note=res.note))
         results.append(res)
+    # Özel alokasyon (K-198): aktarılmayan arz tabloları ve satırları da yeniden hesaplanır; değişen satır bu versiyonla yeni versiyon açar
+    refreshed = allocation.refresh(session, run)
+    for res in results:
+        if refreshed.get(res.entity):
+            note = ALLOCATION_NOTE.format(n=refreshed[res.entity])
+            res.note = f"{res.note} {note}" if res.note else note
+            session.execute(sa.update(VERSION_ENTITY).where(VERSION_ENTITY.c.DataVersionId == run.version, VERSION_ENTITY.c.EntityName == res.entity)
+                            .values(Note=res.note))
     # Kapasite önbelleği (K-188): yalnız etkilenen kaynaklar yenilenir, önbellek yeni veri versiyonuna çekilir (aktarımın işleminde)
     from app.capacity import triggers as capacity_triggers
     capacity_triggers.after_transfer(session, run.version)
-    return {"data_version": run.version, "tables": [r.as_dict() for r in results]}
+    return {"data_version": run.version, "tables": [r.as_dict() for r in results], "allocation": {k: v for k, v in refreshed.items() if v}}
 
 
 def _has_raw(session: Session, entity: str) -> bool:

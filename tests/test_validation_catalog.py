@@ -68,7 +68,7 @@ def test_quality_tracking_matches_docs():
     for d in rows:
         assert by_code[d["code"]] == {d["track"] == "Evet"}, d["code"]
     warn = [d for d in rows if d["severity"] == "Uyarı"]
-    assert (len(warn), sum(d["track"] == "Evet" for d in warn), sum(d["track"] == "Hayır" for d in warn)) == (86, 53, 33)
+    assert (len(warn), sum(d["track"] == "Evet" for d in warn), sum(d["track"] == "Hayır" for d in warn)) == (85, 50, 35)
     assert {d["code"] for d in warn if d["track"] == "Hayır"} == cat.UNTRACKED
 
 

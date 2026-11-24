@@ -2,14 +2,18 @@
 
 Tek kaynak docs/03 "İlişki haritası" tablosudur (test ikisini karşılaştırır). Zorunlu: sözleşmede alan zorunludur (ZOR. E). İsteğe bağlı: alan
 boş bırakılabilir. Rota ve iş emri operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). İstisna
-"Zorunlu (doluysa)": kaydın anahtarının parçası olan isteğe bağlı bağlantı (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları):
+"Zorunlu (doluysa)": kaydın anahtarının parçası olan isteğe bağlı bağlantı (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi):
 boş yazılsaydı anahtar değişir, kayıt başka bir kayda dönüşür ya da onunla çakışırdı (K-153). İki yerde kullanılır:
 - Validasyon (4.4): referans kuralları (zorunlu → Hata, isteğe bağlı → Uyarı) ve pasif ebeveyn kuralları buradan üretilir.
 - Load (5.2): kod `core` Id'sine bu haritayla çevrilir; zorunlu ilişkisi çevrilemeyen satır yüklenmez, isteğe bağlı bağlantı boş yazılır,
   pasif ebeveyne bakan satır yüklenmez.
 Lokasyon ilişkisi (`LocationCode` → Lokasyon) her tabloda ortaktır ve burada ayrıca yazılmaz (`ALL.REF_LOCATION`).
 Bir ilişki birden çok alanla eşleşebilir (ör. bağlı sipariş: SalesOrderNo, SalesOrderLineNo, SalesOrderLineItemNo); ilk alan doluysa bakılır,
-öteki alanlar boşsa eşleşmeyi daraltmaz. Birim alanları referans kontrolüne girmez (K-112).
+öteki alanlar boşsa eşleşmeyi daraltmaz. Kalemsiz arz (K-198): bağlı siparişte satır no boşsa validasyon sipariş no'nun en az bir satırını arar,
+aktarım bağlantıyı (`SalesOrderLineId`) boş yazar (`link_fields`); sipariş no `core`'da ayrı alanda durur. Arzın (stok, iş emri, satın alma
+satırı) sahip ilişkileri isteğe bağlıdır (K-198): sahip bulunamazsa Uyarı, satır yüklenir, iç bağ boş kalır; ERP'nin yazdığı kod `core`'da durur ve özel
+alokasyon anahtarı ondan kurulur (arz genele düşmez). Birim alanları referans kontrolüne
+girmez (K-112).
 """
 from dataclasses import dataclass
 
@@ -30,6 +34,7 @@ class Reference:
                                      # Zorunlu (doluysa): alan boş olabilir, doluysa ve yoksa Hata, satır yüklenmez
     inactive: str | None = None      # ebeveyn pasifse bulgunun sınıfı (yoksa pasif kontrolü yok)
     by_location: bool = True         # LocationCode da eşleşir (lokasyondan bağımsız tablolar: Tedarikçi, Müşteri, Proje…)
+    link_fields: int = 1             # bağlantının yazılması için dolu olması gereken baştaki alan sayısı (bağlı sipariş: sipariş no ve satır no)
 
     @property
     def is_error(self) -> bool:
@@ -66,7 +71,6 @@ REFERENCES: tuple[Reference, ...] = (
     R("ABS", "RESOURCE", "Kaynak", "EmployeeAbsence", ("ResourceCode",), "Resource", ("Code",)),
     R("MS", "MATERIAL", "Malzeme", "MaterialSupplier", ("MaterialCode",), "Material", ("Code",)),
     R("MS", "SUPPLIER", "Tedarikçi", "MaterialSupplier", ("SupplierCode",), "Supplier", ("Code",), inactive=WARNING, by_location=False),
-    R("PRJ", "PROJECT_GROUP", "Proje grubu", "Project", ("ProjectGroupCode",), "ProjectGroup", ("Code",), OPTIONAL, by_location=False),
     R("SO", "CUSTOMER", "Müşteri", "SalesOrderLine", ("CustomerCode",), "Customer", ("Code",), inactive=WARNING, by_location=False),
     R("SO", "MATERIAL", "Malzeme", "SalesOrderLine", ("MaterialCode",), "Material", ("Code",), inactive=WARNING),
     R("SO", "PROJECT", "Proje", "SalesOrderLine", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
@@ -74,17 +78,17 @@ REFERENCES: tuple[Reference, ...] = (
     R("FC", "CUSTOMER", "Müşteri", "Forecast", ("CustomerCode",), "Customer", ("Code",), REQUIRED_IF_FILLED, by_location=False),
     R("FC", "PROJECT", "Proje", "Forecast", ("ProjectCode",), "Project", ("Code",), REQUIRED_IF_FILLED, by_location=False),
     R("STK", "MATERIAL", "Malzeme", "Stock", ("MaterialCode",), "Material", ("Code",), inactive=INFO),
-    R("STK", "PROJECT", "Sahip proje", "Stock", ("ProjectCode",), "Project", ("Code",), REQUIRED_IF_FILLED, by_location=False),
-    R("STK", "CUSTOMER", "Sahip müşteri", "Stock", ("CustomerCode",), "Customer", ("Code",), REQUIRED_IF_FILLED, by_location=False),
-    R("STK", "SALES_ORDER", "Sahip sipariş satırı", "Stock", SO_LINE[0], SO_LINE[1], SO_LINE[2], REQUIRED_IF_FILLED),
+    R("STK", "PROJECT", "Bağlı proje", "Stock", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
+    R("STK", "CUSTOMER", "Bağlı müşteri", "Stock", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
+    R("STK", "SALES_ORDER", "Bağlı sipariş", "Stock", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL, link_fields=2),
     R("BP", "MATERIAL", "Malzeme", "BorrowPayback", ("MaterialCode",), "Material", ("Code",)),
     R("BP", "LENDING_PROJECT", "Ödünç veren proje", "BorrowPayback", ("LendingProjectCode",), "Project", ("Code",), by_location=False),
     R("BP", "BORROWING_PROJECT", "Ödünç alan proje", "BorrowPayback", ("BorrowingProjectCode",), "Project", ("Code",), by_location=False),
     R("WO", "MATERIAL", "Üretilen malzeme", "WorkOrder", ("MaterialCode",), "Material", ("Code",), inactive=WARNING),
     R("WO", "VERSION", "Üretim versiyonu", "WorkOrder", ("ProductionVersionCode", "MaterialCode"), "ProductionVersion", ("Code", "MaterialCode"), OPTIONAL),
-    R("WO", "PROJECT", "Proje", "WorkOrder", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
-    R("WO", "CUSTOMER", "Müşteri", "WorkOrder", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
-    R("WO", "SALES_ORDER", "Bağlı sipariş satırı", "WorkOrder", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL),
+    R("WO", "PROJECT", "Bağlı proje", "WorkOrder", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
+    R("WO", "CUSTOMER", "Bağlı müşteri", "WorkOrder", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
+    R("WO", "SALES_ORDER", "Bağlı sipariş", "WorkOrder", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL, link_fields=2),
     R("WO", "PARENT_WORK_ORDER", "Orijinal iş emri", "WorkOrder", ("ParentWorkOrderNo",), "WorkOrder", ("WorkOrderNo",), OPTIONAL),
     R("WOC", "WORK_ORDER", "İş emri", "WorkOrderComponent", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
     R("WOC", "MATERIAL", "Malzeme", "WorkOrderComponent", ("MaterialCode",), "Material", ("Code",)),
@@ -92,9 +96,9 @@ REFERENCES: tuple[Reference, ...] = (
     R("WOO", "RESOURCE_GROUP", "Kaynak grubu", "WorkOrderOperation", ("ResourceGroupCode",), "ResourceGroup", ("Code",)),
     R("PO", "MATERIAL", "Malzeme", "PurchaseOrderLine", ("MaterialCode",), "Material", ("Code",), inactive=WARNING),
     R("PO", "SUPPLIER", "Tedarikçi", "PurchaseOrderLine", ("SupplierCode",), "Supplier", ("Code",), OPTIONAL, inactive=WARNING, by_location=False),
-    R("PO", "PROJECT", "Proje", "PurchaseOrderLine", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
-    R("PO", "CUSTOMER", "Müşteri", "PurchaseOrderLine", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
-    R("PO", "SALES_ORDER", "Bağlı sipariş satırı", "PurchaseOrderLine", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL),
+    R("PO", "PROJECT", "Bağlı proje", "PurchaseOrderLine", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
+    R("PO", "CUSTOMER", "Bağlı müşteri", "PurchaseOrderLine", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
+    R("PO", "SALES_ORDER", "Bağlı sipariş", "PurchaseOrderLine", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL, link_fields=2),
     R("PO", "WORK_ORDER", "Bağlı iş emri", "PurchaseOrderLine", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",), OPTIONAL),
     R("PC", "WORK_ORDER", "İş emri", "ProductionConfirmation", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
     R("PC", "MATERIAL", "Malzeme", "ProductionConfirmation", ("MaterialCode",), "Material", ("Code",)),

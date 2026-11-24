@@ -30,7 +30,6 @@ CODE_REFS: dict[str, tuple[str, str, str]] = {
     "ResourceCode": ("ResourceId", "Resource", "Code"), "ResourceGroupCode": ("ResourceGroupId", "ResourceGroup", "Code"),
     "SupplierCode": ("SupplierId", "Supplier", "Code"), "SubcontractorCode": ("SubcontractorId", "Supplier", "Code"),
     "CustomerCode": ("CustomerId", "Customer", "Code"), "ProjectCode": ("ProjectId", "Project", "Code"),
-    "ProjectGroupCode": ("ProjectGroupId", "ProjectGroup", "Code"),
     "LendingProjectCode": ("LendingProjectId", "Project", "Code"), "BorrowingProjectCode": ("BorrowingProjectId", "Project", "Code"),
     "WorkOrderNo": ("WorkOrderId", "WorkOrder", "WorkOrderNo"), "ParentWorkOrderNo": ("ParentWorkOrderId", "WorkOrder", "WorkOrderNo"),
     "SalesOrderNo": ("SalesOrderLineId", "SalesOrderLine", "OrderNo"), "SalesOrderLineNo": ("SalesOrderLineId", "SalesOrderLine", "LineNo"),

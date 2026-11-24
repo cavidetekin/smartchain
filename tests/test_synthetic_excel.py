@@ -55,7 +55,7 @@ def norm(v):
 def test_one_file_per_integration_entity_with_stg_headers(written):
     ds, out, manifest = written
     files = sorted(p.name for p in out.glob("*.xlsx"))
-    assert files == sorted(f"{e}.xlsx" for e in stg_entities()) and len(files) == 25  # tahmin ve benzetilen ürün temiz hâlde de (K-174)
+    assert files == sorted(f"{e}.xlsx" for e in stg_entities()) and len(files) == 24  # tahmin ve benzetilen ürün temiz hâlde de (K-174); proje grubu yok (K-198)
     for entity in stg_entities():
         header, data = read(out, entity, examples=True)
         assert header == [f.name for f in contract.fields(entity, labels_of(entity))]  # şablonla aynı (K-110)
@@ -78,7 +78,12 @@ def test_purchase_and_confirmation_files(written):
     header, data = read(out, "PurchaseOrderLine")
     assert not {"OrderNo", "OpenQty"} & set(header) and {r["OrderType"] for r in data} == {"Satın alma", "Fason", "Satın alma talebi"}
     assert all((r["IsPurchaseRequest"], r["IsPurchase"], r["IsSubcontract"]) == (int(r["OrderType"] == "Satın alma talebi"), int(r["OrderType"] == "Satın alma"), int(r["OrderType"] == "Fason")) for r in data)
-    assert {r["IsActive"] for r in data} == {1} and {r["ReceivedQuantity"] for r in data} == {0} and all(r["Uom"] is None and r["CustomerCode"] is None and r["SalesOrderNo"] is None for r in data)
+    assert {r["IsActive"] for r in data} == {1} and {r["ReceivedQuantity"] for r in data} == {0} and all(r["Uom"] is None for r in data)
+    # K-198: kalemsiz siparişe ve müşteriye ayrılmış satırlar; sözleşmede özel alokasyon alanı yok (yüklemede hesaplanır)
+    owned = {r["PurchaseOrderNo"]: (r["CustomerCode"], r["SalesOrderNo"], r["SalesOrderLineNo"]) for r in data if r["CustomerCode"] or r["SalesOrderNo"]}
+    assert owned == {d.ALLOCATED_ORDER_PO: (None, "SO-1021", None), d.ALLOCATED_CUSTOMER_PO: ("MUS-A", None, None),
+                     d.MISSING_ORDER_PO: (None, d.MISSING_ORDER, None)}   # durum 12: olmayan siparişe bağlı
+    assert not {"IsCustomTracked", "IsCustomAllocated", "AllocationLevel", "AllocationKey"} & set(header)
     header, data = read(out, "ProductionConfirmation")
     assert not {"OpNo", "SeqNo", "ResourceCode", "ActualConsumption", "ConfirmedQty", "StartAt", "EndAt"} & set(header)
     orders = {r["WorkOrderNo"]: r for r in read(out, "WorkOrder")[1]}
@@ -101,25 +106,30 @@ def test_work_order_files(written):
 
 
 def test_stock_file(written):
-    """K-123: ham durum dosyada; bayraklar durumla uyumlu; sahip müşteri, sipariş ve birim boş."""
+    """K-123: ham durum dosyada; bayraklar durumla uyumlu; birim boş. K-198: sahipli stok örnekleri; özel alokasyon alanı sözleşmede yok."""
     ds, out, _ = written
     header, data = read(out, "Stock")
     assert "StockStatus" not in header and {r["Status"] for r in data} == {"Serbest", "Kalitede", "Bloke"}
     assert all((r["IsAvailable"], r["IsInQuality"], r["IsBlocked"]) == (int(r["Status"] == "Serbest"), int(r["Status"] == "Kalitede"), int(r["Status"] == "Bloke")) for r in data)
-    assert {r["IsActive"] for r in data} == {1} and all(r["IsCustomTracked"] == (1 if r["ProjectCode"] else 0) for r in data)
-    assert all(r["CustomerCode"] is None and r["SalesOrderNo"] is None and r["SalesOrderLineNo"] is None and r["Uom"] is None for r in data)
+    assert {r["IsActive"] for r in data} == {1} and all(r["Uom"] is None for r in data)
+    assert not {"IsCustomTracked", "IsCustomAllocated", "AllocationLevel", "AllocationKey"} & set(header)
+    owned = {(r["MaterialCode"], r["ProjectCode"], r["CustomerCode"], r["SalesOrderNo"], r["SalesOrderLineNo"], r["SalesOrderLineItemNo"])
+             for r in data if r["ProjectCode"] or r["CustomerCode"] or r["SalesOrderNo"]}
+    assert owned == {("MAM-006", "PRJ-01", None, None, None, None), ("MAM-006", None, "MUS-A", None, None, None),
+                     ("MAM-006", None, None, "SO-1020", 1, 0), (d.ALLOCATION_EMPTY, "PRJ-02", None, None, None, None),
+                     ("MAM-006", d.MISSING_PROJECT, None, None, None, None), (d.ALLOCATED_RAW, None, d.MISSING_CUSTOMER, None, None, None)}   # durum 12
     assert [r["Status"] for r in data if r["ExpectedAcceptanceDate"]] == ["Kalitede"]
     lot = next(r for r in data if r["Status"] == "Kalitede")
     assert lot["QualityEntryDate"].date() < ds.generated_on < lot["ExpectedAcceptanceDate"].date()
 
 
 def test_sales_order_file(written):
-    """K-120: yeni adlar dosyada; birim boş (temel birim); projeli satır özel takipli."""
+    """K-120: yeni adlar dosyada; birim boş (temel birim). K-198: satırda özel takip alanı yok."""
     _, out, _ = written
     header, data = read(out, "SalesOrderLine")
     assert "OpenQty" not in header and all(r["OpenQuantity"] == r["OrderedQuantity"] and r["DeliveredQuantity"] == 0 and r["Uom"] is None for r in data)
     assert {r["IsActive"] for r in data} == {1} and {r["IsOnHold"] for r in data} == {0} and {r["LineItemNo"] for r in data} == {0}
-    assert all(r["IsCustomTracked"] == (1 if r["ProjectCode"] else 0) for r in data)
+    assert "IsCustomTracked" not in header and {r["ProjectCode"] for r in data} == {None, "PRJ-01", "PRJ-02"}
     assert all(r["IsQuote"] == int(r["Type"] == "Teklif") for r in data) and {r["IsQuote"] for r in data} == {0, 1}  # K-127
 
 
@@ -127,9 +137,9 @@ def test_customer_project_and_borrow_files(written):
     """K-119: yeni adlar dosyada; ödünç kaydı kodlarla."""
     _, out, _ = written
     header, data = read(out, "Project")
-    assert not {"IsolationRule", "IsClosed"} & set(header) and {r["IsActive"] for r in data} == {1} and {r["TrackingRule"] for r in data} == {"Ortaktan beslenir", "Tam izolasyon"}
+    assert not {"IsolationRule", "IsClosed"} & set(header) and {r["IsActive"] for r in data} == {1} and not {"TrackingRule", "ProjectGroupCode"} & set(header)  # K-198
     _, customers = read(out, "Customer")
-    assert {r["Code"] for r in customers if r["IsCustomTracked"] == 1} == {"MUS-A"} and all(r["Country"] and r["Region"] and r["City"] for r in customers)
+    assert "IsCustomTracked" not in customers[0] and all(r["Country"] and r["Region"] and r["City"] for r in customers)
     _, borrow = read(out, "BorrowPayback")
     assert [(r["LocationCode"], r["MaterialCode"], r["LendingProjectCode"], r["BorrowingProjectCode"], r["BorrowedQuantity"]) for r in borrow] == [(d.LOCATION_CODE, "MAM-006", "PRJ-01", "PRJ-02", 2)]
 
@@ -204,7 +214,7 @@ def test_material_file(written):
     header, data = read(out, "Material")
     assert not {"Ownership", "ProductionLeadTimeDays", "DefaultProcurement", "IsProjectTracked", "AssemblyScrapPct"} & set(header)
     assert {r["Code"] for r in data if r["IsCustomerSupplied"] == 1} == {d.ISOLATED_MATERIAL} and all(r["IsActive"] == 1 for r in data)
-    assert {r["Code"] for r in data if r["IsCustomTracked"] == 1} == {"MAM-006"}
+    assert {r["Code"] for r in data if r["IsCustomAllocated"] == 1} == set(d.ALLOCATED) and [r["Code"] for r in data if r["IsCustomAllocated"] is None] == [d.ALLOCATION_EMPTY]  # K-198
     assert d.LATE_MATERIAL in {r["Code"] for r in data if r["IsCritical"] == 1} and all(r["IsCritical"] in (0, 1) for r in data)
     assert any(r["IsSubcontractable"] == 1 for r in data) and {r["DefaultSupplyType"] for r in data} == {"Üretim", "Satın alma"}
     marked = {r["Code"]: r for r in data if r["IsNonStockable"] == 1}

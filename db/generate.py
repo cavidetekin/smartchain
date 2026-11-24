@@ -81,7 +81,7 @@ REF_TARGET = {
     "CreatedBy": "AppUser", "RequestedBy": "AppUser", "CancelledBy": "AppUser", "PublishedBy": "AppUser",
     "OwnerUserId": "AppUser", "UserId": "AppUser", "IgnoredBy": "AppUser", "UploadedBy": "AppUser", "DisabledBy": "AppUser", "UpdatedBy": "AppUser",
     "ScenarioDefinitionId": "ScenarioDefinition",
-    "SalesOrderLineId": "SalesOrderLine", "ProjectGroupId": "ProjectGroup", "ProductionVersionId": "ProductionVersion",
+    "SalesOrderLineId": "SalesOrderLine", "ProductionVersionId": "ProductionVersion",
     "ReferenceMaterialId": "Material", "ReferenceProductionVersionId": "ProductionVersion",
     "ViewId": "TableView", "FlowId": "Flow", "FlowRunId": "FlowRun",
     "BaseUom": ("UnitOfMeasure", "Code"), "FromUom": ("UnitOfMeasure", "Code"),
@@ -326,7 +326,10 @@ def render_models(spec) -> str:
             cols.append(f"    sa.Column({', '.join(args + kw)}),")
         if uk and schema not in LAYERS:  # stg ham veridir: anahtar sözleşmede kalır, tekrar kontrolü onu okur (K-129)
             where = ', mssql_where=sa.text("VersionTo IS NULL")' if t["versioned"] else ""
-            extra.append(f'    sa.Index("UX_{name}_{"_".join(uk)}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
+            index = f'UX_{name}_{"_".join(uk)}'
+            if len(index) > 128:  # SQL Server ad sınırı (K-198: Stok'un anahtarı on alan)
+                index = f"UX_{name}_Key"
+            extra.append(f'    sa.Index("{index}", {", ".join(q(u) for u in uk)}, unique=True{where}),')
         if uk and schema == "stg":  # güncel hâlde anahtar bir kez (K-133)
             extra.append(f'    sa.Index("{CURRENT_INDEX.format(table=name)}", {", ".join(q(u) for u in uk)}, unique=True, mssql_where=sa.text("IsCurrent = 1")),')
         if uk and schema == "prc":  # işlenmiş katman güncel hâlin kopyasıdır: anahtar bir kez (K-140)

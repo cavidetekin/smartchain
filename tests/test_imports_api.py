@@ -190,7 +190,7 @@ def test_material_v3_file_without_non_stockable_is_accepted(client, people, db_e
     buffer = io.BytesIO()
     book.save(buffer)
     s = upload(client, people[KEY_USER], buffer.getvalue(), "Material", name="malzeme.xlsx").json()
-    assert s["template_version"] == 3 and s["current_version"] == 4 and s["valid"] == 1 and s["errors"] == 0
+    assert s["template_version"] == 3 and s["current_version"] == 5 and s["valid"] == 1 and s["errors"] == 0
     assert any("v3" in f["message"] for f in s["file_findings"])
     assert stg_rows(db_engine, "Material")[0]["IsNonStockable"] is None
 

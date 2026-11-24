@@ -1,102 +1,98 @@
 {
-  "Location": {
-    "version": 3,
-    "contract": "d7e50bbffec61ab2"
-  },
-  "UomConversion": {
-    "version": 2,
-    "contract": "4e3d29a86c904d9f"
-  },
-  "Material": {
-    "version": 4,
-    "contract": "5cdbd5f01a8ee6c8"
-  },
-  "ProductionVersion": {
-    "version": 2,
-    "contract": "6c65d71f34570d67"
-  },
-  "BOM": {
-    "version": 2,
-    "contract": "e0a52724580a446e"
-  },
-  "Routing": {
-    "version": 3,
-    "contract": "d1523c2206da61dd"
-  },
-  "MaterialReference": {
-    "version": 1,
-    "contract": "c70a3bbd7c01fe4d"
-  },
-  "ResourceGroup": {
-    "version": 3,
-    "contract": "ee538c0d485e6bba"
-  },
-  "Resource": {
-    "version": 4,
-    "contract": "ec850ea22b90b562"
-  },
-  "ResourceGroupMember": {
-    "version": 2,
-    "contract": "1d379cf55a2d7577"
-  },
-  "EmployeeAbsence": {
-    "version": 1,
-    "contract": "be4fbc5df14a7c5d"
-  },
-  "Supplier": {
-    "version": 2,
-    "contract": "c18149db426613a8"
-  },
-  "MaterialSupplier": {
-    "version": 2,
-    "contract": "6f77b07c82372345"
-  },
-  "Customer": {
-    "version": 2,
-    "contract": "3360a958c966bf67"
-  },
-  "ProjectGroup": {
-    "version": 2,
-    "contract": "94ba80d5bb5e9c37"
-  },
-  "Project": {
-    "version": 2,
-    "contract": "f8a8094fdd4c4184"
-  },
-  "SalesOrderLine": {
-    "version": 3,
-    "contract": "122dea946ee0b590"
-  },
-  "Forecast": {
-    "version": 2,
-    "contract": "fe4fb11ee2b7b301"
-  },
-  "Stock": {
-    "version": 3,
-    "contract": "f79300d2d300b4e3"
-  },
-  "BorrowPayback": {
-    "version": 1,
-    "contract": "79eeb1699157bcaf"
-  },
-  "WorkOrder": {
-    "version": 3,
-    "contract": "339d49067cdeff10"
-  },
-  "WorkOrderComponent": {
-    "version": 2,
-    "contract": "225611bf56bf97b7"
-  },
-  "WorkOrderOperation": {
-    "version": 3,
-    "contract": "970a349c7ed72123"
-  },
-  "PurchaseOrderLine": {
-    "version": 3,
-    "contract": "9be01e531c143d47"
-  },
-  "ProductionConfirmation": {
-    "version": 2,
-    "contract": "60c9b114504cc806"
-  }
+ "Location": {
+  "version": 3,
+  "contract": "d7e50bbffec61ab2"
+ },
+ "UomConversion": {
+  "version": 2,
+  "contract": "4e3d29a86c904d9f"
+ },
+ "Material": {
+  "version": 5,
+  "contract": "c5da59fa2a9d6236"
+ },
+ "ProductionVersion": {
+  "version": 2,
+  "contract": "6c65d71f34570d67"
+ },
+ "BOM": {
+  "version": 2,
+  "contract": "e0a52724580a446e"
+ },
+ "Routing": {
+  "version": 3,
+  "contract": "d1523c2206da61dd"
+ },
+ "MaterialReference": {
+  "version": 1,
+  "contract": "c70a3bbd7c01fe4d"
+ },
+ "ResourceGroup": {
+  "version": 3,
+  "contract": "ee538c0d485e6bba"
+ },
+ "Resource": {
+  "version": 4,
+  "contract": "ec850ea22b90b562"
+ },
+ "ResourceGroupMember": {
+  "version": 2,
+  "contract": "1d379cf55a2d7577"
+ },
+ "EmployeeAbsence": {
+  "version": 1,
+  "contract": "be4fbc5df14a7c5d"
+ },
+ "Supplier": {
+  "version": 2,
+  "contract": "c18149db426613a8"
+ },
+ "MaterialSupplier": {
+  "version": 2,
+  "contract": "6f77b07c82372345"
+ },
+ "Customer": {
+  "version": 3,
+  "contract": "3dba50fb04c728f3"
+ },
+ "Project": {
+  "version": 3,
+  "contract": "e575fb167cbcd993"
+ },
+ "SalesOrderLine": {
+  "version": 4,
+  "contract": "7bfd5efd9225cfda"
+ },
+ "Forecast": {
+  "version": 2,
+  "contract": "fe4fb11ee2b7b301"
+ },
+ "Stock": {
+  "version": 5,
+  "contract": "79269ba81aacaed8"
+ },
+ "BorrowPayback": {
+  "version": 1,
+  "contract": "79eeb1699157bcaf"
+ },
+ "WorkOrder": {
+  "version": 5,
+  "contract": "78f96f9690c7d229"
+ },
+ "WorkOrderComponent": {
+  "version": 2,
+  "contract": "225611bf56bf97b7"
+ },
+ "WorkOrderOperation": {
+  "version": 3,
+  "contract": "970a349c7ed72123"
+ },
+ "PurchaseOrderLine": {
+  "version": 5,
+  "contract": "880d09cc5cbbea94"
+ },
+ "ProductionConfirmation": {
+  "version": 2,
+  "contract": "60c9b114504cc806"
+ }
 }

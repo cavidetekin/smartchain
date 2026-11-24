@@ -260,5 +260,8 @@ def importance(session: Session) -> None:
         session.execute(sa.update(W).where(W.c.CheckCode == check.code).values(Importance=NORMAL))
         qualifies = sa.select(sa.cast(t.c.Id, sa.Unicode(60))).where(chain.current(t), check.high_when(t))
         in_chain = sa.text("EXISTS (SELECT 1 FROM adm.DemandChain d WHERE d.EntityName = :entity AND d.RecordId = TRY_CAST(adm.DataQualityWarning.RecordKey AS bigint))")
-        session.execute(sa.update(W).where(W.c.CheckCode == check.code, W.c.RecordKey.in_(qualifies), in_chain).values(Importance=HIGH),
-                        {"entity": check.table})
+        conds = [W.c.CheckCode == check.code, W.c.EntityName == check.table, W.c.RecordKey.in_(qualifies)]
+        if check.high_only:  # önem yalnız kontrolün koşuluna bakar (K-198)
+            session.execute(sa.update(W).where(*conds).values(Importance=HIGH))
+            continue
+        session.execute(sa.update(W).where(*conds, in_chain).values(Importance=HIGH), {"entity": check.table})

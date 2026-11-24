@@ -46,9 +46,9 @@ def stg_key(table: str) -> list[str]:
 
 
 def test_catalog_covers_every_staging_table():
-    assert sorted(TABLES) == sorted(t.name for t in metadata.sorted_tables if t.schema == "stg") and len(TABLES) == 25
+    assert sorted(TABLES) == sorted(t.name for t in metadata.sorted_tables if t.schema == "stg") and len(TABLES) == 24
     assert {e.data_class for e in ENTITIES} == {MASTER_DATA, TRANSACTION_DATA}
-    assert len({e.slug for e in ENTITIES}) == 25 and all(re.fullmatch(r"[a-z-]+", e.slug) for e in ENTITIES)
+    assert len({e.slug for e in ENTITIES}) == 24 and all(re.fullmatch(r"[a-z-]+", e.slug) for e in ENTITIES)
     assert contract.entity("Resource").file_name == "smartchain_kaynak_v4.xlsx" and contract.entity("yok") is None
 
 
@@ -64,10 +64,10 @@ def test_labels_are_short_readable_and_unique(table):
 
 
 def test_required_and_blank_rules():
-    """Boşsa satır yüklenmeyen 90 alan zorunludur (K-180: rota ve iş emri operasyonunda kaynak grubu); her YOKSA kuralının somut karşılığı var."""
+    """Boşsa satır yüklenmeyen 89 alan zorunludur (K-180: rota ve iş emri operasyonunda kaynak grubu; K-198: Proje grubu kalktı); her YOKSA kuralının somut karşılığı var."""
     every = [f for t in TABLES for f in fields(t)]
-    assert sum(f.required for f in every) == 90 and all(f.blank == contract.BLANK_ROW_REJECTED for f in every if f.required)
-    assert sum(1 for f in every if f.values) == 8  # Location.Type ham ERP değeri, listesi yok (K-143)
+    assert sum(f.required for f in every) == 89 and all(f.blank == contract.BLANK_ROW_REJECTED for f in every if f.required)
+    assert sum(1 for f in every if f.values) == 7  # Location.Type ham ERP değeri, listesi yok (K-143); takip kuralı kalktı (K-198)
     assert contract.blank_text("hata (satır atlanır)") == "Satır yüklenmez" and contract.blank_text("tam gün") == "Tam gün kabul edilir"
     assert contract.blank_text("hata (kurallardan sonra)") == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez" and contract.blank_text("yok") == "Yok sayılır"
     assert contract.blank_text("alternatif Kaynak grubu") == "Kaynak grubu da boşsa satır yüklenmez"
@@ -107,23 +107,24 @@ def test_purchase_order_line_v2():
     found = {f.name: f for f in fields("PurchaseOrderLine")}
     core = metadata.tables["core.PurchaseOrderLine"].c
     assert list(found) == ["LocationCode", "PurchaseOrderNo", "LineNo", "OrderType", "SupplierCode", "MaterialCode", "OpenQuantity", "OrderedQuantity", "ReceivedQuantity", "Uom", "RequestedDate", "ConfirmedDate",
-                           "ProjectCode", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo", "SalesOrderLineItemNo", "WorkOrderNo", "Status", "IsPurchaseRequest", "IsPurchase", "IsSubcontract", "IsActive", "IsCustomTracked"]
+                           "ProjectCode", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo", "SalesOrderLineItemNo", "WorkOrderNo", "Status", "IsPurchaseRequest", "IsPurchase", "IsSubcontract", "IsActive"]
     assert [f.name for f in found.values() if f.required] == ["LocationCode", "PurchaseOrderNo", "LineNo", "MaterialCode", "OpenQuantity"]
     assert {n: found[n].label for n in ("PurchaseOrderNo", "OrderType", "OpenQuantity", "OrderedQuantity", "ReceivedQuantity", "Uom", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo",
-                                        "IsPurchaseRequest", "IsPurchase", "IsSubcontract", "IsActive", "IsCustomTracked")} == {
+                                        "IsPurchaseRequest", "IsPurchase", "IsSubcontract", "IsActive")} == {
         "PurchaseOrderNo": "Sipariş no", "OrderType": "Sipariş tipi", "OpenQuantity": "Açık miktar", "OrderedQuantity": "Sipariş miktarı", "ReceivedQuantity": "Teslim alınan miktar", "Uom": "Birim",
-        "CustomerCode": "Müşteri", "SalesOrderNo": "Bağlı sipariş no", "SalesOrderLineNo": "Bağlı sipariş satırı",
-        "IsPurchaseRequest": "Satın alma talebi", "IsPurchase": "Satın alma", "IsSubcontract": "Fason", "IsActive": "Aktif", "IsCustomTracked": "Özel takip"}
+        "CustomerCode": "Bağlı müşteri", "SalesOrderNo": "Bağlı sipariş no", "SalesOrderLineNo": "Bağlı sipariş satırı",  # K-198: tek ad takımı
+        "IsPurchaseRequest": "Satın alma talebi", "IsPurchase": "Satın alma", "IsSubcontract": "Fason", "IsActive": "Aktif"}
     assert not {"OrderNo", "OpenQty"} & set(core.keys()) and not {"OrderNo", "OpenQty"} & set(found)
     assert found["OrderType"].values == () and found["OrderType"].blank == "Bilinmiyor; planda kullanılmaz" and core["OrderType"].nullable and core["OrderType"].type.length == 50
     assert found["Status"].blank == "Bilinmiyor; planda kullanılmaz" and core["Status"].nullable and core["Status"].type.length == 50 and found["Status"].label == "Durum"
     assert found["Uom"].blank == "Temel birimde kabul edilir" and found["Uom"].ref_text == contract.UNIT_CODE
-    for name in ("IsPurchaseRequest", "IsPurchase", "IsSubcontract", "IsActive", "IsCustomTracked"):
+    assert "IsCustomTracked" not in found and "IsCustomAllocated" not in found and {"IsCustomAllocated", "AllocationLevel", "AllocationKey"} <= set(core.keys())  # K-198: sözleşmede yok, yüklemede hesaplanır
+    for name in ("IsPurchaseRequest", "IsPurchase", "IsSubcontract", "IsActive"):
         assert found[name].blank in RULE_FILLED and core[name].server_default is None and core[name].nullable, name
     assert [c.name for c in stg_columns("PurchaseOrderLine") if "UK" in c.info.get("key", "")] == ["LocationCode", "PurchaseOrderNo", "LineNo"]
     key = next(i for i in metadata.tables["core.PurchaseOrderLine"].indexes if i.unique)
     assert [c.name for c in key.columns] == ["LocationId", "PurchaseOrderNo", "LineNo"] and str(key.dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
-    assert contract.entity("PurchaseOrderLine").file_name == "smartchain_satin-alma-siparisi_v3.xlsx"
+    assert contract.entity("PurchaseOrderLine").file_name == "smartchain_satin-alma-siparisi_v5.xlsx"
 
 
 def test_production_confirmation_v2():
@@ -149,23 +150,24 @@ def test_work_order_v2():
     core = metadata.tables["core.WorkOrder"].c
     assert list(found) == ["LocationCode", "WorkOrderNo", "MaterialCode", "ProductionVersionCode", "ProductionOrderType", "Status", "Priority", "OrderedQuantity", "OpenQuantity", "CompletedQuantity", "ScrapQuantity", "Uom",
                            "StartDate", "DueDate", "ProjectCode", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo", "SalesOrderLineItemNo", "ParentWorkOrderNo", "LastActivityDate",
-                           "IsFixed", "IsReleased", "IsStarted", "IsProduction", "IsSubcontract", "IsRework", "IsOnHold", "IsCustomTracked"]
+                           "IsFixed", "IsReleased", "IsStarted", "IsProduction", "IsSubcontract", "IsRework", "IsOnHold"]
     assert [f.name for f in found.values() if f.required] == ["LocationCode", "WorkOrderNo", "MaterialCode", "OrderedQuantity", "OpenQuantity", "DueDate"]
     assert {n: found[n].label for n in ("WorkOrderNo", "ProductionVersionCode", "ProductionOrderType", "Status", "Priority", "OrderedQuantity", "OpenQuantity", "CompletedQuantity", "ScrapQuantity", "Uom", "CustomerCode",
-                                        "IsFixed", "IsReleased", "IsStarted", "IsProduction", "IsSubcontract", "IsRework", "IsOnHold", "IsCustomTracked")} == {
+                                        "IsFixed", "IsReleased", "IsStarted", "IsProduction", "IsSubcontract", "IsRework", "IsOnHold")} == {
         "WorkOrderNo": "İş emri no", "ProductionVersionCode": "Üretim versiyonu", "ProductionOrderType": "İş emri tipi", "Status": "İş emri durumu", "Priority": "Öncelik", "OrderedQuantity": "İş emri miktarı",
-        "OpenQuantity": "Açık miktar", "CompletedQuantity": "Tamamlanan miktar", "ScrapQuantity": "Hurda miktarı", "Uom": "Birim", "CustomerCode": "Müşteri",
-        "IsFixed": "Sabit", "IsReleased": "Yayınlandı", "IsStarted": "Başladı", "IsProduction": "Üretim", "IsSubcontract": "Fason", "IsRework": "Yeniden işleme", "IsOnHold": "Beklemede", "IsCustomTracked": "Özel takip"}
+        "OpenQuantity": "Açık miktar", "CompletedQuantity": "Tamamlanan miktar", "ScrapQuantity": "Hurda miktarı", "Uom": "Birim", "CustomerCode": "Bağlı müşteri",
+        "IsFixed": "Sabit", "IsReleased": "Yayınlandı", "IsStarted": "Başladı", "IsProduction": "Üretim", "IsSubcontract": "Fason", "IsRework": "Yeniden işleme", "IsOnHold": "Beklemede"}
     assert not {"OrderNo", "OrderType", "OrderQty", "OpenQty"} & set(core.keys()) and not {"OrderNo", "OrderType", "OrderQty", "OpenQty"} & set(found)
     assert found["ProductionOrderType"].values == () and found["ProductionOrderType"].blank == "Bilinmiyor; planda kullanılmaz" and core["ProductionOrderType"].server_default is None and core["ProductionOrderType"].nullable
     assert found["Status"].values == () and not found["Status"].required and found["Status"].blank == "Bilinmiyor; planda kullanılmaz" and core["Status"].nullable and core["Status"].type.length == 50 and core["ProductionOrderType"].type.length == 50
     assert found["Uom"].blank == "Temel birimde kabul edilir" and found["Uom"].ref_text == contract.UNIT_CODE
-    for name in ("IsFixed", "IsReleased", "IsStarted", "IsProduction", "IsSubcontract", "IsRework", "IsOnHold", "IsCustomTracked"):
+    assert "IsCustomTracked" not in found and {"IsCustomAllocated", "AllocationLevel", "AllocationKey", "SalesOrderNo"} <= set(core.keys())  # K-198
+    for name in ("IsFixed", "IsReleased", "IsStarted", "IsProduction", "IsSubcontract", "IsRework", "IsOnHold"):
         assert found[name].blank in RULE_FILLED and core[name].server_default is None and core[name].nullable, name
     assert [c.name for c in stg_columns("WorkOrder") if "UK" in c.info.get("key", "")] == ["LocationCode", "WorkOrderNo"]
     key = next(i for i in metadata.tables["core.WorkOrder"].indexes if i.unique)
     assert [c.name for c in key.columns] == ["LocationId", "WorkOrderNo"] and str(key.dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
-    assert contract.entity("WorkOrder").file_name == "smartchain_is-emri_v3.xlsx"
+    assert contract.entity("WorkOrder").file_name == "smartchain_is-emri_v5.xlsx"
 
 
 def test_work_order_component_v2():
@@ -332,10 +334,10 @@ def test_material_v3():
     found = {f.name: f for f in fields("Material")}
     assert not {"DefaultProcurement", "AssemblyScrapPct", "IsProjectTracked", "ProductionLeadTimeDays", "Ownership"} & (set(found) | set(metadata.tables["core.Material"].c.keys()))
     assert {n: found[n].label for n in ("MaterialType", "Brand", "PlannerCode", "MRPGroup", "IsActive", "IsSubcontractable", "IsCustomerSupplied",
-                                        "StockCoverageDays", "QtyPerBox", "QtyPerPallet", "DefaultSupplyType", "ScrapRatio", "IsCustomTracked", "IsCritical", "IsNonStockable")} == {
+                                        "StockCoverageDays", "QtyPerBox", "QtyPerPallet", "DefaultSupplyType", "ScrapRatio", "IsCustomAllocated", "IsCritical", "IsNonStockable")} == {
         "MaterialType": "Malzeme tipi", "Brand": "Marka", "PlannerCode": "Planlamacı", "MRPGroup": "MRP grubu", "IsActive": "Aktif",
         "IsSubcontractable": "Fasona verilebilir", "IsCustomerSupplied": "Müşteri temin malzemesi", "StockCoverageDays": "Stok gün kapsamı",
-        "QtyPerBox": "Kutu içi miktar", "QtyPerPallet": "Palet içi miktar", "DefaultSupplyType": "Tedarik türü", "ScrapRatio": "Fire oranı", "IsCustomTracked": "Özel takip", "IsCritical": "Kritik malzeme", "IsNonStockable": "Stok tutulamaz"}
+        "QtyPerBox": "Kutu içi miktar", "QtyPerPallet": "Palet içi miktar", "DefaultSupplyType": "Tedarik türü", "ScrapRatio": "Fire oranı", "IsCustomAllocated": "Özel alokasyon", "IsCritical": "Kritik malzeme", "IsNonStockable": "Stok tutulamaz"}
     core = metadata.tables["core.Material"].c
     for name in ("IsActive", "IsSubcontractable", "IsCustomerSupplied", "IsCritical", "IsNonStockable"):  # boşsa kural; varsayılan yok
         assert found[name].blank in RULE_FILLED and core[name].server_default is None and "default" not in core[name].info and core[name].nullable
@@ -346,7 +348,7 @@ def test_material_v3():
     keys = {t: next(i for i in metadata.tables[f"{t}.Material"].indexes if i.unique) for t in ("core",)}
     assert stg_key("Material") == ["LocationCode", "Code"] and [c.name for c in keys["core"].columns] == ["LocationId", "Code"]
     assert str(keys["core"].dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
-    assert contract.entity("Material").file_name == "smartchain_malzeme_v4.xlsx"
+    assert contract.entity("Material").file_name == "smartchain_malzeme_v5.xlsx"
 
 
 def test_out_of_phase_flags_stay_in_contract():

@@ -212,7 +212,7 @@ def test_connection_rule_and_card(integration_db, people, client):  # noqa: F811
     r = client.put("/api/integration/connection", json={"database": "x]; DROP DATABASE y"}, headers=owner)
     assert r.status_code == 422
     card = client.put("/api/integration/connection", json={"database": DATABASE}, headers=owner).json()
-    assert card["database"] == DATABASE and card["excel_tables"] == 25 and card["sql_tables"] == 0 and card["account"]
+    assert card["database"] == DATABASE and card["excel_tables"] == 24 and card["sql_tables"] == 0 and card["account"]
 
 
 def test_not_configured(db_engine, people, client):
@@ -356,7 +356,7 @@ def test_channel_and_type(setup, client, db_engine):
     job = pull(client, setup)
     with db_engine.connect() as c:
         row = c.execute(sa.text("SELECT JobType, Channel, Summary FROM adm.Job WHERE Id = :i"), {"i": job}).one()
-    assert (row.JobType, row.Channel) == (TYPE_PULL, CHANNEL_PULL) == ("Veri çekme", "Veri çekme") and "25 tablo" in row.Summary
+    assert (row.JobType, row.Channel) == (TYPE_PULL, CHANNEL_PULL) == ("Veri çekme", "Veri çekme") and "24 tablo" in row.Summary
     assert json.loads(audits(db_engine, "Veri çekme")[-1]["NewValue"])["entities"] == "Bütün tablolar"
 
 
@@ -373,7 +373,7 @@ def test_plan_lists_every_table_with_reason(setup, client):
     save(client, auth(setup[SYSTEM_OWNER]), "BOM", method="SQL")
     plan = client.get("/api/pulls/plan", headers=auth(setup[KEY_USER])).json()
     states = {t["entity"]: (t["state"], t["reason"]) for t in plan["tables"]}
-    assert len(plan["tables"]) == 25
+    assert len(plan["tables"]) == 24
     assert states["Material"] == ("Okunacak", None) and states["Resource"] == ("Atlandı", "Yöntemi Excel")
     assert states["Stock"] == ("Atlandı", "Çekim kapalı") and states["BOM"] == ("Atlandı", "View tanımsız")
 
@@ -385,7 +385,7 @@ def test_skipped_tables_get_their_reason(setup, client, db_engine):
     job = pull(client, setup)
     run(db_engine, job)
     data = result(client, setup, job)
-    assert len(data["tables"]) == 25 and data["status"] == "Bitti"
+    assert len(data["tables"]) == 24 and data["status"] == "Bitti"
     assert table_of(data, "Stock")["status"] == "Atlandı" and table_of(data, "Stock")["reason"] == "Çekim kapalı"
     assert table_of(data, "BOM")["reason"] == "View tanımsız" and table_of(data, "Resource")["reason"] == "Yöntemi Excel"
     assert table_of(data, "Material")["status"] == "Alındı" and stg_count(db_engine, "Stock") == 0

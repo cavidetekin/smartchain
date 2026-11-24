@@ -28,7 +28,7 @@ def test_every_table_is_checked_from_the_contract():
         row, found = checker.check(1, {})  # boş satır: zorunlusu olanda hata
         assert (row is None) == any(f.required for f in checker.fields), e.table
         assert all(x.row == 1 for x in found)
-    assert required == 90  # K-180: Routing ve WorkOrderOperation'da kaynak grubu zorunlu
+    assert required == 89  # K-180: Routing ve WorkOrderOperation'da kaynak grubu zorunlu; K-198: Proje grubu kalktı
 
 
 @pytest.mark.parametrize("kind, value, expected", [

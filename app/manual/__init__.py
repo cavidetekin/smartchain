@@ -22,7 +22,7 @@ KEY_LENGTH = 60
 # Ana veri ve işlem verisi ekranlarının tabloları (K-168, K-169); manuel değer yalnız bunlarda
 SCREEN_TABLES = frozenset({
     "Material", "MaterialReference", "ProductionVersion", "BOM", "Routing", "Resource", "ResourceGroup", "ResourceGroupMember", "Supplier",
-    "MaterialSupplier", "Customer", "Location", "UnitOfMeasure", "UomConversion", "SalesOrderLine", "Forecast", "Project", "ProjectGroup", "Stock",
+    "MaterialSupplier", "Customer", "Location", "UnitOfMeasure", "UomConversion", "SalesOrderLine", "Forecast", "Project", "Stock",
     "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "ProductionConfirmation", "PurchaseOrderLine", "EmployeeAbsence",
 })
 UNVERSIONED = frozenset({"Location", "UnitOfMeasure"})
@@ -34,7 +34,13 @@ SYSTEM_REASON = "Sistem alanına manuel değer girilemez."
 TABLE_REASON = "Manuel değer yalnız ana veri ve işlem verisinde girilir."
 ACTIVE_REASON = "Aktif, kaydın aktarımda açık kalıp kalmayacağını belirler; manuel değer girilemez."
 # Kod üzerinden ilişki kuran metin alanları (üretim versiyonunun ağacı ve rotası): ilişki alanı sayılır
-CODE_RELATIONS = frozenset({("ProductionVersion", "BOMCode"), ("ProductionVersion", "RouteCode")})
+# Arzın bağlı proje, müşteri ve sipariş alanları da ilişkidir (K-198: ERP'den geldiği gibi durur; iç bağ ve anahtar bunlardan hesaplanır)
+CODE_RELATIONS = frozenset({("ProductionVersion", "BOMCode"), ("ProductionVersion", "RouteCode")}
+                           | {(t, f) for t in ("Stock", "WorkOrder", "PurchaseOrderLine")
+                              for f in ("ProjectCode", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo", "SalesOrderLineItemNo")})
+# Yalnız ERP'den ya da veri kuralıyla gelen alanlar (K-198): kuraldır, elle girilmez
+RULE_ONLY = frozenset({("Material", "IsCustomAllocated")})
+RULE_ONLY_REASON = "Özel alokasyon yalnız ERP'den ya da veri kuralıyla gelir; manuel değer girilemez."
 
 
 def core_table(table: str) -> sa.Table:
@@ -60,6 +66,8 @@ def not_manual_reason(table: str, field: str) -> str | None:
         return KEY_REASON
     if field.endswith("Id") or (table, field) in CODE_RELATIONS:
         return RELATION_REASON
+    if (table, field) in RULE_ONLY:
+        return RULE_ONLY_REASON
     if field == "IsActive":  # aktarım pasif kaydı kapatır (K-149)
         return ACTIVE_REASON
     return None

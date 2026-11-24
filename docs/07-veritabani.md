@@ -11,7 +11,7 @@
 - **Entegrasyon tablolarının standart alanları:** `stg`'de `StagingRowId`, `ImportBatchId`, `ErrorText`, `SourceRowNo`, `IsCurrent` (K-133), `SupersededAt` (K-160); `prc`'de `StagingRowId` (ham satırdan), `ImportBatchId`, `SourceRowNo`, `RowStatus` (Yeni, Hatalı, Aktarıldı). Bu tablolarda zorunluluk veritabanında değil, doğrulama adımında kontrol edilir.
 - **Açıklamalar:** Her tablo ve alanın Türkçe açıklaması veritabanına da yazılır; SQL Server Management Studio'da tablo ve kolon özelliklerinde görünür.
 
-## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58); ham katman, hiç değişmez (K-140) (25 tablo)
+## `stg` · Entegrasyon tabloları: ERP'nin dili, ilişkiler kodla (K-58); ham katman, hiç değişmez (K-140) (24 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -28,20 +28,19 @@
 | `stg.EmployeeAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 6 |
 | `stg.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 16 |
 | `stg.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Entegrasyon |  | 19 |
-| `stg.Customer` | Müşteri. | Entegrasyon |  | 20 |
-| `stg.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Entegrasyon |  | 5 |
-| `stg.Project` | Proje. | Entegrasyon |  | 16 |
-| `stg.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur. Vade: teyit tarihi, yoksa istek tarihi. | Entegrasyon |  | 26 |
+| `stg.Customer` | Müşteri. | Entegrasyon |  | 19 |
+| `stg.Project` | Proje. | Entegrasyon |  | 14 |
+| `stg.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur. Vade: teyit tarihi, yoksa istek tarihi. | Entegrasyon |  | 25 |
 | `stg.Forecast` | Talep tahmini (netleme ön hesapta). | Entegrasyon |  | 15 |
 | `stg.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | Entegrasyon |  | 8 |
-| `stg.Stock` | Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak. | Entegrasyon |  | 25 |
-| `stg.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 34 |
+| `stg.Stock` | Stok; lot ve durum bazında. Bağlı proje, müşteri ya da sipariş doluysa stok ona ayrılmıştır; boşsa geneldir. | Entegrasyon |  | 24 |
+| `stg.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 33 |
 | `stg.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
 | `stg.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 24 |
-| `stg.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 29 |
+| `stg.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 28 |
 | `stg.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
 
-## `prc` · İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış; validasyon ve load bunu okur (K-140) (25 tablo)
+## `prc` · İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış; validasyon ve load bunu okur (K-140) (24 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -58,20 +57,19 @@
 | `prc.EmployeeAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 6 |
 | `prc.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 16 |
 | `prc.MaterialSupplier` | Malzeme–tedarikçi ilişkisi; satın alma parametreleri. Satın alma her zaman sürekli; yuvarlama son hesapta. | Entegrasyon |  | 19 |
-| `prc.Customer` | Müşteri. | Entegrasyon |  | 20 |
-| `prc.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Entegrasyon |  | 5 |
-| `prc.Project` | Proje. | Entegrasyon |  | 16 |
-| `prc.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur. Vade: teyit tarihi, yoksa istek tarihi. | Entegrasyon |  | 26 |
+| `prc.Customer` | Müşteri. | Entegrasyon |  | 19 |
+| `prc.Project` | Proje. | Entegrasyon |  | 14 |
+| `prc.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur. Vade: teyit tarihi, yoksa istek tarihi. | Entegrasyon |  | 25 |
 | `prc.Forecast` | Talep tahmini (netleme ön hesapta). | Entegrasyon |  | 15 |
 | `prc.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | Entegrasyon |  | 8 |
-| `prc.Stock` | Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak. | Entegrasyon |  | 25 |
-| `prc.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 34 |
+| `prc.Stock` | Stok; lot ve durum bazında. Bağlı proje, müşteri ya da sipariş doluysa stok ona ayrılmıştır; boşsa geneldir. | Entegrasyon |  | 24 |
+| `prc.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 33 |
 | `prc.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
 | `prc.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 24 |
-| `prc.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 29 |
+| `prc.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 28 |
 | `prc.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
 
-## `core` · Ana veri ve işlem verisi (27 tablo)
+## `core` · Ana veri ve işlem verisi (26 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -89,17 +87,16 @@
 | `core.BOM` | Ürün ağacı satırı. | Ana veri | evet | 19 |
 | `core.Routing` | Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile. | Ana veri | evet | 24 |
 | `core.MaterialReference` | Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır. | Ana veri | evet | 8 |
-| `core.ProjectGroup` | Proje grubu (grup içi paylaşım için). | Ana veri | evet | 6 |
-| `core.Project` | Proje. | Ana veri | evet | 17 |
-| `core.Customer` | Müşteri. | Ana veri | evet | 21 |
-| `core.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur, plana dahil olmaları senaryo parametresi. Vade: teyit tarihi, yoksa istek tarihi. | İşlem verisi | evet | 27 |
+| `core.Project` | Proje. | Ana veri | evet | 15 |
+| `core.Customer` | Müşteri. | Ana veri | evet | 20 |
+| `core.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur, plana dahil olmaları senaryo parametresi. Vade: teyit tarihi, yoksa istek tarihi. | İşlem verisi | evet | 26 |
 | `core.Forecast` | Talep tahmini (netleme ön hesapta). | İşlem verisi | evet | 16 |
 | `core.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | İşlem verisi | evet | 9 |
-| `core.Stock` | Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak. | İşlem verisi | evet | 24 |
-| `core.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | İşlem verisi | evet | 33 |
+| `core.Stock` | Stok; lot ve durum bazında. Bağlı proje, müşteri ya da sipariş doluysa stok ona ayrılmıştır; boşsa geneldir. | İşlem verisi | evet | 31 |
+| `core.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | İşlem verisi | evet | 40 |
 | `core.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | İşlem verisi | evet | 19 |
 | `core.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | İşlem verisi | evet | 26 |
-| `core.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | İşlem verisi | evet | 28 |
+| `core.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | İşlem verisi | evet | 35 |
 | `core.TransferOrder` | Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep). | İşlem verisi | evet | 13 |
 | `core.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | İşlem verisi | evet | 13 |
 
@@ -132,7 +129,7 @@
 | `planning.WorkspaceOverride` | Çalışmadaki geçici değişiklikler: parametreler ve çalışmada değiştirilebilir ana veri alanları. | Plan |  | 7 |
 | `planning.PlanRun` | Bir plan hesabı (senaryo ya da çalışma); bütün plan çıktıları buna bağlı. | Plan |  | 10 |
 | `planning.PlanVersion` | Onaylı plan versiyonu; hep saklanır. Aynı anda tek geçerli. | Plan |  | 7 |
-| `planning.PlannedOrder` | Planlı sipariş: üretim, satın alma ya da fason önerisi. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca. | Plan |  | 12 |
+| `planning.PlannedOrder` | Planlı sipariş: üretim, satın alma ya da fason önerisi. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca. | Plan |  | 14 |
 | `planning.SupplyRecommendation` | Mevcut arz için öneri: öne çek, ertele, iptal, azalt, hızlandır. | Plan |  | 9 |
 | `planning.DemandFulfillment` | Talebin planlanan karşılanması ve gecikmesi. | Plan |  | 9 |
 | `planning.CapacityLoad` | Kaynak grubu ve dönem bazında kapasite ve kapasite yükü (plan ve yük grup düzeyindedir, K-180). | Plan |  | 10 |

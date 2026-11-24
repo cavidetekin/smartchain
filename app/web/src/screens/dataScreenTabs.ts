@@ -37,8 +37,7 @@ export const TRANSACTION_TABS: TabDef[] = [
   { key: "talep", label: X.tabs.demand, tables: [
     { list: "transaction-sales-order", slug: "satis-siparisi", label: X.tables.salesOrder },
     { list: "transaction-forecast", slug: "tahmin", label: X.tables.forecast },
-    { list: "transaction-project", slug: "proje", label: X.tables.project },
-    { list: "transaction-project-group", slug: "proje-grubu", label: X.tables.projectGroup }] },
+    { list: "transaction-project", slug: "proje", label: X.tables.project }] },
   { key: "stok", label: X.tabs.stock, tables: [
     { list: "transaction-stock", slug: "stok", label: X.tables.stock },
     { list: "transaction-borrow-payback", slug: "odunc-ve-geri-odeme", label: X.tables.borrowPayback }] },

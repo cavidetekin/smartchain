@@ -264,7 +264,7 @@ def test_chain_computes_and_api_serves(db_engine):
             r = client.post("/api/raw-compare/query", headers=auth(user), json={"fields": ["Name", "NewCount", "MissingCount", "ChangedCount", "ChangePct", "State", "TodayLoad"], "limit": 50})
             assert r.status_code == 200, (role, r.text)
         rows = {x["Entity"]: x for x in r.json()["rows"]}
-        assert len(rows) == 25
+        assert len(rows) == 24
         assert (rows["Customer"]["NewCount"], rows["Customer"]["MissingCount"], rows["Customer"]["ChangedCount"], rows["Customer"]["State"]) == (1, 1, 1, compare.READY)
         assert rows["Material"]["State"] == "Veri yok"
         h = auth(people[END_USER])

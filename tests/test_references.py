@@ -10,8 +10,10 @@ from app.validation import catalog as cat
 DOCS03 = (Path(__file__).resolve().parents[1] / "docs" / "03-entegrasyon.md").read_text(encoding="utf-8")
 HEADER = "| TABLO | ALAN | EBEVEYN | EBEVEYN ANAHTARI | İLİŞKİ | PASİF EBEVEYN | KOD |"
 UNIT_FIELDS = {"BaseUom", "FromUom", "ToUom", "ComponentUom", "Uom", "CapacityUnit"}  # referans kontrolüne girmez (K-112)
-IN_KEY = {("UomConversion", "MaterialCode"), ("Forecast", "CustomerCode"), ("Forecast", "ProjectCode"), ("Stock", "ProjectCode"),
-          ("Stock", "CustomerCode"), ("Stock", "SalesOrderNo")}  # anahtarın parçası olan isteğe bağlı bağlantı (K-153)
+IN_KEY = {("UomConversion", "MaterialCode"), ("Forecast", "CustomerCode"), ("Forecast", "ProjectCode")}  # anahtarın parçası olan isteğe bağlı bağlantı (K-153)
+# Stok'un bağlı proje, müşteri ve siparişi anahtarın parçasıdır ama isteğe bağlıdır (K-198): anahtar iç bağda değil ERP'den gelen ham alanlardadır,
+# sahip bulunamasa da satır yüklenir ve anahtarı değişmez
+RAW_KEY = {("Stock", "ProjectCode"), ("Stock", "CustomerCode"), ("Stock", "SalesOrderNo")}
 EITHER_ONE: set = set()  # "kaynak ya da kaynak grubu" istisnası kalktı: rota ve iş emri operasyonunda kaynak grubu zorunlu (K-180)
 
 
@@ -53,7 +55,7 @@ def test_required_follows_the_contract():
     anahtarının parçası olan bağlantı (boş yazılsaydı anahtar değişirdi, K-153); doluysa ve yoksa Hata. Öteki isteğe bağlı."""
     for r in refs.REFERENCES:
         required = {f.name: f.required for f in contract_fields(r.child)}[r.fields[0]]
-        in_key = r.fields[0] in key_fields(r.child)
+        in_key = r.fields[0] in key_fields(r.child) and (r.child, r.fields[0]) not in RAW_KEY
         expected = refs.REQUIRED if required else refs.REQUIRED_IF_FILLED if (r.child, r.fields[0]) in EITHER_ONE or in_key else refs.OPTIONAL
         assert r.kind == expected, (r.child, r.fields[0], r.kind)
     assert {(r.child, r.fields[0]) for r in refs.REFERENCES if r.kind == refs.REQUIRED_IF_FILLED} == EITHER_ONE | IN_KEY
@@ -71,8 +73,9 @@ def test_required_if_filled_is_an_error_only_when_filled():
     for key in (("Routing", "RTG.REF_RESOURCE_GROUP"), ("WorkOrderOperation", "WOO.REF_RESOURCE_GROUP")):
         assert by_key[key].severity == cat.ERROR and " dolu ve " not in by_key[key].condition
     assert ("Routing", "RTG.REF_RESOURCE") not in by_key and ("WorkOrderOperation", "WOO.REF_RESOURCE") not in by_key
-    codes = [("UomConversion", "UOM.REF_MATERIAL"), ("Forecast", "FC.REF_CUSTOMER"), ("Forecast", "FC.REF_PROJECT"), ("Stock", "STK.REF_PROJECT"),
-              ("Stock", "STK.REF_CUSTOMER"), ("Stock", "STK.REF_SALES_ORDER")]  # anahtarın parçası: boş yazılsaydı anahtar değişirdi (K-153)
+    codes = [("UomConversion", "UOM.REF_MATERIAL"), ("Forecast", "FC.REF_CUSTOMER"), ("Forecast", "FC.REF_PROJECT")]  # anahtarın parçası: boş yazılsaydı anahtar değişirdi (K-153)
+    for key in (("Stock", "STK.REF_PROJECT"), ("Stock", "STK.REF_CUSTOMER"), ("Stock", "STK.REF_SALES_ORDER")):   # K-198: arzın sahibi bulunamazsa Uyarı, satır yüklenir
+        assert by_key[key].severity == cat.WARNING and " dolu ve " in by_key[key].condition and not by_key[key].tracked, key
     for key in codes:
         rule = by_key[key]
         assert rule.severity == cat.ERROR and " dolu ve " in rule.condition, rule.code

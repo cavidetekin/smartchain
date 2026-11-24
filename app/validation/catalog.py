@@ -32,8 +32,8 @@ UNTRACKED = frozenset({
     "SO.ZERO_OPEN", "WO.ZERO_OPEN", "PO.ZERO_OPEN", "SO.DELIVERED", "PO.RECEIVED", "WOC.ISSUED", "WOO.CONFIRMED", "BP.PAID", "PC.MATERIAL",
     "BOM.NO_VERSION", "RTG.NO_VERSION", "BOM.SINGLE_ALTERNATIVE", "SO.INACTIVE_CUSTOMER", "SO.NOT_SELLABLE", "PO.INACTIVE_MATERIAL",
     "PO.INACTIVE_SUPPLIER", "PO.NO_SUPPLIER", "PO.REF_SUPPLIER", "WO.INACTIVE_MATERIAL", "WO.REF_VERSION", "WO.REWORK_NO_PARENT",
-    "WO.REF_PARENT_WORK_ORDER", "REF.REF_REFERENCE_VERSION", "PRJ.REF_PROJECT_GROUP", "LOC.NO_FLAG", "SO.REF_PROJECT", "WO.REF_PROJECT",
-    "WO.REF_CUSTOMER", "WO.REF_SALES_ORDER", "PO.REF_PROJECT", "PO.REF_CUSTOMER", "PO.REF_SALES_ORDER", "PO.REF_WORK_ORDER",
+    "WO.REF_PARENT_WORK_ORDER", "REF.REF_REFERENCE_VERSION", "LOC.NO_FLAG", "SO.REF_PROJECT", "WO.REF_PROJECT",
+    "WO.REF_CUSTOMER", "WO.REF_SALES_ORDER", "STK.REF_PROJECT", "STK.REF_CUSTOMER", "STK.REF_SALES_ORDER", "PO.REF_PROJECT", "PO.REF_CUSTOMER", "PO.REF_SALES_ORDER", "PO.REF_WORK_ORDER",
 })
 
 Where = Callable[[sa.Alias], sa.ColumnElement]
@@ -349,7 +349,6 @@ def _confirmation_material(t):
 H, U, B = ERROR, WARNING, INFO
 EQ, NE, GT, LT, GE, LE, EMPTY, FILLED = cond.EQ, cond.NE, cond.GT, cond.LT, cond.GE, cond.LE, cond.EMPTY, cond.FILLED
 RES_TYPES = ("IsEmployee", "IsMachine", "IsFurnace", "IsMold", "IsOther", "IsSubcontractor")
-OWNER = (Q("ProjectCode", EMPTY), Q("CustomerCode", EMPTY), Q("SalesOrderNo", EMPTY))
 
 
 def G(code, table, title, severity, message, *groups, **kw) -> RuleDef:
@@ -458,7 +457,6 @@ TABLE_RULES: tuple[RuleDef, ...] = (
       C(lambda t: sa.and_(one(t.c.IsAvailable), t.c.ExpiryDate < _today()), "ExpiryDate")),
     X("STK.NON_STOCKABLE", "Stock", "Stok tutulamaz malzemede stok", "Stok tutulamaz malzemede stok kaydı (K-113)", U, "Stok tutulamaz malzemede stok kaydı.",
       C(_non_stockable, "MaterialCode"), check_type=CROSS, reads=("Material",)),
-    G("STK.CUSTOM_NO_OWNER", "Stock", "Özel takipli stokun sahibi yok", U, "Özel takipli kaydın sahibi yok.", [Q("IsCustomTracked", EQ, 1), *OWNER]),
     G("STK.ZERO_QTY", "Stock", "Stok miktarı sıfır", B, "Stok miktarı sıfır.", [Q("Quantity", EQ, 0)]),
     G("BP.SAME_PROJECT", "BorrowPayback", "Ödünç veren ve alan proje aynı", H, "Ödünç veren ve alan proje aynı.", [Q("BorrowingProjectCode", EQ, other="LendingProjectCode")]),
     G("BP.QTY", "BorrowPayback", "Ödünç miktarı sıfır ya da negatif", H, "Ödünç miktarı sıfırdan büyük olmalı.", [Q("BorrowedQuantity", LE, 0)]),
@@ -477,7 +475,6 @@ TABLE_RULES: tuple[RuleDef, ...] = (
       C(lambda t: _flags_not_one(t, ("IsProduction", "IsSubcontract", "IsRework")), "IsProduction")),
     G("WO.REWORK_NO_PARENT", "WorkOrder", "Yeniden işlemenin orijinal iş emri yok", U, "Yeniden işlemenin orijinal iş emri yok.",
       [Q("ParentWorkOrderNo", EMPTY), Q("IsRework", EQ, 1)]),
-    G("WO.CUSTOM_NO_OWNER", "WorkOrder", "Özel takipli iş emrinin sahibi yok", U, "Özel takipli kaydın sahibi yok.", [Q("IsCustomTracked", EQ, 1), *OWNER]),
     G("WOC.ISSUED", "WorkOrderComponent", "Çekilen gereken miktardan fazla", U, "Çekilen gereken miktardan fazla.", [Q("IssuedQuantity", GT, other="RequiredQuantity")]),
     G("WOO.RESOURCE_NUMBER", "WorkOrderOperation", "Kaynak adedi 1'den az", H, "Kaynak adedi en az 1 olmalı.", [Q("ResourceNumber", LT, 1)]),
     G("WOO.CONFIRMED", "WorkOrderOperation", "Teyit edilen tüketim planlanandan fazla", U, "Teyit edilen tüketim planlanandan fazla.",
@@ -493,7 +490,6 @@ TABLE_RULES: tuple[RuleDef, ...] = (
     X("PO.PAST_DUE", "PurchaseOrderLine", "Tarihi geçmiş açık satın alma siparişi", "Açık miktar > 0 ve Tedarikçi teyit tarihi (boşsa İstenen tarih) geçmişte", U,
       "Tarih geçmiş:", C(lambda t: sa.and_(t.c.OpenQuantity > 0, sa.func.coalesce(t.c.ConfirmedDate, t.c.RequestedDate) < _today()), "RequestedDate"),
       append_value=True),
-    G("PO.CUSTOM_NO_OWNER", "PurchaseOrderLine", "Özel takipli siparişin sahibi yok", U, "Özel takipli kaydın sahibi yok.", [Q("IsCustomTracked", EQ, 1), *OWNER]),
     G("PC.QTY", "ProductionConfirmation", "Teyit miktarı sıfır ya da negatif", H, "Teyit miktarı sıfırdan büyük olmalı.", [Q("ConfirmedQuantity", LE, 0)]),
     X("PC.MATERIAL", "ProductionConfirmation", "Malzeme iş emrininkinden farklı", "Malzeme, iş emrinin malzemesinden farklı", U, "Malzeme iş emrinin malzemesinden farklı.",
       C(_confirmation_material, "MaterialCode"), check_type=CROSS, reads=("WorkOrder",)),

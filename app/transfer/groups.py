@@ -1,11 +1,11 @@
 """Kısmi aktarımın grupları (fonksiyon 06; K-150, K-155). docs/00 K-150 ile birebir (test karşılaştırır).
 
-Her işlem verisi tablosu tam bir grupta; Proje ve Proje grubu katalogda Ana veri, istisna olarak Talep grubuyla aktarılır.
+Her işlem verisi tablosu tam bir grupta; Proje katalogda Ana veri, istisna olarak Talep grubuyla aktarılır (Proje grubu K-198'de kalktı).
 """
 from collections.abc import Iterable
 
 GROUPS: dict[str, tuple[str, ...]] = {
-    "Talep": ("SalesOrderLine", "Forecast", "Project", "ProjectGroup"),
+    "Talep": ("SalesOrderLine", "Forecast", "Project"),
     "Stok": ("Stock", "BorrowPayback"),
     "Üretim": ("WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "ProductionConfirmation"),
     "Satın alma": ("PurchaseOrderLine",),

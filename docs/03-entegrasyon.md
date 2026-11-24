@@ -104,7 +104,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Kapasite girişleri (WorkPattern, ResourceEfficiency, OvertimeLimit, ResourceDowntime, FactoryCalendar; K-185) | Parametre (senaryolu) | Smartchain (Kapasite yönetimi ekranı) | Smartchain | Elle | — | Çalışma düzeni zorunlu (yoksa veri kalitesi uyarır); ötekiler isteğe bağlı |
 | Tedarikçi ve malzeme-tedarikçi (Supplier, MaterialSupplier) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code · LocationCode + MaterialCode + SupplierCode | Zorunlu |
 | Müşteri (Customer) | Ana veri | API · SQL | ERP | Gece tam | Code | Zorunlu |
-| Proje (Project, ProjectGroup) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code | Proje bazlı planlamada |
+| Proje (Project) | Ana veri | API · SQL · Excel | ERP | Gece tam | Code | Proje bazlı planlamada |
 
 ### Veri sözleşmesi · varlıklar
 <sub>26. Entegrasyon tasarımı · Veri sözleşmesi · varlık listesi · 2/2</sub>
@@ -135,7 +135,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|
 | Location | Lokasyon | Ana veri | Tesisler, depolar ve fason depoları | lokasyon | 3 |
 | UomConversion | Birim dönüşümü | Ana veri | Malzeme bazında birimler arası çevrim oranları | birim-donusumu | 2 |
-| Material | Malzeme | Ana veri | Hammadde, yarı mamul ve nihai ürünler ile planlama bilgileri | malzeme | 4 |
+| Material | Malzeme | Ana veri | Hammadde, yarı mamul ve nihai ürünler ile planlama bilgileri | malzeme | 5 |
 | ProductionVersion | Üretim versiyonu | Ana veri | Bir malzemenin ürün ağacı ve rotasını belirleyen üretim versiyonları | uretim-versiyonu | 2 |
 | BOM | Ürün ağacı | Ana veri | Malzemelerin bileşenleri ve miktarları | urun-agaci | 2 |
 | Routing | Rota | Ana veri | Üretim operasyonları, kullandıkları kaynak grupları ve süreleri | rota | 3 |
@@ -146,17 +146,16 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | EmployeeAbsence | Çalışan izni | İşlem verisi | Çalışanların izin ve rapor kayıtları | calisan-izni | 1 |
 | Supplier | Tedarikçi | Ana veri | Tedarikçiler ve fasoncular | tedarikci | 2 |
 | MaterialSupplier | Malzeme tedarikçisi | Ana veri | Malzemelerin tedarikçileri, temin süreleri ve sipariş koşulları | malzeme-tedarikcisi | 2 |
-| Customer | Müşteri | Ana veri | Müşteriler | musteri | 2 |
-| ProjectGroup | Proje grubu | Ana veri | Stok ve kapasiteyi paylaşan proje grupları | proje-grubu | 2 |
-| Project | Proje | Ana veri | Proje bazlı planlanan işler | proje | 2 |
-| SalesOrderLine | Satış siparişi | İşlem verisi | Müşteri sipariş ve teklif satırları | satis-siparisi | 3 |
+| Customer | Müşteri | Ana veri | Müşteriler | musteri | 3 |
+| Project | Proje | Ana veri | Proje bazlı planlanan işler | proje | 3 |
+| SalesOrderLine | Satış siparişi | İşlem verisi | Müşteri sipariş ve teklif satırları | satis-siparisi | 4 |
 | Forecast | Tahmin | İşlem verisi | Malzeme ve dönem bazında talep tahminleri | tahmin | 2 |
-| Stock | Stok | İşlem verisi | Lot ve duruma göre eldeki stok | stok | 3 |
+| Stock | Stok | İşlem verisi | Lot ve duruma göre eldeki stok | stok | 5 |
 | BorrowPayback | Ödünç ve geri ödeme | İşlem verisi | Projeler arası ödünç kayıtları ve geri ödemeleri | odunc-ve-geri-odeme | 1 |
-| WorkOrder | İş emri | İşlem verisi | Açık üretim, fason ve yeniden işleme emirleri | is-emri | 3 |
+| WorkOrder | İş emri | İşlem verisi | Açık üretim, fason ve yeniden işleme emirleri | is-emri | 5 |
 | WorkOrderComponent | İş emri bileşeni | İşlem verisi | İş emirlerinin bileşenleri ve çekilen miktarlar | is-emri-bileseni | 2 |
 | WorkOrderOperation | İş emri operasyonu | İşlem verisi | İş emirlerinin operasyonları ve kalan işi | is-emri-operasyonu | 3 |
-| PurchaseOrderLine | Satın alma siparişi | İşlem verisi | Açık satın alma ve fason sipariş satırları, talepler dahil | satin-alma-siparisi | 3 |
+| PurchaseOrderLine | Satın alma siparişi | İşlem verisi | Açık satın alma ve fason sipariş satırları, talepler dahil | satin-alma-siparisi | 5 |
 | ProductionConfirmation | Üretim gerçekleşmesi | İşlem verisi | İş emri bazında stoğa girişler | uretim-gerceklesmesi | 2 |
 
 ### stg.Material
@@ -192,7 +191,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
-| IsCustomTracked | bit |  | H | Malzeme ortak havuzdan değil, belli bir talebe (proje, müşteri ya da sipariş) ayrılmış olarak takip edilir; hangi talebe ayrıldığı talep kaydından gelir | Kural ya da elle | yok |
+| IsCustomAllocated | bit |  | H | Malzeme özel alokasyonludur: bu malzemede sahibine (sipariş, proje ya da müşteri) ayrılmış arz yalnız sahibine gider; boşsa malzemenin arzı genel sayılır ve veri kalitesi uyarır (K-198) | ERP, yoksa kural | yok |
 | IsPhantom | bit |  | H | Hayalet yarı mamul | ERP | yok |
 | IsNonStockable | bit |  | H | Stok tutulamaz; üretilen ya da teslim alınan miktar beklemeden tüketilir, dönem sonu stoğu sıfırdır | ERP, yoksa kural | yok |
 | GoodsReceiptDays | decimal(9,2) |  | H | Mal kabul süresi (iş günü) | ERP, yoksa kural | yok |
@@ -484,22 +483,8 @@ FROM erp.WorkCenter;
 | Country | nvarchar(100) |  | H | Ülke | ERP | bilinmiyor |
 | Region | nvarchar(100) |  | H | Bölge | ERP | bilinmiyor |
 | City | nvarchar(100) |  | H | Şehir | ERP | bilinmiyor |
-| IsCustomTracked | bit |  | H | Bu müşterinin talepleri ortak havuzdan değil, müşteriye ayrılmış olarak takip edilir | ERP, yoksa kural | yok |
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–3 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
-
-### stg.ProjectGroup
-<sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
-
-- Proje grubu (grup içi paylaşım için).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
-
-| ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
-|---|---|---|---|---|---|---|
-| Code | nvarchar(50) | UK | E | Grup kodu | ERP ya da kural | hata (satır atlanır) |
-| Name | nvarchar(200) |  | H | Proje grubu adı | ERP ya da kural | bilinmiyor |
-| TrackingRule | nvarchar(20) |  | H | Tam izolasyon \| Ortaktan beslenir \| Grup içi paylaşım | ERP ya da kural | hata (kurallardan sonra) |
-| Priority | int |  | H | Proje grubu önceliği | ERP ya da kural | yok |
-| IsActive | bit |  | H | Aktif mi | ERP ya da kural | hata (kurallardan sonra) |
 
 ### stg.Project
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme</sub>
@@ -510,8 +495,6 @@ FROM erp.WorkCenter;
 |---|---|---|---|---|---|---|
 | Code | nvarchar(50) | UK | E | Proje kodu | ERP ya da kural | hata (satır atlanır) |
 | Name | nvarchar(200) |  | H | Proje adı | ERP ya da kural | bilinmiyor |
-| ProjectGroupCode | nvarchar(50) | REF | H | Proje grubu kodu | ERP ya da kural | yok |
-| TrackingRule | nvarchar(20) |  | H | Proje bazında takip kuralı (grubu ezer) | ERP ya da kural | gruptan |
 | Priority | int |  | H | Proje önceliği | ERP ya da kural | yok |
 | IsActive | bit |  | H | Aktif mi | ERP ya da kural | hata (kurallardan sonra) |
 | AdditionalText1–7 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
@@ -543,7 +526,6 @@ FROM erp.WorkCenter;
 | Status | nvarchar(50) |  | H | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | ERP | bilinmiyor |
 | IsActive | bit |  | H | Aktif mi | ERP, yoksa kural | hata (kurallardan sonra) |
 | IsOnHold | bit |  | H | Kredi, teknik onay ya da müşteri talebiyle bekletilen satır | ERP, yoksa kural | yok |
-| IsCustomTracked | bit |  | H | Satır düzeyinde özel takip | ERP, yoksa kural | yok |
 | IsQuote | bit |  | H | Teklif satırı; Type'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
@@ -587,7 +569,7 @@ FROM erp.WorkCenter;
 ### stg.Stock
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
-- Stok; lot ve durum bazında. Sahip: proje, müşteri, sipariş ya da ortak.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Stok; lot ve durum bazında. Bağlı proje, müşteri ya da sipariş doluysa stok ona ayrılmıştır; boşsa geneldir.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
@@ -596,10 +578,10 @@ FROM erp.WorkCenter;
 | Warehouse | nvarchar(30) | UK | H | Depo | ERP | bilinmiyor |
 | LotNo | nvarchar(50) | UK | H | Lot / seri | ERP | bilinmiyor |
 | Status | nvarchar(50) | UK | H | ERP'den ham stok durumu; veri kurallarında kullanılır, değer listesi yok | ERP | bilinmiyor |
-| ProjectCode | nvarchar(50) | UK,REF | H | Sahip proje; proje, müşteri ve sipariş boşsa stok ortaktır | ERP | yok |
-| CustomerCode | nvarchar(50) | UK,REF | H | Sahip müşteri; stoğun ayrıldığı müşteri, ileride kullanılmak üzere | ERP | yok |
-| SalesOrderNo | nvarchar(30) | UK,REF | H | Sahip sipariş no; stoğun ayrıldığı sipariş, ileride kullanılmak üzere | ERP | yok |
-| SalesOrderLineNo | int | UK,REF | H | Sahip sipariş satırı; stoğun ayrıldığı sipariş satırı, ileride kullanılmak üzere | ERP | yok |
+| ProjectCode | nvarchar(50) | UK,REF | H | Bağlı proje; stoğun ayrıldığı proje | ERP | yok |
+| CustomerCode | nvarchar(50) | UK,REF | H | Bağlı müşteri; stoğun ayrıldığı müşteri | ERP | yok |
+| SalesOrderNo | nvarchar(30) | UK,REF | H | Bağlı sipariş no; stoğun ayrıldığı sipariş, satırı boşsa siparişin bütün kalemleri (kalemsiz arz) | ERP | yok |
+| SalesOrderLineNo | int | UK,REF | H | Bağlı sipariş satırı | ERP | yok |
 | SalesOrderLineItemNo | int | UK,REF | H | Bağlı sipariş alt satırı | ERP | yok |
 | Quantity | decimal(18,4) |  | E | Miktar | ERP | hata (satır atlanır) |
 | Uom | nvarchar(10) | REF | H | Miktarın birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | ERP | temel birim |
@@ -610,7 +592,6 @@ FROM erp.WorkCenter;
 | IsInQuality | bit |  | H | Stok planda kalitede sayılır; Status ve depoya göre veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | IsBlocked | bit |  | H | Stok planda bloke sayılır; Status ve depoya göre veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | IsActive | bit |  | H | Aktif mi | ERP, yoksa kural | hata (kurallardan sonra) |
-| IsCustomTracked | bit |  | H | Stok düzeyinde özel takip | ERP, yoksa kural | yok |
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
@@ -635,10 +616,10 @@ FROM erp.WorkCenter;
 | Uom | nvarchar(10) | REF | H | Miktarların birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | ERP | temel birim |
 | StartDate | date |  | H | Başlangıç | ERP | bilinmiyor |
 | DueDate | date |  | E | Bitiş | ERP | hata (satır atlanır) |
-| ProjectCode | nvarchar(50) | REF | H | Proje (ayraç) | ERP | yok |
-| CustomerCode | nvarchar(50) | REF | H | Müşteri | ERP | yok |
-| SalesOrderNo | nvarchar(30) | REF | H | Bağlı sipariş no (ayraç) | ERP | yok |
-| SalesOrderLineNo | int | REF | H | Bağlı sipariş satır no | ERP | yok |
+| ProjectCode | nvarchar(50) | REF | H | Bağlı proje; i̇ş emrinin ayrıldığı proje | ERP | yok |
+| CustomerCode | nvarchar(50) | REF | H | Bağlı müşteri; i̇ş emrinin ayrıldığı müşteri | ERP | yok |
+| SalesOrderNo | nvarchar(30) | REF | H | Bağlı sipariş no; i̇ş emrinin ayrıldığı sipariş, satırı boşsa siparişin bütün kalemleri (kalemsiz arz) | ERP | yok |
+| SalesOrderLineNo | int | REF | H | Bağlı sipariş satırı | ERP | yok |
 | SalesOrderLineItemNo | int | REF | H | Bağlı sipariş alt satırı | ERP | yok |
 | ParentWorkOrderNo | nvarchar(30) | REF | H | Yeniden işlemede orijinal iş emri | Kural ya da elle | yok |
 | LastActivityDate | date |  | H | Son hareket tarihi (eskime kontrolü) | ERP | bilinmiyor |
@@ -649,7 +630,6 @@ FROM erp.WorkCenter;
 | IsSubcontract | bit |  | H | Fason iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | IsRework | bit |  | H | Yeniden işleme iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | IsOnHold | bit |  | H | Bekletilen iş emri | ERP, yoksa kural | yok |
-| IsCustomTracked | bit |  | H | İş emri düzeyinde özel takip | ERP, yoksa kural | yok |
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
@@ -723,9 +703,9 @@ FROM erp.WorkCenter;
 | Uom | nvarchar(10) | REF | H | Miktarların birimi; boşsa malzemenin temel biriminde kabul edilir, doluysa birim dönüşümüyle çevrilir | ERP | temel birim |
 | RequestedDate | date |  | H | İstenen tarih | ERP | bilinmiyor |
 | ConfirmedDate | date |  | H | Tedarikçi teyit tarihi | ERP | bilinmiyor |
-| ProjectCode | nvarchar(50) | REF | H | Proje | ERP | yok |
-| CustomerCode | nvarchar(50) | REF | H | Müşteri | ERP | yok |
-| SalesOrderNo | nvarchar(30) | REF | H | Bağlı sipariş no | ERP | yok |
+| ProjectCode | nvarchar(50) | REF | H | Bağlı proje; satın alma satırının ayrıldığı proje | ERP | yok |
+| CustomerCode | nvarchar(50) | REF | H | Bağlı müşteri; satın alma satırının ayrıldığı müşteri | ERP | yok |
+| SalesOrderNo | nvarchar(30) | REF | H | Bağlı sipariş no; satın alma satırının ayrıldığı sipariş, satırı boşsa siparişin bütün kalemleri (kalemsiz arz) | ERP | yok |
 | SalesOrderLineNo | int | REF | H | Bağlı sipariş satırı | ERP | yok |
 | SalesOrderLineItemNo | int | REF | H | Bağlı sipariş alt satırı | ERP | yok |
 | WorkOrderNo | nvarchar(30) | REF | H | Fasonda bağlı iş emri | ERP | yok |
@@ -734,7 +714,6 @@ FROM erp.WorkCenter;
 | IsPurchase | bit |  | H | Satın alma siparişi; OrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | IsSubcontract | bit |  | H | Fason siparişi; OrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | IsActive | bit |  | H | Aktif mi | ERP, yoksa kural | hata (kurallardan sonra) |
-| IsCustomTracked | bit |  | H | Satır düzeyinde özel takip | ERP, yoksa kural | yok |
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
@@ -833,9 +812,10 @@ FROM erp.WorkCenter;
 <sub>26. Entegrasyon tasarımı · Referans kontrolü ve kod→Id</sub>
 
 - Her ilişki alanının baktığı tablo ve anahtar. Validasyon (fonksiyon 04) referans ve pasif ebeveyn kurallarını buradan üretir; aktarım (fonksiyon 05, 5.2) kodu `core` Id'sine bu haritayla çevirir. Kodda `app/integration/references.py`; test ikisini karşılaştırır.
-- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. Rota ve iş emri operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). **Zorunlu (doluysa)** istisnadır: kaydın anahtarının parçası olan isteğe bağlı bağlantı Zorunlu (doluysa)dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi, Stokun sahip alanları; K-153): boş yazılsaydı anahtar değişirdi.
+- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. Rota ve iş emri operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). **Zorunlu (doluysa)** istisnadır: kaydın anahtarının parçası olan isteğe bağlı bağlantı Zorunlu (doluysa)dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi; K-153. Stok'un bağlı proje, müşteri ve siparişi K-198'de isteğe bağlı oldu: anahtar ERP'den gelen ham alanlardadır): boş yazılsaydı anahtar değişirdi.
 - **PASİF EBEVEYN:** ebeveyn bulunur ama `IsActive` = Hayır ise satırdaki bulgunun sınıfı; satır aktarılmaz. "—": bulgu yazılmaz, aktarım ebeveyn yokmuş gibi davranır (zorunluysa satır aktarılmaz, isteğe bağlıysa bağlantı boş).
-- **Eşleşme:** ALAN ve EBEVEYN ANAHTARI aynı sırayla eşleşir. Birden çok alanlı ilişkide (bağlı sipariş satırı) ilk alan doluysa bakılır; öteki alanlar boşsa eşleşmeyi daraltmaz. Proje, müşteri, tedarikçi ve proje grubu lokasyondan bağımsızdır; birim dönüşümünün malzemesi herhangi bir lokasyonda bulunursa yeter (K-112).
+- **Eşleşme:** ALAN ve EBEVEYN ANAHTARI aynı sırayla eşleşir. Birden çok alanlı ilişkide (bağlı sipariş satırı) ilk alan doluysa bakılır; öteki alanlar boşsa eşleşmeyi daraltmaz. **Kalemsiz arz (K-198):** bağlı siparişte satır no boşsa validasyon yalnız sipariş no'nun o lokasyonda en az bir satırını arar; aktarım bağlantıyı (`SalesOrderLineId`) boş yazar, siparişin ilk satırına bağlamaz. Sipariş no, satır no ve alt satır no `core`'da ayrı alanlarda ERP'den geldiği gibi durur. Proje, müşteri ve tedarikçi lokasyondan bağımsızdır; birim dönüşümünün malzemesi herhangi bir lokasyonda bulunursa yeter (K-112).
+- **Özel alokasyon (K-198; uygulandı, sürüm 0.57.0):** Stok, iş emri ve satın alma satırının `IsCustomAllocated`, `AllocationLevel` ve `AllocationKey` alanları sözleşmede yoktur; aktarım hesaplar (`app/allocation`). Malzeme özel alokasyonluysa satırda ERP'nin yazdığı en detaylı sahip (bağlı sipariş → bağlı proje → bağlı müşteri) anahtardır; hesap satırın kendi alanlarına ve malzemeye bakar, sahibin sistemde bulunmasına bakmaz. Bu yüzden arzın sahip ilişkileri (proje, müşteri, sipariş) üç tabloda da **isteğe bağlıdır**: sahip bulunamazsa Uyarı yazılır, satır aktarılır, iç bağ (`ProjectId`, `CustomerId`, `SalesOrderLineId`) boş kalır, ERP'nin yazdığı kod `core`'da durur (`ProjectCode`, `CustomerCode`, `SalesOrderNo`…) ve anahtar ondan kurulur; arz genele düşmez. Stok'un tekil anahtarı da bu ham alanlardadır. Her aktarımın sonunda bütün arz tablolarının güncel satırları yeniden hesaplanır (malzemenin alanı değişmiş olabilir); değeri değişen satır yeni versiyon açar.
 - **Ortak ve dışarıda:** `LocationCode` → Lokasyon (`Code`) her tabloda zorunludur (`ALL.REF_LOCATION`), tabloda ayrıca yazılmaz. Birim alanları (`BaseUom`, `FromUom`, `ToUom`, `ComponentUom`, `Uom`, `CapacityUnit`) referans kontrolüne girmez (K-112); dönüşümü `ALL.UOM_CONVERSION` denetler.
 
 | TABLO | ALAN | EBEVEYN | EBEVEYN ANAHTARI | İLİŞKİ | PASİF EBEVEYN | KOD |
@@ -856,7 +836,6 @@ FROM erp.WorkCenter;
 | EmployeeAbsence | LocationCode + ResourceCode | Resource | LocationCode + Code | Zorunlu | — | ABS.REF_RESOURCE |
 | MaterialSupplier | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | MS.REF_MATERIAL |
 | MaterialSupplier | SupplierCode | Supplier | Code | Zorunlu | Uyarı | MS.REF_SUPPLIER |
-| Project | ProjectGroupCode | ProjectGroup | Code | İsteğe bağlı | — | PRJ.REF_PROJECT_GROUP |
 | SalesOrderLine | CustomerCode | Customer | Code | Zorunlu | Uyarı | SO.REF_CUSTOMER |
 | SalesOrderLine | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Uyarı | SO.REF_MATERIAL |
 | SalesOrderLine | ProjectCode | Project | Code | İsteğe bağlı | — | SO.REF_PROJECT |
@@ -864,9 +843,9 @@ FROM erp.WorkCenter;
 | Forecast | CustomerCode | Customer | Code | Zorunlu (doluysa) | — | FC.REF_CUSTOMER |
 | Forecast | ProjectCode | Project | Code | Zorunlu (doluysa) | — | FC.REF_PROJECT |
 | Stock | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | Bilgi | STK.REF_MATERIAL |
-| Stock | ProjectCode | Project | Code | Zorunlu (doluysa) | — | STK.REF_PROJECT |
-| Stock | CustomerCode | Customer | Code | Zorunlu (doluysa) | — | STK.REF_CUSTOMER |
-| Stock | LocationCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | SalesOrderLine | LocationCode + OrderNo + LineNo + LineItemNo | Zorunlu (doluysa) | — | STK.REF_SALES_ORDER |
+| Stock | ProjectCode | Project | Code | İsteğe bağlı | — | STK.REF_PROJECT |
+| Stock | CustomerCode | Customer | Code | İsteğe bağlı | — | STK.REF_CUSTOMER |
+| Stock | LocationCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | SalesOrderLine | LocationCode + OrderNo + LineNo + LineItemNo | İsteğe bağlı | — | STK.REF_SALES_ORDER |
 | BorrowPayback | LocationCode + MaterialCode | Material | LocationCode + Code | Zorunlu | — | BP.REF_MATERIAL |
 | BorrowPayback | LendingProjectCode | Project | Code | Zorunlu | — | BP.REF_LENDING_PROJECT |
 | BorrowPayback | BorrowingProjectCode | Project | Code | Zorunlu | — | BP.REF_BORROWING_PROJECT |

@@ -6,6 +6,7 @@ import json
 import openpyxl
 import pytest
 import sqlalchemy as sa
+import testdb
 from sqlalchemy.orm import Session
 
 from app.api.permissions import END_USER, KEY_USER
@@ -50,12 +51,8 @@ def history(db_engine):
         versions = dict(c.execute(sa.text("SELECT JobId, Id FROM adm.DataVersion WHERE JobId IN (:a, :b)"), {"a": full, "b": partial}).all())
     yield {"key": key, "end": end, "full": full, "partial": partial, "failed": failed, "versions": versions}
     with db_engine.begin() as c:
-        v = versions[full]
-        c.execute(sa.text("DELETE FROM core.Customer WHERE VersionFrom = :v"), {"v": v})
-        c.execute(sa.text("UPDATE core.Customer SET VersionTo = NULL WHERE VersionTo = :t"), {"t": v - 1})
-        for version in versions.values():
-            c.execute(sa.text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId = :v"), {"v": version})
-            c.execute(sa.text("DELETE FROM adm.DataVersion WHERE Id = :v"), {"v": version})
+        for version in sorted(versions.values(), reverse=True):
+            testdb.undo_transfer(c, version)
     clean(db_engine)
 
 
@@ -89,7 +86,7 @@ def test_report_reads_version_entities_not_job_result(history, db_engine):
     body = client.get(f"/api/transfers/{h['full']}", headers=auth(h["key"])).json()
     tables = {t["entity"]: t for t in body["tables"]}
     assert body["data_version"] == h["versions"][h["full"]] and body["transfer_type"] == "Tam" and body["requested_by_name"] == "Geçmiş Key"
-    assert len(tables) == 25 and tables["Customer"]["new"] == 1 and tables["Forecast"]["note"] == "Veri gelmedi; mevcut veri korunur."
+    assert len(tables) == 24 and tables["Customer"]["new"] == 1 and tables["Forecast"]["note"] == "Veri gelmedi; mevcut veri korunur."
     assert [t["entity"] for t in body["tables"]][:2] == ["Location", "Material"]               # aktarım sırasıyla
     partial = client.get(f"/api/transfers/{h['partial']}", headers=auth(h["key"])).json()
     assert partial["transfer_type"] == "Kısmi" and partial["groups"] == ["Stok", "İzin"]

@@ -357,13 +357,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | SO.DELIVERED | SalesOrderLine | Teslim edilen sipariş miktarından büyük | Teslim edilen miktar > Sipariş miktarı | Uyarı | Hayır | Mantıksal | Evet |  |
 | SO.OPEN_MISMATCH | SalesOrderLine | Açık miktar sipariş eksi teslime eşit değil | Açık miktar ≠ Sipariş miktarı − Teslim edilen miktar (üçü de doluysa) | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
 | SO.PAST_DUE | SalesOrderLine | Teslim tarihi geçmiş açık satış siparişi | Açık miktar > 0 ve İstek tarihi geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
-| STK.LINE_NO_ORDER | Stock | Sipariş satırı var, sipariş no yok | Sahip sipariş satırı boş değil ve Sahip sipariş no boş | Hata |  | Mantıksal | Evet |  |
+| STK.LINE_NO_ORDER | Stock | Sipariş satırı var, sipariş no yok | Bağlı sipariş satırı boş değil ve Bağlı sipariş no boş | Hata |  | Mantıksal | Evet |  |
 | STK.ACCEPT_DATE | Stock | Kabul tarihi kaliteye girişten önce | Beklenen kabul tarihi < Kaliteye giriş tarihi | Hata |  | Mantıksal | Evet |  |
 | STK.STATUS_FLAGS | Stock | Stok durumu tek değil | Kullanılabilir, Kalitede, Bloke bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
 | STK.QUALITY_NO_DATE | Stock | Kalitedeki stokun kabul tarihi yok | Beklenen kabul tarihi boş ve Kalitede = Evet | Uyarı | Evet | Mantıksal | Evet |  |
 | STK.EXPIRED | Stock | Son kullanma tarihi geçmiş | Kullanılabilir stokta son kullanma tarihi geçmiş | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
 | STK.NON_STOCKABLE | Stock | Stok tutulamaz malzemede stok | Stok tutulamaz malzemede stok kaydı (K-113) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Material |
-| STK.CUSTOM_NO_OWNER | Stock | Özel takipli stokun sahibi yok | Özel takip = Evet ve Sahip proje boş ve Sahip müşteri boş ve Sahip sipariş no boş | Uyarı | Evet | Mantıksal | Evet |  |
 | STK.ZERO_QTY | Stock | Stok miktarı sıfır | Miktar = 0 | Bilgi |  | Mantıksal | Evet |  |
 | BP.SAME_PROJECT | BorrowPayback | Ödünç veren ve alan proje aynı | Ödünç alan proje = Ödünç veren proje | Hata |  | Mantıksal | Evet |  |
 | BP.QTY | BorrowPayback | Ödünç miktarı sıfır ya da negatif | Ödünç miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
@@ -372,13 +371,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | WO.QTY | WorkOrder | İş emri miktarı sıfır ya da negatif | İş emri miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
 | WO.START_DUE | WorkOrder | Başlangıç bitişten sonra | Başlangıç > Bitiş | Hata |  | Mantıksal | Evet |  |
 | WO.SELF_PARENT | WorkOrder | İş emri kendisinin yeniden işlemesi | Yeniden işlemede orijinal iş emri = İş emri no | Hata |  | Mantıksal | Evet |  |
-| WO.LINE_NO_ORDER | WorkOrder | Sipariş satırı var, sipariş no yok | Bağlı sipariş satır no boş değil ve Bağlı sipariş no (ayraç) boş | Hata |  | Mantıksal | Evet |  |
+| WO.LINE_NO_ORDER | WorkOrder | Sipariş satırı var, sipariş no yok | Bağlı sipariş satırı boş değil ve Bağlı sipariş no boş | Hata |  | Mantıksal | Evet |  |
 | WO.OPEN_ORDERED | WorkOrder | Açık miktar iş emri miktarından büyük | Açık miktar > İş emri miktarı | Uyarı | Evet | Mantıksal | Evet |  |
 | WO.ZERO_OPEN | WorkOrder | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Hayır | Mantıksal | Evet |  |
 | WO.TYPE_FLAGS | WorkOrder | İş emri tipi tek değil | Üretim, Fason, Yeniden işleme bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
 | WO.PAST_DUE | WorkOrder | Bitiş tarihi geçmiş açık iş emri | Açık miktar > 0 ve Bitiş geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
 | WO.REWORK_NO_PARENT | WorkOrder | Yeniden işlemenin orijinal iş emri yok | Yeniden işlemede orijinal iş emri boş ve Yeniden işleme = Evet | Uyarı | Hayır | Mantıksal | Evet |  |
-| WO.CUSTOM_NO_OWNER | WorkOrder | Özel takipli iş emrinin sahibi yok | Özel takip = Evet ve Proje (ayraç) boş ve Müşteri boş ve Bağlı sipariş no (ayraç) boş | Uyarı | Evet | Mantıksal | Evet |  |
 | WOC.ISSUED | WorkOrderComponent | Çekilen gereken miktardan fazla | Çekilen miktar > Gereken miktar | Uyarı | Hayır | Mantıksal | Evet |  |
 | WOO.RESOURCE_NUMBER | WorkOrderOperation | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata |  | Mantıksal | Evet |  |
 | WOO.CONFIRMED | WorkOrderOperation | Teyit edilen tüketim planlanandan fazla | Teyit edilen tüketim > Planlanan tüketim | Uyarı | Hayır | Mantıksal | Evet |  |
@@ -389,7 +387,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PO.NO_SUPPLIER | PurchaseOrderLine | Tedarikçi yok | Tedarikçi boş ve Satın alma talebi ≠ Evet | Uyarı | Hayır | Mantıksal | Evet |  |
 | PO.NO_DATE | PurchaseOrderLine | İstenen ve teyit tarihi yok | İstenen tarih boş ve Tedarikçi teyit tarihi boş | Uyarı | Evet | Mantıksal | Evet |  |
 | PO.PAST_DUE | PurchaseOrderLine | Tarihi geçmiş açık satın alma siparişi | Açık miktar > 0 ve Tedarikçi teyit tarihi (boşsa İstenen tarih) geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
-| PO.CUSTOM_NO_OWNER | PurchaseOrderLine | Özel takipli siparişin sahibi yok | Özel takip = Evet ve Proje boş ve Müşteri boş ve Bağlı sipariş no boş | Uyarı | Evet | Mantıksal | Evet |  |
 | PC.QTY | ProductionConfirmation | Teyit miktarı sıfır ya da negatif | Teyit miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
 | PC.MATERIAL | ProductionConfirmation | Malzeme iş emrininkinden farklı | Malzeme, iş emrinin malzemesinden farklı | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | ALL.REF_LOCATION | Hepsi | Lokasyon bulunamadı | Lokasyon kodu Lokasyon tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Location |
@@ -414,7 +411,6 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | MS.REF_MATERIAL | MaterialSupplier | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | MS.REF_SUPPLIER | MaterialSupplier | Tedarikçi bulunamadı | Tedarikçi kodu Tedarikçi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Supplier |
 | MS.INACTIVE_SUPPLIER | MaterialSupplier | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | Supplier |
-| PRJ.REF_PROJECT_GROUP | Project | Proje grubu bulunamadı | Proje grubu kodu dolu ve Proje grubu tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProjectGroup |
 | SO.REF_CUSTOMER | SalesOrderLine | Müşteri bulunamadı | Müşteri kodu Müşteri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Customer |
 | SO.INACTIVE_CUSTOMER | SalesOrderLine | Müşteri pasif | Müşteri bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
 | SO.REF_MATERIAL | SalesOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
@@ -426,18 +422,18 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | FC.REF_PROJECT | Forecast | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
 | STK.REF_MATERIAL | Stock | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | STK.INACTIVE_MATERIAL | Stock | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Material |
-| STK.REF_PROJECT | Stock | Sahip proje bulunamadı | Sahip proje kodu dolu ve Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
-| STK.REF_CUSTOMER | Stock | Sahip müşteri bulunamadı | Sahip müşteri kodu dolu ve Müşteri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Customer |
-| STK.REF_SALES_ORDER | Stock | Sahip sipariş satırı bulunamadı | Sahip sipariş satırı dolu ve Satış siparişi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| STK.REF_PROJECT | Stock | Bağlı proje bulunamadı | Bağlı proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
+| STK.REF_CUSTOMER | Stock | Bağlı müşteri bulunamadı | Bağlı müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
+| STK.REF_SALES_ORDER | Stock | Bağlı sipariş bulunamadı | Bağlı sipariş numarası dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
 | BP.REF_MATERIAL | BorrowPayback | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | BP.REF_LENDING_PROJECT | BorrowPayback | Ödünç veren proje bulunamadı | Ödünç veren proje kodu Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
 | BP.REF_BORROWING_PROJECT | BorrowPayback | Ödünç alan proje bulunamadı | Ödünç alan proje kodu Proje tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Project |
 | WO.REF_MATERIAL | WorkOrder | Üretilen malzeme bulunamadı | Üretilen malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | WO.INACTIVE_MATERIAL | WorkOrder | Üretilen malzeme pasif | Üretilen malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
 | WO.REF_VERSION | WorkOrder | Üretim versiyonu bulunamadı | Üretim versiyonu kodu dolu ve Üretim versiyonu tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | ProductionVersion |
-| WO.REF_PROJECT | WorkOrder | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
-| WO.REF_CUSTOMER | WorkOrder | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
-| WO.REF_SALES_ORDER | WorkOrder | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| WO.REF_PROJECT | WorkOrder | Bağlı proje bulunamadı | Bağlı proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
+| WO.REF_CUSTOMER | WorkOrder | Bağlı müşteri bulunamadı | Bağlı müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
+| WO.REF_SALES_ORDER | WorkOrder | Bağlı sipariş bulunamadı | Bağlı sipariş numarası dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
 | WO.REF_PARENT_WORK_ORDER | WorkOrder | Orijinal iş emri bulunamadı | Orijinal iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | WOC.REF_WORK_ORDER | WorkOrderComponent | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | WOC.REF_MATERIAL | WorkOrderComponent | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
@@ -447,9 +443,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PO.INACTIVE_MATERIAL | PurchaseOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
 | PO.REF_SUPPLIER | PurchaseOrderLine | Tedarikçi bulunamadı | Tedarikçi kodu dolu ve Tedarikçi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Supplier |
 | PO.INACTIVE_SUPPLIER | PurchaseOrderLine | Tedarikçi pasif | Tedarikçi bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Supplier |
-| PO.REF_PROJECT | PurchaseOrderLine | Proje bulunamadı | Proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
-| PO.REF_CUSTOMER | PurchaseOrderLine | Müşteri bulunamadı | Müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
-| PO.REF_SALES_ORDER | PurchaseOrderLine | Bağlı sipariş satırı bulunamadı | Bağlı sipariş satırı dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
+| PO.REF_PROJECT | PurchaseOrderLine | Bağlı proje bulunamadı | Bağlı proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
+| PO.REF_CUSTOMER | PurchaseOrderLine | Bağlı müşteri bulunamadı | Bağlı müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
+| PO.REF_SALES_ORDER | PurchaseOrderLine | Bağlı sipariş bulunamadı | Bağlı sipariş numarası dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
 | PO.REF_WORK_ORDER | PurchaseOrderLine | Bağlı iş emri bulunamadı | Bağlı iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | PC.REF_WORK_ORDER | ProductionConfirmation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | PC.REF_MATERIAL | ProductionConfirmation | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
@@ -468,7 +464,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | WOC.OPERATION_NOT_IN_WO | WorkOrderComponent | Bileşenin operasyonu iş emrinde yok | Operasyon no dolu, iş emrinin operasyonları var ve bu operasyon aralarında yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | WorkOrderOperation |
 | PO.SUPPLIER_NOT_LISTED | PurchaseOrderLine | Tedarikçi malzemenin tedarikçilerinde yok | Fason olmayan siparişte tedarikçi bulunuyor ve bu malzemenin malzeme tedarikçisi kayıtlarında yok | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Supplier, MaterialSupplier |
 
-- Müşteri ve Proje grubu: yalnız ortak kurallar (lokasyondan bağımsızdırlar; tablolar arası kural yoktur).
+- Müşteri: yalnız ortak kurallar (lokasyondan bağımsızdır; tablolar arası kural yoktur).
 - **Uygulama (4.4, K-146):** referans, pasif ebeveyn ve bütünlük kuralları Tablolar arası adımda çalışır; her biri tek `INSERT … SELECT … WHERE [NOT] EXISTS`.
 
 ### 04 · Validasyon · Sonuç özeti
@@ -591,7 +587,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 06 · Kısmi aktarım
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Çalışma prensibi 1/3</sub>
 
-- Yalnız seçilen işlem verisi gruplarını yeni veri versiyonuna almak; ana veri aktarılmaz, seçilmeyen gruplar core'da olduğu gibi kalır (K-150). Gruplar: **Talep** (Satış siparişi, Tahmin, Proje, Proje grubu), **Stok** (Stok, Ödünç ve geri ödeme), **Üretim** (İş emri, İş emri bileşeni, İş emri operasyonu, Üretim gerçekleşmesi), **Satın alma** (Satın alma siparişi), **İzin** (Çalışan izni). Proje ve Proje grubu katalogda Ana veridir, kısmi aktarımda istisna olarak Talep grubuyla gelir. Gün içi talep, stok ve üretim tazelemesinin yolu.
+- Yalnız seçilen işlem verisi gruplarını yeni veri versiyonuna almak; ana veri aktarılmaz, seçilmeyen gruplar core'da olduğu gibi kalır (K-150). Gruplar: **Talep** (Satış siparişi, Tahmin, Proje), **Stok** (Stok, Ödünç ve geri ödeme), **Üretim** (İş emri, İş emri bileşeni, İş emri operasyonu, Üretim gerçekleşmesi), **Satın alma** (Satın alma siparişi), **İzin** (Çalışan izni). Proje katalogda Ana veridir, kısmi aktarımda istisna olarak Talep grubuyla gelir. Gün içi talep, stok ve üretim tazelemesinin yolu.
 
 #### NASIL ÇALIŞIR
 
@@ -629,7 +625,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Açık çalışmalara 'yeni veri var' bildirimi (seçime bağlı).
   - Veri kalitesi listesi kapsam dahilinde güncellenir.
   - Ana sayfa 'dünden bugüne' ve ana veri ekranları.
-- **ÖRNEK:** Öğlen akışı Talep ve Stok gruplarını aktarır: Satış siparişi, Tahmin, Proje, Proje grubu, Stok, Ödünç ve geri ödeme. Yeni bir malzeme koduna bakan 2 sipariş satırı aktarılmaz (malzeme gece tam aktarımda gelecek), raporda "ana verisi aktarılmadı · 2". v232 kısmi: 6 tablo yeni, öteki tablolar v231'den. 38 sn.
+- **ÖRNEK:** Öğlen akışı Talep ve Stok gruplarını aktarır: Satış siparişi, Tahmin, Proje, Stok, Ödünç ve geri ödeme. Yeni bir malzeme koduna bakan 2 sipariş satırı aktarılmaz (malzeme gece tam aktarımda gelecek), raporda "ana verisi aktarılmadı · 2". v232 kısmi: 5 tablo yeni, öteki tablolar v231'den. 38 sn.
 
 - **Uygulama (5.3, K-155):** Veri yükleme ekranında "Kısmi aktar": pencerede grup seçimi (hiçbiri seçili açılır), seçilen grupların tabloları güncel satır, Hatalı ve notuyla; başlatılamıyorsa nedeni. Sonuç "Veri aktarım raporu" (tam aktarımla aynı pencere). Bağlı ana verisi mevcut veride olmayan satırın mevcut hâli kalır, notu "bekliyor". Gelen veride pasif ama mevcut veride aktif ana veriye bakan satır aktarılır.
 
@@ -2038,7 +2034,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Öncelik grubu:** 1–5 arası tam sayı; küçük olan önce gelir. Üç düzeyde girilebilir, hepsi isteğe bağlıdır.
 - **01:** Müşteri, Proje ya da Sipariş sekmesinde "Öncelik grubu" hücresine 1–5 yazılır ya da listeden seçilir; hücre boşaltılırsa değer kalkar. Birden çok satır seçiliyken birine yazılan değer hepsine uygulanır (K-187); Excel'den yapıştırılabilir.
 - **02:** Her düzeyde Öncelik grubu doluysa o, boşsa ERP önceliği (mevcut `Priority` alanı; 1–5 dışındaysa yok sayılır) alınır.
-- **03:** Hiyerarşi sabittir: siparişin değeri varsa o; yoksa projesinin; o da yoksa müşterisinin; hiçbiri yoksa 5. Tahminde proje → müşteri; ikisi de yoksa 5. Proje grubu hiyerarşiye girmez.
+- **03:** Hiyerarşi sabittir: siparişin değeri varsa o; yoksa projesinin; o da yoksa müşterisinin; hiçbiri yoksa 5. Tahminde proje → müşteri; ikisi de yoksa 5.
 - **04:** Sipariş ve tahminde "Geçerli öncelik grubu" ve "Öncelik kaynağı" (Sipariş · Proje · Müşteri · Yok) hesaplanır; girilen değerle ayrı kolonlardır. İşlem verisi › Satış siparişi ve Tahmin listelerinde de alan olarak açılabilir (seçili senaryoya göre).
 - **Kartlar:** Müşteri ve Proje sekmelerinde kayıt seçilince o kaydın açık siparişleri ve tahminleri; Sipariş sekmesinde siparişin müşterisi ve projesi (kendi ERP önceliği ve öncelik gruplarıyla); Geçmiş.
 - **GIRDI**
@@ -2240,7 +2236,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Parametre seti: zaman yapısı, öncelik ve alokasyon kuralı, 'aynı proje arzı varken yeni arz' ayarı
   - Çalışma geçici değişiklikleri ve sabitlemeler (WorkspaceOverride)
 - **03:** Sahiplik: stok lotları ve açık arz proje ya da ortak olarak etiketlenir; pasif ve hatalı kayıtlar dışarıda kalır.
-- **04:** LLC sırasıyla proje bazlı netleştirme: her malzemede önce aynı projenin stoğu ve kesin arzı, sonra ortak stok ve ortak arz; grup içi paylaşım proje grubu kuralına göre.
+- **04:** LLC sırasıyla proje bazlı netleştirme: her malzemede önce aynı projenin stoğu ve kesin arzı, sonra ortak stok ve ortak arz. Not: özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
 - **05:** Aynı projenin kesin arzı (iş emri, satın alma) ihtiyacı karşılıyorsa yeni arz ihtiyacı doğmaz; tarih uymuyorsa öne çek / ertele adayı olarak işaretlenir (36).
 - **ÇIKTI**
   - CapacityLoad brüt / duruş / net kapasite satırları (kaynak × bucket)
@@ -2253,7 +2249,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F29 · D Planlama motoru · Çalışma prensibi 2/3</sub>
 
 - **KURALLAR VE SINIRLAR**
-  - Netleştirme her zaman LLC sırasıyla ve öncelik kuralıyla; proje stoğu başka projeye verilmez (proje grubu kuralı hariç).
+  - Netleştirme her zaman LLC sırasıyla ve öncelik kuralıyla; proje stoğu başka projeye verilmez. Not: özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
   - Model proje görmez: tek havuz. Proje kırılımı yalnız ön ve son hesaptadır.
   - 'Aynı projenin kesin arzı varken yeni arz üretilsin mi' parametresi varsayılan hayır.
   - Sabit dönemdeki iş emirleri olduğu gibi alınır; kapasiteden düşülür.
@@ -2268,7 +2264,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Pegging ekranında proje / ortak kırılımı ve netleştirme izi görünür.
   - Sistem sağlığında aşama süreleri.
 - **ÖRNEK:** Ağaç A → B → C (2 adet) → D. X projesi için A talebi 100 (H46). D stoğu: X'e ayrılmış 60, ortak 50. LLC sırasıyla ihtiyaç D = 200: 60 proje stoğu + 50 ortak, 90 eksik. Model tek havuzda 90 D kararı verir; son hesap bu 90'ı pegging ile X projesine yazar.
-- **AÇIK KONU:** Proje grubu içinde paylaşım sırası (önce hangi projeden) parametre mi, sabit kural mı?
+- **Not (K-198):** proje grubu ve takip kuralı kalktı; paylaşım sırası açık konusu geçersiz.
 
 ### 29 · Ön hesap · yeniden hesaplanacak alanlar
 <sub>24. Ekranlar ve fonksiyonlar · F29 · D Planlama motoru · Çalışma prensibi 3/3</sub>
@@ -2304,6 +2300,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 30 · MRP patlatma
 <sub>24. Ekranlar ve fonksiyonlar · F30 · D Planlama motoru · Çalışma prensibi 1/2</sub>
 
+- **Not (K-198):** özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
 - Bağımsız talebi ağaç üzerinden bağımlı talebe çevirmek; dört aşamalı netleştirmeyle net ihtiyaç, sipariş adayları ve pegging iskeleti.
 
 #### NASIL ÇALIŞIR
@@ -2648,6 +2645,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 35 · Son hesap
 <sub>24. Ekranlar ve fonksiyonlar · F35 · D Planlama motoru · Çalışma prensibi 1/2</sub>
 
+- **Not (K-198):** özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
 - Model çıktısını kullanıcı diline çevirmek: satın alma yuvarlama, planlı siparişler, pegging ile proje geri yazma, doluluk ve stok.
 
 #### NASIL ÇALIŞIR
@@ -4338,6 +4336,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 58 · Manuel pegging
 <sub>24. Ekranlar ve fonksiyonlar · F58 · F Manuel planlama · Çalışma prensibi 1/2</sub>
 
+- **Not (K-198):** özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
 - Belirli bir stok lotunu ya da arzı belirli bir siparişe elle bağlamak; model bu bağı sabit alır.
 
 #### NASIL ÇALIŞIR
@@ -4802,6 +4801,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 64 · Malzeme planı
 <sub>24. Ekranlar ve fonksiyonlar · F64 · G Malzeme ve öneriler · Çalışma prensibi 1/2</sub>
 
+- **Not (K-198):** özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
 - Çalışmadaki plan hesabının malzeme sonuçlarını dönem bazında göstermek: brüt ihtiyaç, açık arz, planlı sipariş, stok projeksiyonu ve eksik; projeye ayrılmış stok ile ortak stoğu ayrı izlemek.
 
 #### NASIL ÇALIŞIR
@@ -5255,6 +5255,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 70 · Pegging
 <sub>24. Ekranlar ve fonksiyonlar · F70 · H Analiz · Çalışma prensibi 1/2</sub>
 
+- **Not (K-198):** özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
 - Bir talebin hangi stok, iş emri, satın alma ya da planlı siparişle karşılandığını (talepten aşağı) ve bir arzın hangi talepleri beslediğini (arzdan yukarı) ağaç olarak göstermek; eksikliğin nerede doğduğunu düğüm düğüm görünür kılmak.
 
 #### NASIL ÇALIŞIR
@@ -5403,6 +5404,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 72 · Termin sorgusu
 <sub>24. Ekranlar ve fonksiyonlar · F72 · H Analiz · Çalışma prensibi 1/3</sub>
 
+- **Not (K-198):** özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
 - Yeni bir talep için (ürün, miktar, istenen tarih) mevcut planı bozmadan en erken teslim tarihini, bölerek teslim seçeneğini ve termini kısıtlayan kaynak ya da malzemeyi hesaplamak; satış ve planlamanın teklif öncesi sorusuna hızlı cevap vermek.
 
 #### NASIL ÇALIŞIR

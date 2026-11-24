@@ -37,7 +37,6 @@ REFS: dict[str, tuple[str, str, Callable, str | None]] = {
     "ProductionVersionId": ("ProductionVersion", "ProductionVersionCode", _code, "Code"),
     "ResourceId": ("Resource", "ResourceCode", _code, "Code"), "ResourceGroupId": ("ResourceGroup", "ResourceGroupCode", _code, "Code"),
     "SupplierId": ("Supplier", "SupplierCode", _code, "Code"), "SubcontractorId": ("Supplier", "SubcontractorCode", _code, "Code"),
-    "ProjectGroupId": ("ProjectGroup", "ProjectGroupCode", _code, "Code"),
     "CustomerId": ("Customer", "CustomerCode", _code, "Code"), "ProjectId": ("Project", "ProjectCode", _code, "Code"),
     "LendingProjectId": ("Project", "LendingProjectCode", _code, "Code"), "BorrowingProjectId": ("Project", "BorrowingProjectCode", _code, "Code"),
     "WorkOrderId": ("WorkOrder", "WorkOrderCode", lambda a: a.c.WorkOrderNo, "WorkOrderNo"),

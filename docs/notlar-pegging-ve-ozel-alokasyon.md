@@ -2,7 +2,7 @@
 
 Tarih: 23–24.11.2026 görüşmeleri.
 
-**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi, K numarası almadı ve `GELISTIRME_ADIMLARI.md`'de adımı yok. Adımlar sırası geldikçe eklenecek; o adımda ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
+**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Ara iş kapandı (K-198, 0.57.0). Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi ve K numarası almadı. Adımları `GELISTIRME_ADIMLARI.md`'ye eklendi (24.11.2026: Ara iş, 7.15, 7.16, 7.17, 9.5 ve ilgili adımlara notlar); her adım başlarken ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
 
 İşaretler: ✔ karar · ◻ öneri (onay yok) · ? açık konu
 
@@ -10,12 +10,12 @@ Tarih: 23–24.11.2026 görüşmeleri.
 
 ## 1. Özel alokasyon (sahiplik) kuralı
 
-- ✔ Tek kural: **anahtarlı arz yalnız sahibine gider; anahtarsız arz herkese açıktır.**
-- ✔ Paylaşım kuralları yok. **Proje grubu tablosu ve Takip kuralı kaldırılır.**
+- ✔ Tek kural: **anahtarlı arz yalnız sahibine gider; anahtarsız arz herkese açıktır.** (K-198)
+- ✔ Paylaşım kuralları yok. **Proje grubu tablosu ve Takip kuralı kaldırılır.** (K-198)
 - ✔ Ödünç ve geri ödeme tablosu (`BorrowPayback`) **kalır.**
 - ? Ödünç kayıtlarının modelde kullanılıp kullanılmayacağı yeniden ele alınacak; kullanılırsa siparişten pek farkı olmayan bir kayıt gibi düşünülebilir.
-- ✔ Sahiplik hiyerarşisi: **sipariş → proje → müşteri** (en detaylıdan genele). Hiyerarşi talepten okunur.
-- ✔ Arzın anahtarı, dolu olan **en detaylı tek alandır** (siparişe ayrılmış arz yalnız siparişi taşır; müşteri ve proje yazılmaz).
+- ✔ Sahiplik hiyerarşisi: **sipariş → proje → müşteri** (en detaylıdan genele). Hiyerarşi talepten okunur. (K-198)
+- ✔ Arzın anahtarı, dolu olan **en detaylı tek alandır** (siparişe ayrılmış arz yalnız siparişi taşır; müşteri ve proje yazılmaz). (K-198)
 - ✔ Bir malzeme, bir sahip için ayrı izlenir (kendi üretimi, satın alması, bakiyesi) ancak **malzemenin kendisinde ya da alt seviyelerinde, özel alokasyonlu bir malzemede o sahibe ayrılmış arz varsa.** Yoksa genele (grup) düşer.
 - ✔ Belirleme modelden bağımsızdır: her sipariş için ürün ağacında (bütün alternatifler, üretim siparişleri dâhil) aşağı yürünür.
 - ✔ Takip seviyesi, malzemenin kendisinde ve altında bulunan en detaylı seviyedir. Alt seviyede sipariş bazlı takip varsa o siparişin akışı üstteki bütün seviyelerde ayrı kalır (yukarı doğru gevşemez, aşağı doğru gevşeyebilir).
@@ -29,14 +29,19 @@ Tarih: 23–24.11.2026 görüşmeleri.
 
 ## 2. Veri alanları ve tablolar
 
-- ✔ Ad her yerde **`IsCustomAllocated`** (`IsCustomTracked` yerine); arayüzde "Özel alokasyon". Faz 1'den çıkarılan "alokasyon / pay ayırma" konusu ile ilgisi yok.
-- ✔ **Malzemede** `IsCustomAllocated`: kuraldır; yalnız ERP'den ya da veri kuralıyla gelir, **elle girilmez**. Boşsa veri kalitesi uyarısı.
-- ✔ **Arz ve öneri satırlarında** `IsCustomAllocated`: süzme için vardır, **sistem hesaplar** (malzeme özel alokasyonluysa ve satırda sahip bilgisi varsa Evet).
-- ✔ ERP'den gelen satır bayrakları (stok, üretim siparişi, satın alma satırı, müşteri, satış siparişi satırı) sözleşmeden çıkar.
-- ✔ Bütün arzlarda (stok, üretim siparişi, satın alma) yüklemede sistem doldurur: **`AllocationLevel`** (Sipariş · Proje · Müşteri) ve **`AllocationKey`** (ör. `MUS-A`, `PRJ-01`, `SO-1003|10|1`).
-- ✔ Eşleşme seviye + anahtar ile yapılır (içeride Id). **Lokasyon anahtarın parçası değildir.**
-- ✔ Siparişe ayrılmış arzda kalem boşsa anahtar yalnız sipariş numarasıdır ve o siparişin bütün kalemlerine açıktır.
-- ✔ `planning.PlannedOrder`: **`ProjectId` kalkar**; `IsCustomAllocated`, `AllocationLevel`, `AllocationKey` eklenir (motor yazar).
+- ✔ Ad her yerde **`IsCustomAllocated`** (`IsCustomTracked` yerine); arayüzde "Özel alokasyon". Faz 1'den çıkarılan "alokasyon / pay ayırma" konusu ile ilgisi yok. (K-198)
+- ✔ **Malzemede** `IsCustomAllocated`: kuraldır; yalnız ERP'den ya da veri kuralıyla gelir, **elle girilmez**. Boşsa veri kalitesi uyarısı. (K-198)
+- ✔ **Arz ve öneri satırlarında** `IsCustomAllocated`: süzme için vardır, **sistem hesaplar** (malzeme özel alokasyonluysa ve satırda sahip bilgisi varsa Evet). (K-198)
+- ✔ ERP'den gelen satır bayrakları (stok, üretim siparişi, satın alma satırı, müşteri, satış siparişi satırı) sözleşmeden çıkar. (K-198)
+- ✔ Bütün arzlarda (stok, üretim siparişi, satın alma) yüklemede sistem doldurur: **`AllocationLevel`** (Sipariş · Proje · Müşteri) ve **`AllocationKey`** (ör. `MUS-A`, `PRJ-01`, `SO-1003|10|1`). (K-198)
+- ✔ Eşleşme seviye + anahtar ile yapılır (içeride Id). **Lokasyon anahtarın parçası değildir.** (K-198)
+- ✔ Malzeme özel alokasyonlu değilse, arz satırında sahip bilgisi (proje, müşteri, sipariş) dolu olsa bile `AllocationLevel` ve `AllocationKey` **boş kalır**; satır geneldir. Seviye ve anahtar doluysa arz ayrılmış demektir. (K-198)
+- ✔ Malzemede `IsCustomAllocated` **boşsa** arz satırları genel sayılır (`IsCustomAllocated` = Hayır, seviye ve anahtar boş); malzemedeki alan boş kalır ve veri kalitesi uyarısı çıkar. (K-198)
+- ✔ Siparişe ayrılmış arzda kalem boşsa anahtar yalnız sipariş numarasıdır ve o siparişin bütün kalemlerine açıktır. (K-198)
+- ✔ `planning.PlannedOrder`: **`ProjectId` kalkar**; `IsCustomAllocated`, `AllocationLevel`, `AllocationKey` eklenir (motor yazar). (K-198)
+- ✔ Stok, üretim siparişi ve satın alma satırının ana tablosunda sipariş no, satır no ve alt satır no ayrı alanlar olarak durur; kalemli anahtar her zaman üç parçadır (K-198).
+- ✔ Üç arz tablosunda sahip alanlarının adı: Bağlı proje · Bağlı müşteri · Bağlı sipariş no · Bağlı sipariş satırı · Bağlı sipariş alt satırı; ilişkili alanlar da aynı adı taşır; iç bağ kolonu gösterilmez (K-198).
+- ✔ Sahibi bulunamayan ya da kapanmış ayrılmış arz genele düşmez; anahtar ERP'nin yazdığı gibi kalır, arz boşta bekler; uyarı yok, raporda görünür (K-198).
 - ✔ Bakılacak: `PlannedOrder` çok dar (üretim alternatifi, lokasyon, kaynak yok); yapısı sonra yeniden ele alınacak.
 - ✔ Yeni **core** tablo **`MaterialAllocationRule`**: malzeme, lokasyon, `AllocationLevel`, `AllocationKey`, **sebep** (kendi arzı var · alt seviye yüzünden). Sistem üretir; elle değişmez; senaryo değildir; veri versiyonu değişince (yükleme dâhil) yeniden hesaplanır.
 
@@ -50,7 +55,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Okların ucu vardır ve malzemenin gittiği yönü gösterir.
 - ◻ Malzeme detayında bir sekme olarak yer alır; "Tümünü kapat" düğmesi; çift tıklama seçili malzemeyi değiştirir; aynı malzeme iki yolda açılırsa iki kutu görünür.
 - ◻ Çok kullanılan malzemede (ör. cıvata) açılan kutu sayısına sınır ("ilk 20 + kalanını göster").
-- ? `GELISTIRME_ADIMLARI.md`'de yeri yok; yeni adım olarak eklenecek, sırası belirlenmedi.
+- ✔ Geliştirme adımı: 7.16.
 - Mockup: `plans/7.15-mockups/uretim-akisi.html`
 
 ## 4. Pegging: genel ilkeler ve öncelik (sıralama) kararları
@@ -76,10 +81,12 @@ Tarih: 23–24.11.2026 görüşmeleri.
 ## 5. Pegging'de eşleşme
 
 - ✔ Herkes allocation key üzerinden, hiyerarşiyle eşleşir. Bir ihtiyacın bakacağı arz sırası: Sipariş → Proje → Müşteri → Anahtarsız (genel).
+- ✔ Sipariş seviyesinde sıra: önce kendi kalemine ayrılmış arz (kalemli anahtar), sonra siparişin geneline ayrılmış arz (kalemsiz anahtar), sonra proje, müşteri, genel.
 - ✔ **Genelden gelen miktar:** model aktarım miktarını plan çıktısına yazar; pegging o miktarı **aşamaz ve altında kalamaz**, yalnız arkasındaki gerçek arzı (hangi stok, hangi sipariş) kendi sıralamasıyla seçer. Amaç: pegging modelle çelişmesin.
 - ✔ **Sipariş ve tahminde anahtar yoktur**; talep yalnız kimliğini taşır (sipariş, proje, müşteri). Anahtar her malzemede `MaterialAllocationRule`'dan okunur, çünkü aynı sipariş bir malzemede özel, başka malzemede genel olabilir.
 - ✔ Her malzemede sorulur: kural tablosunda Sipariş var mı → Proje var mı → Müşteri var mı → yoksa genel. İlk bulunanda durur.
 - ✔ **Müşterili tahmin o müşteriye ayrılmış arzı kullanır.** Müşterisi boş tahmin her malzemede geneldir.
+- ? Sözleşmede tahmin proje de taşıyabiliyor; projeli tahminin o projeye ayrılmış arzı kullanması teyit edilmedi.
 - ✔ Üretim ihtiyacı, hizmet ettiği talebin kimliğini taşır; genel üretimin bileşen ihtiyacı kimliksizdir.
 
 ## 6. Pegging sonuç tablosu ve görünümler
@@ -109,11 +116,11 @@ Tarih: 23–24.11.2026 görüşmeleri.
 
 ## 9. Sözleşme dosyalarına işlenirken değişecekler
 
-- `IsCustomTracked` → `IsCustomAllocated` (bütün tablolar, arayüz, sözleşme).
-- Arzlara `AllocationLevel`, `AllocationKey`; ERP satır bayrakları sözleşmeden çıkar.
+- `IsCustomTracked` → `IsCustomAllocated` (bütün tablolar, arayüz, sözleşme). (K-198, uygulandı)
+- Arzlara `AllocationLevel`, `AllocationKey`; ERP satır bayrakları sözleşmeden çıkar. (K-198, uygulandı)
 - Yeni tablo `MaterialAllocationRule`.
-- `PlannedOrder`: `ProjectId` kalkar, alokasyon alanları eklenir.
-- `ProjectGroup` tablosu ve `TrackingRule` kalkar.
+- `PlannedOrder`: `ProjectId` kalkar, alokasyon alanları eklenir. (K-198, uygulandı)
+- `ProjectGroup` tablosu ve `TrackingRule` kalkar. (K-198, uygulandı)
 - "Özel alokasyon" parametresi (Parametreler › Malzeme).
 - "Full pegging yöntemi" parametresi.
 - `planning.Pegging` yapısı; aktarım çıktısı.

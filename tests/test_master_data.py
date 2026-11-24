@@ -26,10 +26,10 @@ def cols(name: str) -> dict[str, dict]:
 def test_tabs_and_registration():
     master = [n for _, lists in MASTER_TABS for n in lists]
     tx = [n for _, lists in TRANSACTION_TABS for n in lists]
-    assert len(master) == len(set(master)) == 14 and len(tx) == len(set(tx)) == 12
+    assert len(master) == len(set(master)) == 14 and len(tx) == len(set(tx)) == 11
     assert [k for k, _ in MASTER_TABS] == ["malzeme", "urun-agaci-ve-rota", "kaynak", "tedarikci-ve-musteri", "lokasyon-ve-birim"]
     assert [k for k, _ in TRANSACTION_TABS] == ["talep", "stok", "uretim", "satin-alma", "izin"]
-    assert {"transaction-project", "transaction-project-group"} <= set(tx)
+    assert "transaction-project" in tx and "transaction-project-group" not in tx  # K-198
     assert set(master + tx) <= {d.name for d in LISTS}
     assert {BY_NAME[n].function for n in master} == {10} and {BY_NAME[n].function for n in tx} == {102}
 
@@ -43,7 +43,8 @@ def test_relations_show_codes_not_ids():
     assert {"ResourceGroupCode"} <= set(cols("master-routing")) and "ResourceCode" not in cols("master-routing")
     assert {"ResourceGroupCode", "ResourceCode"} <= set(cols("master-resource-group-member"))
     assert {"CustomerCode", "ProjectCode", "MaterialCode"} <= set(cols("transaction-sales-order"))
-    assert {"SalesOrderLineCode", "ParentWorkOrderCode", "ProductionVersionCode"} <= set(cols("transaction-work-order"))
+    assert {"ParentWorkOrderCode", "ProductionVersionCode", "ProjectCode", "CustomerCode", "SalesOrderNo"} <= set(cols("transaction-work-order"))
+    assert "SalesOrderLineCode" not in cols("transaction-work-order")  # K-198: iç bağ kolon değil; sahip ham alanlarda
     assert {"LendingProjectCode", "BorrowingProjectCode"} <= set(cols("transaction-borrow-payback"))
     assert "UnitOfRow" not in cols("master-routing") and "BaseUom" not in cols("transaction-stock")  # birim yalnız ondalık için
 
@@ -77,9 +78,16 @@ def test_standard_view_shows_all_transferred_fields():
         c = cols(name)
         hidden = {f for f, x in c.items() if not x["default_visible"]}
         expected = {"UpdatedAt"} | ({"IsActive"} if "IsActive" in c and name != "master-location" else set())
+        # K-198: arz tablolarında seviye, anahtar, satır no ve alt satır no Alanlar'da durur, kapalı gelir; "Özel alokasyon" ve "Sipariş no" açık
+        expected |= {"AllocationLevel", "AllocationKey", "SalesOrderLineNo", "SalesOrderLineItemNo"}
         assert hidden == expected & set(c), name
         assert all(x.get("standard_filter") is None for x in c.values())  # süzgeç yok (K-169)
     assert cols("master-location")["IsActive"]["default_visible"]  # versiyonsuz: pasif lokasyon kalır (K-153)
+    for name in ("transaction-stock", "transaction-work-order", "transaction-purchase-order"):
+        c = cols(name)
+        assert all(c[f]["default_visible"] for f in ("IsCustomAllocated", "ProjectCode", "CustomerCode", "SalesOrderNo")) and not c["AllocationKey"]["default_visible"], name
+        assert not any(c[f]["manual"] for f in ("IsCustomAllocated", "AllocationLevel", "AllocationKey", "ProjectCode", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo"))
+        assert c["AllocationLevel"]["label"] == "Alokasyon seviyesi" and c["AllocationKey"]["label"] == "Alokasyon anahtarı"
 
 
 # ------------------------------------------------------------------ API (Smartchain_test, sentetik v0)
@@ -133,8 +141,10 @@ def test_rows_map_codes_and_unit_decimals(api, db_engine):
     assert r.status_code == 200, r.text
     rows = [row for row in r.json()["rows"] if row["MaterialCode"] in base]
     assert rows and all(row["_unit_decimals"] == base[row["MaterialCode"]] for row in rows)  # stok miktarı malzemenin biriminden
-    r = api.post("/api/transaction-work-order/query", json={"fields": ["WorkOrderNo", "SalesOrderLineCode"], "limit": 100})
-    assert r.status_code == 200 and all(v is None or " / " in v and not v.startswith(" ") for v in (x["SalesOrderLineCode"] for x in r.json()["rows"]))
+    # K-198: arz tablolarında iç bağ kolonu yok; bağlı sipariş ERP'den geldiği gibi ham alanlarda. Sipariş satırı kolonu yalnız kendi listelerinde
+    assert api.post("/api/transaction-work-order/query", json={"fields": ["WorkOrderNo", "SalesOrderLineCode"], "limit": 5}).status_code == 422
+    r = api.post("/api/transaction-work-order/query", json={"fields": ["WorkOrderNo", "CustomerCode", "SalesOrderNo", "SalesOrderLineNo"], "limit": 100})
+    assert r.status_code == 200 and ("WO-5001", "SO-1004", 1) in {(x["WorkOrderNo"], x["SalesOrderNo"], x["SalesOrderLineNo"]) for x in r.json()["rows"]}
     for name in BY_NAME:  # her liste sorgulanır
         assert api.post(f"/api/{name}/query", json={"limit": 5}).status_code == 200, name
 

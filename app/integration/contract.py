@@ -35,7 +35,6 @@ BLANK_MEANINGS = {      # docs/03 BOŞSA → şablonun "Boş bırakılırsa" sat
     "tam gün": "Tam gün kabul edilir",
     "ilk operasyon": "İlk operasyonda gerekir",
     "motor seçer": "Plan hesabı seçer",
-    "gruptan": "Proje grubunun değeri geçerli",
     "müşteriden": "Müşterinin değeri geçerli",
     "bütün malzemeler": "Bütün malzemelere uygulanır",
 }
@@ -48,7 +47,7 @@ REF_TEXT = {
     "ResourceGroupCode": "Kaynak grubu tablosundaki kod",
     "SubcontractorCode": "Tedarikçi tablosundaki kod", "SupplierCode": "Tedarikçi tablosundaki kod",
     "CustomerCode": "Müşteri tablosundaki kod", "ProjectCode": "Proje tablosundaki kod",
-    "LendingProjectCode": "Proje tablosundaki kod", "BorrowingProjectCode": "Proje tablosundaki kod", "ProjectGroupCode": "Proje grubu tablosundaki kod",
+    "LendingProjectCode": "Proje tablosundaki kod", "BorrowingProjectCode": "Proje tablosundaki kod",
     "SalesOrderNo": "Satış siparişi tablosundaki sipariş numarası", "SalesOrderLineNo": "Satış siparişi tablosundaki satır numarası",
     "SalesOrderLineItemNo": "Satış siparişi tablosundaki alt satır numarası",
     "WorkOrderNo": "İş emri tablosundaki numara", "ParentWorkOrderNo": "İş emri tablosundaki numara",

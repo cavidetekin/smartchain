@@ -9,7 +9,7 @@ from .definition import ListDefinition
 FIELDS = (
     MANUAL_COLUMN, "Code", "Name", "MaterialLevel", "MaterialType", "MaterialGroup", "Brand", "PlannerCode", "MRPGroup", "BaseUom",
     "DefaultSupplyType", "IsCustomerSupplied", "IsActive", "IsCritical", "IsPurchasable", "IsProducible", "IsSellable",
-    "IsSubcontractable", "IsCustomTracked", "IsPhantom", "IsNonStockable", "GoodsReceiptDays", "SafetyStock", "StockCoverageDays",
+    "IsSubcontractable", "IsCustomAllocated", "IsPhantom", "IsNonStockable", "GoodsReceiptDays", "SafetyStock", "StockCoverageDays",
     "MaxStock", "LotSizePolicy", "MinLot", "MaxLot", "LotMultiple", "QtyPerBox", "QtyPerPallet", "ScrapRatio", "ShelfLifeDays",
     *(f"AdditionalText{i}" for i in range(1, 8)), *(f"AdditionalNumber{i}" for i in range(1, 4)),
     "UpdatedAt",

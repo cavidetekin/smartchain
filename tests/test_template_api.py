@@ -127,7 +127,7 @@ def test_entity_list_sorts_filters_and_exports(client, people):
 
     fields = ["Name", "EntityClass", "Description", "Version", "FieldCount", "RequiredCount"]
     body = client.post("/api/data-entities/query", headers=h, json={"fields": fields, "limit": 100}).json()
-    assert [r["Name"] for r in body["rows"]] == [e.name for e in contract.ENTITIES] and body["total"] == 25
+    assert [r["Name"] for r in body["rows"]] == [e.name for e in contract.ENTITIES] and body["total"] == 24
     assert all(r["Entity"] for r in body["rows"])  # satır menüsü gizli kolonu da okur
     group = next(r for r in body["rows"] if r["Name"] == "Kaynak grubu")
     assert (group["Version"], group["FieldCount"], group["RequiredCount"]) == (3, 14, 2)
@@ -144,4 +144,4 @@ def test_entity_list_sorts_filters_and_exports(client, people):
     r = client.post("/api/data-entities/export", headers=h, json={"fields": fields})
     assert r.status_code == 200, r.text
     rows = list(load_workbook(io.BytesIO(r.content)).worksheets[0].iter_rows(values_only=True))
-    assert rows[0][0] == "Tablo" and len(rows) == 26
+    assert rows[0][0] == "Tablo" and len(rows) == 25

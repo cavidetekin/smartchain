@@ -120,6 +120,7 @@ Bu adımda uyarı üretilmez; yalnız arayüz ve saklama vardır.
 ## Sahte motor (`app/engine/fake.py`)
 
 - `fixtures/plan_v0.json`'u döndürür: 3 planlı sipariş, 1 mevcut arz önerisi, 2 talep karşılama, 2 doluluk, 3 pegging, 2 uyarı, 4 metrik. Malzeme, kaynak ve sipariş Id'leri sentetik veri (0.8) gelene kadar yer tutucudur; plan fikstürü 8.0'da sentetik veriye göre yeniden hazırlanır.
+- **Planlı sipariş ve özel alokasyon (K-198):** `PlannedOrder` proje taşımaz (`ProjectId` kalktı); `IsCustomAllocated`, `AllocationLevel` ve `AllocationKey` alanlarını motor yazar (arz satırlarındaki anahtarla aynı biçimde). Motor gelene kadar boştur; fikstürde örnek 8.0'da.
 - Uyarı kodları (`CAP_OVERLOAD`, `ORDER_LATE`) `param.WarningDefinition` kataloğundadır (7.11, K-190; geçiş 0069); eksikse geliştirme ve testte `ensure_fixture_warning_definitions` ekler.
 - EngineUsed senaryonun `ModelType` parametresidir (yoksa LP), Solver `Sahte`.
 - Sahte motora özel PlanningSetting anahtarları (gerçek motor okumaz):

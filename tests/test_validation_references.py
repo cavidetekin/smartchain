@@ -31,7 +31,7 @@ DATA = {
                  mat("M-REF", "Üretim"), mat("M-BUY", "Satın alma"), mat("M-BUY2", "Satın alma"), mat("M-FSN", "Fason"), mat("M-FSN2", "Fason"),
                  mat("M-COMP")],
     "UomConversion": [{"MaterialCode": None, "FromUom": "KOLI", "ToUom": "ADET", "Factor": 12}, {"MaterialCode": "M-YOK", "FromUom": "KG", "ToUom": "ADET", "Factor": 2}],
-    "Project": [{"Code": "P-1", "Name": "Proje", "IsActive": 1, "ProjectGroupCode": "PG-YOK"}],
+    "Project": [{"Code": "P-1", "Name": "Proje", "IsActive": 1}],
     "Customer": [{"Code": "C-1", "Name": "Müşteri", "IsActive": 1}, {"Code": "C-PAS", "Name": "Pasif", "IsActive": 0}],
     "Supplier": [{"Code": "S-1", "Name": "Tedarikçi", "IsActive": 1}, {"Code": "S-PAS", "Name": "Pasif", "IsActive": 0},
                  {"Code": "S-FSN", "Name": "Fasoncu", "IsActive": 1, "IsSubcontractor": 1}, {"Code": "S-BOS", "Name": "Bağsız", "IsActive": 1}],
@@ -194,8 +194,8 @@ def test_integrity_findings_are_on_the_parent(hits):
 
 
 def test_missing_parent_table_is_no_data(hits):
-    """Proje grubu yüklenmedi: kural satır satır bulgu yazmaz, "Karşılaştırılacak veri yok"; boş olabilecek tablo kuralı durdurmaz."""
-    assert of(hits, "PRJ.REF_PROJECT_GROUP") == [(None, "Bilgi", "Karşılaştırılacak veri yok: Proje grubu.")]
+    """Boş olabilecek tablo kuralı durdurmaz ("Karşılaştırılacak veri yok" bulgusu test_validation_chain'de; Proje grubu K-198'de kalktı)."""
+    assert of(hits, "PRJ.REF_PROJECT_GROUP") == []
     assert of(hits, "FC.REF_PROJECT") == [(f"{LOC} · M-OK · P-YOK · 01.12.2026 · T", "Hata", "Proje bulunamadı: P-YOK")]  # anahtarın parçası (K-153)
     assert of(hits, "FC.REF_MATERIAL") == []
     assert not [h for h in hits if h[0] == "MAT.NO_VERSION" and h[2] is None]  # benzetilen ürün tablosu doluysa da boşsa da çalışır

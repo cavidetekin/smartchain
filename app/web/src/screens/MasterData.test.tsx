@@ -19,8 +19,8 @@ const COLUMNS: Record<string, ListColumn[]> = {
                  col("Quantity", "Miktar", "number", "number", { decimals_from_unit: true })],
   "master-location": [col("Code", "Lokasyon kodu", "text", "text")],
   "transaction-sales-order": [col("OrderNo", "Sipariş no", "text", "text"), col("OpenQuantity", "Açık miktar", "number", "number", { decimals_from_unit: true })],
-  "transaction-project-group": [col("Code", "Proje grubu kodu", "text", "text")],
   "transaction-purchase-order": [col("PurchaseOrderNo", "Sipariş no", "text", "text")],
+  "transaction-project": [col("Code", "Proje kodu", "text", "text")],
 };
 const ROWS: Record<string, Reply["body"]> = {
   materials: [{ Id: 1, Code: "HAM-001", Name: "Çelik çubuk", IsActive: true }],
@@ -28,7 +28,7 @@ const ROWS: Record<string, Reply["body"]> = {
   "master-bom": [{ Id: 5, MaterialCode: "ALT-001", Quantity: 2, _unit_decimals: 0 }],
   "master-location": [{ Id: 1, Code: "ORM-01" }],
   "transaction-sales-order": [{ Id: 50, OrderNo: "SO-1001", OpenQuantity: 12, _unit_decimals: 0 }],
-  "transaction-project-group": [{ Id: 1, Code: "PG-01" }],
+  "transaction-project": [{ Id: 1, Code: "PRJ-01" }],
   "transaction-purchase-order": [{ Id: 1, PurchaseOrderNo: "PO-2001" }],
 };
 const MASTER_COUNTS = {
@@ -43,7 +43,7 @@ const TX_COUNTS = {
   data_version: 35,
   tabs: [
     { key: "talep", tables: [{ list: "transaction-sales-order", label: "Satış siparişi", count: 51 }, { list: "transaction-forecast", label: "Tahmin", count: 0 },
-                             { list: "transaction-project", label: "Proje", count: 3 }, { list: "transaction-project-group", label: "Proje grubu", count: 1 }] },
+                             { list: "transaction-project", label: "Proje", count: 3 }] },
     { key: "satin-alma", tables: [{ list: "transaction-purchase-order", label: "Satın alma siparişi", count: 39 }] },
   ],
 };
@@ -126,13 +126,13 @@ describe("Ana veri", () => {
 describe("İşlem verisi", () => {
   const openTx = (path = "/veri/islem-verisi") => open(path, "İşlem verisi");
 
-  it("sekmeler aktarım grupları; varsayılan Talep, tablo seçiminde Proje ve Proje grubu", async () => {
+  it("sekmeler aktarım grupları; varsayılan Talep, tablo seçiminde Proje (Proje grubu yok, K-198)", async () => {
     await openTx();
     expect(within(tabs("İşlem verisi bölümleri")).getAllByRole("radio").map((r) => r.textContent))
       .toEqual(["Talep", "Stok", "Üretim", "Satın alma", "İzin"]);
     expect(await screen.findByText("SO-1001", {}, { timeout: 5000 })).toBeInTheDocument();
     await waitFor(() => expect([...picker()!.querySelectorAll("option")].map((o) => o.textContent))
-      .toEqual(["Satış siparişi (51)", "Tahmin (0)", "Proje (3)", "Proje grubu (1)"]));
+      .toEqual(["Satış siparişi (51)", "Tahmin (0)", "Proje (3)"]));
   });
 
   it("tek tablolu sekmede tablo seçimi yok; adreste tablo yazmaz", async () => {
@@ -145,8 +145,8 @@ describe("İşlem verisi", () => {
   });
 
   it("adresle tablo; Key user ve End user açar", async () => {
-    await openTx("/veri/islem-verisi?sekme=talep&tablo=proje-grubu");
-    await waitFor(() => expect(picker()).toHaveValue("transaction-project-group"));
-    expect(await screen.findByText("PG-01", {}, { timeout: 5000 })).toBeInTheDocument();
+    await openTx("/veri/islem-verisi?sekme=talep&tablo=proje");
+    await waitFor(() => expect(picker()).toHaveValue("transaction-project"));
+    expect(await screen.findByText("PRJ-01", {}, { timeout: 5000 })).toBeInTheDocument();
   });
 });

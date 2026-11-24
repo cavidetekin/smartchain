@@ -136,7 +136,7 @@ def test_material_reference_and_resource_templates():
 
 
 def test_purchase_and_confirmation_templates_v2():
-    for table, version in (("PurchaseOrderLine", 3), ("ProductionConfirmation", 2)):
+    for table, version in (("PurchaseOrderLine", 5), ("ProductionConfirmation", 2)):
         assert dict(build(table)["_Surum"].iter_rows(values_only=True))["Sürüm"] == version, table
     found = notes(build("PurchaseOrderLine"))
     assert not {"OrderNo", "OpenQty"} & set(found) and found["OrderType"]["Smartchain değerleri"] is None and found["OrderType"]["Boş bırakılırsa"] == "Bilinmiyor; planda kullanılmaz" and found["Status"]["Boş bırakılırsa"] == "Bilinmiyor; planda kullanılmaz"
@@ -151,7 +151,7 @@ def test_purchase_and_confirmation_templates_v2():
 
 def test_work_order_templates_operation_v3_group_required():
     """K-180: iş emri operasyonu v3; kaynak alanı yok, kaynak grubu zorunlu."""
-    for table, version in (("WorkOrder", 3), ("WorkOrderComponent", 2), ("WorkOrderOperation", 3)):
+    for table, version in (("WorkOrder", 5), ("WorkOrderComponent", 2), ("WorkOrderOperation", 3)):
         assert dict(build(table)["_Surum"].iter_rows(values_only=True))["Sürüm"] == version, table
     found = notes(build("WorkOrder"))
     assert not {"OrderNo", "OrderType", "OrderQty", "OpenQty"} & set(found)
@@ -168,11 +168,11 @@ def test_work_order_templates_operation_v3_group_required():
 
 def test_stock_template_v2():
     wb = build("Stock")
-    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 3
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 5
     found = notes(wb)
     assert "StockStatus" not in found and found["Status"]["Etiket"] == "Stok durumu" and found["Status"]["Smartchain değerleri"] is None and found["Status"]["Örnek"] == "Karantina"
     assert found["Status"]["Boş bırakılırsa"] == "Bilinmiyor; planda kullanılmaz" and found["IsAvailable"]["Boş bırakılırsa"] == "Yok sayılır"
-    assert found["SalesOrderLineNo"]["Etiket"] == "Sahip sipariş satırı" and found["Uom"]["Boş bırakılırsa"] == "Temel birimde kabul edilir"
+    assert found["SalesOrderLineNo"]["Etiket"] == "Bağlı sipariş satırı" and found["SalesOrderNo"]["Etiket"] == "Bağlı sipariş no" and found["ProjectCode"]["Etiket"] == "Bağlı proje" and found["Uom"]["Boş bırakılırsa"] == "Temel birimde kabul edilir"
 
 
 def test_forecast_template_v2():
@@ -186,7 +186,7 @@ def test_forecast_template_v2():
 
 def test_sales_order_template_v2():
     wb = build("SalesOrderLine")
-    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 3
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 4
     found = notes(wb)
     assert found["Type"]["Smartchain değerleri"] is None and found["Type"]["Boş bırakılırsa"] == "Bilinmiyor; planda kullanılmaz" and found["Status"]["Smartchain değerleri"] is None
     assert found["IsQuote"]["Etiket"] == "Teklif" and found["IsQuote"]["Boş bırakılırsa"] == "Yok sayılır"
@@ -197,12 +197,11 @@ def test_sales_order_template_v2():
 
 def test_project_templates_v2_and_borrow_v1():
     assert notes(build("Project"))["IsActive"]["Boş bırakılırsa"] == "Veri kuralıyla doldurulur; dolmazsa satır yüklenmez"
-    rule = notes(build("ProjectGroup"))["TrackingRule"]
-    assert rule["Etiket"] == "Takip kuralı" and rule["Smartchain değerleri"].startswith("Tam izolasyon, Ortaktan beslenir, Grup içi paylaşım.")
+    assert not {"TrackingRule", "ProjectGroupCode"} & set(notes(build("Project")))  # K-198: proje grubu ve takip kuralı kalktı
     wb = build("BorrowPayback")
     assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 1 and wb.sheetnames[0] == "Ödünç ve geri ödeme"
     assert notes(wb)["BorrowDate"]["Örnek"] == datetime(2026, 10, 20)
-    assert notes(build("Customer"))["IsCustomTracked"]["Açıklama"] == "Bu müşterinin talepleri ortak havuzdan değil, müşteriye ayrılmış olarak takip edilir"
+    assert "IsCustomTracked" not in notes(build("Customer"))  # K-198
 
 
 def test_material_supplier_template_v2():
@@ -234,7 +233,7 @@ def test_additional_field_appears_with_its_label_version_stays():
     assert "AdditionalNumber1" in [c.value for c in wb["Malzeme"][1]] and "AdditionalNumber2" not in [c.value for c in wb["Malzeme"][1]]
     extra = notes(wb)["AdditionalNumber1"]
     assert extra["Etiket"] == "Birim ağırlık" and extra["Açıklama"] is None and extra["Örnek"] == 10
-    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 4  # ek alan etiketi sürümü artırmaz; Malzeme v4 sözleşmeden (K-113)
+    assert dict(wb["_Surum"].iter_rows(values_only=True))["Sürüm"] == 5  # ek alan etiketi sürümü artırmaz; Malzeme v5 sözleşmeden (K-198)
 
 
 def test_routing_template_v3_group_required():
@@ -284,7 +283,7 @@ def test_material_template_v3():
     found = notes(wb)
     assert found["ScrapRatio"]["Etiket"] == "Fire oranı" and found["ScrapRatio"]["Açıklama"] == "Oran olarak fire (0,05 = %5)" and found["ScrapRatio"]["Örnek"] == 0.02
     assert found["IsCustomerSupplied"]["Boş bırakılırsa"] == "Yok sayılır" and found["IsCustomerSupplied"]["Tip"] == "1 = Evet, 0 = Hayır"
-    assert found["IsCustomTracked"]["Etiket"] == "Özel takip" and "talep kaydından gelir" in found["IsCustomTracked"]["Açıklama"]
+    assert found["IsCustomAllocated"]["Etiket"] == "Özel alokasyon" and "yalnız sahibine gider" in found["IsCustomAllocated"]["Açıklama"]
     assert found["IsCritical"]["Etiket"] == "Kritik malzeme" and found["IsCritical"]["Boş bırakılırsa"] == "Yok sayılır"
     assert found["MRPGroup"]["Etiket"] == "MRP grubu" and found["MRPGroup"]["Açıklama"] == "MRP grubu; planlama parametreleri aynı olan malzemeleri gruplar"
 

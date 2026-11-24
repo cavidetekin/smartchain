@@ -317,7 +317,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>Ekran 29 · geliştirme 6.1 · K-169 (mockup yok; Ana veri ekranının düzeni) · uygulandı</sub>
 
 - **Ne:** aktarılan işlem verisi, salt okunur; Ana veri ekranının bileşeni ve kuralları (tablo seçimi, Standart görünüm, sayı biçimi).
-- **Sekmeler (aktarım grupları, K-150):** Talep (Satış siparişi · Tahmin · Proje · Proje grubu) · Stok (Stok · Ödünç ve geri ödeme) · Üretim (İş emri · İş emri bileşeni · İş emri operasyonu · Üretim gerçekleşmesi) · Satın alma (Satın alma siparişi) · İzin (Çalışan izni). Tek tablolu sekmede tablo seçimi görünmez.
+- **Sekmeler (aktarım grupları, K-150):** Talep (Satış siparişi · Tahmin · Proje) · Stok (Stok · Ödünç ve geri ödeme) · Üretim (İş emri · İş emri bileşeni · İş emri operasyonu · Üretim gerçekleşmesi) · Satın alma (Satın alma siparişi) · İzin (Çalışan izni). Tek tablolu sekmede tablo seçimi görünmez.
+- **Özel alokasyon (K-198; uygulandı, sürüm 0.57.0):** Stok, İş emri ve Satın alma siparişi tablolarında sahip alanları aynı adı taşır: "Bağlı proje", "Bağlı müşteri" ve "Bağlı sipariş no" açık gelir; "Bağlı sipariş satırı" ve "Bağlı sipariş alt satırı" Alanlar'da durur, kapalı gelir. İç bağ kolonu (eski "Sahip / Bağlı sipariş satırı") gösterilmez; ilişkili alan grupları "Bağlı proje · …", "Bağlı müşteri · …", "Bağlı sipariş · …" başlığını taşır. "Özel alokasyon" (yüklemede hesaplanır) açık gelir; "Alokasyon seviyesi" (Sipariş · Proje · Müşteri) ve "Alokasyon anahtarı" kapalı gelir. Hiçbiri elle değiştirilemez. Ana veri › Malzeme'de "Özel alokasyon" yalnız ERP'den ya da veri kuralıyla gelir; manuel değer girilemez.
 - **Yetki:** fonksiyon 102; bütün roller görür, End user salt okunur (görünüm, alan, Excel serbest).
 
 ### Veri kuralları
