@@ -80,6 +80,20 @@
   --span-own-bg: #ffdfa3;    --span-own-text: #7a5200;    /* amber: kaynağın kendi kaydı */
   --span-both-bg: #ffc9b5;   --span-both-text: #8a3a1e;   /* mercan: malzeme blokajında iki tedarik biçimi birden (K-193); mor ve indigo kullanılmaz */
 
+  /* Akış çizimi (K-200; ui/flow, docs/12 "Akış çizimi standardı"): her ton zemin · çerçeve · yazı · soluk yazı. Durum rengi değil.
+     Kutu tonları Üretim akışında malzeme seviyesidir (mockup uretim-akisi-renkler.html A): erik, petrol, hardal; hayalet açık gri.
+     Erik paletin eriğine (--chart-5) çekildi: mockup'taki ton mora kayıyordu, mor ikincil aksiyonun rengidir (K-131) */
+  --flow-box-bg: #ffffff;       --flow-box-border: var(--lead-300);  --flow-box-text: var(--lead-900);  --flow-box-meta: var(--lead-600);
+  --flow-current-bg: #cfebdd;   --flow-current-border: #8fcbb0;      --flow-current-text: #1f5b43;      --flow-current-meta: #3d7a60;   /* seçili: nane */
+  --flow-option-bg: var(--indigo-50); --flow-option-border: #c5cbf2; --flow-option-text: var(--indigo-500); --flow-option-meta: var(--lead-600);
+  --flow-final-bg: #f3e8f1;     --flow-final-border: #d9bdd5;        --flow-final-text: #582b52;        --flow-final-meta: #7a4673;     /* nihai ürün: erik */
+  --flow-semi-bg: #e3eff3;      --flow-semi-border: #b3d2dc;         --flow-semi-text: #1e4e5a;         --flow-semi-meta: #3b6e7b;      /* yarı mamul: petrol */
+  --flow-raw-bg: #f7eed8;       --flow-raw-border: #e2cd95;          --flow-raw-text: #5e4710;          --flow-raw-meta: #806526;       /* hammadde: hardal */
+  --flow-phantom-bg: var(--lead-50); --flow-phantom-border: var(--lead-300); --flow-phantom-text: var(--lead-700); --flow-phantom-meta: var(--lead-600);  /* hayalet: açık gri */
+  --flow-badge-bg: #ffffff;     --flow-badge-border: var(--lead-300); --flow-badge-text: var(--lead-700);                                /* "veya G1" etiketi: nötr */
+  --flow-box-hover: var(--lead-600);
+  --flow-edge: var(--lead-300);      --flow-edge-text: var(--lead-600);   --flow-toggle-border: #9aa0b2;
+
   /* Form alanları (mockup m24f-0757) */
   --field-bg: #ffffff;
   --field-border: var(--lead-300);

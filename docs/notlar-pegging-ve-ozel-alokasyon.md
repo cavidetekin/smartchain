@@ -2,7 +2,7 @@
 
 Tarih: 23–24.11.2026 görüşmeleri.
 
-**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Ara iş kapandı (K-198, 0.57.0). 7.15 kapandı (K-199, 0.58.0). Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi ve K numarası almadı. Adımları `GELISTIRME_ADIMLARI.md`'ye eklendi (24.11.2026: Ara iş, 7.15, 7.16, 7.17, 9.5 ve ilgili adımlara notlar); her adım başlarken ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
+**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Ara iş kapandı (K-198, 0.57.0). 7.15 kapandı (K-199, 0.58.0). 7.16 kapandı (K-200, 0.59.0). Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi ve K numarası almadı. Adımları `GELISTIRME_ADIMLARI.md`'ye eklendi (24.11.2026: Ara iş, 7.15, 7.16, 7.17, 9.5 ve ilgili adımlara notlar); her adım başlarken ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
 
 İşaretler: ✔ karar · ◻ öneri (onay yok) · ? açık konu
 
@@ -54,8 +54,10 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Birden çok ürün ağacı alternatifi varsa önce "Alternatif 1, 2, 3" kutuları gelir, basılan alternatifin malzemeleri açılır; tek alternatif varsa malzemeler doğrudan açılır.
 - ✔ **Sol: beni kullananlar. Sağ: benim kullandıklarım.**
 - ✔ Okların ucu vardır ve malzemenin gittiği yönü gösterir.
-- ◻ Malzeme detayında bir sekme olarak yer alır; "Tümünü kapat" düğmesi; çift tıklama seçili malzemeyi değiştirir; aynı malzeme iki yolda açılırsa iki kutu görünür.
-- ◻ Çok kullanılan malzemede (ör. cıvata) açılan kutu sayısına sınır ("ilk 20 + kalanını göster").
+- ✔ Malzeme satırının ⋯ menüsünden geniş pencere olarak açılır (kartta sekme yok); "Tümünü kapat" düğmesi; çift tıklama seçili malzemeyi değiştirir; aynı malzeme iki yolda açılırsa iki kutu görünür (K-200).
+- ✔ Bir basışta 20'den çok kutu açılacaksa ilk 20 ve "+N malzeme" kutusu (K-200).
+- ✔ Alternatif kutusu farklı ürün ağacı başınadır (aynı ağaçlı versiyonlar birleşir); ağaç satırındaki alternatif grubu kutunun köşesinde "veya G1" etiketi; hayalet malzeme kutu olarak görünür; benzetilen ürün benzetildiği ürünün ağacını notuyla açar; miktar birimli, fire yok (K-200).
+- ✔ Kutular malzeme seviyesine göre renkli (nihai ürün erik, yarı mamul petrol, hammadde hardal; hayalet gri; seçili nane); yakınlaştırma (− · + · Sığdır · %100, Ctrl + tekerlek); PNG olarak indirme; benzetilen notu yalnız seçili malzemede başlığın altında (K-200).
 - ✔ Geliştirme adımı: 7.16.
 - Mockup: `plans/7.15-mockups/uretim-akisi.html`
 
@@ -126,4 +128,4 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - "Full pegging yöntemi" parametresi.
 - `planning.Pegging` yapısı; aktarım çıktısı.
 - Model artık tek havuz değil: bakiye boyutu.
-- Yeni ekran: Üretim akışı. Yeni rapor: Pegging raporu.
+- Yeni ekran: Üretim akışı (K-200, uygulandı). Yeni rapor: Pegging raporu.

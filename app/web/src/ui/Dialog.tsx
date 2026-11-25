@@ -8,7 +8,7 @@ import { tr } from "../i18n/tr";
 import { Button } from "./Button";
 
 export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLabel, busy, danger, submitDisabled, submitReason, wide,
-                         dismissible = true, cancelLabel, blurred, noCancel, xwide, extraActions, className, titleAside }: {
+                         dismissible = true, cancelLabel, blurred, noCancel, xwide, full, extraActions, className, titleAside }: {
   title: string;
   /** Başlığın altında sessiz satır (ör. kaynak ve satır sayısı). */
   subtitle?: ReactNode;
@@ -25,6 +25,8 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
   wide?: boolean;
   /** En geniş pencere; ekrana sığmayan içerik kayar (ör. satır kaymayan tablo). */
   xwide?: boolean;
+  /** Tam pencere boyu: pencerenin tamamı, içerik kalan yüksekliği doldurur (ör. Üretim akışı; K-200). */
+  full?: boolean;
   /** false: Esc kapatmaz, Vazgeç yok (cancelLabel verilirse o düğme onClose'u çağırır). */
   dismissible?: boolean;
   /** İkincil düğmenin metni (ör. "Şimdi çıkış yap"); verilirse ikincil düğme biçiminde. */
@@ -93,7 +95,7 @@ export function Dialog({ title, subtitle, children, onClose, onSubmit, submitLab
 
   return (
     <div className={`sc-dialog-backdrop${blurred ? " is-blurred" : ""}`}>
-      <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}${xwide ? " sc-dialog--xwide" : ""}${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
+      <form ref={ref} className={`sc-dialog${wide ? " sc-dialog--wide" : ""}${xwide ? " sc-dialog--xwide" : ""}${full ? " sc-dialog--full" : ""}${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
             onKeyDown={onKey} onSubmit={submit}>
         <div className={titleAside ? "sc-dialog-head" : undefined}>
           <div>

@@ -932,6 +932,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kaynak sütunu:** Her alanın yanında ERP, kural (numarasıyla) ya da elle; boşsa alanın BOŞSA anlamı.
 - **Rol farkı:** Düzenle butonu Key user ve üstünde; End user düzenleyemez, görünüm ve Excel serbest (K-99).
 - **Geçmişe geçiş:** Geçmiş butonu değişiklik geçmişini (14) açar.
+- **Üretim akışı (7.16, K-200; uygulandı, sürüm 0.59.0):** malzemenin altındaki ve üstündeki olası akışlar ürün ağacından çizilir (satır menüsünde "Üretim akışı"; ekran 03). Görüntülemedir, ayrı fonksiyon numarası yoktur: bu fonksiyonun okuma yetkisiyle açılır. Çizilen kenarlar: güncel ve aktif üretim versiyonlarının ağaç satırları (geçerlilik tarihi süzülmez), kendi versiyonu olmayan malzemede benzetilen ürünün ağacı; açık iş emrinin bileşenleri çizilmez. Hayalet malzeme kutu olarak görünür.
 
 ### 11 · Değerin kaynağını gösterme
 <sub>24. Ekranlar ve fonksiyonlar · F11 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>

@@ -152,6 +152,8 @@ Boşluk ölçeği `--space-1…8`: 4, 8, 12, 16, 20, 24, 32 px karşılığı. M
 | StripSelect, StripText | tablonun şeridinde etiketli seçim ve kutu (bkz. Üst şerit; K-171) |
 | MasterDetail | ana tablo ve detay kartı: kapatma, ayraç, ilk dolu sekme (bkz. Ana–detay düzeni) |
 | Chart, ChartPanel (`ui/chart/`) | grafik ve ayar paneli: çubuk, çizgi, kademeli çizgi, alan; yan yana, yığılmış, %100; yatay; ikincil eksen; eşik, referans çizgisi; boş, yükleniyor, hata (bkz. Grafik standardı; K-178) |
+| FlowDiagram (`ui/flow/`) | akış çizimi: kutu, ara kutu, "+N" kutusu, uçlu ok ve etiketi, + işaretleri (bkz. Akış çizimi standardı; K-200) |
+| Dialog | dar, form, geniş, en geniş ve **tam pencere** (`full`; pencerenin tamamı, içerik kalan yüksekliği doldurur; Üretim akışı, K-200); salt okunur pencerede yalnız "Kapat" |
 | OccupancyCell, OccupancyLegend | doluluk hücresi ve lejantı (eşikler parametre) |
 | Hücre işaretleri | manuel değişiklik (indigo çerçeve, U-4/U-16), sabit dönem (gri ve kilit), kümülatif eksik (kiremit yazı); tablo 1.3'te kullanır |
 
@@ -196,7 +198,7 @@ Tablolu ekranda ayrı üst şerit (beyaz kutu) yoktur: ekranın seçimleri ve i�
 Tablodan seçilen kaydın ayrıntısı aynı ekranda gösterilecekse standart budur; ilk kullanan Dünden bugüne (ekran 28), sonraki ekranlar da bunu kullanır.
 
 - **Yerleşim:** üstte ana tablo, altta detay kartı. Kartın sekmeleri kart tablosunun şeridinin solunda, sağda tablo düğmeleri, Büyüt ve ✕; şerit ana tablonunkinden alçaktır. Her ekran kendi sekmelerini tanımlar. Kartta kaydın kodu ve adı gösterilmez (K-173). İkisi de ekrana sığar, kaydırma tablo içindedir.
-- **Açma (K-171):** satıra tıklamak yalnız seçer. Satır sonundaki ⋯ menüsünün ilk seçeneği "Detay" kartı açar; sağ tık aynı menüyü açar. Kart açıkken başka satıra tıklamak kartı o kayda geçirir. Detayın asıl amaç olduğu ekranlarda (Dünden bugüne, Zamanlanmış işler) satıra tıklamak kartı açar (K-161).
+- **Açma (K-171):** satıra tıklamak yalnız seçer. Satır sonundaki ⋯ menüsünün ilk seçeneği "Detay" kartı açar; sağ tık aynı menüyü açar. Kart açıkken başka satıra tıklamak kartı o kayda geçirir. Detayın asıl amaç olduğu ekranlarda (Dünden bugüne, Zamanlanmış işler) satıra tıklamak kartı açar (K-161). "Detay"dan sonra tablonun kendi seçenekleri gelir (ör. Ana veri › Malzeme'de "Üretim akışı"; K-200).
 - **Kapatma:** kartın sağ üstünde ✕ ve Esc; detay amaçlı ekranlarda seçili satıra yeniden tıklamak da kapatır. Açık kart ve sekmesi hatırlanır (K-171). Açık pencere, çekmece ya da açılır menü varken Esc önce onu kapatır. Kapanınca ana tablo bütün yüksekliği alır, seçim işareti kalkar.
 - **Boyut:** iki tablo arasında sürüklenebilir ayraç; klavyeyle yukarı ve aşağı ok. Her tablo en az yüksekliğin %15'ini korur. Oran kullanıcının tarayıcısında ekran başına hatırlanır. Ayraca çift tıklayınca ilk orana döner.
 - **Büyütme:** kart şeridinde ✕ düğmesinin solunda "Büyüt": ana tablo seçili kaydın adını gösteren tek satırlık şeride iner (filtre, sıralama ve seçim korunur), kart ekranın neredeyse tamamını alır; aynı düğme ("Küçült") önceki orana döndürür. Kart kapanınca büyütme sona erer, kaydedilmez.
@@ -244,6 +246,31 @@ Grafik ortak tablonun parçasıdır: `DataTable` kullanan her tabloda (ana tablo
 | Dağılım (K-179) | Yatay ve dikey eksende birer sayısal alan; satır başına bir nokta; isteğe bağlı renk kırılımı (kategori; en büyük 11 değer + "Diğer", satır sayısına göre). Renk kırılımı yokken nokta rengi renk seçiciyle seçilir (varsayılan paletin ilk rengi). Eksen başlıkları alanların adlarıdır (Eksenler bölümünden değiştirilir; dikey eksenin en düşük ve en yüksek değeri, birimi ve kılavuz çizgisi de oradan). Tür seçilince alanlar listenin ilk iki ölçü alanıyla gelir (ondalıklı alanlar önce). İpucu: kaydın adı (listenin varsayılan sırasındaki ilk metin alanı; ör. sipariş no, malzeme kodu), renk değeri ve iki değer. En çok 2.000 nokta: aşılırsa satırlar listenin varsayılan sırasıyla eşit aralıkla örneklenir (ilk 2.000 değil) ve grafiğin altında "8.450 kayıttan 2.000'i gösteriliyor." uyarısı çıkar. Bir eksendeki alanın birimi karışıksa grafik çizilmez; "Farklı birimler aynı eksende gösterilemez: <alan>. Birime göre filtreleyin." uyarısı çıkar (bu durumda örnekleme uyarısı yazılmaz). Seçim, iniş, yakınlaştırma, referans çizgisi, eşik ve küçük grafik dağılımda yoktur |
 | Dışa aktarma (K-179) | Grafik başlığında (☰'nin solunda) indirme düğmesi ve menüsü: Görsel (PNG) · Veri (Excel). Düğme Excel'e aktarma yetkisiyle görünür (fonksiyon 86; End user dahil); çizilecek grafik yokken pasiftir. **Görsel:** ekrandaki ayarla aynı (başlık, gösterge, etiketler, Türkçe biçim), beyaz zemin, 2× çözünürlük; seçim soluklaştırması ve üstüne gelme bandı görsele girmez. Tarayıcıda, ekran dışı bir tuvalde üretilir; en az 720 × 360 px, küçük grafiklerde bütün küçük grafikler görsele girer (kaydırılan kısım dahil). Dosya adı `smartchain_<liste>_grafik_veri-v35_2026-11-17_1706.png`. **Veri (Excel):** "Veri" sayfası (toplanmış veri: satırlar yatay eksen, kolonlar seriler ve parçalar; küçük grafik varsa başta onun kolonu; dağılımda gösterilen noktalar; sayılar sayı, dönemler tarih), "Bilgi" sayfası (kaynak, grafik, filtreler, kim, ne zaman) ve "Grafik" sayfası (görsel). **Tablonun Excel'ine grafik:** Excel'e aktar penceresinde grafik açık ve çizilmişken "Grafiği ekle" kutusu; işaretlenirse dosyaya "Grafik" sayfası (görsel) eklenir. Excel'in düzenlenebilir grafiği yoktur. Her dışa aktarım denetim izine "Dışa aktarım" olarak düşer; iz yazılamazsa dosya inmez |
 | Hareket | Canlandırma yoktur; veri değişince grafik anında çizilir |
+
+## Akış çizimi standardı (7.16, K-200; `ui/flow/`; uygulandı)
+
+Malzemeler arasındaki akışı kutu ve okla çizen ortak bileşen. İlk kullanan Üretim akışı penceresi (Ana veri, K-200); pegging'in akış görünümü (8.11) aynı bileşeni kullanır. Kendi SVG bileşenimizdir; dış kütüphane yoktur. Bileşen veri bilmez: düğümleri, etiketleri ve olayları kullanan ekran verir.
+
+| Konu | Kural |
+|---|---|
+| Yön | Seçili kutu ortada; solda onu kullananlar, sağda onun kullandıkları. Sütun = seviye. Oklar uçludur ve malzemenin gittiği yönü gösterir (sağdan sola) |
+| Açılış | Kapalı: yalnız seçili kutu. İlk açılışta ve "Tümünü kapat"ta seçili kutu ortalanır |
+| Kutu | En çok üç satır: kod (Inter, yarı kalın), ad, tür (soluk). Uzun metin kesilir, tamamı ipucunda. Kutunun rengi (zemin, çerçeve, yazı) kullanan ekranın verdiği tondandır (`tone`); ton yoksa nötr. Sağ üst köşede isteğe bağlı küçük, nötr etiket (`badge`; ör. "veya G1"): tonu değiştirmez, kod etikete yer bırakacak kadar kesilir |
+| + işareti | Kutunun iki yanında yuvarlak düğme: sol + sol yönü, sağ + sağ yönü bir seviye açar; açıkken − olur ve kapatır. Açılacak bir şey yoksa işaret yoktur. Yüklenirken "…" |
+| Kutuya basma | Sağ yönü açar ya da kapatır. Çift tıklama (klavyede Enter) kutuyu seçili yapar |
+| Ara kutu | Seçenekler (ör. "Alternatif 1"): açık indigo, yuvarlak uçlu, alçak; altında küçük açıklama (ör. versiyon kodları). Basınca üyeleri açılır |
+| Ok ve etiketi | Aynı kutuya giren oklar ortak gövdede birleşir: her kutudan çıkan çizgi yuvarlak köşeyle ortak dikey gövdeye girer, gövdeden kutuya tek çizgi ve tek ok ucu gider; çizgi kalınlığı her yerde aynıdır. Sol tarafta gövde tek kutudan çıkar, her kullanana ayrı ok ucuyla girer. Etiket açılan kutunun yanında, okun düz parçasında: üstünde miktar ve birim ("×8 AD"; Türkçe biçim, Inter), varsa altında ek bilgi ("Alternatif 1, 2"); zeminlidir |
+| Aynı kayıt iki yolda | İki ayrı kutu; birleştirilmez |
+| Geniş açılım | Bir basışta 20'den çok kutu gelecekse ilk 20 ve altında kesikli çerçeveli "+N malzeme" kutusu; basınca kalanı açılır (200'den çoksa 200'er) |
+| Yerleşim | Yaprak kutular alt alta; üst kutu çocuklarının dikey ortasında. İki yan ayrı yerleşir, seçili kutuda hizalanır. Ölçüler rem (dört yazı boyunda ölçeklenir) |
+| Kayma ve boşluk | Dal açılıp kapanınca basılan kutu ekranda yerinde kalır; yeni açılan kutular görünmüyorsa görünecek kadar kayar. Çizimin dört yanında sabit boşluk vardır (kutu ve + işareti kenara yapışmaz, kesilmez). Çizim alanı kendi içinde iki yönde kayar; kaydırma çubuğu yalnız çizim sığmayınca çıkar |
+| Hareket | Canlandırma yoktur |
+| Hata | Dal yüklenemezse kutunun yanında kısa hata metni; + yeniden basılabilir. Açılmış dal kapatılıp açılınca yeniden istenmez |
+| Klavye | + işaretleri ve kutular sekmeyle gezilir; Enter ya da boşluk işareti çalıştırır, kutuda Enter seçili yapar |
+| Renk | Belirteçler `--flow-*` (tokens.css). Seçili kutu nane; ara kutu açık indigo; ok ve etiket kurşun. Üretim akışında kutu malzeme seviyesine göre: Nihai ürün erik (`--flow-final-*`), Yarı mamul petrol (`--flow-semi-*`), Hammadde hardal (`--flow-raw-*`), hayalet açık gri (`--flow-phantom-*`). Durum renkleri kullanılmaz |
+| Açıklama satırı | Pencerenin alt satırında, solda: yalnız renkler (Seçili malzeme · Nihai ürün · Yarı mamul · Hammadde · Hayalet · Alternatif); yazılı açıklama yoktur. "Kapat" aynı satırın sağında |
+| Yakınlaştırma | Başlıkta simge düğmeler (tablo şeridindeki simge düğme standardı; ipucu ve erişilebilir ad): − uzaklaştır · + yakınlaştır · Sığdır (açık çizimin tamamı alana sığar, en çok %100) · %100. Adımlar %25–%200. Ctrl + fare tekerleği imlecin olduğu noktaya doğru yakınlaştırır. Düğmeyle yakınlaştırmada alanın ortası yerinde kalır |
+| PNG indirme | Başlıkta simge düğme: açık çizimin tamamı (ekranda görünen kısım değil), %100 boyda, beyaz zeminde; üstte başlık satırı, altta renk açıklaması; + işaretleri görsele girmez. Tarayıcıda, ekran dışı tuvalde çizilir (yazı tipleri gömülü fontlardan; grafik görseliyle aynı yol, K-179). Çok büyük çizimde görsel tarayıcının tuval sınırına sığacak kadar küçültülür. Kullanan ekran indirmenin izini yazdırır (K-108) |
 
 ## Pivot standardı (7.7, K-183)
 

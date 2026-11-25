@@ -44,6 +44,7 @@ FIELD_LABELS = {
     "function": "Fonksiyon no", "function_name": "Fonksiyon", "access": "Erişim", "action": "İşlem", "target": "Hedef", "target_id": "Hedef no",
     "method": "İstek türü", "path": "İstek adresi",
     # Dışa aktarım
+    "material": "Malzeme", "location": "Lokasyon",
     "list": "Liste", "title": "Liste", "rows": "Satır", "size": "Boyut (bayt)", "seconds": "Süre (sn)", "background": "Arka planda",
     "columns": "Kolonlar", "filters": "Filtreler", "sort": "Sıralama", "group_by": "Gruplama", "scope": "Kapsam", "data_version": "Veri versiyonu",
     "chart_image": "Grafik eklendi", "chart": "Grafik türü", "format": "Dosya biçimi", "pivot": "Pivot",

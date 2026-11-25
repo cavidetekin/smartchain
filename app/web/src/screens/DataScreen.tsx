@@ -19,6 +19,7 @@ import { UnsavedGuard } from "../table/useTableEdits";
 import { Alert, ConfirmDialog, MasterDetail, OverflowTabs } from "../ui";
 import { type MenuAction, MenuActions, MenuItem, RowPopMenu } from "../ui/PopMenu";
 import { type CardTab, cardOfSlug, HISTORY_TAB, recordUrl, relationSlug, screenQuery, type TabDef, type TableDef } from "./dataScreenTabs";
+import { ProductionFlow } from "./ProductionFlow";
 import { type RecordCard, type RecordsCard, recordsApi } from "./recordsApi";
 import { recordLabel, useManualValues } from "./useManualValues";
 
@@ -52,8 +53,12 @@ export const HISTORY_HINTS: FieldHints = { RecordLabel: { width: 10 }, At: { wid
 
 interface Card { id: string; tab: CardTab }
 
-/** Satır menüsü (K-171): ilk seçenek "Detay"; sağ tıkta hücre seçenekleri (Kopyala, Manuel değeri kaldır) başta. */
-function useDetailMenu(open: (row: Row) => void) {
+/** "Üretim akışı" (K-200) hangi tabloda, satırın hangi malzemesiyle açılır: Malzeme'de kaydın kendisi, Alokasyon kuralı'nda satırın malzemesi. */
+const FLOW_MATERIAL: Record<string, string> = { materials: "Id", "master-allocation-rule": "MaterialId" };
+
+/** Satır menüsü (K-171): ilk seçenek "Detay", sonra tablonun kendi seçenekleri (ör. "Üretim akışı", K-200); sağ tıkta hücre seçenekleri
+ *  (Kopyala, Manuel değeri kaldır) başta. */
+function useDetailMenu(open: (row: Row) => void, actions?: (row: Row) => MenuAction[]) {
   const [menu, setMenu] = useState<{ row: Row; anchor: HTMLElement; extra?: MenuAction[] } | null>(null);
   const rowMenu: RowMenuSpec = useMemo(() => ({
     label: (row: Row) => T.rowMenu(recordLabel(row)),
@@ -63,6 +68,7 @@ function useDetailMenu(open: (row: Row) => void) {
     <RowPopMenu label={T.rowMenu(recordLabel(menu.row))} anchor={menu.anchor} onClose={() => setMenu(null)}>
       <MenuActions items={menu.extra} onDone={() => setMenu(null)} />
       <MenuItem label={T.detail} state={{ allowed: true }} onClick={() => { const row = menu.row; setMenu(null); open(row); }} />
+      <MenuActions items={actions?.(menu.row)} onDone={() => setMenu(null)} end={false} />
     </RowPopMenu>
   ) : null;
   return { rowMenu, element };
@@ -170,7 +176,13 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
   const card = choice.card;
   const setCard = useCallback((next: Card | null) => setChoice((c) => ({ ...c, card: next })), []);
   const openCard = useCallback((row: Row) => setChoice((c) => ({ ...c, card: { id: String(row.Id), tab: c.card?.tab ?? HISTORY_TAB } })), []);
-  const detailMenu = useDetailMenu(openCard);
+  const [flow, setFlow] = useState<number | null>(null);  // Üretim akışı penceresi (K-200); adrese yazılmaz
+  const flowField = FLOW_MATERIAL[table.list];
+  const flowActions = useCallback((row: Row): MenuAction[] => {
+    const material = flowField ? Number(row[flowField]) : NaN;
+    return Number.isFinite(material) && row[flowField] != null ? [{ label: tr.productionFlow.menu, onClick: () => setFlow(material) }] : [];
+  }, [flowField]);
+  const detailMenu = useDetailMenu(openCard, flowActions);
   const rowProps = useCallback((row: Row) => (card ? { onClick: () => openCard(row) } : {}), [card, openCard]);
 
   return (
@@ -196,6 +208,7 @@ export function DataScreen({ id, title, sections, tabs, countsUrl }: {
                                      selectedRowId={card ? (Number.isNaN(Number(card.id)) ? card.id : Number(card.id)) : undefined} />
                         )} />
       {detailMenu.element}
+      {flow !== null && <ProductionFlow materialId={flow} onClose={() => setFlow(null)} />}
       <UnsavedGuard dirty={manual.dirty} />
       {pending && (
         <ConfirmDialog title={tr.table.unsavedTitle} message={tr.table.unsavedText} confirmLabel={tr.table.unsavedLeave} danger

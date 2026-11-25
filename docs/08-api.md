@@ -743,6 +743,21 @@ Uygulandı (6.3, K-171, K-173).
 | `record-history` listesi (`/api/record-history/columns · query · values`) | 14 okuma | Geçmiş (`adm.FieldChange`), liste sözleşmesiyle; süzgeç `TableName` ve `RecordKey` (yalnız süzmede). Kolonlar Tarih, Veri, Alan, Eski değer, Yeni değer, Kaynak; değerler alanın tipine göre biçimli; en yeni üstte |
 | `GET /api/audit-log/{id}` | 98 okuma | Detayda `target` (`list`, `id`): "Kayda git" hedefi; bulunamazsa `target_reason` |
 
+## Üretim akışı (ekran 03, fonksiyon 10; K-200)
+
+Uygulandı (7.16, sürüm 0.59.0).
+
+Bir malzemenin yapısını seviye seviye verir (`app/api/services/production_flow.py`); pencere açtıkça ister, ağacın tamamı yüklenmez. Kenar tanımı K-200 madde 5 (`app/structure.py`). `{id}` malzemenin güncel kaydının kimliğidir (lokasyona özgü); bulunamazsa 404.
+
+| Uç nokta | Yetki | Açıklama |
+|---|---|---|
+| `GET /api/production-flow/{id}` | 10 okuma | Seçili malzemenin kutusu: `material` (`id`, `code`, `name`, `level`, `phantom`, `has_parents`, `has_components`), `location` (lokasyon kodu) ve `reference` (malzeme benzetilen ürünse ağacını kullandığı ürün `{"code"}`, değilse `null`; başlığın altındaki not) |
+| `GET /api/production-flow/{id}/components` | 10 okuma | Malzemenin kullandıkları: `reference` (benzetilen ürünün ağacı açıldıysa `{"code"}`, yoksa `null`) ve `alternatives`: her farklı ürün ağacı için `no`, `versions` (üretim versiyonu kodları), `bom_code`, `items` (`material`, `quantity`: bir üst malzeme için, `uom`, `group`, `group_priority`). Aynı bileşenin satırları toplanır. Sıra: alternatifler önceliğe ve versiyon koduna, bileşenler ağaçtaki sıraya göre |
+| `POST /api/production-flow/{id}/export-log` | 10 okuma | Çizimin PNG olarak indirilmesinin izi ve dosya adı (`file_name`: `uretim-akisi-<malzeme kodu>.png`). Görsel tarayıcıda üretilir; iz ("Dışa aktarım", K-108) yazılamazsa ad dönmez, dosya inmez |
+| `GET /api/production-flow/{id}/parents?offset=0&limit=20` | 10 okuma | Malzemeyi kullananlar, koda göre sıralı ve sayfalı (`limit` en çok 200): `total` ve `items` (`material`, `alternatives`: üst malzemenin alternatif sayısı, `uses`: `alternative`, `quantity`, `uom`, `group`) |
+
+Her `material` kendi `has_parents` ve `has_components` bilgisini taşır (+ işaretinin olup olmadığı açmadan bilinir). **Ölçüm (25.11.2026; `tests/test_production_flow_perf.py`, `-m perf`; hedef bir + basışında sunucuda ortanca ≤ 200 ms):** 10.010 malzeme, 16 seviye ve 31.920 ağaç satırında kutu 4–7 ms · kullandıkları 34–57 ms · kullananlar (ilk 20) 12–23 ms (dört koşunun aralığı). 2.000 ağaçta kullanılan malzemede (cıvata örneği) kullananların ilk 20'si 92–190 ms; aynı malzemede "+N malzeme" adımı (sonraki 200 kutu) 265–470 ms ile hedefin üstündedir; olduğu gibi kabul edildi (K-200): indeks eklenmedi, gerçek müşteri verisiyle ölçülecek. Kullananlar sorgusu ağaç satırlarını bileşene göre tarar (bileşene göre indeks yok). Kimlik listesi kısa ise parametreyle (sabit boylara tamamlanır), uzunsa geçici tabloyla geçer: 200 kimlik parametre olarak geçince süre birkaç katına çıkıyordu.
+
 ## Manuel değer (ekran 03 ve 29, fonksiyon 11, 12, 13; K-170)
 
 Uygulandı (6.2, K-170, K-172).

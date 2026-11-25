@@ -180,6 +180,7 @@ def _build(spec: Spec) -> ListDefinition:
         unit_decimals=spec.unit_decimals,
         server_values=frozenset(f for f in fields if f.endswith("Code") and f != "Code") | ({"Id"} if "Id" in table.c else set()),
         filter_only=("Id",) if "Id" in table.c else (),
+        key_fields=("MaterialId",) if spec.table == ALLOCATION_RULE else (),  # satır menüsünde "Üretim akışı" satırın malzemesiyle açılır (K-200)
         manual_table=spec.table,
         related_table=spec.table,
     )

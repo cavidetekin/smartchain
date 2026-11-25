@@ -9,6 +9,18 @@ export function locative(n: number): string {
   return "de";  // yüz'de, bin'de
 }
 
+/** Rakamla biten kodun tamlayan eki (MAM-001'in, ALT-016'nın): okunuşun son sözcüğüne göre; rakamla bitmiyorsa ek yazılmaz (boş). */
+export function genitive(code: string): string {
+  const digits = code.match(/(\d+)$/)?.[1];
+  if (!digits) return "";
+  const n = Number(digits.slice(-3));
+  const ones = ["", "in", "nin", "ün", "ün", "in", "nın", "nin", "in", "un"];
+  const tens = ["", "un", "nin", "un", "ın", "nin", "ın", "in", "in", "ın"];
+  if (n % 10) return ones[n % 10];
+  if (n % 100) return tens[Math.floor(n / 10) % 10];
+  return n ? "ün" : digits.length > 3 ? "in" : "ın";  // yüz'ün, bin'in, sıfır'ın
+}
+
 export const tr = {
   app: { name: "Smartchain" },
   menu: {
@@ -490,6 +502,38 @@ export const tr = {
     // Yalnız bir kayıt (Veri kalitesinden Kayda git, K-174)
     onlyRecord: "Yalnız Veri kalitesinden açılan kayıt gösteriliyor.",
     showAll: "Bütün kayıtları göster",
+  },
+  // Üretim akışı penceresi (K-200): malzemenin kullananları ve kullandıkları, ürün ağacından
+  productionFlow: {
+    title: "Üretim akışı",
+    menu: "Üretim akışı",
+    closeAll: "Tümünü kapat",
+    loading: "Yükleniyor…",
+    failed: "Yüklenemedi.",
+    notFound: "Malzeme güncel veride bulunamadı.",
+    location: (code: string) => `Lokasyon ${code}`,
+    phantom: "Hayalet",
+    alternative: (no: number) => `Alternatif ${no}`,
+    alternatives: (list: string) => `Alternatif ${list}`,
+    alternativeShort: (no: number) => `Alt. ${no}`,
+    reference: (code: string) => (genitive(code) ? `${code}'${genitive(code)} ağacı (benzetilen)` : `${code} ağacı (benzetilen)`),
+    more: (n: string) => `+${n} malzeme`,
+    toggle: (code: string, side: "left" | "right", open: boolean) =>
+      `${code} ${side === "left" ? "kullananlarını" : "kullandıklarını"} ${open ? "kapat" : "aç"}`,
+    toggleOption: (name: string, open: boolean) => `${name} malzemelerini ${open ? "kapat" : "aç"}`,
+    key: "Renkler",
+    keyCurrent: "Seçili malzeme",
+    keyOption: "Alternatif",
+    keyPhantom: "Hayalet",
+    orGroup: (name: string) => `veya ${name}`,
+    zoomOut: "Uzaklaştır",
+    zoomIn: "Yakınlaştır",
+    zoomFit: "Sığdır",
+    zoomReset: "%100",
+    zoomResetTitle: "Normal boy (%100)",
+    zoomLevel: (percent: number) => `%${percent}`,
+    download: "PNG olarak indir",
+    downloadFailed: "Görsel indirilemedi.",
   },
   masterData: {
     title: "Ana veri",

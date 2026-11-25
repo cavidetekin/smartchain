@@ -1422,3 +1422,69 @@ tr.is-clickable { cursor: pointer; }
 .sc-field-rows > .sc-tip-anchor > .sc-check > span { order: -1; color: var(--text-muted); font-size: var(--fs-base); }
 /* Pencere tablosundaki seçenek kutusu (ör. Veri yükle'de Yükleme modu): seçenek kesilmeyecek genişlikte (K-172) */
 .sc-local-table td select.sc-cell-input { width: auto; }
+
+/* Tam pencere boyu (ui/Dialog full; K-200): pencerenin tamamı, içerik kalan yüksekliği doldurur */
+.sc-dialog--full { width: min(110rem, calc(100vw - 2rem)); height: calc(100vh - 2rem); }
+.sc-dialog--full .sc-dialog-body { flex: 1; min-height: 0; }
+.sc-dialog--full .sc-dialog-actions .sc-flow-key { margin-right: auto; }   /* renk açıklaması solda, "Kapat" sağda: aynı satır */
+
+/* Akış çizimi (ui/flow; docs/12 "Akış çizimi standardı", K-200): çizim alanı kendi içinde iki yönde kayar */
+.sc-flow { flex: 1; min-height: 12rem; overflow: auto; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--surface); }
+.sc-flow-canvas { overflow: hidden; }
+.sc-flow svg { display: block; font-family: var(--font-sans); }
+.sc-flow-node, .sc-flow-toggle { cursor: pointer; outline: none; }
+.sc-flow-node > rect { stroke-width: 1; }
+.sc-flow-node:hover > rect, .sc-flow-node:focus-visible > rect { stroke: var(--flow-box-hover); }
+.sc-flow-node:focus-visible > rect, .sc-flow-toggle:focus-visible circle { stroke-width: 2; }
+.sc-flow-code { font-family: var(--font-num); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+/* tonlar: zemin · çerçeve · yazı · soluk yazı (tokens.css --flow-<ton>-*) */
+.sc-flow-tone--box > rect { fill: var(--flow-box-bg); stroke: var(--flow-box-border); }
+.sc-flow-tone--box > text { fill: var(--flow-box-text); }
+.sc-flow-tone--box > .sc-flow-meta { fill: var(--flow-box-meta); }
+.sc-flow-tone--current > rect { fill: var(--flow-current-bg); stroke: var(--flow-current-border); }
+.sc-flow-tone--current > text { fill: var(--flow-current-text); }
+.sc-flow-tone--current > .sc-flow-meta { fill: var(--flow-current-meta); }
+.sc-flow-tone--option > rect { fill: var(--flow-option-bg); stroke: var(--flow-option-border); }
+.sc-flow-tone--option > text { fill: var(--flow-option-text); }
+.sc-flow-tone--option > .sc-flow-meta { fill: var(--flow-option-meta); }
+.sc-flow-tone--final > rect { fill: var(--flow-final-bg); stroke: var(--flow-final-border); }
+.sc-flow-tone--final > text { fill: var(--flow-final-text); }
+.sc-flow-tone--final > .sc-flow-meta { fill: var(--flow-final-meta); }
+.sc-flow-tone--semi > rect { fill: var(--flow-semi-bg); stroke: var(--flow-semi-border); }
+.sc-flow-tone--semi > text { fill: var(--flow-semi-text); }
+.sc-flow-tone--semi > .sc-flow-meta { fill: var(--flow-semi-meta); }
+.sc-flow-tone--raw > rect { fill: var(--flow-raw-bg); stroke: var(--flow-raw-border); }
+.sc-flow-tone--raw > text { fill: var(--flow-raw-text); }
+.sc-flow-tone--raw > .sc-flow-meta { fill: var(--flow-raw-meta); }
+.sc-flow-tone--phantom > rect { fill: var(--flow-phantom-bg); stroke: var(--flow-phantom-border); }
+.sc-flow-tone--phantom > text { fill: var(--flow-phantom-text); }
+.sc-flow-tone--phantom > .sc-flow-meta { fill: var(--flow-phantom-meta); }
+.sc-flow-option { font-weight: var(--fw-semibold); }
+.sc-flow-node--more > rect { stroke-dasharray: 3 2; }
+.sc-flow-node--more > .sc-flow-more { font-family: var(--font-num); font-variant-numeric: tabular-nums; fill: var(--flow-box-meta); }
+.sc-flow-badge rect { fill: var(--flow-badge-bg); stroke: var(--flow-badge-border); stroke-width: 0.8; }
+.sc-flow-badge text { fill: var(--flow-badge-text); }
+.sc-flow-toggle circle { fill: var(--surface); stroke: var(--flow-toggle-border); stroke-width: 1.2; }
+.sc-flow-toggle:hover circle, .sc-flow-toggle:focus-visible circle { stroke: var(--indigo-500); }
+.sc-flow-toggle text { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); fill: var(--indigo-500); }
+.sc-flow-toggle .sc-flow-error { font-family: var(--font-sans); font-weight: var(--fw-regular); fill: var(--text-muted); }
+.sc-flow-edge { fill: none; stroke: var(--flow-edge); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.sc-flow-arrow { fill: none; stroke: var(--flow-toggle-border); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.sc-flow-edge-label { font-family: var(--font-num); font-variant-numeric: tabular-nums; fill: var(--flow-edge-text); paint-order: stroke; stroke: var(--surface); stroke-width: 3; stroke-linejoin: round; }
+.sc-flow-edge-note { font-family: var(--font-sans); }
+/* renk açıklaması (yalnız renkler) */
+.sc-flow-key { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: 0; padding: 0; list-style: none; color: var(--text-muted); font-size: var(--fs-sm); }
+.sc-flow-key li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.sc-flow-swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: 0.25rem; border: 1px solid var(--flow-box-border); background: var(--flow-box-bg); }
+.sc-flow-swatch--current { background: var(--flow-current-bg); border-color: var(--flow-current-border); }
+.sc-flow-swatch--option { background: var(--flow-option-bg); border-color: var(--flow-option-border); }
+.sc-flow-swatch--final { background: var(--flow-final-bg); border-color: var(--flow-final-border); }
+.sc-flow-swatch--semi { background: var(--flow-semi-bg); border-color: var(--flow-semi-border); }
+.sc-flow-swatch--raw { background: var(--flow-raw-bg); border-color: var(--flow-raw-border); }
+.sc-flow-swatch--phantom { background: var(--flow-phantom-bg); border-color: var(--flow-phantom-border); }
+/* başlıktaki düğmeler: yakınlaştırma (simge düğme standardı), PNG, "Tümünü kapat" */
+.sc-flow-tools { display: flex; flex: none; align-items: center; gap: var(--strip-gap); }
+.sc-flow-tools .sc-tool-btn { width: 2.1538rem; height: 2.1538rem; border: 1px solid var(--lead-300); background: var(--surface); }
+.sc-flow-tools .sc-tool-btn--text { width: auto; padding: 0 var(--space-2); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); }
+.sc-flow-tools .sc-tool-btn svg { width: 1.1rem; height: 1.1rem; }
+.sc-flow-zoom { min-width: 3.2rem; text-align: right; color: var(--text-muted); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); }
