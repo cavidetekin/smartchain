@@ -94,7 +94,11 @@ LIMIT_SUPPLIER, LIMIT_MATERIAL, LIMIT_QTY = "TED-05", "SAT-003", 400
 IMPOSSIBLE_ORDER, IMPOSSIBLE_PRODUCT = "SO-1040", "MAM-010"
 MAINTENANCE_RESOURCE, LEAVE_WORKER, SICK_WORKER = "T-02", "W-007", "W-015"
 # Özel alokasyon örnekleri (K-198; docs/11): MAM-006 ve ağacındaki ALLOCATED_RAW özel alokasyonlu; ALLOCATION_EMPTY'nin alanı boş (durum 11)
-ALLOCATED = ("MAM-006", "SAT-009")
+ALLOCATED = ("MAM-006", "SAT-009", "HAM-008", "SAT-001")
+# Alokasyon kuralı örnekleri (K-199; durum 13): çok seviye (MAM-006 → ALT-017 → PRC-046 → HAM-008) ve alternatifli ağaç (ALT-017'nin ikinci
+# versiyonu; SAT-001 yalnız ikinci ağaçta). 7.16 Üretim akışı demosunda da kullanılır.
+DEEP_ALLOCATED, DEEP_ORDER_PO = "HAM-008", "PO-2074"
+ALTERNATIVE_PARENT, ALTERNATIVE_BOM, ALTERNATIVE_ONLY, ALTERNATIVE_CUSTOMER = "ALT-017", "B-ALT-017-2", "SAT-001", "MUS-B"
 ALLOCATED_RAW = "SAT-009"
 ALLOCATION_EMPTY = "SAT-010"
 ALLOCATED_ORDER_PO, ALLOCATED_CUSTOMER_PO = "PO-2071", "PO-2072"
@@ -203,6 +207,7 @@ def generate(on: date | None = None, seed: int = SEED) -> Dataset:
     _organisation(b, rng)
     _materials(b, rng)
     _structure(b, rng)
+    _alternative(b)
     _suppliers(b, rng)
     _orders(b, rng)
     _stock(b, rng)
@@ -600,6 +605,18 @@ def order_fields(line: dict | None, order_no: str | None = None) -> dict:
     return {"SalesOrderLineId": None, "SalesOrderNo": order_no, "SalesOrderLineNo": None, "SalesOrderLineItemNo": None}
 
 
+def _alternative(b: _Builder) -> None:
+    """Alternatifli örnek (K-199): bir alt montajın ikinci üretim versiyonu ve ikinci ağacı. İkinci ağaç birincinin bileşenlerine ek olarak yalnız
+    burada geçen bir malzemeyi kullanır. Durum hesapları ve iş emirleri birinci versiyonu kullanır (öncelik 1)."""
+    parent = b.id("Material", ALTERNATIVE_PARENT)
+    v1 = next(pv for pv in b.t["ProductionVersion"] if pv["MaterialId"] == parent)
+    b.add("ProductionVersion", **{**{k: v for k, v in v1.items() if k != "Id"}, "Code": "V2", "Name": "Alternatif üretim", "Priority": 2, "BOMCode": ALTERNATIVE_BOM})
+    rows = [r for r in b.t["BOM"] if r["MaterialId"] == parent and r["Code"] == v1["BOMCode"]]
+    for row in rows:
+        b.add("BOM", **{**{k: v for k, v in row.items() if k != "Id"}, "Code": ALTERNATIVE_BOM})
+    b.add("BOM", **{**{k: v for k, v in rows[0].items() if k != "Id"}, "Code": ALTERNATIVE_BOM, "ComponentMaterialId": b.id("Material", ALTERNATIVE_ONLY), "Quantity": 1.0})
+
+
 def _stock(b: _Builder, rng: random.Random) -> None:
     ds = b.ds
     for m in b.t["Material"]:
@@ -637,6 +654,11 @@ def _stock(b: _Builder, rng: random.Random) -> None:
           Quantity=1.0, **owner_fields(b, project=MISSING_PROJECT), **_stock_flags("Serbest"))
     b.add("Stock", LocationId=1, MaterialId=mid(ALLOCATED_RAW), Warehouse="ANA", LotNo=None, Status="Serbest",
           Quantity=30.0, **owner_fields(b, customer=MISSING_CUSTOMER), **_stock_flags("Serbest"))
+    # durum 13 (K-199): üç seviye aşağıda projeye ayrılmış stok; yalnız alternatif ağaçta geçen malzemede müşteriye ayrılmış stok
+    b.add("Stock", LocationId=1, MaterialId=mid(DEEP_ALLOCATED), Warehouse="ANA", LotNo=None, Status="Serbest",
+          Quantity=50.0, **owner_fields(b, project="PRJ-01"), **_stock_flags("Serbest"))
+    b.add("Stock", LocationId=1, MaterialId=mid(ALTERNATIVE_ONLY), Warehouse="ANA", LotNo=None, Status="Serbest",
+          Quantity=15.0, **owner_fields(b, customer=ALTERNATIVE_CUSTOMER), **_stock_flags("Serbest"))
     # Devreye almada açık, ERP'de doğrudan yapılmış ödünç (K-119).
     b.add("BorrowPayback", LocationId=1, MaterialId=mid("MAM-006"), LendingProjectId=b.id("Project", "PRJ-01"),
           BorrowingProjectId=b.id("Project", "PRJ-02"), BorrowedQuantity=2.0, PaidBackQuantity=0.0,
@@ -656,7 +678,7 @@ def _work_orders(b: _Builder, rng: random.Random) -> None:
         ("WO-5010", "PRC-060", 30, False, 4), ("WO-5011", "PRC-068", 10, True, 1), ("WO-5012", "MAM-009", 6, False, 4),
         ("WO-5013", "MAM-006", 4, False, 5),   # projeye ayrılmış iş emri (K-198)
     ]
-    pv_by_mat = {pv["MaterialId"]: pv for pv in b.t["ProductionVersion"]}
+    pv_by_mat = {pv["MaterialId"]: pv for pv in b.t["ProductionVersion"] if pv["Priority"] == 1}   # iş emirleri birinci versiyondan (alternatifli örnek, K-199)
     for no, code, qty, started, week in plan:
         m = b.find("Material", code)
         pv = pv_by_mat[m["Id"]]
@@ -710,12 +732,12 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
                   and m["Code"] not in (LATE_MATERIAL, LIMIT_MATERIAL)]
     n = 2000
 
-    def po(material_id, qty, req, conf, supplier_id, kind="Satın alma", wo=None, no=None, customer=None, order_no=None):
+    def po(material_id, qty, req, conf, supplier_id, kind="Satın alma", wo=None, no=None, customer=None, order_no=None, line=None):
         nonlocal n
         n += 1
         b.add("PurchaseOrderLine", LocationId=1, PurchaseOrderNo=no or f"PO-{n}", LineNo=1, OrderType=kind,
               SupplierId=supplier_id, MaterialId=material_id, OpenQuantity=float(qty), OrderedQuantity=float(qty), ReceivedQuantity=0.0,
-              Uom=None, RequestedDate=req, ConfirmedDate=conf, **owner_fields(b, customer=customer), **order_fields(None, order_no), WorkOrderId=wo, Status="Açık",
+              Uom=None, RequestedDate=req, ConfirmedDate=conf, **owner_fields(b, customer=customer), **order_fields(line, order_no), WorkOrderId=wo, Status="Açık",
               IsPurchaseRequest=kind == "Satın alma talebi", IsPurchase=kind == "Satın alma", IsSubcontract=kind == "Fason",  # K-121
               IsActive=True)
 
@@ -745,6 +767,8 @@ def _purchase_orders(b: _Builder, rng: random.Random) -> None:
     po(raw, 40, ds.day(3, 2), ds.day(3, 2), supplier_of[raw], no=ALLOCATED_ORDER_PO, order_no="SO-1021")
     po(raw, 60, ds.day(4, 2), ds.day(4, 2), supplier_of[raw], no=ALLOCATED_CUSTOMER_PO, customer="MUS-A")
     po(raw, 20, ds.day(5, 2), ds.day(5, 2), supplier_of[raw], no=MISSING_ORDER_PO, order_no=MISSING_ORDER)   # durum 12: olmayan siparişe bağlı
+    deep = b.id("Material", DEEP_ALLOCATED)   # durum 13 (K-199): üç seviye aşağıda sipariş satırına ayrılmış satın alma
+    po(deep, 80, ds.day(2, 2), ds.day(2, 2), supplier_of[deep], no=DEEP_ORDER_PO, line=next(s for s in b.t["SalesOrderLine"] if s["OrderNo"] == "SO-1020"))
 
 
 def _copy(b: _Builder, table: str, row: dict, **values) -> dict:

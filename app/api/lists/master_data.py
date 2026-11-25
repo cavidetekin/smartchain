@@ -27,9 +27,11 @@ HIDDEN = ("IsActive", "UpdatedAt", "AllocationLevel", "AllocationKey", "SalesOrd
 # Arz tablolarında iç bağlar (K-198): kolon olarak, Alanlar listesinde ve şablonda yoktur; sahip, ERP'den geldiği gibi ham alanlarda gösterilir
 # (`ProjectCode`, `CustomerCode`, `SalesOrderNo`…). İlişkili alanlar iç bağ üzerinden çalışır ("Bağlı proje · …", "Bağlı müşteri · …", "Bağlı sipariş · …").
 INTERNAL_LINKS = {t: ("ProjectId", "CustomerId", "SalesOrderLineId") for t in ("Stock", "WorkOrder", "PurchaseOrderLine")}
+# Alokasyon kuralı (K-199): sistem üretir; kaynak malzeme yalnız metindir ("SAT-009 +2"; birden çok olabildiği için ilişkili alanı yoktur)
+ALLOCATION_RULE = "MaterialAllocationRule"
 UNIT_OF_ROW = "UnitOfRow"
-NAMES = {row[0]: row[1] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "Birim"}
-SLUGS = {row[0]: row[4] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "birim"}
+NAMES = {row[0]: row[1] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "Birim", "MaterialAllocationRule": "Alokasyon kuralı"}
+SLUGS = {row[0]: row[4] for row in ENTITY_CATALOG} | {"UnitOfMeasure": "birim", "MaterialAllocationRule": "alokasyon-kurali"}
 
 
 # İlişkiler tek yerde: `relations.REFS` (ilişki alanı → hedef tablo; K-182). Kod kolonları ve ilişkili alanlar aynı tablodan.
@@ -72,6 +74,7 @@ MASTER_SPECS: tuple[Spec, ...] = (
          percent=frozenset({"QuotaRatio"}), unit_decimals=frozenset({"MinimumOrderQuantity", "OrderLotSize", "MaximumOrderQuantity"}),
          unit_ref=MATERIAL_UNIT),
     Spec("Customer", "master-customer", ADD),
+    Spec("MaterialAllocationRule", "master-allocation-rule"),
     Spec("Location", "master-location", ADD),
     Spec("UnitOfMeasure", "master-unit-of-measure"),
     Spec("UomConversion", "master-uom-conversion", {"Factor": 4}),
@@ -156,6 +159,8 @@ def _build(spec: Spec) -> ListDefinition:
     if "Id" in table.c:  # İlişkili kayıtlar kimlikle süzülür (K-173; yalnız süzmede)
         labels["Id"] = "Kayıt no"
     hidden = ("UpdatedAt",) if spec.table == "Location" else HIDDEN  # Lokasyon versiyonsuz, pasif kalır (K-153, K-169)
+    if spec.table == ALLOCATION_RULE:  # seviye ve anahtar burada tablonun kendisidir (açık gelir); manuel değer girilemez: o kolon kapalı gelir
+        hidden = (*(h for h in hidden if h not in ("AllocationLevel", "AllocationKey")), MANUAL_COLUMN)
     return ListDefinition(
         name=spec.name,
         table=f"core.{spec.table}",
@@ -188,7 +193,7 @@ SPEC_BY_TABLE = {s.table: s for s in (*MASTER_SPECS, *TRANSACTION_SPECS)}
 
 # Ekranların sekmeleri ve tabloları (K-168, K-169); ön yüz aynı sırayı kullanır, sayılar ucu bu tabloları sayar.
 MASTER_TABS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("malzeme", ("materials", "master-material-reference")),
+    ("malzeme", ("materials", "master-material-reference", "master-allocation-rule")),
     ("urun-agaci-ve-rota", ("master-production-version", "master-bom", "master-routing")),
     ("kaynak", ("master-resource", "master-resource-group", "master-resource-group-member")),
     ("tedarikci-ve-musteri", ("master-supplier", "master-material-supplier", "master-customer")),

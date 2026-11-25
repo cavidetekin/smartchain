@@ -29,6 +29,7 @@ LOAD_ORDER = [
     "SalesOrderLine", "Forecast", "Stock", "BorrowPayback", "WorkOrder", "WorkOrderComponent", "WorkOrderOperation", "PurchaseOrderLine",
     "ProductionConfirmation",
 ]
+DERIVED = ["MaterialAllocationRule"]  # sistemin ürettiği ana tablolar (K-199): veri setinde satırı yoktur, yüklemede hesaplanır
 CAPACITY_TABLES = ["WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar"]  # kapasite girişleri (K-185)
 MODEL_TABLES = ["ResourceGroupConstraint"]  # model kısıtları (K-189)
 PARAM_ORDER = ["DemandPriority", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
@@ -86,7 +87,7 @@ def _delete(conn: Connection) -> list[int]:
     if versions:
         delete_plan_data(conn, versions)
         in_versions = bindparam("v", expanding=True)
-        for name in reversed(LOAD_ORDER):
+        for name in (*DERIVED, *reversed(LOAD_ORDER)):
             conn.execute(text(f"DELETE FROM core.[{name}] WHERE VersionFrom IN :v").bindparams(in_versions),
                          {"v": versions})
         conn.execute(text("DELETE FROM adm.DataVersionEntity WHERE DataVersionId IN :v").bindparams(in_versions),
@@ -362,7 +363,9 @@ def _load(conn: Connection, ds: Dataset) -> dict:
             DataVersionId=version, EntityName=name, ImportBatchId=None))
     # Özel alokasyon (K-198): arz satırlarının seviyesi, anahtarı ve bayrağı aktarımdaki hesapla aynı işlevden; yükleme aktarım olmadığı için yerinde
     from app import allocation
+    from app.allocation import rules as allocation_rules
     allocation.update_in_place(conn)
+    counts[allocation_rules.TABLE] = allocation_rules.rebuild(conn, version, now, history=False)["rules"]   # alokasyon kuralı (K-199): yüklemede üretilir
 
     set_id = conn.execute(text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar()
     if set_id is None:

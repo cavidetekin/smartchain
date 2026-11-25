@@ -34,7 +34,8 @@ const ROWS: Record<string, Reply["body"]> = {
 const MASTER_COUNTS = {
   data_version: 35,
   tabs: [
-    { key: "malzeme", tables: [{ list: "materials", label: "Malzeme", count: 1212 }, { list: "master-material-reference", label: "Benzetilen ürün", count: 0 }] },
+    { key: "malzeme", tables: [{ list: "materials", label: "Malzeme", count: 1212 }, { list: "master-material-reference", label: "Benzetilen ürün", count: 0 },
+                               { list: "master-allocation-rule", label: "Alokasyon kuralı", count: 20 }] },
     { key: "urun-agaci-ve-rota", tables: [{ list: "master-production-version", label: "Üretim versiyonu", count: 123 },
                                           { list: "master-bom", label: "Ürün ağacı", count: 274 }, { list: "master-routing", label: "Rota", count: 212 }] },
   ],
@@ -94,7 +95,7 @@ describe("Ana veri", () => {
   it("tablo seçimi araç çubuğunun başında, kayıt sayılarıyla; seçilince tablo değişir", async () => {
     const user = await openMaster();
     await waitFor(() => expect(picker()).toBeInTheDocument());
-    await waitFor(() => expect([...picker()!.querySelectorAll("option")].map((o) => o.textContent)).toEqual(["Malzeme (1.212)", "Benzetilen ürün (0)"]));
+    await waitFor(() => expect([...picker()!.querySelectorAll("option")].map((o) => o.textContent)).toEqual(["Malzeme (1.212)", "Benzetilen ürün (0)", "Alokasyon kuralı (20)"]));
     const lead = picker()!.closest(".sc-table-toolbar-main")!;   // şeridin solu: sekmeler, sonra tablo seçimi (K-173)
     expect(lead.firstElementChild).toHaveClass("sc-overflow-tabs");
     expect(lead.children[1]).toBe(picker());

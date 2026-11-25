@@ -82,7 +82,8 @@ def test_purchase_and_confirmation_files(written):
     # K-198: kalemsiz siparişe ve müşteriye ayrılmış satırlar; sözleşmede özel alokasyon alanı yok (yüklemede hesaplanır)
     owned = {r["PurchaseOrderNo"]: (r["CustomerCode"], r["SalesOrderNo"], r["SalesOrderLineNo"]) for r in data if r["CustomerCode"] or r["SalesOrderNo"]}
     assert owned == {d.ALLOCATED_ORDER_PO: (None, "SO-1021", None), d.ALLOCATED_CUSTOMER_PO: ("MUS-A", None, None),
-                     d.MISSING_ORDER_PO: (None, d.MISSING_ORDER, None)}   # durum 12: olmayan siparişe bağlı
+                     d.MISSING_ORDER_PO: (None, d.MISSING_ORDER, None),   # durum 12: olmayan siparişe bağlı
+                     d.DEEP_ORDER_PO: (None, "SO-1020", 1)}               # durum 13 (K-199): üç seviye aşağıda sipariş satırına bağlı
     assert not {"IsCustomTracked", "IsCustomAllocated", "AllocationLevel", "AllocationKey"} & set(header)
     header, data = read(out, "ProductionConfirmation")
     assert not {"OpNo", "SeqNo", "ResourceCode", "ActualConsumption", "ConfirmedQty", "StartAt", "EndAt"} & set(header)
@@ -117,7 +118,8 @@ def test_stock_file(written):
              for r in data if r["ProjectCode"] or r["CustomerCode"] or r["SalesOrderNo"]}
     assert owned == {("MAM-006", "PRJ-01", None, None, None, None), ("MAM-006", None, "MUS-A", None, None, None),
                      ("MAM-006", None, None, "SO-1020", 1, 0), (d.ALLOCATION_EMPTY, "PRJ-02", None, None, None, None),
-                     ("MAM-006", d.MISSING_PROJECT, None, None, None, None), (d.ALLOCATED_RAW, None, d.MISSING_CUSTOMER, None, None, None)}   # durum 12
+                     ("MAM-006", d.MISSING_PROJECT, None, None, None, None), (d.ALLOCATED_RAW, None, d.MISSING_CUSTOMER, None, None, None),   # durum 12
+                     (d.DEEP_ALLOCATED, "PRJ-01", None, None, None, None), (d.ALTERNATIVE_ONLY, None, d.ALTERNATIVE_CUSTOMER, None, None, None)}   # durum 13
     assert [r["Status"] for r in data if r["ExpectedAcceptanceDate"]] == ["Kalitede"]
     lot = next(r for r in data if r["Status"] == "Kalitede")
     assert lot["QualityEntryDate"].date() < ds.generated_on < lot["ExpectedAcceptanceDate"].date()
@@ -193,7 +195,10 @@ def test_bom_file(written):
     _, out, _ = written
     header, data = read(out, "BOM")
     assert not {"ProductionVersionCode", "OpNo", "ScrapPct", "IsFixedQuantity"} & set(header)
-    assert {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["Code"] == f"B-{r['MaterialCode']}" for r in data)
+    assert {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["Code"] == f"B-{r['MaterialCode']}" for r in data if r["Code"] != d.ALTERNATIVE_BOM)
+    second = [r["ComponentMaterialCode"] for r in data if r["Code"] == d.ALTERNATIVE_BOM]   # alternatifli örnek (K-199): ikinci ağaç birincinin bileşenleri + bir malzeme
+    first = [r["ComponentMaterialCode"] for r in data if r["Code"] == f"B-{d.ALTERNATIVE_PARENT}"]
+    assert sorted(second) == sorted([*first, d.ALTERNATIVE_ONLY]) and {r["MaterialCode"] for r in data if r["Code"] == d.ALTERNATIVE_BOM} == {d.ALTERNATIVE_PARENT}
     assert {r["SequenceNo"] for r in data} == {1} and {r["IsLotBasedUsage"] for r in data} == {0} and {r["IsPhantom"] for r in data} == {0}
     _, versions = read(out, "ProductionVersion")
     assert {r["Code"] for r in data} <= {v["BOMCode"] for v in versions}
@@ -204,8 +209,9 @@ def test_production_version_file(written):
     _, out, _ = written
     header, data = read(out, "ProductionVersion")
     assert "IsDefault" not in header and data
-    assert {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["BOMCode"] == f"B-{r['MaterialCode']}" for r in data)
-    assert {(r["Code"], r["Type"], r["IsActive"], r["Priority"]) for r in data} == {("V1", "Standart", 1, 1)}
+    assert {r["LocationCode"] for r in data} == {d.LOCATION_CODE} and all(r["BOMCode"] == f"B-{r['MaterialCode']}" for r in data if r["Code"] == "V1")
+    assert {(r["Code"], r["Type"], r["IsActive"], r["Priority"]) for r in data} == {("V1", "Standart", 1, 1), ("V2", "Standart", 1, 2)}
+    assert [(r["MaterialCode"], r["BOMCode"]) for r in data if r["Code"] == "V2"] == [(d.ALTERNATIVE_PARENT, d.ALTERNATIVE_BOM)]   # alternatifli örnek (K-199)
 
 
 def test_material_file(written):

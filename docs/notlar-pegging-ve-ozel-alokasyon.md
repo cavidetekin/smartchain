@@ -2,7 +2,7 @@
 
 Tarih: 23–24.11.2026 görüşmeleri.
 
-**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Ara iş kapandı (K-198, 0.57.0). Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi ve K numarası almadı. Adımları `GELISTIRME_ADIMLARI.md`'ye eklendi (24.11.2026: Ara iş, 7.15, 7.16, 7.17, 9.5 ve ilgili adımlara notlar); her adım başlarken ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
+**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Ara iş kapandı (K-198, 0.57.0). 7.15 kapandı (K-199, 0.58.0). Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi ve K numarası almadı. Adımları `GELISTIRME_ADIMLARI.md`'ye eklendi (24.11.2026: Ara iş, 7.15, 7.16, 7.17, 9.5 ve ilgili adımlara notlar); her adım başlarken ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
 
 İşaretler: ✔ karar · ◻ öneri (onay yok) · ? açık konu
 
@@ -22,6 +22,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Özel bakiye genel arzı kullanabilir; bu tek yönlü bir **aktarım** kararıdır ve yalnız mevcut genel arzın geldiği dönemlerde gerekir (1. dönem stok, açık siparişler).
 - ✔ Anahtarlı bakiyeler arasında aktarım yoktur. Bir malzemede müşteri, proje ve sipariş arzı birlikte varsa birbirine karışmaz; aktarım yalnız genelden gelir.
 - ✔ Kullanılmayan anahtarlı arz (fazla) boşta kalır ve listelenir. Yeni arz sahip başına ayrı açılır, partiler birleştirilmez, yuvarlama fazlası sahibinindir.
+- ✔ Kural tablosuna yalnız kullanacak talebi ve açık arzı olan sahipler girer; talebi olmayan, sahibi bulunamayan ya da kapanmış ayrılmış arz satır açmaz, model onu plana almaz (K-199).
 - ✔ Senaryo parametresi (Parametreler › Malzeme): **"Özel alokasyon": Dikkate al · Dikkate alma.**
 - ◻ "Dikkate alma" seçilince anahtarlı arz da genele girer; bu durumda "sahibi dışında kullanılan ayrılmış arzlar" listesi çıkarılır.
 - ◻ Ayrılmış bir talep, her malzemede "o malzemenin kendisinde arzı olan en detaylı seviye + genel"i kullanır (ayrıntı teyit edilmedi).
@@ -43,7 +44,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Üç arz tablosunda sahip alanlarının adı: Bağlı proje · Bağlı müşteri · Bağlı sipariş no · Bağlı sipariş satırı · Bağlı sipariş alt satırı; ilişkili alanlar da aynı adı taşır; iç bağ kolonu gösterilmez (K-198).
 - ✔ Sahibi bulunamayan ya da kapanmış ayrılmış arz genele düşmez; anahtar ERP'nin yazdığı gibi kalır, arz boşta bekler; uyarı yok, raporda görünür (K-198).
 - ✔ Bakılacak: `PlannedOrder` çok dar (üretim alternatifi, lokasyon, kaynak yok); yapısı sonra yeniden ele alınacak.
-- ✔ Yeni **core** tablo **`MaterialAllocationRule`**: malzeme, lokasyon, `AllocationLevel`, `AllocationKey`, **sebep** (kendi arzı var · alt seviye yüzünden). Sistem üretir; elle değişmez; senaryo değildir; veri versiyonu değişince (yükleme dâhil) yeniden hesaplanır.
+- ✔ Yeni **core** tablo **`MaterialAllocationRule`**: malzeme, lokasyon, `AllocationLevel`, `AllocationKey`, **sebep** (Kendi arzı · Alt seviye arzı). Sistem üretir; elle değişmez; senaryo değildir; veri versiyonu değişince (yükleme dâhil) yeniden hesaplanır. Kaynak malzeme kolonu; versiyonlu; Ana veri › Malzeme sekmesinde ve malzeme kartında gösterilir (K-199).
 
 ## 3. Üretim akışı ekranı
 
@@ -86,7 +87,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ **Sipariş ve tahminde anahtar yoktur**; talep yalnız kimliğini taşır (sipariş, proje, müşteri). Anahtar her malzemede `MaterialAllocationRule`'dan okunur, çünkü aynı sipariş bir malzemede özel, başka malzemede genel olabilir.
 - ✔ Her malzemede sorulur: kural tablosunda Sipariş var mı → Proje var mı → Müşteri var mı → yoksa genel. İlk bulunanda durur.
 - ✔ **Müşterili tahmin o müşteriye ayrılmış arzı kullanır.** Müşterisi boş tahmin her malzemede geneldir.
-- ? Sözleşmede tahmin proje de taşıyabiliyor; projeli tahminin o projeye ayrılmış arzı kullanması teyit edilmedi.
+- ✔ Tahmin de sipariş de aynı kontrolden geçer; tahminde sipariş no olmadığı için proje → müşteri seviyesinde eşleşir (K-199).
 - ✔ Üretim ihtiyacı, hizmet ettiği talebin kimliğini taşır; genel üretimin bileşen ihtiyacı kimliksizdir.
 
 ## 6. Pegging sonuç tablosu ve görünümler
@@ -118,7 +119,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 
 - `IsCustomTracked` → `IsCustomAllocated` (bütün tablolar, arayüz, sözleşme). (K-198, uygulandı)
 - Arzlara `AllocationLevel`, `AllocationKey`; ERP satır bayrakları sözleşmeden çıkar. (K-198, uygulandı)
-- Yeni tablo `MaterialAllocationRule`.
+- Yeni tablo `MaterialAllocationRule`. (K-199, uygulandı)
 - `PlannedOrder`: `ProjectId` kalkar, alokasyon alanları eklenir. (K-198, uygulandı)
 - `ProjectGroup` tablosu ve `TrackingRule` kalkar. (K-198, uygulandı)
 - "Özel alokasyon" parametresi (Parametreler › Malzeme).

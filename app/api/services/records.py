@@ -89,6 +89,7 @@ RELATIONS: dict[str, tuple[Relation, ...]] = {
         Relation("material-supplier", "Malzeme tedarikçisi", "master-material-supplier", _by("MaterialSupplier", "MaterialId")),
         Relation("uom-conversion", "Birim dönüşümü", "master-uom-conversion", _by("UomConversion", "MaterialId")),
         Relation("material-reference", "Benzetilen ürün", "master-material-reference", _any("MaterialReference", "MaterialId", "ReferenceMaterialId")),
+        Relation("allocation-rule", "Alokasyon kuralı", "master-allocation-rule", _by("MaterialAllocationRule", "MaterialId")),   # K-199
     ),
     "ProductionVersion": (
         Relation("bom", "Ürün ağacı", "master-bom", _version_part("BOM", "Code", "BOMCode")),

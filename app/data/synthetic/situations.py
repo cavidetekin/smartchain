@@ -21,8 +21,10 @@ class Check:
 
 def _bom_children(ds: Dataset) -> dict[int, list[tuple[int, float]]]:
     children = defaultdict(list)
-    for r in ds.rows("BOM"):  # sette malzeme başına tek ağaç
-        children[r["MaterialId"]].append((r["ComponentMaterialId"], r["Quantity"]))
+    first = {(pv["MaterialId"], pv["BOMCode"]) for pv in ds.rows("ProductionVersion") if pv["Priority"] == 1}
+    for r in ds.rows("BOM"):  # durum hesapları birinci versiyonun ağacıyla (alternatifli örnek, K-199)
+        if (r["MaterialId"], r["Code"]) in first:
+            children[r["MaterialId"]].append((r["ComponentMaterialId"], r["Quantity"]))
     return children
 
 
@@ -41,7 +43,7 @@ def explode(ds: Dataset, material_id: int, qty: float) -> dict[int, float]:
 
 def resource_hours(ds: Dataset, material_id: int, qty: float, group_id: int) -> float:
     """Malzemenin (alt kırılımlarıyla) bir kaynak grubundaki yükü: plan ve yük grup düzeyindedir (K-180)."""
-    route_of = {pv["MaterialId"]: pv["RouteCode"] for pv in ds.rows("ProductionVersion")}
+    route_of = {pv["MaterialId"]: pv["RouteCode"] for pv in ds.rows("ProductionVersion") if pv["Priority"] == 1}
     ops = defaultdict(float)
     for r in ds.rows("Routing"):
         if r["ResourceGroupId"] == group_id:

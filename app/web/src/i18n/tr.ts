@@ -496,7 +496,7 @@ export const tr = {
     sections: "Ana veri bölümleri",
     tabs: { material: "Malzeme", bomRouting: "Ürün ağacı ve rota", resource: "Kaynak", supplierCustomer: "Tedarikçi ve müşteri",
             locationUnit: "Lokasyon ve birim" },
-    tables: { material: "Malzeme", materialReference: "Benzetilen ürün", productionVersion: "Üretim versiyonu", bom: "Ürün ağacı", routing: "Rota",
+    tables: { material: "Malzeme", materialReference: "Benzetilen ürün", allocationRule: "Alokasyon kuralı", productionVersion: "Üretim versiyonu", bom: "Ürün ağacı", routing: "Rota",
               resource: "Kaynak", resourceGroup: "Kaynak grubu", groupMember: "Kaynak grup eşleşmesi", supplier: "Tedarikçi",
               materialSupplier: "Malzeme tedarikçisi", customer: "Müşteri", location: "Lokasyon", unit: "Birim", uomConversion: "Birim dönüşümü" },
   },

@@ -683,6 +683,10 @@ Staging'in işlenmiş katmanını core'a yeni bir veri versiyonunda yazar; iş t
 
 **Ölçüm (`python -m pytest -m perf -k transfer`, `tests/test_transfer_perf.py`):** 25 tablo × 50.000 satır, her 97. satırın kodu tanımsız: ilk aktarım (hepsi yeni) ortanca 270,5 sn (241,0–283,6), ardından ikinci aktarım (hepsi değişmeyen) ortanca 220,4 sn (217,0–223,1). Kısmi aktarım (`-k partial`, K-155), Talep ve Stok grupları (6 tablo × 50.000 satır, tam aktarımın ardından, hepsi değişmeyen): ortanca 63,2 sn (62,9–79,3). Sürenin çoğu kod→Id çözümlemesi ve karşılaştırmadır; sınır 30 dk. Sunucuda ilk kurulumda yeniden ölçülür.
 
+**Alokasyon kuralı (K-199; `app/allocation/rules.py`; uygulandı, sürüm 0.58.0).** Her aktarımın sonunda (tam ve kısmi) ve sentetik yüklemede tam hesaplanır, sonra fark alınır. Hesap veritabanında küme SQL'iyle ve geçici tablolarla yapılır: kenarlar → arz ve talep anahtarları (anahtar tam sayı kimlikle taşınır) → arzdan yukarı kapanış → talepten aşağı kapanış (yalnız yukarı kapanışın içinde) → sonuç ve fark. Önce aşağı yürümek her sahip için bütün ağacı dolaşır (ölçümde 28 sn); sıra bu yüzden yukarı–aşağıdır.
+
+**Ölçüm (`python -m pytest -m perf -k allocation_rules`, `tests/test_allocation_rules_perf.py`; 25.11.2026):** 10.010 malzeme, 16 seviye, 29.920 ağaç satırı, 5.000 açık sipariş satırı, 30 proje, 200 müşteri, 300 ayrılmış arz; sonuç 13.004 kural. Hesap ortanca **6,7 sn** (kenarlar 0,8 · anahtarlar 0,1 · yukarı 3,4 · aşağı 1,8 · sonuç 0,7); kaynak malzemesiz 6,3 sn (kaynak malzeme kolonunun maliyeti 0,4 sn). Fark ve ilk yazma dahil tam çağrı 9,3 sn (yazma 2,2 sn; sonraki aktarımlarda yalnız değişen satırlar yazılır). Hedef: hesap ortanca ≤ 10 sn.
+
 ## Ham veri temizliği (ekran 02, fonksiyon 09, K-156)
 
 Saklama süresini (`RawDataRetentionDays`, 1–30 gün; varsayılan yok) geçen partilerde güncel olmayan ham satırları, ön kontrol bulgularını ve yüklenen
@@ -721,7 +725,7 @@ Hesap tablo validasyon işinin başında yapılır; sonuç güncelse atlanır, d
 
 | Uç nokta | Yetki | Açıklama |
 |---|---|---|
-| Ortak listeler `materials`, `master-…` | 10 okuma | Ana veri: 14 tablo, salt okunur; ilişkiler kodla; miktar ondalığı satırın biriminden |
+| Ortak listeler `materials`, `master-…` | 10 okuma | Ana veri: 15 tablo (Alokasyon kuralı dahil: sistem üretir, K-199), salt okunur; ilişkiler kodla; miktar ondalığı satırın biriminden |
 | Ortak listeler `transaction-…` | 102 okuma | İşlem verisi: 11 tablo (Proje dahil), salt okunur |
 | `GET /api/master-data/counts` · `GET /api/transaction-data/counts` | 10 / 102 okuma | Sekmeler, tablolar ve güncel veri versiyonundaki kayıt sayıları (tablo seçimi için); veri yoksa sayı boş |
 

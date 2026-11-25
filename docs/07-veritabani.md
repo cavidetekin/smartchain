@@ -69,7 +69,7 @@
 | `prc.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 28 |
 | `prc.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
 
-## `core` · Ana veri ve işlem verisi (26 tablo)
+## `core` · Ana veri ve işlem verisi (27 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -87,6 +87,7 @@
 | `core.BOM` | Ürün ağacı satırı. | Ana veri | evet | 19 |
 | `core.Routing` | Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile. | Ana veri | evet | 24 |
 | `core.MaterialReference` | Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır. | Ana veri | evet | 8 |
+| `core.MaterialAllocationRule` | Alokasyon kuralı: bir malzemenin hangi sahip (sipariş, proje, müşteri) adına ayrı izleneceği. Sistem üretir: her aktarımın sonunda ve sentetik yüklemede taleplerden ürün ağacında aşağı yürünerek hesaplanır (K-199). ERP sözleşmesinde yoktur, elle değiştirilemez, veri kuralı yazamaz, senaryoya bağlı değildir. Model ve pegging ağaçta yeniden yürümez, bu tabloyu okur. | Ana veri | evet | 7 |
 | `core.Project` | Proje. | Ana veri | evet | 15 |
 | `core.Customer` | Müşteri. | Ana veri | evet | 20 |
 | `core.SalesOrderLine` | Müşteri sipariş satırı; teklifler IsQuote ile okunur, plana dahil olmaları senaryo parametresi. Vade: teyit tarihi, yoksa istek tarihi. | İşlem verisi | evet | 26 |

@@ -219,7 +219,9 @@ def _has_allocation(engine: Engine) -> bool:
     """Sentetik set özel alokasyon örneklerini taşıyor mu (K-198; olmayan siparişe bağlı satın alma satırı, durum 12): eski setle kurulmuş test veritabanı yeniden yüklenir."""
     with engine.connect() as conn:
         return conn.execute(sa.text("SELECT COUNT(*) FROM core.PurchaseOrderLine WHERE VersionTo IS NULL AND AllocationKey = N'SO-9999' "
-                                    "AND SalesOrderLineId IS NULL AND CustomerCode IS NULL")).scalar() >= 1
+                                    "AND SalesOrderLineId IS NULL AND CustomerCode IS NULL")).scalar() >= 1 and conn.execute(sa.text(
+            # alokasyon kuralı (K-199, durum 13): alternatif ağaçtaki arzdan gelen kural
+            "SELECT COUNT(*) FROM core.MaterialAllocationRule WHERE VersionTo IS NULL AND SourceMaterials = N'SAT-001' AND Reason = N'Alt seviye arzı'")).scalar() >= 1
 
 
 def ensure_synthetic(engine: Engine) -> bool:

@@ -194,7 +194,7 @@ def test_material_relations(api, people, db_engine):
                                 "WHERE p.MaterialId = m.Id AND p.VersionTo IS NULL) ORDER BY m.Code")).scalar()
     card = api.get(f"/api/records/materials/{mid}", headers=auth(people[KEY_USER])).json()
     keys = [x["key"] for x in card["relations"]]
-    assert keys == ["production-version", "bom", "where-used", "routing", "material-supplier", "uom-conversion", "material-reference"]
+    assert keys == ["production-version", "bom", "where-used", "routing", "material-supplier", "uom-conversion", "material-reference", "allocation-rule"]
     pv = next(x for x in card["relations"] if x["key"] == "production-version")
     assert pv["count"] > 0
     tx = api.get(f"/api/records/transaction-sales-order/{customer_order(db_engine)}", headers=auth(people[KEY_USER])).json()

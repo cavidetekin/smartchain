@@ -26,7 +26,7 @@ def cols(name: str) -> dict[str, dict]:
 def test_tabs_and_registration():
     master = [n for _, lists in MASTER_TABS for n in lists]
     tx = [n for _, lists in TRANSACTION_TABS for n in lists]
-    assert len(master) == len(set(master)) == 14 and len(tx) == len(set(tx)) == 11
+    assert len(master) == len(set(master)) == 15 and len(tx) == len(set(tx)) == 11
     assert [k for k, _ in MASTER_TABS] == ["malzeme", "urun-agaci-ve-rota", "kaynak", "tedarikci-ve-musteri", "lokasyon-ve-birim"]
     assert [k for k, _ in TRANSACTION_TABS] == ["talep", "stok", "uretim", "satin-alma", "izin"]
     assert "transaction-project" in tx and "transaction-project-group" not in tx  # K-198
@@ -80,6 +80,8 @@ def test_standard_view_shows_all_transferred_fields():
         expected = {"UpdatedAt"} | ({"IsActive"} if "IsActive" in c and name != "master-location" else set())
         # K-198: arz tablolarında seviye, anahtar, satır no ve alt satır no Alanlar'da durur, kapalı gelir; "Özel alokasyon" ve "Sipariş no" açık
         expected |= {"AllocationLevel", "AllocationKey", "SalesOrderLineNo", "SalesOrderLineItemNo"}
+        if name == "master-allocation-rule":   # K-199: seviye ve anahtar tablonun kendisidir (açık); manuel değer girilemez (kolon kapalı)
+            expected = {"UpdatedAt", "ManualState"}
         assert hidden == expected & set(c), name
         assert all(x.get("standard_filter") is None for x in c.values())  # süzgeç yok (K-169)
     assert cols("master-location")["IsActive"]["default_visible"]  # versiyonsuz: pasif lokasyon kalır (K-153)

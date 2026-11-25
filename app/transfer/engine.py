@@ -497,6 +497,9 @@ def run_transfer(session: Session, user_id: int | None, progress: Callable[[str]
             res.note = f"{res.note} {note}" if res.note else note
             session.execute(sa.update(VERSION_ENTITY).where(VERSION_ENTITY.c.DataVersionId == run.version, VERSION_ENTITY.c.EntityName == res.entity)
                             .values(Note=res.note))
+    # Alokasyon kuralı (K-199): arz anahtarları kesinleşti; taleplerden ağaçta yürünerek tam hesap ve fark (aktarımın işleminde)
+    from app.allocation import rules as allocation_rules
+    allocation_rules.rebuild(session, run.version, run.now, run.user_id)
     # Kapasite önbelleği (K-188): yalnız etkilenen kaynaklar yenilenir, önbellek yeni veri versiyonuna çekilir (aktarımın işleminde)
     from app.capacity import triggers as capacity_triggers
     capacity_triggers.after_transfer(session, run.version)

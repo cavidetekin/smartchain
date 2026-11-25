@@ -500,6 +500,26 @@ MaterialReference = sa.Table(
     comment="Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır.",
 )
 
+MaterialAllocationRule = sa.Table(
+    "MaterialAllocationRule", metadata,
+    sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),
+    sa.Column("LocationId", sa.Integer(), sa.ForeignKey("core.Location.Id"), nullable=False, comment="Lokasyon", info={'label': "Lokasyon", 'source': "Yüklemede diğer tablolardan", 'workspace': False}),
+    sa.Column("MaterialId", sa.BigInteger(), index=True, nullable=False, comment="Malzeme", info={'label': "Malzeme", 'source': "Yüklemede diğer tablolardan", 'workspace': False}),
+    sa.Column("AllocationLevel", sa.Unicode(10), nullable=False, comment="Sipariş | Proje | Müşteri", info={'label': "Alokasyon seviyesi", 'values': ["Sipariş", "Proje", "Müşteri"], 'source': "Yüklemede diğer tablolardan", 'workspace': False}),
+    sa.Column("AllocationKey", sa.Unicode(60), nullable=False, comment="Malzemenin adına ayrı izlendiği sahibin anahtarı; arz satırlarındaki anahtarla aynı biçimde", info={'label': "Alokasyon anahtarı", 'source': "Yüklemede diğer tablolardan", 'workspace': False}),
+    sa.Column("Reason", sa.Unicode(20), nullable=False, comment="Kendi arzı | Alt seviye arzı", info={'label': "Sebep", 'values': ["Kendi arzı", "Alt seviye arzı"], 'source': "Yüklemede diğer tablolardan", 'workspace': False}),
+    sa.Column("SourceMaterials", sa.Unicode(70), nullable=True, comment="Sebebi alt seviye arzı olan satırda ayrılmış arzın durduğu alt malzeme; birden çoksa koda göre ilki ve kalanların sayısı. Metindir: kaynak birden çok malzeme olabildiği için ilişkili alanı yoktur", info={'label': "Kaynak malzeme", 'source': "Yüklemede diğer tablolardan", 'workspace': False}),
+    sa.Column("VersionFrom", sa.Integer(), primary_key=True, autoincrement=False, comment="Kaydın geçerli olduğu ilk veri versiyonu", info={'label': "Kaydın geçerli olduğu ilk veri versiyonu", 'source': "Sistem", 'workspace': False}),
+    sa.Column("VersionTo", sa.Integer(), nullable=True, comment="Kaydın geçerli olduğu son veri versiyonu; güncel kayıtta boş", info={'label': "Kaydın geçerli olduğu son veri versiyonu", 'source': "Sistem", 'workspace': False}),
+    sa.Column("ImportBatchId", sa.BigInteger(), sa.ForeignKey("adm.ImportBatch.Id"), nullable=True, comment="Kaydı getiren yükleme partisi", info={'label': "Kaydı getiren yükleme partisi", 'source': "Sistem", 'workspace': False}),
+    sa.Column("BusinessKey", sa.Unicode(200), nullable=False, comment="İş anahtarı; kod ya da kodların birleşimi", info={'label': "İş anahtarı", 'source': "Sistem", 'workspace': False}),
+    sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Son değişiklik zamanı", info={'label': "Son değişiklik zamanı", 'source': "Sistem", 'workspace': False}),
+    sa.Index("UX_MaterialAllocationRule_LocationId_MaterialId_AllocationLevel_AllocationKey", "LocationId", "MaterialId", "AllocationLevel", "AllocationKey", unique=True, mssql_where=sa.text("VersionTo IS NULL")),
+    schema="core",
+    info={'field_class': "Ana veri"},
+    comment="Alokasyon kuralı: bir malzemenin hangi sahip (sipariş, proje, müşteri) adına ayrı izleneceği. Sistem üretir: her aktarımın sonunda ve sentetik yüklemede taleplerden ürün ağacında aşağı yürünerek hesaplanır (K-199). ERP sözleşmesinde yoktur, elle değiştirilemez, veri kuralı yazamaz, senaryoya bağlı değildir. Model ve pegging ağaçta yeniden yürümez, bu tabloyu okur.",
+)
+
 Project = sa.Table(
     "Project", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=False, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),

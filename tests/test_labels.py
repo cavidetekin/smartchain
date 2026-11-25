@@ -20,7 +20,7 @@ KNOWN = {
     "IsCritical": {"Kritik": {"ResourceGroup"}, "Kritik malzeme": {"Material"}},
     "IsPhantom": {"Hayalet yarı mamul": {"Material"}, "Hayalet bileşen": {"BOM", "WorkOrderComponent"}},
     "IsSubcontractor": {"Fason deposu": {"Location"}, "Fason": {"ResourceGroup"}, "Fasoncu mu": {"Supplier"}},
-    "MaterialId": {"Malzeme": {"UomConversion", "MaterialSupplier", "SalesOrderLine", "Forecast", "BorrowPayback", "Stock", "PurchaseOrderLine", "TransferOrder"},
+    "MaterialId": {"Malzeme": {"UomConversion", "MaterialSupplier", "SalesOrderLine", "Forecast", "BorrowPayback", "Stock", "PurchaseOrderLine", "TransferOrder", "MaterialAllocationRule"},
                    "Üretilen malzeme": {"ProductionVersion", "BOM", "WorkOrder", "ProductionConfirmation"}, "Benzetilen ürün": {"MaterialReference"},
                    "Bileşen": {"WorkOrderComponent"}},
     "Name": {"Lokasyon adı": {"Location"}, "Birim adı": {"UnitOfMeasure"}, "Kaynak adı": {"Resource"}, "Grup adı": {"ResourceGroup"}, "Malzeme adı": {"Material"},

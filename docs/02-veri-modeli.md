@@ -161,6 +161,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Ürün ağacı satırı
 - Rota satırı: operasyon–kaynak
 - **MaterialReference:** Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır
+- **MaterialAllocationRule:** Alokasyon kuralı: hangi malzeme hangi sahip adına ayrı izlenir (sistem üretir, K-199)
 - Proje
 
 #### SISTEM
@@ -667,6 +668,25 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
 - **Kullanım (K-126):** Ürünün kendi geçerli versiyonu yoksa motor referans ürünün ağacını ve rotasını kullanır; motorda uygulanışı Aşama 10.
+
+### MaterialAllocationRule
+<sub>21. Veri modeli · Malzeme</sub>
+
+- Ana veri · versiyonlu · Faz 1
+- Alokasyon kuralı: bir malzemenin hangi sahip (sipariş, proje, müşteri) adına ayrı izleneceği. Sistem üretir: her aktarımın sonunda ve sentetik yüklemede taleplerden ürün ağacında aşağı yürünerek hesaplanır (K-199). ERP sözleşmesinde yoktur, elle değiştirilemez, veri kuralı yazamaz, senaryoya bağlı değildir. Model ve pegging ağaçta yeniden yürümez, bu tabloyu okur.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| LocationId | int | FK,UK | Lokasyon |  | Yüklemede diğer tablolardan | H | E |  |
+| MaterialId | bigint | FK,UK | Malzeme |  | Yüklemede diğer tablolardan | H | E |  |
+| AllocationLevel | nvarchar(10) | UK | Sipariş \| Proje \| Müşteri | Alokasyon seviyesi | Yüklemede diğer tablolardan | H | E |  |
+| AllocationKey | nvarchar(60) | UK | Malzemenin adına ayrı izlendiği sahibin anahtarı; arz satırlarındaki anahtarla aynı biçimde | Alokasyon anahtarı | Yüklemede diğer tablolardan | H | E |  |
+| Reason | nvarchar(20) |  | Kendi arzı \| Alt seviye arzı | Sebep | Yüklemede diğer tablolardan | H | E |  |
+| SourceMaterials | nvarchar(70) |  | Sebebi alt seviye arzı olan satırda ayrılmış arzın durduğu alt malzeme; birden çoksa koda göre ilki ve kalanların sayısı. Metindir: kaynak birden çok malzeme olabildiği için ilişkili alanı yoktur | Kaynak malzeme | Yüklemede diğer tablolardan | H | H |  |
+| Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
+
+- **Kural (K-199; uygulandı, sürüm 0.58.0):** (malzeme, anahtar) satırı vardır ⇔ o anahtara uyan bir talebin (açık satış siparişi satırı ya da aktif tahmin) malzemesinden o anahtarlı açık arzın (stok, iş emri, satın alma satırı) malzemesine inen bir yolun üzerindedir (uçlar dahil; bütün üretim versiyonları ve alternatifler, benzetilen ürün ve açık iş emirlerinin bileşenleri dahil). Arz malzemenin kendisindeyse sebep "Kendi arzı", yalnız alt seviyelerindeyse "Alt seviye arzı". Kullanacak talebi olmayan, sahibi bulunamayan ya da kapanmış ayrılmış arz satır açmaz. Hayalet malzemeye satır açılmaz. Tekillik: lokasyon + malzeme + seviye + anahtar; aynı kural yeniden hesapta aynı `Id`'yi korur.
 
 ### Project
 <sub>21. Veri modeli · Malzeme</sub>

@@ -14,7 +14,8 @@ const X = tr.transactionData;
 export const MASTER_TABS: TabDef[] = [
   { key: "malzeme", label: M.tabs.material, tables: [
     { list: "materials", slug: "malzeme", label: M.tables.material },
-    { list: "master-material-reference", slug: "benzetilen-urun", label: M.tables.materialReference }] },
+    { list: "master-material-reference", slug: "benzetilen-urun", label: M.tables.materialReference },
+    { list: "master-allocation-rule", slug: "alokasyon-kurali", label: M.tables.allocationRule }] },
   { key: "urun-agaci-ve-rota", label: M.tabs.bomRouting, tables: [
     { list: "master-production-version", slug: "uretim-versiyonu", label: M.tables.productionVersion },
     { list: "master-bom", slug: "urun-agaci", label: M.tables.bom },

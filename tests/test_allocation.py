@@ -201,15 +201,20 @@ def test_synthetic_examples(db_engine):
         wo = dict((r[0], tuple(r[1:])) for r in c.execute(sa.text(
             "SELECT WorkOrderNo, IsCustomAllocated, AllocationLevel, AllocationKey FROM core.WorkOrder WHERE VersionTo IS NULL AND WorkOrderNo IN (N'WO-5001', N'WO-5013')")))
         po = dict((r[0], tuple(r[1:])) for r in c.execute(sa.text(
-            "SELECT PurchaseOrderNo, SalesOrderLineId, AllocationLevel, AllocationKey FROM core.PurchaseOrderLine WHERE VersionTo IS NULL AND IsCustomAllocated = 1")))
+            "SELECT PurchaseOrderNo, SalesOrderLineId, AllocationLevel, AllocationKey FROM core.PurchaseOrderLine WHERE VersionTo IS NULL AND IsCustomAllocated = 1 "
+            "AND SalesOrderLineId IS NULL")))
+        deep = tuple(c.execute(sa.text("SELECT AllocationLevel, AllocationKey FROM core.PurchaseOrderLine WHERE VersionTo IS NULL AND PurchaseOrderNo = :n "
+                                       "AND SalesOrderLineId IS NOT NULL"), {"n": d.DEEP_ORDER_PO}).one())
         stale = sum(c.execute(sa.text(f"SELECT COUNT(*) FROM core.[{t}] WHERE VersionTo IS NULL AND IsCustomAllocated IS NULL")).scalar() for t in allocation.TABLES)
     assert sorted((m, float(q), f, lv, k) for m, q, f, lv, k in stock_rows) == sorted([
         ("MAM-006", 3.0, True, "Proje", "PRJ-01"), ("MAM-006", 2.0, True, "Müşteri", "MUS-A"), ("MAM-006", 1.0, True, "Sipariş", "SO-1020|1|0"),
         (d.ALLOCATION_EMPTY, 20.0, False, None, None),
-        ("MAM-006", 1.0, True, "Proje", d.MISSING_PROJECT), (d.ALLOCATED_RAW, 30.0, True, "Müşteri", d.MISSING_CUSTOMER)], key=str)   # durum 12: genele düşmez
+        ("MAM-006", 1.0, True, "Proje", d.MISSING_PROJECT), (d.ALLOCATED_RAW, 30.0, True, "Müşteri", d.MISSING_CUSTOMER),   # durum 12: genele düşmez
+        (d.DEEP_ALLOCATED, 50.0, True, "Proje", "PRJ-01"), (d.ALTERNATIVE_ONLY, 15.0, True, "Müşteri", d.ALTERNATIVE_CUSTOMER)], key=str)   # durum 13
     assert wo == {"WO-5001": (False, None, None), "WO-5013": (True, "Proje", "PRJ-02")}
     assert po == {d.ALLOCATED_ORDER_PO: (None, "Sipariş", "SO-1021"), d.ALLOCATED_CUSTOMER_PO: (None, "Müşteri", "MUS-A"),
                   d.MISSING_ORDER_PO: (None, "Sipariş", d.MISSING_ORDER)}
+    assert deep == ("Sipariş", "SO-1020|1|0")   # durum 13: satıra bağlı (iç bağ dolu) satın alma
     assert stale == 0
 
 

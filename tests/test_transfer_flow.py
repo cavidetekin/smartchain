@@ -57,8 +57,11 @@ def test_dirty_data_end_to_end(dirty):
             closed = {e: t[e]["closed"] for e in ("Stock", "WorkOrder", "PurchaseOrderLine")}
             assert closed == {"Stock": 0, "WorkOrder": 0, "PurchaseOrderLine": 0}, closed
             assert q("SELECT COUNT(*) FROM core.WorkOrder WHERE WorkOrderNo = N'WO-5013' AND VersionTo IS NULL AND AllocationKey = N'PRJ-02'") == 1
-            assert q("SELECT COUNT(*) FROM core.PurchaseOrderLine WHERE PurchaseOrderNo IN (N'PO-2071', N'PO-2072', N'PO-2073') AND VersionTo IS NULL AND IsCustomAllocated = 1") == 3
-            assert q("SELECT COUNT(*) FROM core.Stock WHERE VersionTo IS NULL AND IsCustomAllocated = 1") == 5   # durum 12 dahil: sahibi bulunamayan iki stok genele düşmez
+            assert q("SELECT COUNT(*) FROM core.PurchaseOrderLine WHERE PurchaseOrderNo IN (N'PO-2071', N'PO-2072', N'PO-2073', N'PO-2074') AND VersionTo IS NULL AND IsCustomAllocated = 1") == 4
+            # K-199: alokasyon kuralları kirli verinin aktarımından sonra da aynı (temiz satırlar değişmedi)
+            assert q("SELECT COUNT(*) FROM core.MaterialAllocationRule WHERE VersionTo IS NULL AND VersionFrom = :v", v=v) == 0
+            assert q("SELECT COUNT(*) FROM core.MaterialAllocationRule WHERE VersionTo = :t", t=v - 1) == 0
+            assert q("SELECT COUNT(*) FROM core.Stock WHERE VersionTo IS NULL AND IsCustomAllocated = 1") == 7   # durum 12 (sahibi bulunamayan iki stok genele düşmez) ve durum 13 dahil
         finally:
             s.rollback()
 
