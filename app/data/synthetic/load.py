@@ -33,7 +33,7 @@ DERIVED = ["MaterialAllocationRule"]  # sistemin ürettiği ana tablolar (K-199)
 CAPACITY_TABLES = ["WorkPattern", "ResourceEfficiency", "OvertimeLimit", "ResourceDowntime", "FactoryCalendar"]  # kapasite girişleri (K-185)
 MODEL_TABLES = ["ResourceGroupConstraint"]  # model kısıtları (K-189)
 PARAM_ORDER = ["DemandPriority", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES, *MODEL_TABLES]  # Baz senaryoya bağlanır; Baz'ın parametrelerine dokunulmaz (K-175)
-PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "DemandPriority", "WarningThreshold", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES,
+PARAM_CHILDREN = ["PlanningSetting", "TimeBucketDefinition", "ObjectiveDefinition", "DemandPriority", "WarningThreshold", "PeggingCriterion", "SupplierLimit", "MaterialHold", *CAPACITY_TABLES,
                   *MODEL_TABLES]
 LOCATION_BOUND = ("FactoryCalendar", "SupplierLimit", "MaterialHold")   # lokasyon taşıyan param tabloları
 NO_BASE = "Baz senaryo yok; önce veritabanını güncelleyin (alembic -c db/alembic.ini upgrade head)."

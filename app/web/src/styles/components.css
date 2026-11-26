@@ -1488,3 +1488,32 @@ tr.is-clickable { cursor: pointer; }
 .sc-flow-tools .sc-tool-btn--text { width: auto; padding: 0 var(--space-2); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); }
 .sc-flow-tools .sc-tool-btn svg { width: 1.1rem; height: 1.1rem; }
 .sc-flow-zoom { min-width: 3.2rem; text-align: right; color: var(--text-muted); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); }
+
+/* Sıralanabilir liste (ui/SortableList; docs/12 "Sıralanabilir liste standardı", K-201) */
+.sc-sortable { margin: 0; padding: 0; list-style: none; }
+.sc-sortable-row { display: flex; align-items: center; gap: var(--space-2); box-sizing: border-box; height: 2.9231rem; padding: 0 var(--space-3); border-bottom: 1px solid var(--line);
+  background: var(--surface); }
+.sc-sortable-row:last-child { border-bottom: 0; }
+.sc-sortable-row[draggable="true"] { cursor: grab; }
+.sc-sortable-row:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.sc-sortable-row.is-dragging { opacity: 0.45; }
+.sc-sortable-row.is-drop-before { box-shadow: inset 0 2px 0 var(--indigo-500); }
+.sc-sortable-row.is-drop-after { box-shadow: inset 0 -2px 0 var(--indigo-500); }
+.sc-sortable-no { flex: none; width: 1.4rem; color: var(--text-muted); text-align: right; }
+.sc-sortable-grip { flex: none; width: 1rem; height: 1rem; color: var(--lead-300); }
+.sc-sortable-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-sortable-end { flex: none; margin-left: auto; }   /* yön düğmeleri satırın sağ kenarına yaslı */
+.sc-sortable-moves { display: inline-flex; flex: none; gap: 0.1538rem; }
+.sc-sortable-moves .sc-tool-btn svg { width: 1rem; height: 1rem; }
+
+/* Parametreler › Pegging (K-201): tek kart, sayfanın genişliğinde; iki liste yan yana, dar pencerede alt alta */
+.sc-pegging { display: flex; flex-direction: column; gap: var(--space-2); max-width: 86rem; }
+.sc-pegging-method { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-4) 0; }
+.sc-pegging-method .sc-field-label { color: var(--text); }
+.sc-pegging-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--space-4); padding: var(--space-3) var(--space-4) var(--space-4); }   /* kart içeriği kadar: alt kenarlar farklı olabilir */
+.sc-pegging-list { min-width: 0; border: 1px solid var(--table-border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.sc-pegging-head { display: flex; align-items: center; height: var(--row-height); margin: 0; padding: 0 var(--space-3); border-bottom: 1px solid var(--table-head-border);
+  background: var(--table-head-bg); color: var(--table-head-text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }   /* tablo başlığı standardı (K-201 demo) */
+.sc-pegging-list .sc-segment button { white-space: nowrap; }
+@container (max-width: 76rem) { .sc-pegging-lists { grid-template-columns: minmax(0, 1fr); } }   /* üç seçenekli yön ve ölçüt adı sığmıyorsa alt alta */
+.sc-pegging { container-type: inline-size; }

@@ -503,6 +503,22 @@ export const tr = {
     onlyRecord: "Yalnız Veri kalitesinden açılan kayıt gösteriliyor.",
     showAll: "Bütün kayıtları göster",
   },
+  // Sıralanabilir liste (K-201; ui/SortableList)
+  sortable: {
+    row: (no: number, name: string) => `${no}. ${name}`,
+    up: (name: string) => `${name}: yukarı taşı`,
+    down: (name: string) => `${name}: aşağı taşı`,
+    upTitle: "Yukarı taşı",
+    downTitle: "Aşağı taşı",
+  },
+  // Parametreler › Pegging (K-201)
+  pegging: {
+    title: "Pegging",
+    lists: { need: "İhtiyaç sırası", supply: "Arz sırası" },
+    direction: (criterion: string) => `${criterion} yönü`,
+    loading: "Yükleniyor…",
+    failed: "İşlem yapılamadı.",
+  },
   // Üretim akışı penceresi (K-200): malzemenin kullananları ve kullandıkları, ürün ağacından
   productionFlow: {
     title: "Üretim akışı",

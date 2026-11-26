@@ -53,6 +53,14 @@ class Objective:
 
 
 @dataclass(frozen=True)
+class PeggingRules:
+    """Pegging'in sıralama ölçütleri (K-201; Parametreler › Pegging): iki liste, sıralı (ölçüt, yön) çiftleri; yönsüz ölçütte yön None.
+    Ölçütler yukarıdan aşağı uygulanır. Adlar ve yönler `app/params/pegging.py`'dedir. 7.17'de yalnız tanım: pegging 10.6'da okur."""
+    need: tuple[tuple[str, str | None], ...] = ()      # ihtiyaçlar hangi sırayla ele alınır
+    supply: tuple[tuple[str, str | None], ...] = ()    # her ihtiyaç arzı hangi sırayla tüketir
+
+
+@dataclass(frozen=True)
 class ScenarioParameters:
     """Senaryonun parametrelerinin tamamı (K-175): her senaryo kendi parametrelerini taşır."""
     id: int    # ScenarioDefinition.Id
@@ -61,6 +69,8 @@ class ScenarioParameters:
     time_buckets: tuple[TimeBucket, ...] = ()    # plan ekseni
     report_buckets: tuple[TimeBucket, ...] = ()  # raporlama ekseni (planla aynıysa plan dizisi)
     objectives: tuple[Objective, ...] = ()       # aktif hedef satırları, sırasıyla (K-196: liste kullanıcının; her satır ayrı hedef olarak çözülür)
+    # K-201: pegging sıralaması. `CustomAllocation` (model 10.4, pegging 10.6) ve `FullPeggingMethod` (10.6) `settings` içindedir
+    pegging: PeggingRules = field(default_factory=PeggingRules)
 
 
 class PlanningData(Protocol):

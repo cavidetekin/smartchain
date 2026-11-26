@@ -16,4 +16,5 @@ export { DEFAULT_THRESHOLDS, legendLabels, occupancyLevel, type OccupancyLevel, 
 export { OverflowTabs, type TabOption } from "./OverflowTabs";
 export { ChoiceRow, SettingsCard, SettingsFoot, SettingsLayout, type SettingsSection, SwitchRow, UnitRow } from "./SettingsForm";
 export { EditGrid, type GridColumn, GridSeq } from "./EditGrid";
+export { moveItem, type SortableItem, SortableList } from "./SortableList";
 export { StripSelect, StripText } from "./StripField";

@@ -14,7 +14,7 @@ export interface ParamDef {
   /** Değerin birimini taşıyan parametre: ekranda aynı satırda. */
   unit_key?: string;
 }
-export interface SubDef { key: string; title: string; table: "buckets" | "report" | "warnings" | null; params: ParamDef[] }
+export interface SubDef { key: string; title: string; table: "buckets" | "report" | "warnings" | "pegging" | null; params: ParamDef[] }
 export interface SectionDef { key: string; title: string; table: "objectives" | null; subs: SubDef[] }
 export type ParamValues = Record<string, string | null>;
 export interface ParametersData {
@@ -36,6 +36,11 @@ export interface ObjectiveKind { code: string; label: string; family: string; gr
 /** "Yeni hedef tanımla" ve "Düzenle" gövdesi. */
 export interface ObjectiveEdit { code: string; scope: Record<string, (string | number)[]>; description: string | null; seconds: number | null; tolerance: number | null }
 export interface ObjectivesData { rows: ObjectiveRow[]; total_seconds: number; catalog: ObjectiveKind[] }
+
+/** Pegging (K-201): sıralama ölçütü. Yönsüz ölçütte (ihtiyaç ya da arz türü) `direction` boş, `directions` boş liste; yön seçeneğinin ipucu ölçüte göre. */
+export interface PeggingCriterion { criterion: string; direction: string | null; directions: { value: string; hint: string }[] }
+export type PeggingSide = "need" | "supply";
+export interface PeggingData { method: { key: string; label: string; value: string; options: string[] }; need: PeggingCriterion[]; supply: PeggingCriterion[] }
 
 /** Uyarı eşikleri (fonksiyon 26; K-190): dört önemin eşiği (API alanları) ve satır. Eşiksiz uyarıda `unit` ve `direction` boş, önem `severity`'de. */
 export const TIERS = ["low", "medium", "high", "critical"] as const;
@@ -70,6 +75,11 @@ export const parametersApi = (scenarioId: number) => {
     preview: (axis: Axis, rows: BucketRow[], signal?: AbortSignal) => postJson<BucketPreview>(`/api/parameters/time-buckets/${axis}/preview${q}`, { rows }, signal),
     saveBuckets: (axis: Axis, rows: BucketRow[]) => sendJson<BucketsData>("PUT", `/api/parameters/time-buckets/${axis}${q}`, { rows }),
     warningThresholds: (signal?: AbortSignal) => getJson<WarningsData>(`/api/parameters/warning-thresholds${q}`, signal),
+    pegging: (signal?: AbortSignal) => getJson<PeggingData>(`/api/parameters/pegging${q}`, signal),
+    /** Yöntem ve iki liste tek işlemde (K-201); listelerde yalnız ölçüt ve yön gider. */
+    savePegging: (body: { method: string; need: PeggingCriterion[]; supply: PeggingCriterion[] }) =>
+      sendJson<PeggingData>("PUT", `/api/parameters/pegging${q}`, { method: body.method, need: body.need.map(({ criterion, direction }) => ({ criterion, direction })),
+                                                                    supply: body.supply.map(({ criterion, direction }) => ({ criterion, direction })) }),
     saveWarningThresholds: (rows: WarningChange[]) => sendJson<WarningsData>("PUT", `/api/parameters/warning-thresholds${q}`, { rows }),
   };
 };

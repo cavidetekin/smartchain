@@ -40,6 +40,7 @@ TABLES: tuple[ScenarioTable, ...] = (
     ScenarioTable("ObjectiveDefinition", SETTING),
     ScenarioTable("TimeBucketDefinition", SETTING),
     ScenarioTable("WarningThreshold", SETTING),   # uyarı eşikleri (K-190): ayar, tam kopya
+    ScenarioTable("PeggingCriterion", SETTING),   # pegging sıralama ölçütleri (K-201): ayar, tam kopya
     # Kapasite girişleri (K-185): fark yapısı ve çözümleme `app/params/resolve.py`'de
     *[ScenarioTable(name, DATA, resolve.materializer(name)) for name in resolve.FIELDS],
 )

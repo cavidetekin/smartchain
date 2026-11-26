@@ -358,6 +358,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![Parametre setleri](mockups/m24e-0315-parametre-setleri.png)
 
 - **Mockup geçersiz (K-175):** parametre seti, set listesi ve sekmeleri yok. Güncel mockup `plans/7.1-mockups/parametreler.html`.
+- **Pegging (7.17, K-201; uygulandı, sürüm 0.60.0):** Hedefler'in yanında yeni sekme. "Full pegging yöntemi" (FIFO · Talep termini) ve yan yana iki ölçüt listesi: İhtiyaç sırası ve Arz sırası. Ölçütler sürüklenerek ya da klavyeyle (Alt + ↑ / ↓) sıralanır; yönü olan ölçütte yön seçilir. Ölçüt eklenmez, silinmez. "Özel alokasyon" (Dikkate al · Dikkate alma) Model › Çözüm'dedir.
 - **Tek kavram senaryo:** ekran, bağlam çubuğunda seçili senaryonun parametrelerini gösterir; ekranda ayrıca senaryo seçimi yoktur. 7.1'de tek senaryo Baz'dır.
 - **Şerit:** yalnız ana başlıklar: Model · Hedefler · Talep · Malzeme · Kapasite · Planlama ufku · Plan kararlılığı · Uyarı eşikleri (7.11, K-190; alt başlıkları Talep · Malzeme · Kapasite · Plan kalitesi).
 - **Form başlıkları:** Sistem ayarları düzeni (docs/12): solda alt başlıklar, sağda sıkı kart, Kaydet ve Vazgeç kartın altında, 44×24 anahtarlar. Tek alt başlıklı başlıkta sol menü yok.

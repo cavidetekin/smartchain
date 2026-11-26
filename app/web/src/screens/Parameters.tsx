@@ -18,6 +18,7 @@ import { Alert, Button, ChoiceRow, ConfirmDialog, EditGrid, type GridColumn, Gri
 import { MenuItem, RowPopMenu } from "../ui/PopMenu";
 import { dropId } from "./DataRules";
 import { Objectives } from "./Objectives";
+import { Pegging } from "./Pegging";
 import { type Axis, type BucketPart, type BucketRow, type BucketsData, type ParamDef, type ParametersData, type ParamValues,
          parametersApi, type Period, type SubDef } from "./parametersApi";
 import { useShell } from "../shell/ShellContext";
@@ -352,6 +353,8 @@ export function Parameters() {
     body = <Objectives key={formKey} canWrite={canWrite} onDirty={onGridDirty} actions={stripEnd} />;
   } else if (sub?.table === "warnings") {   // Uyarı eşikleri (K-190): alt başlık = kategori; kaydetme kategori başına
     body = <WarningThresholds key={`${sub.key}:${formKey}`} category={sub.title} canWrite={can(me, 26, "write")} onDirty={onGridDirty} />;
+  } else if (sub?.table === "pegging") {   // Pegging (K-201): yöntem ve iki ölçüt listesi tek kartta, tek Kaydet
+    body = <Pegging key={formKey} api={api} canWrite={canWrite} onDirty={onGridDirty} />;
   } else if (sub?.table === "buckets") {
     body = <Buckets key={`plan:${formKey}`} axis="plan" label={T.buckets} periodsLabel={T.periods} canWrite={canWrite} onDirty={onGridDirty} />;
   } else if (sub) {

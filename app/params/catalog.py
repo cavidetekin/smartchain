@@ -42,7 +42,7 @@ class Sub:
     key: str
     title: str
     params: tuple[Param, ...] = ()
-    table: str | None = None  # "buckets" | "report": form yerine tablo
+    table: str | None = None  # "buckets" | "report" | "warnings" | "pegging": form yerine (ya da formla birlikte) özel gövde
 
 
 @dataclass(frozen=True)
@@ -75,11 +75,21 @@ SECTIONS: tuple[Section, ...] = (
                hint="Satın alma kararı modelde süreklidir; öneri sonradan sipariş lotuna yuvarlanır (K-27)."),
         )),
         Sub("cozum", "Çözüm", (
+            # K-201: model parametresidir; model de pegging de uyar ("Dikkate alma": anahtarlara bakılmaz, sahibine ayrılmış arz genele girer).
+            # Okuyanı bugün yok: model 10.4'te, pegging 10.6'da okur.
+            _c("CustomAllocation", "Özel alokasyon", ("Dikkate al", "Dikkate alma"), "Dikkate al",
+               hint="Dikkate alma seçilirse sahibine ayrılmış arz da genele girer; model de pegging de anahtarlara bakmaz."),
             Param("OptimalityGapPct", "Optimality gap (%)", NUMBER, "1", minimum=0, maximum=100),
             _b("MrpWarmStart", "MRP ile başlangıç çözümü", YES),
         )),
     )),
     Section("hedefler", "Hedefler", table="objectives"),
+    # K-201: yöntem burada (PlanningSetting); iki ölçüt listesi kendi tablosunda ve kendi uçlarında (`app/params/pegging.py`)
+    Section("pegging", "Pegging", (
+        Sub("pegging", "Pegging", (
+            _c("FullPeggingMethod", "Full pegging yöntemi", ("FIFO", "Talep termini"), "FIFO"),
+        ), table="pegging"),
+    )),
     Section("talep", "Talep", (
         Sub("kapsam", "Plana giren talep", (
             _b("IncludeFirmOrders", "Kesin sipariş", YES),

@@ -1785,8 +1785,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | `ProductionLotMultiple` | Model › Model tipi | Üretimde lot katı | Evet · Hayır | Hayır |
 | `ProductionMaxLot` | Model › Model tipi | Üretimde maksimum lot | Evet · Hayır | Hayır |
 | `RoundPurchaseToLot` | Model › Model tipi | Satın alma önerisini sipariş lotuna yuvarla | Evet · Hayır | Evet |
+| `CustomAllocation` | Model › Çözüm | Özel alokasyon | Dikkate al · Dikkate alma | Dikkate al |
 | `OptimalityGapPct` | Model › Çözüm | Optimality gap (%) | sayı | 1 |
 | `MrpWarmStart` | Model › Çözüm | MRP ile başlangıç çözümü | Evet · Hayır | Evet |
+| `FullPeggingMethod` | Pegging | Full pegging yöntemi | FIFO · Talep termini | FIFO |
 | `IncludeFirmOrders` | Talep › Plana giren talep | Kesin sipariş | Evet · Hayır | Evet |
 | `IncludeQuotes` | Talep › Plana giren talep | Teklif | Evet · Hayır | Hayır |
 | `IncludeOnHold` | Talep › Plana giren talep | Beklemedeki sipariş | Evet · Hayır | Hayır |
@@ -1815,6 +1817,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | `OpenWorkOrders` | Plan kararlılığı | Açık iş emirleri | Sabit · Yalnız öteleme önerisi · Serbest | Yalnız öteleme önerisi |
 | `OpenPurchaseOrders` | Plan kararlılığı | Açık satın alma siparişleri | Sabit · Öneri üret | Sabit |
 | `KeepLockedRecords` | Plan kararlılığı | Sabitlenmiş kararlar korunsun | Evet · Hayır | Evet |
+
+**Pegging (7.17, K-201; uygulandı, sürüm 0.60.0).** Parametreler'in Pegging sekmesi pegging'in sıralama ayarlarını tutar; hesap bu ayarları Aşama 10'da okur. "Full pegging yöntemi" yukarıdaki tablodadır. İki ölçüt listesi `param.PeggingCriterion`'dadır: **İhtiyaç sırası** (Dönem · Kesin sipariş · Teklif · Beklemedeki sipariş · Tahmin · Üretim siparişi ihtiyacı · Üretim planı ihtiyacı · Öncelik grubu · İhtiyaç tarihi · Sipariş no) ve **Arz sırası** (Dönem · Stok · Kalitedeki stok · Üretim siparişi · Satın alma siparişi · Arz tarihi · Üretim planı · Satın alma önerisi · Son kullanma tarihi). Ölçütler yukarıdan aşağı uygulanır; kullanıcı yalnız sırayı ve yönlü ölçütün yönünü (Artan · Azalan; arzda Dönem'de ayrıca İhtiyaca en yakın) değiştirir. Talep türleri Hedefler'deki türlerle aynı kaynaktandır. "Özel alokasyon" model parametresidir (Model › Çözüm); model de pegging de ona uyar.
 
 - **Model:** üretim lot kuralları (minimum lot, lot katı, maksimum lot) yalnız MILP'te uygulanır; LP'de anahtarlar pasif ve gridir, değerleri korunur. Satın alma kararı modelde süreklidir; öneri sonradan sipariş lotuna yuvarlanır (K-27).
 - **Talep:** "Plana giren talep" alt başlığında talep tipleri ayrı ayrı açılır (Kesin sipariş, Teklif, Beklemedeki sipariş, Tahmin; K-60, K-127). "En fazla gecikebilecek gün" boşsa sınırsızdır.
@@ -2168,7 +2172,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Baz'ı izler ve Baz'dan ayır (K-176 e):** seçim senaryoda saklanır. Ayırma tek yönlüdür; yeniden bağlama yoktur. Ayırmada (ve "Baz'ı izler: Hayır" ile açılan senaryoda) her veri tablosunun "Baz'ın o anki değerlerini tam kopyala" işlevi çağrılır. Fark yapısı ve çözümleme katmanı 7.9'da geldiği için 7.3'te seçim kaydedilir ve gösterilir; işlevler 7.9'da ve sonraki adımlarda bağlanır.
 - **Silme:** yayınlanmış planı (onaylı plan) olan senaryo silinemez, yalnız pasif yapılır. Silinen senaryoyu seçmiş kullanıcılar Baz'a düşer. Denetim izi senaryonun adını saklar; silinse de okunur.
 - **Seçili senaryo:** kullanıcı bazında hatırlanır; yeniden girişte son seçilen açılır, o senaryo pasifse ya da silindiyse Baz. Senaryoya bağlı uçlar senaryoyu istekle alır (`scenario_id`): iki sekmede iki senaryo açıkken yanlış senaryoya yazılmaz.
-- **Senaryoya bağlı ekranlar:** bugün Parametreler; sonraki adımlarda Kapasite yönetimi, Öncelik yönetimi, Pegging kuralları, Uyarı eşikleri, Tedarikçi limitleri, Malzeme blokajı ve plan ekranları. Geçişte bu ekranlar yeni senaryoyla baştan yüklenir; kaydedilmemiş değişiklik varsa geçiş onay ister.
+- **Senaryoya bağlı ekranlar:** bugün Parametreler; sonraki adımlarda Kapasite yönetimi, Öncelik yönetimi, Uyarı eşikleri, Tedarikçi limitleri, Malzeme blokajı ve plan ekranları. Geçişte bu ekranlar yeni senaryoyla baştan yüklenir; kaydedilmemiş değişiklik varsa geçiş onay ister.
 - **Smartchain'de girilen veri** (kapasite, limitler, blokaj) versiyonlanmaz ve plan hesabı için kopyası tutulmaz; eski planın çıktıları kendi değerlerini taşır, eski girdi değeri değişiklik geçmişinden okunur.
 - **Hata durumları:** boş ya da kullanılan ad; Baz'da yasak işlem; Baz'ı izlemeyen senaryoda ayırma; yayınlanmış planı olan senaryoda silme; Admin altında yönetim işlemi (403).
 - **YENİDEN HESAPLANACAK ALANLAR:** yönetim işlemleri hesap başlatmaz. Silme senaryonun plan versiyonlarını ve çıktılarını siler.

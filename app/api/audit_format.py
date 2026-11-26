@@ -23,7 +23,7 @@ FIELD_LABELS = {
     # Ayar, etiket, görünüm
     "Value": "Değer", "Label": "Etiket", "Name": "Ad", "IsShared": "Paylaşılan", "Definition": "Tanım", "view_id": "Görünüm no",
     # Parametreler: hedefler (K-175)
-    "Seq": "Sıra", "TimeBudgetSeconds": "Süre bütçesi (sn)", "TolerancePct": "Ödün payı (%)",
+    "Seq": "Sıra", "Order": "Sıra", "TimeBudgetSeconds": "Süre bütçesi (sn)", "TolerancePct": "Ödün payı (%)",
     "Objective": "Hedef", "Scope": "Kapsam", "Description": "Açıklama", "RowCount": "Satır sayısı", "Layout": "Düzen",   # hedef satırları (K-196)
     # Kapasite yönetimi (K-185)
     "ValidFrom": "Başlangıç", "ValidTo": "Bitiş", "StartDate": "Başlangıç", "EndDate": "Bitiş", "DailyCapacity": "Günlük kapasite", "EfficiencyPct": "Verimlilik (%)",

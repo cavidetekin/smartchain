@@ -101,7 +101,7 @@
 | `core.TransferOrder` | Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep). | İşlem verisi | evet | 13 |
 | `core.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | İşlem verisi | evet | 13 |
 
-## `param` · Planlama parametreleri ve senaryo tanımları (15 tablo)
+## `param` · Planlama parametreleri ve senaryo tanımları (16 tablo)
 
 | Tablo | Açıklama | Sınıf | Versiyonlu | Alan |
 |---|---|---|---|---|
@@ -112,6 +112,7 @@
 | `param.DemandPriority` | Öncelik grubu (K-195): müşteri, proje ya da sipariş satırı için bu ekranda girilen 1–5 öncelik grubu. Senaryoya bağlı, Baz + fark (K-176); kayıt başına tek satır. Öncelik yönetimi ekranından girilir. | Parametre |  | 10 |
 | `param.ObjectiveDefinition` | Senaryonun hedef satırları (leksikografik, ağırlık yok; K-175): motor satırları sırayla çözer. Senaryonun süre bütçesi aktif satırların sürelerinin toplamıdır. Hedef listesi kullanıcınındır (K-196): her satır bir hedef ve bir kapsamdır (Scope); kapsamlar örtüşebilir, hiçbir satırın kapsamadığı kayıt hiçbir hedefe girmez. | Parametre |  | 9 |
 | `param.WarningDefinition` | Uyarı kataloğu (K-190): sistemin tanıdığı uyarı kodları ve kategorileri. Satırları sistem yazar; eşik, önem ve aktiflik senaryoya bağlıdır (WarningThreshold). | Parametre |  | 2 |
+| `param.PeggingCriterion` | Pegging sıralama ölçütleri (K-201): senaryonun İhtiyaç sırası ve Arz sırası listeleri; her satır bir ölçüttür, sırasıyla. Ölçütler yukarıdan aşağı uygulanır. Senaryoda satır yoksa başlangıç sırası geçerlidir (`app/params/pegging.py`); ilk kayıtta listenin tamamı yazılır. Bir listede her ölçüt bir kez bulunur. Yön yalnız yönlü ölçütte doludur ("İhtiyaca en yakın" yalnız arzın Dönem ölçütünde). | Parametre |  | 5 |
 | `param.WarningThreshold` | Senaryonun uyarı eşikleri (K-190): her senaryoda her uyarı için bir satır. Kademeli: her önem için ayrı eşik; boş kademe kullanılmaz. Yön uyarıya göre sabittir ve eşik dahil değildir. | Parametre |  | 9 |
 | `param.ScenarioDefinition` | Senaryo tanımı (K-175): parametrelerinin tamamını kendisi taşır (PlanningSetting, TimeBucketDefinition, ObjectiveDefinition ve senaryoya bağlı öteki tablolar); senaryolar arasında paylaşılan set yoktur. Kurulumda tek senaryo "Baz" gelir; silinemez, pasif yapılamaz. | Parametre |  | 9 |
 | `param.WorkPattern` | Çalışma düzeni (K-185): günlük kapasite ve haftanın günleri. Çalışma günü yalnız buradan gelir. Geçerlilik: önce seviye (kaynakta o günü kapsayan kayıt varsa kaynağınkiler, yoksa grubunkiler), sonra başlangıcı en ileri olan. | Parametre |  | 19 |

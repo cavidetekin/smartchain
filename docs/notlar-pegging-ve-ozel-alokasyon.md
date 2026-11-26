@@ -2,7 +2,7 @@
 
 Tarih: 23–24.11.2026 görüşmeleri.
 
-**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Ara iş kapandı (K-198, 0.57.0). 7.15 kapandı (K-199, 0.58.0). 7.16 kapandı (K-200, 0.59.0). Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi ve K numarası almadı. Adımları `GELISTIRME_ADIMLARI.md`'ye eklendi (24.11.2026: Ara iş, 7.15, 7.16, 7.17, 9.5 ve ilgili adımlara notlar); her adım başlarken ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
+**Durum: not. Bu dosya bağlayıcı değildir; kod bu dosyaya göre değiştirilmez.** Ara iş kapandı (K-198, 0.57.0). 7.15 kapandı (K-199, 0.58.0). 7.16 kapandı (K-200, 0.59.0). 7.17 kapandı (K-201, 0.60.0); Aşama 7 kapandı. Buradaki kararlar henüz sözleşme dosyalarına (`00-kararlar`, `02-veri-modeli`, `03-entegrasyon` ve diğerleri) işlenmedi ve K numarası almadı. Adımları `GELISTIRME_ADIMLARI.md`'ye eklendi (24.11.2026: Ara iş, 7.15, 7.16, 7.17, 9.5 ve ilgili adımlara notlar); her adım başlarken ilgili kararlar önce sözleşme dosyalarına işlenir (K-54), sonra kod yazılır. Motorla ilgili ayrıntılar Aşama 10'da konuşulacak.
 
 İşaretler: ✔ karar · ◻ öneri (onay yok) · ? açık konu
 
@@ -23,7 +23,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Anahtarlı bakiyeler arasında aktarım yoktur. Bir malzemede müşteri, proje ve sipariş arzı birlikte varsa birbirine karışmaz; aktarım yalnız genelden gelir.
 - ✔ Kullanılmayan anahtarlı arz (fazla) boşta kalır ve listelenir. Yeni arz sahip başına ayrı açılır, partiler birleştirilmez, yuvarlama fazlası sahibinindir.
 - ✔ Kural tablosuna yalnız kullanacak talebi ve açık arzı olan sahipler girer; talebi olmayan, sahibi bulunamayan ya da kapanmış ayrılmış arz satır açmaz, model onu plana almaz (K-199).
-- ✔ Senaryo parametresi (Parametreler › Malzeme): **"Özel alokasyon": Dikkate al · Dikkate alma.**
+- ✔ Senaryo parametresi (Parametreler › Model › Çözüm): **"Özel alokasyon": Dikkate al · Dikkate alma.** Model parametresidir; model de pegging de uyar (K-201).
 - ◻ "Dikkate alma" seçilince anahtarlı arz da genele girer; bu durumda "sahibi dışında kullanılan ayrılmış arzlar" listesi çıkarılır.
 - ◻ Ayrılmış bir talep, her malzemede "o malzemenin kendisinde arzı olan en detaylı seviye + genel"i kullanır (ayrıntı teyit edilmedi).
 - ? Bugünkü "model proje görmez, tek havuz" ifadesi kıtlık durumunda yanlış sonuç veriyor; değişecek.
@@ -68,7 +68,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Tek seviyeli pegging ve **full (çok seviyeli) pegging** birlikte vardır.
 - ✔ Pegging **senaryo bazlıdır.**
 - ✔ Sürekli hesaplanan bir şey olmamalı; **üretim kararı ya da öncelik değişince** yeniden hesaplanır.
-- ✔ Parametre **"Full pegging yöntemi": FIFO · Talep termini.**
+- ✔ Parametre **"Full pegging yöntemi": FIFO · Talep termini.** (K-201; motordaki işleyişi Aşama 10'da yeniden incelenecek.)
   - FIFO: her seviye kendi ihtiyaç tarihine göre sıralanır.
   - Talep termini: yalnız en üstteki talebin terminine göre sıralanır.
 - ✔ Bu ayrı bir parametredir; **Hedefler sırasından bağımsızdır** (model kararını vermiştir, pegging ayrıdır).
@@ -79,7 +79,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Arz satırları: stok, kalitedeki stok, üretim siparişi, satın alma siparişi, üretim planı, satın alma önerisi.
 - ✔ Stok ve satın almada sıralamaya **raf ömrü** de girer.
 - ◻ Algoritma: sipariş sipariş, yukarıdan aşağı; her malzemede planın bütün ihtiyaçlarına karşı uygulanabilirlik kontrolü (öncelikli sipariş yalnız başkasını geciktirmeyeni alır).
-- ? Sıralama ölçütlerinin kullanıcı tarafından sıralanabilir olması ve nihai ürün / yarı mamul / hammadde için ayrı sıralama isteği: mockup karmaşık bulundu, **çözülmedi**, yeniden ele alınacak. Mockup: `plans/7.15-mockups/pegging.html`
+- ✔ Sıralama iki ölçüt listesiyle yönetilir: İhtiyaç sırası ve Arz sırası (Parametreler › Pegging). Kullanıcı ölçütleri sıralar, yönlü ölçütte yön seçer; ölçütler yukarıdan aşağı uygulanır; ihtiyaç ve arz türleri de birer ölçüttür (K-201). Tek liste bütün malzeme seviyeleri için geçerlidir; seviyeye göre ayrım motor aşamasında yeniden ele alınacak. Mockup: `plans/7.15-mockups/pegging-siralama.html`
 
 ## 5. Pegging'de eşleşme
 
@@ -124,8 +124,8 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - Yeni tablo `MaterialAllocationRule`. (K-199, uygulandı)
 - `PlannedOrder`: `ProjectId` kalkar, alokasyon alanları eklenir. (K-198, uygulandı)
 - `ProjectGroup` tablosu ve `TrackingRule` kalkar. (K-198, uygulandı)
-- "Özel alokasyon" parametresi (Parametreler › Malzeme).
-- "Full pegging yöntemi" parametresi.
+- "Özel alokasyon" parametresi (Parametreler › Model › Çözüm). (K-201, uygulandı)
+- "Full pegging yöntemi" parametresi. (K-201, uygulandı)
 - `planning.Pegging` yapısı; aktarım çıktısı.
 - Model artık tek havuz değil: bakiye boyutu.
 - Yeni ekran: Üretim akışı (K-200, uygulandı). Yeni rapor: Pegging raporu.

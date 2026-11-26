@@ -6,7 +6,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.params import catalog as cat, horizon, objectives as objective_rows, scenarios, service as params
+from app.params import catalog as cat, horizon, objectives as objective_rows, pegging as pegging_rules, scenarios, service as params
 
 from ..errors import AppError
 from ..repositories import audit
@@ -17,6 +17,7 @@ ACTION_SETTING = "Parametre değişikliği"
 ACTION_OBJECTIVE = "Hedef değişikliği"
 ACTION_BUCKETS = "Dönem dizisi değişikliği"
 ACTION_WARNING = "Uyarı eşiği değişikliği"
+ACTION_PEGGING = "Pegging sırası değişikliği"
 OBJECT = "Senaryo"
 INVALID = "Girilen bilgiler geçersiz."
 AXES = {"plan": cat.AXIS_PLAN, "rapor": cat.AXIS_REPORT}
@@ -92,6 +93,37 @@ def update(session: Session | None, actor: CurrentUser, changes: dict, scenario_
 
     auth._db(work)
     return read(session, actor, scenario_id)
+
+
+def pegging(session: Session | None, user: CurrentUser, scenario_id: int | None = None) -> dict:
+    """Pegging ayarları (K-201): yöntem ve iki ölçüt listesi."""
+    session = auth._require(session)
+
+    def work():
+        sid, _ = _scenario(session, user, scenario_id)
+        return pegging_rules.read(session, sid)
+
+    return auth._db(work)
+
+
+def update_pegging(session: Session | None, actor: CurrentUser, body: dict, scenario_id: int | None = None) -> dict:
+    """Yöntem ve iki liste tek işlemde; liste değişikliği "Pegging sırası değişikliği", yöntem "Parametre değişikliği" olarak ize düşer."""
+    session = auth._require(session)
+
+    def work():
+        sid, name = _scenario(session, actor, scenario_id)
+        try:
+            pegging_rules.save(
+                session, sid, body,
+                lambda key, old, new: audit.write_audit(session, ACTION_SETTING, actor.id, OBJECT, _key(name, key), {"Value": new}, {"Value": old}, scenario=name),
+                lambda side, old, new: audit.write_audit(session, ACTION_PEGGING, actor.id, OBJECT, _key(name, f"{side} sırası"), {"Order": new}, {"Order": old}, scenario=name))
+        except params.ParamError as err:
+            session.rollback()
+            raise _invalid(err) from None
+        session.commit()
+
+    auth._db(work)
+    return pegging(session, actor, scenario_id)
 
 
 def objectives(session: Session | None, user: CurrentUser, scenario_id: int | None = None) -> dict:

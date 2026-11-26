@@ -22,6 +22,20 @@ class Changes(BaseModel):
     changes: dict[str, Any]
 
 
+class PeggingItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    criterion: str
+    direction: str | None = None
+
+
+class PeggingBody(BaseModel):
+    """Pegging ayarları (K-201): verilen alanlar yazılır; her liste tanımdaki ölçütlerin tamamını birer kez içermelidir."""
+    model_config = ConfigDict(extra="forbid")
+    method: str | None = None
+    need: list[PeggingItem] | None = None
+    supply: list[PeggingItem] | None = None
+
+
 class ObjectiveRow(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: int
@@ -83,6 +97,16 @@ def read(scenario_id: int | None = None, user: CurrentUser = Depends(read22), se
 @router.put("/parameters", summary="Parametreler: yalnız değişenler yazılır, denetim izine (22 yazma)")
 def update(body: Changes, scenario_id: int | None = None, user: CurrentUser = Depends(write22), session: Session = Depends(get_session)) -> dict:
     return service.update(session, user, body.changes, scenario_id)
+
+
+@router.get("/parameters/pegging", summary="Pegging: yöntem ve iki ölçüt listesi (İhtiyaç sırası, Arz sırası; 22 okuma)")
+def pegging(scenario_id: int | None = None, user: CurrentUser = Depends(read22), session: Session = Depends(get_session)) -> dict:
+    return service.pegging(session, user, scenario_id)
+
+
+@router.put("/parameters/pegging", summary="Pegging: yöntem ve iki liste tek işlemde; yalnız sıra ve yön değişir (22 yazma)")
+def update_pegging(body: PeggingBody, scenario_id: int | None = None, user: CurrentUser = Depends(write22), session: Session = Depends(get_session)) -> dict:
+    return service.update_pegging(session, user, body.model_dump(exclude_none=True), scenario_id)
 
 
 @router.get("/parameters/objectives", summary="Hedefler: sıra, süre bütçesi, ödün payı, aktiflik (22 okuma)")

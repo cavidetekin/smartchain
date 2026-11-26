@@ -2,10 +2,10 @@
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.params import catalog as cat, objectives as objective_rows, service as params
+from app.params import catalog as cat, objectives as objective_rows, pegging as pegging_rules, service as params
 
 from .data import SqlPlanningData
-from .interface import EngineInput, Objective, PlanRunInfo, ScenarioParameters, TimeBucket
+from .interface import EngineInput, Objective, PeggingRules, PlanRunInfo, ScenarioParameters, TimeBucket
 
 
 class PlanRunNotFound(LookupError):
@@ -34,8 +34,10 @@ def load_parameters(session: Session, scenario_definition_id: int) -> ScenarioPa
     report = plan if settings.get("ReportAxisSameAsPlan") != cat.NO else _buckets(session, scenario_definition_id, cat.AXIS_REPORT)
     objectives = tuple(Objective(o["seq"], o["code"], o["seconds"], o["tolerance"] or 0.0, o["scope"])
                        for o in objective_rows.read_objectives(session, scenario_definition_id) if o["active"])
+    pegging = PeggingRules(need=tuple(pegging_rules.read_list(session, scenario_definition_id, pegging_rules.NEED)),
+                           supply=tuple(pegging_rules.read_list(session, scenario_definition_id, pegging_rules.SUPPLY)))
     return ScenarioParameters(id=scenario_definition_id, name=name, settings=settings, time_buckets=plan, report_buckets=report,
-                              objectives=objectives)
+                              objectives=objectives, pegging=pegging)
 
 
 def load_input(session: Session, plan_run_id: int, time_budget_seconds: int) -> EngineInput:

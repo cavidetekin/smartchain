@@ -1004,6 +1004,19 @@ WarningDefinition = sa.Table(
     comment="Uyarı kataloğu (K-190): sistemin tanıdığı uyarı kodları ve kategorileri. Satırları sistem yazar; eşik, önem ve aktiflik senaryoya bağlıdır (WarningThreshold).",
 )
 
+PeggingCriterion = sa.Table(
+    "PeggingCriterion", metadata,
+    sa.Column("ScenarioDefinitionId", sa.Integer(), sa.ForeignKey("param.ScenarioDefinition.Id"), primary_key=True, autoincrement=False, comment="Senaryo", info={'label': "Senaryo", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Side", sa.Unicode(10), primary_key=True, autoincrement=False, comment="İhtiyaç | Arz", info={'label': "Liste", 'values': ["İhtiyaç", "Arz"], 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Seq", sa.Integer(), primary_key=True, autoincrement=False, comment="Sıra", info={'label': "Sıra", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Criterion", sa.Unicode(40), nullable=False, comment="Ölçütün adı (Dönem, Kesin sipariş, Stok, Arz tarihi…)", info={'label': "Ölçüt", 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Column("Direction", sa.Unicode(20), nullable=True, comment="Artan | Azalan | İhtiyaca en yakın", info={'label': "Yön", 'values': ["Artan", "Azalan", "İhtiyaca en yakın"], 'source': "Smartchain (parametre)", 'workspace': False}),
+    sa.Index("UX_PeggingCriterion_ScenarioDefinitionId_Side_Criterion", "ScenarioDefinitionId", "Side", "Criterion", unique=True),
+    schema="param",
+    info={'field_class': "Parametre"},
+    comment="Pegging sıralama ölçütleri (K-201): senaryonun İhtiyaç sırası ve Arz sırası listeleri; her satır bir ölçüttür, sırasıyla. Ölçütler yukarıdan aşağı uygulanır. Senaryoda satır yoksa başlangıç sırası geçerlidir (`app/params/pegging.py`); ilk kayıtta listenin tamamı yazılır. Bir listede her ölçüt bir kez bulunur. Yön yalnız yönlü ölçütte doludur (\"İhtiyaca en yakın\" yalnız arzın Dönem ölçütünde).",
+)
+
 WarningThreshold = sa.Table(
     "WarningThreshold", metadata,
     sa.Column("Id", sa.BigInteger(), primary_key=True, autoincrement=True, comment="Kayıt kimliği", info={'label': "Kayıt kimliği", 'source': "Sistem", 'workspace': False}),

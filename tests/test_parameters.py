@@ -183,7 +183,7 @@ def test_base_scenario_comes_with_start_values(db_engine, base, client, people):
     key = auth(people[KEY_USER])
     body = client.get("/api/parameters", headers=key).json()
     assert body["scenario"] == {"id": base, "name": "Baz"}
-    assert [s["title"] for s in body["sections"]] == ["Model", "Hedefler", "Talep", "Malzeme", "Kapasite", "Planlama ufku", "Plan kararlılığı", "Uyarı eşikleri"]
+    assert [s["title"] for s in body["sections"]] == ["Model", "Hedefler", "Pegging", "Talep", "Malzeme", "Kapasite", "Planlama ufku", "Plan kararlılığı", "Uyarı eşikleri"]
     labels = {p["key"]: p["label"] for s in body["sections"] for sub in s["subs"] for p in sub["params"]}
     assert labels["FixPeriod"] == "Sabit dönem"
     assert [labels[k] for k in ("IncludeFirmOrders", "IncludeQuotes", "IncludeOnHold", "IncludeForecast")] == ["Kesin sipariş", "Teklif", "Beklemedeki sipariş", "Tahmin"]
@@ -192,7 +192,7 @@ def test_base_scenario_comes_with_start_values(db_engine, base, client, people):
     assert (body["values"]["SafetyStockMode"], body["values"]["OpenWorkOrders"]) == ("Esnek hedef", "Yalnız öteleme önerisi")
     fix = next(p for s in body["sections"] for sub in s["subs"] for p in sub["params"] if p["key"] == "FixPeriod")
     assert fix["unit_key"] == "FixPeriodUnit" and body["computed"] == {"fix_period_end": None}
-    assert [sub["title"] for sub in body["sections"][3]["subs"]] == ["Kısıt ve stok", "Güvenlik stoğu", "Tedarik"]
+    assert [sub["title"] for sub in body["sections"][4]["subs"]] == ["Kısıt ve stok", "Güvenlik stoğu", "Tedarik"]
     assert body["values"] == {p.key: p.default for p in cat.PARAMS}
     lot = next(p for s in body["sections"] for sub in s["subs"] for p in sub["params"] if p["key"] == "ProductionMinLot")
     assert lot["enabled_when"] == {"key": "ModelType", "value": "MILP"}

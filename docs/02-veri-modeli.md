@@ -1107,6 +1107,20 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Code | nvarchar(30) | PK | Uyarı kodu | Sistem | H | E |  |
 | Category | nvarchar(20) |  | Talep \| Malzeme \| Kapasite \| Plan kalitesi | Sistem | H | E |  |
 
+### PeggingCriterion
+<sub>21. Veri modeli · Parametre</sub>
+
+- Parametre · versiyonsuz · Faz 1
+- Pegging sıralama ölçütleri (K-201): senaryonun İhtiyaç sırası ve Arz sırası listeleri; her satır bir ölçüttür, sırasıyla. Ölçütler yukarıdan aşağı uygulanır. Senaryoda satır yoksa başlangıç sırası geçerlidir (`app/params/pegging.py`); ilk kayıtta listenin tamamı yazılır. Bir listede her ölçüt bir kez bulunur. Yön yalnız yönlü ölçütte doludur ("İhtiyaca en yakın" yalnız arzın Dönem ölçütünde).
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| ScenarioDefinitionId | int | PK,FK,UK | Senaryo |  | Smartchain (parametre) | H | E |  |
+| Side | nvarchar(10) | PK,UK | İhtiyaç \| Arz | Liste | Smartchain (parametre) | H | E |  |
+| Seq | int | PK | Sıra |  | Smartchain (parametre) | H | E |  |
+| Criterion | nvarchar(40) | UK | Ölçütün adı (Dönem, Kesin sipariş, Stok, Arz tarihi…) | Ölçüt | Smartchain (parametre) | H | E |  |
+| Direction | nvarchar(20) |  | Artan \| Azalan \| İhtiyaca en yakın | Yön | Smartchain (parametre) | H | H |  |
+
 ### WarningThreshold
 <sub>21. Veri modeli · Parametre</sub>
 
