@@ -781,41 +781,54 @@ def write_warnings_and_metrics(session, plan_run_id: int, today: date | None = N
     session.execute(sa.text("DELETE FROM planning.PlanMetric WHERE PlanRunId = :run"), p)
     rows: list[dict] = []
 
-    def add(code, kind, oid, value, message):
-        rows.append({"PlanRunId": plan_run_id, "WarningCode": code, "ObjectType": kind, "ObjectId": oid, "Value": value, "Message": message[:400]})
+    def add(code, kind, oid, value, message, start=None, end=None, group=None, material=None, demand=None, supply=None):
+        """Uyarı satırı: dönem ve ilgili kayıt ayrı alanlarda (K-206); ObjectType ve ObjectId genel bağ."""
+        rows.append({"PlanRunId": plan_run_id, "WarningCode": code, "ObjectType": kind, "ObjectId": oid, "Value": value, "Message": message[:400],
+                     "PeriodStart": start, "PeriodEnd": end, "ResourceGroupId": group, "MaterialId": material, "PlannedDemandId": demand, "PlannedSupplyId": supply})
+
+    from app.planning import derive
+    scenario = session.execute(sa.text("SELECT ScenarioDefinitionId FROM planning.PlanRun WHERE Id = :run"), p).scalar_one()
+    ends = {x.start: x.end for x in derive.plan_periods(session, scenario, today)}
 
     types = ", ".join(f"N'{t}'" for t in ORDER_TYPES)
-    for oid, no, line, late, unmet, days in session.execute(sa.text(
-            "SELECT d.SalesOrderLineId, d.OrderNo, d.[LineNo], d.LateQuantity, d.UnmetQuantity, DATEDIFF(day, d.DuePeriodStart, d.LastFulfillmentPeriodStart) "
-            f"FROM planning.PlannedDemand d WHERE d.PlanRunId = :run AND d.IsIncluded = 1 AND d.DemandType IN ({types}) "
+    for did, oid, no, line, late, unmet, days, due, mat in session.execute(sa.text(
+            "SELECT d.Id, d.SalesOrderLineId, d.OrderNo, d.[LineNo], d.LateQuantity, d.UnmetQuantity, DATEDIFF(day, d.DuePeriodStart, d.LastFulfillmentPeriodStart), "
+            f"d.DuePeriodStart, d.MaterialId FROM planning.PlannedDemand d WHERE d.PlanRunId = :run AND d.IsIncluded = 1 AND d.DemandType IN ({types}) "
             "AND (d.LateQuantity > 0.001 OR d.UnmetQuantity > 0.001)"), p):
+        link = dict(start=due, end=ends.get(due), material=mat, demand=did)
         if late and late > 0.001:
-            add("ORDER_LATE", "Sipariş", oid, days or 0, f"Sipariş {no}/{line}: {float(late):g} birim {days or 0} gün geç karşılanıyor.")
+            add("ORDER_LATE", "Sipariş", oid, days or 0, f"Sipariş {no}/{line}: {float(late):g} birim {days or 0} gün geç karşılanıyor.", **link)
         if unmet and unmet > 0.001:
-            add("ORDER_UNMET", "Sipariş", oid, float(unmet), f"Sipariş {no}/{line}: {float(unmet):g} birim karşılanamıyor.")
-    for oid, unmet in session.execute(sa.text("SELECT ForecastId, UnmetQuantity FROM planning.PlannedDemand WHERE PlanRunId = :run AND IsIncluded = 1 "
-                                              "AND DemandType = N'Tahmin' AND UnmetQuantity > 0.001"), p):
-        add("FORECAST_UNMET", "Tahmin", oid, float(unmet), f"Tahmin {oid}: {float(unmet):g} birim karşılanamıyor.")
+            add("ORDER_UNMET", "Sipariş", oid, float(unmet), f"Sipariş {no}/{line}: {float(unmet):g} birim karşılanamıyor.", **link)
+    for did, oid, unmet, due, mat in session.execute(sa.text(
+            "SELECT Id, ForecastId, UnmetQuantity, DuePeriodStart, MaterialId FROM planning.PlannedDemand WHERE PlanRunId = :run AND IsIncluded = 1 "
+            "AND DemandType = N'Tahmin' AND UnmetQuantity > 0.001"), p):
+        add("FORECAST_UNMET", "Tahmin", oid, float(unmet), f"Tahmin {oid}: {float(unmet):g} birim karşılanamıyor.", start=due, end=ends.get(due), material=mat, demand=did)
     for g in capacity_view.group_periods(session, plan_run_id, today):
         when = g["PeriodStart"].strftime("%d.%m.%Y")
         if g["Overload"] > capacity_view.EPS:
             pct = 100 * g["Load"] / g["AvailableCapacity"] if g["AvailableCapacity"] else 0
             add("CAP_OVERLOAD", "Kaynak grubu", g["ResourceGroupId"], round(pct, 2),
-                f"{g['Code']}, {when} döneminde %{pct:.1f} dolu; ek mesaiden sonra {g['Overload']:.1f} saat aşım.")
+                f"{g['Code']}, {when} döneminde %{pct:.1f} dolu; ek mesaiden sonra {g['Overload']:.1f} saat aşım.",
+                start=g["PeriodStart"], end=g["PeriodEnd"], group=g["ResourceGroupId"])
         if g["Overtime"] > capacity_view.EPS:
-            add("OVERTIME_USE", "Kaynak grubu", g["ResourceGroupId"], round(g["Overtime"], 2), f"{g['Code']}, {when} döneminde {g['Overtime']:.1f} saat ek mesai.")
-    for sid, no, order_date, rounded, qty in session.execute(sa.text(
-            "SELECT Id, SupplyNo, OrderDate, RoundedQuantity, Quantity FROM planning.PlannedSupply WHERE PlanRunId = :run AND IsIncluded = 1 "
-            "AND SupplyType = N'Satın alma' AND Source = N'Plan'"), p):
+            add("OVERTIME_USE", "Kaynak grubu", g["ResourceGroupId"], round(g["Overtime"], 2), f"{g['Code']}, {when} döneminde {g['Overtime']:.1f} saat ek mesai.",
+                start=g["PeriodStart"], end=g["PeriodEnd"], group=g["ResourceGroupId"])
+    for sid, no, order_date, rounded, qty, start, end, mat in session.execute(sa.text(
+            "SELECT Id, SupplyNo, OrderDate, RoundedQuantity, Quantity, PeriodStart, PeriodEnd, MaterialId FROM planning.PlannedSupply WHERE PlanRunId = :run "
+            "AND IsIncluded = 1 AND SupplyType = N'Satın alma' AND Source = N'Plan'"), p):
+        link = dict(start=start, end=end, material=mat, supply=sid)
         if order_date is not None and order_date < today:
             days = (today - order_date).days
-            add("PURCHASE_LATE", "Tedarik planı", sid, days, f"Satın alma planı {no}: sipariş tarihi {order_date:%d.%m.%Y}, {days} gün geçmiş.")
+            add("PURCHASE_LATE", "Tedarik planı", sid, days, f"Satın alma planı {no}: sipariş tarihi {order_date:%d.%m.%Y}, {days} gün geçmiş.", **link)
         if rounded is not None and float(rounded) - float(qty) > 0.001:
             add("MAT_EXCESS", "Tedarik planı", sid, float(rounded) - float(qty),
-                f"Satın alma planı {no}: sipariş lotu nedeniyle {float(rounded) - float(qty):g} birim fazla stok.")
+                f"Satın alma planı {no}: sipariş lotu nedeniyle {float(rounded) - float(qty):g} birim fazla stok.", **link)
     if rows:
-        session.execute(sa.text("INSERT INTO planning.PlanWarning (PlanRunId, WarningCode, ObjectType, ObjectId, Value, Message, UpdatedAt) "
-                                "VALUES (:PlanRunId, :WarningCode, :ObjectType, :ObjectId, :Value, :Message, SYSUTCDATETIME())"), rows)
+        session.execute(sa.text(
+            "INSERT INTO planning.PlanWarning (PlanRunId, WarningCode, ObjectType, ObjectId, Value, Message, PeriodStart, PeriodEnd, ResourceGroupId, MaterialId, "
+            "PlannedDemandId, PlannedSupplyId, UpdatedAt) VALUES (:PlanRunId, :WarningCode, :ObjectType, :ObjectId, :Value, :Message, :PeriodStart, :PeriodEnd, "
+            ":ResourceGroupId, :MaterialId, :PlannedDemandId, :PlannedSupplyId, SYSUTCDATETIME())"), rows)
     values = metrics.compute(session, plan_run_id)
     session.execute(sa.text("INSERT INTO planning.PlanMetric (PlanRunId, MetricCode, Value) VALUES (:r, :c, :v)"),
                     [{"r": plan_run_id, "c": k, "v": v} for k, v in values.items()])

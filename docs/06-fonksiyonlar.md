@@ -3212,6 +3212,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 43 · Çalışma açma
 <sub>24. Ekranlar ve fonksiyonlar · F43 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
 
+- **Çalışma katmanı kalktı (K-207):** "Çalışma" (çalışma aç / kaydet / at, `Workspace`, `WorkspaceOverride`) yoktur; her şey senaryoya bağlıdır, kişisel deneme için kullanıcı kendi senaryosunu açar. Müdahale aynı planın üstünde, ayrı alanlarda yapılır. Fonksiyon 43–49'un metinleri eski tasarımdır; 8.6 Müdahale altyapısı adımında yeniden ele alınır.
 - Bir gece senaryosu üzerinde kullanıcının kendi çalışma alanını açmak; değişiklikler bu alana yazılır, yeniden hesap ve yayın buradan yapılır. Senaryo olduğu gibi kalır.
 
 #### NASIL ÇALIŞIR

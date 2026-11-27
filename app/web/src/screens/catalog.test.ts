@@ -16,10 +16,10 @@ describe("ekran kataloğu", () => {
     expect(SCREENS[0]).toMatchObject({ no: "01", name: "Ana sayfa", group: null });
   });
 
-  it("çalışmanın ekranları (10–19) Çalışma'nın altında ve çalışma gerektirir", () => {
+  it("planlama ekranları (10–19) Çalışma'nın altında ve kilitsiz (K-207)", () => {
     const kids = childrenOf("09");
     expect(kids.map((s) => s.no)).toEqual(["10", "11", "12", "13", "14", "15", "16", "17", "18", "19"]);
-    expect(kids.every((s) => s.requiresWorkspace && s.group === "planlama")).toBe(true);
+    expect(kids.every((s) => !s.requiresWorkspace && s.group === "planlama")).toBe(true);     // çalışma katmanı kalktı: kilit yok
   });
 
   it("en çok iki seviye: alt ekranın altında ekran yok", () => {

@@ -59,7 +59,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### PLANLAMA
 
 - **08 · Senaryo karşılaştırma:** Senaryoların plan versiyonları, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma. **Raporlar'a taşındı (K-204):** Senaryo karşılaştırma ayrı ekran değildir; Raporlar altında "Senaryo karşılaştırma raporu" olur (geliştirme 9.7). Metin eski tasarımdır.
-- **09 · Çalışma:** Bir senaryo üzerindeki çalışma alanı: özet metrikler, yapılan değişiklikler, yeniden hesap, yayın. 10–19 numaralı ekranlar bu bağlamda açılır.
+- **09 · Çalışma:** Bir senaryo üzerindeki çalışma alanı: özet metrikler, yapılan değişiklikler, yeniden hesap, yayın. 10–19 numaralı ekranlar bu bağlamda açılır. **Çalışma katmanı kalktı (K-207):** "Çalışma" (çalışma aç / kaydet / at, `Workspace`, `WorkspaceOverride`) yoktur; her şey senaryoya bağlıdır, kişisel deneme için kullanıcı kendi senaryosunu açar. Müdahale aynı planın üstünde, ayrı alanlarda yapılır. Bu metin eski tasarımdır; 8.6 Müdahale altyapısı adımında yeniden ele alınır.
 - **10 · Kaynak doluluk raporu:** Kaynak × dönem doluluğu; dünden farkı; detaya iniş.
 - **11 · Ürün bazlı planlama:** Ürün × dönem: talep, üretim, stok projeksiyonu, kümülatif eksik; üretim miktarı girilir.
 - **12 · Kaynak bazlı planlama:** Kaynak × dönem: yükü taşıma, alternatif kaynağa ya da fasona aktarma, kaynak parametrelerini geçici değiştirme.
@@ -399,6 +399,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 09/25</sub>
 
 ![Çalışma](mockups/m24e-0318-calisma.png)
+
+- **Çalışma katmanı kalktı (K-207):** "Çalışma" (çalışma aç / kaydet / at, `Workspace`, `WorkspaceOverride`) yoktur; her şey senaryoya bağlıdır, kişisel deneme için kullanıcı kendi senaryosunu açar. Müdahale aynı planın üstünde, ayrı alanlarda yapılır. Bu metin eski tasarımdır; 8.6 Müdahale altyapısı adımında yeniden ele alınır.
 
 - **Senaryo üzerinde çalışma:** Gece senaryosundan açılır; değişiklikler bu çalışmaya yazılır.
 - **Değişiklik izi:** Hangi ekranda ne değişti ve etkisi; tek tek geri alınabilir.

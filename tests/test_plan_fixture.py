@@ -89,6 +89,13 @@ def test_load_writes_three_consistent_plans(db_engine):
             # 3: darboğazda ek mesai ve aşım; uyarılar
             codes = {r[0] for r in q("SELECT DISTINCT WarningCode FROM planning.PlanWarning WHERE PlanRunId = :r")}
             assert {"ORDER_LATE", "ORDER_UNMET", "CAP_OVERLOAD", "OVERTIME_USE", "PURCHASE_LATE", "MAT_EXCESS"} <= codes
+            # uyarılar dönemini ve ilgili kaydı kendi alanlarında taşır (K-206)
+            assert q("SELECT COUNT(*) FROM planning.PlanWarning WHERE PlanRunId = :r AND (PeriodStart IS NULL OR PeriodEnd IS NULL OR "
+                     "(WarningCode IN (N'CAP_OVERLOAD', N'OVERTIME_USE') AND ResourceGroupId IS NULL) OR "
+                     "(WarningCode IN (N'ORDER_LATE', N'ORDER_UNMET', N'FORECAST_UNMET') AND PlannedDemandId IS NULL) OR "
+                     "(WarningCode IN (N'PURCHASE_LATE', N'MAT_EXCESS') AND (PlannedSupplyId IS NULL OR MaterialId IS NULL)))") == [(0,)]
+            assert q("SELECT COUNT(*) FROM planning.PlanWarning w JOIN core.ResourceGroup g ON g.Id = w.ResourceGroupId AND g.VersionTo IS NULL "
+                     "WHERE w.PlanRunId = :r AND w.WarningCode = N'CAP_OVERLOAD' AND g.Code = :g", g=d.BOTTLENECK_GROUP)[0][0] > 0
             assert q("SELECT COUNT(*) FROM planning.PlannedOvertime o JOIN core.ResourceGroup g ON g.Id = o.ResourceGroupId AND g.VersionTo IS NULL "
                      "WHERE o.PlanRunId = :r AND g.Code = :g", g=d.BOTTLENECK_GROUP)[0][0] > 0
             # 4: transfer ve Genelden pegging'i (arz gerçek genel arz)

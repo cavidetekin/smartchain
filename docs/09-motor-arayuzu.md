@@ -120,7 +120,7 @@ Bu adımda motor kuralı uygulanmaz; giriş, saklama, dönem hesabı ve arayüz 
 `PlanningData.warning_thresholds()` planın senaryosundaki aktif uyarıları verir (`SqlPlanningData`): `[{Code, Category, Unit, Direction, Low, Medium, High, Critical, Severity}]`. Kapalı uyarı dönmez. Motorun ve plan ekranlarının uygulayacağı kural (Aşama 8 ve 10):
 - Eşikli uyarı: değer bir kademenin eşiğini geçiyorsa (yön `above`: değer > eşik; `below`: değer < eşik; eşik dahil değil) uyarı çıkar; önemi tuttuğu en yüksek kademedir. Boş kademe atlanır. Nesne başına tek uyarı.
 - Eşiksiz uyarı: durum oluşunca `Severity` önemiyle çıkar.
-- Uyarı kodları `param.WarningDefinition` kataloğundadır (geçiş 0069 yazar); `PlanWarning.WarningCode` ona bağlıdır.
+- Uyarı kodları `param.WarningDefinition` kataloğundadır (geçiş 0069 yazar); `PlanWarning.WarningCode` ona bağlıdır. Uyarı satırı dönemini (`PeriodStart`, `PeriodEnd`) ve ilgili kaydı ayrı alanlarda taşır (K-206): kapasite uyarısında `ResourceGroupId`, talep uyarısında `PlannedDemandId`, malzeme uyarısında `PlannedSupplyId` ve `MaterialId`; `ObjectType` ve `ObjectId` genel bağ olarak durur. Ekranlar döneme ve kayda bu alanlarla süzer; tutarlılık denetimi de mesaj metnine değil bu alanlara bakar.
 
 Bu adımda uyarı üretilmez; yalnız arayüz ve saklama vardır.
 

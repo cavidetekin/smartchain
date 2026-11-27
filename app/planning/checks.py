@@ -7,7 +7,7 @@
 - Yük: Kapasite kullanımı = Üretim adedi × Birim kullanım; ek mesai ≤ ek mesai limiti; aşım olan her grup × dönemde CAP_OVERLOAD uyarısı.
 - Pegging: iki taraf aynı malzeme ve lokasyon; hareket başına bağlanan toplam ≤ hareket miktarı; transfer hareketi yok; Genelden = Evet ise arzın
   anahtarı boş, ihtiyacınki dolu; üst bağın seviyesi bir eksik; kök talep alanları talepten.
-- Uyarı: geç kalan siparişin ORDER_LATE, karşılanmayan siparişin ORDER_UNMET, karşılanmayan tahminin FORECAST_UNMET uyarısı var.
+- Uyarı: geç kalan siparişin ORDER_LATE, karşılanmayan siparişin ORDER_UNMET, karşılanmayan tahminin FORECAST_UNMET uyarısı var; uyarılar dönemle ve ilgili kayıtla (K-206) eşlenir, mesaj metniyle değil.
 """
 from collections import defaultdict
 from datetime import date
@@ -78,11 +78,11 @@ def problems(session: Session, plan_run_id: int, today: date | None = None, limi
             add("Ek mesai", f"{g['Code']} {g['PeriodStart']}: ek mesai {g['Overtime']:.2f} > limit {g['OvertimeLimit']:.2f}")
         if g["Overload"] > capacity_view.EPS:
             overloaded.add((g["ResourceGroupId"], g["PeriodStart"]))
-    # CAP_OVERLOAD uyarısının nesnesi kaynak grubu, mesajında dönem başı (gg.aa.yyyy) geçer (PlanWarning'de dönem kolonu yok)
-    warned = _rows(session, "SELECT ObjectId, Message FROM planning.PlanWarning WHERE PlanRunId = :run AND WarningCode = N'CAP_OVERLOAD'", run)
-    for gid, start in overloaded:
-        if not any(o == gid and start.strftime("%d.%m.%Y") in (m or "") for o, m in warned):
-            add("Uyarı", f"kaynak grubu {gid} {start}: aşım var, CAP_OVERLOAD uyarısı yok")
+    # CAP_OVERLOAD uyarısı kaynak grubunu ve dönemini kendi alanlarında taşır (K-206)
+    warned = {(g, s) for g, s in _rows(session, "SELECT ResourceGroupId, PeriodStart FROM planning.PlanWarning WHERE PlanRunId = :run "
+                                                "AND WarningCode = N'CAP_OVERLOAD'", run)}
+    for gid, start in sorted(overloaded - warned):
+        add("Uyarı", f"kaynak grubu {gid} {start}: aşım var, CAP_OVERLOAD uyarısı yok")
 
     # pegging
     for gid, why in _rows(session, f"""
@@ -109,13 +109,13 @@ def problems(session: Session, plan_run_id: int, today: date | None = None, limi
             add("Pegging miktarı", f"hareket {tid} ({side}): bağlanan {float(total):.3f} > miktar {float(qty):.3f}")
 
     # uyarı
-    codes = {(code, oid) for code, oid in _rows(session, "SELECT WarningCode, ObjectId FROM planning.PlanWarning WHERE PlanRunId = :run", run)}
+    codes = {(code, did) for code, did in _rows(session, "SELECT WarningCode, PlannedDemandId FROM planning.PlanWarning WHERE PlanRunId = :run", run)}
     order_types = ", ".join(f"N'{t}'" for t in ORDER_TYPES)
     for code, oid, what in _rows(session, f"""
-            SELECT N'ORDER_LATE', SalesOrderLineId, OrderNo FROM planning.PlannedDemand WHERE PlanRunId = :run AND LateQuantity > 0.001 AND DemandType IN ({order_types})
-            UNION ALL SELECT N'ORDER_UNMET', SalesOrderLineId, OrderNo FROM planning.PlannedDemand WHERE PlanRunId = :run AND UnmetQuantity > 0.001
+            SELECT N'ORDER_LATE', Id, OrderNo FROM planning.PlannedDemand WHERE PlanRunId = :run AND LateQuantity > 0.001 AND DemandType IN ({order_types})
+            UNION ALL SELECT N'ORDER_UNMET', Id, OrderNo FROM planning.PlannedDemand WHERE PlanRunId = :run AND UnmetQuantity > 0.001
                 AND DemandType IN ({order_types})
-            UNION ALL SELECT N'FORECAST_UNMET', ForecastId, NULL FROM planning.PlannedDemand WHERE PlanRunId = :run AND UnmetQuantity > 0.001
+            UNION ALL SELECT N'FORECAST_UNMET', Id, NULL FROM planning.PlannedDemand WHERE PlanRunId = :run AND UnmetQuantity > 0.001
                 AND DemandType = N'{cat.DEMAND_FORECAST}'""", run):
         if (code, oid) not in codes:
             add("Uyarı", f"{what or oid}: {code} uyarısı yok")

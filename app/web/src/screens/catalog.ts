@@ -44,7 +44,8 @@ export const GROUPS: Group[] = [
 ];
 
 // Çalışmanın ekranları Çalışma'yla (43) birlikte görünür.
-const W = { group: "planlama" as const, parent: "09", requiresWorkspace: true, fn: 43 };
+// K-207: çalışma katmanı kalktı; ekranlar kilitsizdir ve seçili senaryonun planını gösterir ("Çalışma" girişi 8.6'da menüden kalkar)
+const W = { group: "planlama" as const, parent: "09", fn: 43 };
 
 export const SCREENS: Screen[] = [
   { no: "01", fn: 82, name: "Ana sayfa", path: "/ana-sayfa", group: null, step: "9.1", icon: House,

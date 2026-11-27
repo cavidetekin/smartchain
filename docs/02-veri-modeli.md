@@ -1970,6 +1970,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | WarningCode | nvarchar(30) | FK | Uyarı tanımı | Motor | H | E |  |
 | ObjectType | nvarchar(20) |  | İlgili nesne tipi | Motor | H | H |  |
 | ObjectId | bigint |  | İlgili nesne | Motor | H | H |  |
+| PeriodStart | date |  | Uyarının döneminin ilk günü (dönemli uyarıda; K-206) | Motor | H | H |  |
+| PeriodEnd | date |  | Uyarının döneminin son günü | Motor | H | H |  |
+| ResourceGroupId | bigint | FK | İlgili kaynak grubu (kapasite uyarıları) | Motor | H | H |  |
+| MaterialId | bigint | FK | İlgili malzeme | Motor | H | H |  |
+| PlannedDemandId | bigint | FK,IX | İlgili talep (talep uyarıları) | Motor | H | H |  |
+| PlannedSupplyId | bigint | FK,IX | İlgili tedarik planı kaydı (malzeme uyarıları) | Motor | H | H |  |
 | Value | decimal(18,4) |  | Ölçülen değer | Motor | H | H |  |
 | Message | nvarchar(400) |  | Mesaj (şablon tabanlı açıklama) | Motor | H | H |  |
 | UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |

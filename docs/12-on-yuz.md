@@ -25,7 +25,7 @@ Ekranlar menüde gruplar hâlinde durur; ekranlar arası geçiş için üstte se
 | Parametre | Parametre setleri (06) · Gece senaryoları (07) |
 | Yönetim | Kullanıcılar (22) · Entegrasyon (23) · Sistem sağlığı (24) · Denetim izi (26) · Sistem ayarları (25) |
 
-- **Çalışmanın ekranları** (doluluk, ürün / kaynak / sipariş bazlı planlama, Gantt, malzeme, öneriler, pegging, termin ve olaylar, yayın) menüde Çalışma'nın altında listelenir (K-43). Çalışma açık değilken gri ve kapalıdır; üzerine gelince "Önce bir çalışma açın" yazar.
+- **Çalışmanın ekranları** (doluluk, ürün / kaynak / sipariş bazlı planlama, Gantt, malzeme, öneriler, pegging, termin ve olaylar, yayın) menüde Çalışma'nın altında listelenir (K-43). **Kilit yoktur (K-207):** ekranlar çalışma açmadan açılır ve seçili senaryonun planını gösterir; "Çalışma" girişi 8.6'da menüden kalkar.
 - **Raporlar** menüde Raporlar'ın altında listelenir; çoğaldıkça alt gruplara ayrılır (ör. Raporlar › Kapasite › Kaynak doluluk).
 - **En çok iki seviye:** grup › ekran ya da grup › alt grup › ekran. Daha derin seviye açılmaz.
 - **Gruplar açılır kapanır;** hangi grupların açık bırakıldığı kullanıcı için hatırlanır.
