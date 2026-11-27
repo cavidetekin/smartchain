@@ -98,6 +98,41 @@ def test_latest_migration_goes_forward_back_and_forward(scratch):
     assert check.returncode == 0, check.stdout + check.stderr
 
 
+def test_0084_closes_manual_flags_but_keeps_used_and_deliberate_ones(scratch):
+    """K-203 (geçiş 0084): 0052'den sonra "Evet" ile eklenen alanlar kapanır. Manuel değeri olan alan ve System owner'ın son olarak açtığı alan açık kalır;
+    listede olmayan alana dokunulmaz. Geri alış listedeki alanları yeniden açar."""
+    assert _alembic(scratch, "upgrade", "0083").returncode == 0
+    engine = sa.create_engine(scratch)
+    flag = "SELECT TableName + N'.' + FieldName, ManualOverrides FROM adm.FieldDefinition WHERE TableName + N'.' + FieldName IN :keys"
+    keys = ("ResourceGroup.IsCritical", "ResourceGroup.IsMachine", "ResourceGroup.CapacityUnit", "ResourceGroupMember.AdditionalText1",
+            "WorkPattern.DayMon", "Material.MaterialGroup")
+    try:
+        with engine.begin() as c:
+            c.execute(sa.text("ALTER TABLE adm.ManualValue NOCHECK CONSTRAINT ALL"))    # deneme veritabanı: kullanıcı satırı kurulmaz
+            c.execute(sa.text("UPDATE adm.FieldDefinition SET ManualOverrides = 1 WHERE TableName + N'.' + FieldName IN :keys").bindparams(
+                sa.bindparam("keys", expanding=True)), {"keys": list(keys)})      # eski kurulumdaki hâl: yeni alanlar "Evet" eklenmişti
+            c.execute(sa.text("INSERT INTO adm.ManualValue (TableName, RecordKey, FieldName, Value, UnderlyingSource, IsBaseChanged, CreatedBy, CreatedAt, UpdatedBy, UpdatedAt) "
+                              "VALUES (N'ResourceGroup', N'1', N'IsCritical', N'1', N'ERP', 0, 1, SYSUTCDATETIME(), 1, SYSUTCDATETIME())"))
+            for at, new in (("2026-11-01", "false"), ("2026-11-02", "true")):          # kapatıp yeniden açtı: bilerek açık
+                c.execute(sa.text("INSERT INTO adm.AuditLog ([At], Action, ObjectType, ObjectKey, NewValue) VALUES (:at, N'Manuel değişikliği', N'FieldDefinition', "
+                                  "N'ResourceGroup.CapacityUnit', :v)"), {"at": at, "v": '{"ManualOverrides": ' + new + "}"})
+        up = _alembic(scratch, "upgrade", "0084")
+        assert up.returncode == 0, up.stdout + up.stderr
+        q = sa.text(flag).bindparams(sa.bindparam("keys", expanding=True))
+        with engine.connect() as c:
+            got = dict(c.execute(q, {"keys": list(keys)}).all())
+            assert got == {"ResourceGroup.IsCritical": True, "ResourceGroup.CapacityUnit": True,              # manuel değeri var · bilerek açılmış
+                           "ResourceGroup.IsMachine": False, "ResourceGroupMember.AdditionalText1": False, "WorkPattern.DayMon": False,
+                           "Material.MaterialGroup": True}                                                     # listede değil: dokunulmadı
+            assert c.execute(sa.text("SELECT COUNT(*) FROM adm.ManualValue")).scalar() == 1                    # değer silinmedi
+        down = _alembic(scratch, "downgrade", "0083")
+        assert down.returncode == 0, down.stdout + down.stderr
+        with engine.connect() as c:
+            assert dict(c.execute(q, {"keys": list(keys)}).all())["ResourceGroup.IsMachine"] is True
+    finally:
+        engine.dispose()
+
+
 def test_0082_renames_the_saved_pegging_criterion(scratch):
     """K-202 (geçiş 0082): "Satın alma önerisi" ölçütü "Satın alma planı" oldu; senaryoların kayıtlı Arz sırası çevrilir (sıra ve yön korunur),
     geri alışta eski ada döner. Çevrilmeseydi eski ad tanımda bulunmadığı için atılır, kullanıcının sırası bozulurdu."""

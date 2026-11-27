@@ -1,7 +1,7 @@
 """Veri sözlüğünün kurulumu (K-104): core, param ve plan çıktı tablolarının (K-202) alanları adm.FieldDefinition'a, docs/02'den üretilen modelden.
 
 Geçiş çalıştırır (0013), bu yüzden uygulamayı import etmez; model parametre gelir. Var olan satırda yalnız docs'tan gelen
-StandardLabel ve Description güncellenir: System owner'ın değerleri ezilmez. Kaynağı "Sistem" olan kolonlar (Id, sürüm kolonları) sözlüğe girmez.
+StandardLabel ve Description güncellenir: System owner'ın değerleri ezilmez. Yeni satır "Manuel: Hayır" ile yazılır (K-203). Kaynağı "Sistem" olan kolonlar (Id, sürüm kolonları) sözlüğe girmez.
 """
 import re
 
@@ -50,7 +50,7 @@ def fields(metadata: sa.MetaData) -> list[dict]:
             out.append({
                 "TableName": table.name, "FieldName": col.name, "FieldClass": field_class,
                 "EditableInWorkspace": bool(col.info.get("workspace")), "ValuePriority": "ERP ezer",
-                "ManualOverrides": table.schema != "planning",  # plan çıktısına manuel değer girilmez (K-202)
+                "ManualOverrides": False,  # yeni alan her zaman kapalı gelir, System owner açar (K-170, K-203)
                 "IfEmpty": col.info.get("if_empty") or None, "IsRequired": not col.nullable,
                 "StandardLabel": standard_label(col.name, col.info.get("label")),
                 "Description": description(col.name, col.comment),

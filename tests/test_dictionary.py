@@ -32,6 +32,23 @@ def test_only_core_param_and_plan_outputs_with_no_name_clash():
     assert {t.name for t in metadata.tables.values() if t.schema == "planning" and t.info.get("field_class")} == generate.PLAN_OUTPUTS   # K-202
 
 
+def test_new_fields_come_in_closed(db_engine):
+    """K-170, K-203: sözlüğe yeni eklenen alan "Manuel: Hayır" gelir; System owner açar. (İşlem geri alınır.)"""
+    assert not any(r["ManualOverrides"] for r in dictionary.fields(metadata))
+    with db_engine.connect() as c:
+        try:
+            c.execute(text("DELETE FROM adm.FieldDefinition WHERE TableName IN (N'ResourceGroup', N'WorkPattern', N'PlannedSupply')"))
+            added = dictionary.sync(c, metadata)["added"]
+            rows = c.execute(text("SELECT ManualOverrides, COUNT(*) FROM adm.FieldDefinition WHERE TableName IN (N'ResourceGroup', N'WorkPattern', N'PlannedSupply') "
+                                  "GROUP BY ManualOverrides")).all()
+            assert added > 20 and [tuple(r) for r in rows] == [(False, added)]
+        finally:
+            c.rollback()
+
+
+test_new_fields_come_in_closed = pytest.mark.db(test_new_fields_come_in_closed)
+
+
 def test_standard_label():
     assert dictionary.standard_label("AdditionalText3", None) == "Ek metin alanı 3"
     assert dictionary.standard_label("AdditionalNumber2", None) == "Ek sayı alanı 2"
