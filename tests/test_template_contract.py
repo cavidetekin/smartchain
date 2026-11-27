@@ -64,7 +64,7 @@ def test_labels_are_short_readable_and_unique(table):
 
 
 def test_required_and_blank_rules():
-    """Boşsa satır yüklenmeyen 89 alan zorunludur (K-180: rota ve iş emri operasyonunda kaynak grubu; K-198: Proje grubu kalktı); her YOKSA kuralının somut karşılığı var."""
+    """Boşsa satır yüklenmeyen 89 alan zorunludur (K-180: rota ve üretim siparişi operasyonunda kaynak grubu; K-198: Proje grubu kalktı); her YOKSA kuralının somut karşılığı var."""
     every = [f for t in TABLES for f in fields(t)]
     assert sum(f.required for f in every) == 89 and all(f.blank == contract.BLANK_ROW_REJECTED for f in every if f.required)
     assert sum(1 for f in every if f.values) == 7  # Location.Type ham ERP değeri, listesi yok (K-143); takip kuralı kalktı (K-198)
@@ -128,7 +128,7 @@ def test_purchase_order_line_v2():
 
 
 def test_production_confirmation_v2():
-    """K-125: iş emri bazlı stoğa giriş; operasyon ve kaynak alanları yok; tarih saatsiz."""
+    """K-125: üretim siparişi bazlı stoğa giriş; operasyon ve kaynak alanları yok; tarih saatsiz."""
     found = {f.name: f for f in fields("ProductionConfirmation")}
     core = metadata.tables["core.ProductionConfirmation"].c
     assert list(found) == ["LocationCode", "ConfirmationNo", "WorkOrderNo", "MaterialCode", "ConfirmedQuantity", "StartDate", "EndDate"]
@@ -154,7 +154,7 @@ def test_work_order_v2():
     assert [f.name for f in found.values() if f.required] == ["LocationCode", "WorkOrderNo", "MaterialCode", "OrderedQuantity", "OpenQuantity", "DueDate"]
     assert {n: found[n].label for n in ("WorkOrderNo", "ProductionVersionCode", "ProductionOrderType", "Status", "Priority", "OrderedQuantity", "OpenQuantity", "CompletedQuantity", "ScrapQuantity", "Uom", "CustomerCode",
                                         "IsFixed", "IsReleased", "IsStarted", "IsProduction", "IsSubcontract", "IsRework", "IsOnHold")} == {
-        "WorkOrderNo": "İş emri no", "ProductionVersionCode": "Üretim versiyonu", "ProductionOrderType": "İş emri tipi", "Status": "İş emri durumu", "Priority": "Öncelik", "OrderedQuantity": "İş emri miktarı",
+        "WorkOrderNo": "Üretim siparişi no", "ProductionVersionCode": "Üretim versiyonu", "ProductionOrderType": "Üretim siparişi tipi", "Status": "Üretim siparişi durumu", "Priority": "Öncelik", "OrderedQuantity": "Üretim siparişi miktarı",
         "OpenQuantity": "Açık miktar", "CompletedQuantity": "Tamamlanan miktar", "ScrapQuantity": "Hurda miktarı", "Uom": "Birim", "CustomerCode": "Bağlı müşteri",
         "IsFixed": "Sabit", "IsReleased": "Yayınlandı", "IsStarted": "Başladı", "IsProduction": "Üretim", "IsSubcontract": "Fason", "IsRework": "Yeniden işleme", "IsOnHold": "Beklemede"}
     assert not {"OrderNo", "OrderType", "OrderQty", "OpenQty"} & set(core.keys()) and not {"OrderNo", "OrderType", "OrderQty", "OpenQty"} & set(found)
@@ -167,7 +167,7 @@ def test_work_order_v2():
     assert [c.name for c in stg_columns("WorkOrder") if "UK" in c.info.get("key", "")] == ["LocationCode", "WorkOrderNo"]
     key = next(i for i in metadata.tables["core.WorkOrder"].indexes if i.unique)
     assert [c.name for c in key.columns] == ["LocationId", "WorkOrderNo"] and str(key.dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
-    assert contract.entity("WorkOrder").file_name == "smartchain_is-emri_v5.xlsx"
+    assert contract.entity("WorkOrder").file_name == "smartchain_uretim-siparisi_v5.xlsx"
 
 
 def test_work_order_component_v2():
@@ -186,7 +186,7 @@ def test_work_order_component_v2():
     assert [c.name for c in stg_columns("WorkOrderComponent") if "UK" in c.info.get("key", "")] == ["LocationCode", "WorkOrderNo", "MaterialCode", "OperationNo", "SequenceNo"]
     key = next(i for i in metadata.tables["core.WorkOrderComponent"].indexes if i.unique)
     assert [c.name for c in key.columns] == ["LocationId", "WorkOrderId", "MaterialId", "OperationNo", "SequenceNo"] and str(key.dialect_options["mssql"]["where"]) == "VersionTo IS NULL"
-    assert contract.entity("WorkOrderComponent").file_name == "smartchain_is-emri-bileseni_v2.xlsx"
+    assert contract.entity("WorkOrderComponent").file_name == "smartchain_uretim-siparisi-bileseni_v2.xlsx"
 
 
 def test_work_order_operation_v3():
@@ -200,7 +200,7 @@ def test_work_order_operation_v3():
     assert found["Status"].values == () and found["Status"].label == "Operasyon durumu" and found["IsCompleted"].blank == "Yok sayılır" and core["IsCompleted"].server_default is None
     assert found["IsCompleted"].label == "Tamamlandı" and found["SequenceNo"].label == "Sıra no" and found["ResourceRole"].values == ("Primary", "Secondary")
     assert not {"OpNo", "SeqNo", "AlternativeGroup", "AlternativePriority", "Consumption"} & set(core.keys()) and not {"OpNo", "SeqNo", "AlternativeGroup", "AlternativePriority", "Consumption"} & set(found)
-    assert contract.entity("WorkOrderOperation").file_name == "smartchain_is-emri-operasyonu_v3.xlsx"
+    assert contract.entity("WorkOrderOperation").file_name == "smartchain_uretim-siparisi-operasyonu_v3.xlsx"
     assert contract.entity("MaterialSupplier").file_name == "smartchain_malzeme-tedarikcisi_v2.xlsx"
 
 

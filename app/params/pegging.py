@@ -64,7 +64,7 @@ CRITERIA: dict[str, tuple[Criterion, ...]] = {
         _directed("Dönem", _TIME, _NEAREST),
         Criterion("Stok"), Criterion("Kalitedeki stok"), Criterion("Üretim siparişi"), Criterion("Satın alma siparişi"),
         _directed("Arz tarihi", _TIME),
-        Criterion("Üretim planı"), Criterion("Satın alma önerisi"),
+        Criterion("Üretim planı"), Criterion("Satın alma planı"),
         _directed("Son kullanma tarihi", _TIME),
     ),
 }

@@ -43,7 +43,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Veri versiyonları:** Versiyonlu tablolarda her kayıt hangi veri versiyonundan hangisine kadar geçerli olduğunu taşır (VersionFrom, VersionTo). Kısmi aktarımda sadece değişen kayıtlar yazılır; veri kopyalanmaz (K-152).
 - **Çalışmalar:** Çalışmadaki geçici değişiklikler tek bir tabloda tutulur (WorkspaceOverride); ana veri değişmez.
 - **Plan çıktıları:** Bütün plan çıktıları bir plan hesabına (PlanRun) bağlıdır; onaylı plan yayınlanan hesabı gösterir.
-- **Özel alokasyon (K-198):** Anahtarlı arz yalnız sahibine gider, anahtarsız arz herkese açıktır. Stok, iş emri ve satın alma satırı ayrıldığı sahibi ERP'den geldiği gibi taşır (bağlı sipariş, proje, müşteri); yüklemede yazılan en detaylı sahipten `AllocationLevel` ve `AllocationKey` hesaplanır (malzeme özel alokasyonluysa). Sahibi bulunamayan ya da kapanmış arz genele düşmez. Proje grubu ve takip kuralı yoktur; envanter sahip sayısıyla çoğaltılmaz.
+- **Özel alokasyon (K-198):** Anahtarlı arz yalnız sahibine gider, anahtarsız arz herkese açıktır. Stok, üretim siparişi ve satın alma satırı ayrıldığı sahibi ERP'den geldiği gibi taşır (bağlı sipariş, proje, müşteri); yüklemede yazılan en detaylı sahipten `AllocationLevel` ve `AllocationKey` hesaplanır (malzeme özel alokasyonluysa). Sahibi bulunamayan ya da kapanmış arz genele düşmez. Proje grubu ve takip kuralı yoktur; envanter sahip sayısıyla çoğaltılmaz.
 - **İki katman:** Entegrasyon tabloları kodla (MaterialCode), ana tablolar Id ile; ERP verisi ana tablolara aktarımla geçer.
 - **Ek alanlar:** Ana veride 10 (7 metin + 3 sayı), yapı ve işlem verisinde 5 (3 metin + 2 sayı); etiketi FieldDefinition'da.
 - **Etiket ve açıklama:** ETİKET kolonu doluysa ekrandaki alan adı odur; açıklama AÇIKLAMA'da ve veritabanı yorumunda kalır. Boşsa etiket AÇIKLAMA'dan kuralla türer (K-88).
@@ -74,7 +74,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Ana veri · 10 alan
   - AdditionalText1–7 ve AdditionalNumber1–3. Location, Resource, ResourceGroup, Material, Supplier, Customer, Project.
   - Yapı ve işlem verisi · 5 alan
-  - AdditionalText1–3 ve AdditionalNumber1–2. ProductionVersion, BOM, Routing, MaterialSupplier, SalesOrderLine, Forecast, Stock, iş emri tabloları, PurchaseOrderLine, TransferOrder, ProductionConfirmation.
+  - AdditionalText1–3 ve AdditionalNumber1–2. ProductionVersion, BOM, Routing, MaterialSupplier, SalesOrderLine, Forecast, Stock, üretim siparişi tabloları, PurchaseOrderLine, TransferOrder, ProductionConfirmation.
   - Kullanım
   - Etiket ve görünürlük FieldDefinition'da (ör. AdditionalText3 = 'Malzeme sınıfı'): Label'ı olmayan ek alan listede görünmez (K-88). Ekranda sıralanır ve filtrelenir (U-6–U-8); veri kurallarında koşul olarak kullanılabilir.
 
@@ -97,7 +97,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Alan adları</sub>
 
 - Aynı alan hangi tabloda olursa olsun aynı etiketi taşır: tablolar, Alanlar paneli, ilişkili alan başlıkları, şablonlar, kural metinleri, Geçmiş ve veri sözlüğü aynı adı gösterir. Etiket bu dosyadaki ETİKET sütunundan gelir; ekranda ayrıca ad verilmez.
-- Üç arz tablosunda (Stok, İş emri, Satın alma siparişi) sahip alanları: **Bağlı proje · Bağlı müşteri · Bağlı sipariş no · Bağlı sipariş satırı · Bağlı sipariş alt satırı**. İç bağ alanları (`ProjectId`, `CustomerId`, `SalesOrderLineId`; kaynağı Sistem: aktarım koddan çözer) kolon olarak gösterilmez ve veri sözlüğüne girmez; ilişkili alan grubunun başlığını verir ("Bağlı proje · …", "Bağlı müşteri · …", "Bağlı sipariş · …").
+- Üç arz tablosunda (Stok, Üretim siparişi, Satın alma siparişi) sahip alanları: **Bağlı proje · Bağlı müşteri · Bağlı sipariş no · Bağlı sipariş satırı · Bağlı sipariş alt satırı**. İç bağ alanları (`ProjectId`, `CustomerId`, `SalesOrderLineId`; kaynağı Sistem: aktarım koddan çözer) kolon olarak gösterilmez ve veri sözlüğüne girmez; ilişkili alan grubunun başlığını verir ("Bağlı proje · …", "Bağlı müşteri · …", "Bağlı sipariş · …").
 - Kural testle korunur (`tests/test_labels.py`): aynı adlı alanın tablolar arasında farklı etiketi varsa test düşer. Bugün bilinen farklar testte listelidir; yeni fark eklenemez, listedekiler karar bekler.
 
 ### Alan grupları ve veri akışı
@@ -187,9 +187,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Stock:** Stok
 - **BorrowPayback:** Projeler arası ödünç ve geri ödeme
-- **WorkOrder:** Açık iş emri (üretim, fason, yeniden işleme)
-- **WorkOrderComponent:** İş emrinin bileşenleri ve çekilen miktar
-- **WorkOrderOperation:** İş emrinin operasyonları ve kalan iş
+- **WorkOrder:** Açık üretim siparişi (üretim, fason, yeniden işleme)
+- **WorkOrderComponent:** Üretim siparişinin bileşenleri ve çekilen miktar
+- **WorkOrderOperation:** Üretim siparişinin operasyonları ve kalan iş
 - **PurchaseOrderLine:** Açık satın alma ve fason siparişi satırı (ve talep)
 - **TransferOrder:** Açık lokasyonlar arası transfer
 - **ProductionConfirmation:** Üretim gerçekleşmeleri
@@ -336,7 +336,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Kaynak</sub>
 
 - Ana veri · versiyonlu · Faz 1
-- Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez.
+- Kaynak grubu: planlama birimi (K-180). Rota ve üretim siparişi operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
@@ -686,7 +686,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | SourceMaterials | nvarchar(70) |  | Sebebi alt seviye arzı olan satırda ayrılmış arzın durduğu alt malzeme; birden çoksa koda göre ilki ve kalanların sayısı. Metindir: kaynak birden çok malzeme olabildiği için ilişkili alanı yoktur | Kaynak malzeme | Yüklemede diğer tablolardan | H | H |  |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Kural (K-199; uygulandı, sürüm 0.58.0):** (malzeme, anahtar) satırı vardır ⇔ o anahtara uyan bir talebin (açık satış siparişi satırı ya da aktif tahmin) malzemesinden o anahtarlı açık arzın (stok, iş emri, satın alma satırı) malzemesine inen bir yolun üzerindedir (uçlar dahil; bütün üretim versiyonları ve alternatifler, benzetilen ürün ve açık iş emirlerinin bileşenleri dahil). Arz malzemenin kendisindeyse sebep "Kendi arzı", yalnız alt seviyelerindeyse "Alt seviye arzı". Kullanacak talebi olmayan, sahibi bulunamayan ya da kapanmış ayrılmış arz satır açmaz. Hayalet malzemeye satır açılmaz. Tekillik: lokasyon + malzeme + seviye + anahtar; aynı kural yeniden hesapta aynı `Id`'yi korur.
+- **Kural (K-199; uygulandı, sürüm 0.58.0):** (malzeme, anahtar) satırı vardır ⇔ o anahtara uyan bir talebin (açık satış siparişi satırı ya da aktif tahmin) malzemesinden o anahtarlı açık arzın (stok, üretim siparişi, satın alma satırı) malzemesine inen bir yolun üzerindedir (uçlar dahil; bütün üretim versiyonları ve alternatifler, benzetilen ürün ve açık üretim siparişlerinin bileşenleri dahil). Arz malzemenin kendisindeyse sebep "Kendi arzı", yalnız alt seviyelerindeyse "Alt seviye arzı". Kullanacak talebi olmayan, sahibi bulunamayan ya da kapanmış ayrılmış arz satır açmaz. Hayalet malzemeye satır açılmaz. Tekillik: lokasyon + malzeme + seviye + anahtar; aynı kural yeniden hesapta aynı `Id`'yi korur.
 
 ### Project
 <sub>21. Veri modeli · Malzeme</sub>
@@ -844,19 +844,19 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Arz ve stok</sub>
 
 - İşlem verisi · versiyonlu · Faz 1
-- Açık iş emri (üretim, fason, yeniden işleme).
+- Açık üretim siparişi (üretim, fason, yeniden işleme).
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
-| WorkOrderNo | nvarchar(30) | UK | İş emri no |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderNo | nvarchar(30) | UK | Üretim siparişi no |  | ERP | H | E | hata (satır atlanır) |
 | MaterialId | bigint | FK | Üretilen malzeme |  | ERP | H | E | hata (satır atlanır) |
-| ProductionVersionId | bigint | FK | Üretim versiyonu; iş emrinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır, gelmediyse bu versiyonun ağacına ve rotasına gider | Üretim versiyonu | ERP | H | H | bilinmiyor |
-| ProductionOrderType | nvarchar(50) |  | ERP'den ham iş emri tipi; veri kurallarında kullanılır, değer listesi yok | İş emri tipi | ERP | H | H | bilinmiyor |
-| Status | nvarchar(50) |  | ERP'den ham iş emri durumu; veri kurallarında kullanılır, değer listesi yok | İş emri durumu | ERP | H | H | bilinmiyor |
-| Priority | int |  | İş emri önceliği | Öncelik | ERP | H | H | yok |
-| OrderedQuantity | decimal(18,4) |  | İş emri miktarı |  | ERP | H | E | hata (satır atlanır) |
+| ProductionVersionId | bigint | FK | Üretim versiyonu; üretim siparişinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır, gelmediyse bu versiyonun ağacına ve rotasına gider | Üretim versiyonu | ERP | H | H | bilinmiyor |
+| ProductionOrderType | nvarchar(50) |  | ERP'den ham üretim siparişi tipi; veri kurallarında kullanılır, değer listesi yok | Üretim siparişi tipi | ERP | H | H | bilinmiyor |
+| Status | nvarchar(50) |  | ERP'den ham üretim siparişi durumu; veri kurallarında kullanılır, değer listesi yok | Üretim siparişi durumu | ERP | H | H | bilinmiyor |
+| Priority | int |  | Üretim siparişi önceliği | Öncelik | ERP | H | H | yok |
+| OrderedQuantity | decimal(18,4) |  | Üretim siparişi miktarı |  | ERP | H | E | hata (satır atlanır) |
 | OpenQuantity | decimal(18,4) |  | Açık miktar |  | ERP | H | E | hata (satır atlanır) |
 | CompletedQuantity | decimal(18,4) |  | Tamamlanan miktar |  | ERP | H | H | yok |
 | ScrapQuantity | decimal(18,4) |  | Hurda miktarı |  | ERP | H | H | yok |
@@ -864,42 +864,42 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | StartDate | date |  | Başlangıç |  | ERP | H | H | bilinmiyor |
 | DueDate | date |  | Bitiş |  | ERP | H | E | hata (satır atlanır) |
 | ProjectId | bigint | FK | Bağlı proje (iç bağ): proje kodu sistemde bulunuyorsa dolar; kolon olarak gösterilmez | Bağlı proje | Sistem | H | H |  |
-| ProjectCode | nvarchar(50) |  | İş emrinin ayrıldığı proje, ERP'den geldiği gibi; proje bulunamasa da kapansa da yazıldığı gibi kalır | Bağlı proje | ERP | H | H | yok |
+| ProjectCode | nvarchar(50) |  | Üretim siparişinin ayrıldığı proje, ERP'den geldiği gibi; proje bulunamasa da kapansa da yazıldığı gibi kalır | Bağlı proje | ERP | H | H | yok |
 | CustomerId | bigint | FK | Bağlı müşteri (iç bağ): müşteri kodu sistemde bulunuyorsa dolar; kolon olarak gösterilmez | Bağlı müşteri | Sistem | H | H |  |
-| CustomerCode | nvarchar(50) |  | İş emrinin ayrıldığı müşteri, ERP'den geldiği gibi; müşteri bulunamasa da kapansa da yazıldığı gibi kalır | Bağlı müşteri | ERP | H | H | yok |
+| CustomerCode | nvarchar(50) |  | Üretim siparişinin ayrıldığı müşteri, ERP'den geldiği gibi; müşteri bulunamasa da kapansa da yazıldığı gibi kalır | Bağlı müşteri | ERP | H | H | yok |
 | SalesOrderLineId | bigint | FK | Bağlı sipariş (iç bağ): sipariş no ve satırı doluysa ve satır bulunuyorsa dolar, kalemsiz arzda boştur; kolon olarak gösterilmez | Bağlı sipariş | Sistem | H | H |  |
-| SalesOrderNo | nvarchar(30) |  | İş emrinin ayrıldığı sipariş, ERP'den geldiği gibi; satırı boşsa arz siparişin bütün kalemlerine ayrılmıştır (kalemsiz arz) | Bağlı sipariş no | ERP | H | H | yok |
+| SalesOrderNo | nvarchar(30) |  | Üretim siparişinin ayrıldığı sipariş, ERP'den geldiği gibi; satırı boşsa arz siparişin bütün kalemlerine ayrılmıştır (kalemsiz arz) | Bağlı sipariş no | ERP | H | H | yok |
 | SalesOrderLineNo | int |  | Bağlı siparişin satır no'su, ERP'den geldiği gibi | Bağlı sipariş satırı | ERP | H | H | yok |
 | SalesOrderLineItemNo | int |  | Bağlı siparişin alt satır no'su, ERP'den geldiği gibi | Bağlı sipariş alt satırı | ERP | H | H | yok |
-| ParentWorkOrderId | bigint | FK | Yeniden işlemede orijinal iş emri | Orijinal iş emri | Kural ya da elle | H | H | yok |
+| ParentWorkOrderId | bigint | FK | Yeniden işlemede orijinal üretim siparişi | Orijinal üretim siparişi | Kural ya da elle | H | H | yok |
 | LastActivityDate | date |  | Son hareket tarihi (eskime kontrolü) | Son hareket tarihi | ERP | H | H | bilinmiyor |
-| IsFixed | bit |  | Motor bu iş emrinin tarihini ve miktarını değiştirmez | Sabit | ERP, yoksa kural | H | H | yok |
-| IsReleased | bit |  | İş emri yayınlandı; Status'tan veri kuralıyla doldurulur | Yayınlandı | ERP, yoksa kural | H | H | yok |
-| IsStarted | bit |  | İş emri başladı; Status'tan veri kuralıyla doldurulur | Başladı | ERP, yoksa kural | H | H | yok |
-| IsProduction | bit |  | Üretim iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Üretim | ERP, yoksa kural | H | H | yok |
-| IsSubcontract | bit |  | Fason iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Fason | ERP, yoksa kural | H | H | yok |
-| IsRework | bit |  | Yeniden işleme iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | Yeniden işleme | ERP, yoksa kural | H | H | yok |
-| IsOnHold | bit |  | Bekletilen iş emri | Beklemede | ERP, yoksa kural | H | H | yok |
-| IsCustomAllocated | bit |  | İş emri sahibine ayrılmış mı: malzeme özel alokasyonluysa ve satırda sahip (sipariş, proje ya da müşteri) varsa Evet; yüklemede hesaplanır (K-198) | Özel alokasyon | Yüklemede diğer tablolardan | H | H |  |
+| IsFixed | bit |  | Motor bu üretim siparişinin tarihini ve miktarını değiştirmez | Sabit | ERP, yoksa kural | H | H | yok |
+| IsReleased | bit |  | Üretim siparişi yayınlandı; Status'tan veri kuralıyla doldurulur | Yayınlandı | ERP, yoksa kural | H | H | yok |
+| IsStarted | bit |  | Üretim siparişi başladı; Status'tan veri kuralıyla doldurulur | Başladı | ERP, yoksa kural | H | H | yok |
+| IsProduction | bit |  | Üretim siparişi; ProductionOrderType'tan veri kuralıyla doldurulur | Üretim | ERP, yoksa kural | H | H | yok |
+| IsSubcontract | bit |  | Fason üretim siparişi; ProductionOrderType'tan veri kuralıyla doldurulur | Fason | ERP, yoksa kural | H | H | yok |
+| IsRework | bit |  | Yeniden işleme üretim siparişi; ProductionOrderType'tan veri kuralıyla doldurulur | Yeniden işleme | ERP, yoksa kural | H | H | yok |
+| IsOnHold | bit |  | Bekletilen üretim siparişi | Beklemede | ERP, yoksa kural | H | H | yok |
+| IsCustomAllocated | bit |  | Üretim siparişi sahibine ayrılmış mı: malzeme özel alokasyonluysa ve satırda sahip (sipariş, proje ya da müşteri) varsa Evet; yüklemede hesaplanır (K-198) | Özel alokasyon | Yüklemede diğer tablolardan | H | H |  |
 | AllocationLevel | nvarchar(10) |  | Sipariş \| Proje \| Müşteri | Alokasyon seviyesi | Yüklemede diğer tablolardan | H | H |  |
 | AllocationKey | nvarchar(60) |  | Arzın ayrıldığı sahibin anahtarı; satırda ERP'nin yazdığı en detaylı sahipten: sipariş (sipariş no, satır ve alt satır dik çizgiyle; kalemsiz arzda yalnız sipariş no), proje kodu ya da müşteri kodu. Sahip sistemde bulunmasa da kapansa da anahtar kalır; lokasyon anahtara girmez; malzeme özel alokasyonlu değilse boştur (K-198) | Alokasyon anahtarı | Yüklemede diğer tablolardan | H | H |  |
 | AdditionalText1–3 | nvarchar(255) |  | Ek metin alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | AdditionalNumber1–2 | decimal(18,4) |  | Ek sayı alanları; etiketi FieldDefinition'da |  | ERP | H | H | yok |
 | Ortak alanlar: VersionFrom, VersionTo, ImportBatchId, BusinessKey, UpdatedAt |  |  |  |  |  |  |  |  |
 
-- **Kendi satırları önce (K-124):** İş emrinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır; gelmediyse `ProductionVersionId`'nin ağacına ve rotasına gider. Motorda uygulanışı 10.1.
+- **Kendi satırları önce (K-124):** Üretim siparişinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır; gelmediyse `ProductionVersionId`'nin ağacına ve rotasına gider. Motorda uygulanışı 10.1.
 
 ### WorkOrderComponent
 <sub>21. Veri modeli · Arz ve stok</sub>
 
 - İşlem verisi · versiyonlu · Faz 1
-- İş emrinin bileşenleri ve çekilen miktar.
+- Üretim siparişinin bileşenleri ve çekilen miktar.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
-| WorkOrderId | bigint | FK,UK | İş emri |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderId | bigint | FK,UK | Üretim siparişi |  | ERP | H | E | hata (satır atlanır) |
 | MaterialId | bigint | FK,UK | Bileşen |  | ERP | H | E | hata (satır atlanır) |
 | OperationNo | int | UK | Bağlı olduğu operasyon no (ihtiyaç tarihi için) | Operasyon no | ERP | H | H | ilk operasyon |
 | SequenceNo | int | UK | Sıra no; aynı bileşen iki kez geçerse operasyon no ile ayrışır | Sıra no | ERP | H | H | bilinmiyor |
@@ -919,13 +919,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Arz ve stok</sub>
 
 - İşlem verisi · versiyonlu · Faz 1
-- İş emrinin operasyonları ve kalan iş.
+- Üretim siparişinin operasyonları ve kalan iş.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
-| WorkOrderId | bigint | FK,UK | İş emri |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderId | bigint | FK,UK | Üretim siparişi |  | ERP | H | E | hata (satır atlanır) |
 | OperationNo | int | UK | Operasyon no |  | ERP | H | E | hata (satır atlanır) |
 | SequenceNo | int | UK | Operasyon içindeki alt sıra | Sıra no | ERP | H | E | hata (satır atlanır) |
 | OperationName | nvarchar(150) |  | Operasyon adı |  | ERP | H | H | bilinmiyor |
@@ -979,7 +979,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | SalesOrderNo | nvarchar(30) |  | Satın alma satırının ayrıldığı sipariş, ERP'den geldiği gibi; satırı boşsa arz siparişin bütün kalemlerine ayrılmıştır (kalemsiz arz) | Bağlı sipariş no | ERP | H | H | yok |
 | SalesOrderLineNo | int |  | Bağlı siparişin satır no'su, ERP'den geldiği gibi | Bağlı sipariş satırı | ERP | H | H | yok |
 | SalesOrderLineItemNo | int |  | Bağlı siparişin alt satır no'su, ERP'den geldiği gibi | Bağlı sipariş alt satırı | ERP | H | H | yok |
-| WorkOrderId | bigint | FK | Fasonda bağlı iş emri | Bağlı iş emri | ERP | H | H | yok |
+| WorkOrderId | bigint | FK | Fasonda bağlı üretim siparişi | Bağlı üretim siparişi | ERP | H | H | yok |
 | Status | nvarchar(50) |  | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | Durum | ERP | H | H | bilinmiyor |
 | IsPurchaseRequest | bit |  | Satın alma talebi; OrderType'tan veri kuralıyla doldurulur | Satın alma talebi | ERP, yoksa kural | H | H | yok |
 | IsPurchase | bit |  | Satın alma siparişi; OrderType'tan veri kuralıyla doldurulur | Satın alma | ERP, yoksa kural | H | H | yok |
@@ -1016,14 +1016,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>21. Veri modeli · Arz ve stok</sub>
 
 - İşlem verisi · versiyonlu · Faz 1
-- Üretim gerçekleşmeleri: iş emri bazında stoğa girişler.
+- Üretim gerçekleşmeleri: üretim siparişi bazında stoğa girişler.
 
 | ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | BOŞSA |
 |---|---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
 | LocationId | int | FK,UK | Lokasyon |  | ERP | H | E | hata (satır atlanır) |
 | ConfirmationNo | nvarchar(30) | UK | Teyit no |  | ERP | H | E | hata (satır atlanır) |
-| WorkOrderId | bigint | FK | İş emri |  | ERP | H | E | hata (satır atlanır) |
+| WorkOrderId | bigint | FK | Üretim siparişi |  | ERP | H | E | hata (satır atlanır) |
 | MaterialId | bigint | FK | Üretilen malzeme |  | ERP | H | E | hata (satır atlanır) |
 | ConfirmedQuantity | decimal(18,4) |  | Teyit miktarı |  | ERP | H | E | hata (satır atlanır) |
 | StartDate | date |  | Başlangıç |  | ERP | H | H | bilinmiyor |
@@ -1737,7 +1737,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| SupplyType | nvarchar(15) |  | İş emri \| Satın alma \| Fason \| Transfer | Motor | H | E |  |
+| SupplyType | nvarchar(15) |  | Üretim siparişi \| Satın alma \| Fason \| Transfer | Motor | H | E |  |
 | SupplyId | bigint |  | Arz kaydı | Motor | H | E |  |
 | Action | nvarchar(15) |  | Öne çek \| Ertele \| İptal \| Azalt \| Hızlandır | Motor | H | E |  |
 | CurrentDate | date |  | Mevcut tarih | Motor | H | H |  |
@@ -1792,7 +1792,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
 | PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| SupplyType | nvarchar(15) |  | Stok \| İş emri \| Satın alma \| Planlı sipariş … | Motor | H | E |  |
+| SupplyType | nvarchar(15) |  | Stok \| Üretim siparişi \| Satın alma \| Planlı sipariş … | Motor | H | E |  |
 | SupplyId | bigint |  | Arz | Motor | H | E |  |
 | DemandType | nvarchar(15) |  | Sipariş \| Bağımlı talep … | Motor | H | E |  |
 | DemandId | bigint |  | Talep | Motor | H | E |  |

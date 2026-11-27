@@ -3,7 +3,7 @@
 Küme (`adm.DemandChain`): her kontrolde baştan, veritabanında küme tabanlı SQL ile, seviye seviye (talep başına yol çıkarılmaz). Zinciri yalnız
 açık satış siparişi (aktif, açık miktarı > 0; teklif ve beklemede dahil) ve planlama ufkundaki tahmin başlatır. Her seviyede: aktif üretim
 versiyonları, ağaç satırları ve bileşenleri (alternatifler dahil), rota satırları, rotadaki kaynak grubu ve grubun kaynakları (grup eşleşmesiyle; K-180),
-malzeme tedarikçileri ve tedarikçi; kendi aktif versiyonu olmayan malzemede benzetilen ürünün versiyonu, ağacı ve rotası; açık iş emirleri,
+malzeme tedarikçileri ve tedarikçi; kendi aktif versiyonu olmayan malzemede benzetilen ürünün versiyonu, ağacı ve rotası; açık üretim siparişleri,
 bileşenleri ve operasyonları.
 
 Yollar (`adm.DemandChainPath`): yalnız kart açılınca, kayıttan yukarı (nerede kullanılıyor) çıkılarak; uyarı başına en çok 1.000 yol.
@@ -105,7 +105,7 @@ def rebuild(session: Session, day: date) -> dict[str, int]:
         _add(session, "WorkOrderComponent", sa.select(woc.c.Id).where(current(woc), woc.c.WorkOrderId.in_(_in_chain("WorkOrder"))))
         _add(session, "WorkOrderOperation", sa.select(woo.c.Id).where(current(woo), woo.c.WorkOrderId.in_(_in_chain("WorkOrder"))))
         _add(session, "ResourceGroup", sa.select(woo.c.ResourceGroupId).where(current(woo), woo.c.Id.in_(_in_chain("WorkOrderOperation"))))
-        # gruptan eşleşmeyle kaynağa (rota ve iş emri operasyonu kaynağı değil grubu gösterir, K-180)
+        # gruptan eşleşmeyle kaynağa (rota ve üretim siparişi operasyonu kaynağı değil grubu gösterir, K-180)
         _add(session, "ResourceGroupMember", sa.select(rgm.c.Id).where(current(rgm), rgm.c.ResourceGroupId.in_(_in_chain("ResourceGroup"))))
         _add(session, "Resource", sa.select(rgm.c.ResourceId).where(current(rgm), rgm.c.Id.in_(_in_chain("ResourceGroupMember"))))
         added = _add(session, "Material", sa.select(bom.c.ComponentMaterialId).where(current(bom), bom.c.Id.in_(_in_chain("BOM"))))
@@ -154,7 +154,7 @@ def _demands(session: Session, mats: set[int], day: date) -> dict[int, list[Dema
 
 
 def _parents(session: Session, mats: set[int]) -> dict[int, set[int]]:
-    """Malzemeyi kullananlar: ağacında bileşen olduğu aktif versiyonun malzemesi; onu benzetilen ürün olarak izleyen malzeme; açık iş emrinin malzemesi."""
+    """Malzemeyi kullananlar: ağacında bileşen olduğu aktif versiyonun malzemesi; onu benzetilen ürün olarak izleyen malzeme; açık üretim siparişinin malzemesi."""
     bom, pv, mr, wo, woc = core("BOM"), core("ProductionVersion"), core("MaterialReference"), core("WorkOrder"), core("WorkOrderComponent")
     out: dict[int, set[int]] = {}
     if not mats:
@@ -192,7 +192,7 @@ def start_materials(session: Session, entity: str, record_id: int) -> tuple[set[
     if entity == "Routing":
         return route_materials(rtg.c.Id == record_id), []
     def group_materials(groups) -> set[int]:
-        """Grubu (grupları) gösteren rotaların ve açık iş emri operasyonlarının malzemeleri."""
+        """Grubu (grupları) gösteren rotaların ve açık üretim siparişi operasyonlarının malzemeleri."""
         woo = core("WorkOrderOperation")
         mats = route_materials(rtg.c.ResourceGroupId.in_(groups))
         return mats | set(session.execute(sa.select(wo.c.MaterialId).select_from(woo.join(wo, wo.c.Id == woo.c.WorkOrderId))
@@ -209,7 +209,7 @@ def start_materials(session: Session, entity: str, record_id: int) -> tuple[set[
     if entity in ("WorkOrderComponent", "WorkOrderOperation"):
         return set(session.execute(sa.select(wo.c.MaterialId).select_from(t.join(wo, wo.c.Id == t.c.WorkOrderId))
                                    .where(t.c.Id == record_id, current(t), current(wo))).scalars()), []
-    if "MaterialId" in t.c:  # ağaç satırında ana malzeme; tedarikçi, stok, satın alma, iş emri, versiyon…
+    if "MaterialId" in t.c:  # ağaç satırında ana malzeme; tedarikçi, stok, satın alma, üretim siparişi, versiyon…
         return set(session.execute(sa.select(t.c.MaterialId).where(t.c.Id == record_id, current(t))).scalars()), []
     return set(), []
 

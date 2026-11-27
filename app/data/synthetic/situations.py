@@ -163,7 +163,7 @@ def check_impossible_due(ds: Dataset) -> Check:
                  and not any(w["MaterialId"] == fg["Id"] for w in ds.rows("WorkOrder")))
     ok = no_supply and so["RequestedDate"] < earliest and lead >= 10
     detail = (f"{d.IMPOSSIBLE_ORDER} termini {so['RequestedDate']:%d.%m.%Y}, en kısa üretim {lead} iş günü "
-              f"→ en erken {earliest:%d.%m.%Y}; stok ve iş emri yok")
+              f"→ en erken {earliest:%d.%m.%Y}; stok ve üretim siparişi yok")
     return Check(4, "İmkânsız termin", ok, detail)
 
 

@@ -23,7 +23,7 @@
 | `stg.Routing` | Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile. | Entegrasyon |  | 23 |
 | `stg.MaterialReference` | Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır. | Entegrasyon |  | 7 |
 | `stg.Resource` | Kaynak: tek bir makine, işçi ya da fason iş yeri. Planlama birimi kaynak değil kaynak grubudur (K-180): tip bayrakları, kritiklik, kapasite birimi ve fasoncu gruptadır; kaynak gruplarına `ResourceGroupMember` ile bağlanır. | Entegrasyon |  | 18 |
-| `stg.ResourceGroup` | Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez. | Entegrasyon |  | 24 |
+| `stg.ResourceGroup` | Kaynak grubu: planlama birimi (K-180). Rota ve üretim siparişi operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez. | Entegrasyon |  | 24 |
 | `stg.ResourceGroupMember` | Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180). | Entegrasyon |  | 8 |
 | `stg.EmployeeAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 6 |
 | `stg.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 16 |
@@ -34,11 +34,11 @@
 | `stg.Forecast` | Talep tahmini (netleme ön hesapta). | Entegrasyon |  | 15 |
 | `stg.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | Entegrasyon |  | 8 |
 | `stg.Stock` | Stok; lot ve durum bazında. Bağlı proje, müşteri ya da sipariş doluysa stok ona ayrılmıştır; boşsa geneldir. | Entegrasyon |  | 24 |
-| `stg.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 33 |
-| `stg.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
-| `stg.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 24 |
+| `stg.WorkOrder` | Açık üretim siparişi (üretim, fason, yeniden işleme). | Entegrasyon |  | 33 |
+| `stg.WorkOrderComponent` | Üretim siparişinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
+| `stg.WorkOrderOperation` | Üretim siparişinin operasyonları ve kalan iş. | Entegrasyon |  | 24 |
 | `stg.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 28 |
-| `stg.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
+| `stg.ProductionConfirmation` | Üretim gerçekleşmeleri: üretim siparişi bazında stoğa girişler. | Entegrasyon |  | 12 |
 
 ## `prc` · İşlenmiş staging: ham katmanın güncel hâli, veri kuralları uygulanmış; validasyon ve load bunu okur (K-140) (24 tablo)
 
@@ -52,7 +52,7 @@
 | `prc.Routing` | Rota: her satır bir operasyon–kaynak grubu ilişkisi; sıra önce OperationNo, sonra SequenceNo. Aynı operasyonun kaynak grupları ayrı satırda, ResourceRole ile. | Entegrasyon |  | 23 |
 | `prc.MaterialReference` | Benzetilen ürün: kendi ağacı ya da rotası olmayan ürün, başka bir ürünün verisiyle planlanır. | Entegrasyon |  | 7 |
 | `prc.Resource` | Kaynak: tek bir makine, işçi ya da fason iş yeri. Planlama birimi kaynak değil kaynak grubudur (K-180): tip bayrakları, kritiklik, kapasite birimi ve fasoncu gruptadır; kaynak gruplarına `ResourceGroupMember` ile bağlanır. | Entegrasyon |  | 18 |
-| `prc.ResourceGroup` | Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez. | Entegrasyon |  | 24 |
+| `prc.ResourceGroup` | Kaynak grubu: planlama birimi (K-180). Rota ve üretim siparişi operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez. | Entegrasyon |  | 24 |
 | `prc.ResourceGroupMember` | Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180). | Entegrasyon |  | 8 |
 | `prc.EmployeeAbsence` | Kişi bazında izin ve rapor. | Entegrasyon |  | 6 |
 | `prc.Supplier` | Tedarikçi ve fasoncu. | Entegrasyon |  | 16 |
@@ -63,11 +63,11 @@
 | `prc.Forecast` | Talep tahmini (netleme ön hesapta). | Entegrasyon |  | 15 |
 | `prc.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | Entegrasyon |  | 8 |
 | `prc.Stock` | Stok; lot ve durum bazında. Bağlı proje, müşteri ya da sipariş doluysa stok ona ayrılmıştır; boşsa geneldir. | Entegrasyon |  | 24 |
-| `prc.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | Entegrasyon |  | 33 |
-| `prc.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
-| `prc.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | Entegrasyon |  | 24 |
+| `prc.WorkOrder` | Açık üretim siparişi (üretim, fason, yeniden işleme). | Entegrasyon |  | 33 |
+| `prc.WorkOrderComponent` | Üretim siparişinin bileşenleri ve çekilen miktar. | Entegrasyon |  | 17 |
+| `prc.WorkOrderOperation` | Üretim siparişinin operasyonları ve kalan iş. | Entegrasyon |  | 24 |
 | `prc.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | Entegrasyon |  | 28 |
-| `prc.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | Entegrasyon |  | 12 |
+| `prc.ProductionConfirmation` | Üretim gerçekleşmeleri: üretim siparişi bazında stoğa girişler. | Entegrasyon |  | 12 |
 
 ## `core` · Ana veri ve işlem verisi (27 tablo)
 
@@ -77,7 +77,7 @@
 | `core.UnitOfMeasure` | Ölçü birimi. | Ana veri |  | 3 |
 | `core.UomConversion` | Malzeme bazında birim dönüşümü. | Ana veri | evet | 7 |
 | `core.Resource` | Kaynak: tek bir makine, işçi ya da fason iş yeri. Planlama birimi kaynak değil kaynak grubudur (K-180): tip bayrakları, kritiklik, kapasite birimi ve fasoncu gruptadır; kaynak gruplarına `ResourceGroupMember` ile bağlanır. | Ana veri | evet | 19 |
-| `core.ResourceGroup` | Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez. | Ana veri | evet | 25 |
+| `core.ResourceGroup` | Kaynak grubu: planlama birimi (K-180). Rota ve üretim siparişi operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez. | Ana veri | evet | 25 |
 | `core.ResourceGroupMember` | Kaynak grup eşleşmesi: kaynağın gruba üyeliği. Bir kaynak birden fazla gruba üye olabilir (birden fazla yetkinliği olan işçi). Geçerlilik tarihi yoktur: yüklü eşleşme bugünden itibaren geçerlidir. Gruptaki kaynak sayısı bu tablodan bilinir (K-180). | Ana veri | evet | 9 |
 | `core.EmployeeAbsence` | Kişi bazında izin ve rapor. | İşlem verisi | evet | 7 |
 | `core.Material` | Malzeme ve planlama ana verisi. | Ana veri | evet | 44 |
@@ -94,12 +94,12 @@
 | `core.Forecast` | Talep tahmini (netleme ön hesapta). | İşlem verisi | evet | 16 |
 | `core.BorrowPayback` | Projeler arası ödünç ve geri ödeme kaydı: devreye almada açık olan ve ERP'de doğrudan yapılan ödünçlerin motora bildirilmesi; onaylanan öneriler de buraya yazılır. | İşlem verisi | evet | 9 |
 | `core.Stock` | Stok; lot ve durum bazında. Bağlı proje, müşteri ya da sipariş doluysa stok ona ayrılmıştır; boşsa geneldir. | İşlem verisi | evet | 31 |
-| `core.WorkOrder` | Açık iş emri (üretim, fason, yeniden işleme). | İşlem verisi | evet | 40 |
-| `core.WorkOrderComponent` | İş emrinin bileşenleri ve çekilen miktar. | İşlem verisi | evet | 19 |
-| `core.WorkOrderOperation` | İş emrinin operasyonları ve kalan iş. | İşlem verisi | evet | 26 |
+| `core.WorkOrder` | Açık üretim siparişi (üretim, fason, yeniden işleme). | İşlem verisi | evet | 40 |
+| `core.WorkOrderComponent` | Üretim siparişinin bileşenleri ve çekilen miktar. | İşlem verisi | evet | 19 |
+| `core.WorkOrderOperation` | Üretim siparişinin operasyonları ve kalan iş. | İşlem verisi | evet | 26 |
 | `core.PurchaseOrderLine` | Açık satın alma ve fason siparişi satırı (ve talep). | İşlem verisi | evet | 35 |
 | `core.TransferOrder` | Açık lokasyonlar arası transfer; Faz 1'de sabit hareket (gelen arz, giden talep). | İşlem verisi | evet | 13 |
-| `core.ProductionConfirmation` | Üretim gerçekleşmeleri: iş emri bazında stoğa girişler. | İşlem verisi | evet | 13 |
+| `core.ProductionConfirmation` | Üretim gerçekleşmeleri: üretim siparişi bazında stoğa girişler. | İşlem verisi | evet | 13 |
 
 ## `param` · Planlama parametreleri ve senaryo tanımları (16 tablo)
 

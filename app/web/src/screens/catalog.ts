@@ -91,7 +91,7 @@ export const SCREENS: Screen[] = [
   { no: "03", fn: 10, name: "Ana veri", path: "/veri/ana-veri", group: "veri", step: "6.1", icon: Table2,
     description: "Malzeme, ürün ağacı ve rota, kaynak, tedarikçi ve müşteri, lokasyon ve birim; aktarılan veri, salt okunur." },
   { no: "29", fn: 102, name: "İşlem verisi", path: "/veri/islem-verisi", group: "veri", step: "6.1", icon: ListOrdered,
-    description: "Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi, çalışan izni; aktarılan veri, salt okunur." },
+    description: "Satış siparişi, tahmin, proje, stok, ödünç, üretim siparişi, satın alma siparişi, çalışan izni; aktarılan veri, salt okunur." },
   { no: "05", fn: 20, name: "Veri kalitesi", path: "/veri/veri-kalitesi", group: "veri", step: "6.5", icon: ShieldCheck,
     description: "Ana veri ve işlem verisi uyarıları; düzeltme listesi." },
 

@@ -110,7 +110,7 @@ const PARTIAL = {
   groups: [
     { name: "Talep", tables: [row("SalesOrderLine", "Satış siparişi"), row("Forecast", "Tahmin", "Veri gelmedi", 0), row("Project", "Proje", "Veri gelmedi", 0)] },
     { name: "Stok", tables: [row("Stock", "Stok"), row("BorrowPayback", "Ödünç ve geri ödeme", "Veri gelmedi", 0)] },
-    { name: "Üretim", tables: [row("WorkOrder", "İş emri")] },
+    { name: "Üretim", tables: [row("WorkOrder", "Üretim siparişi")] },
     { name: "Satın alma", tables: [row("PurchaseOrderLine", "Satın alma siparişi")] },
     { name: "İzin", tables: [row("EmployeeAbsence", "Çalışan izni")] },
   ],

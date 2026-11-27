@@ -7,8 +7,8 @@ olmayan, sahibi bulunamayan ya da kapanmış ayrılmış arz satır açmaz. Mode
 
 Hesap veritabanında, küme SQL'iyle ve geçici tablolarla (her turda yalnız son turun satırları genişler):
 1. Kenarlar: aktif üretim versiyonlarının ağaç satırları (bütün versiyonlar ve alternatifler), kendi aktif versiyonu olmayan malzemede benzetilen
-   ürünün ağacı, açık iş emirlerinin kendi bileşenleri. Malzemenin `Id`'si lokasyona özgüdür: yürüyüş lokasyon içinde kalır.
-2. Arz anahtarları: stok (miktar > 0), iş emri ve satın alma satırı (açık miktar > 0); yalnız anahtarlı (özel alokasyonlu) satırlar (K-198).
+   ürünün ağacı, açık üretim siparişlerinin kendi bileşenleri. Malzemenin `Id`'si lokasyona özgüdür: yürüyüş lokasyon içinde kalır.
+2. Arz anahtarları: stok (miktar > 0), üretim siparişi ve satın alma satırı (açık miktar > 0); yalnız anahtarlı (özel alokasyonlu) satırlar (K-198).
 3. Talep anahtarları: açık satış siparişi satırı → Sipariş / kalemli anahtar, Sipariş / kalemsiz anahtar (yalnız sipariş no), Proje, Müşteri;
    aktif tahmin → Proje, Müşteri. Yalnız arzı olan anahtarlar alınır (budama).
 4. Yukarı kapanış (arzdan; talebi olan anahtarlar; arzın durduğu malzeme "kaynak" olarak taşınır): arzın üstündeki bütün malzemeler. Küçük kümedir.
@@ -67,7 +67,7 @@ SELECT x.P, x.C FROM (
     WHERE w.VersionTo IS NULL AND w.OpenQuantity > 0
 ) x WHERE x.P <> x.C"""
 
-# Açık ve anahtarlı arz (K-198): stokta miktar > 0, iş emri ve satın alma satırında açık miktar > 0
+# Açık ve anahtarlı arz (K-198): stokta miktar > 0, üretim siparişi ve satın alma satırında açık miktar > 0
 OPEN_SUPPLY = f"""
     SELECT AllocationLevel AS L, AllocationKey AS K, MaterialId AS M FROM core.Stock s
     WHERE s.VersionTo IS NULL AND s.IsCustomAllocated = 1 AND s.AllocationKey IS NOT NULL AND s.Quantity > 0 AND {ON.format('s')}

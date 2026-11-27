@@ -71,8 +71,8 @@ SECTIONS: tuple[Section, ...] = (
             _b("ProductionMinLot", "Üretimde minimum lot", NO, enabled_when=_MILP, hint=_LOT_HINT),
             _b("ProductionLotMultiple", "Üretimde lot katı", NO, enabled_when=_MILP, hint=_LOT_HINT),
             _b("ProductionMaxLot", "Üretimde maksimum lot", NO, enabled_when=_MILP, hint=_LOT_HINT),
-            _b("RoundPurchaseToLot", "Satın alma önerisini sipariş lotuna yuvarla", YES,
-               hint="Satın alma kararı modelde süreklidir; öneri sonradan sipariş lotuna yuvarlanır (K-27)."),
+            _b("RoundPurchaseToLot", "Satın alma planını sipariş lotuna yuvarla", YES,
+               hint="Satın alma kararı modelde süreklidir; plan sonradan sipariş lotuna yuvarlanır (K-27)."),
         )),
         Sub("cozum", "Çözüm", (
             # K-201: model parametresidir; model de pegging de uyar ("Dikkate alma": anahtarlara bakılmaz, sahibine ayrılmış arz genele girer).
@@ -143,7 +143,7 @@ SECTIONS: tuple[Section, ...] = (
             Param("FixPeriod", "Sabit dönem", INT, "0", minimum=0, unit_key="FixPeriodUnit",
                   hint="Hafta ve Ay'da içinde bulunulan hafta ya da ay sayıya dahildir; sabit dönem takvim sınırında biter. 0: sabit dönem yok."),
             _c("FixPeriodUnit", "Sabit dönem birimi", FIX_UNITS, DAY),
-            _c("OpenWorkOrders", "Açık iş emirleri", ("Sabit", "Yalnız öteleme önerisi", "Serbest"), "Yalnız öteleme önerisi"),
+            _c("OpenWorkOrders", "Açık üretim siparişleri", ("Sabit", "Yalnız öteleme önerisi", "Serbest"), "Yalnız öteleme önerisi"),
             _c("OpenPurchaseOrders", "Açık satın alma siparişleri", ("Sabit", "Öneri üret"), "Sabit"),
             _b("KeepLockedRecords", "Sabitlenmiş kararlar korunsun", YES),
         )),
@@ -257,7 +257,7 @@ WARNINGS: tuple[Warning, ...] = (
     Warning("MAT_SHORTAGE", "Malzeme", "Malzeme eksiği", UNIT_DAY, BELOW, (60, 30, 14, 7)),
     Warning("MAT_BELOW_SAFETY", "Malzeme", "Güvenlik stoğunun altı", UNIT_PCT, BELOW, (100, 75, 50, 25)),
     Warning("MAT_EXCESS", "Malzeme", "Fazla stok", UNIT_PCT, ABOVE, (100, 125, 150, None)),
-    Warning("PURCHASE_LATE", "Malzeme", "Geciken satın alma önerisi", UNIT_DAY, ABOVE, (1, 7, 14, 30)),
+    Warning("PURCHASE_LATE", "Malzeme", "Geciken satın alma planı", UNIT_DAY, ABOVE, (1, 7, 14, 30)),
     Warning("SHELF_LIFE", "Malzeme", "Raf ömrü", UNIT_DAY, BELOW, (90, 60, 30, 7)),
     Warning("CAP_OVERLOAD", "Kapasite", "Aşırı yük", UNIT_PCT, ABOVE, (None, 100, 110, 125)),
     Warning("CAP_OVER_TARGET", "Kapasite", "Hedef doluluğun üstü", UNIT_PCT, ABOVE, (100, 110, None, None)),

@@ -83,11 +83,11 @@ DATA = {
                   {**WO, "WorkOrderNo": "ARW-2", "MaterialCode": "AR-A2"}],                                                                              # bileşeni ağaçtan farklı
     "WorkOrderComponent": [{"LocationCode": LOC, "WorkOrderNo": "ARW-2", "MaterialCode": "AR-H7", "OperationNo": 10, "SequenceNo": 1, "RequiredQuantity": 1}],
     "PurchaseOrderLine": [{**PO, "PurchaseOrderNo": "ARO-1", "MaterialCode": "AR-H2", "CustomerCode": "ARC-2"},     # örnek: H2'de müşteriye ayrılmış
-                          {**PO, "PurchaseOrderNo": "ARO-2", "MaterialCode": "AR-H7", "CustomerCode": "ARC-2"}],    # iş emri bileşeninde
+                          {**PO, "PurchaseOrderNo": "ARO-2", "MaterialCode": "AR-H7", "CustomerCode": "ARC-2"}],    # üretim siparişi bileşeninde
 }
 S, P, C = "Sipariş", "Proje", "Müşteri"
 EXPECTED = {
-    # plandaki sayılı örnek (H7 iş emri bileşeni olarak A2'nin altına eklendi: Müşteri / ARC-2'nin iki kaynağı var)
+    # plandaki sayılı örnek (H7 üretim siparişi bileşeni olarak A2'nin altına eklendi: Müşteri / ARC-2'nin iki kaynağı var)
     ("H1", P, "ARP-1"): (OWN, None), ("P1", S, "ARS-1|10|0"): (OWN, None), ("P1", P, "ARP-1"): (BELOW, "AR-H1"),
     ("A1", S, "ARS-1|10|0"): (BELOW, "AR-P1"), ("A1", P, "ARP-1"): (BELOW, "AR-H1"),
     ("M", S, "ARS-1|10|0"): (BELOW, "AR-P1"), ("M", P, "ARP-1"): (BELOW, "AR-H1"), ("M", C, "ARC-2"): (BELOW, "AR-H2 +1"),

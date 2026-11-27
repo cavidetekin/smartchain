@@ -32,7 +32,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - `adm.IntegrationEntity`: yöntem, çekim anahtarı, view
   - `IntegrationDatabase` ayarı (aynı instance, Windows kimliği)
   - `ERP_LoadLog` sinyali
-  - Varlık sırası: referans verisi (birim, takvim, kaynak, malzeme) → ağaç ve rota → işlem verisi (stok, sipariş, iş emri)
+  - Varlık sırası: referans verisi (birim, takvim, kaynak, malzeme) → ağaç ve rota → işlem verisi (stok, sipariş, üretim siparişi)
   - Son okunan sinyal (`ImportBatch.SignalId`)
 - **03:** View her zaman tam okunur; satırlar Excel'le aynı kontrol kodundan geçer (K-129), geçerliler ham veri tablolarına (stg.*), sorunlar bulgu listesine yazılır. Tablo başına bir parti: yöntem SQL, kaynak view, sinyal, zaman, satır sayısı. Tekrar eden anahtarda iki satır da düşer.
 - **04:** İlerleme iş panelinde anlık görünür. Hata alan tablo işaretlenir, sıradaki tabloyla devam edilir.
@@ -289,14 +289,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Gece akışında tam aktarım (05) devam eder.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; validasyon değer yazmaz.
 - **ÖRNEK:** Rota 6.230 güncel kayıt, 3 Hata (iki satırda kaynak ve kaynak grubu boş, bir negatif süre), 5 Uyarı. Eşik %5, oran %0,05: çip "Hatalı · 3"; aktarım hatalı satırları atlar.
-- **Uygulama (3.4, K-133…K-139):** İş tipi "Validasyon", kanal "Veri işleme" (sınır `JobLimitProcessing`, performans ölçümüyle). Rota ve iş emri operasyonunda "kaynak ve kaynak grubu ikisi boş" kontrolü ön kontrolden validasyona taşındı (hazır kural, Hata). Değer listesi dışı değer ön kontrol penceresinde de görünür (partiye ait).
+- **Uygulama (3.4, K-133…K-139):** İş tipi "Validasyon", kanal "Veri işleme" (sınır `JobLimitProcessing`, performans ölçümüyle). Rota ve üretim siparişi operasyonunda "kaynak ve kaynak grubu ikisi boş" kontrolü ön kontrolden validasyona taşındı (hazır kural, Hata). Değer listesi dışı değer ön kontrol penceresinde de görünür (partiye ait).
 
 ### 04 · Validasyon · hazır kurallar
 <sub>24. Ekranlar ve fonksiyonlar · F04 · A Veri alma · Geliştirme 3.4 (K-137, K-139)</sub>
 
 - Kod kataloğu bu tablodan yazılır (`app/validation/catalog.py`); test ikisini karşılaştırır. AD ekranda "Kural" kolonudur; KOD varsayılan görünümde gizlidir. SINIF katalogdaki sınıftır, Validasyon kuralları ekranında değişir. Tür: Yapısal (listede görünmez, arka planda çalışır), Mantıksal (tablo içi), Küme (tablo içi, tablonun bütün güncel hâline bakar), Tablolar arası (OKUNAN tabloya bakar).
 - **Birim dönüşümü alanları (ALL.UOM_CONVERSION):** BOM: ComponentUom · SalesOrderLine: Uom · Forecast: Uom · Stock: Uom · WorkOrder: Uom · WorkOrderComponent: Uom · PurchaseOrderLine: Uom. Malzeme alanı BOM'da ComponentMaterialCode, ötekilerde MaterialCode.
-- **Referans, pasif ebeveyn ve bütünlük (K-146):** REF ve INACTIVE kuralları docs/03 "İlişki haritası"ndan üretilir: zorunlu ilişki yoksa Hata, isteğe bağlı bağlantı doluysa ve yoksa Uyarı, "Zorunlu (doluysa)" (rota ve iş emri operasyonunda kaynak ve kaynak grubu; anahtarın parçası olan bağlantı, K-153) doluysa ve yoksa Hata, ebeveyn pasifse haritadaki sınıf. Ebeveyn aranırken işlenmiş katmanın bütün satırlarına bakılır (pasif ebeveyn de vardır); kontrol edilen satır pasifse hiçbir kurala girmez (K-145). Mesaj değerle: "Malzeme bulunamadı: MAM-099". OKUNAN'da "(boş olabilir)": o tablonun verisi yoksa kural atlanmaz.
+- **Referans, pasif ebeveyn ve bütünlük (K-146):** REF ve INACTIVE kuralları docs/03 "İlişki haritası"ndan üretilir: zorunlu ilişki yoksa Hata, isteğe bağlı bağlantı doluysa ve yoksa Uyarı, "Zorunlu (doluysa)" (rota ve üretim siparişi operasyonunda kaynak ve kaynak grubu; anahtarın parçası olan bağlantı, K-153) doluysa ve yoksa Hata, ebeveyn pasifse haritadaki sınıf. Ebeveyn aranırken işlenmiş katmanın bütün satırlarına bakılır (pasif ebeveyn de vardır); kontrol edilen satır pasifse hiçbir kurala girmez (K-145). Mesaj değerle: "Malzeme bulunamadı: MAM-099". OKUNAN'da "(boş olabilir)": o tablonun verisi yoksa kural atlanmaz.
 - **TAKİP (K-174):** "Veri kalitesinde takip" ilk değeri; yalnız Uyarı'da (Hata ve Bilgi'de boş). Evet olan kural yüklenmiş veride (`core`) de çalışır ve bulgusu veri kalitesi uyarısıdır (20). Ölçüt: sorun ana tabloda kaldıkça plan yanlış çıkar mı. Validasyon kuralları ekranında değişir; "İlk hâline döndür" bu tablodaki hâline getirir. 86 Uyarı kuralından 53'ü Evet.
 - **Uygulama (6.5, K-174):** uygulandı. `ValidationRule.TrackQuality` (geçiş 0056; ilk değerler katalogdan, `RuleDef.tracked`); Validasyon kuralları'nda Takip kolonu ve pencere anahtarı; üç tarihli kural (SO.PAST_DUE, WO.PAST_DUE, PO.PAST_DUE); test katalogu bu tablonun TAKİP kolonuyla karşılaştırır (Uyarı 86, Evet 53, Hayır 33).
 - **DÜZENLENİR (K-139):** "Evet": koşul editörle ifade edilir; ad, mesaj, koşul, sınıf ve aktiflik pencerede değişir, "İlk hâline döndür" bu tablodaki hâline getirir. "Sınıf, aktiflik": döngü, toplam, çakışma, bayrak sayımı, bugünle karşılaştırma, hesaplı fark ya da tablolar arası; yalnız sınıf ve aktiflik tablodan değişir. "Kilitli": yapısal kontrol.
@@ -368,27 +368,27 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | BP.QTY | BorrowPayback | Ödünç miktarı sıfır ya da negatif | Ödünç miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
 | BP.DUE_DATE | BorrowPayback | Geri ödeme tarihi ödünçten önce | Geri ödeme tarihi < Ödünç tarihi | Hata |  | Mantıksal | Evet |  |
 | BP.PAID | BorrowPayback | Geri ödenen ödünçten fazla | Geri ödenen miktar > Ödünç miktarı | Uyarı | Hayır | Mantıksal | Evet |  |
-| WO.QTY | WorkOrder | İş emri miktarı sıfır ya da negatif | İş emri miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
+| WO.QTY | WorkOrder | Üretim siparişi miktarı sıfır ya da negatif | Üretim siparişi miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
 | WO.START_DUE | WorkOrder | Başlangıç bitişten sonra | Başlangıç > Bitiş | Hata |  | Mantıksal | Evet |  |
-| WO.SELF_PARENT | WorkOrder | İş emri kendisinin yeniden işlemesi | Yeniden işlemede orijinal iş emri = İş emri no | Hata |  | Mantıksal | Evet |  |
+| WO.SELF_PARENT | WorkOrder | Üretim siparişi kendisinin yeniden işlemesi | Orijinal üretim siparişi = Üretim siparişi no | Hata |  | Mantıksal | Evet |  |
 | WO.LINE_NO_ORDER | WorkOrder | Sipariş satırı var, sipariş no yok | Bağlı sipariş satırı boş değil ve Bağlı sipariş no boş | Hata |  | Mantıksal | Evet |  |
-| WO.OPEN_ORDERED | WorkOrder | Açık miktar iş emri miktarından büyük | Açık miktar > İş emri miktarı | Uyarı | Evet | Mantıksal | Evet |  |
+| WO.OPEN_ORDERED | WorkOrder | Açık miktar üretim siparişi miktarından büyük | Açık miktar > Üretim siparişi miktarı | Uyarı | Evet | Mantıksal | Evet |  |
 | WO.ZERO_OPEN | WorkOrder | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Hayır | Mantıksal | Evet |  |
-| WO.TYPE_FLAGS | WorkOrder | İş emri tipi tek değil | Üretim, Fason, Yeniden işleme bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
-| WO.PAST_DUE | WorkOrder | Bitiş tarihi geçmiş açık iş emri | Açık miktar > 0 ve Bitiş geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
-| WO.REWORK_NO_PARENT | WorkOrder | Yeniden işlemenin orijinal iş emri yok | Yeniden işlemede orijinal iş emri boş ve Yeniden işleme = Evet | Uyarı | Hayır | Mantıksal | Evet |  |
+| WO.TYPE_FLAGS | WorkOrder | Üretim siparişi tipi tek değil | Üretim, Fason, Yeniden işleme bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| WO.PAST_DUE | WorkOrder | Bitiş tarihi geçmiş açık üretim siparişi | Açık miktar > 0 ve Bitiş geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
+| WO.REWORK_NO_PARENT | WorkOrder | Yeniden işlemenin orijinal üretim siparişi yok | Orijinal üretim siparişi boş ve Yeniden işleme = Evet | Uyarı | Hayır | Mantıksal | Evet |  |
 | WOC.ISSUED | WorkOrderComponent | Çekilen gereken miktardan fazla | Çekilen miktar > Gereken miktar | Uyarı | Hayır | Mantıksal | Evet |  |
 | WOO.RESOURCE_NUMBER | WorkOrderOperation | Kaynak adedi 1'den az | Kaynak adedi < 1 | Hata |  | Mantıksal | Evet |  |
 | WOO.CONFIRMED | WorkOrderOperation | Teyit edilen tüketim planlanandan fazla | Teyit edilen tüketim > Planlanan tüketim | Uyarı | Hayır | Mantıksal | Evet |  |
 | PO.ZERO_OPEN | PurchaseOrderLine | Açık miktar sıfır | Açık miktar = 0 | Uyarı | Hayır | Mantıksal | Evet |  |
 | PO.RECEIVED | PurchaseOrderLine | Teslim alınan sipariş miktarından büyük | Teslim alınan miktar > Sipariş miktarı | Uyarı | Hayır | Mantıksal | Evet |  |
 | PO.TYPE_FLAGS | PurchaseOrderLine | Sipariş tipi tek değil | Satın alma talebi, Satın alma, Fason bayraklarından hiçbiri ya da birden fazlası Evet | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
-| PO.SUBCON_NO_WO | PurchaseOrderLine | Fason siparişin iş emri yok | Fasonda bağlı iş emri boş ve Fason = Evet | Uyarı | Evet | Mantıksal | Evet |  |
+| PO.SUBCON_NO_WO | PurchaseOrderLine | Fason siparişin üretim siparişi yok | Fasonda bağlı üretim siparişi boş ve Fason = Evet | Uyarı | Evet | Mantıksal | Evet |  |
 | PO.NO_SUPPLIER | PurchaseOrderLine | Tedarikçi yok | Tedarikçi boş ve Satın alma talebi ≠ Evet | Uyarı | Hayır | Mantıksal | Evet |  |
 | PO.NO_DATE | PurchaseOrderLine | İstenen ve teyit tarihi yok | İstenen tarih boş ve Tedarikçi teyit tarihi boş | Uyarı | Evet | Mantıksal | Evet |  |
 | PO.PAST_DUE | PurchaseOrderLine | Tarihi geçmiş açık satın alma siparişi | Açık miktar > 0 ve Tedarikçi teyit tarihi (boşsa İstenen tarih) geçmişte | Uyarı | Evet | Mantıksal | Sınıf, aktiflik |  |
 | PC.QTY | ProductionConfirmation | Teyit miktarı sıfır ya da negatif | Teyit miktarı ≤ 0 | Hata |  | Mantıksal | Evet |  |
-| PC.MATERIAL | ProductionConfirmation | Malzeme iş emrininkinden farklı | Malzeme, iş emrinin malzemesinden farklı | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| PC.MATERIAL | ProductionConfirmation | Malzeme üretim siparişininkinden farklı | Malzeme, üretim siparişinin malzemesinden farklı | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | ALL.REF_LOCATION | Hepsi | Lokasyon bulunamadı | Lokasyon kodu Lokasyon tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Location |
 | ALL.UOM_CONVERSION | Hepsi | Birim dönüşümü yok | Birim dolu, malzemenin temel biriminden farklı ve dönüşüm yok (malzemeye özel ya da genel, iki yönden biri; K-112) | Hata |  | Tablolar arası | Sınıf, aktiflik | Material, UomConversion |
 | UOM.REF_MATERIAL | UomConversion | Malzeme bulunamadı | Malzeme kodu dolu ve Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
@@ -434,10 +434,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | WO.REF_PROJECT | WorkOrder | Bağlı proje bulunamadı | Bağlı proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
 | WO.REF_CUSTOMER | WorkOrder | Bağlı müşteri bulunamadı | Bağlı müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
 | WO.REF_SALES_ORDER | WorkOrder | Bağlı sipariş bulunamadı | Bağlı sipariş numarası dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
-| WO.REF_PARENT_WORK_ORDER | WorkOrder | Orijinal iş emri bulunamadı | Orijinal iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| WOC.REF_WORK_ORDER | WorkOrderComponent | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WO.REF_PARENT_WORK_ORDER | WorkOrder | Orijinal üretim siparişi bulunamadı | Orijinal üretim siparişi numarası dolu ve Üretim siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOC.REF_WORK_ORDER | WorkOrderComponent | Üretim siparişi bulunamadı | Üretim siparişi numarası Üretim siparişi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | WOC.REF_MATERIAL | WorkOrderComponent | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
-| WOO.REF_WORK_ORDER | WorkOrderOperation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| WOO.REF_WORK_ORDER | WorkOrderOperation | Üretim siparişi bulunamadı | Üretim siparişi numarası Üretim siparişi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | WOO.REF_RESOURCE_GROUP | WorkOrderOperation | Kaynak grubu bulunamadı | Kaynak grubu kodu Kaynak grubu tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | ResourceGroup |
 | PO.REF_MATERIAL | PurchaseOrderLine | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | PO.INACTIVE_MATERIAL | PurchaseOrderLine | Malzeme pasif | Malzeme bulunuyor ama pasif (Aktif = Hayır) | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
@@ -446,8 +446,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PO.REF_PROJECT | PurchaseOrderLine | Bağlı proje bulunamadı | Bağlı proje kodu dolu ve Proje tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Project |
 | PO.REF_CUSTOMER | PurchaseOrderLine | Bağlı müşteri bulunamadı | Bağlı müşteri kodu dolu ve Müşteri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Customer |
 | PO.REF_SALES_ORDER | PurchaseOrderLine | Bağlı sipariş bulunamadı | Bağlı sipariş numarası dolu ve Satış siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | SalesOrderLine |
-| PO.REF_WORK_ORDER | PurchaseOrderLine | Bağlı iş emri bulunamadı | Bağlı iş emri numarası dolu ve İş emri tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
-| PC.REF_WORK_ORDER | ProductionConfirmation | İş emri bulunamadı | İş emri numarası İş emri tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| PO.REF_WORK_ORDER | PurchaseOrderLine | Bağlı üretim siparişi bulunamadı | Bağlı üretim siparişi numarası dolu ve Üretim siparişi tablosunda yok | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | WorkOrder |
+| PC.REF_WORK_ORDER | ProductionConfirmation | Üretim siparişi bulunamadı | Üretim siparişi numarası Üretim siparişi tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | WorkOrder |
 | PC.REF_MATERIAL | ProductionConfirmation | Malzeme bulunamadı | Malzeme kodu Malzeme tablosunda yok | Hata |  | Tablolar arası | Sınıf, aktiflik | Material |
 | MAT.NO_VERSION | Material | Üretilen malzemenin aktif versiyonu yok | Tedarik türü = Üretim; aktif (Aktif = Evet) üretim versiyonu ve benzetilen ürün kaydı yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion, MaterialReference (boş olabilir) |
 | MAT.NO_SUPPLIER | Material | Satın alınan malzemenin aktif tedarikçisi yok | Tedarik türü = Satın alma; kaydı ve tedarikçisi aktif malzeme tedarikçisi yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, Supplier (boş olabilir) |
@@ -460,8 +460,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | RES.UNUSED | Resource | Kaynak hiçbir grupta yok | Kaynak hiçbir grup eşleşmesinde geçmiyor (K-180) | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ResourceGroupMember (boş olabilir) |
 | SUP.NO_MATERIAL | Supplier | Tedarikçi hiçbir malzemeye bağlı değil | Tedarikçi hiçbir malzeme tedarikçisi kaydında yok ve hiçbir kaynak grubunun fasoncusu değil | Bilgi |  | Tablolar arası | Sınıf, aktiflik | MaterialSupplier, ResourceGroup (boş olabilir) |
 | SO.NOT_SELLABLE | SalesOrderLine | Malzeme satılabilir değil | Malzemenin Satılabilir alanı Evet değil | Uyarı | Hayır | Tablolar arası | Sınıf, aktiflik | Material |
-| WO.NO_STRUCTURE | WorkOrder | İş emrinin versiyonu ve kendi yapısı yok | Üretim versiyonu boş ya da bulunamadı; iş emrinin bileşeni ve operasyonu yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion (boş olabilir), WorkOrderComponent (boş olabilir), WorkOrderOperation (boş olabilir) |
-| WOC.OPERATION_NOT_IN_WO | WorkOrderComponent | Bileşenin operasyonu iş emrinde yok | Operasyon no dolu, iş emrinin operasyonları var ve bu operasyon aralarında yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | WorkOrderOperation |
+| WO.NO_STRUCTURE | WorkOrder | Üretim siparişinin versiyonu ve kendi yapısı yok | Üretim versiyonu boş ya da bulunamadı; üretim siparişinin bileşeni ve operasyonu yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | ProductionVersion (boş olabilir), WorkOrderComponent (boş olabilir), WorkOrderOperation (boş olabilir) |
+| WOC.OPERATION_NOT_IN_WO | WorkOrderComponent | Bileşenin operasyonu üretim siparişinde yok | Operasyon no dolu, üretim siparişinin operasyonları var ve bu operasyon aralarında yok | Uyarı | Evet | Tablolar arası | Sınıf, aktiflik | WorkOrderOperation |
 | PO.SUPPLIER_NOT_LISTED | PurchaseOrderLine | Tedarikçi malzemenin tedarikçilerinde yok | Fason olmayan siparişte tedarikçi bulunuyor ve bu malzemenin malzeme tedarikçisi kayıtlarında yok | Bilgi |  | Tablolar arası | Sınıf, aktiflik | Supplier, MaterialSupplier |
 
 - Müşteri: yalnız ortak kurallar (lokasyondan bağımsızdır; tablolar arası kural yoktur).
@@ -587,7 +587,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 06 · Kısmi aktarım
 <sub>24. Ekranlar ve fonksiyonlar · F06 · A Veri alma · Çalışma prensibi 1/3</sub>
 
-- Yalnız seçilen işlem verisi gruplarını yeni veri versiyonuna almak; ana veri aktarılmaz, seçilmeyen gruplar core'da olduğu gibi kalır (K-150). Gruplar: **Talep** (Satış siparişi, Tahmin, Proje), **Stok** (Stok, Ödünç ve geri ödeme), **Üretim** (İş emri, İş emri bileşeni, İş emri operasyonu, Üretim gerçekleşmesi), **Satın alma** (Satın alma siparişi), **İzin** (Çalışan izni). Proje katalogda Ana veridir, kısmi aktarımda istisna olarak Talep grubuyla gelir. Gün içi talep, stok ve üretim tazelemesinin yolu.
+- Yalnız seçilen işlem verisi gruplarını yeni veri versiyonuna almak; ana veri aktarılmaz, seçilmeyen gruplar core'da olduğu gibi kalır (K-150). Gruplar: **Talep** (Satış siparişi, Tahmin, Proje), **Stok** (Stok, Ödünç ve geri ödeme), **Üretim** (Üretim siparişi, Üretim siparişi bileşeni, Üretim siparişi operasyonu, Üretim gerçekleşmesi), **Satın alma** (Satın alma siparişi), **İzin** (Çalışan izni). Proje katalogda Ana veridir, kısmi aktarımda istisna olarak Talep grubuyla gelir. Gün içi talep, stok ve üretim tazelemesinin yolu.
 
 #### NASIL ÇALIŞIR
 
@@ -863,7 +863,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **99 · Malzeme blokajı:** Malzeme için belli tarihlerde yeni tedarik planı (üretim, satın alma ya da ikisi) çıkarılmasını durdurmak (K-193).
 - **100 · Validasyon kuralı tanımlama:** Staging'deki veride hangi durumun Hata, Uyarı ya da Bilgi olacağını tablo başına tanımlamak; hazır kuralların sınıfını değiştirmek ya da kapatmak, kullanıcı kuralı eklemek, hata eşiğini girmek (K-136).
 - **101 · Dünden bugüne:** Ham veride tablo başına son veri ile önceki günün son verisini karşılaştırmak: satır sayısı değişimi, yeni gelen, gelmeyen ve güncellenen kayıtlar (K-159, K-160).
-- **102 · İşlem verisi görüntüleme:** Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi ve çalışan izni verisini Ana veri'nin düzeninde, salt okunur görüntülemek (K-169).
+- **102 · İşlem verisi görüntüleme:** Satış siparişi, tahmin, proje, stok, ödünç, üretim siparişi, satın alma siparişi ve çalışan izni verisini Ana veri'nin düzeninde, salt okunur görüntülemek (K-169).
 - **103 · Model kısıtları:** Kaynak grubunun kısıtsız kapasite çarpanını ve hedef doluluğunu senaryo bazında yönetmek (Baz + fark); değer hücreye yazılır, yalnız kritik gruplarda uygulanır (7.10, K-189).
 
 ### 10 · Ana veri görüntüleme
@@ -872,7 +872,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim ve vardiya ana verisini tek düzende, arama ve filtreyle görüntülemek; her değeri kaynağıyla birlikte göstermek.
 
 - **Uygulama (6.1, K-168, K-169):** uygulandı. Yalnız aktarılan veri, salt okunur; sekmeler Malzeme · Ürün ağacı ve rota · Kaynak · Tedarikçi ve müşteri · Lokasyon ve birim (Proje İşlem verisi'nde, 102), çok tablolu sekmede araç çubuğunun başında tablo seçimi. Tablo tam genişlik ("liste solda, detay sağda" yerine); detay kartı yok. Takvim Kapasite yönetimi'nde (7.9, K-167). Standart görünümde aktarılan bütün alanlar açık, sığmayan kolonlarda tablo yana kayar; Aktif süzgeci yok, Aktif kolonu gizli (Lokasyon'da açık) (K-169).
-- **Uygulama (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Kaynak grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.9'da kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Kaynak grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve İş emri operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Kaynak grup eşleşmesi; Kaynak grubu → Kaynak grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
+- **Uygulama (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Kaynak grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.9'da kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Kaynak grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve Üretim siparişi operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Kaynak grup eşleşmesi; Kaynak grubu → Kaynak grup eşleşmesi, Rota, Üretim siparişi operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
 - **İlişkili alanlar (7.6, K-182; uygulandı):** her tabloda, satırın bağlı olduğu kaydın alanları Alanlar panelinden kolon olarak eklenebilir (ör. Kaynak grup eşleşmesinde "Kaynak grubu · Kritik"); salt okunur, veri kopyalanmaz. Kayıt kartındaki "İlişkili kayıtlar" (K-173) ayrı özelliktir: orada çok karşılıklı ilişkiler tablo olarak açılır.
 
 #### NASIL ÇALIŞIR
@@ -887,7 +887,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Sekme (varlık), arama metni, filtreler (grup, tip, kritik, değer kaynağı, pasif kayıtlar)
   - Sütun ve sıralama tercihi (kullanıcı bazında saklanır)
 - **03:** Sütunlar veri sözlüğünden gelir; kullanıcı sütun gizleyip sıralama yapar, tercih kullanıcıya kaydedilir.
-- **04:** Satır seçilince sağda detay kartı açılır: tüm alanlar ve kaynak etiketi, ilişkili kayıtlar (rota, iş emri, duruş, uyarı), değişiklik geçmişi (14).
+- **04:** Satır seçilince sağda detay kartı açılır: tüm alanlar ve kaynak etiketi, ilişkili kayıtlar (rota, üretim siparişi, duruş, uyarı), değişiklik geçmişi (14).
 - **05:** Versiyon seçiciyle geçmiş bir veri versiyonu salt okunur açılabilir; başlıkta 'salt okunur · v229' uyarısı görünür.
 - **ÇIKTI**
   - Liste görünümü (arama, filtre, sıralama) ve detay kartı
@@ -911,7 +911,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Yok; salt okunur görünüm.
   - Dışa aktarma denetim izine yazılır.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez; salt okunur görünüm.
-- **ÖRNEK:** 'torna' araması + Tip: Makine + Kaynak etiketi: elle → 46 kaynaktan 2 satır (TRN-01, TRN-02). TRN-01 seçilince sağda 38 rota operasyonu, 6 açık iş emri ve 1 duruş kaydı görünür.
+- **ÖRNEK:** 'torna' araması + Tip: Makine + Kaynak etiketi: elle → 46 kaynaktan 2 satır (TRN-01, TRN-02). TRN-01 seçilince sağda 38 rota operasyonu, 6 açık üretim siparişi ve 1 duruş kaydı görünür.
 
 ### 10 · Ana veri görüntüleme · Arama ve filtre
 <sub>24. Ekranlar ve fonksiyonlar · F10 · B Ana veri ve kurallar · Mockup 1/2</sub>
@@ -920,7 +920,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Anında arama:** Kod ve ad üzerinde yazdıkça daralır; filtre çipleri tek tıkla kaldırılır.
 - **Kaynak etiketine göre filtre:** 'Manuel değer olanlar' gibi filtreler veri kalitesi takibini kolaylaştırır.
-- **İlişkili kayıtlar:** Detay kartında rota, iş emri, duruş ve uyarı sayıları; tek tıkla gidilir.
+- **İlişkili kayıtlar:** Detay kartında rota, üretim siparişi, duruş ve uyarı sayıları; tek tıkla gidilir.
 - **Klavye:** Ok tuşlarıyla satır, Enter ile detay, E ile düzenleme; altta ipucu.
 
 ### 10 · Ana veri görüntüleme · Detay kartı
@@ -932,7 +932,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kaynak sütunu:** Her alanın yanında ERP, kural (numarasıyla) ya da elle; boşsa alanın BOŞSA anlamı.
 - **Rol farkı:** Düzenle butonu Key user ve üstünde; End user düzenleyemez, görünüm ve Excel serbest (K-99).
 - **Geçmişe geçiş:** Geçmiş butonu değişiklik geçmişini (14) açar.
-- **Üretim akışı (7.16, K-200; uygulandı, sürüm 0.59.0):** malzemenin altındaki ve üstündeki olası akışlar ürün ağacından çizilir (satır menüsünde "Üretim akışı"; ekran 03). Görüntülemedir, ayrı fonksiyon numarası yoktur: bu fonksiyonun okuma yetkisiyle açılır. Çizilen kenarlar: güncel ve aktif üretim versiyonlarının ağaç satırları (geçerlilik tarihi süzülmez), kendi versiyonu olmayan malzemede benzetilen ürünün ağacı; açık iş emrinin bileşenleri çizilmez. Hayalet malzeme kutu olarak görünür.
+- **Üretim akışı (7.16, K-200; uygulandı, sürüm 0.59.0):** malzemenin altındaki ve üstündeki olası akışlar ürün ağacından çizilir (satır menüsünde "Üretim akışı"; ekran 03). Görüntülemedir, ayrı fonksiyon numarası yoktur: bu fonksiyonun okuma yetkisiyle açılır. Çizilen kenarlar: güncel ve aktif üretim versiyonlarının ağaç satırları (geçerlilik tarihi süzülmez), kendi versiyonu olmayan malzemede benzetilen ürünün ağacı; açık üretim siparişinin bileşenleri çizilmez. Hayalet malzeme kutu olarak görünür.
 
 ### 11 · Değerin kaynağını gösterme
 <sub>24. Ekranlar ve fonksiyonlar · F11 · B Ana veri ve kurallar · Çalışma prensibi 1/2</sub>
@@ -1547,7 +1547,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Önceki uyarılar ve durumları; yok saymadan sonraki kayıt değişiklikleri (FieldChange, K-173)
   - Açık talep: açık satış siparişi (aktif, açık miktarı > 0; teklif ve beklemede dahil), varsayılan parametre setinin ufkundaki tahmin
 - **03:** Smartchain verisi kontrolleri çalışır: kapasitesi tanımsız kaynak (aktif ve kritik, günlük kapasite boş; K-117). Aşama 7 ekranları kendi kontrollerini ekler.
-- **04:** Talep zinciri kümesi baştan hesaplanır (tek geçiş, seviye seviye): talebin malzemesi; her seviyede aktif üretim versiyonları, ağaç satırları ve bileşenleri (alternatifler dahil), rota satırları, rotadaki kaynak ve kaynak grupları, malzeme tedarikçileri; kendi ağacı olmayan üründe benzetilen ürünün ağacı ve rotası; açık iş emirlerinin bileşen ve operasyonları. Uyarının kaydı ya da malzemesi kümedeyse Yüksek, değilse Normal.
+- **04:** Talep zinciri kümesi baştan hesaplanır (tek geçiş, seviye seviye): talebin malzemesi; her seviyede aktif üretim versiyonları, ağaç satırları ve bileşenleri (alternatifler dahil), rota satırları, rotadaki kaynak ve kaynak grupları, malzeme tedarikçileri; kendi ağacı olmayan üründe benzetilen ürünün ağacı ve rotası; açık üretim siparişlerinin bileşen ve operasyonları. Uyarının kaydı ya da malzemesi kümedeyse Yüksek, değilse Normal.
 - **05:** Eşleştirme (kimlik kural + kayıt): ilk kez çıkan → Yeni; önceden olan → Açık (tespit tarihi korunur); Yok sayıldı korunur, kaydı yok saymadan sonra değiştiyse (ERP'den yeni versiyon ya da manuel değer) Açık olur; çıkmayan uyarı **silinir**, yok sayılmış olsa da (kapandı durumu ve geçmiş yok; aynı sorun yeniden çıkarsa Yeni gelir).
 - **ÇIKTI**
   - Veri kalitesi uyarıları (DataQualityWarning): durum, önem, tablo, kayıt, kontrol, mesaj, tespit tarihi, gerekçe
@@ -1556,7 +1556,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **06:** Detay kartı açılınca Talep zinciri o kayıttan yukarı (nerede kullanılıyor) çıkılarak bulunur; uyarı başına en çok 1.000 yol.
 
 - **Uygulama (6.5, K-174):** uygulandı. `app/quality/` (kontrol `run.py`, talep zinciri `chain.py`, Smartchain kontrolleri `checks.py`); kurallar `core`'un `prc` biçimli izdüşümünde (`sqlkit.core_layer`), RES.REF_SUBCONTRACTOR işlenmiş staging'de iş anahtarıyla; iş tipi "Veri kalitesi" (Veri işleme kanalı, öncelik −1, kuyrukta bekleyenle birleşir) aktarımdan, manuel değerden sonra ve gün dönümünde; tablolar `adm.DataQualityWarning`, `adm.DemandChain`, `adm.DemandChainPath` (geçiş 0056, 0057). Ölçüm (202 malzeme): planlar hazırken 2,1 sn, soğukken 8,8 sn (4,3 sn sorgu derlemesi); iyileştirme Bekleyen kontroller'de.
-- **Uygulama (7.5, K-180):** "kapasitesi tanımsız kaynak" kontrolü aktif, en az bir aktif kritik gruba üye ve günlük kapasitesi boş kaynağa bakar (kritiklik kaynak grubundadır; kontrol 7.9'da yeniden ele alınır). Talep zinciri rota ve iş emri operasyonundan kaynak grubuna, gruptan grup eşleşmesiyle kaynağa iner. Kaynak grubuna taşınan ve yeni kurallar veri kalitesinde takiplidir: grup tipi tek değil, fason bayrağı çelişkisi, fasoncu bulunamadı, kaynağın gruplarının kapasite birimi farklı, kaynak farklı tipte gruplara üye, kaynak adedi gruptaki kaynak sayısından büyük, rotadaki kaynak grubu pasif, kaynak grubunda kaynak yok, kaynak hiçbir grupta yok.
+- **Uygulama (7.5, K-180):** "kapasitesi tanımsız kaynak" kontrolü aktif, en az bir aktif kritik gruba üye ve günlük kapasitesi boş kaynağa bakar (kritiklik kaynak grubundadır; kontrol 7.9'da yeniden ele alınır). Talep zinciri rota ve üretim siparişi operasyonundan kaynak grubuna, gruptan grup eşleşmesiyle kaynağa iner. Kaynak grubuna taşınan ve yeni kurallar veri kalitesinde takiplidir: grup tipi tek değil, fason bayrağı çelişkisi, fasoncu bulunamadı, kaynağın gruplarının kapasite birimi farklı, kaynak farklı tipte gruplara üye, kaynak adedi gruptaki kaynak sayısından büyük, rotadaki kaynak grubu pasif, kaynak grubunda kaynak yok, kaynak hiçbir grupta yok.
 
 ### 20 · Veri kalitesi kontrolü · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F20 · B Ana veri ve kurallar · Çalışma prensibi 2/2</sub>
@@ -1665,7 +1665,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **KIM VE NEREDEN**
   - Kim: Key user ve üstü; End user görür
   - Nereden: Model kısıtları ekranı (31), üçüncü sekme "Malzeme blokajı"; tablo seçimi Kayıtlar · Geçerlilik
-- **Anlam:** blokaj yalnız yeni plan önerilerini durdurur. Açık iş emirleri ve açık satın alma siparişleri etkilenmez; plan onları gelecek arz sayar. Ürün ağacı için ek kural yoktur: eldeki stok kullanılır; stok bitince üst ürün kendiliğinden üretilemez. Satış blokajı yoktur.
+- **Anlam:** blokaj yalnız yeni plan önerilerini durdurur. Açık üretim siparişleri ve açık satın alma siparişleri etkilenmez; plan onları gelecek arz sayar. Ürün ağacı için ek kural yoktur: eldeki stok kullanılır; stok bitince üst ürün kendiliğinden üretilemez. Satış blokajı yoktur.
 - **01:** "Yeni kayıt": malzeme (aramalı), tür (Üretim · Satın alma · Üretim ve satın alma), başlangıç, bitiş (boşsa süresiz), dönemi kapatma oranı (%) ve sebep girilir. Pencere tür ve oran boş açılır; zorunlu alan boşken Kaydet pasiftir.
 - **02:** Tür malzemenin tedarik biçimine uymalıdır: üretilmeyen malzemeye (`IsProducible` Hayır) "Üretim" içeren, satın alınmayan malzemeye (`IsPurchasable` Hayır) "Satın alma" içeren tür girilmez; alan boşsa izin verilir. Pencerede uymayan seçenek pasiftir.
 - **03:** Kayıt saklanır, iz bırakır (Geçmiş). Tür, tarihler, oran ve sebep tabloda da düzenlenir; lokasyon ve malzeme kayıttan sonra değişmez.
@@ -1723,7 +1723,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 102 · İşlem verisi görüntüleme
 <sub>24. Ekranlar ve fonksiyonlar · F102 · B Ana veri ve kurallar · Çalışma prensibi (6.1, K-169)</sub>
 
-- Aktarılan işlem verisini plan öncesi kontrol için görmek: siparişler, tahminler, projeler, stok, ödünç, iş emirleri, satın alma siparişleri, çalışan izinleri.
+- Aktarılan işlem verisini plan öncesi kontrol için görmek: siparişler, tahminler, projeler, stok, ödünç, üretim siparişleri, satın alma siparişleri, çalışan izinleri.
 
 #### NASIL ÇALIŞIR
 
@@ -1734,7 +1734,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Liste geçerli veri versiyonundan okunur; ilişkiler kodla görünür, Standart görünümde aktarılan bütün alanlar açıktır.
 - **KURALLAR VE SINIRLAR**
   - Salt okunur: işlem verisi Smartchain'de değiştirilmez, ERP'de düzeltilir.
-  - Miktarlar malzemenin temel biriminin ondalığıyla; iş emri operasyonunun tüketimleri kaynağın kapasite biriminin.
+  - Miktarlar malzemenin temel biriminin ondalığıyla; üretim siparişi operasyonunun tüketimleri kaynağın kapasite biriminin.
 - **Uygulama (6.1, K-169):** uygulandı.
 
 ### C · Parametre
@@ -1784,7 +1784,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | `ProductionMinLot` | Model › Model tipi | Üretimde minimum lot | Evet · Hayır | Hayır |
 | `ProductionLotMultiple` | Model › Model tipi | Üretimde lot katı | Evet · Hayır | Hayır |
 | `ProductionMaxLot` | Model › Model tipi | Üretimde maksimum lot | Evet · Hayır | Hayır |
-| `RoundPurchaseToLot` | Model › Model tipi | Satın alma önerisini sipariş lotuna yuvarla | Evet · Hayır | Evet |
+| `RoundPurchaseToLot` | Model › Model tipi | Satın alma planını sipariş lotuna yuvarla | Evet · Hayır | Evet |
 | `CustomAllocation` | Model › Çözüm | Özel alokasyon | Dikkate al · Dikkate alma | Dikkate al |
 | `OptimalityGapPct` | Model › Çözüm | Optimality gap (%) | sayı | 1 |
 | `MrpWarmStart` | Model › Çözüm | MRP ile başlangıç çözümü | Evet · Hayır | Evet |
@@ -1814,17 +1814,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | `BucketDate` | Planlama ufku › Takvim ayarları | Dönem içi tarih | Dönem başı · Dönem sonu | Dönem sonu |
 | `FixPeriod` | Plan kararlılığı | Sabit dönem | tam sayı | 0 |
 | `FixPeriodUnit` | Plan kararlılığı | Sabit dönem birimi | Gün · Hafta · Ay | Gün |
-| `OpenWorkOrders` | Plan kararlılığı | Açık iş emirleri | Sabit · Yalnız öteleme önerisi · Serbest | Yalnız öteleme önerisi |
+| `OpenWorkOrders` | Plan kararlılığı | Açık üretim siparişleri | Sabit · Yalnız öteleme önerisi · Serbest | Yalnız öteleme önerisi |
 | `OpenPurchaseOrders` | Plan kararlılığı | Açık satın alma siparişleri | Sabit · Öneri üret | Sabit |
 | `KeepLockedRecords` | Plan kararlılığı | Sabitlenmiş kararlar korunsun | Evet · Hayır | Evet |
 
-**Pegging (7.17, K-201; uygulandı, sürüm 0.60.0).** Parametreler'in Pegging sekmesi pegging'in sıralama ayarlarını tutar; hesap bu ayarları Aşama 10'da okur. "Full pegging yöntemi" yukarıdaki tablodadır. İki ölçüt listesi `param.PeggingCriterion`'dadır: **İhtiyaç sırası** (Dönem · Kesin sipariş · Teklif · Beklemedeki sipariş · Tahmin · Üretim siparişi ihtiyacı · Üretim planı ihtiyacı · Öncelik grubu · İhtiyaç tarihi · Sipariş no) ve **Arz sırası** (Dönem · Stok · Kalitedeki stok · Üretim siparişi · Satın alma siparişi · Arz tarihi · Üretim planı · Satın alma önerisi · Son kullanma tarihi). Ölçütler yukarıdan aşağı uygulanır; kullanıcı yalnız sırayı ve yönlü ölçütün yönünü (Artan · Azalan; arzda Dönem'de ayrıca İhtiyaca en yakın) değiştirir. Talep türleri Hedefler'deki türlerle aynı kaynaktandır. "Özel alokasyon" model parametresidir (Model › Çözüm); model de pegging de ona uyar.
+**Pegging (7.17, K-201; uygulandı, sürüm 0.60.0).** Parametreler'in Pegging sekmesi pegging'in sıralama ayarlarını tutar; hesap bu ayarları Aşama 10'da okur. "Full pegging yöntemi" yukarıdaki tablodadır. İki ölçüt listesi `param.PeggingCriterion`'dadır: **İhtiyaç sırası** (Dönem · Kesin sipariş · Teklif · Beklemedeki sipariş · Tahmin · Üretim siparişi ihtiyacı · Üretim planı ihtiyacı · Öncelik grubu · İhtiyaç tarihi · Sipariş no) ve **Arz sırası** (Dönem · Stok · Kalitedeki stok · Üretim siparişi · Satın alma siparişi · Arz tarihi · Üretim planı · Satın alma planı · Son kullanma tarihi). Ölçütler yukarıdan aşağı uygulanır; kullanıcı yalnız sırayı ve yönlü ölçütün yönünü (Artan · Azalan; arzda Dönem'de ayrıca İhtiyaca en yakın) değiştirir. Talep türleri Hedefler'deki türlerle aynı kaynaktandır. "Özel alokasyon" model parametresidir (Model › Çözüm); model de pegging de ona uyar.
 
 - **Model:** üretim lot kuralları (minimum lot, lot katı, maksimum lot) yalnız MILP'te uygulanır; LP'de anahtarlar pasif ve gridir, değerleri korunur. Satın alma kararı modelde süreklidir; öneri sonradan sipariş lotuna yuvarlanır (K-27).
 - **Talep:** "Plana giren talep" alt başlığında talep tipleri ayrı ayrı açılır (Kesin sipariş, Teklif, Beklemedeki sipariş, Tahmin; K-60, K-127). "En fazla gecikebilecek gün" boşsa sınırsızdır.
 - **Malzeme:** güvenlik stoğu ve stok gün kapsamı ikisi de doluysa hangisinin geçerli olacağı (K-113); tedarikçi seçim kuralı (K-118); teyit tarihi boş açık arzda istenen tarih kullanılır; tarihi geçmiş açık arz bugüne çekilir ya da plana alınmaz.
 - **Kapasite:** kaynak kısıtı, fazla mesai, fason ve işçi kısıtı anahtarları. Limitler ve verim parametre değil veridir: Kapasite yönetimi (7.9).
-- **Plan kararlılığı:** sabit dönem değer ve birimdir (Gün, Hafta, Ay), ekranda tek satırda. Sınırı Planlama ufku'ndaki kapsam kuralıyla hesaplanır: plan başlangıcından başlar; Hafta ve Ay'da içinde bulunulan hafta ya da ay sayıya dahildir ve periyot takvim sınırında biter; 0 sabit dönem yok demektir. Kayıtlı değerin son günü alanın altında yazılır. Ayrıca açık iş emirleri (Sabit, Yalnız öteleme önerisi, Serbest), açık satın alma siparişleri ve "Sabitlenmiş kararlar korunsun" (planlamacının sabitlediği kararlar; docs'ta eski adı "kilit").
+- **Plan kararlılığı:** sabit dönem değer ve birimdir (Gün, Hafta, Ay), ekranda tek satırda. Sınırı Planlama ufku'ndaki kapsam kuralıyla hesaplanır: plan başlangıcından başlar; Hafta ve Ay'da içinde bulunulan hafta ya da ay sayıya dahildir ve periyot takvim sınırında biter; 0 sabit dönem yok demektir. Kayıtlı değerin son günü alanın altında yazılır. Ayrıca açık üretim siparişleri (Sabit, Yalnız öteleme önerisi, Serbest), açık satın alma siparişleri ve "Sabitlenmiş kararlar korunsun" (planlamacının sabitlediği kararlar; docs'ta eski adı "kilit").
 - **Hedefler (leksikografik, ağırlık yok; K-175, K-196):** hedef türleri sabittir; **hedef listesi tamamen kullanıcınındır**: sistem kendiliğinden satır üretmez, bölmez, kaldırmaz, süre paylaştırmaz. Her satır bir hedef ve bir kapsamdır ve ayrı bir çözüm adımıdır. Sıra sürüklenir (farklı hedeflerin satırları iç içe olabilir), motor aktif satırları sırayla çözer. Satır: Sıra · Grup · Hedef · Kapsam · Açıklama · Süre bütçesi (sn) · Ödün payı (%; üst hedeften verilebilecek en çok ödün, 0 = katı) · Aktif. Kapalı satır çözülmez; sırası, süresi ve payı boştur, listenin sonunda durur. Altta toplam: satır sayısı ve süre; senaryonun süre bütçesi aktif satırların sürelerinin toplamıdır, ayrı bir senaryo süre parametresi yoktur. Süre 1 ya da daha büyük tam sayı, ödün payı 0–100. Liste boş olabilir; satır varsa en az biri aktiftir (Kaydet'te denetlenir).
 - **Hedefler, grupları, eksenleri ve başlangıç değerleri** (türün süresi başlangıçta aktif gelen satırlarına eşit bölünür; toplam 1.140 sn):
 
@@ -2057,7 +2057,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - **Yer:** Parametreler ekranı (ekran 06) › "Uyarı eşikleri" başlığı; seçili senaryonun eşikleri. Kim: Key user ve üstü (fonksiyon 26).
   - **Düzen ve tablo:** öteki başlıklardaki gibi solda alt başlıklar (Talep · Malzeme · Kapasite · Plan kalitesi), sağda seçili kategorinin kartı; Vazgeç ve Kaydet kartın altında. Kolonlar: Uyarı · Birim · Yön ("Aşınca" / "Altına düşünce") · Düşük · Orta · Yüksek · Kritik · Aktif. Her önem için ayrı eşik (kademeli); boş hücre o kademenin kullanılmadığını gösterir. Eşiksiz uyarıda dört önem kolonunun yerinde tek seçim düğmesi ("Düşük | Orta | Yüksek | Kritik"). Yüzde "%95" biçiminde. Değişen hücre işaretli; kaydetme kategori başınadır, Vazgeç geri alır; kaydedilmemiş değişiklikle başka kategoriye geçişte uyarı. Kapatılan uyarının satırı belirgin soluktur.
   - **Kural:** bir nesne için tek uyarı çıkar; önemi tuttuğu en yüksek kademedir. Yön uyarıya göre sabittir ve eşik dahil değildir: "aşınca" değer eşikten büyük, "altında" değer eşikten küçük olunca; eşiğe eşit değer uyarı vermez.
-  - **Uyarılar:** Talep: Gecikme (gün; sipariş satırı, istenen tarihe göre; aşınca) · OTIF oranı (%; plan geneli; altında) · Karşılama oranı (%; plan geneli; altında) · Karşılanmayan sipariş (eşiksiz) · Karşılanmayan tahmin (eşiksiz). Malzeme (malzeme başına): Malzeme eksiği (gün; eksiğin bugünden kaç gün sonra başladığı; altında) · Güvenlik stoğunun altı (%; dönem sonu stoğu ÷ güvenlik stoğu; altında) · Fazla stok (%; dönem sonu stoğu ÷ maksimum stok; aşınca) · Geciken satın alma önerisi (gün; aşınca) · Raf ömrü (gün; son kullanma tarihine kalan gün; altında; Faz 1'de yalnız uyarı). Kapasite (kaynak grubu ve dönem başına): Aşırı yük (%; yük ÷ kullanılabilir kapasite; aşınca) · Hedef doluluğun üstü (%; yük ÷ hedef kapasite; aşınca; hedef girilmemiş grupta çıkmaz) · Düşük doluluk (%; altında) · Ek mesai kullanımı (%; planlanan ek mesai ÷ limit; aşınca). Plan kalitesi (eşiksiz): Süre bütçesi doldu · Kısıt gevşetildi · Yedek yöntem çalıştı.
+  - **Uyarılar:** Talep: Gecikme (gün; sipariş satırı, istenen tarihe göre; aşınca) · OTIF oranı (%; plan geneli; altında) · Karşılama oranı (%; plan geneli; altında) · Karşılanmayan sipariş (eşiksiz) · Karşılanmayan tahmin (eşiksiz). Malzeme (malzeme başına): Malzeme eksiği (gün; eksiğin bugünden kaç gün sonra başladığı; altında) · Güvenlik stoğunun altı (%; dönem sonu stoğu ÷ güvenlik stoğu; altında) · Fazla stok (%; dönem sonu stoğu ÷ maksimum stok; aşınca) · Geciken satın alma planı (gün; aşınca) · Raf ömrü (gün; son kullanma tarihine kalan gün; altında; Faz 1'de yalnız uyarı). Kapasite (kaynak grubu ve dönem başına): Aşırı yük (%; yük ÷ kullanılabilir kapasite; aşınca) · Hedef doluluğun üstü (%; yük ÷ hedef kapasite; aşınca; hedef girilmemiş grupta çıkmaz) · Düşük doluluk (%; altında) · Ek mesai kullanımı (%; planlanan ek mesai ÷ limit; aşınca). Plan kalitesi (eşiksiz): Süre bütçesi doldu · Kısıt gevşetildi · Yedek yöntem çalıştı.
   - **Önemlerin anlamı sabittir:** Kritik yayın öncesi kontrolde sayılır ve ana sayfada öne çıkar; Yüksek planı etkiler; Orta izlenir; Düşük bilgi niteliğindedir.
   - **Doğrulama:** gün tam sayı; yüzde en çok iki ondalık; 0 ya da büyük. Dolu kademeler yöne göre sıralı olmalı (aşınca: Düşük < Orta < Yüksek < Kritik; altında tersi); sıra bozuksa hücre reddedilir. Aktif eşikli uyarıda en az bir kademe dolu. Kapatılan uyarının değerleri durur.
   - **Senaryolar:** eşikler ayardır (tam kopya): kopyalanan senaryo kaynağının eşiklerini alır; Baz'daki değişiklik izleyen senaryoya akmaz; fark işareti yok.
@@ -2237,12 +2237,12 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01:** Zaman yapısı kurulur: günlük, haftalık, aylık bucket dizisi ve sabit dönem. Her kaynak için dönem kapasitesi: (çalışma günü × adet − duruş günü × etkilenen adet) × günlük kapasite × verim → CapacityLoad brüt, duruş kaybı, net.
 - **02:** Talep hazırlanır: sipariş satırları, tahmin netleme (sipariş tahmini tüketir), teklifler (`IsQuote`) parametreye göre; öncelik kuralıyla (müşteri sınıfı, tarih, proje, tip) sıralanır.
 - **GIRDI**
-  - Veri versiyonu: stok (lot, sahip), açık siparişler ve iş emirleri, ağaç, rota, takvim, vardiya, duruş
+  - Veri versiyonu: stok (lot, sahip), açık siparişler ve üretim siparişleri, ağaç, rota, takvim, vardiya, duruş
   - Parametre seti: zaman yapısı, öncelik ve alokasyon kuralı, 'aynı proje arzı varken yeni arz' ayarı
   - Çalışma geçici değişiklikleri ve sabitlemeler (WorkspaceOverride)
 - **03:** Sahiplik: stok lotları ve açık arz proje ya da ortak olarak etiketlenir; pasif ve hatalı kayıtlar dışarıda kalır.
 - **04:** LLC sırasıyla proje bazlı netleştirme: her malzemede önce aynı projenin stoğu ve kesin arzı, sonra ortak stok ve ortak arz. Not: özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
-- **05:** Aynı projenin kesin arzı (iş emri, satın alma) ihtiyacı karşılıyorsa yeni arz ihtiyacı doğmaz; tarih uymuyorsa öne çek / ertele adayı olarak işaretlenir (36).
+- **05:** Aynı projenin kesin arzı (üretim siparişi, satın alma) ihtiyacı karşılıyorsa yeni arz ihtiyacı doğmaz; tarih uymuyorsa öne çek / ertele adayı olarak işaretlenir (36).
 - **ÇIKTI**
   - CapacityLoad brüt / duruş / net kapasite satırları (kaynak × bucket)
   - Kullanılabilir stok ve kesin arz (tek havuz) + proje kırılımı (pegging için saklanır)
@@ -2257,7 +2257,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Netleştirme her zaman LLC sırasıyla ve öncelik kuralıyla; proje stoğu başka projeye verilmez. Not: özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
   - Model proje görmez: tek havuz. Proje kırılımı yalnız ön ve son hesaptadır.
   - 'Aynı projenin kesin arzı varken yeni arz üretilsin mi' parametresi varsayılan hayır.
-  - Sabit dönemdeki iş emirleri olduğu gibi alınır; kapasiteden düşülür.
+  - Sabit dönemdeki üretim siparişleri olduğu gibi alınır; kapasiteden düşülür.
   - Faz 1: set-up, kalıp, fırın ve raf ömrü ön hesapta yoktur (raf ömrü yalnız uyarı).
 - **HATA VE ISTISNA**
   - Ürün ağacı döngüsü: malzeme ve bağlı talep hesaptan çıkarılır, kritik uyarı; hesap devam eder.
@@ -2390,7 +2390,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Sistem (her plan hesabında) · model tipi ve ağırlıklar: Admin ve üstü (senaryo tanımı, parametre seti)
   - Nereden: Plan hesabı aşaması · ayarları: Gece senaryo tanımı 'Model ayarları' · izi: Sistem sağlığı hesap kaydı
 - **01:** Model tipi senaryo tanımından okunur: LP ya da MILP. Her zaman MILP çalışmaz; tip parametriktir.
-- **02:** Karar değişkenleri: üretim P[malzeme, kaynak, bucket], satın alma Q (her zaman sürekli), stok I, geç karşılama B, fazla mesai O, fason S. MILP'de yalnız üretim tarafı tamsayı (parti / iş emri sayısı).
+- **02:** Karar değişkenleri: üretim P[malzeme, kaynak, bucket], satın alma Q (her zaman sürekli), stok I, geç karşılama B, fazla mesai O, fason S. MILP'de yalnız üretim tarafı tamsayı (parti / üretim siparişi sayısı).
 - **GIRDI**
   - Ön hesap paketi ve MRP adayları (30)
   - Senaryo tanımı: model tipi, eksen ayarları (fazla mesai, fason, talep çarpanı, malzeme kısıtı)
@@ -2736,7 +2736,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kesin arz listesi ve pegging bağları (35)
   - İhtiyaç tarihleri (DemandFulfillment) ve sabit dönem
   - Parametreler: en küçük fark eşiği (gün / bucket), öne çekme uygunluğu (temin süresi, kapasite), öneri türleri
-- **03:** Uygunluk kontrolü: öne çekmede tedarikçi temin süresi ya da iş emrinde kapasite; sabit dönemdeki arz dokunulmaz; fark eşiğin altındaysa öneri üretilmez.
+- **03:** Uygunluk kontrolü: öne çekmede tedarikçi temin süresi ya da üretim siparişinde kapasite; sabit dönemdeki arz dokunulmaz; fark eşiğin altındaysa öneri üretilmez.
 - **04:** Etki hesaplanır: öneri uygulanırsa hangi siparişlerin gecikmesi ne kadar azalır (what-if, pegging üzerinden); etki puanı.
 - **05:** SupplyRecommendation yazılır: tür, mevcut tarih, önerilen tarih, önerilen miktar, neden metni (39).
 - **ÇIKTI**
@@ -3699,7 +3699,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **50 · Ürün bazlı · üretim miktarı girme:** Ürün × dönem tablosunda üretim miktarını elle belirlemek; değer sabitlenir, model planın kalanını etrafında çözer.
 - **51 · Ürün bazlı · talebe eşitle:** Bir ürünün üretim satırını dönem dönem talebe ya da net talebe eşitlemek; bilinen bir başlangıç noktası kurmak.
-- **52 · Kaynak bazlı · yük taşıma:** Kaynak bazlı görünümde bir yükü (iş emri ya da planlı sipariş) başka döneme taşımak; taşınan yük sabitlenir.
+- **52 · Kaynak bazlı · yük taşıma:** Kaynak bazlı görünümde bir yükü (üretim siparişi ya da planlı sipariş) başka döneme taşımak; taşınan yük sabitlenir.
 - **53 · Kaynak bazlı · alternatif kaynağa aktarma:** Bir yükü rotadaki alternatif kaynağa aktarmak; süre çarpanı ve birimle yük yeniden hesaplanır, iki kaynak birlikte görülür.
 - **54 · Kaynak bazlı · fasona aktarma:** Bir yükü iç kaynaktan fason kaynağa aktarmak; temin süresine göre teslim hesaplanır, planlı fason siparişi oluşur.
 - **55 · Geçici kaynak parametresi:** Verim, fazla mesai, çalışma günü ve duruşu yalnız bu çalışmada geçici değiştirmek; kapasite ve doluluk anında yeniden.
@@ -3707,10 +3707,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **57 · Sipariş bazlı · hedef tarih ve koruma:** Siparişe hedef dönem vermek ve korumak; koruma açıkken model siparişi en geç bu dönemde karşılamak zorundadır.
 - **58 · Manuel pegging:** Belirli bir stok lotunu ya da arzı belirli bir siparişe elle bağlamak; model bu bağı sabit alır.
 - **59 · Gantt · sürükle-bırak:** Gantt'ta çubuğu başka döneme ya da kaynak satırına taşımak; çubuk bucket sınırına oturur, saat düzeyi yoktur.
-- **60 · Gantt · bölme ve birleştirme:** Bir iş emri ya da planlı sipariş çubuğunu miktarla parçalara bölmek ve parçaları yeniden tek çubukta birleştirmek.
+- **60 · Gantt · bölme ve birleştirme:** Bir üretim siparişi ya da planlı sipariş çubuğunu miktarla parçalara bölmek ve parçaları yeniden tek çubukta birleştirmek.
 - **61 · Sabitleme ve sabitlemeyi kaldırma:** Hücre, çubuk, sipariş hedefi ya da pegging bağını sabitleyip modelin dokunmamasını sağlamak; sabitleme kaldırınca model karar verir.
 - **62 · Anlık etki önizlemesi:** Her manuel değişiklikte, model çalışmadan, kaynak yükü, stok projeksiyonu ve teslim tahmininin ekranda hemen güncellenmesi.
-- **63 · Sabit dönem koruması:** Sabit dönemdeki plan değerlerinin hiçbir görünümde değişmemesi ve modelin dokunmaması; üretim ERP iş emirleriyle yürür.
+- **63 · Sabit dönem koruması:** Sabit dönemdeki plan değerlerinin hiçbir görünümde değişmemesi ve modelin dokunmaması; üretim ERP üretim siparişleriyle yürür.
 
 ### 50 · Ürün bazlı · üretim miktarı girme
 <sub>24. Ekranlar ve fonksiyonlar · F50 · F Manuel planlama · Çalışma prensibi 1/3</sub>
@@ -3873,7 +3873,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 52 · Kaynak bazlı · yük taşıma
 <sub>24. Ekranlar ve fonksiyonlar · F52 · F Manuel planlama · Çalışma prensibi 1/2</sub>
 
-- Kaynak bazlı görünümde bir yükü (iş emri ya da planlı sipariş) başka döneme taşımak; taşınan yük sabitlenir.
+- Kaynak bazlı görünümde bir yükü (üretim siparişi ya da planlı sipariş) başka döneme taşımak; taşınan yük sabitlenir.
 
 #### NASIL ÇALIŞIR
 
@@ -3883,17 +3883,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01:** Yük satırında 'Taşı' seçilir; hedef dönem listesi her dönemin doluluğuyla açılır. Sabit dönem seçilemez; talep tarihinden geç dönemler 'gecikme' notuyla gösterilir.
 - **02:** Hedef seçilince önizleme penceresi: kaynağın önce / sonra doluluğu (eski ve yeni dönem), etkilenen siparişlerin tahmini teslim tarihi, bağlı operasyon ve malzeme tarihlerinin kayması.
 - **GIRDI**
-  - Yük: iş emri ya da planlı sipariş, mevcut dönem, süre (kaynağın biriminde)
+  - Yük: üretim siparişi ya da planlı sipariş, mevcut dönem, süre (kaynağın biriminde)
   - Hedef dönem
   - Kaynağın dönem kapasitesi ve doluluğu; yükü bekleyen siparişlerin talep tarihi; bağlı operasyonlar ve malzeme ihtiyaç tarihleri
 - **03:** Doğrulama: operasyon sırası korunur (op 20 op 10'dan önceye gidemez), malzeme temin tarihinden önceye taşınırsa uyarı; aşırı yük uyarı olarak gösterilir, engellenmez.
 - **04:** Onay ile yük yeni dönemde elle sabitlenmiş işaretlenir, taslağa ve değişiklik izine düşer; anlık etki şeridi güncellenir. 'Geri al' tek tıkla eski dönemi getirir.
-- **05:** 'Kaydet ve yeniden planla': model yükü sabit alır; aynı iş emrinin diğer operasyonlarını, bileşen ihtiyaçlarını ve bu yükü bekleyen siparişleri yeniden çözer.
+- **05:** 'Kaydet ve yeniden planla': model yükü sabit alır; aynı üretim siparişinin diğer operasyonlarını, bileşen ihtiyaçlarını ve bu yükü bekleyen siparişleri yeniden çözer.
 - **ÇIKTI**
   - Elle plan kaydı (ManualPlanEntry, öneri): yük, yeni dönem, sabitleme
-  - Değişiklik izi satırı; iş emri için SupplyRecommendation (ertele / öne çek)
+  - Değişiklik izi satırı; üretim siparişi için SupplyRecommendation (ertele / öne çek)
   - Yeniden hesap işi ve güncel plan çıktıları
-- **06:** Sonuçta değişiklik izine gerçekleşen etki yazılır; iş emri ERP'de olduğundan taşınma ERP'ye geri yazılmaz, 'ertele / öne çek' önerisi olarak Öneriler ekranına düşer.
+- **06:** Sonuçta değişiklik izine gerçekleşen etki yazılır; üretim siparişi ERP'de olduğundan taşınma ERP'ye geri yazılmaz, 'ertele / öne çek' önerisi olarak Öneriler ekranına düşer.
 
 ### 52 · Kaynak bazlı · yük taşıma · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F52 · F Manuel planlama · Çalışma prensibi 2/2</sub>
@@ -3902,21 +3902,21 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Hedef sabit dönem olamaz; sabitlenmiş yük önce açılmalıdır (61).
   - Çok dönemli yük bütün olarak taşınır; parçalamak için 'Böl' (60).
   - Bağlı operasyon sırası bozulamaz: engellenir, nedeni yazılır.
-  - Taşınan yük iş emriyse ERP'deki tarih değişmez; plan içinde sabitlenmiş kabul edilir ve öneri üretilir.
+  - Taşınan yük üretim siparişiyse ERP'deki tarih değişmez; plan içinde sabitlenmiş kabul edilir ve öneri üretilir.
 - **HATA VE ISTISNA**
   - Hedefte malzeme tarihi yetişmiyor: uyarı, kullanıcı taşıyabilir; model malzemeyi öne çekmeyi dener, olmazsa 'malzeme eksik' uyarısı.
   - Yeniden hesapta çözüm bulunamazsa sabitleme yumuşatılır, uyarı üretilir (50 ile aynı).
-  - Aynı iş emrinde ikinci taşıma: önceki taslak güncellenir, iz tek satırda tutulur.
+  - Aynı üretim siparişinde ikinci taşıma: önceki taslak güncellenir, iz tek satırda tutulur.
 - **ETKISI VE TETIKLENENLER**
   - Anlık etki (62), değişiklik izi (44), yeniden hesap (46).
   - Gantt ve ürün bazlı görünümler aynı değişikliği gösterir.
-  - Öneriler ekranına ertele / öne çek satırı (iş emri için).
+  - Öneriler ekranına ertele / öne çek satırı (üretim siparişi için).
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
 - **Kaynak yükü ve doluluk:** CapacityLoad.Load (anlık → model) Aynı kaynak, eski ve yeni dönem
 - **Etkilenen siparişlerin tarihi:** DemandFulfillment.PlannedDate, DelayDays Anlık tahmin; yeniden hesapta kesinleşir
 - **Bağlı operasyon tarihleri:** WorkOrderOperation / PlannedOrder Yeniden hesapta; sonraki operasyonlar kayar
 - **Bileşen ihtiyaç tarihleri:** MRP / Pegging Yeniden hesapta; malzeme planı ve öneriler güncellenir
-- **Mevcut arz önerileri:** SupplyRecommendation İş emri için ertele / öne çek satırı
+- **Mevcut arz önerileri:** SupplyRecommendation Üretim siparişi için ertele / öne çek satırı
 - **Uyarılar ve metrikler:** PlanWarning, PlanMetric Aşırı yük, gecikme; yeniden hesap sonrası
 - **ÖRNEK:** WO-5530 (Kapak K-22, 22 sa) H46 → H47: Freze H46 %108 → %96, H47 %97 → %109. SO-1190/1 gecikmesi 4 → 11 gün tahmini; sistem H48 alternatifini önerir.
 
@@ -3963,7 +3963,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01:** 'Aktar' ile alternatif listesi açılır: yalnız rotada tanımlı alternatifler; her biri için birim, süre çarpanı, bu yükün yeni süresi ve hedef dönemdeki önce → sonra doluluğu.
 - **02:** Miktar seçilir: tamamı ya da bir kısmı (kısmi aktarım bölme (60) ile iki parça oluşturur).
 - **GIRDI**
-  - Yük (iş emri / planlı sipariş, operasyon, süre)
+  - Yük (üretim siparişi / planlı sipariş, operasyon, süre)
   - Rotadaki alternatif kaynaklar: süre çarpanı, kapasite birimi, işçilik satırları
   - Alternatiflerin dönem doluluğu ve limitleri
 - **03:** Önizleme: iki kaynağın önce / sonra doluluğu, işçi kaynaklarının yükü, kapasite birimi uyumu; aşırı yük uyarı olarak gösterilir.
@@ -3971,9 +3971,9 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **05:** 'Kaydet ve yeniden planla': model yükü yeni kaynakta sabit alır; süreyi çarpanla hesaplar, işçilik satırlarını ve bağlı operasyonları yeniden çözer.
 - **ÇIKTI**
   - Elle plan kaydı (ManualPlanEntry, öneri): yük, yeni kaynak, süre, sabitleme
-  - Değişiklik izi; iş emri için SupplyRecommendation 'kaynak değiştir' (öneri)
+  - Değişiklik izi; üretim siparişi için SupplyRecommendation 'kaynak değiştir' (öneri)
   - Yeniden hesap işi ve güncel plan çıktıları
-- **06:** İş emri ERP'de başka kaynağa atanmışsa aktarım ERP'ye yazılmaz; Öneriler ekranına 'kaynak değiştir' önerisi düşer (öneri).
+- **06:** Üretim siparişi ERP'de başka kaynağa atanmışsa aktarım ERP'ye yazılmaz; Öneriler ekranına 'kaynak değiştir' önerisi düşer (öneri).
 
 ### 53 · Kaynak bazlı · alternatif kaynağa aktarma · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F53 · F Manuel planlama · Çalışma prensibi 2/3</sub>
@@ -4002,7 +4002,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **İşçi yükü:** CapacityLoad (işçi kaynakları) Alternatifin işçilik satırındaki kaynaklar; anlık tahmin
 - **Operasyon kaynak ataması:** WorkOrderOperation / PlannedOrder.ResourceId Yeniden hesapta sabit; bağlı operasyonlar yeniden
 - **Teslim ve gecikme, pegging:** DemandFulfillment, Pegging Yeniden hesapta
-- **Mevcut arz önerileri:** SupplyRecommendation İş emri için 'kaynak değiştir' (öneri)
+- **Mevcut arz önerileri:** SupplyRecommendation Üretim siparişi için 'kaynak değiştir' (öneri)
 - **Uyarılar ve metrikler:** PlanWarning, PlanMetric Yeniden hesap sonrası
 
 ### 53 · Kaynak bazlı · alternatif kaynağa aktarma · Alternatif seçimi
@@ -4022,7 +4022,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **İki kaynak birlikte:** Boşalan ve dolan kaynağın dört dönemi yan yana.
 - **Kontrol listesi:** Birim uyumu, eşik, işçi yükü; Faz 1 dışı kısıtlar gri.
-- **ERP notu:** İş emri ERP'de; aktarım planda sabitlenmiş, ERP için öneri üretilir.
+- **ERP notu:** Üretim siparişi ERP'de; aktarım planda sabitlenmiş, ERP için öneri üretilir.
 - **Tahmini etiketi:** Önizleme model değildir; yeniden hesap kesinleştirir.
 
 ### 53 · Kaynak bazlı · alternatif kaynağa aktarma · Aktarıldı · taslak
@@ -4053,10 +4053,10 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Malzeme–tedarikçi ilişkisi (bu operasyon için tanımlı fasoncular)
 - **03:** Kontroller: dönem üst limiti (ResourcePeriodLimit) aşılırsa uyarı ya da engel (parametre); fasona gidecek yarı mamul ve bileşenin hazır olma tarihi kontrol edilir.
 - **04:** Önizleme: iç kaynağın boşalan yükü, fason limit kullanımı, etkilenen siparişlerin teslim tarihi.
-- **05:** Onay ile planlı fason siparişi (PlannedOrder, tür = fason) elle sabitlenmiş oluşturulur; iş emriyse Öneriler ekranına 'fasona çevir' önerisi düşer.
+- **05:** Onay ile planlı fason siparişi (PlannedOrder, tür = fason) elle sabitlenmiş oluşturulur; üretim siparişiyse Öneriler ekranına 'fasona çevir' önerisi düşer.
 - **ÇIKTI**
   - Planlı fason siparişi (PlannedOrder: tür fason, tedarikçi, miktar, gönderim ve teslim tarihi, sabitleme)
-  - Değişiklik izi; iş emri için SupplyRecommendation 'fasona çevir'
+  - Değişiklik izi; üretim siparişi için SupplyRecommendation 'fasona çevir'
   - Yeniden hesap işi ve güncel plan çıktıları
 - **06:** 'Kaydet ve yeniden planla': model fason siparişini sabit alır; bileşen ihtiyaçlarını gönderim tarihine, ürün arzını teslim tarihine göre yeniden çözer.
 
@@ -4087,7 +4087,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Fason teslim tarihi:** PlannedOrder.DueDate (hesap) Gönderim + sabit + miktar × birim gün
 - **Bileşen ihtiyaç tarihleri:** MRP / Pegging Yeniden hesapta; gönderim dönemine kayar
 - **Teslim ve gecikme:** DemandFulfillment Bu yükü bekleyen siparişler
-- **Mevcut arz önerileri:** SupplyRecommendation İş emri için 'fasona çevir'
+- **Mevcut arz önerileri:** SupplyRecommendation Üretim siparişi için 'fasona çevir'
 - **Uyarılar ve metrikler:** PlanWarning, PlanMetric (fason miktarı) Yeniden hesap sonrası
 
 ### 54 · Kaynak bazlı · fasona aktarma · Fasoncu seçimi
@@ -4353,7 +4353,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Arz seçilir, miktar girilir (kullanılabilir ile sınırlı); kısmi bağ mümkün; not eklenir.
 - **GIRDI**
   - Sipariş satırı ve bağlanacak ürün / bileşen ihtiyacı
-  - Uygun arz listesi: stok lotları (sahip: proje / ortak), açık iş emri, satın alma, planlı sipariş; tarih ve kullanılabilir miktar
+  - Uygun arz listesi: stok lotları (sahip: proje / ortak), açık üretim siparişi, satın alma, planlı sipariş; tarih ve kullanılabilir miktar
   - Proje stoğu paylaşım kuralı (parametre); miktar
 - **03:** Doğrulama: başka projeye ayrılmış stok bağlanamaz (paylaşım kuralı izin vermiyorsa); arz tarihi ihtiyaç tarihinden geçse gecikme uyarısı; miktar aşımı engel.
 - **04:** 'Bağla' ile pegging kaydı 'manuel' işaretli olarak taslağa ve değişiklik izine yazılır; satır kartında bağ ve sabitleme görünür.
@@ -4373,7 +4373,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Bağlanan miktar kullanılabilir miktarı aşamaz; aynı arz birden fazla siparişe kısmi bağlanabilir.
   - Bağ çalışmaya aittir; yayınlanan planla saklanır, gece senaryolarına taşınıp taşınmayacağı parametre (öneri, açık).
 - **HATA VE ISTISNA**
-  - Arz ERP'de kaybolursa (stok tüketildi, iş emri iptal): bağ 'geçersiz' işaretlenir, uyarı, model serbest çözer.
+  - Arz ERP'de kaybolursa (stok tüketildi, üretim siparişi iptal): bağ 'geçersiz' işaretlenir, uyarı, model serbest çözer.
   - Proje stoğu kısıtı: seçenek pasif, neden ipucu.
   - Arz tarihi talebi karşılamıyor: uyarı, bağ yine kurulabilir; gecikme raporlanır.
 - **ETKISI VE TETIKLENENLER**
@@ -4394,7 +4394,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![58 · Manuel pegging · Arz seçimi](mockups/m24f-0592-58-manuel-pegging-arz-secimi.png)
 
-- **Uygun arzlar:** Stok lotları, iş emri, satın alma, planlı sipariş; sahip ve kullanılabilir miktar.
+- **Uygun arzlar:** Stok lotları, üretim siparişi, satın alma, planlı sipariş; sahip ve kullanılabilir miktar.
 - **Kısıtlı satır:** Başka projeye ayrılmış lot pasif; nedeni yanında.
 - **Miktar girişi:** Kullanılabilirle sınırlı; kısmi bağ; not alanı.
 - **Bağ kalıcılığı:** Bağın sabit olduğu bilgi kutusunda açıklanır.
@@ -4422,14 +4422,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01:** Çubuk tutulur (fare ya da klavye seçimi); sürükleme hayaleti görünür, geçerli hedefler aydınlanır, geçersizler (sabit dönem, sabitlenmiş çubuk üstü, rota dışı kaynak) gri ve engelli imleçle gösterilir.
 - **02:** Sürüklerken hedef hücrede ipucu balonu: hedef dönemlerin önce → sonra doluluğu ve etkilenen siparişin tahmini gecikmesi (anlık etki, 62).
 - **GIRDI**
-  - Çubuk: iş emri / planlı sipariş, kaynak, dönem aralığı, süre
+  - Çubuk: üretim siparişi / planlı sipariş, kaynak, dönem aralığı, süre
   - Hedef dönem ve (satır değişiyorsa) hedef kaynak
   - Kısıtlar: sabit dönem, sabitlemeler, operasyon sırası, rota alternatifleri
 - **03:** Bırakınca çubuk hedef bucket'ın başına oturur; dönem sayısı korunur. Başka kaynak satırına bırakıldıysa alternatif kaynak kontrolleri (53) çalışır ve süre çarpanla yeniden hesaplanır.
-- **04:** Doğrulama: aynı iş emrinin operasyon sırası bozulamaz; malzeme hazır tarihinden önceye taşınırsa uyarı; aşırı yük uyarı, engel değil.
+- **04:** Doğrulama: aynı üretim siparişinin operasyon sırası bozulamaz; malzeme hazır tarihinden önceye taşınırsa uyarı; aşırı yük uyarı, engel değil.
 - **ÇIKTI**
   - Elle plan kaydı (ManualPlanEntry, öneri): yük, yeni dönem / kaynak, sabitleme
-  - Değişiklik izi ve anlık etki; iş emri için ertele / öne çek / kaynak değiştir önerisi
+  - Değişiklik izi ve anlık etki; üretim siparişi için ertele / öne çek / kaynak değiştir önerisi
   - Yeniden hesap işi ve güncel plan çıktıları
 - **05:** Çubuk elle sabitlenmiş görünümüne geçer; taslağa ve değişiklik izine düşer; sağ kartta önce / sonra etkisi ve 'Geri al'.
 - **06:** 'Kaydet ve yeniden planla': model çubuğu sabit alır, bağlı operasyonları, malzemeyi ve bekleyen siparişleri yeniden çözer. Klavye: Alt + ← → dönem, Shift + ↑ ↓ satır; Ctrl + Z geri al.
@@ -4451,7 +4451,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Anlık etki (62), değişiklik izi (44), yeniden hesap (46).
   - Kaynak bazlı ve ürün bazlı görünümler aynı taşınmayı gösterir.
-  - Öneriler ekranına iş emri için öneri satırı.
+  - Öneriler ekranına üretim siparişi için öneri satırı.
 - **ÖRNEK:** WO-5530 (Freze, H45–H46) H47–H48'e sürüklenir: balon 'Freze %97 → %109, %92 → %103'. Bırakınca çubuk H47 başına oturur, sabitlenir; SO-1190/1 gecikmesi 4 → 11 gün tahmini. Geri al tek tık.
 
 ### 59 · Gantt · sürükle-bırak · yeniden hesaplanacak alanlar
@@ -4463,7 +4463,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Bağlı operasyon tarihleri:** WorkOrderOperation / PlannedOrder Yeniden hesapta; sonraki operasyonlar kayar
 - **Bileşen ihtiyaç tarihleri:** MRP / Pegging Yeniden hesapta
 - **Süre (satır değiştiyse):** Hesap (anlık) Alternatif kaynak çarpanı ve birimi
-- **Mevcut arz önerileri:** SupplyRecommendation İş emri için ertele / öne çek / kaynak değiştir
+- **Mevcut arz önerileri:** SupplyRecommendation Üretim siparişi için ertele / öne çek / kaynak değiştir
 - **Uyarılar ve metrikler:** PlanWarning, PlanMetric Yeniden hesap sonrası
 
 ### 59 · Gantt · sürükle-bırak · Sürükleme anı
@@ -4499,7 +4499,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 60 · Gantt · bölme ve birleştirme
 <sub>24. Ekranlar ve fonksiyonlar · F60 · F Manuel planlama · Çalışma prensibi 1/3</sub>
 
-- Bir iş emri ya da planlı sipariş çubuğunu miktarla parçalara bölmek ve parçaları yeniden tek çubukta birleştirmek.
+- Bir üretim siparişi ya da planlı sipariş çubuğunu miktarla parçalara bölmek ve parçaları yeniden tek çubukta birleştirmek.
 
 #### NASIL ÇALIŞIR
 
@@ -4509,17 +4509,17 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **01:** 'Böl' penceresinde miktar kaydırıcıyla ya da sayıyla ayrılır; her parçanın süresi orantıyla hesaplanır (set-up Faz 1'de yok, ek süre gelmez).
 - **02:** Parti kuralları kontrol edilir: minimum parti altına inen parça uyarı alır (parametre: engel).
 - **GIRDI**
-  - Çubuk (iş emri / planlı sipariş), miktar, süre, dönem aralığı
+  - Çubuk (üretim siparişi / planlı sipariş), miktar, süre, dönem aralığı
   - Parça miktarı (kaydırıcı ya da sayı); parti kuralları (minimum parti, kat)
   - 2. parçanın yeri: sonraki dönem ya da sürükleyerek
 - **03:** 2. parça varsayılan olarak sonraki döneme, aynı kaynağa konur; kullanıcı sonra sürükleyebilir (59) ya da alternatif / fasona aktarabilir (53, 54).
-- **04:** Parçalar aynı iş emrine bağlı kalır ('1/2', '2/2'); yeni parça elle sabitlenmiş, taslağa ve değişiklik izine düşer; anlık etki şeridi güncellenir.
+- **04:** Parçalar aynı üretim siparişine bağlı kalır ('1/2', '2/2'); yeni parça elle sabitlenmiş, taslağa ve değişiklik izine düşer; anlık etki şeridi güncellenir.
 - **05:** 'Birleştir': aynı işin parçaları seçilir, en erken başlangıca tek çubuk; süre toplanır.
 - **ÇIKTI**
   - Parça kayıtları (ManualPlanEntry, öneri): iş referansı, parça no, miktar, dönem, kaynak, sabitleme
-  - Değişiklik izi; iş emri için SupplyRecommendation 'böl' (öneri)
+  - Değişiklik izi; üretim siparişi için SupplyRecommendation 'böl' (öneri)
   - Yeniden hesap işi; parça bazlı DemandFulfillment ve Pegging
-- **06:** 'Kaydet ve yeniden planla': model parçaları ayrı yükler olarak sabit alır; teslim parça bazında (kısmi sevkiyat parametresi) hesaplanır. İş emri ERP'de tekse bölme 'bölme önerisi' olarak Öneriler ekranına düşer (öneri).
+- **06:** 'Kaydet ve yeniden planla': model parçaları ayrı yükler olarak sabit alır; teslim parça bazında (kısmi sevkiyat parametresi) hesaplanır. Üretim siparişi ERP'de tekse bölme 'bölme önerisi' olarak Öneriler ekranına düşer (öneri).
 
 ### 60 · Gantt · bölme ve birleştirme · kurallar ve etkiler
 <sub>24. Ekranlar ve fonksiyonlar · F60 · F Manuel planlama · Çalışma prensibi 2/3</sub>
@@ -4528,7 +4528,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Parça miktarları toplamı değişmez; miktar sıfır olamaz.
   - Minimum parti ve kat kuralı: uyarı ya da engel (parametre).
   - Set-up ve kalıp kısıtı Faz 1 dışında; bölme ek süre ya da maliyet getirmez.
-  - Birleştirme yalnız aynı iş emrinin parçaları için; farklı işler birleşmez.
+  - Birleştirme yalnız aynı üretim siparişinin parçaları için; farklı işler birleşmez.
   - Kısmi teslim parametresi kapalıysa teslim son parçanın tarihidir.
 - **HATA VE ISTISNA**
   - Minimum parti ihlali: alan kırmızı, neden; parametre engelse buton pasif.
@@ -4537,7 +4537,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **ETKISI VE TETIKLENENLER**
   - Anlık etki (62), değişiklik izi (44), yeniden hesap (46).
   - Kaynak bazlı ve sipariş bazlı görünümlerde parça satırları; pegging parça bazında.
-  - Öneriler ekranı: iş emri için bölme önerisi (öneri).
+  - Öneriler ekranı: üretim siparişi için bölme önerisi (öneri).
 - **ÖRNEK:** WO-5521 100 adet (38 sa, H46–H47) → 60 (23 sa, H46–H47) + 40 (15 sa, H48): CNC torna 1 H47 %112 → %100, H48 %98 → %108. SO-1182/1 teslimi 60 adet H47, 40 adet H48 (kısmi sevkiyat açık).
 
 ### 60 · Gantt · bölme ve birleştirme · yeniden hesaplanacak alanlar
@@ -4549,7 +4549,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Teslim (parça bazında):** DemandFulfillment Kısmi sevkiyat parametresine göre; yeniden hesapta
 - **Arz–talep bağı:** Pegging Parça bazında yeniden kurulur
 - **Bileşen ihtiyaç tarihleri:** MRP Parça başlangıçlarına göre
-- **Mevcut arz önerileri:** SupplyRecommendation İş emri için 'böl' (öneri)
+- **Mevcut arz önerileri:** SupplyRecommendation Üretim siparişi için 'böl' (öneri)
 - **Uyarılar ve metrikler:** PlanWarning, PlanMetric Yeniden hesap sonrası
 
 ### 60 · Gantt · bölme ve birleştirme · Bölme penceresi
@@ -4607,7 +4607,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Sabitleme sayısı eşiği aşınca uyarı; çözümsüzlükte sabitlemeler en yeni'den eskiye yumuşatılır ve hangi kilidin gevşediği yazılır.
 - **HATA VE ISTISNA**
   - Çözümsüzlük: model sabitlemeleri sırayla gevşetir, 'karşılanamayan sabitleme' uyarısı ve liste.
-  - Öğe ERP'de kaybolduysa (iş emri kapandı) sabitleme 'geçersiz', listede işaretli.
+  - Öğe ERP'de kaybolduysa (üretim siparişi kapandı) sabitleme 'geçersiz', listede işaretli.
   - Yetkisiz kullanıcı (End user) sabitleme ikonlarını görür ama değiştiremez.
 - **ETKISI VE TETIKLENENLER**
   - Yeniden hesap (46): sabitlenmiş öğeler kısıt.
@@ -4714,7 +4714,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 63 · Sabit dönem koruması
 <sub>24. Ekranlar ve fonksiyonlar · F63 · F Manuel planlama · Çalışma prensibi 1/2</sub>
 
-- Sabit dönemdeki plan değerlerinin hiçbir görünümde değişmemesi ve modelin dokunmaması; üretim ERP iş emirleriyle yürür.
+- Sabit dönemdeki plan değerlerinin hiçbir görünümde değişmemesi ve modelin dokunmaması; üretim ERP üretim siparişleriyle yürür.
 
 #### NASIL ÇALIŞIR
 
@@ -4722,14 +4722,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Sistem (her görünümde otomatik) · dönem uzunluğu: Admin ve üstü (parametre seti) · çalışmada geçici değişiklik: Admin ve üstü (öneri)
   - Nereden: Zaman yapısı parametresi (23) · tüm planlama görünümlerinde gri / kilitli hücre ve çubuklar · ipucu ve parametreye bağlantı
 - **01:** Zaman yapısından sabit dönem alınır; bucket'lar işaretlenir (ör. H44).
-- **02:** Tüm görünümlerde sabit dönemdeki hücre ve çubuklar gri ve kilitli; tıklama ya da bırakma denemesinde ipucu: dönem, değerin kaynağı (ERP iş emri) ve parametre bağlantısı.
-- **03:** Model sabit dönemdeki iş emirlerini tarih ve miktarıyla sabit alır; bu döneme planlı sipariş üretmez; karşılanamayan talep uyarı olur ('sabit dönemde karşılanamayan talep').
+- **02:** Tüm görünümlerde sabit dönemdeki hücre ve çubuklar gri ve kilitli; tıklama ya da bırakma denemesinde ipucu: dönem, değerin kaynağı (ERP üretim siparişi) ve parametre bağlantısı.
+- **03:** Model sabit dönemdeki üretim siparişlerini tarih ve miktarıyla sabit alır; bu döneme planlı sipariş üretmez; karşılanamayan talep uyarı olur ('sabit dönemde karşılanamayan talep').
 - **GIRDI**
   - Sabit dönem uzunluğu (TimeBucketDefinition / parametre seti)
-  - ERP'deki açık iş emirleri (tarih, miktar, kaynak) ve gerçekleşmeler
+  - ERP'deki açık üretim siparişleri (tarih, miktar, kaynak) ve gerçekleşmeler
   - Çalışmada geçici değişiklik isteği (öneri)
 - **04:** Sürükle-bırak hedefi olarak reddedilir (kırmızı hayalet); talebe eşitle ve toplu işlemler dönemi atlar; yük taşıma hedef listesinde pasif.
-- **05:** Kapasite ve doluluk sabit dönem için ERP iş emirlerinden hesaplanır ve raporlanır; geçici duruş girilirse yalnız doluluk raporu değişir, plan değişmez.
+- **05:** Kapasite ve doluluk sabit dönem için ERP üretim siparişlerinden hesaplanır ve raporlanır; geçici duruş girilirse yalnız doluluk raporu değişir, plan değişmez.
 - **06:** Dönem uzunluğu parametre setinden değiştirilir (Admin); çalışmada geçici olarak 0 ya da 2 hafta yapmak WorkspaceOverride ile mümkündür, yalnız Admin ve üstü, tüm plan yeniden hesaplanır (öneri).
 - **ÇIKTI**
   - Görünümlerde sabitlenmiş / gri dönem; ipucu metinleri
@@ -4741,25 +4741,25 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Sabit dönem Key user tarafından hiçbir görünümde değiştirilemez; sistem kilididir.
-  - Model bu döneme planlı sipariş üretmez, iş emri taşımaz.
+  - Model bu döneme planlı sipariş üretmez, üretim siparişi taşımaz.
   - Dönem uzunluğu parametre setine aittir; senaryolar farklı setlerle farklı sabit dönemle çalışabilir.
   - Çalışmada geçici kaldırma Admin ve üstü; denetim izine 'sabit dönem kaldırıldı' yazılır (öneri).
-  - Sabit dönemdeki iş emrinin miktar kalanı gerçekleşmelerden (ProductionConfirmation), operasyon kalanı WorkOrderOperation'dan okunur.
+  - Sabit dönemdeki üretim siparişinin miktar kalanı gerçekleşmelerden (ProductionConfirmation), operasyon kalanı WorkOrderOperation'dan okunur.
 - **HATA VE ISTISNA**
-  - Sabit dönemde talep karşılanamıyor: uyarı, model sonraki döneme kaydırır; kullanıcı ERP'de iş emri açmalıdır (ERP'ye yazma Faz 1'de yok).
+  - Sabit dönemde talep karşılanamıyor: uyarı, model sonraki döneme kaydırır; kullanıcı ERP'de üretim siparişi açmalıdır (ERP'ye yazma Faz 1'de yok).
   - Geçici kaldırma sonrası yayın: yayın kontrolünde 'sabit dönem kaldırılmış' uyarısı, onay ister.
-  - ERP iş emri sabit dönemde yoksa (yeni ürün): model uyarı üretir, planlı sipariş yine üretmez.
+  - ERP üretim siparişi sabit dönemde yoksa (yeni ürün): model uyarı üretir, planlı sipariş yine üretmez.
 - **ETKISI VE TETIKLENENLER**
   - Tüm manuel planlama fonksiyonları: dönem reddi.
   - Model: kısıt; uyarılar.
   - Yayın kontrolleri (76): geçici kaldırma uyarısı.
 - **YENİDEN HESAPLANACAK ALANLAR:** Alan Nerede Ne zaman / neden
-- **Sabit dönem planı:** PlannedOrder / WorkOrder (`IsFixed`) Değişmez; ERP iş emirlerinden
-- **Sabit dönem yükü ve doluluk:** CapacityLoad ERP iş emirlerinden hesaplanır; geçici duruş yalnız raporu etkiler
+- **Sabit dönem planı:** PlannedOrder / WorkOrder (`IsFixed`) Değişmez; ERP üretim siparişlerinden
+- **Sabit dönem yükü ve doluluk:** CapacityLoad ERP üretim siparişlerinden hesaplanır; geçici duruş yalnız raporu etkiler
 - **Karşılanamayan talep:** PlanWarning, DemandFulfillment Sabit dönemde arz yetmezse; sonraki döneme kayar
 - **Dönem uzunluğu değişirse:** Tüm plan (PlanRun) Parametre ya da geçici değişiklikte tamamı yeniden hesaplanır
 - **Görünüm durumu:** Ekran (anlık) Hangi bucket'ların sabitlenmiş olduğu
-- **ÖRNEK:** H44 dondurulmuş: WO-5530'u H44'e sürüklemek kırmızı hayaletle reddedilir. SO-1190/1'in 40 adet K-22 talebi H44'te karşılanamıyor → uyarı, plan H45'e kaydırır; sahada iş emri açılması gerekir.
+- **ÖRNEK:** H44 dondurulmuş: WO-5530'u H44'e sürüklemek kırmızı hayaletle reddedilir. SO-1190/1'in 40 adet K-22 talebi H44'te karşılanamıyor → uyarı, plan H45'e kaydırır; sahada üretim siparişi açılması gerekir.
 - **AÇIK KONU:** Çalışmada sabit dönemi geçici kaldırma (0 hafta) olsun mu? Öneri: Admin ve üstü, yayın öncesi uyarıyla.
 
 ### 63 · Sabit dönem koruması · Bırakma engeli
@@ -4768,7 +4768,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![63 · Sabit dönem koruması · Bırakma engeli](mockups/m24f-0615-63-dondurulmus-donem-korumasi-birakma-engeli.png)
 
 - **Kırmızı hayalet:** Sabit dönemdeki bucket üstünde hayalet kırmızı; ipucu nedeni ve parametre yolunu yazar.
-- **Sabit değerler:** Sağ kartta sabit dönemdeki iş emirleri ve karşılanamayan talep.
+- **Sabit değerler:** Sağ kartta sabit dönemdeki üretim siparişleri ve karşılanamayan talep.
 - **Parametre bağlantısı:** Dönem uzunluğu zaman yapısı parametresinden; tek tıkla geçiş.
 - **Model kuralı:** Planlı sipariş üretilmediği bilgi kutusunda.
 
@@ -4778,7 +4778,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![63 · Sabit dönem koruması · Hücre ipucu](mockups/m24f-0616-63-dondurulmus-donem-korumasi-hucre-ipucu.png)
 
 - **Tıklama engeli:** Gri hücreye tıklayınca düzenleme açılmaz; ipucu çıkar.
-- **Değerin kaynağı:** Değerin hangi ERP iş emirlerinden geldiği yazılı.
+- **Değerin kaynağı:** Değerin hangi ERP üretim siparişlerinden geldiği yazılı.
 - **Kim değiştirir:** Parametre Admin yetkisinde; Key user yönlendirilir.
 - **Tutarlı görünüm:** Gri + sabitleme tüm görünümlerde aynı anlam.
 
@@ -4800,7 +4800,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **65 · Eksik filtresi:** Malzeme planında yalnız eksiği olan malzemeleri öne çıkarmak; temin süresi içinde kalan, yeni siparişle kapanamayacak eksikleri ayrıca işaretleyerek planlamacının önce nereye bakacağını söylemek.
 - **66 · Planlı sipariş kararı:** Plan hesabının ürettiği üretim, satın alma ve fason önerilerini tek tek değerlendirip onaylamak, reddetmek ya da bekletmek; gerekirse yuvarlanmış miktarı ve tarihi elle düzeltmek. Yayına yalnız karar verilmiş öneriler girer.
 - **67 · Toplu karar:** Filtreyle daraltılmış öneri satırlarını tek işlemde onaylamak, bekletmek ya da reddetmek; onaydan önce istisnaları (elle değiştirilmiş, yetişmeyecek) göstererek yanlış toplu onayı önlemek.
-- **68 · Mevcut arz önerisi kararı:** Açık satın alma siparişleri ve iş emirleri için üretilen öne çek, ertele, azalt ve iptal önerilerini değerlendirmek; yeni sipariş açmadan önce mevcut arzı düzelterek stok ve gecikmeyi azaltmak.
+- **68 · Mevcut arz önerisi kararı:** Açık satın alma siparişleri ve üretim siparişleri için üretilen öne çek, ertele, azalt ve iptal önerilerini değerlendirmek; yeni sipariş açmadan önce mevcut arzı düzelterek stok ve gecikmeyi azaltmak.
 - **69 · Önerileri dışa aktarma:** Onaylanan planlı siparişleri ve mevcut arz önerilerini ERP'de işlenebilir Excel dosyalarına çıkarmak; Faz 1'de ERP'ye geri yazma olmadığından aktarımın izini elle işaretle tutmak.
 
 ### 64 · Malzeme planı
@@ -4827,7 +4827,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Malzeme × dönem görünümü ve proje kırılımı
   - Hücre bazında pegging penceresi; Pegging (70) ve Öneriler (16) ekranlarına geçiş
   - Excel çıktısı
-- **06:** Hücreye tıklanınca pegging penceresi açılır: ihtiyacı oluşturan talepler ya da arzın kaynağı (sipariş numarası, iş emri).
+- **06:** Hücreye tıklanınca pegging penceresi açılır: ihtiyacı oluşturan talepler ya da arzın kaynağı (sipariş numarası, üretim siparişi).
 - **07:** Görünüm Excel'e aktarılır (malzeme × dönem, seçili filtreyle).
 
 ### 64 · Malzeme planı · kurallar ve etkiler
@@ -4856,7 +4856,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![64 · Malzeme planı · Hücreden pegging](mockups/m24f-0621-64-malzeme-plani-hucreden-pegging.png)
 
 - **Beş satır:** Brüt ihtiyaç, açık arz, planlı sipariş, stok projeksiyonu, eksik; her dönem için.
-- **Hücre detayı:** Tıklanan ihtiyaç hücresi talepleri açar: iş emri, planlı, sipariş bağımlı.
+- **Hücre detayı:** Tıklanan ihtiyaç hücresi talepleri açar: üretim siparişi, planlı, sipariş bağımlı.
 - **Temin süresi işareti:** Yetişmeyecek eksik ayrı satırda kırmızı; çözüm öne çekmedir.
 - **Proje kırılımı:** Ayrılmış stok ve ortak stok alt kartta ayrı izlenir.
 
@@ -5107,7 +5107,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 68 · Mevcut arz önerisi kararı
 <sub>24. Ekranlar ve fonksiyonlar · F68 · G Malzeme ve öneriler · Çalışma prensibi 1/3</sub>
 
-- Açık satın alma siparişleri ve iş emirleri için üretilen öne çek, ertele, azalt ve iptal önerilerini değerlendirmek; yeni sipariş açmadan önce mevcut arzı düzelterek stok ve gecikmeyi azaltmak.
+- Açık satın alma siparişleri ve üretim siparişleri için üretilen öne çek, ertele, azalt ve iptal önerilerini değerlendirmek; yeni sipariş açmadan önce mevcut arzı düzelterek stok ve gecikmeyi azaltmak.
 
 #### NASIL ÇALIŞIR
 
@@ -5118,7 +5118,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02:** Karar: onayla (öneri yayına ve ERP işlem listesine girer), beklet, reddet (neden zorunlu).
 - **GIRDI**
   - SupplyRecommendation: arz (PO / WO), eylem (öne çek, ertele, azalt, iptal, hızlandır), mevcut ve önerilen tarih / miktar, neden
-  - Tedarikçi temin süresi ve iş emri bayrakları (`IsStarted`, `IsFixed`)
+  - Tedarikçi temin süresi ve üretim siparişi bayrakları (`IsStarted`, `IsFixed`)
   - Parametre: aynı projenin kesin arzı varken yeni sipariş açılsın mı
 - **03:** Reddetmede eksiğin nasıl kapanacağı seçilir: model yeni planlı sipariş açsın (parametre bu çalışmada açılır), eksik kalsın (gecikme uyarısı), alternatif tedarikçi önerilsin.
 - **04:** Onaylanan öne çekme / erteleme, sonraki hesapta arzın yeni tarihiyle (kesin arz olarak) alınır; iptal onayı arzı plandan çıkarır.
@@ -5134,7 +5134,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Aynı projenin kesin arzı varsa model yeni sipariş yerine öne çekme önerir; red durumunda yeni sipariş ancak parametre açılırsa üretilir.
-  - `IsStarted` iş emri iptal önerisi almaz; yalnız azalt ya da ertele. `IsFixed` iş emrinin tarihi ve miktarı için öneri üretilmez.
+  - `IsStarted` üretim siparişi iptal önerisi almaz; yalnız azalt ya da ertele. `IsFixed` üretim siparişinin tarihi ve miktarı için öneri üretilmez.
   - Öne çekme önerisi tedarikçi temin süresini aşamaz; sınırda ise 'teyit gerekir' etiketiyle gelir.
   - Sabit dönemdeki arz ertelenemez; öne çekilebilir.
   - Onaylanan öneri ERP'de gerçekleşene kadar planda 'kabul edilmiş öneri' olarak izlenir; bir sonraki veri yüklemesinde ERP tarihi gelince öneri kapanır.
@@ -5196,13 +5196,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **GIRDI**
   - Karar durumlu öneriler (PlannedOrder + karar, SupplyRecommendation + karar)
   - Kapsam: onaylananlar / seçili / tümü
-  - Biçim şablonları: satın alma talebi (tedarikçi bazlı), iş emri açma listesi, ERP işlem listesi, ham liste
+  - Biçim şablonları: satın alma talebi (tedarikçi bazlı), üretim siparişi açma listesi, ERP işlem listesi, ham liste
 - **03:** Dosya üretilir: başlıkta çalışma / onaylı plan versiyonu, veri versiyonu, hesap zamanı ve kullanıcı; satırlarda öneri numarası (PS-, AR-) kalıcıdır.
 - **04:** Dışa aktarım izine yazılır (kim, ne, hangi plan, kaç satır).
-- **05:** ERP takibi (öneri): kullanıcı satırı 'ERP'ye aktarıldı' olarak belge numarasıyla işaretler; bir sonraki veri yüklemesinde ERP'den gelen sipariş / iş emri öneriyle eşlenir ve öneri kapanır.
+- **05:** ERP takibi (öneri): kullanıcı satırı 'ERP'ye aktarıldı' olarak belge numarasıyla işaretler; bir sonraki veri yüklemesinde ERP'den gelen sipariş / üretim siparişi öneriyle eşlenir ve öneri kapanır.
 - **06:** Yayınlanmış plan için aynı dosya Raporlar'dan tekrar üretilebilir; içerik yayın anındaki kararlardır.
 - **ÇIKTI**
-  - xlsx: satın alma talebi, iş emri listesi, ERP işlem listesi, ham liste (seçime göre sayfalar)
+  - xlsx: satın alma talebi, üretim siparişi listesi, ERP işlem listesi, ham liste (seçime göre sayfalar)
   - Dışa aktarım izi kaydı
   - ERP aktarım işareti ve belge numarası (öneri)
 
@@ -5223,8 +5223,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - ERP aktarım işareti (öneri) Öneriler ekranında sütun olarak görünür.
   - Planı etkilemez.
 - **YENİDEN HESAPLANACAK ALANLAR:** Yeniden hesap gerektirmez. Dışa aktarım planı değiştirmez; ERP'den gelen gerçek belge bir sonraki veri yüklemesinde açık arz olarak plana girer ve öneri kapanır.
-- **ÖRNEK:** Yayın v15 sonrası: 38 onaylı planlı sipariş → satın alma talebi (Mekan Rulman, Anadolu Çelik, Ege Conta sayfaları), 6 iş emri, 6 ERP işlemi (öne çek / ertele). Ertesi gün PO-7840 ERP'den gelince PS-2041 kapanır.
-- **AÇIK KONU:** ERP'ye geri yazma (satın alma talebi ve iş emri açma) Faz 1 dışında; elle işaretleme yeterli mi, yoksa Faz 1'de SQL arayüz tablosuna yazma düşünülsün mü?
+- **ÖRNEK:** Yayın v15 sonrası: 38 onaylı planlı sipariş → satın alma talebi (Mekan Rulman, Anadolu Çelik, Ege Conta sayfaları), 6 üretim siparişi, 6 ERP işlemi (öne çek / ertele). Ertesi gün PO-7840 ERP'den gelince PS-2041 kapanır.
+- **AÇIK KONU:** ERP'ye geri yazma (satın alma talebi ve üretim siparişi açma) Faz 1 dışında; elle işaretleme yeterli mi, yoksa Faz 1'de SQL arayüz tablosuna yazma düşünülsün mü?
 
 ### 69 · Önerileri dışa aktarma · Kapsam ve biçim
 <sub>24. Ekranlar ve fonksiyonlar · F69 · G Malzeme ve öneriler · Mockup 1/2</sub>
@@ -5232,7 +5232,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![69 · Önerileri dışa aktarma · Kapsam ve biçim](mockups/m24f-0645-69-onerileri-disa-aktarma-kapsam-ve-bicim.png)
 
 - **Kapsam seçimi:** Onaylananlar varsayılan; seçili satırlar ya da tümü (durum sütunuyla).
-- **Biçimler:** Satın alma talebi, iş emri listesi, ERP işlem listesi; aynı dosyada sayfalar.
+- **Biçimler:** Satın alma talebi, üretim siparişi listesi, ERP işlem listesi; aynı dosyada sayfalar.
 - **Sınır bilgisi:** Faz 1'de ERP'ye geri yazma olmadığı bilgi kutusunda yazar.
 - **Adım göstergesi:** Kapsam → biçim → dosya; üç adım tek pencerede.
 
@@ -5250,7 +5250,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · Fonksiyon prensipleri ve mockuplar</sub>
 
 - Her fonksiyon için: çalışma prensibi (nasıl çalışır · kurallar ve etkiler, 2 slayt) ve adım adım mockup. Yeniden hesaplanacak alanlar 2. slaytta.
-- **70 · Pegging:** Bir talebin hangi stok, iş emri, satın alma ya da planlı siparişle karşılandığını (talepten aşağı) ve bir arzın hangi talepleri beslediğini (arzdan yukarı) ağaç olarak göstermek; eksikliğin nerede doğduğunu düğüm düğüm görünür kılmak.
+- **70 · Pegging:** Bir talebin hangi stok, üretim siparişi, satın alma ya da planlı siparişle karşılandığını (talepten aşağı) ve bir arzın hangi talepleri beslediğini (arzdan yukarı) ağaç olarak göstermek; eksikliğin nerede doğduğunu düğüm düğüm görünür kılmak.
 - **71 · Gecikme nedeni:** Geciken ya da karşılanmayan her talep için gecikmeyi oluşturan kapasite, malzeme, öncelik ve sabitleme nedenlerini katkı sırasına göre bulmak ve planlamacının anlayacağı sade bir cümleyle açıklamak; Faz 1'de dil modeli kapalı, açıklama şablondan üretilir.
 - **72 · Termin sorgusu:** Yeni bir talep için (ürün, miktar, istenen tarih) mevcut planı bozmadan en erken teslim tarihini, bölerek teslim seçeneğini ve termini kısıtlayan kaynak ya da malzemeyi hesaplamak; satış ve planlamanın teklif öncesi sorusuna hızlı cevap vermek.
 - **73 · Olay senaryosu:** Planı bozmadan 'ne olursa' sorusuna cevap vermek: kaynak duruşu, tedarikçi gecikmesi, sipariş iptali, talep değişimi ya da yeni kaynak gibi bir olayın termin, kapasite ve malzeme üzerindeki etkisini önce / sonra olarak göstermek.
@@ -5261,7 +5261,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · F70 · H Analiz · Çalışma prensibi 1/2</sub>
 
 - **Not (K-198):** özel alokasyon kuralı (K-198); netleştirme sırası Aşama 10'da yeniden yazılacak.
-- Bir talebin hangi stok, iş emri, satın alma ya da planlı siparişle karşılandığını (talepten aşağı) ve bir arzın hangi talepleri beslediğini (arzdan yukarı) ağaç olarak göstermek; eksikliğin nerede doğduğunu düğüm düğüm görünür kılmak.
+- Bir talebin hangi stok, üretim siparişi, satın alma ya da planlı siparişle karşılandığını (talepten aşağı) ve bir arzın hangi talepleri beslediğini (arzdan yukarı) ağaç olarak göstermek; eksikliğin nerede doğduğunu düğüm düğüm görünür kılmak.
 
 #### NASIL ÇALIŞIR
 
@@ -5269,13 +5269,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Kim: Key user ve üstü (çalışma) · End user onaylı plan pegging'ini raporda salt okunur görür
   - Nereden: Menü · Çalışma › 'Pegging' · Sipariş bazlı, Malzeme planı ve Uyarılar ekranlarından 'pegging' bağlantısı
 - **01:** Başlangıç seçilir: arama kutusuna sipariş, malzeme, proje ya da arz belgesi yazılır; ya da başka ekrandan bağlantıyla gelinir. Yön: talepten aşağı ya da arzdan yukarı.
-- **02:** Ağaç Pegging tablosundan kurulur: talep → arz (stok, iş emri, satın alma, planlı sipariş) → alt seviye ihtiyaç → …; her düğümde miktar, dönem, proje etiketi.
+- **02:** Ağaç Pegging tablosundan kurulur: talep → arz (stok, üretim siparişi, satın alma, planlı sipariş) → alt seviye ihtiyaç → …; her düğümde miktar, dönem, proje etiketi.
 - **GIRDI**
   - Plan hesabının Pegging tablosu (arz–talep bağları, miktar, dönem) ve DemandFulfillment
   - Ürün ağacı (BOM), stok sahipliği (proje / ortak), açık arz ve planlı siparişler
   - PlanWarning: kapasite ve malzeme kısıt işaretleri
   - Başlangıç noktası: sipariş satırı, tahmin, proje ya da arz belgesi
-- **03:** Kısıt işaretleri düğüme eklenir: aşırı yüklü kaynak (kapasite), eksik malzeme (adet), bölünmüş iş emri, temin süresi içinde eksik; işaretler PlanWarning'den gelir.
+- **03:** Kısıt işaretleri düğüme eklenir: aşırı yüklü kaynak (kapasite), eksik malzeme (adet), bölünmüş üretim siparişi, temin süresi içinde eksik; işaretler PlanWarning'den gelir.
 - **04:** Düğümler genişletilip daraltılır; 'yalnız kısıtlı düğümler' filtresi sorunlu yolu bırakır. Kapsam: tüm seviyeler ya da n seviye.
 - **05:** Düğüm menüsünden ilgili ekrana geçilir: kaynak bazlı planlama, kaynak doluluk, malzeme planı, öneriler, uyarı.
 - **06:** Sağda özet: eksikliğin nedeni (71), arz için 'kimi besliyor' ve ertelenirse etkilenenler.
@@ -5591,7 +5591,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **KURALLAR VE SINIRLAR**
   - Taslak ürün ana veriye yazılmaz; çalışma yayınlansa da taslak ürün onaylı plana 'taslak' etiketiyle girer, ERP'ye aktarılmaz (öneri).
-  - Yeni bileşenin tedarikçisi yoksa temin süresi elle girilir; yoksa 'tedarikçi tanımsız' uyarısıyla satın alma önerisi üretilmez.
+  - Yeni bileşenin tedarikçisi yoksa temin süresi elle girilir; yoksa 'tedarikçi tanımsız' uyarısıyla satın alma planı üretilmez.
   - Rota operasyonu mevcut bir kaynağa bağlanmak zorundadır; taslak kaynak yok (kaynak ekleme olay senaryosuyla, 73).
   - Geçici hesap süre bütçesi 72 ile aynıdır.
   - Taslaklar çalışmayla birlikte silinir; kalıcı olması için yayınlanmalı ya da dışa aktarılmalıdır.
@@ -6163,7 +6163,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Önceki sabahın veri versiyonu ve onaylı planı (fark referansı)
   - Ana senaryo seçimi (varsayılan Baz) ve uyarı önem sırası (WarningDefinition)
 - **03:** Açık uyarılar önem ve kategoriye göre sıralanır; ilk beş gösterilir, sayaçlar dünkü sabahla karşılaştırılır.
-- **04:** 'Dünden bugüne': önceki sabahın veri versiyonu ve onaylı planı ile bugünkü veri versiyonu karşılaştırılır (açık sipariş, iptal, geciken, doluluk, darboğaz, satın alma önerisi).
+- **04:** 'Dünden bugüne': önceki sabahın veri versiyonu ve onaylı planı ile bugünkü veri versiyonu karşılaştırılır (açık sipariş, iptal, geciken, doluluk, darboğaz, satın alma planı).
 - **05:** Ekran canlıdır (WebSocket): gece akışı sürüyorsa adımlar ilerledikçe, gün içinde yükleme yapılırsa fark tablosu tazelenir.
 - **06:** Aksiyonlar: 'Uyarılara git' (kritik filtresiyle, 83), 'Baz senaryoda çalışma aç' (43), hatalı senaryo satırında 'Yeniden çalıştır' (41), fark satırından detay çekmecesi.
 - **ÇIKTI**

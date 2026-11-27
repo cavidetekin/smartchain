@@ -1,6 +1,6 @@
 """Özel alokasyon (K-198): arz satırının seviyesi, anahtarı ve satır bayrağı.
 
-Tek kural: anahtarlı arz yalnız sahibine gider, anahtarsız arz herkese açıktır. Bu modül arzın (stok, iş emri, satın alma satırı) anahtarını
+Tek kural: anahtarlı arz yalnız sahibine gider, anahtarsız arz herkese açıktır. Bu modül arzın (stok, üretim siparişi, satın alma satırı) anahtarını
 hesaplar; kuralın motordaki ve pegging'deki uygulanışı kendi adımlarındadır (7.15, 7.17, Aşama 10).
 
 Hesap (aktarım, sentetik yükleme ve yeniden hesap aynı ifadeleri kullanır):

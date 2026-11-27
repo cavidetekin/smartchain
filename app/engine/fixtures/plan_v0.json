@@ -10,7 +10,7 @@
      "StartDate": "2026-11-16", "DueDate": "2026-11-20", "BucketStart": "2026-11-16"}
   ],
   "supply_recommendations": [
-    {"SupplyType": "İş emri", "SupplyId": 3001, "Action": "Öne çek",
+    {"SupplyType": "Üretim siparişi", "SupplyId": 3001, "Action": "Öne çek",
      "CurrentDate": "2026-11-20", "ProposedDate": "2026-11-13", "ProposedQty": 60}
   ],
   "demand_fulfillment": [

@@ -43,9 +43,9 @@ export const TRANSACTION_TABS: TabDef[] = [
     { list: "transaction-stock", slug: "stok", label: X.tables.stock },
     { list: "transaction-borrow-payback", slug: "odunc-ve-geri-odeme", label: X.tables.borrowPayback }] },
   { key: "uretim", label: X.tabs.production, tables: [
-    { list: "transaction-work-order", slug: "is-emri", label: X.tables.workOrder },
-    { list: "transaction-work-order-component", slug: "is-emri-bileseni", label: X.tables.workOrderComponent },
-    { list: "transaction-work-order-operation", slug: "is-emri-operasyonu", label: X.tables.workOrderOperation },
+    { list: "transaction-work-order", slug: "uretim-siparisi", label: X.tables.workOrder },
+    { list: "transaction-work-order-component", slug: "uretim-siparisi-bileseni", label: X.tables.workOrderComponent },
+    { list: "transaction-work-order-operation", slug: "uretim-siparisi-operasyonu", label: X.tables.workOrderOperation },
     { list: "transaction-production-confirmation", slug: "uretim-gerceklesmesi", label: X.tables.productionConfirmation }] },
   { key: "satin-alma", label: X.tabs.purchase, tables: [
     { list: "transaction-purchase-order", slug: "satin-alma-siparisi", label: X.tables.purchaseOrder }] },

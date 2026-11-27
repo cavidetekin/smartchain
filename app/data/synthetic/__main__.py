@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         configure_demo(engine)
         print(f"SQL kaynağı: {m['database']} · {len(m['tables'])} tablo, {sum(m['tables'].values())} satır, {len(m['errors'])} kasıtlı hata")
-        print("Demo: Ürün ağacı, Rota, Stok, Satış siparişi, İş emri SQL ve view'lı; Malzeme ekranda seçilir.")
+        print("Demo: Ürün ağacı, Rota, Stok, Satış siparişi, Üretim siparişi SQL ve view'lı; Malzeme ekranda seçilir.")
         return 0
     from db import guard
     from .load import ResetRefused, SyntheticLockError, load, reset, unload

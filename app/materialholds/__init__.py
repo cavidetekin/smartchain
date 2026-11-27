@@ -5,7 +5,7 @@ Kayıt `param.MaterialHold`'dadır (lokasyon, malzeme, tür, başlangıç, biti�
 liste, servis ve motor arayüzü buradan okur.
 
 Kurallar:
-- Blokaj yalnız yeni plan önerilerini durdurur; açık iş emirleri ve açık satın alma siparişleri etkilenmez. Satış blokajı yoktur.
+- Blokaj yalnız yeni plan önerilerini durdurur; açık üretim siparişleri ve açık satın alma siparişleri etkilenmez. Satış blokajı yoktur.
 - Tür: Üretim · Satın alma · Üretim ve satın alma. Tür malzemenin tedarik biçimine uyar: `Material.IsProducible` Hayır ise "Üretim" içeren,
   `IsPurchasable` Hayır ise "Satın alma" içeren tür reddedilir; alan boşsa (bilinmiyor) izin verilir.
 - Blokajlar birleşir: bir gün, türü o tedarik biçimini kapsayan geçerli kayıtlardan herhangi biri kapsıyorsa o tedarik biçiminde blokajlıdır. Aynı

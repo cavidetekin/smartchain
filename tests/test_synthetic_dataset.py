@@ -82,7 +82,7 @@ def test_references_resolve(ds):
     assert len(keys) == len(set(keys))
     groups = {g["Id"]: g for g in ds.rows("ResourceGroup")}
     assert all(o["ResourceGroupId"] and "ResourceId" not in o for o in ds.rows("WorkOrderOperation"))
-    assert not [o for o in ds.rows("WorkOrderOperation") if groups[o["ResourceGroupId"]]["IsEmployee"]]  # iş emri operasyonu yalnız Primary satırdan
+    assert not [o for o in ds.rows("WorkOrderOperation") if groups[o["ResourceGroupId"]]["IsEmployee"]]  # üretim siparişi operasyonu yalnız Primary satırdan
 
 
 def test_resource_side(ds):
@@ -188,7 +188,7 @@ def test_bottleneck_orders(ds):
 
 @pytest.mark.parametrize("offset", range(7))
 def test_no_accidental_past_due_on_any_weekday(offset):
-    """Tarihten bağımsızlık (7.11): set haftanın hangi günü üretilirse üretilsin, bilerek konan sipariş (durum 9) dışında hiçbir açık sipariş, iş emri
+    """Tarihten bağımsızlık (7.11): set haftanın hangi günü üretilirse üretilsin, bilerek konan sipariş (durum 9) dışında hiçbir açık sipariş, üretim siparişi
     ya da satın alma siparişi "tarihi geçmiş" durumda değildir (kirli veri testi ve veri kalitesi beklenmeyen uyarı görmez). Pazartesi'den Pazar'a."""
     on = date(2026, 11, 16) + timedelta(days=offset)
     assert on.weekday() == offset

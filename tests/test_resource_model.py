@@ -78,7 +78,7 @@ def test_no_capacity_check_reads_work_patterns_and_the_critical_group(eng):
 
 
 def test_demand_chain_reaches_the_resource_through_its_group(eng):
-    """Zincir: rota ve iş emri operasyonu → kaynak grubu → grup eşleşmesi → kaynak. Kaynağın malzemeleri gruplarının malzemeleridir."""
+    """Zincir: rota ve üretim siparişi operasyonu → kaynak grubu → grup eşleşmesi → kaynak. Kaynağın malzemeleri gruplarının malzemeleridir."""
     group = core_id(eng, "ResourceGroup", Code=NO_CAPACITY_GROUP)
     resource = core_id(eng, "Resource", Code=d.NO_CAPACITY_RESOURCE)
     with Session(eng) as s:
@@ -99,7 +99,7 @@ def test_demand_chain_reaches_the_resource_through_its_group(eng):
 
 
 def test_record_card_relations(api, db_engine):
-    """K-173, K-180: Kaynak → Kaynak grup eşleşmesi (rota yok); Kaynak grubu → Kaynak grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Fason kaynak grubu."""
+    """K-173, K-180: Kaynak → Kaynak grup eşleşmesi (rota yok); Kaynak grubu → Kaynak grup eşleşmesi, Rota, Üretim siparişi operasyonu; Tedarikçi → Fason kaynak grubu."""
     group = core_id(db_engine, "ResourceGroup", Code=d.BOTTLENECK_GROUP)
     resource = _members(db_engine, ResourceGroupId=group)[0][1]
     card = api.get(f"/api/records/master-resource/{resource}").json()
@@ -121,7 +121,7 @@ def test_record_card_relations(api, db_engine):
 
 
 def test_consumption_decimals_come_from_the_group_unit(api, db_engine):
-    """Rota ve iş emri operasyonunda tüketim grubun kapasite biriminin ondalığıyla; kaynağın günlük kapasitesi gruplarının ortak biriminden,
+    """Rota ve üretim siparişi operasyonunda tüketim grubun kapasite biriminin ondalığıyla; kaynağın günlük kapasitesi gruplarının ortak biriminden,
     grubu olmayan kaynakta varsayılan ondalık (K-168, K-180)."""
     units = dict(_sql(db_engine, "SELECT g.Code, u.Decimals FROM core.ResourceGroup g JOIN core.UnitOfMeasure u ON u.Code = g.CapacityUnit WHERE g.VersionTo IS NULL").all())
     assert units

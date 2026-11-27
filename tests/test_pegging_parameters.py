@@ -17,7 +17,7 @@ from auth_helpers import auth, delete_users, ensure_user
 NEED_START = [("Dönem", "Artan"), ("Kesin sipariş", None), ("Teklif", None), ("Beklemedeki sipariş", None), ("Tahmin", None), ("Üretim siparişi ihtiyacı", None),
               ("Üretim planı ihtiyacı", None), ("Öncelik grubu", "Artan"), ("İhtiyaç tarihi", "Artan"), ("Sipariş no", "Artan")]
 SUPPLY_START = [("Dönem", "Artan"), ("Stok", None), ("Kalitedeki stok", None), ("Üretim siparişi", None), ("Satın alma siparişi", None), ("Arz tarihi", "Artan"),
-                ("Üretim planı", None), ("Satın alma önerisi", None), ("Son kullanma tarihi", "Artan")]
+                ("Üretim planı", None), ("Satın alma planı", None), ("Son kullanma tarihi", "Artan")]
 KEYS = ("FullPeggingMethod", "CustomAllocation")
 
 

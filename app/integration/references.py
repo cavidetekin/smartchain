@@ -1,7 +1,7 @@
 """İlişki haritası (K-146): her ilişki alanının baktığı tablo ve anahtar; zorunlu mu, isteğe bağlı mı; ebeveyn pasifse sınıf.
 
 Tek kaynak docs/03 "İlişki haritası" tablosudur (test ikisini karşılaştırır). Zorunlu: sözleşmede alan zorunludur (ZOR. E). İsteğe bağlı: alan
-boş bırakılabilir. Rota ve iş emri operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). İstisna
+boş bırakılabilir. Rota ve üretim siparişi operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). İstisna
 "Zorunlu (doluysa)": kaydın anahtarının parçası olan isteğe bağlı bağlantı (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi):
 boş yazılsaydı anahtar değişir, kayıt başka bir kayda dönüşür ya da onunla çakışırdı (K-153). İki yerde kullanılır:
 - Validasyon (4.4): referans kuralları (zorunlu → Hata, isteğe bağlı → Uyarı) ve pasif ebeveyn kuralları buradan üretilir.
@@ -10,7 +10,7 @@ boş yazılsaydı anahtar değişir, kayıt başka bir kayda dönüşür ya da o
 Lokasyon ilişkisi (`LocationCode` → Lokasyon) her tabloda ortaktır ve burada ayrıca yazılmaz (`ALL.REF_LOCATION`).
 Bir ilişki birden çok alanla eşleşebilir (ör. bağlı sipariş: SalesOrderNo, SalesOrderLineNo, SalesOrderLineItemNo); ilk alan doluysa bakılır,
 öteki alanlar boşsa eşleşmeyi daraltmaz. Kalemsiz arz (K-198): bağlı siparişte satır no boşsa validasyon sipariş no'nun en az bir satırını arar,
-aktarım bağlantıyı (`SalesOrderLineId`) boş yazar (`link_fields`); sipariş no `core`'da ayrı alanda durur. Arzın (stok, iş emri, satın alma
+aktarım bağlantıyı (`SalesOrderLineId`) boş yazar (`link_fields`); sipariş no `core`'da ayrı alanda durur. Arzın (stok, üretim siparişi, satın alma
 satırı) sahip ilişkileri isteğe bağlıdır (K-198): sahip bulunamazsa Uyarı, satır yüklenir, iç bağ boş kalır; ERP'nin yazdığı kod `core`'da durur ve özel
 alokasyon anahtarı ondan kurulur (arz genele düşmez). Birim alanları referans kontrolüne
 girmez (K-112).
@@ -89,18 +89,18 @@ REFERENCES: tuple[Reference, ...] = (
     R("WO", "PROJECT", "Bağlı proje", "WorkOrder", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
     R("WO", "CUSTOMER", "Bağlı müşteri", "WorkOrder", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
     R("WO", "SALES_ORDER", "Bağlı sipariş", "WorkOrder", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL, link_fields=2),
-    R("WO", "PARENT_WORK_ORDER", "Orijinal iş emri", "WorkOrder", ("ParentWorkOrderNo",), "WorkOrder", ("WorkOrderNo",), OPTIONAL),
-    R("WOC", "WORK_ORDER", "İş emri", "WorkOrderComponent", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
+    R("WO", "PARENT_WORK_ORDER", "Orijinal üretim siparişi", "WorkOrder", ("ParentWorkOrderNo",), "WorkOrder", ("WorkOrderNo",), OPTIONAL),
+    R("WOC", "WORK_ORDER", "Üretim siparişi", "WorkOrderComponent", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
     R("WOC", "MATERIAL", "Malzeme", "WorkOrderComponent", ("MaterialCode",), "Material", ("Code",)),
-    R("WOO", "WORK_ORDER", "İş emri", "WorkOrderOperation", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
+    R("WOO", "WORK_ORDER", "Üretim siparişi", "WorkOrderOperation", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
     R("WOO", "RESOURCE_GROUP", "Kaynak grubu", "WorkOrderOperation", ("ResourceGroupCode",), "ResourceGroup", ("Code",)),
     R("PO", "MATERIAL", "Malzeme", "PurchaseOrderLine", ("MaterialCode",), "Material", ("Code",), inactive=WARNING),
     R("PO", "SUPPLIER", "Tedarikçi", "PurchaseOrderLine", ("SupplierCode",), "Supplier", ("Code",), OPTIONAL, inactive=WARNING, by_location=False),
     R("PO", "PROJECT", "Bağlı proje", "PurchaseOrderLine", ("ProjectCode",), "Project", ("Code",), OPTIONAL, by_location=False),
     R("PO", "CUSTOMER", "Bağlı müşteri", "PurchaseOrderLine", ("CustomerCode",), "Customer", ("Code",), OPTIONAL, by_location=False),
     R("PO", "SALES_ORDER", "Bağlı sipariş", "PurchaseOrderLine", SO_LINE[0], SO_LINE[1], SO_LINE[2], OPTIONAL, link_fields=2),
-    R("PO", "WORK_ORDER", "Bağlı iş emri", "PurchaseOrderLine", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",), OPTIONAL),
-    R("PC", "WORK_ORDER", "İş emri", "ProductionConfirmation", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
+    R("PO", "WORK_ORDER", "Bağlı üretim siparişi", "PurchaseOrderLine", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",), OPTIONAL),
+    R("PC", "WORK_ORDER", "Üretim siparişi", "ProductionConfirmation", ("WorkOrderNo",), "WorkOrder", ("WorkOrderNo",)),
     R("PC", "MATERIAL", "Malzeme", "ProductionConfirmation", ("MaterialCode",), "Material", ("Code",)),
 )
 

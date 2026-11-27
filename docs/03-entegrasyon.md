@@ -46,7 +46,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>26. Entegrasyon tasarımı · Genel görünüm</sub>
 
 - **ERP (müşteri)**
-  - Ana veri, siparişler, stok, iş emirleri, gerçekleşmeler
+  - Ana veri, siparişler, stok, üretim siparişleri, gerçekleşmeler
   - Ürün ERP'ye özel alan taşımaz
 - **API adaptörü**
   - REST çağrısı, sayfalama, artımlı çekim
@@ -75,7 +75,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
   - Veri versiyonu (tam / kısmi)
 - **Çıkış (Faz 1: Excel)**
   - Satın alma talebi listesi
-  - İş emri açma listesi, fason listesi
+  - Üretim siparişi açma listesi, fason listesi
   - Raporlar (Excel / PDF)
   - Faz 2: ERP'ye API ile geri yazma
 - **Excel şablonları**
@@ -117,13 +117,13 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Tahmin (Forecast) | İşlem verisi | Excel · API | ERP ya da Excel | Haftalık | LocationCode + MaterialCode + CustomerCode + ProjectCode + Period + Type | İsteğe bağlı |
 | Ödünç ve geri ödeme (BorrowPayback) | İşlem verisi | API · SQL · Excel | ERP | Gece tam | LocationCode + MaterialCode + LendingProjectCode + BorrowingProjectCode + BorrowDate | Proje bazlı planlamada |
 | Stok (Stock) | İşlem verisi | API · SQL | ERP | Gece tam + gün içi kısmi | LocationCode + MaterialCode + Warehouse + LotNo + Status + ProjectCode + CustomerCode + SalesOrderNo + SalesOrderLineNo + SalesOrderLineItemNo | Zorunlu |
-| İş emri (WorkOrder, Component, Operation) | İşlem verisi | API · SQL | ERP | Gece tam + gün içi kısmi | LocationCode + WorkOrderNo · LocationCode + WorkOrderNo + MaterialCode + OperationNo + SequenceNo · LocationCode + WorkOrderNo + OperationNo + SequenceNo | Zorunlu |
+| Üretim siparişi (WorkOrder, Component, Operation) | İşlem verisi | API · SQL | ERP | Gece tam + gün içi kısmi | LocationCode + WorkOrderNo · LocationCode + WorkOrderNo + MaterialCode + OperationNo + SequenceNo · LocationCode + WorkOrderNo + OperationNo + SequenceNo | Zorunlu |
 | Satın alma / fason siparişi (PurchaseOrderLine) | İşlem verisi | API · SQL | ERP | Gece tam + gün içi kısmi | LocationCode + PurchaseOrderNo + LineNo | Zorunlu |
 | Transfer (TransferOrder) | İşlem verisi | API · SQL | ERP | Gece | OrderNo | Çok lokasyonda (Faz 2) |
 | Üretim gerçekleşmesi (ProductionConfirmation) | İşlem verisi | API · SQL | ERP | Gece artımlı | LocationCode + ConfirmationNo | Doğruluk raporları için (A-22) |
 | Sevkiyat / sipariş kapanışı (yeni) | İşlem verisi | API · SQL | ERP | Gece artımlı | OrderNo+LineNo+ShipDate | A-22 · raporlar 17, 19 |
 | Birim maliyet (Material ek alanı, yeni) | Ana veri | API · SQL · Excel | ERP | Gece tam | MaterialCode | A-22 · stok değeri, tutar |
-| Çıkış: satın alma talebi, iş emri açma, fason listesi | Plan çıktısı | Excel (Faz 1) · API (Faz 2) | Smartchain | Yayın sonrası, istek üzerine | PlannedOrder.Id | Faz 1 Excel |
+| Çıkış: satın alma talebi, üretim siparişi açma, fason listesi | Plan çıktısı | Excel (Faz 1) · API (Faz 2) | Smartchain | Yayın sonrası, istek üzerine | PlannedOrder.Id | Faz 1 Excel |
 
 ### Veri sözleşmesi · varlık kataloğu
 <sub>26. Entegrasyon tasarımı · Veri sözleşmesi · Geliştirme 3.1 (K-110)</sub>
@@ -152,11 +152,11 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Forecast | Tahmin | İşlem verisi | Malzeme ve dönem bazında talep tahminleri | tahmin | 2 |
 | Stock | Stok | İşlem verisi | Lot ve duruma göre eldeki stok | stok | 5 |
 | BorrowPayback | Ödünç ve geri ödeme | İşlem verisi | Projeler arası ödünç kayıtları ve geri ödemeleri | odunc-ve-geri-odeme | 1 |
-| WorkOrder | İş emri | İşlem verisi | Açık üretim, fason ve yeniden işleme emirleri | is-emri | 5 |
-| WorkOrderComponent | İş emri bileşeni | İşlem verisi | İş emirlerinin bileşenleri ve çekilen miktarlar | is-emri-bileseni | 2 |
-| WorkOrderOperation | İş emri operasyonu | İşlem verisi | İş emirlerinin operasyonları ve kalan işi | is-emri-operasyonu | 3 |
+| WorkOrder | Üretim siparişi | İşlem verisi | Açık üretim, fason ve yeniden işleme siparişleri | uretim-siparisi | 5 |
+| WorkOrderComponent | Üretim siparişi bileşeni | İşlem verisi | Üretim siparişlerinin bileşenleri ve çekilen miktarlar | uretim-siparisi-bileseni | 2 |
+| WorkOrderOperation | Üretim siparişi operasyonu | İşlem verisi | Üretim siparişlerinin operasyonları ve kalan işi | uretim-siparisi-operasyonu | 3 |
 | PurchaseOrderLine | Satın alma siparişi | İşlem verisi | Açık satın alma ve fason sipariş satırları, talepler dahil | satin-alma-siparisi | 5 |
-| ProductionConfirmation | Üretim gerçekleşmesi | İşlem verisi | İş emri bazında stoğa girişler | uretim-gerceklesmesi | 2 |
+| ProductionConfirmation | Üretim gerçekleşmesi | İşlem verisi | Üretim siparişi bazında stoğa girişler | uretim-gerceklesmesi | 2 |
 
 ### stg.Material
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Malzeme · 1/2</sub>
@@ -366,7 +366,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### stg.ResourceGroup
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Kaynak</sub>
 
-- Kaynak grubu: planlama birimi (K-180). Rota ve iş emri operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Kaynak grubu: planlama birimi (K-180). Rota ve üretim siparişi operasyonu grubu gösterir; plan ve yük grup düzeyindedir. Tip, kritiklik, kapasite birimi ve fasoncu gruptadır. Gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir, ayrıca girilmez.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
@@ -598,18 +598,18 @@ FROM erp.WorkCenter;
 ### stg.WorkOrder
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
-- Açık iş emri (üretim, fason, yeniden işleme).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Açık üretim siparişi (üretim, fason, yeniden işleme).  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | UK,REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
-| WorkOrderNo | nvarchar(30) | UK | E | İş emri no | ERP | hata (satır atlanır) |
+| WorkOrderNo | nvarchar(30) | UK | E | Üretim siparişi no | ERP | hata (satır atlanır) |
 | MaterialCode | nvarchar(50) | REF | E | Üretilen malzeme | ERP | hata (satır atlanır) |
-| ProductionVersionCode | nvarchar(30) | REF | H | Üretim versiyonu; iş emrinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır, gelmediyse bu versiyonun ağacına ve rotasına gider | ERP | bilinmiyor |
-| ProductionOrderType | nvarchar(50) |  | H | ERP'den ham iş emri tipi; veri kurallarında kullanılır, değer listesi yok | ERP | bilinmiyor |
-| Status | nvarchar(50) |  | H | ERP'den ham iş emri durumu; veri kurallarında kullanılır, değer listesi yok | ERP | bilinmiyor |
-| Priority | int |  | H | İş emri önceliği | ERP | yok |
-| OrderedQuantity | decimal(18,4) |  | E | İş emri miktarı | ERP | hata (satır atlanır) |
+| ProductionVersionCode | nvarchar(30) | REF | H | Üretim versiyonu; üretim siparişinin kendi bileşen ve operasyon satırları geldiyse motor onları kullanır, gelmediyse bu versiyonun ağacına ve rotasına gider | ERP | bilinmiyor |
+| ProductionOrderType | nvarchar(50) |  | H | ERP'den ham üretim siparişi tipi; veri kurallarında kullanılır, değer listesi yok | ERP | bilinmiyor |
+| Status | nvarchar(50) |  | H | ERP'den ham üretim siparişi durumu; veri kurallarında kullanılır, değer listesi yok | ERP | bilinmiyor |
+| Priority | int |  | H | Üretim siparişi önceliği | ERP | yok |
+| OrderedQuantity | decimal(18,4) |  | E | Üretim siparişi miktarı | ERP | hata (satır atlanır) |
 | OpenQuantity | decimal(18,4) |  | E | Açık miktar | ERP | hata (satır atlanır) |
 | CompletedQuantity | decimal(18,4) |  | H | Tamamlanan miktar | ERP | yok |
 | ScrapQuantity | decimal(18,4) |  | H | Hurda miktarı | ERP | yok |
@@ -621,27 +621,27 @@ FROM erp.WorkCenter;
 | SalesOrderNo | nvarchar(30) | REF | H | Bağlı sipariş no; i̇ş emrinin ayrıldığı sipariş, satırı boşsa siparişin bütün kalemleri (kalemsiz arz) | ERP | yok |
 | SalesOrderLineNo | int | REF | H | Bağlı sipariş satırı | ERP | yok |
 | SalesOrderLineItemNo | int | REF | H | Bağlı sipariş alt satırı | ERP | yok |
-| ParentWorkOrderNo | nvarchar(30) | REF | H | Yeniden işlemede orijinal iş emri | Kural ya da elle | yok |
+| ParentWorkOrderNo | nvarchar(30) | REF | H | Orijinal üretim siparişi | Kural ya da elle | yok |
 | LastActivityDate | date |  | H | Son hareket tarihi (eskime kontrolü) | ERP | bilinmiyor |
-| IsFixed | bit |  | H | Motor bu iş emrinin tarihini ve miktarını değiştirmez | ERP, yoksa kural | yok |
-| IsReleased | bit |  | H | İş emri yayınlandı; Status'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
-| IsStarted | bit |  | H | İş emri başladı; Status'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
-| IsProduction | bit |  | H | Üretim iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
-| IsSubcontract | bit |  | H | Fason iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
-| IsRework | bit |  | H | Yeniden işleme iş emri; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
-| IsOnHold | bit |  | H | Bekletilen iş emri | ERP, yoksa kural | yok |
+| IsFixed | bit |  | H | Motor bu üretim siparişinin tarihini ve miktarını değiştirmez | ERP, yoksa kural | yok |
+| IsReleased | bit |  | H | Üretim siparişi yayınlandı; Status'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
+| IsStarted | bit |  | H | Üretim siparişi başladı; Status'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
+| IsProduction | bit |  | H | Üretim siparişi; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
+| IsSubcontract | bit |  | H | Fason üretim siparişi; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
+| IsRework | bit |  | H | Yeniden işleme üretim siparişi; ProductionOrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
+| IsOnHold | bit |  | H | Bekletilen üretim siparişi | ERP, yoksa kural | yok |
 | AdditionalText1–3 | nvarchar(255) |  | H | Ek metin alanları; etiketi FieldDefinition'da | ERP | yok |
 | AdditionalNumber1–2 | decimal(18,4) |  | H | Ek sayı alanları; etiketi FieldDefinition'da | ERP | yok |
 
 ### stg.WorkOrderComponent
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
-- İş emrinin bileşenleri ve çekilen miktar.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Üretim siparişinin bileşenleri ve çekilen miktar.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | UK,REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
-| WorkOrderNo | nvarchar(30) | UK,REF | E | İş emri | ERP | hata (satır atlanır) |
+| WorkOrderNo | nvarchar(30) | UK,REF | E | Üretim siparişi | ERP | hata (satır atlanır) |
 | MaterialCode | nvarchar(50) | UK,REF | E | Bileşen | ERP | hata (satır atlanır) |
 | OperationNo | int | UK | H | Bağlı olduğu operasyon no (ihtiyaç tarihi için) | ERP | ilk operasyon |
 | SequenceNo | int | UK | H | Sıra no; aynı bileşen iki kez geçerse operasyon no ile ayrışır | ERP | bilinmiyor |
@@ -658,12 +658,12 @@ FROM erp.WorkCenter;
 ### stg.WorkOrderOperation
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
-- İş emrinin operasyonları ve kalan iş.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Üretim siparişinin operasyonları ve kalan iş.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | UK,REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
-| WorkOrderNo | nvarchar(30) | UK,REF | E | İş emri | ERP | hata (satır atlanır) |
+| WorkOrderNo | nvarchar(30) | UK,REF | E | Üretim siparişi | ERP | hata (satır atlanır) |
 | OperationNo | int | UK | E | Operasyon no | ERP | hata (satır atlanır) |
 | SequenceNo | int | UK | E | Operasyon içindeki alt sıra | ERP | hata (satır atlanır) |
 | OperationName | nvarchar(150) |  | H | Operasyon adı | ERP | bilinmiyor |
@@ -708,7 +708,7 @@ FROM erp.WorkCenter;
 | SalesOrderNo | nvarchar(30) | REF | H | Bağlı sipariş no; satın alma satırının ayrıldığı sipariş, satırı boşsa siparişin bütün kalemleri (kalemsiz arz) | ERP | yok |
 | SalesOrderLineNo | int | REF | H | Bağlı sipariş satırı | ERP | yok |
 | SalesOrderLineItemNo | int | REF | H | Bağlı sipariş alt satırı | ERP | yok |
-| WorkOrderNo | nvarchar(30) | REF | H | Fasonda bağlı iş emri | ERP | yok |
+| WorkOrderNo | nvarchar(30) | REF | H | Fasonda bağlı üretim siparişi | ERP | yok |
 | Status | nvarchar(50) |  | H | ERP'den ham sipariş durumu; veri kurallarında kullanılır, değer listesi yok | ERP | bilinmiyor |
 | IsPurchaseRequest | bit |  | H | Satın alma talebi; OrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
 | IsPurchase | bit |  | H | Satın alma siparişi; OrderType'tan veri kuralıyla doldurulur | ERP, yoksa kural | yok |
@@ -720,13 +720,13 @@ FROM erp.WorkCenter;
 ### stg.ProductionConfirmation
 <sub>26. Entegrasyon tasarımı · Entegrasyon tabloları · Arz ve stok</sub>
 
-- Üretim gerçekleşmeleri: iş emri bazında stoğa girişler.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
+- Üretim gerçekleşmeleri: üretim siparişi bazında stoğa girişler.  ·  Entegrasyon tablosu: ERP'nin dili, ilişkiler kodla; sistem alanları ve Smartchain parametreleri hariç.
 
 | ALAN | TIP | ANAHTAR | ZOR. | AÇIKLAMA | KAYNAK | BOŞSA |
 |---|---|---|---|---|---|---|
 | LocationCode | nvarchar(30) | UK,REF | E | Lokasyon kodu | ERP | hata (satır atlanır) |
 | ConfirmationNo | nvarchar(30) | UK | E | Teyit no | ERP | hata (satır atlanır) |
-| WorkOrderNo | nvarchar(30) | REF | E | İş emri | ERP | hata (satır atlanır) |
+| WorkOrderNo | nvarchar(30) | REF | E | Üretim siparişi | ERP | hata (satır atlanır) |
 | MaterialCode | nvarchar(50) | REF | E | Üretilen malzeme | ERP | hata (satır atlanır) |
 | ConfirmedQuantity | decimal(18,4) |  | E | Teyit miktarı | ERP | hata (satır atlanır) |
 | StartDate | date |  | H | Başlangıç | ERP | bilinmiyor |
@@ -788,7 +788,7 @@ FROM erp.WorkCenter;
 - **Yükleme:** Ekrandan sürükle-bırak (03): varlık ve sürüm tanıma, mod (ekle / güncelle ya da tam), satır bazlı ön kontrol, hata raporu, geçerli satırlarla devam. Hatalı satır ham veriye alınmaz, bulgu listesinde ve hata raporunda durur (K-129).
 - **Anahtar:** Tablolardaki ANAHTAR kolonu veritabanı indeksi değildir: `stg` ham veridir, aynı anahtar aynı partide (hata) ve sonraki partide (normal) gelebilir. Tekrar kontrolü bu tanımı okur (K-129). `stg` tablolarının standart alanları: `StagingRowId`, `ImportBatchId`, `RowStatus`, `ErrorText`, `SourceRowNo` (kaynaktaki satır no).
 - **Sınırlar:** Tek dosya tek varlık; 200.000 satır ve 100 MB (parametre); eski şablon sürümü uyarı verir. Excel yolu ERP'den gelen varlığın master'ı olamaz (çakışma: ERP ezer, alan ayarına göre).
-- **Dışa aktarma:** Aynı şablonlarla ana veri dışa aktarılır, düzeltilir ve manuel değer olarak geri yüklenir; plan çıktıları (satın alma talebi, iş emri açma) ERP'nin alışık olduğu sütun düzeninde Excel listesi.
+- **Dışa aktarma:** Aynı şablonlarla ana veri dışa aktarılır, düzeltilir ve manuel değer olarak geri yüklenir; plan çıktıları (satın alma talebi, üretim siparişi açma) ERP'nin alışık olduğu sütun düzeninde Excel listesi.
 
 ### Alan eşleme ve dönüşüm kuralları
 <sub>26. Entegrasyon tasarımı · Alan eşleme ve dönüşüm</sub>
@@ -804,7 +804,7 @@ FROM erp.WorkCenter;
 | Birim dönüşümü · zincir | KOLİ → ADET ve ADET → KG tanımlı | Zincirleme dönüşüm türetilmez: KOLİ → KG hesaplanmaz; gerekiyorsa ayrıca tanımlanır. |
 | Birim dönüşümü · lokasyon | HAM-001 iki lokasyonda var, dönüşüm satırı bir tane | UomConversion lokasyondan bağımsızdır, LocationCode taşımaz. MaterialCode, o koda sahip bütün lokasyonlardaki malzemeye uygulanır; kod→Id çevirisinde dönüşüm satırı aynı koddaki her lokasyonun malzemesine bağlanır. |
 | Tarih | '20261023' → 2026-10-23; vade: ConfirmedDate yoksa RequestedDate | Biçim view'da ya da adaptörde; boş tarihin anlamı alanın BOŞSA kolonundadır, gerekirse veri kuralıyla doldurulur. |
-| Türetme | İş emri: açık miktar = sipariş − teslim | View'da ya da adaptörde; sözleşme alanı tek değer alır. |
+| Türetme | Üretim siparişi: açık miktar = sipariş − teslim | View'da ya da adaptörde; sözleşme alanı tek değer alır. |
 | Birleştirme | Stok: depo + lot + durum + proje → tek satır | Anahtar sözleşmede; ERP daha ayrıntılıysa toplanır, daha kabasa alanlar boş kalır (anlamı BOŞSA kolonunda). |
 | Smartchain girişi | Günlük kapasite (çalışma düzeni), verimlilik | Entegre edilmez (K-117); Kapasite yönetimi ekranında girilir (K-185); kaynakta alan değildir. |
 
@@ -812,10 +812,10 @@ FROM erp.WorkCenter;
 <sub>26. Entegrasyon tasarımı · Referans kontrolü ve kod→Id</sub>
 
 - Her ilişki alanının baktığı tablo ve anahtar. Validasyon (fonksiyon 04) referans ve pasif ebeveyn kurallarını buradan üretir; aktarım (fonksiyon 05, 5.2) kodu `core` Id'sine bu haritayla çevirir. Kodda `app/integration/references.py`; test ikisini karşılaştırır.
-- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. Rota ve iş emri operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). **Zorunlu (doluysa)** istisnadır: kaydın anahtarının parçası olan isteğe bağlı bağlantı Zorunlu (doluysa)dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi; K-153. Stok'un bağlı proje, müşteri ve siparişi K-198'de isteğe bağlı oldu: anahtar ERP'den gelen ham alanlardadır): boş yazılsaydı anahtar değişirdi.
+- **İLİŞKİ:** Zorunlu: sözleşmede alan zorunludur (ZOR. E); yoksa Hata, satır aktarılmaz. İsteğe bağlı: alan boş bırakılabilir; doluysa ve yoksa Uyarı, satır aktarılır, bağlantı boş yazılır. Rota ve üretim siparişi operasyonunda kaynak grubu zorunludur (K-180; "kaynak ya da kaynak grubu" istisnası kalktı). **Zorunlu (doluysa)** istisnadır: kaydın anahtarının parçası olan isteğe bağlı bağlantı Zorunlu (doluysa)dır (Birim dönüşümünün malzemesi, Tahminin müşterisi ve projesi; K-153. Stok'un bağlı proje, müşteri ve siparişi K-198'de isteğe bağlı oldu: anahtar ERP'den gelen ham alanlardadır): boş yazılsaydı anahtar değişirdi.
 - **PASİF EBEVEYN:** ebeveyn bulunur ama `IsActive` = Hayır ise satırdaki bulgunun sınıfı; satır aktarılmaz. "—": bulgu yazılmaz, aktarım ebeveyn yokmuş gibi davranır (zorunluysa satır aktarılmaz, isteğe bağlıysa bağlantı boş).
 - **Eşleşme:** ALAN ve EBEVEYN ANAHTARI aynı sırayla eşleşir. Birden çok alanlı ilişkide (bağlı sipariş satırı) ilk alan doluysa bakılır; öteki alanlar boşsa eşleşmeyi daraltmaz. **Kalemsiz arz (K-198):** bağlı siparişte satır no boşsa validasyon yalnız sipariş no'nun o lokasyonda en az bir satırını arar; aktarım bağlantıyı (`SalesOrderLineId`) boş yazar, siparişin ilk satırına bağlamaz. Sipariş no, satır no ve alt satır no `core`'da ayrı alanlarda ERP'den geldiği gibi durur. Proje, müşteri ve tedarikçi lokasyondan bağımsızdır; birim dönüşümünün malzemesi herhangi bir lokasyonda bulunursa yeter (K-112).
-- **Özel alokasyon (K-198; uygulandı, sürüm 0.57.0):** Stok, iş emri ve satın alma satırının `IsCustomAllocated`, `AllocationLevel` ve `AllocationKey` alanları sözleşmede yoktur; aktarım hesaplar (`app/allocation`). Malzeme özel alokasyonluysa satırda ERP'nin yazdığı en detaylı sahip (bağlı sipariş → bağlı proje → bağlı müşteri) anahtardır; hesap satırın kendi alanlarına ve malzemeye bakar, sahibin sistemde bulunmasına bakmaz. Bu yüzden arzın sahip ilişkileri (proje, müşteri, sipariş) üç tabloda da **isteğe bağlıdır**: sahip bulunamazsa Uyarı yazılır, satır aktarılır, iç bağ (`ProjectId`, `CustomerId`, `SalesOrderLineId`) boş kalır, ERP'nin yazdığı kod `core`'da durur (`ProjectCode`, `CustomerCode`, `SalesOrderNo`…) ve anahtar ondan kurulur; arz genele düşmez. Stok'un tekil anahtarı da bu ham alanlardadır. Her aktarımın sonunda bütün arz tablolarının güncel satırları yeniden hesaplanır (malzemenin alanı değişmiş olabilir); değeri değişen satır yeni versiyon açar.
+- **Özel alokasyon (K-198; uygulandı, sürüm 0.57.0):** Stok, üretim siparişi ve satın alma satırının `IsCustomAllocated`, `AllocationLevel` ve `AllocationKey` alanları sözleşmede yoktur; aktarım hesaplar (`app/allocation`). Malzeme özel alokasyonluysa satırda ERP'nin yazdığı en detaylı sahip (bağlı sipariş → bağlı proje → bağlı müşteri) anahtardır; hesap satırın kendi alanlarına ve malzemeye bakar, sahibin sistemde bulunmasına bakmaz. Bu yüzden arzın sahip ilişkileri (proje, müşteri, sipariş) üç tabloda da **isteğe bağlıdır**: sahip bulunamazsa Uyarı yazılır, satır aktarılır, iç bağ (`ProjectId`, `CustomerId`, `SalesOrderLineId`) boş kalır, ERP'nin yazdığı kod `core`'da durur (`ProjectCode`, `CustomerCode`, `SalesOrderNo`…) ve anahtar ondan kurulur; arz genele düşmez. Stok'un tekil anahtarı da bu ham alanlardadır. Her aktarımın sonunda bütün arz tablolarının güncel satırları yeniden hesaplanır (malzemenin alanı değişmiş olabilir); değeri değişen satır yeni versiyon açar.
 - **Alokasyon kuralı (K-199; uygulandı, sürüm 0.58.0):** `core.MaterialAllocationRule` sözleşmede yoktur; her aktarımın sonunda, özel alokasyon yeniden hesabından sonra, taleplerden ürün ağacında aşağı yürünerek üretilir (`app/allocation/rules.py`). Kısmi aktarımda da tam hesaplanır; hangi grup gelirse gelsin (Talep, Stok, Üretim, Satın alma) sonuç güncel veriyle aynıdır.
 - **Ortak ve dışarıda:** `LocationCode` → Lokasyon (`Code`) her tabloda zorunludur (`ALL.REF_LOCATION`), tabloda ayrıca yazılmaz. Birim alanları (`BaseUom`, `FromUom`, `ToUom`, `ComponentUom`, `Uom`, `CapacityUnit`) referans kontrolüne girmez (K-112); dönüşümü `ALL.UOM_CONVERSION` denetler.
 
@@ -880,7 +880,7 @@ FROM erp.WorkCenter;
 | Kaynak temel bilgisi (kod, ad, grup) | ERP ya da Excel | Salt okunur | Kaynağa göre |
 | Kaynak planlama alanları (günlük kapasite, verim, hedef doluluk, fason parametreleri) | Smartchain | Ekranda tanımlanır, entegre edilmez (K-117) | Aktarımda ezilmez |
 | Çalışma düzeni, fabrika takvimi, duruş | Smartchain (K-65, K-185) | Kapasite yönetimi ekranından girilir | Smartchain değeri kalır |
-| Siparişler, stok, iş emirleri, gerçekleşmeler | ERP | Salt okunur | Her aktarımda ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
+| Siparişler, stok, üretim siparişleri, gerçekleşmeler | ERP | Salt okunur | Her aktarımda ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
 | Tahmin | ERP ya da Excel | Excel ile yüklenir | Son yükleme geçerli; versiyonlu |
 | Parametreler, senaryo tanımları, kurallar, manuel değerler | Smartchain | Ekrandan | ERP'ye gitmez |
 | Plan çıktıları (planlı sipariş, öneri) | Smartchain | Onaylı plan | Faz 1: Excel ile ERP'ye elle; Faz 2: API geri yazma, ERP belge no geri okunur |
@@ -912,10 +912,10 @@ FROM erp.WorkCenter;
 ### Smartchain'den ERP'ye · Faz 1 Excel, Faz 2 API
 <sub>26. Entegrasyon tasarımı · Smartchain'den ERP'ye</sub>
 
-- **Faz 1 · Excel listeleri:** Onaylı plandan: satın alma talebi listesi (tedarikçi, malzeme, yuvarlanmış miktar, tarih), iş emri açma listesi (ürün, miktar, kaynak, dönem), fason listesi, öneri aksiyonları (öne çek / ertele / iptal). Sütun düzeni müşterinin ERP ithalat şablonuna göre ayarlanır (kurulum verisi).
+- **Faz 1 · Excel listeleri:** Onaylı plandan: satın alma talebi listesi (tedarikçi, malzeme, yuvarlanmış miktar, tarih), üretim siparişi açma listesi (ürün, miktar, kaynak, dönem), fason listesi, öneri aksiyonları (öne çek / ertele / iptal). Sütun düzeni müşterinin ERP ithalat şablonuna göre ayarlanır (kurulum verisi).
 - **ERP belge numarası geri:** ERP'de açılan sipariş bir sonraki gece çekimde gelir; eşleme ERP referans alanı ile (sipariş notu ya da dış belge no, kurulumda belirlenir) ya da aksiyon listesinde elle girilen numarayla. Öneri takibi (R19) bu bağı kullanır.
 - **Kapsam dışı:** Stok hareketi, üretim teyidi, sevkiyat gibi işlem kayıtları Smartchain'den ERP'ye hiçbir fazda yazılmaz; bunlar ERP'nin işi.
-- **Faz 2 · API geri yazma:** Onaylanan planlı siparişler ERP'ye API ile yazılır (satın alma talebi, planlı iş emri); ERP belge numarası anında geri alınır. Yazma yetkisi ayrı servis hesabı; her yazma denetim izinde. Yalnız yeni belge; ERP'deki belgeyi değiştirme yok.
+- **Faz 2 · API geri yazma:** Onaylanan planlı siparişler ERP'ye API ile yazılır (satın alma talebi, planlı üretim siparişi); ERP belge numarası anında geri alınır. Yazma yetkisi ayrı servis hesabı; her yazma denetim izinde. Yalnız yeni belge; ERP'deki belgeyi değiştirme yok.
 
 ### Güvenlik ve erişim
 <sub>26. Entegrasyon tasarımı · Güvenlik ve erişim</sub>
@@ -960,7 +960,7 @@ FROM erp.WorkCenter;
 | VERI | ALANLAR | KULLANAN | YÖNTEM / SIKLIK |
 |---|---|---|---|
 | Sevkiyat / sipariş kapanışı (yeni varlık) | OrderNo, LineNo, ShipDate, ShippedQty, IsClosed | R17 Teslim performansı, R19 Öneri takibi, R18 | API · SQL · gece artımlı |
-| Üretim gerçekleşmesi (mevcut, ek alan) | ReasonCode (sapma nedeni) | R16 Plan–gerçekleşen: iş emri ve miktar düzeyinde; kaynak ve operasyon kırılımı yok (K-128) | API · SQL · gece artımlı |
+| Üretim gerçekleşmesi (mevcut, ek alan) | ReasonCode (sapma nedeni) | R16 Plan–gerçekleşen: üretim siparişi ve miktar düzeyinde; kaynak ve operasyon kırılımı yok (K-128) | API · SQL · gece artımlı |
 | Satın alma teslimatı (ek alan) | PurchaseOrderLine.ReceivedQuantity (K-125); ReceivedDate henüz sözleşmede yok | R19 Öneri takibi, R05 | API · SQL · gece |
 | ERP belge eşlemesi (ek alan) | PurchaseOrderLine / WorkOrder.ExternalRef (Smartchain öneri no) | R19, Aksiyon listesi | API · SQL · gece |
 | Tahmin geçmişi (versiyonlu) | Forecast.VersionDate (ay başı dondurulmuş tahmin) | R20 Tahmin doğruluğu | Excel · aylık |
@@ -975,4 +975,4 @@ FROM erp.WorkCenter;
 - **Sessiz hata eşiği:** Kapandı (K-158): eşik ve uyarı yok; satır sayısı değişimi Dünden bugüne ekranında raporlanır (5.5b, K-159).
 - **Kişisel veri:** İşçi adı yerine anonim kod kullanımı: müşteri tercihi; parametre olarak öneriyoruz.
 - **Rota tüketim birimi:** Kapandı (K-130): dönüşüm view'da; kural istisna için.
-- **Faz 2 geri yazma kapsamı:** Yalnız satın alma talebi mi, planlı iş emri de mi? Müşteri ERP'sinin planlı sipariş kavramına bağlı; keşifte netleşir.
+- **Faz 2 geri yazma kapsamı:** Yalnız satın alma talebi mi, planlı üretim siparişi de mi? Müşteri ERP'sinin planlı sipariş kavramına bağlı; keşifte netleşir.

@@ -76,7 +76,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Tek seviyeli pegging'de sıralama kuralı işler.
 - ✔ İhtiyaç satırları: **talep karşılama, üretim ihtiyacı.**
 - ✔ **Güvenlik stoğu ihtiyaç satırı değildir**; artan arz "Güvenlik stoğu için" / "Fazla arz" olarak etiketlenir.
-- ✔ Arz satırları: stok, kalitedeki stok, üretim siparişi, satın alma siparişi, üretim planı, satın alma önerisi.
+- ✔ Arz satırları: stok, kalitedeki stok, üretim siparişi, satın alma siparişi, üretim planı, satın alma planı.
 - ✔ Stok ve satın almada sıralamaya **raf ömrü** de girer.
 - ◻ Algoritma: sipariş sipariş, yukarıdan aşağı; her malzemede planın bütün ihtiyaçlarına karşı uygulanabilirlik kontrolü (öncelikli sipariş yalnız başkasını geciktirmeyeni alır).
 - ✔ Sıralama iki ölçüt listesiyle yönetilir: İhtiyaç sırası ve Arz sırası (Parametreler › Pegging). Kullanıcı ölçütleri sıralar, yönlü ölçütte yön seçer; ölçütler yukarıdan aşağı uygulanır; ihtiyaç ve arz türleri de birer ölçüttür (K-201). Tek liste bütün malzeme seviyeleri için geçerlidir; seviyeye göre ayrım motor aşamasında yeniden ele alınacak. Mockup: `plans/7.15-mockups/pegging-siralama.html`

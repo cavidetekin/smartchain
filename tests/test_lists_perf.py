@@ -170,7 +170,7 @@ def _copy_rows(conn, table: str, rows: int, overrides: dict[str, str]) -> None:
 
 
 def generate_related(conn, operations: int = ROWS, work_orders: int = RELATED_WORK_ORDERS) -> None:
-    """Malzemeler (bugünkü üretici), her biri bir malzemeye bağlı iş emirleri ve her biri bir iş emrine bağlı operasyonlar."""
+    """Malzemeler (bugünkü üretici), her biri bir malzemeye bağlı üretim siparişleri ve her biri bir üretim siparişine bağlı operasyonlar."""
     v, loc = conn.execute(text("SELECT TOP 1 Id, LocationId FROM adm.DataVersion ORDER BY Id DESC")).one()
     conn.execute(GENERATE, {"v": v, "loc": loc, "rows": work_orders})
     _copy_rows(conn, "WorkOrder", work_orders, {
@@ -203,7 +203,7 @@ def related_session(db_engine):
                                               sort=[SortItem(field=RELATED_NAME, dir="desc")])),
 ])
 def test_related_fields_under_target(related_session, name, req):
-    """K-182: İş emri operasyonu → İş emri → Malzeme; 50.000 operasyon, 5.000 iş emri. Yazıldı, tam performans ölçümüyle birlikte koşulur."""
+    """K-182: Üretim siparişi operasyonu → Üretim siparişi → Malzeme; 50.000 operasyon, 5.000 üretim siparişi. Yazıldı, tam performans ölçümüyle birlikte koşulur."""
     from app.api.lists.master_data import BY_NAME
     defn = BY_NAME["transaction-work-order-operation"]
     body = service.query(related_session, defn, req)

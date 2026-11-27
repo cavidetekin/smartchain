@@ -26,7 +26,7 @@ UNIT_CODE = "Birim kodu; yeni kod yüklemede oluşur"  # birim şablonu yok, kod
 BLANK_ROW_REJECTED = "Satır yüklenmez"
 AFTER_RULES = "hata (kurallardan sonra)"          # BOŞSA (K-138): kuralla dolabilir, dolmazsa validasyonda Hata
 LEAD_TIME_AFTER_RULES = "tedarik süresi doluysa hata (kurallardan sonra)"
-EITHER = "alternatif "   # iki alandan biri dolu olmalı; bugün kullanan alan yok (rota ve iş emri operasyonunda kaynak grubu zorunlu oldu, K-180)
+EITHER = "alternatif "   # iki alandan biri dolu olmalı; bugün kullanan alan yok (rota ve üretim siparişi operasyonunda kaynak grubu zorunlu oldu, K-180)
 BLANK_MEANINGS = {      # docs/03 BOŞSA → şablonun "Boş bırakılırsa" satırı
     "yok": "Yok sayılır",
     "sınırsız": "Sınır yok",
@@ -50,7 +50,7 @@ REF_TEXT = {
     "LendingProjectCode": "Proje tablosundaki kod", "BorrowingProjectCode": "Proje tablosundaki kod",
     "SalesOrderNo": "Satış siparişi tablosundaki sipariş numarası", "SalesOrderLineNo": "Satış siparişi tablosundaki satır numarası",
     "SalesOrderLineItemNo": "Satış siparişi tablosundaki alt satır numarası",
-    "WorkOrderNo": "İş emri tablosundaki numara", "ParentWorkOrderNo": "İş emri tablosundaki numara",
+    "WorkOrderNo": "Üretim siparişi tablosundaki numara", "ParentWorkOrderNo": "Üretim siparişi tablosundaki numara",
     "ProductionVersionCode": "Üretim versiyonu tablosundaki kod", "ReferenceProductionVersionCode": "Üretim versiyonu tablosundaki kod",
     "ReferenceMaterialCode": "Malzeme tablosundaki kod",
 }

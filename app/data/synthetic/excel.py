@@ -50,7 +50,7 @@ def _resolvers(ds: Dataset) -> dict:
         "ResourceCode": lambda r: c("Resource", r.get("ResourceId")),
         "ResourceGroupCode": lambda r: c("ResourceGroup", r.get("ResourceGroupId")),
         "SubcontractorCode": lambda r: c("Supplier", r.get("SubcontractorId")),
-        "WorkOrderNo": lambda r: r["WorkOrderNo"] if "WorkOrderNo" in r else wo("WorkOrderId")(r),  # iş emrinin kendi kolonu da bu adda (K-124)
+        "WorkOrderNo": lambda r: r["WorkOrderNo"] if "WorkOrderNo" in r else wo("WorkOrderId")(r),  # üretim siparişinin kendi kolonu da bu adda (K-124)
         "ParentWorkOrderNo": wo("ParentWorkOrderId"),
         "ProductionVersionCode": lambda r: c("ProductionVersion", r.get("ProductionVersionId")),
         "SalesOrderNo": lambda r: r.get("SalesOrderNo") or so("OrderNo")(r),  # kalemsiz arzda yalnız sipariş no (K-198)

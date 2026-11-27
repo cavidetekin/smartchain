@@ -14,7 +14,7 @@ IN_KEY = {("UomConversion", "MaterialCode"), ("Forecast", "CustomerCode"), ("For
 # Stok'un bağlı proje, müşteri ve siparişi anahtarın parçasıdır ama isteğe bağlıdır (K-198): anahtar iç bağda değil ERP'den gelen ham alanlardadır,
 # sahip bulunamasa da satır yüklenir ve anahtarı değişmez
 RAW_KEY = {("Stock", "ProjectCode"), ("Stock", "CustomerCode"), ("Stock", "SalesOrderNo")}
-EITHER_ONE: set = set()  # "kaynak ya da kaynak grubu" istisnası kalktı: rota ve iş emri operasyonunda kaynak grubu zorunlu (K-180)
+EITHER_ONE: set = set()  # "kaynak ya da kaynak grubu" istisnası kalktı: rota ve üretim siparişi operasyonunda kaynak grubu zorunlu (K-180)
 
 
 def docs_map() -> list[tuple]:
@@ -51,7 +51,7 @@ def test_fields_exist_and_parent_key_is_part_of_the_parent_key():
 
 
 def test_required_follows_the_contract():
-    """Zorunlu: sözleşmede alan zorunlu (ZOR. E); rota ve iş emri operasyonunun kaynak grubu da böyle (K-180). Zorunlu (doluysa): kaydın
+    """Zorunlu: sözleşmede alan zorunlu (ZOR. E); rota ve üretim siparişi operasyonunun kaynak grubu da böyle (K-180). Zorunlu (doluysa): kaydın
     anahtarının parçası olan bağlantı (boş yazılsaydı anahtar değişirdi, K-153); doluysa ve yoksa Hata. Öteki isteğe bağlı."""
     for r in refs.REFERENCES:
         required = {f.name: f.required for f in contract_fields(r.child)}[r.fields[0]]
@@ -67,7 +67,7 @@ def test_required_follows_the_contract():
 
 
 def test_required_if_filled_is_an_error_only_when_filled():
-    """Anahtarın parçası olan isteğe bağlı bağlantı: doluysa ve yoksa Hata; boşsa referans kuralı çalışmaz. Rota ve iş emri operasyonunun kaynak
+    """Anahtarın parçası olan isteğe bağlı bağlantı: doluysa ve yoksa Hata; boşsa referans kuralı çalışmaz. Rota ve üretim siparişi operasyonunun kaynak
     grubu zorunlu alandır: kuralı koşulsuzdur (K-180)."""
     by_key = cat.by_key()
     for key in (("Routing", "RTG.REF_RESOURCE_GROUP"), ("WorkOrderOperation", "WOO.REF_RESOURCE_GROUP")):

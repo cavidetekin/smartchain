@@ -73,7 +73,7 @@ def test_units_in_the_files(written):
 
 
 def test_purchase_and_confirmation_files(written):
-    """K-125: yeni adlar; bayraklar ham tiple uyumlu; gerçekleşme iş emri bazlı."""
+    """K-125: yeni adlar; bayraklar ham tiple uyumlu; gerçekleşme üretim siparişi bazlı."""
     _, out, _ = written
     header, data = read(out, "PurchaseOrderLine")
     assert not {"OrderNo", "OpenQty"} & set(header) and {r["OrderType"] for r in data} == {"Satın alma", "Fason", "Satın alma talebi"}

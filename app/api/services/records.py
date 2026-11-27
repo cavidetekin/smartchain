@@ -101,7 +101,7 @@ RELATIONS: dict[str, tuple[Relation, ...]] = {
     "ResourceGroup": (
         Relation("group-member", "Kaynak grup eşleşmesi", "master-resource-group-member", _by("ResourceGroupMember", "ResourceGroupId")),
         Relation("routing", "Rota", "master-routing", _by("Routing", "ResourceGroupId")),
-        Relation("work-order-operation", "İş emri operasyonu", "transaction-work-order-operation", _by("WorkOrderOperation", "ResourceGroupId")),
+        Relation("work-order-operation", "Üretim siparişi operasyonu", "transaction-work-order-operation", _by("WorkOrderOperation", "ResourceGroupId")),
     ),
     "Supplier": (
         Relation("material-supplier", "Malzeme tedarikçisi", "master-material-supplier", _by("MaterialSupplier", "SupplierId")),
@@ -120,7 +120,7 @@ MASTER_SCREEN = frozenset(n for n in BY_NAME if not n.startswith("transaction-")
 
 
 def label_of(rec: dict) -> tuple[str, str | None]:
-    """Kaydın kodu ve adı (kartın araç çubuğu): kod, sipariş ve satır, iş emri…; yoksa iş anahtarı."""
+    """Kaydın kodu ve adı (kartın araç çubuğu): kod, sipariş ve satır, üretim siparişi…; yoksa iş anahtarı."""
     for key in ("Code", "OrderNo", "PurchaseOrderNo", "WorkOrderNo", "ConfirmationNo", "RouteCode"):
         value = rec.get(key)
         if value not in (None, ""):

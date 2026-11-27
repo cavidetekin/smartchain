@@ -168,7 +168,7 @@ def test_material_change_refreshes_a_table_that_was_not_transferred(s):
     hist = s.execute(sa.text("SELECT FieldName, OldValue, NewValue FROM adm.FieldChange WHERE TableName = N'Stock' AND RecordKey = :k AND DataVersionId = :v "
                              "ORDER BY FieldName"), {"k": str(row["Id"]), "v": v}).all()
     assert [tuple(h) for h in hist] == [("AllocationKey", "AP-1", None), ("AllocationLevel", "Proje", None), ("IsCustomAllocated", "1", "0")]
-    # iş emri ve satın alma bu aktarımda yazıldı: değer aktarımın kendi hesabından, ayrıca yeniden hesap yok
+    # üretim siparişi ve satın alma bu aktarımda yazıldı: değer aktarımın kendi hesabından, ayrıca yeniden hesap yok
     assert "WorkOrder" not in r["allocation"] and all(alloc(x) == (False, None, None) for x in core_rows(s, "WorkOrder", "WorkOrderNo LIKE N'AW-%'"))
 
 

@@ -167,7 +167,7 @@ def test_work_orders_in_the_dictionary(db_engine):
     assert not {("WorkOrder", n) for n in ("OrderNo", "OrderType", "OrderQty", "OpenQty")} & set(rows)
     assert not {("WorkOrderComponent", "RequiredQty"), ("WorkOrderComponent", "IssuedQty"), ("WorkOrderOperation", "OpNo"), ("WorkOrderOperation", "SeqNo")} & set(rows)
     kind = rows[("WorkOrder", "ProductionOrderType")]
-    assert kind.StandardLabel == "İş emri tipi" and kind.IfEmpty == "bilinmiyor" and not kind.IsRequired and not rows[("WorkOrder", "Status")].IsRequired
+    assert kind.StandardLabel == "Üretim siparişi tipi" and kind.IfEmpty == "bilinmiyor" and not kind.IsRequired and not rows[("WorkOrder", "Status")].IsRequired
     assert rows[("WorkOrder", "ProductionVersionId")].StandardLabel == "Üretim versiyonu" and rows[("WorkOrder", "IsFixed")].StandardLabel == "Sabit" and rows[("WorkOrder", "IsFixed")].IfEmpty == "yok"
     assert rows[("WorkOrderComponent", "UnitUsage")].StandardLabel == "Birim kullanım" and rows[("WorkOrderComponent", "IssuedQuantity")].IfEmpty == "yok" and rows[("WorkOrderComponent", "ScrapRatio")].IfEmpty == "yok"
     assert ("WorkOrderOperation", "ResourceId") not in rows and rows[("WorkOrderOperation", "ResourceGroupId")].IsRequired and rows[("WorkOrderOperation", "ResourceRole")].IfEmpty == "hata (kurallardan sonra)" and rows[("WorkOrderOperation", "IsCompleted")].StandardLabel == "Tamamlandı"

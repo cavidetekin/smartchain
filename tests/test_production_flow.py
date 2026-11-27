@@ -117,7 +117,7 @@ def codes(db_engine) -> dict:
 
 
 def bom(engine, code: str, tree: str) -> dict:
-    """Bağımsız kaynak: ağaç tablosundan bileşen → miktar (iş emri bileşenleri bu görünüme girmez)."""
+    """Bağımsız kaynak: ağaç tablosundan bileşen → miktar (üretim siparişi bileşenleri bu görünüme girmez)."""
     with engine.connect() as c:
         return {r[0]: float(r[1]) for r in c.execute(sa.text(
             "SELECT x.Code, SUM(b.Quantity) FROM core.BOM b JOIN core.Material m ON m.Id = b.MaterialId AND m.VersionTo IS NULL "

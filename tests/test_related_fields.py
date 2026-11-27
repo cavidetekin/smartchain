@@ -74,7 +74,7 @@ def test_only_requested_relations_are_joined():
     assert "core.[ResourceGroup] AS rf" not in text                                  # istenmeyen ilişki birleştirilmez
     assert "rf0.[VersionFrom] <= 7" in text and "rf1.[VersionTo] >= 7" in text        # listenin okuduğu versiyonda geçerli satır
     assert "rf0" not in sql(b.total_query())
-    assert b.columns[MATERIAL_NAME]["label"] == "İş emri · Üretilen malzeme · Malzeme adı" and b.related_units == {"WorkOrderId/OpenQuantity": "_unit/WorkOrderId"}
+    assert b.columns[MATERIAL_NAME]["label"] == "Üretim siparişi · Üretilen malzeme · Malzeme adı" and b.related_units == {"WorkOrderId/OpenQuantity": "_unit/WorkOrderId"}
 
 
 def test_limits():

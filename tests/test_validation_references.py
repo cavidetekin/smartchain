@@ -48,7 +48,7 @@ DATA = {
             {"LocationCode": LOC, "MaterialCode": "M-PRD2", "Code": "A-1", "ComponentMaterialCode": "M-PAS", "OperationNo": 30, "SequenceNo": 2, "Quantity": 1},
             {"LocationCode": LOC, "MaterialCode": "M-PRD2", "Code": "A-2", "ComponentMaterialCode": "SAT-999", "OperationNo": 10, "SequenceNo": 1, "Quantity": 1,
              "ComponentUom": "KOLI"}],
-    # K-180: planlama birimi kaynak grubu; rota ve iş emri operasyonu yalnız gruba bağlanır, kaynak gruba eşleşmeyle girer
+    # K-180: planlama birimi kaynak grubu; rota ve üretim siparişi operasyonu yalnız gruba bağlanır, kaynak gruba eşleşmeyle girer
     "Routing": [{"LocationCode": LOC, "RouteCode": "R-1", "OperationNo": 10, "SequenceNo": 1, "ResourceGroupCode": "G-1", "IsActive": 1},
                 {"LocationCode": LOC, "RouteCode": "R-BOS", "OperationNo": 10, "SequenceNo": 1, "ResourceGroupCode": "G-PAS", "IsActive": 1},
                 {"LocationCode": LOC, "RouteCode": "R-1", "OperationNo": 10, "SequenceNo": 2, "ResourceGroupCode": "G-YOK", "IsActive": 1},
@@ -134,13 +134,13 @@ def test_required_reference_is_error_with_the_value(hits):
 
 def test_optional_link_is_warning_only_when_filled(hits):
     assert of(hits, "SO.REF_PROJECT") == [(f"{LOC} · SO-PRJ · 10 · 0", "Uyarı", "Proje bulunamadı: P-YOK")]
-    assert [(s, m) for _, s, m in of(hits, "WO.REF_PARENT_WORK_ORDER")] == [("Uyarı", "Orijinal iş emri bulunamadı: WO-YOK")]
+    assert [(s, m) for _, s, m in of(hits, "WO.REF_PARENT_WORK_ORDER")] == [("Uyarı", "Orijinal üretim siparişi bulunamadı: WO-YOK")]
     assert [(s, m) for _, s, m in of(hits, "RG.REF_SUBCONTRACTOR")] == [("Uyarı", "Fasoncu bulunamadı: S-YOK")]  # fasoncu grupta (K-180)
     assert [(s, m) for _, s, m in of(hits, "UOM.REF_MATERIAL")] == [("Hata", "Malzeme bulunamadı: M-YOK")]  # anahtarın parçası: Zorunlu (doluysa), K-153
 
 
 def test_resource_group_is_a_required_reference(hits):
-    """K-180: rota ve iş emri operasyonu kaynak grubuna bağlanır (zorunlu); grup yoksa Hata. Kaynak alanı kalktı, kaynak referansı yalnız grup eşleşmesinde."""
+    """K-180: rota ve üretim siparişi operasyonu kaynak grubuna bağlanır (zorunlu); grup yoksa Hata. Kaynak alanı kalktı, kaynak referansı yalnız grup eşleşmesinde."""
     assert of(hits, "RTG.REF_RESOURCE_GROUP") == [(f"{LOC} · R-1 · 10 · 2", "Hata", "Kaynak grubu bulunamadı: G-YOK")]
     assert of(hits, "WOO.REF_RESOURCE_GROUP") == [(f"{LOC} · WO-OP · 30 · 1", "Hata", "Kaynak grubu bulunamadı: G-YOK")]
     assert of(hits, "RGM.REF_RESOURCE_GROUP") == [(f"{LOC} · G-YOK · K-1", "Hata", "Kaynak grubu bulunamadı: G-YOK")]

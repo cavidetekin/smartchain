@@ -248,7 +248,7 @@ def add_examples(stg: dict[str, list[dict]]) -> list[dict]:
     x.add("BorrowPayback", bp, ["BP.REF_LENDING_PROJECT"], BorrowDate=date(2027, 2, 6), LendingProjectCode="V-YOK-PRJ")
     x.add("BorrowPayback", bp, ["BP.REF_BORROWING_PROJECT"], BorrowDate=date(2027, 2, 7), BorrowingProjectCode="V-YOK-PRJ")
 
-    # İş emri ve satırları
+    # Üretim siparişi ve satırları
     wo = x.base("WorkOrder", WorkOrderNo="WO-5001")
     w = lambda n, rules, **v: x.add("WorkOrder", wo, rules, WorkOrderNo=f"V-WO-{n}", **v)  # noqa: E731
     w(1, ["WO.QTY", "WO.ZERO_OPEN"], OrderedQuantity=0.0, OpenQuantity=0.0)

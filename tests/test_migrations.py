@@ -98,6 +98,34 @@ def test_latest_migration_goes_forward_back_and_forward(scratch):
     assert check.returncode == 0, check.stdout + check.stderr
 
 
+def test_0082_renames_the_saved_pegging_criterion(scratch):
+    """K-202 (geçiş 0082): "Satın alma önerisi" ölçütü "Satın alma planı" oldu; senaryoların kayıtlı Arz sırası çevrilir (sıra ve yön korunur),
+    geri alışta eski ada döner. Çevrilmeseydi eski ad tanımda bulunmadığı için atılır, kullanıcının sırası bozulurdu."""
+    assert _alembic(scratch, "upgrade", "0081").returncode == 0
+    engine = sa.create_engine(scratch)
+    rows = "SELECT Side, Seq, Criterion, Direction FROM param.PeggingCriterion ORDER BY Side, Seq"
+    try:
+        with engine.begin() as c:
+            sid = c.execute(sa.text("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1")).scalar_one()
+            for side, seq, name, direction in (("Arz", 1, "Satın alma önerisi", None), ("Arz", 2, "Dönem", "Azalan"), ("Arz", 3, "Stok", None),
+                                               ("İhtiyaç", 1, "Tahmin", None)):
+                c.execute(sa.text("INSERT INTO param.PeggingCriterion (ScenarioDefinitionId, Side, Seq, Criterion, Direction) VALUES (:s, :side, :seq, :n, :d)"),
+                          {"s": sid, "side": side, "seq": seq, "n": name, "d": direction})
+        up = _alembic(scratch, "upgrade", "0082")
+        assert up.returncode == 0, up.stdout + up.stderr
+        with engine.connect() as c:
+            assert [tuple(r) for r in c.execute(sa.text(rows))] == [("Arz", 1, "Satın alma planı", None), ("Arz", 2, "Dönem", "Azalan"), ("Arz", 3, "Stok", None),
+                                                                     ("İhtiyaç", 1, "Tahmin", None)]
+            labels = dict(c.execute(sa.text("SELECT FieldName, StandardLabel FROM adm.FieldDefinition WHERE TableName = N'WorkOrder' AND FieldName IN (N'ProductionOrderType', N'Status')")).all())
+            assert labels == {"ProductionOrderType": "Üretim siparişi tipi", "Status": "Üretim siparişi durumu"}          # görünen adlar sözlükte de yenilendi
+        down = _alembic(scratch, "downgrade", "0081")
+        assert down.returncode == 0, down.stdout + down.stderr
+        with engine.connect() as c:
+            assert [r[2] for r in c.execute(sa.text(rows))][0] == "Satın alma önerisi"
+    finally:
+        engine.dispose()
+
+
 def test_0077_cleans_user_definitions_and_keeps_renamed_data(scratch):
     """K-198 (geçiş 0077): kalkan alanları kullanan kullanıcı tanımları silinir ve çıktıda listelenir; malzemedeki eski adı kullananlar yeni ada
     çevrilir; malzemede elle girilmiş değer silinir, alttaki değer geçerli olur; arzın sipariş alanları bağlı satırdan doldurulur."""

@@ -27,7 +27,7 @@ const BOOL = ["Evet", "Hayır"] as const;
 const sources = (row: Row) => (row._sources ?? {}) as CellSources;
 const lowerFirst = (s: string) => s.charAt(0).toLocaleLowerCase("tr") + s.slice(1);
 
-/** Satırın okunur adı (hata ve yapıştırma listesi): kod, sipariş ve satır, iş emri…; yoksa kayıt no. */
+/** Satırın okunur adı (hata ve yapıştırma listesi): kod, sipariş ve satır, üretim siparişi…; yoksa kayıt no. */
 export function recordLabel(row: Row): string {
   for (const key of ["Code", "OrderNo", "PurchaseOrderNo", "WorkOrderNo", "ConfirmationNo", "RouteCode", "MaterialCode", "ResourceCode"]) {
     const v = row[key];

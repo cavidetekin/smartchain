@@ -99,7 +99,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>23. Arayüz prensipleri · 7/7</sub>
 
 - **U-17 · Global bağlam:** Senaryo, plan versiyonu ve bucket seçimi her ekranın başlığında aynı yerde durur ve ekranlar arasında taşınır.
-- **U-18 · Detaya iniş:** Hücreye tıklayınca ilgili kayıtlara filtresiyle gidilir (örn. aşırı yüklü hafta → o haftanın iş emirleri).
+- **U-18 · Detaya iniş:** Hücreye tıklayınca ilgili kayıtlara filtresiyle gidilir (örn. aşırı yüklü hafta → o haftanın üretim siparişleri).
 - **U-19 · Format standardı:** Sayılar 1.234,5; tarihler gg.aa.yyyy; haftalar H44. Birimler kolon başlığında yazılır.
 - **U-20 · Fontlar ürünle paketlenir:** Kurulum internetsiz olduğu için yazı tipleri ve tüm arayüz varlıkları dışarıdan yüklenmez. Metin Instrument Sans; sayı, tarih ve kod Inter, rakamlar eşit genişlikte (K-86).
 - **U-21 · Sunucu tarafı işlem:** Filtre, sıralama ve gruplama sunucuda yapılır; binlerce satırda ekran yavaşlamaz.

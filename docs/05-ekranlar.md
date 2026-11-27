@@ -40,7 +40,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **02 · Veri yükleme:** Çekilen veriyi görme, doğrulama sonucu, tam ya da kısmi aktarım, veri aktarım geçmişi.
 - **28 · Dünden bugüne:** Ham veride tablo başına dünden bugüne satır sayısı değişimi; yeni gelen, gelmeyen ve güncellenen kayıtlar (5.5b, K-159).
 - **03 · Ana veri ekranları:** Kaynak, malzeme, ürün ağacı, rota, tedarikçi, müşteri, proje, takvim, vardiya… Her değerin kaynağı (ERP, kural, elle) görünür; elle düzeltme yapılır.
-- **29 · İşlem verisi:** Satış siparişi, tahmin, proje, stok, ödünç, iş emri, satın alma siparişi ve çalışan izni; aktarılan veri, salt okunur (6.1, K-169).
+- **29 · İşlem verisi:** Satış siparişi, tahmin, proje, stok, ödünç, üretim siparişi, satın alma siparişi ve çalışan izni; aktarılan veri, salt okunur (6.1, K-169).
 - **04 · Veri kuralları:** Tablo başına sıralı veri kuralları; kural penceresi (koşul, sonuç, seçenek), sıra, aç / kapa, kuralları yeniden uygula (K-141, K-142).
 - **27 · Validasyon kuralları:** Staging'de hangi durumun Hata, Uyarı ya da Bilgi olduğu: yapısal kontroller, hazır kurallar, kullanıcı kuralları; tablo başına hata eşiği (K-136).
 - **05 · Veri kalitesi:** Ana veri ve işlem verisi uyarıları; düzeltme listesi.
@@ -155,7 +155,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **33 · Kurallı yerleştirme ve sezgisel:** Model çözüm bulamazsa ya da süre biterse yedek yol.
 - **34 · Süre bütçesi:** Süre aşılınca o ana kadar bulunan en iyi çözüm saklanır.
 - **35 · Son hesap:** Satın alma yuvarlama (parti, minimum, kutu), pegging, proje numaralarını geri yazma.
-- **36 · Mevcut arz önerileri:** Açık sipariş ve iş emirleri için öne çek, ertele, iptal önerisi.
+- **36 · Mevcut arz önerileri:** Açık sipariş ve üretim siparişleri için öne çek, ertele, iptal önerisi.
 - **37 · Uyarı üretme:** 7 kategori: teslim, kapasite, malzeme, ana veri, işlem verisi, proje, plan kalitesi.
 - **38 · Metrik hesaplama:** Zamanında teslim, gecikme, doluluk, fazla mesai, fason, stok değeri.
 
@@ -194,8 +194,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **57 · Sipariş bazlı · hedef tarih ve koruma:** Siparişe hedef tarih verilir ve korunur.
 - **58 · Manuel pegging:** Belirli stok ya da arz belirli siparişe bağlanır.
 - **59 · Gantt · sürükle-bırak:** Çubuk başka bucket'a ya da başka kaynağa bırakılır.
-- **60 · Gantt · bölme ve birleştirme:** İş emri miktarla bölünür ya da birleştirilir.
-- **61 · Sabitleme ve sabitlemeyi kaldırma:** Hücre, iş emri ya da sipariş sabitlenir; model sabitlenmiş olana dokunmaz.
+- **60 · Gantt · bölme ve birleştirme:** Üretim siparişi miktarla bölünür ya da birleştirilir.
+- **61 · Sabitleme ve sabitlemeyi kaldırma:** Hücre, üretim siparişi ya da sipariş sabitlenir; model sabitlenmiş olana dokunmaz.
 - **62 · Anlık etki önizlemesi:** Değişiklik yapılırken kaynak yükü hemen güncellenir.
 - **63 · Sabit dönem koruması:** Sabit dönemdeki bucket'ta değişiklik engellenir.
 
@@ -310,7 +310,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Uygulama (6.2, K-170, K-172):** uygulandı. "Manuel: Evet" alanlarda manuel değer hücre içinde (Ana veri ve İşlem verisi); ilk kolon "Manuel değer", köşe işareti, kaynak ipucu yalnız manuel değer ve kural sonucunda.
 - **Karar (6.3, K-171, K-173):** detay kartı ("Detay ›" rozeti): Geçmiş ve İlişkili kayıtlar; İşlem verisi'nde yalnız Geçmiş. Denetim izinde "Kayda git".
 - **Uygulama (6.3, K-171, K-173):** uygulandı. Detay simgesi (›) tablonun en sağında dar kolonda; hücre menüsü Detay · Kopyala · Manuel değeri kaldır, Ctrl+C; kartın sekmeleri tek sıra: Geçmiş ve tablonun ilişkileri (boş ilişki pasif).
-- **Uygulama (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Kaynak grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.9'da kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Kaynak grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve İş emri operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Kaynak grup eşleşmesi; Kaynak grubu → Kaynak grup eşleşmesi, Rota, İş emri operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
+- **Uygulama (7.5, K-180):** planlama birimi kaynak grubudur. Kaynak sekmesi: Kaynak · Kaynak grubu · Kaynak grup eşleşmesi. Kaynak'ta kimlik, ham tip (yalnız bilgi), üretim yeri, kalan fazla mesai ve geçici kapasite alanları (salt okunur; 7.9'da kalkar); tip bayrakları, Kritik, Kapasite birimi ve Fasoncu Kaynak grubu'nda. Kaynak grup eşleşmesi tarihsizdir, ek alan taşır. Rota ve Üretim siparişi operasyonu'nda kaynak kolonu yoktur, Kaynak grubu zorunludur; tüketimler grubun kapasite biriminin ondalığıyla. İlişkili kayıtlar: Kaynak → Kaynak grup eşleşmesi; Kaynak grubu → Kaynak grup eşleşmesi, Rota, Üretim siparişi operasyonu; Tedarikçi → Malzeme tedarikçisi, Fason kaynak grubu. Vardiya kavramı kalktı.
 - **İlişkili alanlar (7.6, K-182; uygulandı):** her tabloda, satırın bağlı olduğu kaydın alanları Alanlar panelinden kolon olarak eklenebilir (ör. Kaynak grup eşleşmesinde "Kaynak grubu · Kritik"); salt okunur, veri kopyalanmaz. Kayıt kartındaki "İlişkili kayıtlar" (K-173) ayrı özelliktir: orada çok karşılıklı ilişkiler tablo olarak açılır.
 - **Üretim akışı (7.16, K-200; uygulandı, sürüm 0.59.0):** Malzeme ve Alokasyon kuralı tablolarında satırın ⋯ menüsünde "Üretim akışı" ("Detay"dan sonra): satırın malzemesi için tam pencere boyunda salt okunur pencere. Kapalı açılır; solda malzemeyi kullananlar, sağda kullandıkları + işaretiyle seviye seviye açılır; birden çok ürün ağacı varsa önce "Alternatif 1, 2 …" kutuları; okta bir üst malzeme için gereken miktar; "Tümünü kapat"; çift tıklama seçili malzemeyi değiştirir; 20'den çok açılımda "+N malzeme". Alt başlıkta malzemenin kodu, adı ve lokasyonu; malzeme benzetilen ürünse altında kalın not. Kutular malzeme seviyesine göre renkli (hayalet gri); alternatif grubu üyesinde "veya G1" etiketi. Başlıkta yakınlaştırma (− · + · Sığdır · %100), PNG indirme (açık çizimin tamamı) ve "Tümünü kapat"; altta renk açıklaması ve "Kapat". Yalnız ürün ağacı verisinden çizilir (plan, senaryo, stok yok); bütün roller açabilir. Malzeme kartında sekmesi yoktur.
 
@@ -318,8 +318,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>Ekran 29 · geliştirme 6.1 · K-169 (mockup yok; Ana veri ekranının düzeni) · uygulandı</sub>
 
 - **Ne:** aktarılan işlem verisi, salt okunur; Ana veri ekranının bileşeni ve kuralları (tablo seçimi, Standart görünüm, sayı biçimi).
-- **Sekmeler (aktarım grupları, K-150):** Talep (Satış siparişi · Tahmin · Proje) · Stok (Stok · Ödünç ve geri ödeme) · Üretim (İş emri · İş emri bileşeni · İş emri operasyonu · Üretim gerçekleşmesi) · Satın alma (Satın alma siparişi) · İzin (Çalışan izni). Tek tablolu sekmede tablo seçimi görünmez.
-- **Özel alokasyon (K-198; uygulandı, sürüm 0.57.0):** Stok, İş emri ve Satın alma siparişi tablolarında sahip alanları aynı adı taşır: "Bağlı proje", "Bağlı müşteri" ve "Bağlı sipariş no" açık gelir; "Bağlı sipariş satırı" ve "Bağlı sipariş alt satırı" Alanlar'da durur, kapalı gelir. İç bağ kolonu (eski "Sahip / Bağlı sipariş satırı") gösterilmez; ilişkili alan grupları "Bağlı proje · …", "Bağlı müşteri · …", "Bağlı sipariş · …" başlığını taşır. "Özel alokasyon" (yüklemede hesaplanır) açık gelir; "Alokasyon seviyesi" (Sipariş · Proje · Müşteri) ve "Alokasyon anahtarı" kapalı gelir. Hiçbiri elle değiştirilemez. Ana veri › Malzeme'de "Özel alokasyon" yalnız ERP'den ya da veri kuralıyla gelir; manuel değer girilemez.
+- **Sekmeler (aktarım grupları, K-150):** Talep (Satış siparişi · Tahmin · Proje) · Stok (Stok · Ödünç ve geri ödeme) · Üretim (Üretim siparişi · Üretim siparişi bileşeni · Üretim siparişi operasyonu · Üretim gerçekleşmesi) · Satın alma (Satın alma siparişi) · İzin (Çalışan izni). Tek tablolu sekmede tablo seçimi görünmez.
+- **Özel alokasyon (K-198; uygulandı, sürüm 0.57.0):** Stok, Üretim siparişi ve Satın alma siparişi tablolarında sahip alanları aynı adı taşır: "Bağlı proje", "Bağlı müşteri" ve "Bağlı sipariş no" açık gelir; "Bağlı sipariş satırı" ve "Bağlı sipariş alt satırı" Alanlar'da durur, kapalı gelir. İç bağ kolonu (eski "Sahip / Bağlı sipariş satırı") gösterilmez; ilişkili alan grupları "Bağlı proje · …", "Bağlı müşteri · …", "Bağlı sipariş · …" başlığını taşır. "Özel alokasyon" (yüklemede hesaplanır) açık gelir; "Alokasyon seviyesi" (Sipariş · Proje · Müşteri) ve "Alokasyon anahtarı" kapalı gelir. Hiçbiri elle değiştirilemez. Ana veri › Malzeme'de "Özel alokasyon" yalnız ERP'den ya da veri kuralıyla gelir; manuel değer girilemez.
 - **Alokasyon kuralı (K-199; uygulandı, sürüm 0.58.0):** Ana veri › Malzeme sekmesinin tablo seçiminde üçüncü tablo (Malzeme · Benzetilen ürün · Alokasyon kuralı). Kolonlar: Lokasyon · Malzeme · Alokasyon seviyesi · Alokasyon anahtarı · Sebep (Kendi arzı · Alt seviye arzı) · Kaynak malzeme (metin, ör. "SAT-009 +2"; ilişkili alanı yoktur). Sistem üretir; salt okunur, manuel değer girilemez. Malzeme kartında aynı adla sekme o malzemenin satırlarını gösterir. İşlem verisi'nde yoktur.
 - **Yetki:** fonksiyon 102; bütün roller görür, End user salt okunur (görünüm, alan, Excel serbest).
 
@@ -411,7 +411,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **Kaynak × dönem:** Her hücre doluluk yüzdesi; bucket seçimi günlük, haftalık, aylık.
 - **Renk skalası:** Normal indigo tonlarında, %90–100 hardal, %100 üstü kiremit.
 - **Dünden farkı:** Son sütun dünkü onaylı plana göre doluluk değişimini gösterir.
-- **Detaya iniş:** Kaynak ve hafta seçilince yükü oluşturan iş emirleri sağda listelenir.
+- **Detaya iniş:** Kaynak ve hafta seçilince yükü oluşturan üretim siparişleri sağda listelenir.
 
 ### Ürün bazlı planlama
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 11/25</sub>
@@ -428,7 +428,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Kaynak bazlı planlama](mockups/m24e-0321-kaynak-bazli-planlama.png)
 
-- **Kaynağın yükü:** Seçili kaynağın yükü iş emri ve planlı sipariş bazında haftalara dağılmış görünür.
+- **Kaynağın yükü:** Seçili kaynağın yükü üretim siparişi ve planlı sipariş bazında haftalara dağılmış görünür.
 - **Taşı, böl, aktar:** Yük başka haftaya, alternatif kaynağa ya da fasona aktarılır.
 - **Önce / sonra:** Aktarımın iki kaynaktaki etkisi kaydetmeden önce görünür.
 - **Geçici parametre:** Verim, fazla mesai, çalışma günü yalnız bu çalışmada değişir.
@@ -450,7 +450,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Bucket bazlı:** Çubuklar dönem sınırına oturur; saat düzeyinde çizelgeleme yok.
 - **Sürükle-bırak:** Çubuk başka haftaya ya da başka kaynağa bırakılır; etki hemen görünür.
-- **Böl ve sabitle:** İş emri miktarla bölünür; sabitlenmiş çubuğu model taşımaz.
+- **Böl ve sabitle:** Üretim siparişi miktarla bölünür; sabitlenmiş çubuğu model taşımaz.
 - **İki görünüm:** Satırlar kaynak ya da sipariş olabilir; dört planlama görünümü aynı planı değiştirir.
 
 ### Malzeme planı
@@ -470,7 +470,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **Planlı siparişler:** Üretim, satın alma ve fason önerileri tek listede; proje bilgisiyle.
 - **Yuvarlama görünür:** Modelin hesapladığı miktar ve parti, minimum, kutu kuralına göre yuvarlanmış miktar.
-- **Mevcut arz önce:** Açık sipariş ve iş emri için öne çek, ertele, iptal önerileri.
+- **Mevcut arz önce:** Açık sipariş ve üretim siparişi için öne çek, ertele, iptal önerileri.
 - **Karar:** Her satır onaylanır, reddedilir ya da bekletilir; yayında dikkate alınır.
 
 ### Pegging

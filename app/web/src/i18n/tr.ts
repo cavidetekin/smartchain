@@ -565,8 +565,8 @@ export const tr = {
     sections: "İşlem verisi bölümleri",
     tabs: { demand: "Talep", stock: "Stok", production: "Üretim", purchase: "Satın alma", absence: "İzin" },
     tables: { salesOrder: "Satış siparişi", forecast: "Tahmin", project: "Proje", stock: "Stok",
-              borrowPayback: "Ödünç ve geri ödeme", workOrder: "İş emri", workOrderComponent: "İş emri bileşeni",
-              workOrderOperation: "İş emri operasyonu", productionConfirmation: "Üretim gerçekleşmesi", purchaseOrder: "Satın alma siparişi",
+              borrowPayback: "Ödünç ve geri ödeme", workOrder: "Üretim siparişi", workOrderComponent: "Üretim siparişi bileşeni",
+              workOrderOperation: "Üretim siparişi operasyonu", productionConfirmation: "Üretim gerçekleşmesi", purchaseOrder: "Satın alma siparişi",
               employeeAbsence: "Çalışan izni" },
   },
   auditLog: {

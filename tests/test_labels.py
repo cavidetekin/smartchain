@@ -26,16 +26,16 @@ KNOWN = {
     "Name": {"Lokasyon adı": {"Location"}, "Birim adı": {"UnitOfMeasure"}, "Kaynak adı": {"Resource"}, "Grup adı": {"ResourceGroup"}, "Malzeme adı": {"Material"},
              "Tedarikçi adı": {"Supplier"}, "Versiyon adı": {"ProductionVersion"}, "Proje adı": {"Project"}, "Müşteri adı": {"Customer"}},
     "OrderNo": {"Sipariş no": {"SalesOrderLine"}, "Transfer no": {"TransferOrder"}},
-    "OrderedQuantity": {"Sipariş miktarı": {"SalesOrderLine", "PurchaseOrderLine"}, "İş emri miktarı": {"WorkOrder"}},
+    "OrderedQuantity": {"Sipariş miktarı": {"SalesOrderLine", "PurchaseOrderLine"}, "Üretim siparişi miktarı": {"WorkOrder"}},
     "Priority": {"Öncelik": {"MaterialSupplier", "ProductionVersion", "WorkOrder"}, "ERP önceliği": {"Project", "Customer", "SalesOrderLine"}},
     "Quantity": {"Bileşen miktarı": {"BOM"}, "Miktar": {"Forecast", "Stock"}},
     "RequestedDate": {"İstek tarihi": {"SalesOrderLine"}, "İstenen tarih": {"PurchaseOrderLine"}},
-    "Status": {"Sipariş durumu": {"SalesOrderLine"}, "Stok durumu": {"Stock"}, "İş emri durumu": {"WorkOrder"}, "Operasyon durumu": {"WorkOrderOperation"},
+    "Status": {"Sipariş durumu": {"SalesOrderLine"}, "Stok durumu": {"Stock"}, "Üretim siparişi durumu": {"WorkOrder"}, "Operasyon durumu": {"WorkOrderOperation"},
                "Durum": {"PurchaseOrderLine"}},
     "Type": {"Lokasyon tipi": {"Location"}, "Grup tipi": {"ResourceGroup"}, "Versiyon tipi": {"ProductionVersion"}, "Sipariş tipi": {"SalesOrderLine"},
              "Tahmin tipi": {"Forecast"}},
     "Uom": {"Sipariş birimi": {"SalesOrderLine"}, "Birim": {"Forecast", "Stock", "WorkOrder", "WorkOrderComponent", "PurchaseOrderLine"}},
-    "WorkOrderId": {"İş emri": {"WorkOrderComponent", "WorkOrderOperation", "ProductionConfirmation"}, "Bağlı iş emri": {"PurchaseOrderLine"}},
+    "WorkOrderId": {"Üretim siparişi": {"WorkOrderComponent", "WorkOrderOperation", "ProductionConfirmation"}, "Bağlı üretim siparişi": {"PurchaseOrderLine"}},
 }
 OWNER = {"ProjectCode": "Bağlı proje", "CustomerCode": "Bağlı müşteri", "SalesOrderNo": "Bağlı sipariş no", "SalesOrderLineNo": "Bağlı sipariş satırı",
          "SalesOrderLineItemNo": "Bağlı sipariş alt satırı"}
@@ -60,7 +60,7 @@ def test_same_field_has_the_same_label_in_every_table():
 
 
 def test_supply_owner_fields_share_one_set_of_names():
-    """Stok, İş emri ve Satın alma satırı: beş sahip alanı aynı adla; iç bağ kolon değildir; "sahip" kelimesi bu alanlarda geçmez."""
+    """Stok, Üretim siparişi ve Satın alma satırı: beş sahip alanı aynı adla; iç bağ kolon değildir; "sahip" kelimesi bu alanlarda geçmez."""
     for table in allocation.TABLES:
         core = metadata.tables[f"core.{table}"].c
         assert {f: core[f].info.get("label") for f in OWNER} == OWNER, table

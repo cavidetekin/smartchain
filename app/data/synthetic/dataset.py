@@ -607,7 +607,7 @@ def order_fields(line: dict | None, order_no: str | None = None) -> dict:
 
 def _alternative(b: _Builder) -> None:
     """Alternatifli örnek (K-199): bir alt montajın ikinci üretim versiyonu ve ikinci ağacı. İkinci ağaç birincinin bileşenlerine ek olarak yalnız
-    burada geçen bir malzemeyi kullanır. Durum hesapları ve iş emirleri birinci versiyonu kullanır (öncelik 1)."""
+    burada geçen bir malzemeyi kullanır. Durum hesapları ve üretim siparişleri birinci versiyonu kullanır (öncelik 1)."""
     parent = b.id("Material", ALTERNATIVE_PARENT)
     v1 = next(pv for pv in b.t["ProductionVersion"] if pv["MaterialId"] == parent)
     b.add("ProductionVersion", **{**{k: v for k, v in v1.items() if k != "Id"}, "Code": "V2", "Name": "Alternatif üretim", "Priority": 2, "BOMCode": ALTERNATIVE_BOM})
@@ -665,20 +665,20 @@ def _stock(b: _Builder, rng: random.Random) -> None:
           BorrowDate=ds.start - timedelta(days=14), PaybackDueDate=ds.day(3, 0))
 
 
-# --- İş emirleri ---
+# --- Üretim siparişleri ---
 
 def _work_orders(b: _Builder, rng: random.Random) -> None:
     ds = b.ds
     so_mam004 = next(s for s in b.t["SalesOrderLine"] if s["MaterialId"] == b.id("Material", "MAM-004"))
     customer_of_mam004 = next(c["Code"] for c in b.t["Customer"] if c["Id"] == so_mam004["CustomerId"])
-    plan = [  # (iş emri, malzeme, adet, başladı mı, bitiş haftası)
+    plan = [  # (üretim siparişi, malzeme, adet, başladı mı, bitiş haftası)
         ("WO-5001", "MAM-004", 10, False, 2), ("WO-5002", "ALT-010", 10, True, 1), ("WO-5003", "PRC-025", 10, True, 1),
         ("WO-5004", "PRC-004", 20, True, 1), ("WO-5005", "PRC-012", 15, False, 2), ("WO-5006", "ALT-016", 12, False, 3),
         ("WO-5007", "PRC-041", 12, True, 2), ("WO-5008", "PRC-055", 25, False, 3), ("WO-5009", "ALT-019", 8, True, 2),
         ("WO-5010", "PRC-060", 30, False, 4), ("WO-5011", "PRC-068", 10, True, 1), ("WO-5012", "MAM-009", 6, False, 4),
-        ("WO-5013", "MAM-006", 4, False, 5),   # projeye ayrılmış iş emri (K-198)
+        ("WO-5013", "MAM-006", 4, False, 5),   # projeye ayrılmış üretim siparişi (K-198)
     ]
-    pv_by_mat = {pv["MaterialId"]: pv for pv in b.t["ProductionVersion"] if pv["Priority"] == 1}   # iş emirleri birinci versiyondan (alternatifli örnek, K-199)
+    pv_by_mat = {pv["MaterialId"]: pv for pv in b.t["ProductionVersion"] if pv["Priority"] == 1}   # üretim siparişleri birinci versiyondan (alternatifli örnek, K-199)
     for no, code, qty, started, week in plan:
         m = b.find("Material", code)
         pv = pv_by_mat[m["Id"]]
@@ -714,7 +714,7 @@ def _work_orders(b: _Builder, rng: random.Random) -> None:
             if done:
                 b.add("ProductionConfirmation", LocationId=1, ConfirmationNo=f"T-{no}", WorkOrderId=wo["Id"], MaterialId=m["Id"],  # K-125
                       ConfirmedQuantity=float(qty - open_qty), StartDate=ds.start - timedelta(days=3), EndDate=ds.start - timedelta(days=3))
-    # Alt montaj iş emri, mamul iş emrinin alt kırılımı.
+    # Alt montaj üretim siparişi, mamul üretim siparişinin alt kırılımı.
     parent = next(w for w in b.t["WorkOrder"] if w["WorkOrderNo"] == "WO-5001")
     child = next(w for w in b.t["WorkOrder"] if w["WorkOrderNo"] == "WO-5002")
     child["ParentWorkOrderId"] = parent["Id"]
@@ -784,8 +784,8 @@ def _first_of_month(d: date, months_ahead: int) -> date:
 
 def _keep_open_dates_current(b: _Builder) -> None:
     """Üretim günü haftanın sonuna gelince (Cumartesi, Pazar) hafta 1'in geçmiş günü beklenmeyen "tarihi geçmiş" uyarısı vermesin (docs/11): açık
-    siparişin ve iş emrinin hafta 1'de üretim gününden önceye düşen tarihi üretim gününe çekilir. Bilerek geçmiş bırakılan sipariş (durum 9) bu
-    adımdan sonra eklenir; geçmişe ait başlangıç tarihlerine (başlamış iş emri) dokunulmaz. Satın alma tarihleri kendi yerinde aynı kuralla üretilir."""
+    siparişin ve üretim siparişinin hafta 1'de üretim gününden önceye düşen tarihi üretim gününe çekilir. Bilerek geçmiş bırakılan sipariş (durum 9) bu
+    adımdan sonra eklenir; geçmişe ait başlangıç tarihlerine (başlamış üretim siparişi) dokunulmaz. Satın alma tarihleri kendi yerinde aynı kuralla üretilir."""
     ds, on = b.ds, b.ds.generated_on
     for row in b.t["SalesOrderLine"]:
         for field in ("RequestedDate", "ConfirmedDate"):
@@ -838,7 +838,7 @@ def _quality(b: _Builder) -> None:
 
 
 def _subcon_work_order(b, resource_code: str) -> int | None:
-    """Fason siparişin bağlı iş emri (PO.SUBCON_NO_WO, K-137): o fason grubunu kullanan operasyonu olan iş emri, yoksa fason operasyonu olan ilk iş emri."""
+    """Fason siparişin bağlı üretim siparişi (PO.SUBCON_NO_WO, K-137): o fason grubunu kullanan operasyonu olan üretim siparişi, yoksa fason operasyonu olan ilk üretim siparişi."""
     fason = {b.id("ResourceGroup", c) for c in ("F-ISIL", "F-KAPLA")}
     ops = b.t["WorkOrderOperation"]
     own = b.id("ResourceGroup", resource_group(resource_code))

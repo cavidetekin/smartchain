@@ -75,6 +75,8 @@ def history(session: Session | None, audit_id: int, user: CurrentUser) -> dict:
 
 # ------------------------------------------------------------------ "Kayda git" (K-173)
 
+# Tablo adı değişmeden önce yazılmış izlerde başlık eski adladır (K-202: "İş emri" → "Üretim siparişi"); "Kayda git" yine çalışır
+OLD_TITLES = {"İş emri": "Üretim siparişi", "İş emri bileşeni": "Üretim siparişi bileşeni", "İş emri operasyonu": "Üretim siparişi operasyonu"}
 TARGET_NOT_FOUND = "Kayıt bulunamadı."
 TARGET_AMBIGUOUS = "Kod birden çok kayıtta (lokasyon); kayıt seçilemedi."
 
@@ -92,6 +94,7 @@ def record_target(session: Session, raw_type: str | None, raw_key: str | None, r
     except ValueError:
         new = {}
     title, _, code = (raw_key or "").partition(" · ")
+    title = OLD_TITLES.get(title, title)   # ad değişmeden önce yazılmış kayıt (K-202): eski başlık yeni tabloyu gösterir
     list_name = new.get("list") if new.get("list") in BY_NAME else next((n for n, d in BY_NAME.items() if d.title == title), None)
     if list_name is None:
         return {"target": None, "target_reason": TARGET_NOT_FOUND}

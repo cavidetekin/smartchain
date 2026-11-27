@@ -63,7 +63,7 @@ Adım 0.5'te kurulan sözleşme. Motor baştan sabit bu arayüzle çalışır: A
 
 ## Kaynak modeli notları (7.5, K-180)
 
-- Planlama birimi kaynak grubudur: rota ve iş emri operasyonu kaynak grubunu ve gruptan aynı anda kullanılan kaynak adedini verir; kaynak alanı yoktur. Plan ve yük grup düzeyindedir (`CapacityLoad.ResourceGroupId`).
+- Planlama birimi kaynak grubudur: rota ve üretim siparişi operasyonu kaynak grubunu ve gruptan aynı anda kullanılan kaynak adedini verir; kaynak alanı yoktur. Plan ve yük grup düzeyindedir (`CapacityLoad.ResourceGroupId`).
 - Kapasite kaynak grubu × kaynak × gün hesaplanır, grupta toplanır (K-185; `app/capacity/compute.py`); gruptaki kaynak sayısı `ResourceGroupMember`'dan bilinir. Birden fazla gruba üye kaynak her grupta o grubun değeriyle hesaplanır.
 - Motor yalnız kritik grupları kısıtlar (K-185); kritik olmayan grup (`ResourceGroup.IsCritical` = Hayır) sonsuz kapasiteli sayılır ve yalnız raporlanır (kapasitesi yine hesaplanır, Kapasite özeti'nde görünür).
 - Birden fazla gruba üye kaynağın (ortak üye, ör. iki yetkinliği olan işçi) kapasitesini yalnız kritik grupların yükü kullanır.
@@ -102,8 +102,8 @@ Bu adımda motor kuralı uygulanmaz; giriş, saklama, geçerlilik hesabı ve ara
 ## Malzeme blokajı (7.13, K-193)
 
 `PlanningData.material_holds()` planın senaryosunda plan dönemi bazında satır verir (`SqlPlanningData`, `app/materialholds`): `[{LocationId, MaterialId, Supply, PeriodNo, PeriodStart, PeriodEnd, Days, BlockedDays, ClosePct, Closed}]`; `Supply` "Üretim" ya da "Satın alma"; yalnız blokajlı günü olan dönemler (ekrandaki Geçerlilik tablosuyla aynı hesap). `Closed`: blokajlı gün ÷ dönemin takvim günü ≥ dönemi kapatma oranı (döneme dokunan kayıtların en düşüğü). Motorun uygulayacağı kural (Aşama 10):
-- Kapalı dönemde o malzeme için o tedarik biçiminde yeni öneri üretilmez (Üretim: planlı üretim; Satın alma: satın alma önerisi). Açık kalan dönemde blokaj uygulanmaz.
-- Açık iş emirleri ve açık satın alma siparişleri etkilenmez; gelecek arz sayılır. Eldeki stok kullanılır.
+- Kapalı dönemde o malzeme için o tedarik biçiminde yeni öneri üretilmez (Üretim: planlı üretim; Satın alma: satın alma planı). Açık kalan dönemde blokaj uygulanmaz.
+- Açık üretim siparişleri ve açık satın alma siparişleri etkilenmez; gelecek arz sayılır. Eldeki stok kullanılır.
 - Ürün ağacı için ek kural yoktur: blokajlı bileşenin stoğu bitince üst ürün kendiliğinden üretilemez. Satış blokajı yoktur.
 
 Bu adımda motor kuralı uygulanmaz; giriş, saklama, dönem hesabı ve arayüz vardır.

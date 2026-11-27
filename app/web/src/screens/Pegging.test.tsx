@@ -15,7 +15,7 @@ const NEED = [C("Dönem", TIME), C("Kesin sipariş"), C("Teklif"), C("Beklemedek
               C("Öncelik grubu", [{ value: "Artan", hint: "1 önce" }, { value: "Azalan", hint: "5 önce" }]), C("İhtiyaç tarihi", TIME),
               C("Sipariş no", [{ value: "Artan", hint: "küçük numara önce" }, { value: "Azalan", hint: "büyük numara önce" }])];
 const SUPPLY = [C("Dönem", [...TIME, { value: "İhtiyaca en yakın", hint: "ihtiyacın döneminden geriye, yetmezse ileriye" }]), C("Stok"), C("Kalitedeki stok"), C("Üretim siparişi"),
-                C("Satın alma siparişi"), C("Arz tarihi", TIME), C("Üretim planı"), C("Satın alma önerisi"), C("Son kullanma tarihi", TIME)];
+                C("Satın alma siparişi"), C("Arz tarihi", TIME), C("Üretim planı"), C("Satın alma planı"), C("Son kullanma tarihi", TIME)];
 const P = (key: string, label: string, options: string[]) => ({ key, label, kind: "choice", options });
 const SECTIONS = [
   { key: "model", title: "Model", table: null, subs: [
@@ -130,7 +130,7 @@ describe("Parametreler › Pegging", () => {
     expect(sent[0].url).toBe("/api/parameters/pegging?scenario_id=1");
     expect(sent[0].body.method).toBe("Talep termini");
     expect(sent[0].body.need!.slice(0, 3)).toEqual([{ criterion: "Dönem", direction: "Artan" }, { criterion: "Tahmin", direction: null }, { criterion: "Kesin sipariş", direction: null }]);
-    expect(sent[0].body.supply!.map((x) => x.criterion)).toEqual(["Dönem", "Kalitedeki stok", "Stok", "Üretim siparişi", "Arz tarihi", "Satın alma siparişi", "Üretim planı", "Satın alma önerisi", "Son kullanma tarihi"]);
+    expect(sent[0].body.supply!.map((x) => x.criterion)).toEqual(["Dönem", "Kalitedeki stok", "Stok", "Üretim siparişi", "Arz tarihi", "Satın alma siparişi", "Üretim planı", "Satın alma planı", "Son kullanma tarihi"]);
     expect(sent[0].body.supply![0]).toEqual({ criterion: "Dönem", direction: "İhtiyaca en yakın" });
     expect(sent[0].body.need).toHaveLength(10);                                                  // ölçüt eklenmez, silinmez
     await waitFor(() => expect(save()).toBeDisabled());

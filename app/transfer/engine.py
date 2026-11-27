@@ -5,7 +5,7 @@ Kısmide yalnız seçilen grupların tabloları yazılır; seçilmeyen tablolar 
 Tek işlem, ya hep ya hiç: yeni veri versiyonu açılır, tablolar katalog sırasıyla (ebeveyn önce) yazılır. Tablo başına küme SQL:
 1. Çözümle: prc satırları core kolon adlarıyla geçici tabloya; kodlar core'un güncel satırlarından Id'ye çevrilir; satırın durumu
    (1 aktarılır · 2 aktarılmaz, core'daki önceki hâli kalır · 3 kapsam dışı, core'da kapatılır).
-2. Eşleştir: core'un güncel tekil anahtarıyla; eşleşmeyen aktarılacak satır yeni Id alır; tablo içi bağ (orijinal iş emri) aynı aktarımdan çözülür.
+2. Eşleştir: core'un güncel tekil anahtarıyla; eşleşmeyen aktarılacak satır yeni Id alır; tablo içi bağ (orijinal üretim siparişi) aynı aktarımdan çözülür.
 3. Değişeni bul, kapat (`VersionTo` = yeni versiyon − 1), ekle (aynı Id, `VersionFrom` = yeni versiyon); korunan kolonlar önceki versiyondan.
 4. prc'de aktarılan satır "Aktarıldı"; değerin kaynağı (kuralla değişen alanlar, K-148); sayılar DataVersionEntity'ye.
 """

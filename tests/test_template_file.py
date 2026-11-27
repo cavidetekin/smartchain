@@ -150,7 +150,7 @@ def test_purchase_and_confirmation_templates_v2():
 
 
 def test_work_order_templates_operation_v3_group_required():
-    """K-180: iş emri operasyonu v3; kaynak alanı yok, kaynak grubu zorunlu."""
+    """K-180: üretim siparişi operasyonu v3; kaynak alanı yok, kaynak grubu zorunlu."""
     for table, version in (("WorkOrder", 5), ("WorkOrderComponent", 2), ("WorkOrderOperation", 3)):
         assert dict(build(table)["_Surum"].iter_rows(values_only=True))["Sürüm"] == version, table
     found = notes(build("WorkOrder"))

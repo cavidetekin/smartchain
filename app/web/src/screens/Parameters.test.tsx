@@ -13,7 +13,7 @@ const SECTIONS = [
     { key: "model-tipi", title: "Model tipi", table: null, params: [
       P("ModelType", "Model tipi", "choice", { options: ["LP", "MILP"] }),
       P("ProductionMinLot", "Üretimde minimum lot", "bool", { enabled_when: { key: "ModelType", value: "MILP" }, hint: "Yalnız MILP modelde uygulanır." }),
-      P("RoundPurchaseToLot", "Satın alma önerisini sipariş lotuna yuvarla", "bool")] },
+      P("RoundPurchaseToLot", "Satın alma planını sipariş lotuna yuvarla", "bool")] },
     { key: "cozum", title: "Çözüm", table: null, params: [P("OptimalityGapPct", "Optimality gap (%)", "number", { min: 0, max: 100 })] }] },
   { key: "hedefler", title: "Hedefler", table: "objectives", subs: [] },
   { key: "malzeme", title: "Malzeme", table: null, subs: [
@@ -122,21 +122,21 @@ describe("ekran 06 · Parametreler", () => {
     await waitFor(() => expect(sent.find((s) => s.method === "PUT")?.body).toEqual({ changes: { ModelType: "MILP", ProductionMinLot: "1" } }));
     await waitFor(() => expect(save()).toBeDisabled());
     expect(screen.queryByText(/kaydedildi/i)).toBeNull();
-    await user.click(screen.getByRole("switch", { name: "Satın alma önerisini sipariş lotuna yuvarla" }));
+    await user.click(screen.getByRole("switch", { name: "Satın alma planını sipariş lotuna yuvarla" }));
     await user.click(cancel());                                                             // Vazgeç taslağı atar
-    expect(screen.getByRole("switch", { name: "Satın alma önerisini sipariş lotuna yuvarla" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Satın alma planını sipariş lotuna yuvarla" })).toBeChecked();
   });
 
   it("kaydedilmemiş değişiklikle başlık değişirken uyarı; vazgeçince taslak atılır", async () => {
     const { user, router } = await open();
-    await user.click(await screen.findByRole("switch", { name: "Satın alma önerisini sipariş lotuna yuvarla" }));
+    await user.click(await screen.findByRole("switch", { name: "Satın alma planını sipariş lotuna yuvarla" }));
     await user.click(within(tabs()).getByRole("radio", { name: "Malzeme" }));
     const dialog = screen.getByRole("dialog", { name: "Kaydedilmemiş değişiklikler var" });
     expect(router.state.location.search).not.toContain("malzeme");
     await user.click(within(dialog).getByRole("button", { name: /Kaydetmeden/ }));
     await waitFor(() => expect(router.state.location.search).toContain("sekme=malzeme"));
     await user.click(within(tabs()).getByRole("radio", { name: "Model" }));
-    expect(await screen.findByRole("switch", { name: "Satın alma önerisini sipariş lotuna yuvarla" })).toBeChecked();
+    expect(await screen.findByRole("switch", { name: "Satın alma planını sipariş lotuna yuvarla" })).toBeChecked();
   });
 
   it("Hedefler: hücre düzenleme, toplam, kapatma, sürükleme; Kaydet tablonun altında ve sırayla gönderir", async () => {
