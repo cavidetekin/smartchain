@@ -47,6 +47,15 @@ def delete_scenario_plans(conn: Connection, scenario_definition_id: int) -> int:
     return len(runs)
 
 
+def delete_runs(conn: Connection, run_ids: list[int]) -> None:
+    """Plan hesaplarını çıktıları ve gece sonuçlarıyla siler (plan fikstürü yeniden yüklenirken, K-205)."""
+    if not run_ids:
+        return
+    scenarios = _ids(conn, "SELECT Id FROM planning.Scenario WHERE PlanRunId IN :r OR Id IN (SELECT ScenarioId FROM planning.PlanRun WHERE Id IN :r)", r=list(run_ids))
+    workspaces = _ids(conn, "SELECT Id FROM planning.Workspace WHERE ScenarioId IN :sc", sc=scenarios)
+    _delete(conn, scenarios, workspaces, list(run_ids))
+
+
 def _delete(conn: Connection, scenarios: list[int], workspaces: list[int], runs: list[int]) -> None:
     for t in OUTPUT_TABLES:
         _exec(conn, f"DELETE FROM planning.{t} WHERE PlanRunId IN :r", r=runs)

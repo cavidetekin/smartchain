@@ -130,12 +130,10 @@ class PlanResult:
     """Motorun çıktısı (K-202). Satırlar docs/02 alan adlarıyla dict; Id, PlanRunId ve UpdatedAt'i yazıcı doldurur.
 
     Karar tabloları (motor yazar): planned_supply (`PlannedSupply`), demand_fulfillment (`DemandFulfillment`), planned_overtime
-    (`PlannedOvertime`), allocation_transfers (`PlannedAllocationTransfer`). Sonuç tabloları (material_transactions, capacity_loads, pegging)
-    türetilir: hareket ve yük türetmesi 8.0'da, pegging 10.6'da yazılır; o güne kadar satırlarını sahte motorun örneği verir.
-
-    Satıra 'ref' verilebilir; başka tablonun satırı bağ anahtarıyla ona bağlanır (yazıcıda gerçek Id olur): hareket ve yük 'supply_ref' ile
-    tedarik planı kaydına, hareket 'fulfillment_ref' ile karşılama satırına, pegging 'supply_ref' ve 'demand_ref' ile iki harekete, 'parent_ref'
-    ile üst bağa. Sistemin doldurdukları (motor yazmaz): tedarik planı numarası, karşılama satırındaki talep kimliği, hareketin no'su, pegging
+    (`PlannedOvertime`), allocation_transfers (`PlannedAllocationTransfer`). Malzeme hareketleri ve kapasite yükleri motor sonucunda değildir:
+    yazıcı karar satırlarından türetir (K-205, `app/planning/derive.py`). Pegging satırının iki tarafı hareket anahtarıyla verilir ('supply',
+    'demand': hareket türü, kaynak kaydı ve gerekirse malzeme; tedarik planı 'supply_ref', karşılama satırı 'fulfillment_ref' ile); 'parent_ref'
+    üst bağdır. Sistemin doldurdukları (motor yazmaz): tedarik planı numarası, karşılama satırındaki talep kimliği, hareketin no'su, pegging
     satırındaki iki tarafın ve kök talebin alanları (`writer.py`).
     """
 
@@ -146,8 +144,6 @@ class PlanResult:
     demand_fulfillment: list[dict] = field(default_factory=list)
     planned_overtime: list[dict] = field(default_factory=list)
     allocation_transfers: list[dict] = field(default_factory=list)
-    material_transactions: list[dict] = field(default_factory=list)
-    capacity_loads: list[dict] = field(default_factory=list)
     pegging: list[dict] = field(default_factory=list)
     warnings: list[dict] = field(default_factory=list)
     metrics: dict[str, float] = field(default_factory=dict)  # PlanMetric: MetricCode → Value

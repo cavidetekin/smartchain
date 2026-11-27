@@ -122,7 +122,8 @@ def plan_run(session, plan_run_id):
 
 
 def outputs(session, plan_run_id):
-    return session.execute(text("SELECT COUNT(*) FROM planning.PlannedSupply WHERE PlanRunId = :id"),
+    """Plan hesabının talep kopyası (motor testlerinin senaryosunda sahte motor boş plan döner; talep kopyası yine kurulur, K-205)."""
+    return session.execute(text("SELECT COUNT(*) FROM planning.PlannedDemand WHERE PlanRunId = :id"),
                            {"id": plan_run_id}).scalar()
 
 
@@ -131,7 +132,7 @@ def test_job_runs_in_own_process(db_engine, db_session, plan_env):
     job = run_until_done(service(db_engine), db_session, job_id)
     assert job["Status"] == STATUS_DONE and job["Attempt"] == 1
     assert plan_run(db_session, plan_run_id) == "Bitti"
-    assert outputs(db_session, plan_run_id) == 4
+    assert outputs(db_session, plan_run_id) > 0
 
 
 def test_heartbeat_from_service_keeps_long_job_alive(db_engine, db_session, plan_env):
@@ -155,7 +156,7 @@ def test_time_budget_kills_process(db_engine, db_session, plan_env):
     assert time.monotonic() - started < 15
     assert job["Status"] == STATUS_FAILED and "Süre bütçesi aşıldı" in job["ErrorText"]
     assert plan_run(db_session, plan_run_id) == "Hata"
-    assert outputs(db_session, plan_run_id) == 0
+    assert db_session.execute(text("SELECT COUNT(*) FROM planning.PlannedSupply WHERE PlanRunId = :id"), {"id": plan_run_id}).scalar() == 0   # çıktı yazılmadı
 
 
 def test_crash_requeues_then_fails(db_engine, db_session, plan_env):

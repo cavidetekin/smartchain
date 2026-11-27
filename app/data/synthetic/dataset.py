@@ -88,6 +88,10 @@ BOTTLENECK_PRODUCTS = ("MAM-001", "MAM-002", "MAM-003")
 BOTTLENECK_HOURS = 3.0          # bu mamullerin gövde parçasının 5 eksende birim süresi
 LIGHT_M5_HOURS = 0.3
 LABOR_GROUP = "CG-MON"  # işçilik satırlarının grubu: montajcı yetkinliği (K-116, K-117)
+# Ek mesai limitleri (saat/gün/kaynak): Baz; "Fazla mesaili" senaryosunun farkları ve kendi limiti. ISL5: darboğazda aşım ve ek mesai aynı grupta (K-205)
+OVERTIME_LIMITS = ((LABOR_GROUP, 2.0), ("CG-CNC", 1.5), (BOTTLENECK_GROUP, 1.0))
+OVERTIME_DIFFS = {LABOR_GROUP: 4.0, BOTTLENECK_GROUP: 3.0}
+OVERTIME_OWN = ("MONTAJ", 3.0)
 LATE_MATERIAL, LATE_SUPPLIER, LATE_PRODUCT, LATE_ORDER = "HAM-012", "TED-04", "MAM-008", "SO-1027"
 LATE_LEAD_DAYS = 56
 LIMIT_SUPPLIER, LIMIT_MATERIAL, LIMIT_QTY = "TED-05", "SAT-003", 400
@@ -329,7 +333,7 @@ def _capacity(b: _Builder) -> None:
     b.add("param.ResourceEfficiency", ScenarioDefinitionId=1, **owner(group="TASLAMA"), ValidFrom=since, ValidTo=None, EfficiencyPct=85.0, IsValid=True)
     b.add("param.ResourceEfficiency", ScenarioDefinitionId=1, **owner(resource="A-01"), ValidFrom=ds.day(4), ValidTo=ds.day(8, 6), EfficiencyPct=110.0,
           IsValid=True)
-    for code, limit in [(LABOR_GROUP, 2.0), ("CG-CNC", 1.5)]:
+    for code, limit in OVERTIME_LIMITS:
         b.add("param.OvertimeLimit", ScenarioDefinitionId=1, **owner(group=code), ValidFrom=since, ValidTo=None, DailyLimit=limit, IsValid=True)
     # Model kısıtları (docs/11, K-189): iki kritik grupta hedef doluluk, birinde kısıtsız kapasite çarpanı; kritik olmayan grupta değer yok
     for code, factor, target in MODEL_CONSTRAINTS:

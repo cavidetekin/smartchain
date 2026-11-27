@@ -85,6 +85,7 @@ python -m app.data.synthetic load                  # sentetik veri v0'ı ana tab
 python -m app.data.synthetic excel                 # sentetik verinin kirli hâli (entegrasyon Excel'i)
 python -m app.data.synthetic sql                   # kirli hâl: entegrasyon veritabanına ham tablolar ve view'lar (K-130)
 python -m app.data.synthetic rules                 # demo veri kuralları (docs/11, K-141; kurulumda varsayılan kural yok)
+python -m app.data.synthetic plan                  # plan fikstürü: üç plan (docs/11, K-205); --summary özet, --regenerate dosyayı üretir
 python -m app.data.synthetic reset   # aktarımları geri alıp temiz sentetik hâle döner (onay ister)
 python -m app.periods status                       # dönem tablosu önbelleği (K-184): senaryo, gün aralığı, satır sayısı
 python -m app.periods rebuild [--scenario <id>]    # önbelleği düşürüp girişlerden yeniden kurar

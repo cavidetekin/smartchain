@@ -1,15 +1,20 @@
-"""Sonucun yazılması (K-70): tek commit, tekrar çalıştırmada çift kayıt yok, yayınlanmış plan değişmez."""
+"""Sonucun yazılması (K-70, K-205): tek commit, tekrar çalıştırmada çift kayıt yok, yayınlanmış plan değişmez; sahte motor sentetik Baz'da fikstür planını
+yazar (türetme, pegging eşlemesi, uyarı, metrik, tutarlılık denetimi); bilinmeyen alan ve eşleşmeyen hareket anahtarı hiçbir şey yazdırmaz."""
 import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.data.cleanup import OUTPUT_TABLES as CLEANED, delete_runs
+from app.data.synthetic import dataset as d
 from app.engine.fake import FakeEngine
-from app.engine.interface import EngineInput, PlanRunInfo, ScenarioParameters
+from app.engine.interface import EngineInput, PlanResult, PlanRunInfo, ScenarioParameters
 from app.engine.job import run_plan_job
 from app.engine.submit import submit_plan_run
-from app.engine.writer import JobNoLongerOwned, PlanRunPublished, write_result
+from app.engine.writer import OUTPUTS, JobNoLongerOwned, PlanRunPublished, write_result
 from app.jobs import queue
 from app.jobs.constants import CHANNEL_INTERACTIVE, STATUS_DONE, STATUS_FAILED
+from app.periods import cache
+from app.planning import checks
 
 pytestmark = pytest.mark.db
 
@@ -20,14 +25,13 @@ OUTPUT_TABLES = ["planning.PlannedSupply", "planning.DemandFulfillment", "planni
 
 def test_output_tables_are_listed_once():
     """Plan çıktı tabloları: yazıcının listesi ile temizliğin listesi aynı tabloları taşır (K-202); silme sırası bağlanan önce."""
-    from app.data.cleanup import OUTPUT_TABLES as cleaned
-    from app.engine.writer import OUTPUTS
-    written = {t.name for _, t, _ in OUTPUTS}
-    assert written | {"PlannedDemand", "PlanMetric"} == set(cleaned) and len(cleaned) == len(set(cleaned))
+    written = {t.name for _, t in OUTPUTS}
+    assert written | {"PlannedDemand", "PlanMetric"} == set(CLEANED) and len(CLEANED) == len(set(CLEANED))
     assert {f"planning.{t}" for t in written} | {"planning.PlanMetric", "adm.SolverLog"} == set(OUTPUT_TABLES)
-    order = {t: i for i, t in enumerate(cleaned)}
+    order = {t: i for i, t in enumerate(CLEANED)}
     assert order["Pegging"] < order["MaterialTransaction"] < order["DemandFulfillment"] < order["PlannedDemand"]
     assert order["CapacityLoad"] < order["PlannedSupply"] and order["MaterialTransaction"] < order["PlannedSupply"]
+    assert [a for a, _ in OUTPUTS if a is None] == [None, None]                       # hareket ve yük motor sonucunda değil, türetilir (K-205)
 
 
 def counts(session, plan_run_id):
@@ -35,12 +39,35 @@ def counts(session, plan_run_id):
             for t in OUTPUT_TABLES}
 
 
-def submit_and_claim(session, env, job_settings):
-    plan_run_id, job_id = submit_plan_run(session, data_version_id=env["data_version_id"],
-                                          scenario_definition_id=env["scenario_definition_id"], requested_by=env["user_id"])
+def claim(session, job_id, job_settings):
     job = queue.claim_next(session, CHANNEL_INTERACTIVE, job_settings)
     assert job["Id"] == job_id
-    return plan_run_id, job
+    return job
+
+
+def submit_and_claim(session, env, job_settings):
+    """Motor testlerinin kendi veri versiyonu ve senaryosu: sahte motor boş plan döner."""
+    plan_run_id, job_id = submit_plan_run(session, data_version_id=env["data_version_id"],
+                                          scenario_definition_id=env["scenario_definition_id"], requested_by=env["user_id"])
+    return plan_run_id, claim(session, job_id, job_settings)
+
+
+@pytest.fixture
+def baz(db_session, plan_env, job_settings):
+    """Sentetik verinin veri versiyonunda Baz senaryo: sahte motor fikstürün "Baz · güncel" planını yazar. Test sonunda plan hesabı silinir."""
+    version = db_session.execute(text("SELECT MAX(v.Id) FROM adm.DataVersion v JOIN core.Location l ON l.Id = v.LocationId AND l.Code = :c "
+                                      "WHERE v.IsSynthetic = 1"), {"c": d.LOCATION_CODE}).scalar()
+    assert version, "test veritabanında sentetik veri bekleniyor"
+    runs = []
+
+    def submit():
+        plan_run_id, job_id = submit_plan_run(db_session, data_version_id=version, scenario_definition_id=cache.base_id(db_session), requested_by=plan_env["user_id"])
+        runs.append(plan_run_id)
+        return plan_run_id, claim(db_session, job_id, job_settings)
+    yield submit
+    db_session.rollback()
+    with db_session.get_bind().begin() as c:
+        delete_runs(c, runs)
 
 
 def fake_result():
@@ -53,78 +80,47 @@ def run_status(session, plan_run_id):
                                 "WHERE Id = :id"), {"id": plan_run_id}).first()
 
 
-def test_job_writes_plan(db_session, plan_env, job_settings):
-    plan_run_id, job = submit_and_claim(db_session, plan_env, job_settings)
+def test_job_writes_fixture_plan(db_session, baz, job_settings):
+    plan_run_id, job = baz()
     assert run_status(db_session, plan_run_id).Status == "Sırada"
-
     run_plan_job(job["Id"], job["Attempt"], 180)
-
     db_session.expire_all()
     c = counts(db_session, plan_run_id)
-    # talep kopyası hesap başlarken kurulur; sahte motorun üç karşılama satırı ilk iki talebe oturur (talep yoksa satır yazılmaz)
-    demands = db_session.execute(text("SELECT COUNT(*) FROM planning.PlannedDemand WHERE PlanRunId = :id AND IsIncluded = 1"), {"id": plan_run_id}).scalar()
-    fulfilled = 3 if demands >= 2 else demands
-    assert c == {"planning.PlannedSupply": 4, "planning.DemandFulfillment": fulfilled, "planning.PlannedOvertime": 1, "planning.PlannedAllocationTransfer": 1,
-                 "planning.MaterialTransaction": 8, "planning.CapacityLoad": 2, "planning.Pegging": 3, "planning.PlanWarning": 2,
-                 "planning.PlanMetric": 4, "adm.SolverLog": 1}
-    if demands >= 2:   # kırılım satırına talebin kimliği kopyalanır; özet kırılımdan yazılır
-        rows = db_session.execute(text(
-            "SELECT d.DemandType, f.DemandType, d.MaterialId, f.MaterialId, d.DemandQuantity, d.FulfilledQuantity, d.OnTimeQuantity, d.LateQuantity, d.UnmetQuantity, "
-            "d.FulfillmentPct, (SELECT SUM(x.Quantity) FROM planning.DemandFulfillment x WHERE x.PlannedDemandId = d.Id) "
-            "FROM planning.DemandFulfillment f JOIN planning.PlannedDemand d ON d.Id = f.PlannedDemandId WHERE f.PlanRunId = :id ORDER BY f.Id"), {"id": plan_run_id}).all()
-        assert all(r[0] == r[1] and r[2] == r[3] and r[5] == r[10] and r[6] + r[7] == r[5] and r[8] == r[4] - r[5] for r in rows)
-        assert [float(r[9]) for r in rows] == [100.0, 85.0, 85.0]
-        untouched = db_session.execute(text("SELECT COUNT(*) FROM planning.PlannedDemand WHERE PlanRunId = :id AND IsIncluded = 1 AND FulfilledQuantity = 0 "
-                                            "AND UnmetQuantity = DemandQuantity"), {"id": plan_run_id}).scalar()
-        assert untouched == demands - 2                                                         # karşılanmayan talep: tamamı karşılanmadı
+    assert all(c[t] > 0 for t in OUTPUT_TABLES), c
     run = run_status(db_session, plan_run_id)
     assert (run.Status, run.EngineUsed, run.Solver) == ("Bitti", "LP", "Sahte") and run.StartedAt and run.EndedAt
     j = queue.get_job(db_session, job["Id"], job_settings)
     assert j["Status"] == STATUS_DONE and j["Progress"] == "Tamamlandı"
-
-    p = {"id": plan_run_id}
-    # tedarik planı numarası: plan kaydına sistem verir (türüne göre sıra), sipariş kaydında motorun yazdığı kalır
-    supply = db_session.execute(text("SELECT SupplyNo, SupplyType, Source, IsSubcontract, IsIncluded, IsManual, IsFixed FROM planning.PlannedSupply "
-                                     "WHERE PlanRunId = :id ORDER BY Id"), p).all()
-    assert [tuple(r) for r in supply] == [("ÜP-000001", "Üretim", "Plan", False, True, False, False), ("SP-000001", "Satın alma", "Plan", False, True, False, False),
-                                          ("ÜP-000002", "Üretim", "Plan", True, True, False, False), ("ÜS-3001", "Üretim", "Sipariş", False, True, False, False)]
-    # bağlar bu hesabın satırlarına gider; hareketin no'su tedarik planı kaydından
-    # talep hareketinin no'su satış sipariş no'dur (karşılama satırından); tahminde, stokta ve alokasyon transferinde boş kalır
-    order_no = db_session.execute(text("SELECT TOP 1 f.OrderNo FROM planning.DemandFulfillment f WHERE f.PlanRunId = :id ORDER BY f.Id"), p).scalar()
-    assert order_no or not demands
-    moves = db_session.execute(text("SELECT t.MovementType, t.Direction, t.DocumentNo, s.SupplyNo FROM planning.MaterialTransaction t "
-                                    "LEFT JOIN planning.PlannedSupply s ON s.Id = t.PlannedSupplyId AND s.PlanRunId = t.PlanRunId WHERE t.PlanRunId = :id ORDER BY t.Id"), p).all()
-    assert [tuple(r) for r in moves] == [("Üretim planı", "+", "ÜP-000001", "ÜP-000001"), ("Üretim planı ihtiyacı", "-", "ÜP-000001", "ÜP-000001"),
-                                         ("Satın alma planı", "+", "SP-000001", "SP-000001"), ("Kesin sipariş", "-", order_no, None), ("Stok", "+", None, None),
-                                         ("Alokasyon transferi", "-", None, None), ("Alokasyon transferi", "+", None, None), ("Üretim siparişi", "+", "ÜS-3001", "ÜS-3001")]
-    loads = db_session.execute(text("SELECT s.SupplyNo, l.CapacityUsage FROM planning.CapacityLoad l JOIN planning.PlannedSupply s ON s.Id = l.PlannedSupplyId "
-                                    "WHERE l.PlanRunId = :id ORDER BY l.Id"), p).all()
-    assert [(r[0], float(r[1])) for r in loads] == [("ÜP-000001", 60.0), ("ÜS-3001", 30.0)]
-    # pegging: iki hareket bağı, üst bağ ve iki tarafın satıra kopyalanan alanları
-    peg = db_session.execute(text(
-        "SELECT g.[Level], g.SupplyMovementType, g.SupplyDocumentNo, g.DemandMovementType, g.DemandDocumentNo, g.SupplyAllocationKey, g.IsFromGeneral, "
-        "CASE WHEN up.Id IS NULL THEN 0 ELSE 1 END, a.MovementType, b.MovementType, g.SupplyPeriodStart, a.PeriodStart, g.PlannedDemandId, g.RootDemandType "
-        "FROM planning.Pegging g JOIN planning.MaterialTransaction a ON a.Id = g.SupplyTransactionId JOIN planning.MaterialTransaction b ON b.Id = g.DemandTransactionId "
-        "LEFT JOIN planning.Pegging up ON up.Id = g.ParentPeggingId WHERE g.PlanRunId = :id ORDER BY g.Id"), p).all()
-    # pegging gerçek arzı gösterir: genelden karşılanan miktarın arzı Stok hareketidir (Genelden = Evet); transfer hareketi pegging'e girmez
-    assert [tuple(r[:8]) for r in peg] == [(0, "Üretim planı", "ÜP-000001", "Kesin sipariş", order_no, None, False, 0),
-                                           (1, "Satın alma planı", "SP-000001", "Üretim planı ihtiyacı", "ÜP-000001", None, False, 1),
-                                           (1, "Stok", None, "Üretim planı ihtiyacı", "ÜP-000001", None, True, 1)]
-    assert all(r[1] == r[8] and r[3] == r[9] and r[10] == r[11] and (r[12] is None) == (demands == 0) and (r[13] is None) == (demands == 0) for r in peg)
+    assert checks.problems(db_session, plan_run_id) == []
+    # tedarik planı numarası: plan kaydına sistem verir (türüne göre sıra), sipariş kaydında sipariş no
+    nos = [r[0] for r in db_session.execute(text("SELECT SupplyNo FROM planning.PlannedSupply WHERE PlanRunId = :id AND Source = N'Plan' AND SupplyType = N'Üretim' "
+                                                 "ORDER BY Id"), {"id": plan_run_id})]
+    assert nos[:3] == ["ÜP-000001", "ÜP-000002", "ÜP-000003"]
+    assert db_session.execute(text("SELECT COUNT(*) FROM planning.PlannedSupply WHERE PlanRunId = :id AND Source = N'Sipariş' AND SupplyNo NOT LIKE N'WO-%'"),
+                              {"id": plan_run_id}).scalar() == 0
+    # pegging'in iki tarafı ve kök talebi kopyalandı
+    assert db_session.execute(text("SELECT COUNT(*) FROM planning.Pegging WHERE PlanRunId = :id AND (SupplyMovementType IS NULL OR DemandMovementType IS NULL)"),
+                              {"id": plan_run_id}).scalar() == 0
 
 
-def test_rerun_unpublished_replaces_outputs(db_session, plan_env, job_settings):
-    plan_run_id, job = submit_and_claim(db_session, plan_env, job_settings)
+def test_rerun_unpublished_replaces_outputs(db_session, baz, job_settings):
+    plan_run_id, job = baz()
     run_plan_job(job["Id"], job["Attempt"], 180)
     first = counts(db_session, plan_run_id)
-    # Aynı PlanRun yeni bir işle tekrar hesaplanır (ör. iş geri alınıp yeniden çalıştı).
-    job2_id = queue.enqueue(db_session, "Çalışma", CHANNEL_INTERACTIVE, plan_env["user_id"],
-                            {"plan_run_id": plan_run_id})
-    job2 = queue.claim_next(db_session, CHANNEL_INTERACTIVE, job_settings)
-    assert job2["Id"] == job2_id
+    job2 = claim(db_session, queue.enqueue(db_session, "Çalışma", CHANNEL_INTERACTIVE, None, {"plan_run_id": plan_run_id}), job_settings)
     run_plan_job(job2["Id"], job2["Attempt"], 180)
     db_session.expire_all()
     assert counts(db_session, plan_run_id) == first
+
+
+def test_engine_on_other_data_returns_an_empty_plan(db_session, plan_env, job_settings):
+    """Sentetik olmayan veride ya da fikstürde planı olmayan senaryoda sahte motor boş plan döner; talep kopyası yine kurulur."""
+    plan_run_id, job = submit_and_claim(db_session, plan_env, job_settings)
+    run_plan_job(job["Id"], job["Attempt"], 180)
+    db_session.expire_all()
+    assert run_status(db_session, plan_run_id).Status == "Bitti"
+    c = counts(db_session, plan_run_id)
+    assert c["planning.PlannedSupply"] == 0 and c["adm.SolverLog"] == 1
 
 
 def test_nothing_written_when_job_no_longer_owned(db_session, plan_env, job_settings):
@@ -135,29 +131,22 @@ def test_nothing_written_when_job_no_longer_owned(db_session, plan_env, job_sett
     assert run_status(db_session, plan_run_id).Status == "Sırada"
 
 
-def test_unknown_link_rolls_back(db_session, plan_env, job_settings):
-    plan_run_id, job = submit_and_claim(db_session, plan_env, job_settings)
-    result = fake_result()
-    result.pegging[0]["demand_ref"] = "YOK"
-    with pytest.raises(ValueError, match="bilinmeyen bağ demand_ref = YOK"):
-        write_result(db_session, plan_run_id, result, job["Id"], job["Attempt"])
-    result = fake_result()
-    result.pegging[2]["supply_ref"] = "T7"                                                    # alokasyon transferi hareketi
-    with pytest.raises(ValueError, match="transfer hareketi bağlanamaz"):
-        write_result(db_session, plan_run_id, result, job["Id"], job["Attempt"])
-    result = fake_result()
-    result.demand_fulfillment.append({"PlannedDemandId": -1, "PeriodStart": "2026-12-07", "PeriodEnd": "2026-12-13", "Quantity": 1, "IsTardy": False})
-    with pytest.raises(ValueError, match="bu plan hesabında olmayan talep"):
-        write_result(db_session, plan_run_id, result, job["Id"], job["Attempt"])
-    assert set(counts(db_session, plan_run_id).values()) == {0}
+def material(session, code):
+    return session.execute(text("SELECT Id FROM core.Material WHERE Code = :c AND VersionTo IS NULL"), {"c": code}).scalar_one()
 
 
-def test_unknown_column_rolls_back(db_session, plan_env, job_settings):
+def test_unknown_column_and_link_roll_back(db_session, plan_env, job_settings):
     plan_run_id, job = submit_and_claim(db_session, plan_env, job_settings)
-    result = fake_result()
-    result.capacity_loads[0]["Utilisation"] = 1
+    row = {"ref": "S1", "SupplyType": "Satın alma", "Source": "Plan", "MaterialId": material(db_session, "SAT-007"), "LocationId": plan_env["location_id"],
+           "PeriodStart": "2026-12-07", "PeriodEnd": "2026-12-13", "Quantity": 5, "RoundedQuantity": 50}
     with pytest.raises(ValueError, match="bilinmeyen alan Utilisation"):
-        write_result(db_session, plan_run_id, result, job["Id"], job["Attempt"])
+        write_result(db_session, plan_run_id, PlanResult("LP", planned_supply=[{**row, "Utilisation": 1}]), job["Id"], job["Attempt"])
+    bad = {"supply": {"MovementType": "Satın alma planı", "supply_ref": "S1"}, "demand": {"MovementType": "Kesin sipariş", "fulfillment_ref": "YOK"}, "Quantity": 1}
+    with pytest.raises(ValueError, match="hareket anahtarı 0 harekete uyuyor"):
+        write_result(db_session, plan_run_id, PlanResult("LP", planned_supply=[row], pegging=[bad]), job["Id"], job["Attempt"])
+    transfer = {"supply": {"MovementType": "Alokasyon transferi"}, "demand": bad["demand"], "Quantity": 1}
+    with pytest.raises(ValueError, match="kaynak kaydı yok"):                         # transfer hareketi pegging'e bağlanamaz (kaynak kaydı yok)
+        write_result(db_session, plan_run_id, PlanResult("LP", planned_supply=[row], pegging=[transfer]), job["Id"], job["Attempt"])
     assert set(counts(db_session, plan_run_id).values()) == {0}
     assert queue.get_job(db_session, job["Id"], job_settings)["Status"] == "Çalışıyor"
 

@@ -103,12 +103,12 @@ def check_engine(timeout: int) -> str:
                 if status in ("Bitti", "Kısmen", "Hata"):
                     break
                 time.sleep(1)
-            orders = s.execute(text("SELECT COUNT(*) FROM planning.PlannedSupply WHERE PlanRunId = :id"),
-                               {"id": run_id}).scalar()
-            if status != "Bitti" or not orders:
+            demands = s.execute(text("SELECT COUNT(*) FROM planning.PlannedDemand WHERE PlanRunId = :id"),
+                                {"id": run_id}).scalar()
+            if status != "Bitti":
                 error = s.execute(text("SELECT ErrorText FROM adm.Job WHERE Id = :id"), {"id": job_id}).scalar()
                 raise AssertionError(f"Plan hesabı bitmedi: {status} {error or ''}")
-            return f"PlanRun {run_id} Bitti, {orders} tedarik planı kaydı"
+            return f"PlanRun {run_id} Bitti, {demands} talep"
         finally:
             s.rollback()
             p = {"r": run_id, "j": job_id, "dv": dv, "ps": ps, "l": loc}

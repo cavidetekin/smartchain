@@ -46,8 +46,9 @@ def run_plan_job(job_id: int, attempt: int, time_budget_seconds: int) -> None:
             mark_running(session, plan_run_id)
             prepare(session, plan_run_id)  # önceki çıktılar silinir, talep kopyası kurulur (K-202)
             inp = load_input(session, plan_run_id, time_budget_seconds)
-            result = build_engine().run(inp, progress)
-            write_result(session, plan_run_id, result, job_id, attempt)
+            engine = build_engine()
+            result = engine.run(inp, progress)
+            write_result(session, plan_run_id, result, job_id, attempt, after=getattr(engine, "after_write", None))
         except JobNoLongerOwned:
             log.warning("İş %s (deneme %s) artık bu sürecin değil; sonuç yazılmadı", job_id, attempt)
         except (EngineError, PlanRunPublished) as exc:

@@ -8,6 +8,7 @@
   python -m app.data.synthetic check                                     sayılar ve bilerek konmuş durumlar
   python -m app.data.synthetic users                                     kullanıcılar: geçici şifreler (docs/11, 2.1)
   python -m app.data.synthetic rules                                     demo veri kuralları (docs/11, K-141; kurulumda varsayılan kural yok)
+  python -m app.data.synthetic plan   [--regenerate | --summary]         plan fikstürü (K-205): yükler · dosyayı yeniden üretir · özet ve 12 durum
 """
 import argparse
 import sys
@@ -34,11 +35,13 @@ def _print_check(ds) -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m app.data.synthetic", description="Sentetik veri seti v0 (docs/11)")
-    p.add_argument("command", choices=["load", "unload", "reset", "excel", "sql", "check", "users", "rules"])
+    p.add_argument("command", choices=["load", "unload", "reset", "excel", "sql", "check", "users", "rules", "plan"])
     p.add_argument("--date", type=date.fromisoformat, default=None, help="üretim günü (varsayılan bugün)")
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--out", type=Path, default=ROOT / "data" / "synthetic" / "v0" / "kirli")
     p.add_argument("--database", default=None, help="sql: entegrasyon veritabanı")
+    p.add_argument("--regenerate", action="store_true", help="plan: fikstür dosyasını yeniden üretir (veritabanına dokunmaz)")
+    p.add_argument("--summary", action="store_true", help="plan: yüklü fikstür planlarının özeti ve 12 durumun kanıtı")
     a = p.parse_args(argv)
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
@@ -64,6 +67,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Demo veri kuralları yazıldı ({len(DEMO_RULES)}): " + ", ".join(f"{r['entity']} · {r['name']}" for r in DEMO_RULES))
         print("Uygulamak için Veri kuralları ekranında \"Kuralları yeniden uygula\" (ya da bir sonraki yükleme).")
         return 0
+
+    if a.command == "plan":
+        return _plan(a)
 
     ds = generate(a.date, a.seed) if a.command != "unload" else None
     if a.command == "check":
@@ -116,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         if r is None:
             return 1
         print(f"Sıfırlandı: aktarım versiyonları {r['removed_transfers'] or 'yok'} silindi; sentetik v0 veri versiyonu {r['data_version_id']}")
+        _print_plans(r["plans"])
         _queue_quality(get_engine())
         return 0
     try:
@@ -142,8 +149,45 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Sentetik v0 yüklendi: veri versiyonu {r['data_version_id']}, lokasyon {r['location_id']}, "
           f"Baz senaryo {r['scenario_definition_id']}; {sum(r['counts'].values())} satır"
           + (f"; silinen eski versiyonlar {r['removed_versions']}" if r["removed_versions"] else ""))
+    _print_plans(r["plans"])
     _print_check(ds)
     _queue_quality(engine)
+    return 0
+
+
+def _print_plans(plans: list[dict]) -> None:
+    for p in plans:
+        print(f"  plan {p['plan']}: plan hesabı {p['plan_run']} · " + ", ".join(f"{k} {v}" for k, v in p.items() if k not in ("plan", "plan_run")))
+
+
+def _plan(a) -> int:
+    """Plan fikstürü (K-205): dosyayı üretir, yükler ya da özetler."""
+    from . import plan as fixture
+    if a.regenerate:
+        fx = fixture.write()
+        print(f"Plan fikstürü yeniden üretildi: {fixture.FIXTURE} · " + ", ".join(f"{p['name']} {len(p['supply'])} kayıt" for p in fx["plans"]))
+        return 0
+    from sqlalchemy.orm import Session
+    from app.api.db import get_engine
+    engine = get_engine()
+    if a.summary:
+        with Session(engine) as session:
+            print(fixture.summary(session))
+        return 0
+    from db import guard
+    try:  # K-165: önceki fikstür planlarını siler; geliştirme veritabanında onay ister
+        guard.confirm(engine.url.database, "Plan fikstürünü yükleme (önceki fikstür planları silinir)")
+    except guard.Refused as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    try:
+        from .load import load_plans
+        plans = load_plans(engine)
+    except fixture.PlanFixtureError as exc:
+        print(f"DURDU: {exc}", file=sys.stderr)
+        return 2
+    print("Plan fikstürü yüklendi:")
+    _print_plans(plans)
     return 0
 
 

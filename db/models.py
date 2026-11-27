@@ -1649,7 +1649,7 @@ MaterialTransaction = sa.Table(
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Yazılma zamanı (UTC)", info={'label': "Yazılma zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
     schema="planning",
     info={'field_class': "Plan"},
-    comment="Malzeme hareketleri (K-202): planın bütün + ve − hareketleri tek tabloda; karar tablolarından ve ERP'den gelen arzdan türetilir, elle değişmez. Türetme 8.0'da yazılır; o güne kadar satırları sahte motorun örneği verir. Ana hareket → Hareket türü: Stok (Stok · Kalitedeki stok) · Satın alma (Satın alma siparişi · Satın alma planı) · Üretim (Üretim siparişi · Üretim planı) · Talep (Kesin sipariş · Teklif · Beklemedeki sipariş · Tahmin) · Üretim ihtiyacı (Üretim siparişi ihtiyacı · Üretim planı ihtiyacı) · Transfer (Alokasyon transferi; iki satır: genelden −, özele +). Tek tanım `app/planning/movements.py`. No: Üretim planı ve Satın alma planı: tedarik planı no · Üretim siparişi ve Satın alma siparişi: sipariş no · Kesin sipariş, Teklif, Beklemedeki sipariş: satış sipariş no · Üretim ihtiyacı: ihtiyacı doğuran üretimin no'su · Stok, Tahmin, Alokasyon transferi: boş.",
+    comment="Malzeme hareketleri (K-202): planın bütün + ve − hareketleri tek tabloda; karar tablolarından ve ERP'den gelen arzdan türetilir, elle değişmez. Türetme `app/planning/derive.py`'dedir (K-205; motor ve fikstür ortak, yazıcı karar satırlarından sonra çağırır). Ana hareket → Hareket türü: Stok (Stok · Kalitedeki stok) · Satın alma (Satın alma siparişi · Satın alma planı) · Üretim (Üretim siparişi · Üretim planı) · Talep (Kesin sipariş · Teklif · Beklemedeki sipariş · Tahmin) · Üretim ihtiyacı (Üretim siparişi ihtiyacı · Üretim planı ihtiyacı) · Transfer (Alokasyon transferi; iki satır: genelden −, özele +). Tek tanım `app/planning/movements.py`. No: Üretim planı ve Satın alma planı: tedarik planı no · Üretim siparişi ve Satın alma siparişi: sipariş no · Kesin sipariş, Teklif, Beklemedeki sipariş: satış sipariş no · Üretim ihtiyacı: ihtiyacı doğuran üretimin no'su · Stok, Tahmin, Alokasyon transferi: boş.",
 )
 
 CapacityLoad = sa.Table(
@@ -1669,7 +1669,7 @@ CapacityLoad = sa.Table(
     sa.Column("UpdatedAt", mssql.DATETIME2(), nullable=False, comment="Yazılma zamanı (UTC)", info={'label': "Yazılma zamanı (UTC)", 'source': "Sistem", 'workspace': False}),
     schema="planning",
     info={'field_class': "Plan"},
-    comment="Kapasite yükleri (K-202): tedarik planı kaydı × kaynak grubu × dönem bazında yük; yalnız yükler (plan ve yük grup düzeyindedir, K-180). Sistem rotadan hesaplar (türetme 8.0'da; o güne kadar satırları sahte motorun örneği verir); rotada aynı gruba düşen operasyonlar toplanır. Kapasite (toplam, duruş, kullanılabilir) saklanmaz, kapasite hesabından okunur (K-184); ek mesai `PlannedOvertime`'dadır.",
+    comment="Kapasite yükleri (K-202): tedarik planı kaydı × kaynak grubu × dönem bazında yük; yalnız yükler (plan ve yük grup düzeyindedir, K-180). Sistem rotadan hesaplar (türetme `app/planning/derive.py`, K-205); rotada aynı gruba düşen operasyonlar toplanır. Kapasite (toplam, duruş, kullanılabilir) saklanmaz, kapasite hesabından okunur (K-184); ek mesai `PlannedOvertime`'dadır.",
 )
 
 Pegging = sa.Table(

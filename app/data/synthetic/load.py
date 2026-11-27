@@ -123,11 +123,27 @@ def unload(engine: Engine) -> list[int]:
     return versions
 
 
-def load(engine: Engine, ds: Dataset) -> dict:
-    """Önceki sentetik veriyi silip temiz hâli yükler. Yeni veri versiyonu ve satır sayılarını döndürür."""
+def load(engine: Engine, ds: Dataset, plans: bool = True) -> dict:
+    """Önceki sentetik veriyi silip temiz hâli yükler; sonunda plan fikstürünü yükler (K-205). Yeni veri versiyonu ve satır sayılarını döndürür."""
     with engine.begin() as conn:
         _lock(conn, "yüklenmedi")
-        return _load(conn, ds)
+        result = _load(conn, ds)
+    return {**result, "plans": load_plans(engine, ds.generated_on) if plans else []}
+
+
+def load_plans(engine: Engine, on=None) -> list[dict]:
+    """Plan fikstürü (K-205): üç plan, tek işlem (tutarlılık denetimi düşerse hiçbir şey kalmaz). on: sentetik verinin üretim günü (boşsa veri
+    versiyonunun tarihi)."""
+    from sqlalchemy.orm import Session
+    from .plan import load_plans as load_fixture
+    with Session(engine) as session:
+        try:
+            out = load_fixture(session, on=on)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+    return out
 
 
 class ResetRefused(RuntimeError):
@@ -199,7 +215,7 @@ def reset(engine: Engine, ds: Dataset, confirm) -> dict | None:
         _lock(conn, "yüklenmedi")
         result = _load(conn, ds)
     log.info("Geliştirme veritabanı sıfırlandı: aktarım versiyonları %s silindi", preview["versions"])
-    return {**result, "removed_transfers": preview["versions"], "removed_rows": preview["rows"]}
+    return {**result, "removed_transfers": preview["versions"], "removed_rows": preview["rows"], "plans": load_plans(engine, ds.generated_on)}
 
 
 def _scenarios(conn: Connection, base_id: int) -> int:
@@ -262,14 +278,17 @@ def _scenario_differences(conn: Connection, ds: Dataset, base_id: int, now) -> N
         return next(r["Id"] for r in ds.rows("Resource") if r["Code"] == code)
 
     overtime, mono = scenario("Fazla mesaili"), scenario("Kısıtsız kapasite")
-    # Fazla mesaili: montajcıların ek mesai limiti 2 → 4 (Baz satırının farkı: yalnız DailyLimit); montaj hattına senaryonun kendi limiti
+    # Fazla mesaili: montajcıların (2 → 4) ve darboğazın (1 → 3) ek mesai limiti (Baz satırının farkı: yalnız DailyLimit); montaj hattına senaryonun
+    # kendi limiti (dataset.OVERTIME_DIFFS, OVERTIME_OWN; plan fikstürü aynı değerleri okur)
+    from .dataset import OVERTIME_DIFFS, OVERTIME_OWN
+    for code, limit in OVERTIME_DIFFS.items():
+        conn.execute(text(
+            "INSERT INTO param.OvertimeLimit (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, ResourceGroupId, ResourceId, ValidFrom, ValidTo, DailyLimit, UpdatedAt) "
+            "SELECT :s, b.Id, N',DailyLimit,', b.IsValid, b.ResourceGroupId, b.ResourceId, b.ValidFrom, b.ValidTo, :limit, :now FROM param.OvertimeLimit b "
+            "WHERE b.ScenarioDefinitionId = :base AND b.ResourceGroupId = :g"), {"s": overtime, "base": base_id, "g": group(code), "limit": limit, "now": now})
     conn.execute(text(
-        "INSERT INTO param.OvertimeLimit (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, ResourceGroupId, ResourceId, ValidFrom, ValidTo, DailyLimit, UpdatedAt) "
-        "SELECT :s, b.Id, N',DailyLimit,', b.IsValid, b.ResourceGroupId, b.ResourceId, b.ValidFrom, b.ValidTo, 4, :now FROM param.OvertimeLimit b "
-        "WHERE b.ScenarioDefinitionId = :base AND b.ResourceGroupId = :g"), {"s": overtime, "base": base_id, "g": group("CG-MON"), "now": now})
-    conn.execute(text(
-        "INSERT INTO param.OvertimeLimit (ScenarioDefinitionId, IsValid, ResourceGroupId, ValidFrom, DailyLimit, UpdatedAt) VALUES (:s, 1, :g, :a, 3, :now)"),
-        {"s": overtime, "g": group("MONTAJ"), "a": ds.start, "now": now})
+        "INSERT INTO param.OvertimeLimit (ScenarioDefinitionId, IsValid, ResourceGroupId, ValidFrom, DailyLimit, UpdatedAt) VALUES (:s, 1, :g, :a, :limit, :now)"),
+        {"s": overtime, "g": group(OVERTIME_OWN[0]), "a": ds.start, "limit": OVERTIME_OWN[1], "now": now})
     # Kısıtsız kapasite: T-02'nin planlı bakımı bu senaryoda geçersiz (Baz satırı silinmez; "Geçersiz yap")
     conn.execute(text(
         "INSERT INTO param.ResourceDowntime (ScenarioDefinitionId, BaseRowId, OverriddenFields, IsValid, ResourceGroupId, ResourceId, StartDate, EndDate, DowntimeType, "
