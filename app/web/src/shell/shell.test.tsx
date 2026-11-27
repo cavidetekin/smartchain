@@ -39,8 +39,8 @@ describe("kenar menü", () => {
     // U-3: pasiflik yalnız renkle değil, kilit ikonuyla da gösterilir; açık ekranlarda kilit yok.
     expect(within(gantt as HTMLElement).getByTestId("lock")).toBeInTheDocument();
     expect(within(menu()).getAllByTestId("lock")).toHaveLength(10);
-    const senaryolar = within(menu()).getByRole("link", { name: /Senaryo karşılaştırma/ });
-    expect(within(senaryolar).queryByTestId("lock")).toBeNull();
+    const calisma = within(menu()).getByRole("link", { name: /^Çalışma/ });
+    expect(within(calisma).queryByTestId("lock")).toBeNull();
     await user.click(gantt);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana sayfa");
   });
@@ -84,13 +84,14 @@ describe("daraltılmış menü", () => {
     const user = userEvent.setup();
     const { unmount } = renderApp();
     await user.click(screen.getByRole("button", { name: "Menüyü daralt" }));
-    expect(within(menu()).queryByText("Senaryo karşılaştırma")).toBeNull();
+    expect(within(menu()).queryByText("Kaynak doluluk")).toBeNull();
     expect(within(menu()).getByRole("link", { name: "Ana sayfa" })).toHaveAttribute("title", "Ana sayfa");
     await user.hover(within(menu()).getByRole("button", { name: "Planlama" }));
     expect(within(menu()).queryByRole("menu")).toBeNull();  // yalnız basınca açılır
     await user.click(within(menu()).getByRole("button", { name: "Planlama" }));
     const panel = within(menu()).getByRole("menu", { name: "Planlama" });
-    expect(within(panel).getByRole("menuitem", { name: "Senaryo karşılaştırma" })).toBeInTheDocument();
+    expect(within(panel).getByRole("menuitem", { name: "Çalışma" })).toBeInTheDocument();
+    expect(within(panel).queryByRole("menuitem", { name: "Senaryo karşılaştırma" })).toBeNull();     // Raporlar'a taşındı (K-204)
     const yayin = within(panel).getByText("Yayın").closest("[aria-disabled]")!;
     expect(yayin).toHaveAttribute("aria-disabled", "true");
     expect(within(yayin as HTMLElement).getByTestId("lock")).toBeInTheDocument();
@@ -180,8 +181,8 @@ describe("daraltılmış menü", () => {
     within(menu()).getByRole("button", { name: "Planlama" }).focus();
     await user.keyboard("{Enter}");
     const panel = within(menu()).getByRole("menu", { name: "Planlama" });
-    expect(within(panel).getByRole("menuitem", { name: "Senaryo karşılaştırma" })).toHaveFocus();
-    expect(panel.querySelectorAll("a[role=menuitem]")).toHaveLength(2);  // Senaryo karşılaştırma, Çalışma; çalışmanın ekranları kilitli
+    expect(within(panel).getByRole("menuitem", { name: "Çalışma" })).toHaveFocus();
+    expect(panel.querySelectorAll("a[role=menuitem]")).toHaveLength(1);  // Çalışma; çalışmanın ekranları kilitli (08 Raporlar'a taşındı, K-204)
     await user.click(within(panel).getByText("Yayın"));
     expect(within(menu()).getByRole("menu", { name: "Planlama" })).toBeInTheDocument();
   });
@@ -258,7 +259,7 @@ describe("bağlam çubuğu", () => {
     await waitFor(() => expect(screen.getByTestId("scenario")).toHaveTextContent("Senaryo: Fazla mesaili"));
     expect(sent).toEqual([{ id: 2 }]);                                                       // seçim hatırlanır
     expect(screen.getByText("Plan versiyonu: —")).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText("Dönem: —")).toHaveAttribute("title", "Plan versiyonu ve dönem seçimi 8.1'de gelir");
+    expect(screen.getByText("Dönem: —")).toHaveAttribute("title", "Plan versiyonu ve dönem seçimi 8.2'de gelir");
   });
 });
 

@@ -4,10 +4,11 @@ import { describe, expect, it } from "vitest";
 import { childrenOf, GROUPS, SCREENS } from "./catalog";
 
 describe("ekran kataloğu", () => {
-  it("32 ekranı birer kez içerir", () => {
+  it("32 ekranın 08 dışındakileri birer kez içerir", () => {
+    // 08 Senaryo karşılaştırma ayrı ekran değildir: Raporlar altında rapor olur (K-204)
     const nos = SCREENS.map((s) => s.no).sort();
-    expect(nos).toEqual(Array.from({ length: 32 }, (_, i) => String(i + 1).padStart(2, "0")));
-    expect(new Set(SCREENS.map((s) => s.path)).size).toBe(32);
+    expect(nos).toEqual(Array.from({ length: 32 }, (_, i) => String(i + 1).padStart(2, "0")).filter((n) => n !== "08"));
+    expect(new Set(SCREENS.map((s) => s.path)).size).toBe(31);
   });
 
   it("grup sırası K-82'deki gibi", () => {

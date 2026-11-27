@@ -1,4 +1,4 @@
-// Bağlam çubuğu (U-17, docs/12): senaryo seçici (K-177), plan versiyonu / dönem (8.1), veri versiyonu,
+// Bağlam çubuğu (U-17, docs/12): senaryo seçici (K-177), plan versiyonu / dönem (8.2; K-204), veri versiyonu,
 // iş göstergesi, zamanlanmış iş çipi (K-163), kullanıcı.
 import { Check, ChevronDown, Database } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";

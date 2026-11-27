@@ -58,7 +58,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 #### PLANLAMA
 
-- **08 · Senaryo karşılaştırma:** Senaryoların plan versiyonları, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma.
+- **08 · Senaryo karşılaştırma:** Senaryoların plan versiyonları, durumu ve metrikleri; yan yana karşılaştırma; çalışma açma. **Raporlar'a taşındı (K-204):** Senaryo karşılaştırma ayrı ekran değildir; Raporlar altında "Senaryo karşılaştırma raporu" olur (geliştirme 9.7). Metin eski tasarımdır.
 - **09 · Çalışma:** Bir senaryo üzerindeki çalışma alanı: özet metrikler, yapılan değişiklikler, yeniden hesap, yayın. 10–19 numaralı ekranlar bu bağlamda açılır.
 - **10 · Kaynak doluluk raporu:** Kaynak × dönem doluluğu; dünden farkı; detaya iniş.
 - **11 · Ürün bazlı planlama:** Ürün × dönem: talep, üretim, stok projeksiyonu, kümülatif eksik; üretim miktarı girilir.
@@ -170,7 +170,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 - **40 · Gece akışı:** Veri çekme, doğrulama, aktarım ve senaryolar sırayla ya da paralel çalışır.
 - **41 · Senaryoyu yeniden çalıştırma:** Hata veren ya da süre aşan senaryo gündüz yeniden başlatılır. (öneri)
-- **42 · Senaryo karşılaştırma:** Metrikler yan yana; en iyi değer işaretlenir.
+- **42 · Senaryo karşılaştırma:** Metrikler yan yana; en iyi değer işaretlenir. (Raporlar'a taşındı; K-204)
 - **43 · Çalışma açma:** Bir gece senaryosundan çalışma açılır.
 - **44 · Değişiklik izi:** Her değişiklik ekran, kişi, zaman ve etkisiyle kaydedilir.
 - **45 · Değişikliği geri alma:** Tek tek ya da hepsi birden.
@@ -388,6 +388,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Senaryolar](mockups/m24e-0317-senaryolar.png)
 
+- **Raporlar'a taşındı (K-204):** Senaryo karşılaştırma ayrı ekran değildir; Raporlar altında "Senaryo karşılaştırma raporu" olur (geliştirme 9.7). Metin eski tasarımdır.
+
 - **Gece sonuçları:** Gece çalışan senaryolar durum ve ana metrikleriyle listelenir.
 - **Yan yana karşılaştırma:** Teslim, gecikme, fazla mesai, fason, doluluk ve stok aynı tabloda.
 - **Çalışma aç:** Kullanıcı seçtiği senaryo üzerinde çalışma açar; onaylı plan buradan doğar.
@@ -468,7 +470,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Öneriler](mockups/m24e-0325-oneriler.png)
 
-- **Yeniden ele alınacak (8.10; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu ekranın metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
+- **Yeniden ele alınacak (8.12; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu ekranın metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
 
 - **Planlı siparişler:** Üretim, satın alma ve fason önerileri tek listede; proje bilgisiyle.
 - **Yuvarlama görünür:** Modelin hesapladığı miktar ve parti, minimum, kutu kuralına göre yuvarlanmış miktar.

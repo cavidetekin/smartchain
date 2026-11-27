@@ -21,7 +21,7 @@ describe("menü role göre (K-100)", () => {
   it.each([
     ["System owner", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Veri yükleme", "Kullanıcılar", "Sistem ayarları"], []],
     ["Admin", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Kullanıcılar", "Sistem sağlığı", "Sistem ayarları"], []],  // K-164: yalnız Zamanlanmış işler sekmesi
-    ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Senaryo karşılaştırma", "Veri yükleme", "Senaryolar", "Denetim izi"], ["Kullanıcılar"]],
+    ["Key user", ["Planlama", "Takip", "Veri", "Parametre", "Yönetim"], ["Çalışma", "Veri yükleme", "Senaryolar", "Denetim izi"], ["Kullanıcılar", "Senaryo karşılaştırma"]],
     ["End user", ["Takip", "Veri", "Parametre"], ["Uyarılar", "Ana veri", "Veri kalitesi", "Kapasite yönetimi"],
      ["Senaryo karşılaştırma", "Çalışma", "Veri yükleme", "Veri kuralları", "Validasyon kuralları", "Parametreler", "Senaryolar", "Kullanıcılar", "Denetim izi"]],  // K-142
   ])("%s", (role, expectedGroups, shown, hidden) => {

@@ -42,5 +42,5 @@ NUMBER_PREFIX = {SUPPLY_PRODUCTION: "ÜP", SUPPLY_PURCHASE: "SP"}
 
 
 def supply_number(supply_type: str, seq: int) -> str:
-    """Plan kaydının numarası: ÜP-000071, SP-000214 (plan hesabı içinde sıra; taşıma kuralı 8.8'de)."""
+    """Plan kaydının numarası: ÜP-000071, SP-000214 (plan hesabı içinde sıra; taşıma kuralı 8.11'de)."""
     return f"{NUMBER_PREFIX[supply_type]}-{seq:06d}"

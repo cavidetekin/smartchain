@@ -1,5 +1,5 @@
 // Akış çizimi (docs/12 "Akış çizimi standardı", K-200): kutular, uçlu oklar ve + işaretleri; kendi SVG bileşenimiz, dış kütüphane yok.
-// Bileşen veri bilmez: düğümleri, etiketleri ve olayları kullanan ekran verir (Üretim akışı; 8.11'de pegging'in akış görünümü).
+// Bileşen veri bilmez: düğümleri, etiketleri ve olayları kullanan ekran verir (Üretim akışı; 8.5'te pegging'in akış görünümü).
 // Konum: dal açılıp kapanınca `anchor` kutusu ekranda yerinde kalır, yeni açılan kutular görünmüyorsa görünecek kadar kayar; `centerKey`
 // değişince seçili kutu ortalanır. Yakınlaştırma bileşenin içindedir (düğmeler `api` ile, Ctrl + tekerlek imlecin olduğu noktaya doğru).
 import { type KeyboardEvent, type Ref, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";

@@ -33,7 +33,7 @@ export function Shell() {
   const [fontSize, setFontSize] = useState<FontSize>(validFontSize(me.font_size) ?? prefs.legacyFontSize() ?? DEFAULT_FONT_SIZE);
   const [searchTick, setSearchTick] = useState(0);
   const [exports, setExports] = useState<ExportItem[]>([]);
-  // Çalışma açma 8.2'de gelir; o zamana kadar çalışmanın ekranları kapalıdır (K-43).
+  // Çalışma açma 8.6'da gelir (K-204); o zamana kadar çalışmanın ekranları kapalıdır (K-43).
   const workspaceOpen = false;
 
   useEffect(() => applyFontSize(fontSize), [fontSize]);

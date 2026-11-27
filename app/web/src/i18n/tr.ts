@@ -42,7 +42,7 @@ export const tr = {
     scenario: "Senaryo",
     planVersion: "Plan versiyonu",
     bucket: "Dönem",
-    notYet: "Plan versiyonu ve dönem seçimi 8.1'de gelir",
+    notYet: "Plan versiyonu ve dönem seçimi 8.2'de gelir",
     scenarioPick: "Senaryo seç",
     scenarioPassive: "Pasif senaryo: bağlam çubuğundaki listede görünmez",
     scenarios: "Senaryolar",

@@ -2723,7 +2723,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 36 · Mevcut arz önerileri
 <sub>24. Ekranlar ve fonksiyonlar · F36 · D Planlama motoru · Çalışma prensibi 1/2</sub>
 
-- **Yeniden ele alınacak (8.10; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
+- **Yeniden ele alınacak (8.12; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
 
 - Yeni sipariş yerine mevcut açık arzı düzeltmeyi önermek: öne çek, ertele, iptal, azalt; her öneri neden ve etkisiyle.
 
@@ -3147,6 +3147,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 42 · Senaryo karşılaştırma
 <sub>24. Ekranlar ve fonksiyonlar · F42 · E Senaryo ve çalışma · Çalışma prensibi 1/2</sub>
 
+- **Raporlar'a taşındı (K-204):** Senaryo karşılaştırma ayrı ekran değildir; Raporlar altında "Senaryo karşılaştırma raporu" olur (geliştirme 9.7). Metin eski tasarımdır.
 - Gece senaryolarını aynı metriklerle yan yana görmek, en iyi değeri işaretlemek ve farkın hangi siparişlerden, kaynaklardan geldiğine inmek; çalışma açma kararı buradan verilir.
 
 #### NASIL ÇALIŞIR
@@ -4939,7 +4940,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 66 · Planlı sipariş kararı
 <sub>24. Ekranlar ve fonksiyonlar · F66 · G Malzeme ve öneriler · Çalışma prensibi 1/3</sub>
 
-- **Yeniden ele alınacak (8.10; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
+- **Yeniden ele alınacak (8.12; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
 
 - Plan hesabının ürettiği üretim, satın alma ve fason önerilerini tek tek değerlendirip onaylamak, reddetmek ya da bekletmek; gerekirse yuvarlanmış miktarı ve tarihi elle düzeltmek. Yayına yalnız karar verilmiş öneriler girer.
 
@@ -5030,7 +5031,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 67 · Toplu karar
 <sub>24. Ekranlar ve fonksiyonlar · F67 · G Malzeme ve öneriler · Çalışma prensibi 1/2</sub>
 
-- **Yeniden ele alınacak (8.10; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
+- **Yeniden ele alınacak (8.12; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
 
 - Filtreyle daraltılmış öneri satırlarını tek işlemde onaylamak, bekletmek ya da reddetmek; onaydan önce istisnaları (elle değiştirilmiş, yetişmeyecek) göstererek yanlış toplu onayı önlemek.
 
@@ -5113,7 +5114,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 68 · Mevcut arz önerisi kararı
 <sub>24. Ekranlar ve fonksiyonlar · F68 · G Malzeme ve öneriler · Çalışma prensibi 1/3</sub>
 
-- **Yeniden ele alınacak (8.10; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
+- **Yeniden ele alınacak (8.12; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
 
 - Açık satın alma siparişleri ve üretim siparişleri için üretilen öne çek, ertele, azalt ve iptal önerilerini değerlendirmek; yeni sipariş açmadan önce mevcut arzı düzelterek stok ve gecikmeyi azaltmak.
 
@@ -5192,7 +5193,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ### 69 · Önerileri dışa aktarma
 <sub>24. Ekranlar ve fonksiyonlar · F69 · G Malzeme ve öneriler · Çalışma prensibi 1/2</sub>
 
-- **Yeniden ele alınacak (8.10; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
+- **Yeniden ele alınacak (8.12; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu fonksiyonun metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
 
 - Onaylanan planlı siparişleri ve mevcut arz önerilerini ERP'de işlenebilir Excel dosyalarına çıkarmak; Faz 1'de ERP'ye geri yazma olmadığından aktarımın izini elle işaretle tutmak.
 
