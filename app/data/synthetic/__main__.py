@@ -99,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     from db import guard
     from .load import ResetRefused, SyntheticLockError, load, reset, unload
+    from .plan import PlanFixtureError
     if a.command == "reset":
         def confirm(preview: dict) -> bool:
             status = (f"geri alınacak aktarım versiyonları {', '.join(map(str, preview['versions'])) or 'yok'}; silinecek core satırı {preview['rows']}, "
@@ -116,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         try:
             r = reset(get_engine(), ds, confirm)
-        except (ResetRefused, SyntheticLockError) as exc:
+        except (ResetRefused, SyntheticLockError, PlanFixtureError) as exc:   # K-209: ufuk ön koşulu onaydan ve silmeden önce
             print(f"DURDU: {exc}", file=sys.stderr)
             return 2
         if r is None:
@@ -137,13 +138,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Sentetik veri silindi (veri versiyonları: {removed or 'yok'})")
             return 0
         engine = get_engine()
-        try:  # K-166: öncekini siler; onay ister
+        try:  # K-166: öncekini siler; onay ister (ufuk ön koşulu K-209 load içinde, silmeden önce)
             guard.confirm(engine.url.database, "Sentetik veriyi yeniden yükleme (load; öncekini siler)")
         except guard.Refused as exc:
             print(exc, file=sys.stderr)
             return 2
         r = load(engine, ds)
-    except SyntheticLockError as exc:
+    except (SyntheticLockError, PlanFixtureError) as exc:
         print(f"DURDU: {exc}", file=sys.stderr)
         return 2
     print(f"Sentetik v0 yüklendi: veri versiyonu {r['data_version_id']}, lokasyon {r['location_id']}, "
@@ -175,7 +176,7 @@ def _plan(a) -> int:
             print(fixture.summary(session))
         return 0
     from db import guard
-    try:  # K-165: önceki fikstür planlarını siler; geliştirme veritabanında onay ister
+    try:  # K-165: önceki fikstür planlarını siler; geliştirme veritabanında onay ister (ufuk ön koşulu K-209 yüklemede, silmeden önce)
         guard.confirm(engine.url.database, "Plan fikstürünü yükleme (önceki fikstür planları silinir)")
     except guard.Refused as exc:
         print(exc, file=sys.stderr)

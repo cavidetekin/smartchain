@@ -123,8 +123,20 @@ def unload(engine: Engine) -> list[int]:
     return versions
 
 
+def check_horizon(engine: Engine, ds: Dataset) -> None:
+    """Ön koşul (K-209): Baz'ın plan ekseni plan fikstürünün haftalarını haftalık dönemlerle kapsamıyorsa PlanFixtureError; hiçbir şey silinmeden önce.
+    Sentetik senaryolar yüklemede Baz'dan kopyalandığı için Baz'a bakmak yeter."""
+    from sqlalchemy.orm import Session
+    from .plan import check_horizon as check
+    with Session(engine) as session:
+        check(session, ds.generated_on)
+
+
 def load(engine: Engine, ds: Dataset, plans: bool = True) -> dict:
-    """Önceki sentetik veriyi silip temiz hâli yükler; sonunda plan fikstürünü yükler (K-205). Yeni veri versiyonu ve satır sayılarını döndürür."""
+    """Önceki sentetik veriyi silip temiz hâli yükler; sonunda plan fikstürünü yükler (K-205). Yeni veri versiyonu ve satır sayılarını döndürür.
+    Plan yüklenecekse önce ufuk ön koşulu denetlenir (K-209)."""
+    if plans:
+        check_horizon(engine, ds)
     with engine.begin() as conn:
         _lock(conn, "yüklenmedi")
         result = _load(conn, ds)
@@ -204,7 +216,9 @@ def _remove_transfers(conn: Connection, versions: list[int]) -> None:
 
 
 def reset(engine: Engine, ds: Dataset, confirm) -> dict | None:
-    """Aktarımları geri alıp temiz sentetik hâli yükler (tek işlem). confirm(preview) True dönmezse hiçbir şey yapılmaz."""
+    """Aktarımları geri alıp temiz sentetik hâli yükler (tek işlem). confirm(preview) True dönmezse hiçbir şey yapılmaz. Ufuk ön koşulu (K-209)
+    onaydan ve silmeden önce denetlenir."""
+    check_horizon(engine, ds)
     with engine.begin() as conn:
         preview = reset_preview(conn)
         if preview["refuse"]:

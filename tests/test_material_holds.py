@@ -18,6 +18,7 @@ from app.engine.data import SqlPlanningData
 from app.params import resolve, scenario_tables
 from app.quality import run as quality_run
 
+import testdb
 from auth_helpers import auth
 from test_capacity import clean, world  # noqa: F401  (fixture'lar)
 from test_capacity_entries import api, audits, people  # noqa: F401
@@ -30,6 +31,13 @@ PRODUCTION, PURCHASE, BOTH = rules.PRODUCTION, rules.PURCHASE, rules.BOTH
 Y = 2031                                                   # testin kayıtlarının yılı (sentetik kayıtların ve bugünkü ufkun dışında)
 T0 = date(Y, 1, 6)                                         # dönem hesabının "bugün"ü (Pazartesi): haftalık Oca–Mar, aylık Nis–Eyl
 LOCKED = "Lokasyon ve malzeme kayıttan sonra değişmez; kaydı silip yeniden girin."
+
+
+@pytest.fixture(scope="module", autouse=True)
+def default_horizon(db_engine):
+    """Dönem hesabı kurulumun başlangıç ufkuna göre yazıldı (haftalık Oca–Mar, aylık Nis–Eyl); test veritabanı fikstür için 4 aydadır (K-209)."""
+    with testdb.default_plan_horizon(db_engine):
+        yield
 
 
 def tr(day: date) -> str:

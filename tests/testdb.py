@@ -5,6 +5,7 @@ Oturum başında veritabanı yoksa açılır, şemaya getirilir, önceki koşunu
 conftest.py bunu uygulamayı import etmeden önce çağırır; bu yüzden burada üst düzeyde uygulama import edilmez.
 """
 import importlib.util
+from contextlib import contextmanager
 import os
 from collections.abc import Mapping
 from pathlib import Path
@@ -222,6 +223,34 @@ def _has_allocation(engine: Engine) -> bool:
                                     "AND SalesOrderLineId IS NULL AND CustomerCode IS NULL")).scalar() >= 1 and conn.execute(sa.text(
             # alokasyon kuralı (K-199, durum 13): alternatif ağaçtaki arzdan gelen kural
             "SELECT COUNT(*) FROM core.MaterialAllocationRule WHERE VersionTo IS NULL AND SourceMaterials = N'SAT-001' AND Reason = N'Alt seviye arzı'")).scalar() >= 1
+
+
+FIXTURE_WEEK_MONTHS = 4   # plan fikstürünün 13 haftası her gün haftalık dönemde kalsın (K-209): "Hafta · 4 ay"
+
+
+def ensure_fixture_horizon(engine: Engine) -> int:
+    """Test veritabanında Baz'ın ve sentetik senaryoların plan ekseninin haftalık kısmı en az 4 ay (K-209): varsayılan "Hafta · 3 ay" ayın son
+    günlerinde fikstürün 13 haftasını kapsamaz, plan yüklemesi ön koşulda durur. Yalnız test veritabanı; kurulum başlangıç değeri değişmez (K-175).
+    Kurulum varsayılanını sınayan testler (test_parameters) kendi süreleri boyunca varsayılanı yazar. Değişen satır sayısı."""
+    with engine.begin() as conn:
+        return conn.execute(sa.text(
+            "UPDATE b SET [Count] = :n FROM param.TimeBucketDefinition b JOIN param.ScenarioDefinition d ON d.Id = b.ScenarioDefinitionId "
+            "WHERE (d.IsBase = 1 OR d.IsSynthetic = 1) AND b.Axis = N'Plan' AND b.BucketType = N'Hafta' AND b.SpanUnit = N'Ay' AND b.[Count] < :n"),
+            {"n": FIXTURE_WEEK_MONTHS}).rowcount
+
+
+@contextmanager
+def default_plan_horizon(engine: Engine):
+    """Kurulum başlangıç değerine bağlı testler için (ör. dönem hesabı "haftalık Oca–Mar, aylık Nis–Eyl"): Baz ve sentetik senaryoların plan
+    ekseninin haftalık kısmı test süresince "Hafta · 3 ay"; sonunda fikstürün 4 ayına döner (K-209)."""
+    with engine.begin() as conn:
+        conn.execute(sa.text(
+            "UPDATE b SET [Count] = 3 FROM param.TimeBucketDefinition b JOIN param.ScenarioDefinition d ON d.Id = b.ScenarioDefinitionId "
+            "WHERE (d.IsBase = 1 OR d.IsSynthetic = 1) AND b.Axis = N'Plan' AND b.BucketType = N'Hafta' AND b.SpanUnit = N'Ay'"))
+    try:
+        yield
+    finally:
+        ensure_fixture_horizon(engine)
 
 
 def ensure_synthetic(engine: Engine) -> bool:

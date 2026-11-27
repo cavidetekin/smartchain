@@ -157,6 +157,9 @@ def base(db_engine, monkeypatch):
         saved = {t: [dict(r) for r in c.execute(sa.text(f"SELECT * FROM param.[{t}] WHERE ScenarioDefinitionId = :s"), {"s": sid}).mappings()] for t in TABLES}
     with db_engine.begin() as c:   # hedefler başlangıç düzeninde (K-196): test veritabanının geçmişinden bağımsız
         objective_rows.insert_start(c, sid, params.read_settings(c, sid))
+        # plan ekseni kurulum başlangıç değerinde (Hafta · 3 Ay + Ay · 6 Ay): test veritabanı fikstür için 4 aya çekilir (K-209, testdb)
+        c.execute(sa.text("UPDATE param.TimeBucketDefinition SET [Count] = 3 WHERE ScenarioDefinitionId = :s AND Axis = N'Plan' AND BucketType = N'Hafta' "
+                          "AND SpanUnit = N'Ay'"), {"s": sid})
     yield sid
     from db.models import metadata
     with db_engine.begin() as c:

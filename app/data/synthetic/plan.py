@@ -10,6 +10,9 @@ Yükleme (`load_plans`): kodlar güncel veri versiyonunda Id'ye, haftalar senary
 hareketler ve yükler ürünün türetmesiyle (`app.planning.derive`) kurulur, pegging hareketlere eşlenir; uyarı ve metrik yazılır; tutarlılık denetimleri
 (`app.planning.checks`) koşar, hata varsa hiçbir şey kalmaz.
 
+Ön koşul (K-209): fikstür haftalarla kurulduğu için senaryonun plan ekseni fikstürün haftalarını (`dataset.HORIZON_WEEKS`) haftalık dönemlerle
+kapsamalıdır; kapsamıyorsa `plan`, `load` ve `reset` hiçbir şey silmeden durur (`check_horizon`). Kullanıcının ufuk ayarına dokunulmaz (K-175).
+
 Komutlar: `python -m app.data.synthetic plan` (yükler) · `plan --regenerate` (yalnız dosyayı yazar) · `plan --summary` (özet ve 12 durumun kanıtı).
 """
 import copy
@@ -646,6 +649,41 @@ class PlanFixtureError(Exception):
     """Fikstür yüklenemedi (sentetik olmayan veri, eşleşmeyen kayıt, tutarlılık denetimi); hiçbir şey yazılmadı."""
 
 
+HORIZON_HELP = "Parametreler › Ufuk: haftalık kısım en az {weeks} hafta olmalı (ör. Hafta · 4 ay)."
+
+
+def horizon_problem(session, scenario_id: int, on: date, today: date | None = None, weeks: int = d.HORIZON_WEEKS) -> str | None:
+    """Senaryonun plan ekseni fikstürün haftalarını haftalık dönemlerle kapsıyor mu (K-209). Hafta w = `on`un Pazartesi'sinden w − 1 hafta sonra;
+    düştüğü dönem "Hafta" tipinde olmalı ve haftanın sonuna kadar sürmeli (ay sonunda kesilen kısa hafta kapsamaz). Kapsamıyorsa ilk aykırı hafta."""
+    from app.periods import periods as period_list
+    plan = period_list.read(session, scenario_id, today or date.today())
+    first = d.monday(on)
+    for week in range(1, weeks + 1):
+        day = first + timedelta(days=7 * (week - 1))
+        found = next((p for p in plan if day <= p.end), None)
+        if found is None:
+            return f"{week}. hafta ({day:%d.%m.%Y}) plan ufkunun dışında"
+        if found.type != "Hafta" or found.end < day + timedelta(days=6):
+            return f"{week}. hafta ({day:%d.%m.%Y}) haftalık dönemde değil (\"{found.label}\": {found.start:%d.%m.%Y} – {found.end:%d.%m.%Y})"
+    return None
+
+
+def check_horizon(session, on: date, today: date | None = None, scenarios: tuple[str, ...] = ("Baz",)) -> None:
+    """Ön koşul (K-209): adı verilen senaryoların ("Baz" = temel senaryo) plan ekseni fikstürün haftalarını kapsamıyorsa PlanFixtureError; hiçbir
+    şey değişmez. `load` ve `reset` silmeden önce, `plan` yüklemeden önce çağırır."""
+    import sqlalchemy as sa
+    for name in scenarios:
+        sql = ("SELECT Id FROM param.ScenarioDefinition WHERE IsBase = 1" if name == "Baz"
+               else "SELECT Id FROM param.ScenarioDefinition WHERE Name = :n AND IsSynthetic = 1")
+        sid = session.execute(sa.text(sql), {"n": name}).scalar()
+        if sid is None:
+            continue
+        problem = horizon_problem(session, sid, on, today)
+        if problem:
+            raise PlanFixtureError(f"Plan fikstürü yüklenemez: \"{name}\" senaryosunun plan ufku fikstürün {d.HORIZON_WEEKS} haftasını haftalık dönemlerle "
+                                   f"kapsamıyor ({problem}). {HORIZON_HELP.format(weeks=d.HORIZON_WEEKS)} Hiçbir şey silinmedi.")
+
+
 def _local_date(at: datetime) -> date:
     from app.flows.schedule import utc_to_local
     return utc_to_local(at).date()
@@ -874,6 +912,7 @@ def load_plans(session, today: date | None = None, fixture: dict | None = None, 
     version = synthetic_version(session)
     on = on or data_day(session, version)
     fixture = fixture or fixture_for(on)
+    check_horizon(session, on, today, tuple(dict.fromkeys(p["scenario"] for p in fixture["plans"])))   # K-209: silmeden önce
     delete_runs(session.connection(), fixture_runs(session))
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     out = []

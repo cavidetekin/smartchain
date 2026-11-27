@@ -202,6 +202,7 @@ Plan fikstürü (K-205, geliştirme 8.0): elle yazılmaz; sentetik veri tarafın
 - **Uyarı ve metrik:** ORDER_LATE, ORDER_UNMET, FORECAST_UNMET, CAP_OVERLOAD, OVERTIME_USE, PURCHASE_LATE, MAT_EXCESS (değer, mesaj, dönem ve ilgili kayıtla, K-206; önem yazılmaz) ve `app/planning/metrics.py` kataloğu.
 - **Komutlar:** `python -m app.data.synthetic plan` yükler (önceki fikstür planları silinir; geliştirme veritabanında onay ister) · `plan --regenerate` yalnız dosyayı yeniden üretir · `plan --summary` plan başına satır sayıları, 12 durumun kanıt satırları ve tutarlılık denetimleri. `load` ve `reset` sonunda planı da yükler.
 - **Tutarlılık:** yükleme tek işlemdir; denetimlerden (`app/planning/checks.py`: bakiye, talep, arz, yük ve ek mesai, pegging, uyarı) biri düşerse hiçbir şey yazılmaz. Dosya bayatlarsa (sentetik veri ya da kural değişti) test düşer.
+- **Ufuk ön koşulu (K-209):** fikstür haftalarla kurulduğu için senaryonun plan ekseni fikstürün 13 haftasını tam haftalık dönemlerle kapsamalıdır (ay sonunda kesilen kısa hafta ya da aylık dönem kapsamaz). `plan`, `load` ve `reset` onaydan ve silmeden önce denetler; kapsamıyorsa durur ve ne yapılacağını yazar ("Parametreler › Ufuk: haftalık kısım en az 13 hafta olmalı (ör. Hafta · 4 ay)"). Varsayılan "Hafta · 3 ay" ayın son günlerinde 10–12 hafta verir; sentetik veriyle çalışılan veritabanında haftalık kısım en az 4 ay olmalıdır. Kullanıcının ufuk ayarına dokunulmaz (K-175); test veritabanında Baz oturum başında "Hafta · 4 ay"a çekilir.
 
 ### Kapsam dışı
 

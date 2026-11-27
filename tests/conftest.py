@@ -116,6 +116,7 @@ def db_engine():
             raise testdb.TestRunBusy(testdb.BUSY)
         testdb.upgrade_schema()
         testdb.clear_leftovers(engine)
+        testdb.ensure_fixture_horizon(engine)   # plan fikstürünün ufuk ön koşulu (K-209); sentetik yüklemeden önce
         testdb.ensure_synthetic(engine)
     except (testdb.WrongTestDatabase, testdb.TestRunBusy) as exc:
         pytest.exit(str(exc), returncode=2)
