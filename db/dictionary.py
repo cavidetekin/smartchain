@@ -1,4 +1,4 @@
-"""Veri sözlüğünün kurulumu (K-104): core ve param alanları adm.FieldDefinition'a, docs/02'den üretilen modelden.
+"""Veri sözlüğünün kurulumu (K-104): core, param ve plan çıktı tablolarının (K-202) alanları adm.FieldDefinition'a, docs/02'den üretilen modelden.
 
 Geçiş çalıştırır (0013), bu yüzden uygulamayı import etmez; model parametre gelir. Var olan satırda yalnız docs'tan gelen
 StandardLabel ve Description güncellenir: System owner'ın değerleri ezilmez. Kaynağı "Sistem" olan kolonlar (Id, sürüm kolonları) sözlüğe girmez.
@@ -8,6 +8,7 @@ import re
 import sqlalchemy as sa
 
 SYSTEM_SOURCE = "Sistem"
+SCHEMAS = ("core", "param", "planning")  # planning'de yalnız plan çıktı tabloları sınıf taşır (db/generate.py PLAN_OUTPUTS)
 ADDITIONAL = re.compile(r"Additional(Text|Number)(\d+)$")
 ADDITIONAL_TITLE = {"Text": "Ek metin alanı", "Number": "Ek sayı alanı"}
 DOCS_COLUMNS = ("StandardLabel", "Description", "IfEmpty")
@@ -41,14 +42,15 @@ def fields(metadata: sa.MetaData) -> list[dict]:
     out = []
     for table in metadata.tables.values():
         field_class = table.info.get("field_class")
-        if table.schema not in ("core", "param") or not field_class:
+        if table.schema not in SCHEMAS or not field_class:
             continue
         for col in table.columns:
             if col.info.get("source", SYSTEM_SOURCE) == SYSTEM_SOURCE:
                 continue
             out.append({
                 "TableName": table.name, "FieldName": col.name, "FieldClass": field_class,
-                "EditableInWorkspace": bool(col.info.get("workspace")), "ValuePriority": "ERP ezer", "ManualOverrides": True,
+                "EditableInWorkspace": bool(col.info.get("workspace")), "ValuePriority": "ERP ezer",
+                "ManualOverrides": table.schema != "planning",  # plan çıktısına manuel değer girilmez (K-202)
                 "IfEmpty": col.info.get("if_empty") or None, "IsRequired": not col.nullable,
                 "StandardLabel": standard_label(col.name, col.info.get("label")),
                 "Description": description(col.name, col.comment),

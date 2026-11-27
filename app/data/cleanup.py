@@ -5,8 +5,9 @@ Sentetik verinin yeniden yüklenmesi (K-79) ve testler kullanır. Çağıran iş
 from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection
 
-OUTPUT_TABLES = ["PlanWarning", "Pegging", "CapacityLoad", "DemandFulfillment", "SupplyRecommendation",
-                 "PlannedOrder", "PlanMetric"]
+# silme sırası: bağlanan önce (pegging → hareket ve yük → karşılama, tedarik planı → talep; K-202)
+OUTPUT_TABLES = ["PlanWarning", "Pegging", "CapacityLoad", "MaterialTransaction", "PlannedAllocationTransfer", "PlannedOvertime", "DemandFulfillment",
+                 "PlannedSupply", "PlannedDemand", "PlanMetric"]
 
 
 def _ids(conn: Connection, sql: str, **lists) -> list[int]:

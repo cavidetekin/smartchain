@@ -9,10 +9,18 @@ from db.models import metadata
 
 
 class SqlPlanningData:
-    def __init__(self, session: Session, data_version_id: int, scenario_definition_id: int | None = None):
+    def __init__(self, session: Session, data_version_id: int, scenario_definition_id: int | None = None, plan_run_id: int | None = None):
         self.session = session
         self.data_version_id = data_version_id
         self.scenario_definition_id = scenario_definition_id
+        self.plan_run_id = plan_run_id
+
+    def planned_demands(self, included_only: bool = True) -> list[dict]:
+        """Plan hesabının talepleri (docs/09, K-202): hesap başlarken kopyalanan `planning.PlannedDemand` satırları."""
+        if self.plan_run_id is None:
+            raise ValueError("Talepler için plan hesabı gerekir.")
+        from app.planning import demand
+        return demand.rows(self.session, self.plan_run_id, included_only)
 
     def period_values(self, name: str, date_from: date, date_to: date) -> list[dict]:
         """Dönem değerleri (docs/09): ekranın önbelleğini kuran hesabın kendisi; girişler senaryoludur, güncel girişler ve üyelikler okunur."""

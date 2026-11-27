@@ -1,8 +1,8 @@
 # Ara iş · Plan çıktı tabloları (8.0 Plan fikstürü öncesi)
 
-> **Durum:** plan onaylandı (26.11.2026); açık noktaların kararları en altta, metin kararlara göre düzeltildi. İki parça: 1 ad seti, 2 plan tabloları. Her parça kendi zinciri ve commit'iyle; hiçbir parça demo onayı olmadan kapanmaz. 2. parçaya Cavide "devam" deyince başlanır.
+> **Durum:** plan onaylandı (26.11.2026); açık noktaların kararları en altta, metin kararlara göre düzeltildi. İki parça: 1 ad seti (kapandı, 27.11.2026; sürüm 0.61.0, geçiş 0082), 2 plan tabloları (27.11.2026'da başlandı). Her parça kendi zinciri ve commit'iyle; hiçbir parça demo onayı olmadan kapanmaz.
 > **Numaralar:** karar K-202; 1. parça geçiş 0082 ve sürüm 0.61.0; 2. parça geçiş 0083 ve sürüm 0.62.0.
-> **İşaretler:** bölüm 1–8 ve açık noktaların kararları Cavide'nindir. Onay istekindeki iki öneri (a: liste tanımlarının Aşama 8'e taşınması; b: fason ayracının adı `IsSubcontract`) onaysızdır; 2. parçadan önce sorulur.
+> **İşaretler:** bölüm 1–8 ve açık noktaların kararları Cavide'nindir. Onay isteğindeki iki öneri (a: liste tanımlarının Aşama 8'e taşınması; b: fason ayracının adı `IsSubcontract`) 27.11.2026'da onaylandı; metne işlendi.
 > **Kapsam dışı (Aşama 10'a not):** hareket tarihi kuralı ve modelin dönem varsayımı; modelin mevcut üretim siparişlerine dokunma kuralları; satın alma siparişleri için öne çek, ertele, iptal uyarıları; full pegging yöntemi ve seviye bazında sıralama.
 
 ## Bağlam
@@ -42,7 +42,7 @@ Bütün tablolar `planning` şemasında, `PlanRunId` taşır, versiyonsuzdur. Ko
 | `Quantity` · `RoundedQuantity` | Miktar · Yuvarlanmış miktar | |
 | `ProposedQuantity` · `ProposedPeriodStart` | Öneri miktarı · Öneri dönemi | İlk hesap; elle değişiklikten önceki hâl |
 | `IsManual` · `IsFixed` · `IsIncluded` | Elle değiştirildi · Sabitlendi · Plana dahil | |
-| fason ayracı (adı öneri b'ye bağlı) | Fason | Evet · Hayır; kaydın rotasından (`Routing.IsSubcontracted`, `ResourceGroup.IsSubcontractor`) |
+| `IsSubcontract` | Fason | Evet · Hayır; `WorkOrder`'daki alanla aynı ad ve etiket. Kaynak = Plan satırında rotadan (`Routing.IsSubcontracted`, `ResourceGroup.IsSubcontractor`); Kaynak = Sipariş satırında üretim siparişinin kendi alanından (çelişkide ERP'nin dediği geçerli) |
 
 Mevcut üretim siparişlerinin plan kaydı da buradadır (`Source` = Sipariş; döneme bölünürse dönem başına satır). Satın alma siparişleri burada yoktur. `SupplyRecommendation` kalkar.
 
@@ -135,7 +135,7 @@ Bu işte: şema, motor arayüzü, `PlannedDemand` kopyası ve özet alanları. `
 
 - **Motor arayüzü ve yazıcı:** `app/engine/interface.py` (`PlanResult`), `writer.py` (`OUTPUTS`, bağ çözme), `fake.py`, `fixtures/plan_v0.json`.
 - **Temizlik ve kurulum:** `app/data/cleanup.py`, `installer/smoke.py`, `scripts/engine_demo.py`.
-- **Yeni:** `app/planning/` (talep kopyası, sonuç alanları, hareket türleri; kapsamı açık nokta 2'ye bağlı); plan tabloları için liste tanımları; `db/dictionary.py` (plan şeması); `app/api/services/lists.py` (ilişkili alanlar için `PlanRun.DataVersionId`); `app/api/lists/relations.py` (plan tablolarının bağları).
+- **Yeni:** `app/planning/` (talep kopyası, özet alanları, hareket türleri); `db/dictionary.py` (plan tabloları veri sözlüğüne girer). Liste tanımları ve ilişkili alanların `PlanRun.DataVersionId`'den çözülmesi Aşama 8'de (öneri a).
 - **Testler:** `test_engine_writer.py`, `test_engine_service.py`, `test_template_contract.py`, `test_dictionary.py`, `conftest.py` (plan ortamı); ad seti için `test_labels.py`, `test_related_fields.py`, `test_validation_references.py`, `test_pegging_parameters.py`, ön yüzde `Pegging.test.tsx`, `Parameters.test.tsx`.
 
 ## Ad seti dökümü (bölüm 2)
@@ -167,7 +167,7 @@ ERP'den gelen: **Üretim siparişi · Satın alma siparişi**. Smartchain'in ür
 Aşama 8'in başında, 8.0'dan önce: "**Ara iş · Plan çıktı tabloları** (K-202)". İki parça öneriyorum; her biri kendi zinciri ve commit'iyle:
 
 1. **Ad seti** (küçük; yalnız metinler ve geçiş 0082).
-2. **Plan tabloları** (docs, şema, motor arayüzü, yazıcı, sistemin yazdığı kısımlar, liste tanımları).
+2. **Plan tabloları** (docs, şema, motor arayüzü, yazıcı, sistemin yazdığı kısımlar, veri sözlüğü kaydı; liste tanımları Aşama 8'de).
 
 8.0 Plan fikstürü bu tablolara göre yazılır; 8.0'daki not bu işin kapanışında kalkar.
 
@@ -219,10 +219,10 @@ Sahte motor küçük bir örnek plan yazar (yeni biçimde `plan_v0.json`); siste
 - **Sonuç tabloları (türetilir, elle değişmez):** MaterialTransaction · CapacityLoad · Pegging
 - **Dönem tabloları (K-184):** bunlardan toplanır.
 
-## Onay bekleyen öneriler (2. parçadan önce sorulur)
+## İki önerinin kararı (Cavide, 27.11.2026)
 
-- **a.** Plan tablolarının veri sözlüğüne girmesi bu işte kalsın; liste tanımları ve ilişkili alanların plan hesabının veri versiyonundan çözülmesi, tabloyu ilk kullanan Aşama 8 ekranına taşınsın.
-- **b.** Fason ayracının alan adı `IsSubcontract` olsun (`WorkOrder`'daki alanla aynı ad ve etiket); Kaynak = Sipariş satırında değer üretim siparişinin kendi alanından gelsin.
+- **a. Onaylandı:** bu işte yalnız tablolar ve veri sözlüğü kaydı. Liste tanımları ve ilişkili alanların plan hesabının veri versiyonundan çözülmesi, tabloyu ilk kullanan Aşama 8 ekranıyla birlikte yazılır (GELISTIRME 8.3'e not düşüldü).
+- **b. Onaylandı:** `PlannedSupply`'daki fason ayracı `IsSubcontract` (`WorkOrder`'daki alanla aynı ad ve etiket). Kaynak = Plan satırında rotadan beslenir (`Routing.IsSubcontracted`, `ResourceGroup.IsSubcontractor`); Kaynak = Sipariş satırında üretim siparişinin kendi alanından gelir (çelişkide ERP'nin dediği geçerli).
 
 ## 1. parçanın kapsamı (ad seti)
 

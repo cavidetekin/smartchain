@@ -29,8 +29,9 @@ from app.engine.service import EngineService  # noqa: E402
 from app.engine.submit import submit_plan_run  # noqa: E402
 from app.jobs.constants import ACTIVE_STATUSES  # noqa: E402
 
-TABLES = ["PlannedOrder", "SupplyRecommendation", "DemandFulfillment", "CapacityLoad", "Pegging", "PlanWarning",
-          "PlanMetric"]
+from app.data.cleanup import OUTPUT_TABLES  # noqa: E402
+
+TABLES = list(reversed(OUTPUT_TABLES))  # plan çıktı tabloları (K-202)
 
 
 def demo_refs(session: Session, step: float) -> dict:

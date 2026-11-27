@@ -103,18 +103,18 @@ def check_engine(timeout: int) -> str:
                 if status in ("Bitti", "Kısmen", "Hata"):
                     break
                 time.sleep(1)
-            orders = s.execute(text("SELECT COUNT(*) FROM planning.PlannedOrder WHERE PlanRunId = :id"),
+            orders = s.execute(text("SELECT COUNT(*) FROM planning.PlannedSupply WHERE PlanRunId = :id"),
                                {"id": run_id}).scalar()
             if status != "Bitti" or not orders:
                 error = s.execute(text("SELECT ErrorText FROM adm.Job WHERE Id = :id"), {"id": job_id}).scalar()
                 raise AssertionError(f"Plan hesabı bitmedi: {status} {error or ''}")
-            return f"PlanRun {run_id} Bitti, {orders} planlı sipariş"
+            return f"PlanRun {run_id} Bitti, {orders} tedarik planı kaydı"
         finally:
             s.rollback()
             p = {"r": run_id, "j": job_id, "dv": dv, "ps": ps, "l": loc}
             if run_id:
-                for t in ("PlanWarning", "Pegging", "CapacityLoad", "DemandFulfillment", "SupplyRecommendation",
-                          "PlannedOrder", "PlanMetric"):
+                from app.data.cleanup import OUTPUT_TABLES  # plan çıktı tabloları, silme sırasıyla (K-202)
+                for t in OUTPUT_TABLES:
                     s.execute(text(f"DELETE FROM planning.{t} WHERE PlanRunId = :r"), p)
                 s.execute(text("DELETE FROM adm.SolverLog WHERE PlanRunId = :r"), p)
                 s.execute(text("DELETE FROM planning.PlanRun WHERE Id = :r"), p)

@@ -39,11 +39,11 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ✔ Malzeme özel alokasyonlu değilse, arz satırında sahip bilgisi (proje, müşteri, sipariş) dolu olsa bile `AllocationLevel` ve `AllocationKey` **boş kalır**; satır geneldir. Seviye ve anahtar doluysa arz ayrılmış demektir. (K-198)
 - ✔ Malzemede `IsCustomAllocated` **boşsa** arz satırları genel sayılır (`IsCustomAllocated` = Hayır, seviye ve anahtar boş); malzemedeki alan boş kalır ve veri kalitesi uyarısı çıkar. (K-198)
 - ✔ Siparişe ayrılmış arzda kalem boşsa anahtar yalnız sipariş numarasıdır ve o siparişin bütün kalemlerine açıktır. (K-198)
-- ✔ `planning.PlannedOrder`: **`ProjectId` kalkar**; `IsCustomAllocated`, `AllocationLevel`, `AllocationKey` eklenir (motor yazar). (K-198)
+- ✔ `planning.PlannedSupply` (K-202; eski `PlannedOrder`): **`ProjectId` kalkar**; `IsCustomAllocated`, `AllocationLevel`, `AllocationKey` eklenir (motor yazar). (K-198)
 - ✔ Stok, üretim siparişi ve satın alma satırının ana tablosunda sipariş no, satır no ve alt satır no ayrı alanlar olarak durur; kalemli anahtar her zaman üç parçadır (K-198).
 - ✔ Üç arz tablosunda sahip alanlarının adı: Bağlı proje · Bağlı müşteri · Bağlı sipariş no · Bağlı sipariş satırı · Bağlı sipariş alt satırı; ilişkili alanlar da aynı adı taşır; iç bağ kolonu gösterilmez (K-198).
 - ✔ Sahibi bulunamayan ya da kapanmış ayrılmış arz genele düşmez; anahtar ERP'nin yazdığı gibi kalır, arz boşta bekler; uyarı yok, raporda görünür (K-198).
-- ✔ Bakılacak: `PlannedOrder` çok dar (üretim alternatifi, lokasyon, kaynak yok); yapısı sonra yeniden ele alınacak.
+- ✔ ~~Bakılacak: `PlannedOrder` çok dar (üretim alternatifi, lokasyon, kaynak yok); yapısı sonra yeniden ele alınacak.~~ Kapandı (K-202): yerini `PlannedSupply` (Tedarik planı) aldı; lokasyon, üretim versiyonu, dönem, fason ayracı ve elle değişiklik izi taşır.
 - ✔ Yeni **core** tablo **`MaterialAllocationRule`**: malzeme, lokasyon, `AllocationLevel`, `AllocationKey`, **sebep** (Kendi arzı · Alt seviye arzı). Sistem üretir; elle değişmez; senaryo değildir; veri versiyonu değişince (yükleme dâhil) yeniden hesaplanır. Kaynak malzeme kolonu; versiyonlu; Ana veri › Malzeme sekmesinde ve malzeme kartında gösterilir (K-199).
 
 ## 3. Üretim akışı ekranı
@@ -99,11 +99,13 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - ◻ Tek tablo, **her satır bir bağ** (bir arzın bir ihtiyaca verdiği miktar). Bugünkü `planning.Pegging`'e eklenecekler: malzeme, lokasyon, arz tarihi, ihtiyaç tarihi, `AllocationLevel`, `AllocationKey`, genelden mi, kök talep türü, seviye, üst bağ. "Sabit ya da manuel bağ" alanı kalkar.
 - ◻ Pegging veritabanına yazılır (plan hesabına bağlı). Yeniden hesaplama: senaryo çalışınca, plan elle değiştirilip kaydedilince, pegging parametresi değişince. Ekran açılışında hesap yapılmaz.
 - ◻ Kaba boyut tahmini 250 bin – 1 milyon satır / plan hesabı; Aşama 10'da ölçülecek.
+- ✔ **Tablo yapısı (K-202, uygulandı):** karar tabloları (motor yazar: `PlannedSupply`, `DemandFulfillment`, `PlannedOvertime`, `PlannedAllocationTransfer`) → girdi kopyası (sistem yazar: `PlannedDemand`) → sonuç tabloları (türetilir: `MaterialTransaction`, `CapacityLoad`, `Pegging`) → dönem tabloları (bunlardan toplanır). Pegging satırı bir + hareketini bir − hareketine bağlar; iki tarafın ve kök talebin alanları satıra da yazılır.
+- ✔ **Pegging'de alokasyon transferi (K-202):** Pegging gerçek arzı gösterir: özel alokasyonlu ihtiyaç genel arzdan karşılanıyorsa arz tarafı o genel arzın hareketidir (ör. Stok) ve Genelden = Evet olur. Transfer hareketleri (Alokasyon transferi) yalnız bakiye içindir; pegging satırında arz ya da ihtiyaç olarak yer almaz. Model transferin miktarını verir; hangi genel arzdan alınacağını pegging arz sırasına göre seçer (hesap 10.6'da).
 - Mockup: `plans/7.15-mockups/pegging-sonuc.html`
 
 ## 7. Pegging raporu ve plan satırları
 
-- ✔ **`PlannedOrder` genel kalır**, sahibe göre bölünmez.
+- ✔ **`PlannedSupply` genel kalır**, sahibe göre bölünmez.
 - ✔ Üretimin kime gittiğini (sipariş, proje, müşteri) **pegging'den türeyen ayrı bir rapor** gösterir: **Pegging raporu.**
 - ✔ Raporlar aşamasında konuşulacak; raporlar listesinde yoksa eklenecek. Müşterinin ERP'sine ne gideceği sorusu da bu raporla şekillenecek.
 
@@ -122,7 +124,7 @@ Tarih: 23–24.11.2026 görüşmeleri.
 - `IsCustomTracked` → `IsCustomAllocated` (bütün tablolar, arayüz, sözleşme). (K-198, uygulandı)
 - Arzlara `AllocationLevel`, `AllocationKey`; ERP satır bayrakları sözleşmeden çıkar. (K-198, uygulandı)
 - Yeni tablo `MaterialAllocationRule`. (K-199, uygulandı)
-- `PlannedOrder`: `ProjectId` kalkar, alokasyon alanları eklenir. (K-198, uygulandı)
+- `PlannedSupply` (eski `PlannedOrder`): `ProjectId` kalkar, alokasyon alanları eklenir. (K-198, uygulandı)
 - `ProjectGroup` tablosu ve `TrackingRule` kalkar. (K-198, uygulandı)
 - "Özel alokasyon" parametresi (Parametreler › Model › Çözüm). (K-201, uygulandı)
 - "Full pegging yöntemi" parametresi. (K-201, uygulandı)

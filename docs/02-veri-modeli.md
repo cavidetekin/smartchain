@@ -91,7 +91,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | Kullanıcı | Kullanıcının ekrandan girdiği tanım. | DataRule, ScenarioDefinition |
 | Sistem | Sistemin ürettiği ya da System owner'ın yönettiği değer. | Id alanları, PlanRun, Job |
 | Ön hesap | Ön hesapta türetilen değer. | WorkOrderComponent.RemainingQuantity |
-| Motor | Planlama motorunun çıktısı. | PlannedOrder, CapacityLoad, Pegging |
+| Motor | Planlama motorunun çıktısı (karar tabloları). | PlannedSupply, DemandFulfillment |
+| Plan hesabı | Plan hesabında sistemin kopyaladığı ya da karar tablolarından türettiği değer; motor yazmaz, elle değişmez (K-202). | PlannedDemand, MaterialTransaction, Pegging |
 
 ### Aynı alan, aynı etiket (K-198; uygulandı, sürüm 0.57.0)
 <sub>21. Veri modeli · Alan adları</sub>
@@ -110,7 +111,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - yükleme
 - **Talep  3 tablo:** Customer · SalesOrderLine · Forecast
 - **Arz ve stok  8 tablo:** Stock · BorrowPayback · WorkOrder · PurchaseOrderLine · TransferOrder
-- **Plan  13 tablo:** ScenarioDefinition · Scenario · Workspace · PlanRun · PlanVersion · PlannedOrder · CapacityLoad · Pegging · PlanWarning
+- **Plan  16 tablo:** ScenarioDefinition · Scenario · Workspace · PlanRun · PlanVersion · PlannedSupply · PlannedDemand · MaterialTransaction · CapacityLoad · Pegging · PlanWarning
 - versiyon
 - **Sistem  8 tablo:** AppUser · Job · SolverLog · SystemEvent · ServiceStatus · AuditLog · SystemSetting · License
 - **Ortak  3 tablo:** Location · UnitOfMeasure · UomConversion
@@ -240,11 +241,14 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 - **WorkspaceOverride:** Çalışmadaki geçici değişiklikler: parametreler ve çalışmada değiştirilebilir ana veri alanları
 - **PlanRun:** Bir plan hesabı (senaryo ya da çalışma)
 - **PlanVersion:** Onaylı plan versiyonu
-- **PlannedOrder:** Planlı sipariş: üretim, satın alma ya da fason önerisi
-- **SupplyRecommendation:** Mevcut arz için öneri: öne çek, ertele, iptal, azalt, hızlandır
-- **DemandFulfillment:** Talebin planlanan karşılanması ve gecikmesi
-- **CapacityLoad:** Kaynak ve dönem bazında kapasite ve kapasite yükü
-- **Pegging:** Arz–talep bağı (full pegging)
+- **PlannedSupply:** Tedarik planı: üretim planı, satın alma planı ve mevcut üretim siparişlerinin plan kaydı (karar tablosu; motor yazar)
+- **PlannedDemand:** Talep karşılama: açık taleplerin kopyası ve karşılama özeti (sistem yazar)
+- **DemandFulfillment:** Talep karşılama kırılımı: talebin dönem dönem karşılanması (karar tablosu; motor yazar)
+- **PlannedOvertime:** Ek mesai planı: kaynak grubu ve dönem bazında ek mesai (karar tablosu; motor yazar)
+- **PlannedAllocationTransfer:** Alokasyon transfer planı: genelden özel alokasyona aktarım (karar tablosu; motor yazar)
+- **MaterialTransaction:** Malzeme hareketleri: planın bütün + ve − hareketleri (sonuç tablosu; türetilir)
+- **CapacityLoad:** Kapasite yükleri: tedarik planı kaydı, kaynak grubu ve dönem bazında yük (sonuç tablosu; türetilir)
+- **Pegging:** Arz–ihtiyaç bağı (full pegging; sonuç tablosu)
 - **PlanWarning:** Plan hesabının ürettiği uyarılar
 - **PlanMetric:** Senaryo karşılaştırma metrikleri
 
@@ -1149,7 +1153,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 |---|---|---|---|---|---|---|---|
 | TableName | nvarchar(60) | PK | Tablo | Sistem | H | E |  |
 | FieldName | nvarchar(60) | PK | Alan | Sistem | H | E |  |
-| FieldClass | nvarchar(15) |  | Ana veri \| Parametre \| İşlem verisi | Sistem | H | E |  |
+| FieldClass | nvarchar(15) |  | Ana veri \| Parametre \| İşlem verisi \| Plan | Sistem | H | E |  |
 | EditableInWorkspace | bit |  | Çalışmada geçici değiştirilebilir mi | Sistem | H | E | 0 |
 | ValuePriority | nvarchar(10) |  | Kullanılmıyor: öncelik sabit, manuel > kural > ERP (K-170) | Sistem | H | H | ERP ezer |
 | ManualOverrides | bit |  | Manuel: manuel değer girilebilir mi (K-170); kurulumda Hayır, System owner açar; anahtar, ilişki ve sistem alanlarında açılmaz | Sistem | H | H | 0 |
@@ -1704,102 +1708,254 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 | PublishedAt | datetime2 |  | Yayın zamanı | Sistem | H | E |  |
 | IsCurrent | bit |  | Geçerli onaylı plan | Sistem | H | E |  |
 
-### PlannedOrder
+### PlannedSupply
 <sub>21. Veri modeli · Plan</sub>
 
 - Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
-- Planlı sipariş: üretim, satın alma ya da fason önerisi. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca.
+- Tedarik planı (K-202): üretim planı ve satın alma planı kayıtları ile mevcut üretim siparişlerinin plan kaydı; motor yazar. Satın alma sürekli hesaplanır, yuvarlanmış miktar ayrıca. Satın alma siparişleri bu tabloda yoktur.
+- Kaynak = Plan: motorun ürettiği kayıt (No: ÜP-… ya da SP-…). Kaynak = Sipariş: mevcut üretim siparişinin plandaki yeri; döneme bölünürse dönem başına bir satır.
+- Fason ayrı tür değildir: Tür Üretim \| Satın alma, fason bilgisi `IsSubcontract` ayracındadır.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| MaterialId | bigint | FK | Malzeme | Motor | H | E |  |
-| OrderType | nvarchar(15) |  | Üretim \| Satın alma \| Fason | Motor | H | E |  |
-| SupplierId | bigint | FK | Tedarikçi | Motor | H | H |  |
-| IsCustomAllocated | bit |  | Planlı sipariş bir sahibe ayrılmış mı; motor yazar (K-198) | Motor | H | H |  |
-| AllocationLevel | nvarchar(10) |  | Sipariş \| Proje \| Müşteri | Motor | H | H |  |
-| AllocationKey | nvarchar(60) |  | Planlı siparişin ayrıldığı sahibin anahtarı; arz satırlarındaki anahtarla aynı biçimde | Motor | H | H |  |
-| Quantity | decimal(18,4) |  | Motorun miktarı (sürekli) | Motor | H | E |  |
-| RoundedQty | decimal(18,4) |  | Yuvarlanmış miktar (son hesap) | Motor | H | H |  |
-| StartDate | date |  | Başlangıç | Motor | H | H |  |
-| DueDate | date |  | Bitiş | Motor | H | E |  |
-| BucketStart | date |  | Dönem | Motor | H | H |  |
-| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| SupplyNo | nvarchar(30) |  | Plan kaydında ÜP-000071 (üretim) ya da SP-000214 (satın alma): plan hesabı içinde sıra, motor boş bırakır, sistem verir; Kaynak = Sipariş satırında üretim siparişinin numarası | No | Motor | H | E |  |
+| SupplyType | nvarchar(15) |  | Üretim \| Satın alma | Tür | Motor | H | E |  |
+| Source | nvarchar(10) |  | Plan \| Sipariş | Kaynak | Motor | H | E |  |
+| WorkOrderId | bigint | FK | Kaynak = Sipariş satırında plan kaydının ait olduğu üretim siparişi | Üretim siparişi | Motor | H | H |  |
+| MaterialId | bigint | FK | Malzeme |  | Motor | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Motor | H | E |  |
+| Uom | nvarchar(10) |  | Miktarın birimi | Birim | Motor | H | H |  |
+| PeriodStart | date |  | Dönemin ilk günü; "Dönem" etiketi (H47 2026) bundan hesaplanır | Başlangıç | Motor | H | E |  |
+| PeriodEnd | date |  | Dönemin son günü | Bitiş | Motor | H | E |  |
+| OrderDate | date |  | Sipariş tarihi: başlangıç − tedarik süresi (satın alma ve fason) | Sipariş tarihi | Motor | H | H |  |
+| ProductionVersionId | bigint | FK | Üretim versiyonu |  | Motor | H | H |  |
+| BOMCode | nvarchar(50) |  | Kaydın kullandığı ürün ağacı | Ürün ağacı kodu | Motor | H | H |  |
+| RouteCode | nvarchar(50) |  | Rota kodu |  | Motor | H | H |  |
+| SupplierId | bigint | FK | Tedarikçi |  | Motor | H | H |  |
+| IsSubcontract | bit |  | Fason kayıt: Kaynak = Plan satırında kaydın rotasından (fason operasyon ya da fason kaynak grubu), Kaynak = Sipariş satırında üretim siparişinin kendi alanından | Fason | Motor | H | H |  |
+| IsCustomAllocated | bit |  | Kaydın bir sahibe ayrılmış mı (K-198) | Özel alokasyon | Motor | H | H |  |
+| AllocationLevel | nvarchar(10) |  | Sipariş \| Proje \| Müşteri | Alokasyon seviyesi | Motor | H | H |  |
+| AllocationKey | nvarchar(60) |  | Kaydın ayrıldığı sahibin anahtarı; arz satırlarındaki anahtarla aynı biçimde | Alokasyon anahtarı | Motor | H | H |  |
+| Quantity | decimal(18,4) |  | Motorun miktarı (sürekli) | Miktar | Motor | H | E |  |
+| RoundedQuantity | decimal(18,4) |  | Yuvarlanmış miktar (son hesap) | Yuvarlanmış miktar | Motor | H | H |  |
+| ProposedQuantity | decimal(18,4) |  | İlk hesabın miktarı; elle değişiklikten önceki hâl | Öneri miktarı | Motor | H | H |  |
+| ProposedPeriodStart | date |  | İlk hesabın dönemi (dönemin ilk günü); elle değişiklikten önceki hâl | Öneri dönemi | Motor | H | H |  |
+| IsManual | bit |  | Kayıt elle değiştirildi | Elle değiştirildi | Kullanıcı | H | E | 0 |
+| IsFixed | bit |  | Kayıt sabitlendi | Sabitlendi | Kullanıcı | H | E | 0 |
+| IsIncluded | bit |  | Kayıt plana dahil | Plana dahil | Kullanıcı | H | E | 1 |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
 
-### SupplyRecommendation
+### PlannedDemand
 <sub>21. Veri modeli · Plan</sub>
 
 - Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
-- Mevcut arz için öneri: öne çek, ertele, iptal, azalt, hızlandır.
+- Talep karşılama (K-202): plan hesabı başlarken hesabın veri versiyonundaki açık bütün taleplerin kopyası; sistem yazar, motor yazmaz. Her tahmin kaydı bir satırdır (sipariş alanları boş).
+- "Plana dahil: Hayır" yalnız türü parametreyle kapalı talepte (Teklif, Beklemedeki sipariş, Tahmin); ufuk dışındaki talep "Evet" kalır.
+- Özet alanları (karşılanan, zamanında, geciken, karşılanmayan, oran, son dönem) hesaptan sonra kırılım satırlarından (`DemandFulfillment`) yazılır; plana dahil olmayan talepte boştur.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| SupplyType | nvarchar(15) |  | Üretim siparişi \| Satın alma \| Fason \| Transfer | Motor | H | E |  |
-| SupplyId | bigint |  | Arz kaydı | Motor | H | E |  |
-| Action | nvarchar(15) |  | Öne çek \| Ertele \| İptal \| Azalt \| Hızlandır | Motor | H | E |  |
-| CurrentDate | date |  | Mevcut tarih | Motor | H | H |  |
-| ProposedDate | date |  | Önerilen tarih | Motor | H | H |  |
-| ProposedQty | decimal(18,4) |  | Önerilen miktar | Motor | H | H |  |
-| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| DemandType | nvarchar(20) |  | Kesin sipariş \| Teklif \| Beklemedeki sipariş \| Tahmin | Tür | Plan hesabı | H | E |  |
+| SalesOrderLineId | bigint | FK | Sipariş satırı (tahminde boş) | Sipariş | Plan hesabı | H | H |  |
+| ForecastId | bigint | FK | Tahmin kaydı (siparişte boş) | Tahmin | Plan hesabı | H | H |  |
+| OrderNo | nvarchar(30) |  | Sipariş no (tahminde boş) | Sipariş no | Plan hesabı | H | H |  |
+| LineNo | int |  | Satır no |  | Plan hesabı | H | H |  |
+| LineItemNo | int |  | Alt satır no |  | Plan hesabı | H | H |  |
+| CustomerId | bigint | FK | Müşteri |  | Plan hesabı | H | H |  |
+| ProjectId | bigint | FK | Proje |  | Plan hesabı | H | H |  |
+| MaterialId | bigint | FK | Malzeme |  | Plan hesabı | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Plan hesabı | H | E |  |
+| Uom | nvarchar(10) |  | Miktarın birimi | Birim | Plan hesabı | H | H |  |
+| DemandQuantity | decimal(18,4) |  | Talebin miktarı: siparişte açık miktar, tahminde tahmin miktarı; kaydın kendi biriminde | Talep miktarı | Plan hesabı | H | E |  |
+| DueDate | date |  | Vade tarihi: siparişte teyit tarihi, yoksa istek tarihi; tahminde kaydın dönemi | Vade tarihi | Plan hesabı | H | E |  |
+| DuePeriodStart | date |  | Vade tarihinin düştüğü plan döneminin ilk günü; vade plan başlangıcından önceyse ilk dönem, ufuktan sonraysa boş | Vade dönemi | Plan hesabı | H | H |  |
+| PriorityGroup | int |  | Geçerli öncelik grubu (1–5; küçük olan önce) | Öncelik grubu | Plan hesabı | H | E |  |
+| IsIncluded | bit |  | Talep plana dahil mi | Plana dahil | Plan hesabı | H | E |  |
+| FulfilledQuantity | decimal(18,4) |  | Karşılanan miktar: kırılım satırlarının toplamı | Karşılanan miktar | Plan hesabı | H | H |  |
+| OnTimeQuantity | decimal(18,4) |  | Zamanında karşılanan miktar | Zamanında miktar | Plan hesabı | H | H |  |
+| LateQuantity | decimal(18,4) |  | Gecikmeli karşılanan miktar | Geciken miktar | Plan hesabı | H | H |  |
+| UnmetQuantity | decimal(18,4) |  | Karşılanmayan miktar: talep miktarı − karşılanan | Karşılanmayan miktar | Plan hesabı | H | H |  |
+| FulfillmentPct | decimal(18,4) |  | Karşılama oranı (%): karşılanan / talep miktarı | Karşılama oranı (%) | Plan hesabı | H | H |  |
+| LastFulfillmentPeriodStart | date |  | Son karşılamanın dönemi (dönemin ilk günü) | Son karşılama dönemi | Plan hesabı | H | H |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
 
 ### DemandFulfillment
 <sub>21. Veri modeli · Plan</sub>
 
 - Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
-- Talebin planlanan karşılanması ve gecikmesi.
+- Talep karşılama kırılımı (K-202): bir talebin bir dönemde karşılanan miktarı; motorun talep tarafında yazdığı tek tablo.
+- Motor talebi (`PlannedDemandId`), dönemi, miktarı ve gecikmeyi yazar; talebin kimlik alanlarını sistem talepten kopyalar.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| DemandType | nvarchar(15) |  | Sipariş \| Tahmin \| Teklif \| Güvenlik stoğu | Motor | H | E |  |
-| DemandId | bigint |  | Talep kaydı | Motor | H | E |  |
-| DueDate | date |  | Vade | Motor | H | H |  |
-| PlannedDate | date |  | Planlanan karşılama | Motor | H | H |  |
-| ShortQty | decimal(18,4) |  | Karşılanamayan miktar | Motor | H | H |  |
-| DelayDays | int |  | Gecikme (gün) | Motor | H | H |  |
-| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| PlannedDemandId | bigint | FK,IX | Karşılanan talep | Talep | Motor | H | E |  |
+| DemandType | nvarchar(20) |  | Kesin sipariş \| Teklif \| Beklemedeki sipariş \| Tahmin | Tür | Plan hesabı | H | E |  |
+| OrderNo | nvarchar(30) |  | Sipariş no (tahminde boş) | Sipariş no | Plan hesabı | H | H |  |
+| LineNo | int |  | Satır no |  | Plan hesabı | H | H |  |
+| LineItemNo | int |  | Alt satır no |  | Plan hesabı | H | H |  |
+| CustomerId | bigint | FK | Müşteri |  | Plan hesabı | H | H |  |
+| ProjectId | bigint | FK | Proje |  | Plan hesabı | H | H |  |
+| MaterialId | bigint | FK | Malzeme |  | Plan hesabı | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Plan hesabı | H | E |  |
+| Uom | nvarchar(10) |  | Miktarın birimi | Birim | Plan hesabı | H | H |  |
+| PeriodStart | date |  | Dönemin ilk günü; "Dönem" etiketi (H47 2026) bundan hesaplanır | Başlangıç | Motor | H | E |  |
+| PeriodEnd | date |  | Dönemin son günü | Bitiş | Motor | H | E |  |
+| Quantity | decimal(18,4) |  | Bu dönemde karşılanan miktar | Karşılama adedi | Motor | H | E |  |
+| IsTardy | bit |  | Karşılama talebin vade döneminden sonra | Gecikmeli | Motor | H | E | 0 |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
+
+### PlannedOvertime
+<sub>21. Veri modeli · Plan</sub>
+
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
+- Ek mesai planı (K-202): kaynak grubu ve dönem bazında motorun ek mesai kararı; `CapacityLoad`'a girmez. Sınırı girdidir (`param.OvertimeLimit`).
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| ResourceGroupId | bigint | FK | Kaynak grubu |  | Motor | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Motor | H | E |  |
+| PeriodStart | date |  | Dönemin ilk günü; "Dönem" etiketi (H47 2026) bundan hesaplanır | Başlangıç | Motor | H | E |  |
+| PeriodEnd | date |  | Dönemin son günü | Bitiş | Motor | H | E |  |
+| Overtime | decimal(18,4) |  | Dönemde planlanan ek mesai | Ek mesai | Motor | H | E |  |
+| CapacityUnit | nvarchar(10) |  | Ek mesainin birimi | Birim | Motor | H | H |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
+
+### PlannedAllocationTransfer
+<sub>21. Veri modeli · Plan</sub>
+
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
+- Alokasyon transfer planı (K-202): genel stoktan özel alokasyona aktarım kararı; motor yazar. Malzeme hareketlerindeki iki satır (genelden −, özele +) bundan türetilir.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| MaterialId | bigint | FK | Malzeme |  | Motor | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Motor | H | E |  |
+| PeriodStart | date |  | Dönemin ilk günü; "Dönem" etiketi (H47 2026) bundan hesaplanır | Başlangıç | Motor | H | E |  |
+| PeriodEnd | date |  | Dönemin son günü | Bitiş | Motor | H | E |  |
+| AllocationLevel | nvarchar(10) |  | Sipariş \| Proje \| Müşteri | Alokasyon seviyesi | Motor | H | E |  |
+| AllocationKey | nvarchar(60) |  | Aktarımın yapıldığı sahibin anahtarı; arz satırlarındaki anahtarla aynı biçimde | Alokasyon anahtarı | Motor | H | E |  |
+| Quantity | decimal(18,4) |  | Aktarılan miktar | Miktar | Motor | H | E |  |
+| Uom | nvarchar(10) |  | Miktarın birimi | Birim | Motor | H | H |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
+
+### MaterialTransaction
+<sub>21. Veri modeli · Plan</sub>
+
+- Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
+- Malzeme hareketleri (K-202): planın bütün + ve − hareketleri tek tabloda; karar tablolarından ve ERP'den gelen arzdan türetilir, elle değişmez. Türetme 8.0'da yazılır; o güne kadar satırları sahte motorun örneği verir.
+- Ana hareket → Hareket türü: Stok (Stok · Kalitedeki stok) · Satın alma (Satın alma siparişi · Satın alma planı) · Üretim (Üretim siparişi · Üretim planı) · Talep (Kesin sipariş · Teklif · Beklemedeki sipariş · Tahmin) · Üretim ihtiyacı (Üretim siparişi ihtiyacı · Üretim planı ihtiyacı) · Transfer (Alokasyon transferi; iki satır: genelden −, özele +). Tek tanım `app/planning/movements.py`.
+- No: Üretim planı ve Satın alma planı: tedarik planı no · Üretim siparişi ve Satın alma siparişi: sipariş no · Kesin sipariş, Teklif, Beklemedeki sipariş: satış sipariş no · Üretim ihtiyacı: ihtiyacı doğuran üretimin no'su · Stok, Tahmin, Alokasyon transferi: boş.
+
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| MaterialId | bigint | FK | Malzeme |  | Plan hesabı | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Plan hesabı | H | E |  |
+| Uom | nvarchar(10) |  | Miktarın birimi | Birim | Plan hesabı | H | H |  |
+| Direction | nvarchar(1) |  | + \| - | Yön | Plan hesabı | H | E |  |
+| MainMovement | nvarchar(20) |  | Stok \| Satın alma \| Üretim \| Talep \| Üretim ihtiyacı \| Transfer | Ana hareket | Plan hesabı | H | E |  |
+| MovementType | nvarchar(30) |  | Stok \| Kalitedeki stok \| Satın alma siparişi \| Satın alma planı \| Üretim siparişi \| Üretim planı \| Kesin sipariş \| Teklif \| Beklemedeki sipariş \| Tahmin \| Üretim siparişi ihtiyacı \| Üretim planı ihtiyacı \| Alokasyon transferi | Hareket türü | Plan hesabı | H | E |  |
+| DocumentNo | nvarchar(30) |  | Hareketin no'su; türe göre içeriği tablo açıklamasında | No | Plan hesabı | H | H |  |
+| Quantity | decimal(18,4) |  | Hareketin miktarı (işaretsiz; yön ayrı alanda) | Miktar | Plan hesabı | H | E |  |
+| PeriodStart | date |  | Dönemin ilk günü; "Dönem" etiketi (H47 2026) bundan hesaplanır | Başlangıç | Plan hesabı | H | E |  |
+| PeriodEnd | date |  | Dönemin son günü | Bitiş | Plan hesabı | H | E |  |
+| MovementDate | date |  | Hareket tarihi: şimdilik her satırda dönem başı; kuralı pegging'le ele alınacak (Aşama 10) | Hareket tarihi | Plan hesabı | H | H |  |
+| IsCustomAllocated | bit |  | Hareketin bir sahibe ayrılmış mı (K-198) | Özel alokasyon | Plan hesabı | H | H |  |
+| AllocationLevel | nvarchar(10) |  | Sipariş \| Proje \| Müşteri | Alokasyon seviyesi | Plan hesabı | H | H |  |
+| AllocationKey | nvarchar(60) |  | Hareketin ayrıldığı sahibin anahtarı; arz satırlarındaki anahtarla aynı biçimde | Alokasyon anahtarı | Plan hesabı | H | H |  |
+| ExpiryDate | date |  | Son kullanma tarihi (stokta) | Son kullanma tarihi | Plan hesabı | H | H |  |
+| PriorityGroup | int |  | Talep hareketinde talebin öncelik grubu | Öncelik grubu | Plan hesabı | H | H |  |
+| OrderNo | nvarchar(30) |  | Talep hareketinde sipariş no | Sipariş no | Plan hesabı | H | H |  |
+| LineNo | int |  | Satır no |  | Plan hesabı | H | H |  |
+| LineItemNo | int |  | Alt satır no |  | Plan hesabı | H | H |  |
+| CustomerId | bigint | FK | Müşteri |  | Plan hesabı | H | H |  |
+| ProjectId | bigint | FK | Proje |  | Plan hesabı | H | H |  |
+| StockId | bigint | FK | Hareketin geldiği stok satırı | Stok | Plan hesabı | H | H |  |
+| PurchaseOrderLineId | bigint | FK | Hareketin geldiği satın alma siparişi satırı | Satın alma siparişi | Plan hesabı | H | H |  |
+| PlannedSupplyId | bigint | FK,IX | Hareketin geldiği tedarik planı kaydı (arzı ya da üretim ihtiyacı) | Tedarik planı | Plan hesabı | H | H |  |
+| DemandFulfillmentId | bigint | FK,IX | Hareketin geldiği talep karşılama satırı | Talep karşılama | Plan hesabı | H | H |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
 
 ### CapacityLoad
 <sub>21. Veri modeli · Plan</sub>
 
 - Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
-- Kaynak grubu ve dönem bazında kapasite ve kapasite yükü (plan ve yük grup düzeyindedir, K-180).
+- Kapasite yükleri (K-202): tedarik planı kaydı × kaynak grubu × dönem bazında yük; yalnız yükler (plan ve yük grup düzeyindedir, K-180). Sistem rotadan hesaplar (türetme 8.0'da; o güne kadar satırları sahte motorun örneği verir); rotada aynı gruba düşen operasyonlar toplanır.
+- Kapasite (toplam, duruş, kullanılabilir) saklanmaz, kapasite hesabından okunur (K-184); ek mesai `PlannedOvertime`'dadır.
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| ResourceGroupId | bigint | FK | Kaynak grubu | Motor | H | E |  |
-| BucketStart | date |  | Dönem | Motor | H | E |  |
-| GrossCapacity | decimal(18,4) |  | Brüt kapasite | Motor | H | H |  |
-| DowntimeLoss | decimal(18,4) |  | Duruş kaybı | Motor | H | H |  |
-| NetCapacity | decimal(18,4) |  | Kalan kapasite (verim sonrası) | Motor | H | H |  |
-| Load | decimal(18,4) |  | Kapasite yükü | Motor | H | H |  |
-| Overtime | decimal(18,4) |  | Fazla mesai | Motor | H | H |  |
-| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| ResourceGroupId | bigint | FK | Kaynak grubu |  | Plan hesabı | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Plan hesabı | H | E |  |
+| PlannedSupplyId | bigint | FK,IX | Yükü doğuran tedarik planı kaydı | Tedarik planı | Plan hesabı | H | E |  |
+| MaterialId | bigint | FK | Üretilen malzeme | Malzeme | Plan hesabı | H | E |  |
+| ProductionQuantity | decimal(18,4) |  | Dönemde üretilen miktar | Üretim adedi | Plan hesabı | H | E |  |
+| UnitUsage | decimal(18,6) |  | Bir birim üretimin kaynak grubundaki kullanımı | Birim kullanım | Plan hesabı | H | H |  |
+| CapacityUsage | decimal(18,4) |  | Dönemdeki yük: üretim adedi × birim kullanım | Kapasite kullanımı | Plan hesabı | H | E |  |
+| CapacityUnit | nvarchar(10) |  | Yükün birimi | Birim | Plan hesabı | H | H |  |
+| PeriodStart | date |  | Dönemin ilk günü; "Dönem" etiketi (H47 2026) bundan hesaplanır | Başlangıç | Plan hesabı | H | E |  |
+| PeriodEnd | date |  | Dönemin son günü | Bitiş | Plan hesabı | H | E |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
 
 ### Pegging
 <sub>21. Veri modeli · Plan</sub>
 
 - Plan · versiyonsuz · Faz 1 · PlanRun'a bağlı; yayınlanmış PlanRun'un satırları değişmez (K-70)
-- Arz–talep bağı (full pegging).
+- Pegging (K-202): bir + hareketini bir − hareketine bir miktarla bağlar (full pegging). Pegging hesabı yazar (10.6); o güne kadar satırları sahte motorun örneği verir. Her satır tek kök talep taşır.
+- İki tarafın ve kök talebin alanları satıra da yazılır (süzme ve sıralama için); sistem bunları iki hareketten ve talepten kopyalar. İki hareket bağı da durur.
+- Pegging gerçek arzı gösterir: özel alokasyonlu ihtiyaç genel arzdan karşılanıyorsa arz tarafı o genel arzın hareketidir (ör. Stok) ve Genelden = Evet olur. Transfer hareketleri (Alokasyon transferi) yalnız bakiye içindir; pegging satırında arz ya da ihtiyaç olarak yer almaz. Model transferin miktarını verir; hangi genel arzdan alınacağını pegging arz sırasına göre seçer (hesap 10.6'da).
 
-| ALAN | TIP | ANAHTAR | AÇIKLAMA | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
-|---|---|---|---|---|---|---|---|
-| Id | bigint | PK | Kayıt kimliği | Sistem | H | E |  |
-| PlanRunId | bigint | FK | Plan hesabı | Motor | H | E |  |
-| SupplyType | nvarchar(15) |  | Stok \| Üretim siparişi \| Satın alma \| Planlı sipariş … | Motor | H | E |  |
-| SupplyId | bigint |  | Arz | Motor | H | E |  |
-| DemandType | nvarchar(15) |  | Sipariş \| Bağımlı talep … | Motor | H | E |  |
-| DemandId | bigint |  | Talep | Motor | H | E |  |
-| RootDemandId | bigint |  | Kök talep | Motor | H | H |  |
-| Quantity | decimal(18,4) |  | Miktar | Motor | H | E |  |
-| IsFixed | bit |  | Sabit ya da manuel bağ | Kullanıcı | H | H | 0 |
-| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) | Sistem | H | E |  |
+| ALAN | TIP | ANAHTAR | AÇIKLAMA | ETİKET | ANA KAYNAK | ÇALIŞ. | ZOR. | VARSAYILAN |
+|---|---|---|---|---|---|---|---|---|
+| Id | bigint | PK | Kayıt kimliği |  | Sistem | H | E |  |
+| PlanRunId | bigint | FK,IX | Plan hesabı |  | Sistem | H | E |  |
+| MaterialId | bigint | FK | Malzeme |  | Plan hesabı | H | E |  |
+| LocationId | int | IX | Lokasyon |  | Plan hesabı | H | E |  |
+| Quantity | decimal(18,4) |  | Bağlanan miktar | Miktar | Plan hesabı | H | E |  |
+| Uom | nvarchar(10) |  | Miktarın birimi | Birim | Plan hesabı | H | H |  |
+| SupplyTransactionId | bigint | FK,IX | Arz hareketi (+) | Arz | Plan hesabı | H | E |  |
+| DemandTransactionId | bigint | FK,IX | İhtiyaç hareketi (−) | İhtiyaç | Plan hesabı | H | E |  |
+| ConsumingMaterialId | bigint | FK | İhtiyacı doğuran (bu malzemeyi kullanan) malzeme; nihai talepte boş | Kullanan malzeme | Plan hesabı | H | H |  |
+| PlannedDemandId | bigint | FK,IX | Bağın hizmet ettiği kök talep; boş olabilir | Kök talep | Plan hesabı | H | H |  |
+| Level | int |  | Seviye: 0 = nihai ürün | Seviye | Plan hesabı | H | H |  |
+| ParentPeggingId | bigint | FK,IX | Bir üst seviyedeki bağ | Üst bağ | Plan hesabı | H | H |  |
+| IsFromGeneral | bit |  | Özel alokasyonlu ihtiyaç genel arzdan karşılandı | Genelden | Plan hesabı | H | E | 0 |
+| SupplyMainMovement | nvarchar(20) |  | Arz hareketinin ana hareketi: Stok \| Satın alma \| Üretim \| Talep \| Üretim ihtiyacı \| Transfer | Arz ana hareketi | Plan hesabı | H | H |  |
+| SupplyMovementType | nvarchar(30) |  | Arz hareketinin türü: Stok \| Kalitedeki stok \| Satın alma siparişi \| Satın alma planı \| Üretim siparişi \| Üretim planı \| Kesin sipariş \| Teklif \| Beklemedeki sipariş \| Tahmin \| Üretim siparişi ihtiyacı \| Üretim planı ihtiyacı \| Alokasyon transferi | Arz hareket türü | Plan hesabı | H | H |  |
+| SupplyDocumentNo | nvarchar(30) |  | Arz hareketinin no'su | Arz no | Plan hesabı | H | H |  |
+| SupplyPeriodStart | date |  | Arz hareketinin döneminin ilk günü | Arz başlangıcı | Plan hesabı | H | H |  |
+| SupplyPeriodEnd | date |  | Arz hareketinin döneminin son günü | Arz bitişi | Plan hesabı | H | H |  |
+| SupplyMovementDate | date |  | Arz hareketinin tarihi | Arz hareket tarihi | Plan hesabı | H | H |  |
+| SupplyAllocationLevel | nvarchar(10) |  | Arz hareketinin alokasyon seviyesi: Sipariş \| Proje \| Müşteri | Arz alokasyon seviyesi | Plan hesabı | H | H |  |
+| SupplyAllocationKey | nvarchar(60) |  | Arz hareketinin alokasyon anahtarı | Arz alokasyon anahtarı | Plan hesabı | H | H |  |
+| DemandMainMovement | nvarchar(20) |  | İhtiyaç hareketinin ana hareketi: Stok \| Satın alma \| Üretim \| Talep \| Üretim ihtiyacı \| Transfer | İhtiyaç ana hareketi | Plan hesabı | H | H |  |
+| DemandMovementType | nvarchar(30) |  | İhtiyaç hareketinin türü: Stok \| Kalitedeki stok \| Satın alma siparişi \| Satın alma planı \| Üretim siparişi \| Üretim planı \| Kesin sipariş \| Teklif \| Beklemedeki sipariş \| Tahmin \| Üretim siparişi ihtiyacı \| Üretim planı ihtiyacı \| Alokasyon transferi | İhtiyaç hareket türü | Plan hesabı | H | H |  |
+| DemandDocumentNo | nvarchar(30) |  | İhtiyaç hareketinin no'su | İhtiyaç no | Plan hesabı | H | H |  |
+| DemandPeriodStart | date |  | İhtiyaç hareketinin döneminin ilk günü | İhtiyaç başlangıcı | Plan hesabı | H | H |  |
+| DemandPeriodEnd | date |  | İhtiyaç hareketinin döneminin son günü | İhtiyaç bitişi | Plan hesabı | H | H |  |
+| DemandMovementDate | date |  | İhtiyaç hareketinin tarihi | İhtiyaç hareket tarihi | Plan hesabı | H | H |  |
+| DemandAllocationLevel | nvarchar(10) |  | İhtiyaç hareketinin alokasyon seviyesi: Sipariş \| Proje \| Müşteri | İhtiyaç alokasyon seviyesi | Plan hesabı | H | H |  |
+| DemandAllocationKey | nvarchar(60) |  | İhtiyaç hareketinin alokasyon anahtarı | İhtiyaç alokasyon anahtarı | Plan hesabı | H | H |  |
+| RootDemandType | nvarchar(20) |  | Kök talebin türü: Kesin sipariş \| Teklif \| Beklemedeki sipariş \| Tahmin | Kök talep türü | Plan hesabı | H | H |  |
+| RootOrderNo | nvarchar(30) |  | Kök talebin sipariş no'su | Kök sipariş no | Plan hesabı | H | H |  |
+| RootLineNo | int |  | Kök talebin satır no'su | Kök sipariş satırı | Plan hesabı | H | H |  |
+| RootLineItemNo | int |  | Kök talebin alt satır no'su | Kök sipariş alt satırı | Plan hesabı | H | H |  |
+| RootCustomerId | bigint | FK | Kök talebin müşterisi | Kök müşteri | Plan hesabı | H | H |  |
+| RootProjectId | bigint | FK | Kök talebin projesi | Kök proje | Plan hesabı | H | H |  |
+| UpdatedAt | datetime2 |  | Yazılma zamanı (UTC) |  | Sistem | H | E |  |
 
 ### PlanWarning
 <sub>21. Veri modeli · Plan</sub>

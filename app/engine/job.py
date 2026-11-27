@@ -13,7 +13,7 @@ from app.jobs import queue
 from .fake import build_engine
 from .interface import EngineError
 from .loader import load_input
-from .writer import JobNoLongerOwned, PlanRunPublished, mark_running, write_failure, write_result
+from .writer import JobNoLongerOwned, PlanRunPublished, mark_running, prepare, write_failure, write_result
 
 log = logging.getLogger("smartchain.engine.job")
 
@@ -44,6 +44,7 @@ def run_plan_job(job_id: int, attempt: int, time_budget_seconds: int) -> None:
             if plan_run_id is None:
                 raise EngineError("İş parametresinde plan hesabı (plan_run_id) yok.")
             mark_running(session, plan_run_id)
+            prepare(session, plan_run_id)  # önceki çıktılar silinir, talep kopyası kurulur (K-202)
             inp = load_input(session, plan_run_id, time_budget_seconds)
             result = build_engine().run(inp, progress)
             write_result(session, plan_run_id, result, job_id, attempt)

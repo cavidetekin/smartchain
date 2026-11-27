@@ -19,9 +19,6 @@ RUN_FAILED = "Hata"
 # Motor adımları (fonksiyon 29–39); iş süreci her geçişte ilerleme yazar (K-71).
 STAGES = ("Ön hesap", "MRP patlatma", "Model kurma", "Çözüm", "Son hesap", "Uyarı ve metrik")
 
-# Pegging'de motorun önerdiği planlı siparişe bağ (SupplyId yazıcıda gerçek Id olur).
-SUPPLY_PLANNED_ORDER = "Planlı sipariş"
-
 
 @dataclass(frozen=True)
 class PlanRunInfo:
@@ -113,6 +110,12 @@ class PlanningData(Protocol):
         Severity}. Yön `above`: değer > eşik; `below`: değer < eşik (eşik dahil değil); önem, tutulan en yüksek kademedir."""
         ...
 
+    def planned_demands(self, included_only: bool = True) -> list[dict]:
+        """Plan hesabının talepleri (docs/09, K-202): `planning.PlannedDemand` satırları (Id, DemandType, MaterialId, LocationId, DemandQuantity,
+        DueDate, DuePeriodStart, PriorityGroup, IsIncluded…), vade tarihi sırasıyla. Hesap başlarken sistem kopyalar; motor karşılamayı bu
+        satırların Id'siyle yazar (`DemandFulfillment.PlannedDemandId`)."""
+        ...
+
 
 @dataclass(frozen=True)
 class EngineInput:
@@ -124,18 +127,26 @@ class EngineInput:
 
 @dataclass
 class PlanResult:
-    """Motorun çıktısı. Satırlar docs/02 alan adlarıyla dict; Id, PlanRunId ve UpdatedAt'i yazıcı doldurur.
+    """Motorun çıktısı (K-202). Satırlar docs/02 alan adlarıyla dict; Id, PlanRunId ve UpdatedAt'i yazıcı doldurur.
 
-    planned_orders satırına 'ref' verilebilir; pegging satırı 'supply_ref' ile o planlı siparişe bağlanır
-    (SupplyType = 'Planlı sipariş', SupplyId yazıcıda gerçek Id olur).
+    Karar tabloları (motor yazar): planned_supply (`PlannedSupply`), demand_fulfillment (`DemandFulfillment`), planned_overtime
+    (`PlannedOvertime`), allocation_transfers (`PlannedAllocationTransfer`). Sonuç tabloları (material_transactions, capacity_loads, pegging)
+    türetilir: hareket ve yük türetmesi 8.0'da, pegging 10.6'da yazılır; o güne kadar satırlarını sahte motorun örneği verir.
+
+    Satıra 'ref' verilebilir; başka tablonun satırı bağ anahtarıyla ona bağlanır (yazıcıda gerçek Id olur): hareket ve yük 'supply_ref' ile
+    tedarik planı kaydına, hareket 'fulfillment_ref' ile karşılama satırına, pegging 'supply_ref' ve 'demand_ref' ile iki harekete, 'parent_ref'
+    ile üst bağa. Sistemin doldurdukları (motor yazmaz): tedarik planı numarası, karşılama satırındaki talep kimliği, hareketin no'su, pegging
+    satırındaki iki tarafın ve kök talebin alanları (`writer.py`).
     """
 
     engine_used: str  # LP | MILP | Kurallı | Kısıtsız MRP
     solver: str | None = None
     status: str = RUN_DONE  # Bitti | Kısmen
-    planned_orders: list[dict] = field(default_factory=list)
-    supply_recommendations: list[dict] = field(default_factory=list)
+    planned_supply: list[dict] = field(default_factory=list)
     demand_fulfillment: list[dict] = field(default_factory=list)
+    planned_overtime: list[dict] = field(default_factory=list)
+    allocation_transfers: list[dict] = field(default_factory=list)
+    material_transactions: list[dict] = field(default_factory=list)
     capacity_loads: list[dict] = field(default_factory=list)
     pegging: list[dict] = field(default_factory=list)
     warnings: list[dict] = field(default_factory=list)

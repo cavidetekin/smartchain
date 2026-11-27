@@ -1,4 +1,4 @@
-"""Veri sözlüğünün kurulumu (K-104): core ve param alanları docs/02'den, geçişle; System owner'ın değeri ezilmez."""
+"""Veri sözlüğünün kurulumu (K-104): core, param ve plan çıktı tablolarının (K-202) alanları docs/02'den, geçişle; System owner'ın değeri ezilmez."""
 import re
 
 import pytest
@@ -9,7 +9,7 @@ from app.data.synthetic.load import load
 from db import dictionary, generate
 from db.models import metadata
 
-SPEC = [t for t in generate.build_spec() if t["schema"] in ("core", "param")]
+SPEC = [t for t in generate.build_spec() if t["schema"] in ("core", "param") or (t["schema"] == "planning" and t["name"] in generate.PLAN_OUTPUTS)]
 EXPECTED = {(t["name"], f["name"]): (t, f) for t in SPEC for f in t["fields"] if f["source"] != dictionary.SYSTEM_SOURCE}
 
 
@@ -25,10 +25,11 @@ def test_fields_match_docs():
         assert (row["IfEmpty"] or "") == field["if_empty"], key  # BOŞSA (K-138); varsayılan yok
 
 
-def test_only_core_and_param_with_no_name_clash():
+def test_only_core_param_and_plan_outputs_with_no_name_clash():
     names = [t["name"] for t in SPEC]
     assert len(names) == len(set(names))
-    assert {t.schema for t in metadata.tables.values() if t.info.get("field_class")} == {"core", "param"}
+    assert {t.schema for t in metadata.tables.values() if t.info.get("field_class")} == {"core", "param", "planning"}
+    assert {t.name for t in metadata.tables.values() if t.schema == "planning" and t.info.get("field_class")} == generate.PLAN_OUTPUTS   # K-202
 
 
 def test_standard_label():

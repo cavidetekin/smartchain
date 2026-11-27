@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.planning import movements
 from db.models import metadata
 
 from . import catalog as cat
@@ -50,7 +51,8 @@ def _directed(name: str, *hints: dict) -> Criterion:
     return Criterion(name, tuple((d, h) for group in hints for d, h in group.items()))
 
 
-PRODUCTION_ORDER_NEED, PRODUCTION_PLAN_NEED = "Üretim siparişi ihtiyacı", "Üretim planı ihtiyacı"
+# arz ve ihtiyaç türlerinin adları malzeme hareketlerinin tek tanımından (K-202, `app/planning/movements.py`)
+PRODUCTION_ORDER_NEED, PRODUCTION_PLAN_NEED = movements.PRODUCTION_ORDER_NEED, movements.PRODUCTION_PLAN_NEED
 
 # Başlangıç sırası tanımın sırasıdır (K-201 madde 4 ve 5)
 CRITERIA: dict[str, tuple[Criterion, ...]] = {
@@ -62,9 +64,9 @@ CRITERIA: dict[str, tuple[Criterion, ...]] = {
     ),
     SUPPLY: (
         _directed("Dönem", _TIME, _NEAREST),
-        Criterion("Stok"), Criterion("Kalitedeki stok"), Criterion("Üretim siparişi"), Criterion("Satın alma siparişi"),
+        Criterion(movements.STOCK), Criterion(movements.QUALITY_STOCK), Criterion(movements.PRODUCTION_ORDER), Criterion(movements.PURCHASE_ORDER),
         _directed("Arz tarihi", _TIME),
-        Criterion("Üretim planı"), Criterion("Satın alma planı"),
+        Criterion(movements.PRODUCTION_PLAN), Criterion(movements.PURCHASE_PLAN),
         _directed("Son kullanma tarihi", _TIME),
     ),
 }

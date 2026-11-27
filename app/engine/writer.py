@@ -1,7 +1,11 @@
-"""PlanResult'u planning.* tablolarına yazar (K-70).
+"""PlanResult'u planning.* tablolarına yazar (K-70, K-202).
 
-Çıktılar, PlanRun durumu ve iş kaydının bitişi aynı işlemde (tek commit) yazılır: yarım plan görünmez,
-commit'ten sonra süreç çökse de iş Bitti olduğu için yeniden çalışmaz. Yayınlanmış PlanRun'a dokunulmaz.
+Plan hesabı başlarken (`prepare`) hesabın önceki çıktıları silinir ve talep kopyası (`PlannedDemand`) kurulur. Çıktılar, talep özeti, PlanRun durumu
+ve iş kaydının bitişi aynı işlemde (tek commit) yazılır: yarım plan görünmez, commit'ten sonra süreç çökse de iş Bitti olduğu için yeniden
+çalışmaz. Yayınlanmış PlanRun'a dokunulmaz.
+
+Sistemin doldurdukları (motor yazmaz): tedarik planı numarası (ÜP-…, SP-…), talep karşılama kırılımındaki talep kimliği, hareketin no'su
+(tedarik planı kaydından), pegging satırındaki iki tarafın ve kök talebin alanları, talebin özet alanları. Talep hareketinin no'su satış sipariş no'dur (karşılama satırından).
 """
 import logging
 from datetime import date
@@ -11,22 +15,28 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.jobs import queue
-from db.models import (CapacityLoad, DemandFulfillment, Pegging, PlanMetric, PlannedOrder, PlanWarning, SolverLog,
-                       SupplyRecommendation)
-from .interface import RUN_FAILED, RUN_RUNNING, SUPPLY_PLANNED_ORDER, PlanResult
+from app.planning import demand, movements
+from db.models import (CapacityLoad, DemandFulfillment, MaterialTransaction, Pegging, PlanMetric, PlannedAllocationTransfer, PlannedDemand,
+                       PlannedOvertime, PlannedSupply, PlanWarning, SolverLog)
+from .interface import RUN_FAILED, RUN_RUNNING, PlanResult
 
 log = logging.getLogger("smartchain.engine")
 
-# PlanResult alanı → tablo. Silme sırası tersidir.
+# PlanResult alanı → tablo ve satırdaki bağ anahtarları (anahtar → kolon, bağlanan PlanResult alanı). Yazım sırasıdır; silme sırası tersidir.
+# Satıra `ref` verilebilir; başka tablonun satırı bağ anahtarıyla o satıra bağlanır (kolon, oluşan Id olur).
 OUTPUTS = [
-    ("planned_orders", PlannedOrder),
-    ("supply_recommendations", SupplyRecommendation),
-    ("demand_fulfillment", DemandFulfillment),
-    ("capacity_loads", CapacityLoad),
-    ("pegging", Pegging),
-    ("warnings", PlanWarning),
+    ("planned_supply", PlannedSupply, {}),
+    ("demand_fulfillment", DemandFulfillment, {}),
+    ("planned_overtime", PlannedOvertime, {}),
+    ("allocation_transfers", PlannedAllocationTransfer, {}),
+    ("material_transactions", MaterialTransaction, {"supply_ref": ("PlannedSupplyId", "planned_supply"), "fulfillment_ref": ("DemandFulfillmentId", "demand_fulfillment")}),
+    ("capacity_loads", CapacityLoad, {"supply_ref": ("PlannedSupplyId", "planned_supply")}),
+    ("pegging", Pegging, {"supply_ref": ("SupplyTransactionId", "material_transactions"), "demand_ref": ("DemandTransactionId", "material_transactions"),
+                          "parent_ref": ("ParentPeggingId", "pegging")}),
+    ("warnings", PlanWarning, {}),
 ]
 SYSTEM_COLUMNS = {"Id", "PlanRunId", "UpdatedAt"}
+REF = "ref"
 
 
 class PlanRunPublished(Exception):
@@ -52,7 +62,21 @@ def mark_running(session: Session, plan_run_id: int) -> None:
     session.commit()
 
 
-def _rows(table: sa.Table, rows: list[dict], plan_run_id: int, now, drop=("ref", "supply_ref")) -> list[dict]:
+def prepare(session: Session, plan_run_id: int) -> int:
+    """Plan hesabı başlarken: önceki çıktılar silinir, talep kopyası kurulur (tek commit). Kopyalanan talep sayısı döner."""
+    try:
+        if is_published(session, plan_run_id):
+            raise PlanRunPublished()
+        _delete_outputs(session, plan_run_id)
+        count = demand.copy(session, plan_run_id)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    return count
+
+
+def _rows(table: sa.Table, rows: list[dict], plan_run_id: int, now, drop=(REF,)) -> list[dict]:
     allowed = {c.name for c in table.columns} - SYSTEM_COLUMNS
     dates = {c.name for c in table.columns if isinstance(c.type, sa.Date)}
     out = []
@@ -69,39 +93,104 @@ def _rows(table: sa.Table, rows: list[dict], plan_run_id: int, now, drop=("ref",
 
 
 def _delete_outputs(session: Session, plan_run_id: int) -> None:
-    for _, table in reversed(OUTPUTS):
+    """Motorun ve sistemin yazdığı çıktılar; talep kopyası (`PlannedDemand`) kalır, onu `prepare` yeniden kurar."""
+    for _, table, _ in reversed(OUTPUTS):
         session.execute(sa.delete(table).where(table.c.PlanRunId == plan_run_id))
     session.execute(sa.delete(PlanMetric).where(PlanMetric.c.PlanRunId == plan_run_id))
     session.execute(sa.delete(SolverLog).where(SolverLog.c.PlanRunId == plan_run_id))
 
 
+def _numbered(rows: list[dict]) -> list[dict]:
+    """Tedarik planı numarası: motorun boş bıraktığı plan kaydına türüne göre sırayla ÜP-… ya da SP-… (plan hesabı içinde sıra)."""
+    seq: dict[str, int] = {}
+    out = []
+    for row in rows:
+        if not row.get("SupplyNo") and row.get("Source") == movements.SOURCE_PLAN and row.get("SupplyType") in movements.NUMBER_PREFIX:
+            seq[row["SupplyType"]] = seq.get(row["SupplyType"], 0) + 1
+            row = {**row, "SupplyNo": movements.supply_number(row["SupplyType"], seq[row["SupplyType"]])}
+        out.append(row)
+    return out
+
+
+def _with_demand(session: Session, plan_run_id: int, rows: list[dict]) -> list[dict]:
+    """Kırılım satırına talebin kimlik alanları kopyalanır; motor yalnız talebi, dönemi, miktarı ve gecikmeyi yazar."""
+    if not rows:
+        return rows
+    found = session.execute(sa.select(PlannedDemand.c.Id, *(PlannedDemand.c[f] for f in demand.IDENTITY)).where(PlannedDemand.c.PlanRunId == plan_run_id)).mappings()
+    demands = {r["Id"]: {f: r[f] for f in demand.IDENTITY} for r in found}
+    out = []
+    for row in rows:
+        if row.get("PlannedDemandId") not in demands:
+            raise ValueError(f"DemandFulfillment: bu plan hesabında olmayan talep {row.get('PlannedDemandId')}")
+        out.append({**row, **demands[row["PlannedDemandId"]]})
+    return out
+
+
+def _fill_copies(session: Session, plan_run_id: int) -> None:
+    """Bağdan kopyalanan alanlar: hareketin no'su tedarik planı kaydından ya da (talep hareketinde) karşılama satırının satış sipariş no'sundan, tahminde
+    boş kalır; pegging'de iki tarafın alanları hareketlerden, kök talebin alanları talepten. Transfer hareketi pegging'e bağlanamaz (yalnız bakiye içindir)."""
+    p = {"run": plan_run_id}
+    session.execute(text("UPDATE t SET DocumentNo = s.SupplyNo FROM planning.MaterialTransaction t JOIN planning.PlannedSupply s ON s.Id = t.PlannedSupplyId "
+                         "WHERE t.PlanRunId = :run AND t.DocumentNo IS NULL"), p)
+    session.execute(text("UPDATE t SET DocumentNo = f.OrderNo FROM planning.MaterialTransaction t JOIN planning.DemandFulfillment f ON f.Id = t.DemandFulfillmentId "
+                         "WHERE t.PlanRunId = :run AND t.DocumentNo IS NULL"), p)
+    transfers = session.execute(text(
+        "SELECT COUNT(*) FROM planning.Pegging g JOIN planning.MaterialTransaction a ON a.Id = g.SupplyTransactionId "
+        "JOIN planning.MaterialTransaction b ON b.Id = g.DemandTransactionId WHERE g.PlanRunId = :run AND (a.MainMovement = :m OR b.MainMovement = :m)"),
+        {**p, "m": movements.MAIN_TRANSFER}).scalar()
+    if transfers:
+        raise ValueError("Pegging: transfer hareketi bağlanamaz; arz tarafı gerçek arzın hareketidir (Genelden = Evet)")
+    sides = ", ".join(f"{side}{f} = {alias}.{f}" for side, alias in (("Supply", "a"), ("Demand", "b"))
+                      for f in ("MainMovement", "MovementType", "DocumentNo", "PeriodStart", "PeriodEnd", "MovementDate", "AllocationLevel", "AllocationKey"))
+    session.execute(text(f"UPDATE g SET {sides} FROM planning.Pegging g JOIN planning.MaterialTransaction a ON a.Id = g.SupplyTransactionId "
+                         "JOIN planning.MaterialTransaction b ON b.Id = g.DemandTransactionId WHERE g.PlanRunId = :run"), p)
+    session.execute(text("UPDATE g SET RootDemandType = d.DemandType, RootOrderNo = d.OrderNo, RootLineNo = d.[LineNo], RootLineItemNo = d.LineItemNo, "
+                         "RootCustomerId = d.CustomerId, RootProjectId = d.ProjectId FROM planning.Pegging g JOIN planning.PlannedDemand d ON d.Id = g.PlannedDemandId "
+                         "WHERE g.PlanRunId = :run"), p)
+
+
+def _insert(session: Session, attr: str, table: sa.Table, links: dict, source: list[dict], plan_run_id: int, now, refs: dict[str, dict]) -> dict:
+    """Bir tablonun satırları. `ref` verilen satır tek tek yazılır (Id'si bağlar için gerekir), ötekiler toplu. Kendi tablosuna bağlanan satır
+    (pegging'in üst bağı) kendinden önce yazılmış, `ref`'li bir satıra bağlanır."""
+    own: dict = {}
+    bulk = []
+    for src in source:
+        row = dict(src)
+        for key, (column, target) in links.items():
+            if key not in row:
+                continue
+            known = own if target == attr else refs.get(target, {})
+            if row[key] not in known:
+                raise ValueError(f"{table.name}: bilinmeyen bağ {key} = {row[key]}")
+            row[column] = known[row.pop(key)]
+        if REF in src:
+            values = _rows(table, [row], plan_run_id, now)[0]
+            own[src[REF]] = session.execute(sa.insert(table).values(**values).returning(table.c.Id)).scalar_one()
+        else:
+            bulk.append(row)
+    if bulk:
+        session.execute(sa.insert(table), _rows(table, bulk, plan_run_id, now))
+    return own
+
+
 def write_result(session: Session, plan_run_id: int, result: PlanResult, job_id: int, attempt: int) -> None:
-    """Önceki çıktıları sil → yaz → PlanRun ve iş Bitti; tek commit. İş bu denemenin değilse hiçbir şey yazılmaz."""
+    """Önceki çıktıları sil → yaz → talep özeti → PlanRun ve iş Bitti; tek commit. İş bu denemenin değilse hiçbir şey yazılmaz."""
     try:
         if is_published(session, plan_run_id):
             raise PlanRunPublished()
         now = queue.db_now(session)
         _delete_outputs(session, plan_run_id)
 
-        # Planlı siparişler tek tek: Id'leri Pegging'deki 'supply_ref' bağları için gerekir.
-        refs: dict[str, int] = {}
-        for src, row in zip(result.planned_orders, _rows(PlannedOrder, result.planned_orders, plan_run_id, now)):
-            new_id = session.execute(sa.insert(PlannedOrder).values(**row).returning(PlannedOrder.c.Id)).scalar_one()
-            if "ref" in src:
-                refs[src["ref"]] = new_id
-
-        pegging = []
-        for row in result.pegging:
-            if "supply_ref" in row:
-                if row["supply_ref"] not in refs:
-                    raise ValueError(f"Pegging: bilinmeyen planlı sipariş bağı {row['supply_ref']}")
-                row = {**row, "SupplyType": SUPPLY_PLANNED_ORDER, "SupplyId": refs[row["supply_ref"]]}
-            pegging.append(row)
-
-        for attr, table in OUTPUTS[1:]:
-            rows = pegging if attr == "pegging" else getattr(result, attr)
-            if rows:
-                session.execute(sa.insert(table), _rows(table, rows, plan_run_id, now))
+        refs: dict[str, dict] = {}
+        for attr, table, links in OUTPUTS:
+            rows = getattr(result, attr)
+            if attr == "planned_supply":
+                rows = _numbered(rows)
+            elif attr == "demand_fulfillment":
+                rows = _with_demand(session, plan_run_id, rows)
+            refs[attr] = _insert(session, attr, table, links, rows, plan_run_id, now, refs)
+        _fill_copies(session, plan_run_id)
+        demand.summarize(session, plan_run_id)
         if result.metrics:
             session.execute(sa.insert(PlanMetric), [{"PlanRunId": plan_run_id, "MetricCode": k, "Value": v}
                                                     for k, v in result.metrics.items()])
@@ -117,7 +206,7 @@ def write_result(session: Session, plan_run_id: int, result: PlanResult, job_id:
     except Exception:
         session.rollback()
         raise
-    log.info("PlanRun %s yazıldı (iş %s, %s planlı sipariş)", plan_run_id, job_id, len(result.planned_orders))
+    log.info("PlanRun %s yazıldı (iş %s, %s tedarik planı kaydı)", plan_run_id, job_id, len(result.planned_supply))
 
 
 def write_failure(session: Session, plan_run_id: int | None, job_id: int, attempt: int, message: str) -> bool:

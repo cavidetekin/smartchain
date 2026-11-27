@@ -61,7 +61,7 @@ def test_list_columns_filter_group_and_keys(client, people):
     assert cols["Description"]["label"] == "Açıklama"
     assert [f for f, c in cols.items() if not c["default_visible"]] == ["Description", "EditableInWorkspace"]  # Alanlar'dan; Senaryo Aşama 8'e kadar gizli
     assert [cols[f]["label"] for f in ("ManualOverrides", "EditableInWorkspace", "IfEmpty")] == ["Manuel", "Senaryo", "Boşsa"]
-    assert cols["FieldClass"]["values"] == ["Ana veri", "Parametre", "İşlem verisi"]
+    assert cols["FieldClass"]["values"] == ["Ana veri", "Parametre", "İşlem verisi", "Plan"]
     assert cols["IsAdditional"]["type"] == "bool" and cols["TableName"]["values_from_server"] is True
 
     # görünmeyen kolonda da anahtar döner (satır işlemi)
@@ -73,7 +73,7 @@ def test_list_columns_filter_group_and_keys(client, people):
     assert r.json()["filtered"] == 10
 
     r = client.post("/api/field-definitions/groups", headers=h, json={"group_by": ["FieldClass"], "fields": ["FieldName"]})
-    assert {g["key"][0] for g in r.json()["groups"]} == {"Ana veri", "Parametre", "İşlem verisi"}
+    assert {g["key"][0] for g in r.json()["groups"]} == {"Ana veri", "Parametre", "İşlem verisi", "Plan"}
 
 
 def test_excel(client, people):
@@ -101,7 +101,7 @@ def test_detail_and_unknown(client, people):
     assert d["standard_label"] == "Ek metin alanı 2" and d["is_additional"] is True and d["label"] is None
     assert d["field_class"] == "Ana veri" and d["used_in_views"] == 0
     assert d["description"] == "Ek metin alanları"
-    assert d["options"]["field_class"] == ["Ana veri", "Parametre", "İşlem verisi"]
+    assert d["options"]["field_class"] == ["Ana veri", "Parametre", "İşlem verisi", "Plan"]
     assert "value_priority" not in d and "value_priority" not in d["options"]  # öncelik sabit (K-172)
     assert d["manual_overrides"] is False and d["manual_reason"] is None and d["manual_count"] == 0  # kurulumda Hayır (K-167)
     assert client.get("/api/field-definitions/Material/Name", headers=h).json()["is_additional"] is False

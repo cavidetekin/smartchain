@@ -8,6 +8,7 @@ import copy
 import json
 import os
 import time
+from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
 
@@ -51,19 +52,48 @@ class FakeEngine:
                 os._exit(3)  # süreç çöküşü: servis işi yeniden sıraya alır (K-71)
             time.sleep(step)
         fx = copy.deepcopy(load_fixture())
+        demands = inp.data.planned_demands() if inp.data is not None else []
+        fulfillment = _fulfillment(fx["demand_fulfillment"], demands)
+        written = {row["ref"] for row in fulfillment}
+        for row in fx["material_transactions"]:  # karşılama satırı yazılmadıysa hareketin bağı da yoktur
+            if row.get("fulfillment_ref") not in written:
+                row.pop("fulfillment_ref", None)
+        for row in fx["pegging"]:
+            at = row.pop("root_demand", None)
+            if at is not None and at < len(demands):
+                row["PlannedDemandId"] = demands[at]["Id"]
         return PlanResult(
             engine_used=settings.get("ModelType", "LP"),
             solver=self.name,
             status=fx["status"],
-            planned_orders=fx["planned_orders"],
-            supply_recommendations=fx["supply_recommendations"],
-            demand_fulfillment=fx["demand_fulfillment"],
+            planned_supply=fx["planned_supply"],
+            demand_fulfillment=fulfillment,
+            planned_overtime=fx["planned_overtime"],
+            allocation_transfers=fx["allocation_transfers"],
+            material_transactions=fx["material_transactions"],
             capacity_loads=fx["capacity_loads"],
             pegging=fx["pegging"],
             warnings=fx["warnings"],
             metrics=fx["metrics"],
             solver_log=fx["solver_log"],
         )
+
+
+def _fulfillment(rows: list[dict], demands: list[dict]) -> list[dict]:
+    """Fikstürün karşılama satırları plan hesabının taleplerine oturtulur: `demand` plana dahil taleplerin vade sırasındaki yeri, `share` talep
+    miktarının payı, `weeks_late` vade döneminden kaç hafta sonra. O sırada talep yoksa satır yazılmaz."""
+    out = []
+    for row in rows:
+        if row["demand"] >= len(demands):
+            continue
+        demand = demands[row["demand"]]
+        start = demand["DuePeriodStart"] or demand["DueDate"]
+        if isinstance(start, str):
+            start = date.fromisoformat(start)
+        start += timedelta(weeks=row["weeks_late"])
+        out.append({"ref": row["ref"], "PlannedDemandId": demand["Id"], "PeriodStart": start, "PeriodEnd": start + timedelta(days=6),
+                    "Quantity": round(float(demand["DemandQuantity"]) * row["share"], 4), "IsTardy": row["weeks_late"] > 0})
+    return out
 
 
 def build_engine() -> FakeEngine:

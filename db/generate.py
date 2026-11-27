@@ -88,7 +88,15 @@ REF_TARGET = {
     "ToUom": ("UnitOfMeasure", "Code"), "CapacityUnit": ("UnitOfMeasure", "Code"),
     "ComponentUom": ("UnitOfMeasure", "Code"), "Uom": ("UnitOfMeasure", "Code"),
     "WarningCode": ("WarningDefinition", "Code"),
+    # plan çıktı tabloları (K-202)
+    "PlannedDemandId": "PlannedDemand", "PlannedSupplyId": "PlannedSupply", "DemandFulfillmentId": "DemandFulfillment",
+    "SupplyTransactionId": "MaterialTransaction", "DemandTransactionId": "MaterialTransaction", "ParentPeggingId": "Pegging",
+    "ForecastId": "Forecast", "StockId": "Stock", "PurchaseOrderLineId": "PurchaseOrderLine", "ConsumingMaterialId": "Material",
+    "RootCustomerId": "Customer", "RootProjectId": "Project",
 }
+# Plan çıktı tabloları (K-202): veri sözlüğüne girer (alan adı ve etiket), sınıfı "Plan"
+PLAN_OUTPUTS = {"PlannedSupply", "PlannedDemand", "DemandFulfillment", "PlannedOvertime", "PlannedAllocationTransfer", "MaterialTransaction",
+                "CapacityLoad", "Pegging"}
 
 ADDITIONAL = re.compile(r"^Additional(Text|Number)1[–-](\d+)$")
 
@@ -265,6 +273,7 @@ def render_models(spec) -> str:
         schema, name = t["schema"], t["name"]
         fields = list(t["fields"])
         cols, extra = [], []
+        in_dictionary = schema in ("core", "param") or (schema == "planning" and name in PLAN_OUTPUTS)  # veri sözlüğü (K-104, K-202)
         if schema in LAYERS:
             system = STAGING_COLS if schema == "stg" else PROCESSED_COLS
             fields = [dict(name=n, type=ty, key="", desc=d, required=r, default=STAGING_DEFAULTS.get(n, ""), source="Sistem")
@@ -312,9 +321,9 @@ def render_models(spec) -> str:
             if f["desc"]:
                 kw.append(f"comment={q(f['desc'])}")
             label, values = field_label(f), value_list(f["desc"])
-            if schema not in LAYERS and (label or values or schema in ("core", "param")):
+            if schema not in LAYERS and (label or values or in_dictionary):
                 info = ([f"'label': {q(label)}"] if label else []) + ([f"'values': {json.dumps(values, ensure_ascii=False)}"] if values else [])
-                if schema in ("core", "param"):  # veri sözlüğü (K-104, db/dictionary.py); DDL'e girmez
+                if in_dictionary:  # veri sözlüğü (K-104, db/dictionary.py); DDL'e girmez
                     info += [f"'source': {q(f.get('source', ''))}", f"'workspace': {bool(f.get('workspace'))}"]
                     info += [f"'default': {q(f['default'])}"] if f.get("default") else []
                     info += [f"'if_empty': {q(f['if_empty'])}"] if f.get("if_empty") else []  # BOŞSA (K-138)
@@ -338,7 +347,7 @@ def render_models(spec) -> str:
         out.append(f"    {q(name)}, metadata,")
         out += cols + extra
         out.append(f"    schema={q(schema)},")
-        if schema in ("core", "param"):
+        if in_dictionary:
             out.append(f"    info={{'field_class': {q(t['cls'])}}},")
         if t["desc"]:
             out.append(f"    comment={q(t['desc'])},")

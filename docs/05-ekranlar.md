@@ -149,7 +149,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 #### PLANLAMA MOTORU (ARKA PLANDA)
 
 - **29 · Ön hesap:** LLC hesaplama, proje bazlı netleştirme, kullanılabilir stok.
-- **30 · MRP patlatma:** Bağımlı talep, 4 aşamalı netleştirme, planlı sipariş; öncelik ve kısıtlar parametrik.
+- **30 · MRP patlatma:** Bağımlı talep, 4 aşamalı netleştirme, tedarik planı; öncelik ve kısıtlar parametrik.
 - **31 · Model kurma:** İş modelinden LP ya da MILP kurulur.
 - **32 · Çözücü adaptörü:** Model seçilen çözücünün girdisine çevrilir; sonuç geri okunur.
 - **33 · Kurallı yerleştirme ve sezgisel:** Model çözüm bulamazsa ya da süre biterse yedek yol.
@@ -428,7 +428,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 
 ![Kaynak bazlı planlama](mockups/m24e-0321-kaynak-bazli-planlama.png)
 
-- **Kaynağın yükü:** Seçili kaynağın yükü üretim siparişi ve planlı sipariş bazında haftalara dağılmış görünür.
+- **Kaynağın yükü:** Seçili kaynağın yükü üretim siparişi ve tedarik planı bazında haftalara dağılmış görünür.
 - **Taşı, böl, aktar:** Yük başka haftaya, alternatif kaynağa ya da fasona aktarılır.
 - **Önce / sonra:** Aktarımın iki kaynaktaki etkisi kaydetmeden önce görünür.
 - **Geçici parametre:** Verim, fazla mesai, çalışma günü yalnız bu çalışmada değişir.
@@ -459,7 +459,7 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 ![Malzeme planı](mockups/m24e-0324-malzeme-plani.png)
 
 - **Malzeme listesi:** Eksiği olan malzemeler üstte; satın alma ve üretim aynı listede.
-- **Malzeme × dönem:** Brüt ihtiyaç, açık arz, planlı sipariş, stok projeksiyonu ve eksik.
+- **Malzeme × dönem:** Brüt ihtiyaç, açık arz, tedarik planı, stok projeksiyonu ve eksik.
 - **Temin süresi:** Temin süresi içindeki eksik ayrıca işaretlenir; yeni sipariş yetişmez.
 - **Proje kırılımı:** Projeye ayrılan stok ve ortak stok ayrı satırlarda izlenir.
 
@@ -467,6 +467,8 @@ Kaynak: Master Design Document (MDD) 26.10.2026. Bu dosya desteden üretilmişti
 <sub>24. Ekranlar ve fonksiyonlar · Mockup · 16/25</sub>
 
 ![Öneriler](mockups/m24e-0325-oneriler.png)
+
+- **Yeniden ele alınacak (8.10; K-202):** mevcut arz önerilerinin tablosu (`SupplyRecommendation`) kalktı; planlı siparişin yerini Tedarik planı (`PlannedSupply`: Üretim planı · Satın alma planı) aldı. Bu ekranın metni ve mockup'ı eski yapıya göredir; 8.10'da yeniden yazılır.
 
 - **Planlı siparişler:** Üretim, satın alma ve fason önerileri tek listede; proje bilgisiyle.
 - **Yuvarlama görünür:** Modelin hesapladığı miktar ve parti, minimum, kutu kuralına göre yuvarlanmış miktar.

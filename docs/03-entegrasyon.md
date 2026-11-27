@@ -883,7 +883,7 @@ FROM erp.WorkCenter;
 | Siparişler, stok, üretim siparişleri, gerçekleşmeler | ERP | Salt okunur | Her aktarımda ERP; elle değişiklik yok (öncelik ve hedef tarih plan alanıdır, veri değil) |
 | Tahmin | ERP ya da Excel | Excel ile yüklenir | Son yükleme geçerli; versiyonlu |
 | Parametreler, senaryo tanımları, kurallar, manuel değerler | Smartchain | Ekrandan | ERP'ye gitmez |
-| Plan çıktıları (planlı sipariş, öneri) | Smartchain | Onaylı plan | Faz 1: Excel ile ERP'ye elle; Faz 2: API geri yazma, ERP belge no geri okunur |
+| Plan çıktıları (tedarik planı, öneri) | Smartchain | Onaylı plan | Faz 1: Excel ile ERP'ye elle; Faz 2: API geri yazma, ERP belge no geri okunur |
 
 ### Senkron sıklığı ve zamanlama
 <sub>26. Entegrasyon tasarımı · Senkron sıklığı</sub>
@@ -915,7 +915,7 @@ FROM erp.WorkCenter;
 - **Faz 1 · Excel listeleri:** Onaylı plandan: satın alma talebi listesi (tedarikçi, malzeme, yuvarlanmış miktar, tarih), üretim siparişi açma listesi (ürün, miktar, kaynak, dönem), fason listesi, öneri aksiyonları (öne çek / ertele / iptal). Sütun düzeni müşterinin ERP ithalat şablonuna göre ayarlanır (kurulum verisi).
 - **ERP belge numarası geri:** ERP'de açılan sipariş bir sonraki gece çekimde gelir; eşleme ERP referans alanı ile (sipariş notu ya da dış belge no, kurulumda belirlenir) ya da aksiyon listesinde elle girilen numarayla. Öneri takibi (R19) bu bağı kullanır.
 - **Kapsam dışı:** Stok hareketi, üretim teyidi, sevkiyat gibi işlem kayıtları Smartchain'den ERP'ye hiçbir fazda yazılmaz; bunlar ERP'nin işi.
-- **Faz 2 · API geri yazma:** Onaylanan planlı siparişler ERP'ye API ile yazılır (satın alma talebi, planlı üretim siparişi); ERP belge numarası anında geri alınır. Yazma yetkisi ayrı servis hesabı; her yazma denetim izinde. Yalnız yeni belge; ERP'deki belgeyi değiştirme yok.
+- **Faz 2 · API geri yazma:** Onaylanan tedarik planı kayıtları ERP'ye API ile yazılır (satın alma talebi, planlı üretim siparişi); ERP belge numarası anında geri alınır. Yazma yetkisi ayrı servis hesabı; her yazma denetim izinde. Yalnız yeni belge; ERP'deki belgeyi değiştirme yok.
 
 ### Güvenlik ve erişim
 <sub>26. Entegrasyon tasarımı · Güvenlik ve erişim</sub>
@@ -975,4 +975,4 @@ FROM erp.WorkCenter;
 - **Sessiz hata eşiği:** Kapandı (K-158): eşik ve uyarı yok; satır sayısı değişimi Dünden bugüne ekranında raporlanır (5.5b, K-159).
 - **Kişisel veri:** İşçi adı yerine anonim kod kullanımı: müşteri tercihi; parametre olarak öneriyoruz.
 - **Rota tüketim birimi:** Kapandı (K-130): dönüşüm view'da; kural istisna için.
-- **Faz 2 geri yazma kapsamı:** Yalnız satın alma talebi mi, planlı üretim siparişi de mi? Müşteri ERP'sinin planlı sipariş kavramına bağlı; keşifte netleşir.
+- **Faz 2 geri yazma kapsamı:** Yalnız satın alma talebi mi, planlı üretim siparişi de mi? Müşteri ERP'sinin tedarik planı kavramına bağlı; keşifte netleşir.

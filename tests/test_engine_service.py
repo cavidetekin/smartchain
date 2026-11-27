@@ -122,7 +122,7 @@ def plan_run(session, plan_run_id):
 
 
 def outputs(session, plan_run_id):
-    return session.execute(text("SELECT COUNT(*) FROM planning.PlannedOrder WHERE PlanRunId = :id"),
+    return session.execute(text("SELECT COUNT(*) FROM planning.PlannedSupply WHERE PlanRunId = :id"),
                            {"id": plan_run_id}).scalar()
 
 
@@ -131,7 +131,7 @@ def test_job_runs_in_own_process(db_engine, db_session, plan_env):
     job = run_until_done(service(db_engine), db_session, job_id)
     assert job["Status"] == STATUS_DONE and job["Attempt"] == 1
     assert plan_run(db_session, plan_run_id) == "Bitti"
-    assert outputs(db_session, plan_run_id) == 3
+    assert outputs(db_session, plan_run_id) == 4
 
 
 def test_heartbeat_from_service_keeps_long_job_alive(db_engine, db_session, plan_env):
